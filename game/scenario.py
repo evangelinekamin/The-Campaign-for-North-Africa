@@ -38,16 +38,16 @@ def coastal_corridor(seed: int = 1941) -> GameState:
     units = (
         Unit("DAK-5le", Side.AXIS, (0, 0),
              (StepRecord("pz", 3), StepRecord("inf", 2)),
-             mobility=Mobility.VEHICLE, cpa=25, stacking_points=2, raw_defense=30),
+             mobility=Mobility.VEHICLE, cpa=25, stacking_points=2, oca=6, dca=6),
         Unit("IT-Ariete", Side.AXIS, (1, 1),
              (StepRecord("tank", 3), StepRecord("inf", 2)),
-             mobility=Mobility.VEHICLE, cpa=20, stacking_points=2, raw_defense=25),
+             mobility=Mobility.VEHICLE, cpa=20, stacking_points=2, oca=5, dca=5),
         Unit("UK-2Armd", Side.ALLIED, (6, 0),
              (StepRecord("cruiser", 3),),
-             mobility=Mobility.VEHICLE, cpa=20, stacking_points=2, raw_defense=18),
+             mobility=Mobility.VEHICLE, cpa=20, stacking_points=2, oca=6, dca=6),
         Unit("UK-9Aus", Side.ALLIED, target,
              (StepRecord("inf", 4),),
-             mobility=Mobility.FOOT, cpa=10, stacking_points=2, raw_defense=30),
+             mobility=Mobility.FOOT, cpa=10, stacking_points=2, oca=5, dca=8),
     )
 
     return GameState(

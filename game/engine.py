@@ -14,7 +14,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-from . import stacking, tactics
+from . import combat, stacking, tactics
 from .apply import apply
 from .events import Control, Event, EventKind, Phase, Side
 from .hexmap import is_adjacent
@@ -23,25 +23,6 @@ from .policy import AttackOrder, MoveOrder, Policy
 from .state import Coord, GameState
 
 CONTROL_OF: dict[Side, Control] = {Side.AXIS: Control.AXIS, Side.ALLIED: Control.ALLIED}
-
-# PLACEHOLDER Combat Results Table: odds-bucket x die(1-6) -> (defender_loss,
-# attacker_loss) in steps. The real CRT (rule 11 + charts) replaces this next.
-_CRT: dict[str, dict[int, tuple[int, int]]] = {
-    "low":   {1: (0, 2), 2: (0, 1), 3: (1, 1), 4: (1, 1), 5: (1, 0), 6: (2, 0)},
-    "even":  {1: (0, 1), 2: (1, 1), 3: (1, 1), 4: (1, 0), 5: (2, 0), 6: (2, 1)},
-    "good":  {1: (1, 1), 2: (1, 0), 3: (2, 0), 4: (2, 0), 5: (2, 1), 6: (3, 0)},
-    "great": {1: (1, 0), 2: (2, 0), 3: (2, 0), 4: (3, 0), 5: (3, 0), 6: (3, 1)},
-}
-
-
-def _bucket(odds: float) -> str:
-    if odds < 1.0:
-        return "low"
-    if odds < 2.0:
-        return "even"
-    if odds < 3.0:
-        return "good"
-    return "great"
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,21 +149,27 @@ def _combat(r: _Run, policy: Policy, side: Side) -> None:
 
 def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
                     target: Coord) -> None:
-    atk = sum(u.strength for u in attackers)
-    dfn = sum(u.strength for u in defenders)
-    bucket = _bucket(atk / dfn)
-    die = r.d6()
-    def_loss, atk_loss = _CRT[bucket][die]
+    # Close Assault via the real differential engine (rule 15 / §15.79 CRT).
+    feature = r.state.terrain.hexsides.get((attackers[0].hex, target))  # §15.33
+    ab, asm, db, dsm = r.d6(), r.d6(), r.d6(), r.d6()
+    res = combat.resolve(
+        attacker_raw=sum(u.raw_offense for u in attackers),
+        defender_raw=sum(u.raw_defense for u in defenders),
+        attacker_strength=sum(u.strength for u in attackers),
+        defender_strength=sum(u.strength for u in defenders),
+        def_terrain=r.state.terrain.terrain[target], attack_feature=feature,
+        atk_roll=ab * 10 + asm, def_roll=db * 10 + dsm)
     r.emit(EventKind.COMBAT_RESOLVED, side, actor,
            {"target": list(target), "attackers": [u.id for u in attackers],
             "defenders": [u.id for u in defenders],
-            "odds": round(atk / dfn, 2), "bucket": bucket,
-            "defender_loss": def_loss, "attacker_loss": atk_loss},
-           rng_draws=(die,))
-    for uid, amount in _spread_losses(defenders, def_loss):
+            "differential": res.differential, "column": res.column,
+            "attacker_loss_pct": res.attacker_loss_pct,
+            "defender_loss_pct": res.defender_loss_pct},
+           rng_draws=(ab, asm, db, dsm))
+    for uid, amount in _spread_losses(defenders, res.defender_steps_lost):
         r.emit(EventKind.STEP_LOST, side, actor,
                {"unit_id": uid, "amount": amount, "role": "defender"})
-    for uid, amount in _spread_losses(attackers, atk_loss):
+    for uid, amount in _spread_losses(attackers, res.attacker_steps_lost):
         r.emit(EventKind.STEP_LOST, side, actor,
                {"unit_id": uid, "amount": amount, "role": "attacker"})
 

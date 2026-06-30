@@ -42,8 +42,8 @@ def _line(e: Event) -> str:
         return f"  REJECT {p['order']} {who}: {p['reason']}"
     if k == EventKind.COMBAT_RESOLVED:
         return (f"  COMBAT @ {tuple(p['target'])}: {'+'.join(p['attackers'])} vs "
-                f"{'+'.join(p['defenders'])} | odds {p['odds']} ({p['bucket']}) "
-                f"d6={e.rng_draws[0]} -> def -{p['defender_loss']} / atk -{p['attacker_loss']}")
+                f"{'+'.join(p['defenders'])} | diff {p['differential']:+d} (col {p['column']}) "
+                f"-> def {p['defender_loss_pct']}% / atk {p['attacker_loss_pct']}%")
     if k == EventKind.STEP_LOST:
         return f"      loss  {p['unit_id']} -{p['amount']} step ({p['role']})"
     if k == EventKind.HEX_CONTROL_CHANGED:

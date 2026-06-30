@@ -37,7 +37,8 @@ class Unit:
     mobility: Mobility
     cpa: int                       # Capability Point Allowance per OpStage (rule 6.0)
     stacking_points: int
-    raw_defense: int               # raw defensive close-assault points (ZOC, §10.15)
+    oca: int                       # offensive close-assault rating (rule 11.15)
+    dca: int                       # defensive close-assault rating (rule 11.15)
     cohesion: int = 0
     cp_used: float = 0.0           # CP spent this OpStage; reset each turn
     is_combat: bool = True         # False for truck convoys / bare HQs / air
@@ -52,6 +53,14 @@ class Unit:
     @property
     def alive(self) -> bool:
         return self.strength > 0
+
+    @property
+    def raw_offense(self) -> int:  # raw offensive close-assault points (rule 11.32)
+        return self.oca * self.strength
+
+    @property
+    def raw_defense(self) -> int:  # raw defensive CA points (ZOC §10.15, combat §15.4)
+        return self.dca * self.strength
 
 
 @dataclass(frozen=True, slots=True)
