@@ -1,0 +1,463 @@
+<!-- 60.0 SCENARIO GROUP ONE: The Italians -->
+# 60.0 SCENARIO GROUP ONE: The Italians
+
+### CASES:
+
+## 60.1 GENERAL DESCRIPTION
+
+The first scenario group covers the initial months of the desert fighting, from 15 September 1940 through the middle of February 1941. Although there was an actual state of war existing between the British and the Italians vis a vis Libya/Egypt, the months of June through early September 1940 have been ignored as there was little done other than aggressive patrolling. The actual campaign starts with the first Italian offensive and subsequent British counter-attack.
+
+## 60.2 SCENARIO LENGTH
+
+[60.21] There are two separate scenarios in the Italian scenario group; each may be played separately to a specific conclusion.
+
+<!-- page 078 -->
+
+[60.22] Graziani's Offensive
+
+This scenario starts with Game-Turn 1, OpStage 1; it ends with the conclusion of Game-Turn 6, OpStage 3. The estimated time of play is anywhere from 25 to 50 hours. Victory Conditions are listed in Case 60.71.
+
+### 60.23 The Italian Campaign
+
+This scenario starts with Game-Turn 1, OpStage 1, and proceeds through the end of Game-Turn 20, OpStage 3. It includes Operation Compass (O'Connor's counteroffensive). The estimated time of play is 90 to 150 hours. Victory Conditions are listed in Case 60.72.
+
+## 60.3 AXIS FORCES
+
+[60.31] Italian Initial Deployment (Hex; Units)
+
+C4218: 1 CCNN Div (I; Att: I(M) [T; Ar/LTC] Trucks: 10 light, 25 medium, 10 heavy.
+
+C4120: 63 Cirene Div (I; Att: LXIII (L) [T; Ar/LTC]; Trucks: 45 medium, 5 heavy.
+
+C4020: 1 Libyan Div (I); Trucks: 10 light, 15 medium.
+
+C3920: 2 Libyan Div (I; Att: IX(L) [T; Tvl/LTC]; Trucks: 15 light, 15 medium.
+
+C3919: Aresca Regt (T; LTC, Det: all except XXI); Trucks: 5 medium, 5 heavy.
+
+C3918: 62 Marmarcia Div (I; Att: LXII(L) [T; Ar/LTC]; Trucks: 40 medium, 5 heavy.
+
+C3617: Maletti Div (I; Att: II(M) [T, Tvl/LTC]; Trucks: 5 light, 30 medium, 5 heavy.
+
+C4707: 64 Catanzaro Div (I); Trucks: 30 medium, 5 heavy.
+
+C4507: 4 CCNN Div (I); Trucks: 10 light, 25 medium, 10 heavy.
+
+Bardia (C4321): Trivoli Regt (T; LTC; Det: II(M) and IX(L)); Barka Garrison; Trucks: 20 medium.
+
+Tobruk (C4807): HQ: Libyan Tank Command; Tobruk Garrison; Trucks: 5 medium.
+
+Benghazi (B4827): Benghazi Garrison.
+
+Barce (B5504): Libyan Parachute Regt (I); Trucks: 5 medium.
+
+Derna (B5925): Derna Garrison.
+
+Mechili (B4921): Mechili Garrison.
+
+Giaribub (C1014): Giaribub Garrison.
+
+Bir Scheferzen (C3419): Scheferzen Garrison.
+
+Fort Maddelena (C3019): Fort Maddelena Garrison.
+
+el Grein (C1715): el Grein Garrison.
+
+Benina (A4829): Benina Garrison.
+
+Soluch (A4130): Soluch Garrison; X Cp (Ar).
+
+Anywhere in Libya: 1/1AR; 2/1AR; 3/1AR; 4/1AR; XXI Cp; XXVI Cp 4/1AR; XXI Cp (Ar).
+
+Within 3 Hexes of C0716: Saharan Det (I); Trucks: 5 light.
+
+Anywhere on Map A or B: XVIII Lib (I; *); XXX-II Lib (I; *); and (all Ar) 147; 131; 2/24; 5/1; 6 GaF; 16 GaF; 22 GaF; 42 GaF; 350 GaF.
+
+Tripoli: 2 CCNN Div (I); 3 CCNN Div (I); XXII Cp (Ar); XXIII Cp (Ar).
+
+Tripolitania: 4/10 Army (I).
+
+In addition, two TOE strength Points of Autoblinda 40's (recce, 1D Code "WW") may be attached, each point to any unit (but not both to the same) ignoring all regular unit composition restrictions. Or they may be deployed in Tobruk as regular (i.e., trained and fueled) replacement points.
+
+### 60.32 Italian Air Strengths
+
+The following planes may be placed at any Italian airfields, landing strips, flying boat basins, etc., within the capacities of those facilities. However, no planes start the game in Italy/Sicily. Crete is unavailable (it is still British).
+
+| Plane | Total Available | Total Refitted |
+| --- | --- | --- |
+| CR 42 | 65 | 25 |
+| CR 32 | 70 | 28 |
+| Ba 65 | 10 | 2 |
+| Ba 88 | 24 | 6 |
+| SM 79 | 133 | 35 |
+| SM 81 | 17 | 4 |
+| Ca 309 | 56 | 12 |
+| Ro37Bis | 10 | 6 |
+| 2S01 | 9 | 9 |
+
+The Italian Player may not attempt to refit planes until Game-Turn 1, OpStage 2.
+
+Italian Pilots Available:
+
+Three's: 3
+
+Two's: 10
+
+One's: 15
+
+Italian SGSU Available: 39.
+
+[60.33] Italian Second-Third Line Trucks
+
+The Italian Player receives the following trucks (Points). He may assign them and place them as he wishes; within the restrictions listed. (Original assignments may, of course, be changed as the game progresses).
+
+| Location | Trucks Available (in points) |
+| --- | --- |
+| Tripoli | 25 Light140 Medium40 Heavy |
+| Anywhere in Libya | 30 Light100 Medium25 Heavy |
+| Any Air Facility | 10 Light50 Medium |
+
+The Italians have a major repair facility at Tripoli, and a temporary facility at Tobruk and Benghazi.
+
+[60.34] Axis Initial Supply Status: The Axis Player receives Dumps with the following supplies at the following locations:
+
+Supply (in points)
+
+| Location | Ammo | Fuel | Stores | Water |
+| --- | --- | --- | --- | --- |
+| Tobruk (C 4807) | 200 | 2000 | 500 | - |
+| Bardia (C 4321) | 100 | 1000 | 200 | - |
+| Benghazi | 100 | 250 | 100 | - |
+| Derna (B 5925) | - | 250 | 50 | - |
+| Tripoli (box) | 250 | 5000 | 250 | - |
+| Dump 1* | 1000 | 1500 | 1500 | 200 |
+| Dump 2* | 1000 | 1500 | 1000 | 200 |
+| C 0716 | 100 | 50 | 50 | - |
+
+*These and two Dummy supply dumps may be placed in any hex on map section C in Libya that is not within four hexes of a Commonwealth unit.
+
+In addition the Axis Player receives a total of 1200 Ammo, 850 Fuel, 100 Stores and 100 Water Points which may be freely distributed among his airfields.
+
+[60.35] The Italian Player may use all Axis coastal shipping counters. They start the game in Tripoli.
+
+[60.36] The Axis Player's Strategic attacks on Malta are restricted to forces called for by Availability Level I (see the Axis strategic Commitment Chart, case 44.41).
+
+[60.37] The Italian Player must plan convoy runs for the remainder of September, 1940, prior to starting the game. He may only use lanes 2,3 and 6.
+
+Consult the Convoy Availability Charts to see what shipping the Italian Player has. He receives all reinforcements as per the Reinforcement Track.
+
+## 60.4 COMMONWEALTH FORCES
+
+[60.41] Commonwealth Initial Deployment (Hex: Units)
+
+C4131: 2nd Scots Guards (I); 31st Field Arty Regt (4 In); Trucks: 10 medium.
+
+C3926: 1st Coy French Motor Marines; Trucks: 2 medium.
+
+C3922: 3rd Coldstream Gds/(I); 1st Kings Royal Rifle Corps (I; 7Spt/7); 4th RHA (7Spt/7); 7th Medium Arty Regt; Trucks: 15 Medium, 5 Heavy.
+
+C3721: 1st Royal Northumberland Fusiliers (I); 3rd RHA (AT; 7Spt/7); Trucks: 5 medium, 5 light.
+
+C3520: 1st RTR (7/7); Trucks: 5 medium. C3320: 2nd Rifle Bde (I; 7Spt/7); Trucks: 10 medium.
+
+C3020: 11th Hus (R; 7Spt/7); Trucks: 3 Medium.
+
+D3714: Matruh Garrison (I; Att: 1 Essex 23/70; 1st Durham Lt Inf 23/70; 1st South Staffordshire; Trucks: 5 light, 15 medium, 5 heavy.
+
+D3612: 7th Armored Division (Det: all 7 Arm Div. units listed above); Trucks: 5 light, 5 medium, 5 heavy.
+
+D3615: 4th Indian Division (Det: 31st Field Arty and 7th In Bde); Trucks: 5 light, 20 medium, 2 heavy.
+
+E1829: 16th Inf Bde (70); Trucks: 20 medium.
+
+Alexandria (E3613 &/or 3714): HQ: 2nd New Zealand Division; 4th NZ Bde (2 NZ); 27th NZ MG Bn (2 NZ); 2nd NZ Cavalry (2 NZ); 4th NZ Field Arty Regt (2 NZ); Trucks: 10 light, 15 medium, 5 heavy.
+
+Cairo and/or Helwan (E 1430): In Training: 6th Australian Division (Less: 19 Aus Bdg; 2/1AFld Arty; 2/2AFld Arty).
+
+Cairo: 8th Field Arty Regt; 1st Welch (I); 1st Cheshire MG Bn; 2nd King's Own Ryl Regt (I).
+
+Anywhere on Map D or E: 8th Medium Arty Regt; 65th Anti-tank Regt; 149th Anti-Tank Regt; 9th Heavy AA; 15th Light AA; 57th Light AA.
+
+Note: 1st Welsh counter bears the same coloration as Indian Units.
+
+Broken Down Vehicles
+
+Alexandria: 2 TOE of A9 Cruiser Tanks; 1 TOE of A10 Cruiser tanks.
+
+[60.42] Commonwealth North African Air Force The following planes, SGSU's and pilots may be placed at any Commonwealth N. African air facility, within the capacity of that facility.
+
+Total
+
+| Plane | Available | Refitted |
+| --- | --- | --- |
+| Lysanders | 12 | 8 |
+| Bombays | 15 | 12 |
+| Sunderlands | 18 | 11 |
+| Blenheim Mk. I's | 26 | 18 |
+| Blenheim Mk. IV's | 12 | 12 |
+| Blenheim Mk. IVF's | 9 | 5 |
+| Gladiators | 36 | 30 |
+| Hurricane Mk. I's | 6 | 4 |
+| Morane 406's* |  | 2 |
+| Potez 63/11* | 2 | 2 |
+| Valentia's | 3 | 1 |
+
+*May be in the same squadron (Free French).
+
+Pilots Available: 1 Three, 5 Two's and 8 One's.
+
+SGSU Available: 14.
+
+[60.43] Commonwealth Second-Third Line Trucks The Commonwealth Player receives the following Truck Points; He may assign them and place them as he wishes, within the restrictions listed. (These will change).
+
+Location Truck Points Available
+
+| Any hex in Cairo | 40 Medium 10 Heavy |
+| --- | --- |
+| Alexandria | 10 Light 20 Medium |
+| Anywhere, maps | 15 Light 40 Medium 5 Heavy |
+| Any Air Fac-ility | 5 Light 30 Medium 20 Heavy |
+
+<!-- page 079 -->
+
+[60.44] INITIAL SUPPLY STATUS
+
+| Location | Ammo | Fuel | Stores |
+| --- | --- | --- | --- |
+| Mersa Matruh (D3714) | 1000 | 3000 | 4000 |
+| Sidi Barrani (C4131) | 250 | 500 | 100 |
+| Dump I | 500 | 750 | 500 |
+
+The Dump I dump and one dummy dump may be placed anywhere in Egypt on map C or D. Remember that unlimited supply points are available in Cairo and Alexandria.
+
+Air Supply (Distribute amongst Air Facilities as desired)
+
+Ammo: 200
+
+Fuel: 250
+
+Stores: 50
+
+Unlimited Supplies in Cairo/Alexandria (as per rules)
+
+The Commonwealth Player has his Major Repair Facility in Alexandria. He has one Temporary Facility in Mersa Matruh.
+
+[60.45] Commonwealth Fleet: The Commonwealth Player has a total of one battleship, three cruisers and seven destroyers available at the beginning of the campaign. These are deployed according to the Commonwealth Fleet Schedule (see Section 30.0). The warships may not be moved until the first OpStage of the second Game-Turn. Their combat ratings are unaffected (i.e., they do not need repair and may fire).
+
+The following units are available and in Port at Alexandria:
+
+| Number | Type |
+| --- | --- |
+| 2 | Battleships |
+| 2 | Cruisers |
+| 4 | A. A. Cruisers |
+| 6 | Destroyers |
+
+The following units are in Valletta, in Malta:
+
+| Number | Type |
+| --- | --- |
+| 1 | Cruiser |
+| 1 | A. A. Cruiser |
+| 2 | Destroyer |
+
+No Fleet units may be moved until the September 1/IV, Stage/Turn. All ships may use their AA Ratings.
+
+[60.46] Malta
+
+Planes:
+
+| 15 Hurricane MkI's | (2 SGSU's) | (12 Ready) |
+| --- | --- | --- |
+| 12 Swordfish | (1 SGSU) | (9 ready) |
+| 3 Gladiators | (1 SGSU) | (all ready) |
+| 1 Sea Gladiator | (1 SGSU) | (all ready) |
+
+Pilots:
+
+4 Two's, 6 One's
+
+AA: 17 AA Points distributed as player sees fit
+
+State of Air facilities: The Malta bases have an initial capacity of five SGSU's. These may be spread amongst the Malta facilities as the player wishes. Construction on increasing the capacity of Malta Air Facilities may begin in October, 1940.
+
+[60.47] The Commonwealth Player uses his Reinforcement Track as printed, bringing in units where and when listed (Remember that some units need Training, which means that other units have to be assigned as Training Units!) No Replacement Points may arrive before November 1940.
+
+## 60.5 AIR FACILITIES
+
+The following Air Facilities are in existence. Players will note that Air facilities may be used by anyone Who controls them. All facilities in Egypt
+
+belong to the Commonwealth; all those in Libya belong to the Italians. at the start of the game.
+
+| Airfields |  |
+| --- | --- |
+| City/Village | Hex |
+| Abbassia | E2132 |
+| Aboukir | E3815 |
+| Abu Seier | Off-Map E(3433) |
+| Alexandria | Both hexes, (E3613, 3714) |
+| Almaza | E2133 |
+| Amiriya | E2212 |
+| Barce | B5504 |
+| Benina | A4829 |
+| Dekheila | E3512 |
+| Deversoir | Off-Map E(1833) |
+| El Adem | C4507 |
+| El Berca | A4728 |
+| Fayid | Off-Map |
+| Ft. Maddalena | C3019 |
+| Ismailia | Off-Map |
+| Kabrit | Off-Map E(1833) |
+| Martuba | B5526 |
+| Mersa Matruh | D3714 |
+| Soluch | A4130 |
+| — | B5825 |
+
+The four Tripoli/Tunisia boxes (off-map).
+
+| Air Landing Strips |  |
+| --- | --- |
+| Augila | B0707 |
+| Bardia | C4321 |
+| Bir el Gubi | C4108 |
+| Burg el Arab | E3109 |
+| Buq Buq | C3926 |
+| El Agheila | A1816 |
+| El Hamman | E3007 |
+| Ft. Capuzzo | C4020 |
+| Fuka | D3323 |
+| Gambut | C4414 |
+| Gazala | B4933 |
+| Giarabub | C1014 |
+| Maraua | B5410 |
+| Matten Baggush | D3520 |
+| Mechili | B4921 |
+| Menastir | C4419 |
+| Qotifiya | D3227 |
+| Sidi Azeiz | C4218 |
+| Sidi Barrani | C4131 |
+| Sidi Haneish | D3418 |
+| Sidi Omar | C3618 |
+| Sollum | C4021 |
+| Siwa | C0127 |
+| Tmimi | B5229 |
+| Tobruk | C4807 |
+| Ztert | B5917 |
+| — | C4119 |
+| — | D3231 |
+| — | D3416 |
+| — | D3516 |
+| — | D3903 |
+
+Note: Insufficient Air Landing Strip counters are provided. Use blanks.
+
+Flying Boat Basins
+
+| Alexandria | E3614 |
+| --- | --- |
+| Bomba | B5331 |
+
+Port Said (off-map E4033).
+
+Flying Boat Alighting Areas Derna B5925
+
+## 60.6 INITIATIVE
+
+For this Scenario Group, the Italian Player has the Initiative for the entire first Game-Turn. Starting with the second Game-Turn, players determine Initiative as per the rules for such.
+
+## 60.7 CONSTRUCTION ON THE MAP AT THE START OF THE GAME
+
+There are no minefields, fortifications, or pipeline (other than those provided by the RR). The RR runs to Mersa Matruh (D3714) and ends there. All ports are at listed Efficiency with the exception of
+
+Tobruk, which is at Efficiency Level 7 (the San Giorgio is partially sunk, blocking the harbor).
+
+## 60.8 FIRST SCENARIO GROUP VICTORY CONDITIONS
+
+### 60.81 Graziani's Offensive
+
+Italian Strategic Victory: The Italian Player must take and hold either Alexandria or Cairo (any hex) with a combat unit that can be supplied (by convoy) from any hex on Game-Map D.
+
+Italian Decisive Victory: The Italian must take and hold (occupy) both Mersa Matruh and Siwa with any combat unit that can be supplied by convoy from Tobruk.
+
+Italian Tactical Victory: The Italian must take and hold (occupy) Sidi Barrani and retain possession of Sollum (C4021) and Fort Maddalena and Giarabub in supply (as above, to Tobruk)
+
+Commonwealth Tactical Victory: Must take and hold Sollum and Halfaya Pass (C3922) as well as Siwa (C0127) tracing supply by truck convoy back to Alexandria or Cairo.
+
+Commonwealth Decisive Victory: Must take and hold Bardia, Fort Maddalena, Sidi Omar, Sollum and Siwa, supply as above.
+
+Commonwealth Strategic Victory: Must take and hold Tobruk; supply as above.
+
+### 60.82 The Italian Campaign
+
+Players are awarded points for holding (occupying) the following locations. Units holding such places must be combat units (i.e., units with nonparenthesized Close Assault Ratings) and they must be able to trace supply of not more than one Game-Turn's duration back to a Supply Dump or City which can eventually be traced back either to Cairo (Commonwealth) or Tripoli (Italian).
+
+Victory Points
+
+| City/Village | Italians Hold | Commonwealth Holds |
+| --- | --- | --- |
+| Mersa Matruh | 100 | 0 |
+| Tobruk | 50 | 25 |
+| Derna | 20 | 30 |
+| Giarabub | 10 | 10 |
+| Siwa (C0127) | 10 | 10 |
+| Benghazi | 10 | 50 |
+| Agedabia (A2629) | 10 | 50 |
+| Mersa Brega (A2021) | 0 | 50 |
+
+If there are no Italian combat units that can trace a Supply Line on the game-map the Commonwealth Player wins a Strategic Victory. All other conditions produce a simple “Victory”. Most points wins. These conditions are based on what actually happened, and less on actual objectives.
+
+## 60.9 AIR & LOGISTICS GAMES ABSTRACTIONS
+
+This Case lists the adjustments needed in addition to those given in Case 59.6 in order to play this scenario without the Air and/or Logistics Game(s).
+
+### 60.91 Air Abstracted
+
+(Land & Logistics Games): None.
+
+### 60.92 Air & Logistics Abstracted (Land Game Only):
+
+A. The Players' ability to bring in Motorization Points is equal to their respective abilities to bring in Medium Truck Points (i.e., each Medium Truck Point equal one Motorization Point).
+
+B. Axis Initial Supply Status: Case 60.34 is replaced by the following:
+
+| Location | Regular Supply Units | Each Ammo | with Fuel |
+| --- | --- | --- | --- |
+| Tobruk (C 4807) | 3 | 15 | 50 |
+| Bardia (C 4321) | 2 | 10 | 40 |
+| Benghazi (B 4827) | 1 | 10 | 10 |
+
+<!-- page 080 -->
+
+| Derna (B 5925) | 1 | - | 10 |
+| --- | --- | --- | --- |
+| Tripoli (box) | 8 | 5 | 60 |
+| Dump 1* | 3 | 40 | 50 |
+| Dump 2* | 3 | 40 | 50 |
+| C 0716 | 1 | 20 | 6 |
+
+*In any one hex on map-section “C” in Libya, not within four hexes of a Commonwealth unit.
+
+In addition, the Axis Player receives two groups of three dummy supply unit counters which may be placed according to the rules for Dumps 1 and 2.
+
+C. Commonwealth Initial Supply Status: Case 60.44 is replaced by the following:
+
+| Location | Regular Supply Units | Ammo | Each with Fuel |
+| --- | --- | --- | --- |
+| Mersa Matruh (D 3714) | 5 | 40 | 60 |
+| Sidi Barrani (C 4131) | 1 | 40 | 60 |
+| Dump 1*. | 3 | 40 | 30 |
+
+*All three in any one hex on map-section “D” west of Mersa Matruh.
+
+In addition, the Commonwealth Player receives one group of three dummy supply units which may be placed according to the rule for Dump 1.
+
+In addition, Alexandria and Cairo each possess three regular supply units, each supply unit containing 40 Ammo & 60 Fuel.
+
+[60.93] Logistics Abstracted (Land & Air Games): A. The Players' ability to bring in motorization points is equal to their respective ability to bring in Medium plus Heavy Trucks (i.e., each Medium and each Heavy Truck is equal to one motorization point).
+
+B. Axis Initial Supplies: As in 60.82 “B” above and in addition a total of 5 regular supply units, each with 40 Ammo and 15 Fuel Points, to be distributed among and placed on any Axis airfields(s).
+
+C. Commonwealth Initial Supply Status: As in 60.82 “C” above and in addition a total of 2 regular supply units each with 20 Ammo and 12 Fuel Points to be distributed among and placed on any Commonwealth air facilities.
+
+---
+[← 59.0 INTRODUCTION TO SCENARIOS](59-introduction-to-scenarios.md) · [61.0 SCENARIO GROUP TWO: THE DESERT FOX →](61-scenario-group-two-the-desert-fox.md)

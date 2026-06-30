@@ -1,0 +1,140 @@
+<!-- 21.0 BREAKDOWN -->
+# 21.0 BREAKDOWN
+
+### COMMENTARY:
+
+The great problem with the desert was not really the heat, which was bad enough. The major problem was the incredible wear and tear that vehicles incurred. The desert got into everything, and this deadly combination of heat, sand, and rocky ground wreaked havoc on all moving parts. Tanks used to going 1000 miles without an overhaul would collapse after one day's hard travel. The rules for Breakdown and Repair attempt to simulate this facet of the Desert Campaign. Like many other rules in CNA, Breakdown requires working with a lot of numbers. The rule itself is
+
+<!-- page 033 -->
+
+simple; it is the record-keeping that will tax the imagination (and patience). Sheets for Breakdown and Repairs are provided.
+
+### GENERAL RULE:
+
+Essentially, all vehicles, except motorcycles and those vehicles assigned (abstractly) to gun units (Artillery, Anti-Tank, AA/Flak, etc.) are subject to Breakdown. Whether a given unit will break down depends on the distance traveled and the type of terrain encountered in a given Operations Stage. Furthermore, certain types of vehicles break down faster than others, and this is taken into account. In general, each type of terrain has a Breakdown Factor, and for each hex entered during movement the moving vehicle accumulates Breakdown Points. When the unit ceases movement, the Player totals the Breakdown Points accumulated, consults the Breakdown Table, adjusts the Breakdown PointColumn for vehicle type, and rolls two dice, adding them together. The result is the percentage of vehicles (of a given type) in that unit that have Broken down. Broken down vehicles may not move, defend or attack. They are represented by Broken down Unit Counters. Broken down units may be captured (by the Enemy) or retrieved (by the owning Player). Either way, Broken down vehicles may be Towed back to a Repair Facility for Maintenance, or they may be Repaired in the Field (see Section 22.0 for Repairs).
+
+### CASES
+
+## 21.1 WHICH UNITS BREAKDOWN
+
+[21.11] Only the following vehicles are subject to Breakdown: Truck Points, tank, armored reconnaissance/armored car and self-propelled gun TOE Strength Points whether they comprise part of a unit or are Replacement Points.
+
+[21.12] Each specific type of TOE Strength Point has its own Breakdown Adjustment Rating (BAR). BAR's are listed below and in the various Tank & Gun Characteristics Charts. For example, an Italian M 13/40 has a BAR of 2R while the Commonwealth Sherman has a BAR of zero.
+
+[21.13] The Breakdown Adjustment Rating is used to adjust the Breakdown Points column to the left or right when rolling to determine Breakdown.
+
+[21.14] Breakdown Adjustment Summary
+
+|  | Breakdown Adjustment |
+| --- | --- |
+| Type of Point | Rating |
+| All Trucks | 2 Left |
+| All Armored Car | 1 Left |
+| ArmRecce |  |
+| SP Guns | 1 Left, 2 Right* |
+| Tanks | 1 Left, 2 Right* |
+
+*Listed individually on the appropriate Tank & Gun Characteristics Chart.
+
+[21.15] Vehicles are never required to check for Breakdown when moving to, from or amongst the Axis off-map Tripoli/Tunisia boxes.
+
+## 21.2 WHEN BREAKDOWN OCCURS
+
+[21.21] Each hex (or rather the terrain in the hex) possesses a Breakdown Point Value, which is listed on the Terrain Effects Chart (8.37). In addition, certain types of hexsides (e.g., Wadis) also have a Breakdown Point Value. The Breakdown Point Value is the number of Breakdown Points a motorized unit or vehicle accumulates when moving into that type of terrain/hex and/or through that type of hexside. Breakdown Point Values for given terrain types may be modified by Weather (see Section 29.0).
+
+[21.22] Combat does not cause Breakdown, although any movement (Retreat, Reaction, etc.) does accumulate Breakdown Points.
+
+[21.23] As a vehicle or motorized unit (see Case 21.11) moves, it accumulates Breakdown Points. All of the vehicles/motorized units in a stack or Parent formation accumulate the Breakdown Points for given terrain. Example: (see bottom of this page)
+
+[21.24] Whenever a vehicular or motorized unit ceases movement — whether it has finished its Movement for that Operations Stage or will be moving again under the Continual Movement Rule — the owning Player must check for possible Breakdown.
+
+[21.25] All Breakdown Points garnered by a unit during a given Operations Stage are accumulated until the end of that Stage. Simply because a Player checks for Breakdown for a unit does not mean those Breakdown Points accumulated up to that point are discharged; they continue to accumulate up until the end of the Stage (see Case 21.26). In other words, Breakdown Points are cumulative within an Operations Stage — and they are cumulative and applicable during both Players' portions of the Operations Stage.
+
+[21.26] If a unit has had a Breakdown check during an Operations Stage (regardless of whether or not it actually suffered any Breakdown), it is required to check for Breakdown again only if it has accumulated enough Breakdown Points to carry over into the next highest Breakdown Point Column on the Breakdown Table (21.38). Example: The LII (M) Battalion (in Case 21.23) had accumulated 15 Breakdown Points the first time it moved. During the same Operations Stage it moves again, but it moves only one hex, accumulating 2 more Breakdown Points for a total of 17. As it is still in the same column (21-30; because M/13's adjust +1 columns higher because of their Breakdown Adjustment Rating), it need not check for Breakdown when it stops. However, in the same Operations Stage, but in the opposing Player's movement, the LII retreats, accumulating 10 more Breakdown Points, for a total of 27. As it is now in a new (higher) column, the unit must check again for Breakdown. A unit does not check for each column; it checks only when it stops, if it is in a higher column. Note: the Breakdown Rate is virtually geometrically progressive — the further you move the worse it gets. The Player is penalized for moving, stopping, moving, stopping, etc.
+
+[21.27] A unit does not check for Breakdown until it has accumulated more than three Breakdown Points, regardless of that unit's Breakdown Adjustment Rating.
+
+[21.28] Breakdown is determined separately for each type of unit: Trucks, Tanks (including S.P. Guns), or Armored Recce and A/C vehicles. Furthermore, if there are tanks and/or Guns
+
+within a stack/Parent formation with differing Breakdown Adjustment Ratings the Player checks separately for each group of tanks and Guns with a different Rating. A different Breakdown diceroll is used for each separate type.
+
+[21.29] Important: In addition to Case 21.28, Players must check separately for each type of unit in a stack that is in a different Breakdown Point column. Example: A Recce unit moves and accumulates 15 Breakdown Points, entering a hex with a second Recce unit (which has not moved), Recce #1 continues to move along with Recce #2, both units picking up 23 more Breakdown Points. Recce #1 has accumulated 38 Breakdown Points, Recce #2, 23. Recce #1 and Recce #2 determine their Breakdown separately, because they are using different Breakdown Point columns.
+
+## 21.3 HOW BREAKDOWN IS DETERMINED
+
+[21.31] To determine Breakdown, the Breakdown Table (21.38) is used. Each column on the Breakdown Table corresponds to a Range of Breakdown Points accumulated. Thus 31-40 means anywhere from 31 to 40 Breakdown Points accumulated at the time of Breakdown check (all fractions are rounded up: 20.5 = 21). The Breakdown Table uses two dice, read sequentially.
+
+[21.32] After the Player checking for Breakdown notes the Breakdown Points accumulated for a given unit, he takes into effect any Breakdown Adjustment Rating (21.13) as well as any adjustments to Breakdown Rates because of Weather (see Case 21.37). These two are cumulative: a 2 column left Breakdown Adjustment Rating plus a one-column-higher shift for Weather makes for a final adjustment of one column lower.
+
+[21.33] Units accumulating more than 71 Breakdown Points use the 71+ column. You cannot adjust higher than that column, and that column is considered as one column for purposes of adjustment. Units that have their column adjusted lower than the 4-10 column do not suffer Breakdown. Remember the adjustments are in columns, not in points accumulated.
+
+[21.34] Having determined the Breakdown Column, the Player throws two dice, reading sequentially, and cross-referencing that diceroll with the Breakdown Column. The result is the percentage of TOE Strength Points Broken down within the units for which the Player is rolling (remember Cases 21.28 and 21.29). Each Truck Point is equivalent to a TOE Strength Point for this purpose. (Remember that it is the TOE Strength Points that break down, not the units.) Example: A stack with 30 Truck Points and 20 TOE Strength Points of Crusader I's accumulates 35 Breakdown Points and stops. The Player checks for Breakdown. The Trucks have a Breakdown Adjustment
+
+In the above example, the Italian LII (M) Tank Battalion — containing, for example's sake, all M/13's — has accumulated 15 Breakdown Points for the illustrated movement: 1/2 Breakdown Point
+
+for each of the two Road hexes (it was using Road Movement), 8 for entering the Rough terrain hex, 2 for crossing the Ridge hexside and 4 for entering the Clear Terrain hex.
+
+<!-- page 034 -->
+
+Rating of 2L, and the Weather is Hot, so the 31-40 column is adjusted one lower (-2 and +1 = -1). The Player rolls a 33, consults the 21-30 column and sees that 10% of his Truck Points (or 3 Truck Points) have Broken down. He then checks for his Crusaders: they have a Breakdown Adjustment Rating of 1R, plus 1 more for the Hot Weather, adjusting the 31-40 column up to the 51-60 column. The Player rolls a 61, and 33% (or 1/3) of his Crusader I's — or 7 TOE Strength Points — have Broken down.
+
+[21.35] All Breakdown fractions are rounded up, (as the 6.7 Tank TOE Strength Points in Case 21.34 became 7). Exception: If the Player is checking for a unit that has only one TOE Strength Point, all percentage results of 10% are ignored.
+
+[21.36] All breakdowns must be distributed as evenly as possible amongst types of vehicles as well as different units. Thus, if two German Panzer battalions, each with different types of tanks (all German tanks have a Breakdown Adjustment Rating of zero) suffers 25% Breakdown, the Breakdown must be distributed proportionally as to all types of tanks and between the different Panzer battalions.
+
+[21.37] Weather affects the Breakdown Rates/Columns as follows (consult also Section 29.0):
+
+a. Normal Weather: No Effect.
+
+b. Hot Weather: For each Breakdown check, adjust one column higher (1R).
+
+c. Rainstorms: All Road Breakdown Point Values are treated as Track Breakdown Point Values.
+
+d. Sandstorms: If at least 50% of a unit's Movement (calculated in Capability Points expended) in a particular Movement Phases, Retreat, Reaction, etc., is on a game-map with Sandstorms adjust the Breakdown column one higher (1R).
+
+[21.38] Breakdown Table
+
+(see Charts and Tables)
+
+## 21.4 BROKEN DOWN VEHICLES
+
+[21.41] Breakdown occurs (for the sake of simplicity) in the hex in which the units checking for Breakdown have ceased movement. However, if a unit checking for Breakdown started its movement within two hexes (with no Friendly units, Friendly ZOC's; or impassable intervening terrain) of an Enemy combat unit larger than a single battalion, then at least 50% of all TOE Strength Points that Break down must be placed in the hex in which that unit began movement.
+
+[21.42] When Breakdown occurs, the Player places a Broken Down Vehicle marker in the hex in which the Breakdown has occurred and records the necessary information on his Broken Down Vehicles Sheet. Broken Down Vehicle Markers are numbered so that the Player may keep track of what is represented by each different marker.
+
+[21.43] When a Truck Breaks down, its cargo stays with it, unless there are sufficient empty Trucks to pick up the slack. Players will note that a Motorized Infantry battalion that loses even one Truck Point that it cannot replace will become “un-motorized” because of the rule that the entire battalion (all TOE Strength Points) must be in trucks for the unit to be considered motorized.
+
+[21.44] Broken down vehicles have no Capability Point Allowance, nor may they participate in combat of any type. Broken down vehicles may be captured (by the Enemy) — see Case 21.5 — or retrieved by the owning Player (see Towing, Case 21.6).
+
+[21.45] Supplies on broken down Trucks may be transferred to working Trucks, in the same hex at the time of Breakdown at a cost of 2 Capability Points (the same as to load/unload). Infantry TOE Strength Points in broken down trucks may "dismount" (1 CP) from the trucks and start walking. Any Capability Points they have accumulated while in a Truck count against their non-motorized Allowance of 10 (or 8), with the exception that if they have used more than 10 (or 8) while motorized they are considered to have used only that 10 (or 8) — not more. If the men and/or supplies are to be picked up by Truck Points that were not attached to the unit which broke down at the time of Breakdown, there is a Capability Point cost for Loading.
+
+## 21.5 CAPTURING BROKEN DOWN VEHICLES
+
+[21.51] Broken down vehicles may be captured by the Enemy. Players should differentiate between the capture of Broken down vehicles and (1) the capture of Destroyed Tanks (see Case 14.5); as well as (2) the Capture of abandoned vehicles.
+
+[21.52] At any time during movement, if a Friendly combat unit of battalion-size or larger moves adjacent to a Broken Down Vehicle marker that vehicle (or vehicles) is captured.
+
+[21.53] Broken down vehicles that are either stacked with Friendly combat units, HQs, or Engineers, or in a Friendly-controlled hex may not be Captured.
+
+[21.54] The capturing unit and the broken down vehicle must be adjacent through passable terrain; i.e., a German Panzer battalion at the bottom of an Escarpment could not capture Enemy Broken down tanks at the top of the escarpment because the German tanks cannot move across and up an escarpment hexside.
+
+[21.55] Captured Broken down vehicles may be placed (towed) a maximum of three hexes in any direction at the instant of capture. The path of this placement, which costs no Capability Points to any unit involved, may not be traced through Enemy units, Enemy Zones of Control or non-passable terrain. (Units being towed are considered vehicles). Note: The capturing unit does not expend any Capability Points for this activity, and may indeed continue to be moved.
+
+## 21.6 TOWING
+
+[21.61] All vehicles scheduled for repairs at a Repair Facility — including Broken down vehicles and destroyed tanks, whether retrieved by the Friendly Player or captured by the Enemy Player — may be towed to a Repair Facility in order to undergo repairs.
+
+[21.62] Only vehicles not undergoing Field Repair (or any other type of repair) may be towed. All towing occurs in the Repair Stage, except for instances such as Case 21.55.
+
+[21.63] There are no towing vehicles (however, see 22.6 and 22.7). Rather, each Broken Down Vehicle marker or Destroyed Tank marker may move 10 Capability Points per Repair Phase. They may move only in the Repair Phase, and they may not React or Retreat Before Combat, etc. The marker is towed as though it is a Medium Truck.
+
+[21.64] No vehicle may ever be towed if it is in an Enemy-controlled hex with the exception of towing at the instant of capture (see Cases 21.55 and 14.53). This restriction applies at all times during the Repair Phase. Friendly units negate Enemy Zones of Control.
+
+[21.65] Towing incurs no costs for Fuel, Stores or Water. Towed vehicles do not undergo Breakdown.
+
+[21.66] A Broken down vehicle that unsuccessfully undergoes Field Repairs may not be Towed in that Repair Phase.
+
+[21.67] Broken down vehicles and destroyed tanks must be towed towards the nearest Temporary or Major Repair Facility, if they are being towed.
+
+---
+[← 20.0 REINFORCEMENTS, REPLACEMENTS AND COMMONWEALTH WITHDRAWALS](20-reinforcements-replacements-and-commonwealth-withdrawals.md) · [22.0 REPAIR →](22-repair.md)

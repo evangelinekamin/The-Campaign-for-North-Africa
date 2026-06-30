@@ -1,0 +1,167 @@
+<!-- 24.0 CONSTRUCTION -->
+# 24.0 CONSTRUCTION
+
+### GENERAL RULE:
+
+Fortifications, minefields, air facilities, repair facilities, roads, railroads and supply dumps all come into existence (for the most part) through construction. Construction entails the use of manpower under the leadership of Engineers, along with the expenditure of time and supplies. Construction occurs in the Construction Segment of the Organization Phase (within the Operations Stage), and it may be affected by weather. Units involved in construction may not expend any Capability Points during an Operations Stage; otherwise that construction is halted.
+
+### CASES:
+
+## 24.1 HOW CONSTRUCTION WORKS
+
+[24.11] All construction is initiated and undertaken in the Construction Segment of the Organization Phase within each Operations Stage. Construction is always completed at the beginning of the Construction Segment of a succeeding Operations Stage, depending on how long the construction takes. The number of Operations Stages required to complete construction are listed on the Construction Chart (24.17). These Operations Stages include the Operations Stage in which construction is started.
+
+[24.12] If units involved in construction expend any Capability Points during the Operations Stage construction is halted and that Operations Stage does not count towards Construction. Units involved in construction do not affect Road/Track Stacking Limits.
+
+[24.13] In order to complete construction of a given item the Player must have the necessary supplies on hand in the hex and actually expend them (listed on the Construction Table and described in the following Cases). Such supplies must begin the Construction Segment in the given hex; they are expended during the Construction Segment (even if the units involved in construction are later forced to move or fight).
+
+[24.14] In addition to supplies expended for construction, units involved in construction expend all normal supplies as required (Stores, Fuel, etc.)
+
+[24.15] No more than one project may be under construction by a given unit at any one time, and units involved in construction are subject to all stacking rules.
+
+[24.16] A unit may always voluntarily cease construction without any penalty other than that construction is halted.
+
+[24.17] Construction Chart (see Charts and Tables)
+
+[24.18] Demolition Chart (see Charts and Tables)
+
+## 24.2 ADVERSE EFFECTS ON CONSTRUCTION
+
+[24.21] During Hot Weather each construction site requires the expenditure of 10 Water Points in addition to any other requirements.
+
+[24.22] No construction may occur in a hex affected by a sandstorm or a rainstorm. This does not stop construction entirely; it only prohibits that Operations Stage from counting towards construction time costs. However, if a unit involved in construction leaves a hex during a sandstorm or rainstorm, construction is considered to have stopped completely and must start over again from the beginning.
+
+[24.23] Units pinned by artillery fire or air bombardment may not engage in construction. The effects of this Case are similar to those of Case 24.22.
+
+[24.24] The presence of Friendly units not engaged in construction has no effect on the process of Construction. Remember the stacking limits, however.
+
+## 24.3 CONSTRUCTING MINEFIELD
+
+[24.31] Minefields may be constructed by any Engineering unit (or Commonwealth HQ Engineers). Engineers may construct regular minefields and/or dummy minefields. The minefield counters indicate whether the minefield is real or dummy on the reverse sides of the counter.
+
+[24.32] A minefield requires one full Operations Stage to construct (lay), regardless of whether it is a dummy or an actual minefield. Thus, a minefield started at the beginning of one Operations Stage will be completed by the beginning of the Construction Segment of the next Operations Stage.
+
+[24.33] In order to lay a regular minefield the Player must have an Engineering unit, 15 Store Points and 15 Ammunition Points in the hex. The supplies are expended at the start of construction. To indicate a minefield under construction, place an Under Construction marker in the hex.
+
+[24.34] A dummy minefield is constructed in the same way as a regular minefield, except that the
+
+Player expends no Ammunition Points and only three Stores Points.
+
+[24.35] Minefields may be constructed in clear, sand/gravel, or rough hexes. Only one Minefield (real or dummy) may be constructed in any one hex. Minefields may not be constructed in major cities.
+
+[24.36] Minefields may not be constructed in Enemy-controlled hexes.
+
+[24.37] See Section 26.0 for the effects of Minefields.
+
+[24.38] If an Engineer unit or HQ unit with Engineering capability spends an entire Operations Stage in a hex with a real minefield (Enemy or Friendly), that Minefield is removed (see Case 23.22). Dummy minefields are removed upon revelation of their status.
+
+## 24.4 CONSTRUCTING FORTIFICATIONS
+
+[24.41] Fortifications are strongly protected defensive emplacements requiring the laying of cement-work, etc. Fortifications are represented by counters as being either Level 1 or Level 2. In additions, major cities have built-in Fortification Levels which may be rebuilt by Engineer units when they are destroyed.
+
+[24.42] In order to construct one Level of fortification, a Player needs one unit (of any size) with Engineering capability plus one Infantry battalion with three or more TOE Strength Points. These units must spend three complete Construction Segments in the hex under Construction (indicated by an Under Construction marker) without expending any Capability Points. At the beginning of the fourth Construction Segment, the Fortification Level is complete, and a Fortification Level counter (with the correct level indicated) is placed in the hex.
+
+[24.43] In addition to Case 24.42, the Player must have present at the beginning of Construction 30 Stores Points. These Stores are then expended and Construction begins.
+
+[24.44] Construction of new fortifications may take place in any hex except mountain, salt marsh, desert, major city, and delta. Fortifications may not be build from scratch in an Enemy Zone of Control.
+
+[24.45] Fortification Levels — as well as Levels of major cities — that have been destroyed by air bombardment or artillery barrage may be rebuilt, using the same guidelines as in Cases 24.42 and 24.43. The major difference is that the rebuilding (or repairing) of fortifications may take place in an Enemy Zone of Control.
+
+[24.46] No other construction — of any type — may take place in a hex which is undergoing fortification construction.
+
+[24.47] Once emplaced, fortifications may not be voluntarily removed. They may be reduced only by air bombardment or artillery barrage. No other type of combat affects fortifications, although fortifications affect combat (see Section 25.0).
+
+[24.48] Fortifications may be built or rebuilt one Level at a time. Levels of a major city may not be built or rebuilt above their original Level of two, with the exception of Alexandria and Cairo, which are Level 3 cities.
+
+## 24.5 ROAD CONSTRUCTION
+
+The Via Balbia is the major — actually the only — road that runs through North Africa. It provides the sole communications link and is of vital impor-
+
+<!-- page 037 -->
+
+tance to both Players. At the beginning of the war, several sections of the Via Balbia were incomplete or in such a state of disrepair as to be nonexistent. Such stretches are noted on the game-map as unfinished roads. In addition, there is a similar stretch on game-map B that avoids the coastal port of Derna. This is the Derna Bypass, built by the Axis to avoid Allied coastal shelling by off-shore bombardment. Finally, the track running between Mersa Matruh and Siwa was tarred over and converted to a road by the 1st SA Road Construction Battalion. All unfinished road sections may be built by construction; any road hexes bombed and destroyed may be rebuilt.
+
+[24.51] Only those sections of road that appear as unfinished road hexes (see Terrain Key on map) may be built into actual road hexes. Neither Player may invent new stretches of road. Any road hex (actual) that has been destroyed by bombing may be rebuilt by construction.
+
+[24.52] Unfinished road hexes and destroyed road hexes (noted by markers for destroyed roads) are treated as tracks for all purposes.
+
+[24.53] There are several ways to Build or Rebuild Road hexes:
+
+a. Any Infantry Battalion of 3 TOE Strength Points or more may build or rebuild one road hex per Construction Stage; or
+
+b. Any Engineer company or HQ with Engineering capability may build or rebuild one road hex per Construction Segment; or
+
+c. Any Engineer battalion alone, or any Engineer company/HQ plus 3 TOE Infantry unit may build or rebuild three road hexes per Construction Segment. The three hexes include the hex the units are in plus any two road hexes adjacent to that hex.
+
+[24.54] For each road hex to be built or rebuilt the Player must expend at the beginning of the Construction Segment two Stores Points that are in the same hex as the constructing units.
+
+[24.55] No Enemy-controlled road hex may be built or rebuild.
+
+[24.56] The Player may use an End of Road marker to indicate how far construction of new road has extended. When an entire stretch is finished, Players should simply note the fact somewhere.
+
+## 24.6 BUILDING AND REPAIRING RAILROADS
+
+There are two railroad lines on the game-maps: the rail complex that crisscrosses the Nile Delta and extends towards Mersa Matruh (eventually to be completed at Tobruk) plus a defunct Benghazi-Barce line. The latter has been included for historical purposes only and may never be used for any reason.
+
+[24.61] The only units that may build railroads (see Case 8.47) are the two New Zealand railroad construction companies (the 10th and the 13th). The NZRRC companies are considered engineering companies, but they may be used only for RR work. All engineer battalions and companies, including the NZRRC — and Commonwealth (only) HQ with Engineering capabilities — may repair destroyed track.
+
+[24.62] One NZRRC company requires two OpStages to build one hex of new track. Two NZRRC companies in the same hex can build one hex of new track in one OpStage.
+
+[24.63] Each Engineer Unit may rebuild three destroyed railroad hexes per Construction Segment. The unit may rebuild the hex it occupies plus any two hexes adjacent to the Engineer unit.
+
+[24.64] For each Railroad hex to be built or rebuilt there must be present with the Engineer unit — and actually expended in the Construction Segment — one Store Point.
+
+[24.65] No Enemy-controlled or Enemy-occupied railroad hex may be built or rebuilt.
+
+[24.66] Railroad hexes may be destroyed by air bombardment or artillery barrage. They may also be destroyed by an Engineer unit, a HQ with Engineer capability, or an Infantry unit with three or more TOE Strength Points, if such a unit spends one complete OpStage in the hex to be destroyed without expending any Capability Points. Destroyed railroad hexes are indicated by placing a Destroyed RR Hex marker on the hex in question.
+
+[24.67] The Alexandria-Mersa Matruh-Tobruk line may be constructed in only one specific direction. Construction must start from the last completed hex extending from Mersa Matruh and grow westward towards Tobruk. No hex may be skipped, and a Railhead marker is provided to indicate the extent of construction. Unbuilt railroad hexes simply do not exist; they serve no function until actually built.
+
+## 24.7 CONSTRUCTING AIR FACILITIES (Air Game Only)
+
+[24.71] Air facilities include airfields, air landing strips, flying boat basins, and flying boat alighting areas. The use of these is covered in the Air Rules.
+
+[24.72] Airfields and flying boat basins may be constructed only by Engineer battalions. Air landing strips and flying boat alighting areas may be constructed by Engineer battalions, Engineer companies, or Squadron Ground Support Units.
+
+[24.73] Air fields or strips may be constructed in clear terrain, rough, major cities, desert or sand/gravel hexes. They may not be constructed in an Enemy-controlled hex. Flying boat facilities may be constructed only in coastal hexes, regardless of the terrain.
+
+[24.74] Airfields and Flying Boat Basins require three Construction Segments to complete, while air landing strips and flying boat alighting areas require one Construction Segment to complete.
+
+[24.75] The supply requirements for building new air facilities are listed on the Construction Chart (24.17).
+
+[24.76] Air facilities may lose their effectiveness — or rather their capacity to maintain squadrons — or be destroyed entirely through bombing. Air landing strips, and flying boat facilities (both) must be built from scratch if destroyed. Airfields are rebuilt Capacity Level by Capacity Level (see Air Rules, Case 36.12). The cost and time to rebuilt one Capacity Level of an airfield is the same as it costs to build an air landing strip. Only one Level may be rebuilt at a time.
+
+[24.77] Air facilities are represented by counters, each of which is lettered for identification purposes. When an air facility is constructed, the Player simply puts the corresponding counter on the game-map. There are no hexes in which air facilities are printed (except for Case 24.78); they must all be constructed, unless provided by the initial set-up for a scenario.
+
+[24.78] A number of air facilities are, in essence, printed on the game-map. Such facilities do not need air facility counters. Each hex in Cairo is considered an airfield. In addition, air facilities for Malta are printed on the Malta map. There are
+
+also air facilities in the Tripoli-Tunis boxes, Commonwealth off-map bases (such as Deversoir; see map E), Crete, Italy, and Sicily. The use of these facilities is covered in various sections of the Air Rules.
+
+## 24.8 CONSTRUCTING REPAIR FACILITIES
+
+[24.81] Only temporary repair facilities may be constructed as new; all major repair facilities are already in existence (see Case 22.31). Both temporary and major repair facilities may have their effectiveness reduced or neutralized by air bombardment and/or artillery barrage. Temporary facilities may be destroyed by the presence of Enemy units; major facilities may not be so destroyed.
+
+[24.82] All Engineer units — including HQ's — may build, rebuild or dismantle temporary repair facilities or rebuild major facilities.
+
+[24.83] Construction of a new temporary repair facility entails the presence of one Engineer unit of any size for three Construction Segments, along with the expenditure of 250 Store Points and 150 Fuel Points (most of which represent machinery, lubricants, etc.). All supplies must be present at the start of construction and are expended immediately.
+
+[24.84] Repair facilities in major cities that have had their City Levels reduced by bombardment (see Case 22.35) may be rebuilt by first rebuilding the Level of the city (see Case 24.4) and then expending 50 Stores Points and 30 Fuel Points, along with the presence of an Engineer unit spending one Construction Segment in the hex.
+
+[24.85] A temporary repair facility may be built in any major city hex or in any village hex. However, no Player may ever have more than two temporary repair facilities at any one time.
+
+[24.86] Temporary repair facilities may be dismantled. It takes one unit with Engineering capability one Construction Segment to dismantle a temporary repair facility. When the facility is dismantled, the Player has 120 Store Points and 25 Fuel Points in that hex. The dismantled facility exists no more, and if a new one is to be built, it must be started from scratch.
+
+[24.87] Temporary repair facilities may not be Constructed in an Enemy-controlled hex. However, all Repair Facilities may be rebuilt or dismantled in an Enemy-controlled hex.
+
+[24.88] A temporary repair facility that is in the process of being dismantled may not be used.
+
+## 24.9 CONSTRUCTING SUPPLY DUMPS AND DUMMY SUPPLY DUMPS
+
+A supply dump is a place where supplies (in the Land Game, ammo and fuel only) are stored in a quasi-organized fashion (see Case 54.1). A supply dump may be constructed by having any one TOE Strength Point of any type expend three Capability Points and 20 Store Points (Logistics Game only) in a hex. A dummy supply dump may be constructed in a hex with an expenditure of three Capability Points only. That hex may then be designated a supply dump (dummy or not as appropriate).
+
+Note: Supplies may be placed in a hex not containing a constructed supply dump. The only restriction on the use of such supplies is that trucks “in convoy” may not load such supplies. Players should keep track (obviously) of the presence of supplies in a hex with no supply dump. However, there are restrictions on the maximum number of points that may be so deployed—see the Logistics Game.
+
+<!-- page 038 -->
+
+---
+[← 23.0 ENGINEERS](23-engineers.md) · [25.0 FORTIFICATIONS →](25-fortifications.md)

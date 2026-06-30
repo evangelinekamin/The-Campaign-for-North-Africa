@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Project scratch
+/scratch/
+*.log
+
+# Large source scan (kept local, not versioned) + Windows cruft
+/tmp/
+*:Zone.Identifier
+*.Identifier

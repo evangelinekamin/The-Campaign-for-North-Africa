@@ -1,0 +1,181 @@
+<!-- 19.0 ORGANIZATION AND REORGANIZATION -->
+# 19.0 ORGANIZATION AND REORGANIZATION
+
+### COMMENTARY:
+
+As has been discussed previously in a variety of sections, the Organization of the various units — i.e., which battalions are part of which Brigade, which Brigades and support units form which Division, etc. — is important to the play of the game, particularly as pertains to Stacking. The basic Organizational hierarchy is pyramidal: 2-3 battalions form a brigade, and 2-3 brigades form a Division. This Section discusses which units are Assigned to a Parent Unit and which units may be Attached, how to Attach and Detach units, and when and how units may be built up to maximum strength.
+
+Important: Players should be aware that this Section is one that could cause considerable problems unless certain basic tenets are understood. First of all, this Section is an attempt to formulate Organizational Doctrine; the Players are being forced to mold and use their armies in much the same way as the commanders did 30 plus years ago. And if it frusrates the Player not to be able to do things that are clearly beneficial, imagine how it was to those actually fighting this campaign. Furthermore, these Organizational rules are not, and should not be, considered as strict, rigid proscriptions. Rather, Players will find them easier to use if they attempt to understand the principles underneath them, and then use the accompanying charts and tables as guides. The charts and tables reflect the maximum Attachments and Assignments; anything within those limits can certainly be accomplished. Most of all, this Section should be played with attention to the flavor and meaning of the campaign which is being fought.
+
+### GENERAL RULE:
+
+Each unit represented by a counter in the game is
+
+<!-- page 029 -->
+
+either independent or assigned and/or attached to a Parent Formation. Companies, battalions, and brigades may be assigned and/or attached; division HQ units are always independent. Divisions, brigades, and battalions may have subsidiary units attached or assigned to them (i.e., be Parent Formations). Historical assignments are listed on the Organization at Arrival Chart (O/A Chart, see Case 4.4); within limits, Players may alter these assignments. Players may more freely alter attachments. Limitations on such alterations are generally related to the capacity of the Parent Formation(s) to absorb subsidiary units. The historical TOE of battle (not the units themselves, but how many of each type there were) of every potential Parent Formation is listed on the Formation Organization Chart (19.3). Restrictions on additional attachments are listed for each Formation on the Maximum Unit Attachment Chart (19.5).
+
+## 19.1 DIFFERENCE BETWEEN "ASSIGNED" AND "ATTACHED" UNITS
+
+[19.11] A unit is assigned to a specific Parent Formation if that unit is considered a part of that Parent Formations organization (e.g., the 8th Panzer Regiment — a Brigade equivalent, see Case 9.2 — begins the game assigned to the 15th Panzer Division).
+
+[19.12] A unit is attached to a specific Parent Formation if the counter representing the Parent Formation on the map represents the attached unit as well. (i.e., not only are both the attached unit and the Parent Formation in the same hex, but they are functionally combined into one unit).
+
+[19.13] It is possible for the same unit to have two different Parent Formations simultaneously, one to which it is assigned, and one to which it is attached. A unit may never be attached to more than one Parent Formation at once; nor may a unit ever be assigned to more than one Parent Formation at once. Note: A unit must be in the same hex as a Parent Formation to which it is attached (indeed, it is represented on the game-map by the Parent Formation's counter); it need not be in the same hex as a Parent Formation to which it is assigned. Of course, a particular unit may be both assigned and attached to the same Parent Formation.
+
+[19.14] It is possible for the same unit to be a Parent Formation and to simultaneously be, in turn, assigned and/or attached to another (higher level) Parent Formation. Note that the units attached to a particular Parent Formation may affect whether or not it can be attached in turn to another unit.
+
+Example: If the 1st Kings Royal Rifle Corps was detached from the 7th Armored Division (its assigned Parent Formation) and sent to support the 2nd New Zealand Division; the 1st KRRC, when absorbed by the 2nd NZ would become attached to one units and assigned to another.
+
+## 19.2 UNIT ASSIGNMENTS
+
+Each Parent Formation (or potential Parent Formation) has an inherent set of limitations on the number and/or type of subsidiary units which may be assigned to it. These limitations are listed on the Formation Organization Chart (19.3). Example: An Italian armor Brigade may have assigned to it three armored battalions.
+
+Units enter the game already assigned to a specific Parent Formation. Assignments are generally permanent, with exceptions for eliminated units for historical assignment shifts and assignment pattern shifts, and for British battalions, as detailed in the following Cases. Any new assignments or reassignments are accomplished during the Player's
+
+Reorganization Segment and recorded on the appropriate Parent Formation's TOE Log Sheet.
+
+[19.21] Any Parent Formation which has fewer units assigned to it than its maximum (see Case 19.3) may be assigned additional independent (non-assigned) units up to that limit (e.g., If only two armored battalions were attached to an Italian armor brigade, the Axis Player could, in his Reorganization Segment, assign any independent Italian armored battalion to that brigade). In order to be assigned to a Parent Formation, an independent unit must be currently attached to it.
+
+[19.22] Should a unit's assigned Parent Formation be eliminated, (see Case 19.11), if that — presumably detached — unit survives, it is considered independent and eligible for re-assignment in accordance with Case 19.21 and 19.3.
+
+[19.23] Should an assigned unit be eliminated, the assignment is considered terminated and another independent unit may be assigned to the Parent Formation in the eliminated unit's place. (i.e., eliminated units do not count towards the limitations listed in Case 19.3).
+
+[19.24] The OA Chart (Case 4.45) contains notes concerning historical shifts in assignment relationships for several units. Players are free to either institute or ignore such assignment shifts at their option, within the restrictions of Case 19.21 (see also Case 19.25). Such re-assignments must be accomplished sometime during the month listed on the OA Chart note, or not at all.
+
+Example: When the German 15th Panzer Division arrives it contains the 115th Panzergrenadier (motorized infantry) Regiment, albeit in a somewhat reduced state. At a later date, listed in the notes of the 15th Panzer and 5th/21st Panzer divisions, that the 115th Regiment, originally assigned to the 15th Panzer, becomes part of the 21st (née "5th Light) Panzer Division, taking on some additional units to flesh out its structure. If the Player wishes to switch the 115th to the 21st Panzer Division, the 115th would then be assigned to the 21st Panzer as per this case.
+
+[19.25] As indicated on the Formation Organization Chart (19.3), the historical assignment limitations on Commonwealth armored divisions and brigades changed three times. The Commonwealth Player may, at his option, assign available independent units to such Parent Formations when these changes allow additional units to be assigned. The Commonwealth Player must “unassign” excess units whenever new limitations require him to do so.
+
+[19.26] A special rule applies to Commonwealth Brigades (both Infantry and Armor). Throughout the war, the Commonwealth made it a practice to shuffle individual battalions from one “assignment” to another. This was especially prevalent in the Indian units, where battalions like the 2/5 Manhattan Light Infantry appears virtually everywhere. Therefore, the Commonwealth Player is permitted to pull assigned battalions from a Brigade and replace them with others from another Brigade (or from the unassigned group). Such battalions are then considered assigned to their new Brigade. Battalions may only be reassigned or shuffled; they may not simply be “unassigned” and made independent. Example: The 2nd Armored Brigade (1st Armored Division) may pull the 10th Royal Hussars and 9th Lancers out, send them to Alexandria for refitting (with, perhaps, new tanks, etc.) and replace them with the 4th and 7th Royal Tank Regiment. The latter two units are now assigned to the 2nd Armored Brigade.
+
+[19.27] Some units (designated with an asterisk on their counters) are assigned to Parent Formations
+
+that never made it to Africa. Except in accordance with Case 19.26, such units may not be reassigned.
+
+[19.28] Only independent units may be assigned to a Parent Formation. No unit assigned to one Parent Formation may be assigned to another, except as noted in Case 19.26.
+
+Remember: Assigned units take up “space” in a Parent Unit’s TOE, regardless of where they are. Even if not attached, an assigned unit occupies its allotted space in the Parent Unit’s TOE.
+
+## 19.3 FORMATION ORGANIZATION CHART
+
+(see Charts and Tables)
+
+The Formation Organization Chart lists the assignment limitations of “normal” units of divisional and brigade level. The maximum number of assigned units of each type that make up the units normal organizational structure are listed. A number of units have singular organizational structures, as noted on the OA Chart; such units are limited by those strictures, and not by any listed on the Formation Organization Chart.
+
+[19.31] Allied Formation Organization Chart (see Charts and Tables)
+
+[19.32] Italian Formation Organization Chart (see Charts and Tables)
+
+[19.33] German Formation Organization Chart (see Charts and Tables)
+
+## 19.4 RESTRICTIONS ON ATTACHMENT AND DETACHMENT
+
+Any units assigned to a particular Parent Formation may freely be attached to or detached from that Parent Formation. Most Parent Formations may have some number of additional non-assigned units of certain types, over and above their assignment limits, attached to them. These attachment limits are listed on the Maximum Attachments Chart (19.5). Non-assigned units may also be substituted for “missing” assigned units (Case 19.45).
+
+[19.41] A unit assigned but not attached to a Parent Formation may become attached to that Parent Formation at any time so long as both units are in the same hex, at a cost of one Capability Point each to both the subsidiary unit and the Parent Formation. The counter representing the attached unit is removed from the map. Note that moving such a unit into the hex with the Parent Formation (or vice versa) and immediately attaching it would have no effect upon the Stacking Point value of the Parent Formation (unless if it was a Shell; see Case 9.26).
+
+[19.42] A unit not assigned to a Parent Formation in the same hex may be attached to that Parent Formation subject to the restrictions of Cases 19.4 and 19.5 (if applicable) at a cost of two Capability Points for both units during the owning Player's Reorganization Segment, only. Note that the unit would have to be moved into the hex containing the Parent Formation (or vice versa) during an earlier Movement Segment, subject to all stacking restrictions.
+
+[19.43] A unit assigned and attached to a particular Parent Formation may be detached from that Parent Formation at any time at a cost of one Capability Point to both units.
+
+[19.44] A unit attached but not assigned to a Parent Formation may be detached from that Parent Formation only during the owning Player's Reorganization Segment or Movement Segment at a cost of one Capability Point each to both units. However, note that units are moved individually or as a stack, and once stopped, can be
+
+<!-- page 030 -->
+
+moved no further. Thus, if a unit is detached from a Parent Formation during a Movement Segment, movement of either the detached unit or Parent Formation must cease (unless they are moved on as a stack).
+
+[19.45] A unit(s) may be attached to a Parent Formation that has fewer units assigned to it than the maximum restrictions listed on the Formation Organization Chart (19.3) as a substitute for the “missing” (that is, not in the games, or re-assigned as per Case 19.66) unit(s). Such a unit must not exceed, in its own organizational structure, the maximum limits that would apply to the missing assigned unit it is being substituted for. Example: If one infantry brigade assigned to a Commonwealth infantry division were eliminated, the Commonwealth Player could attach an independent infantry brigade to that division as a substitute. He could not, however, attach an infantry brigade to which more than three infantry battalions were assigned as a substitute, since that unit would exceed the applicable Formation Organization limits.
+
+[19.46] A unit attached to a Parent Formation which is itself in turn attached to a larger Parent Formation is considered attached to the larger Parent Formation also. Note: This requirement may render it impossible (unless detachments are made) to attach a certain unit to a Parent Formation because other units attached to the first unit cannot be fitted into the Parent Formation's organizational structure. Exception: Units attached to a Parent Formation in turn attached to a larger Parent Formation in accordance with Case 19.45 do not count as being attached to the larger Parent Formation.
+
+[19.47] Any units currently attached to a Parent Formation may be detached in such a way that they end up attached to one another at a cost of only the Capability Points required for detachment. For example, the 132nd Regimente Corazzate and the Nizza Cavelleria Regiment are detached from
+
+the Nizza Cavelleria Regiment are detached from the Ariete Division. The N.C. Rgt. may be attached to the 132nd R.C. at this point without any additional expenditures.
+
+## 19.5 MAXIMUM ATTACHMENT CHART (see Charts and Tables)
+
+The limits listed on this chart apply to all units of the indicated size and type, regardless of whether or not the unit's organization is "standard" (i.e., whether it appears on the Formation Organization Chart, 19.3) or not.
+
+## 19.6 REBUILDING DEPLETED UNITS
+
+The method of replacing TOE Strength Points and/or Rebuilding units is covered in Replacements (Case 20.4). It should be pointed out here, however, that no unit may ever be rebuilt or augmented to the point that it exceeds its printed ID Code Maximum TOE Strength. Example: The Italian Light Tank battalionsmay never have more than nine TOE Strength Points of Tanks. (Whether these can be Light and/or Medium is covered in Case 19.64).
+
+There are some cases, albeit rare, where the arriving TOE Strength is below the “paper” strength of the unit. This fact is usually listed in the TOE & Weapon System(s) section for that unit, and the Players may increase these units accordingly.
+
+[19.61] Units that have been depleted (reduced) by combat, attrition, etc., may be augmented by Replacements (see Case 20.4). No unit may ever be increased above its stated maximum TOE Strength Level (listed in the OA Chart for that unit).
+
+[19.62] Units that have been completely eliminated because of attrition on combat—not breakdown (i.e., no TOE Strength Points remaining) may not be rebuilt. However, HQ units that have lost all their assigned battalions may have new battalions assigned (up to the number listed on the OA Chart) as long as the HQ unit exists as a cadre.
+
+[19.63] If a HQ unit (counter) is eliminated, it may not be rebuilt unless at least 50% of its assigned units still exist and are not attached to other units. In such case, two Infantry Replacement Points may be used to revive the HQ. Otherwise it is gone for good.
+
+[19.64] The use of Replacement Points is covered in Case 20.4. However, the following principles apply in using Replacement Points to rebuild units:
+
+a. Infantry Replacement Points may be used to rebuild a wide variety of Infantry-type units, as well as HQ and Engineer units;
+
+b. Artillery units may be rebuilt with any type of artillery guns. (Commonwealth Players may want, for historical purposes to limit their Medium Regiments to their Medium Guns and Field Regiments to their Field Guns, etc., but this is not a rule.)
+
+c. Tanks may be assigned to any Tank Battalion/ Regiment. (Historically, the Commonwealth used a system of I- or Infantry-tanks, Cruiser Tanks, and Light Tanks. Historians familiar with this might want to follow this system; it is really unimportant on an Operational Level. The Italians used a similar system that is easier to discern.)
+
+d. Creation of Heavy Weapons Points requires the expenditure of Infantry Replacement Points and Gun Replacement Points.
+
+[19.65] Armored Recce and Armored Car units use Recce points, usually, to rebuild. However, the Players may wish to use their Light Tanks to augment Recce units (see Case 20.6).
+
+[19.66] In an instance where a battalion assigned to a Parent Formation has either been eliminated entirely or has, for any reason, been assigned to another Formation, the assigned “space” for that battalion may be taken by another, previously unassigned, battalion. The latter battalion is then considered assigned to the new Parent, although it was not previously so. Example: The 42nd RTR of the 1st Army Tank Brigade is destroyed completely. The Commonwealth Player may assign, say, the 7th RTR to fill its place, even though the 7th RTR would not normally be allowed to be assigned to the 1st Army Tank Brigade. (It would be allowed to “switch” under Case 19.26).
+
+[19.67] The HQ unit for a Parent Formation is, for play purposes, its Cadre. As long as the HQ exists, that Parent Formation may be rebuilt by or Reassignments. If the HQ is eliminated, see Case 19.62 and 19.63.
+
+[19.68] Rebuilding units takes place in the Organization Phase only; it may not take place at any other time. For every two Replacement TOE Strength Points added to a unit, that unit (and its parent, if such is the situation) uses one Capability Point. A unit may earn Disorganization Points by taking on a large number of Replacement Points in an Operations Stage. Severely depleted units a Player wishes to so refit should be first moved to rear areas.
+
+## 19.7 AXIS BATTLE GROUPS
+
+[19.71] The Germans — and to some extent the Italians — have the ability to form Battle Groups (Kampfgruppen) out of ad hoc units or from units from other divisions and brigades. The Germans
+
+did this quite often, molding individual Battle Groups to fit an occasion. Therefore, at any time during an Organization Phase (and only then), the Axis Player may form Battle Groups with his units. All units must be in the same hex in the Organization Phase, and they must conform to Stacking Restrictions and the limits listed in the following Cases. Battle Group counters are provided to give HQ support. (These Battle Groups are given historical names, but can be used in any fashion.)
+
+[19.72] A German Battle Group can carry a maximum of four battalion sized units of any type, but there may be no more than one tank battalion and/or two infantry battalions. Up to two additional companies may be attached over this limit.
+
+[19.73] The Italians also formed Battle Groups, but on a limited basis. No actual counters are provided, but the Italian Player, if he wishes, may form Battle Groups using the list of Battle Groups on the Italian OA Sheet. Italian Battle Groups may have a maximum of three battalion-sized units, only two of which may be infantry and only one of which may be armor. One company-sized unit may be attached. No more than two Italian Battle Groups may be in existence at one time.
+
+## 19.8 FORMING AD HOC AXIS ANTI-TANK BATTERIES
+
+The Axis Player may use his Anti-Tank Gun Replacement Points (his Marders will be especially useful) to form “ad hoc” units; i.e., new units not in the game. Essentially, he will be forming batteries of from 3 to 6 TOE Strength Points of any one AT gun.
+
+[19.81] The Axis Player's Brigade-Level HQ units (including Kampfgruppe) bearing an infantry-type symbol may contain up to six TOE Strength Points of anti-tank guns.
+
+[19.82] The Axis Player may augment any Brigade-Level HQ at any point in the game with Anti-tank TOE Strength Points if, at that point in time, all of his anti-tank units on the map (which includes the Tripoli-Tunisia boxes for this purpose) are at at least 67% of their maximum permitted TOE Strength.
+
+[19.83] The augmentation is performed by assigning anti-tank Replacement TOE Strength Points to the HQ as if the HQ is an anti-tank unit. The initial assignment must be at least three TOE Strength Points.
+
+[19.84] The assigned Anti-Tank Replacement Points are trained at the Gun Replacement Point rate.
+
+[19.85] An HQ that contains Anti-Tank TOE Strength Points possesses a CPA equal to that of those Anti-Tank Points.
+
+[19.86] The Axis Player may only assign a single type of anti-tank guns to a particular HQ (if they are eliminated completely he may begin again with any type of anti-tank gun). Note that captured anti-tank guns cannot be used to augment.
+
+[19.87] An augmented HQ retains a Stacking Point value of zero regardless of the number of AT points it currently contains.
+
+## 19.9 AUGMENTING COMMONWEALTH BATTALIONS WITH ANTI-TANK
+
+[19.91] Starting with the 75th Game-Turn (April 1, 1942), the Commonwealth Player may increase the capabilities of certain of his infantry battalions by giving them TOE Strength Points of Anti-Tank guns.
+
+[19.92] Only those infantry battalions possessing a CPA Rating of 10 (whether or not they were historically motorized; i.e., CPA Rating of 10+)
+
+<!-- page 031 -->
+
+and Offensive/Defense Close Assault Ratings of either 1/2 or 2/2 may be so augmented.
+
+[19.93] These infantry unit's characteristics change to now permit the unit to contain a second weapons system (i.e., Anti-Tank TOE Strength Points).
+
+[19.94] Each historically motorized infantry battalion (CPA of 10 +) may contain 2 TOE Strength Points of anti-tank guns. Each historically non-motorized infantry battalion (CPA of 10) may contain one TOE Strength Point of Anti-Tank guns.
+
+[19.95] The Anti-Tank Points are assigned to the infantry unit as regular Gun Replacement Points. They undergo training at the Gun Replacement Point rate.
+
+[19.96] No Anti-Tank TOE Strength Points may be so assigned if, at that point in time, any anti-tank regiment assigned to the infantry battalions parent unit(s) is not at maximum TOE Strength.
+
+[19.97] Once the Anti-Tank Points have been absorbed by the infantry unit they possess the CPA of that infantry unit (i.e., a CPA of 10 if the infantry are walking or a CPA of 20 or 25 if the infantry are motorized).
+
+[19.98] Anti-Tank TOE Strength Points do not affect any shell determinations of the infantry unit.
+
+---
+[← 18.0 RESERVE STATUS](18-reserve-status.md) · [20.0 REINFORCEMENTS, REPLACEMENTS AND COMMONWEALTH WITHDRAWALS →](20-reinforcements-replacements-and-commonwealth-withdrawals.md)

@@ -1,0 +1,71 @@
+<!-- 10.0 ZONES OF CONTROL -->
+# 10.0 ZONES OF CONTROL
+
+### GENERAL RULE:
+
+The six hexagons immediately surrounding a hex constitute the Zone of Control (ZOC) of any unit in that hex. However, only certain types and sizes of units exert ZOC's. Hexes upon which a unit exerts a ZOC are called controlled hexes, and these inhibit movement of Enemy units. All units must cease movement upon entering an Enemy-controlled hex.
+
+## 10.1 WHICH UNITS EXERT A ZONE OF CONTROL
+
+[10.11] All combat units above battalion-equivalent (i.e. with more than one Stacking Point) exert a Zone of Control. In addition, if there is more than one Stacking Point in a hex even if no larger-than-battalion unit is present, the units in that hex also exert a ZOC. Truck Convoys never exert a ZOC, nor do HQ units that have no attach-ed combat units.
+
+[10.12] Aircraft, Squadron Ground Support units, and warships exert no ZOC.
+
+[10.13] Informational markers, such as dumps, minefields, airfields, etc., do not exert a ZOC.
+
+[10.14] Units with a Cohesion Level of -26 or worse do not exert a ZOC.
+
+[10.15] Regardless of 10.11, any unit(s) in a hex that total less than ten Raw Defensive Close
+
+<!-- page 018 -->
+
+Assault Points do not exert a ZOC, whatever the organizational size of the unit. For this purpose, anti-tank units are always presumed to be Up Front (see Case 12.1).
+
+[10.16] The non-Phasing Player must inform the Phasing Player whether or not a particular unit exerts a Zone of Control if that unit could exert a Zone into a hex and a unit belonging to the Phasing Player either begins a Movement Segment in that hex or is moved into that hex.
+
+## 10.2 EFFECTS OF ZONES OF CONTROL
+
+[10.21] ZOC's extend into all hexes on the game-map, with the following exceptions:
+
+a. ZOC's do not extend through All-Sea heads, Major River hexsides, or Lake hexsides; and
+
+b. ZOC's do not extend through Escarpment hexsides; and
+
+c. ZOC's do not extend into any adjacent hex into which the unit wishing to exert the ZOC could not enter from its present location. (Example: a Tank Battalion could not exert a ZOC into a Salt Marsh hex unless there was a Track or Road connecting the two hexes.)
+
+[10.22] There is no cost in CP's to enter an Enemy ZOC. However, see Section 10.3.
+
+[10.23] A unit must cease movement upon entering an Enemy-controlled hex. The moving unit may not exit that Enemy-controlled hex until the next Movement Segment (within that Operations Stage or in the next Operations Stage). If a unit begins a Movement Segment in an Enemy-controlled hex it may leave that ZOC, at a cost in CP's to Break Off (8.7). Units may not be retreated into a hex in an Enemy ZOC (exception: see Case 10.26).
+
+[10.24] No units may be moved directly from one Enemy-controlled hex into another Enemy-controlled hex. However, terrain permitting, a unit may always “advance” into an adjacent hex vacated by an Enemy unit as a result of Combat, Retreat Before Assault, or Reaction. Such advance is taken as part of movement in the ensuing Movement Segment and costs CP’s. (There is no literal Advance After Combat rule in CNA; this rule is simply an exception to the no-movement-into-Enemy-ZOC’s rule).
+
+[10.25] Friendly units may move through hexes adjacent to an Enemy combat unit that are not controlled by that Enemy unit's ZOC. (See Cases 10.1 and 10.21).
+
+[10.26] For all movement purposes, the presence of a Friendly combat unit in a hex negates the effect of an Enemy ZOC. Friendly ZOC's never affect Friendly units.
+
+[10.27] Opposing units exerting ZOC's on each other are considered to be in each other's ZOC. Furthermore, if opposing units exert a ZOC into the same hex that hex is considered to be controlled by both Players.
+
+[10.28] There is no additional effect when more than one unit exerts a ZOC into a given hex.
+
+[10.29] Truck Convoys may not enter an Enemy ZOC unless such hex is already occupied by a Friendly combat unit. Furthermore, no non-combat unit (i.e., bare HQ's, Engineers, Air Squadron Ground Support Units, etc.) may ever enter an unoccupied hex in an enemy ZOC voluntarily. If such a unit is alone in an Enemy ZOC at any time during the Enemy Movement/Combat Phase and it has no strength of any type, such Friendly non-combat unit is Captured.
+
+## 10.3 ZOC COMBAT REQUIREMENTS (HOLDING OFF)
+
+[10.31] All hexes containing Enemy units exerting
+
+Zones of Control on Friendly combat units must be attacked—either by Artillery Barrage or by Close Assault.
+
+Note: A Probe (see Case 15.9) satisfies this requirement if the basic differential is -4 or better.
+
+[10.32] As an exception to 10.31, if the Friendly units in such Enemy ZOC consist solely of Artillery, anti-tank, or anti-aircraft (or non-combat) units, or there are other type units but they are pinned (12.42), these units do not have to attack as in Case 10.31.
+
+[10.33] Players may use a special “Holding Off” Artillery Barrage to satisfy the requirements of 10.31. (For experienced gamers, this is a sophisticated version of “Soaking Off”.) Thus a Friendly Division that is in the ZOC of Enemy units from two different hexes may choose to Hold Off one of those hexes and Close Assault the other.
+
+[10.34] To perform a Holding Off Barrage, a Friendly Player must Barrage an Enemy hex with at least as many Actual Barrage Strength Points (i.e., Barrage Rating × TOE Strength ÷ 10) as there are individual non-Gun (i.e., Artillery, Anti-Tank or AA units) Enemy battalion-equivalent combat units (units with less than 1 Stacking Point and Gun units do not count) in that hex. Remember, an Enemy Division may consist of, say, eleven battalion-equivalent units, so the Friendly Barraging Player would need 11 Actual Barrage Points to perform a Holding Off action against such a Division.
+
+[10.35] If, according to the precepts of 10.34, a Friendly Phasing Player can not Hold Off Enemy units in a given hex he must Close Assault that hex. (Remember Case 10.32). There is no minimum point requirement for a Close Assault.
+
+[10.36] If, for any reason, a unit can neither Assault nor Hold Off an Enemy unit, that Friendly unit must Retreat three hexes (playing all CP's for such movement) and earn three Disorganization Points, in addition to any garnered by the retreat. Such retreat must place the retreating unit three hexes distant from the Enemy unit (no doubling back, etc.) and may not be made through any hexes in Enemy Zones of Control. If forced to enter an Enemy ZOC the unit Surrenders in entirety.
+
+---
+[← 9.0 STACKING](09-stacking.md) · [11.0 THE COMBAT SYSTEM →](11-the-combat-system.md)

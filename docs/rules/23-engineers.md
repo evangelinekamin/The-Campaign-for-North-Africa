@@ -1,0 +1,37 @@
+<!-- 23.0 ENGINEERS -->
+# 23.0 ENGINEERS
+
+### GENERAL RULE:
+
+In CNA Engineer units are used to aid in construction of a variety of items, as well as helping to repair facilities that have been destroyed. They are also useful in laying and removing minefields. Realistically, engineers had a great deal more usage than we have given them in this simulation. However, we have abstracted a goodly number of those uses, as the “thesis” of the simulation does not lie in the direction of Engineer capability. There are three types of Engineer units: Engineer Battalions, Engineer companies, and Headquarters Units with Engineer capability.
+
+### CASES:
+
+## 23.1 ENGINEER UNITS
+
+[23.11] Engineer counters have no real combat value, nor do they exert Zones of Control. They are not combat units in any way, shape, or form. Engineer units may never enter Enemy-controlled hexes voluntarily, and they may use their parenthesized strength only if they are stacked with a Friendly combat unit.
+
+<!-- page 036 -->
+
+[23.12] Engineer units may be replaced even if eliminated. Engineer units are rebuilt according to the schedule in Case 20.3.
+
+[23.13] The Commonwealth has two units of the New Zealand RR Construction Battalion. These are used solely for the construction and repair of Railroads. The 1S.A. Road Construction unit is used solely for Road work.
+
+[23.14] Headquarters units with a letter E next to their Stacking Points have Engineering capability (see Section 24.0) but otherwise they are treated like any other HQ unit.
+
+## 23.2 USES OF ENGINEERS
+
+[23.21] The cost for a unit that is stacked with any Engineer unit (or HQ unit with Engineering capability) to enter an Enemy Minefield is reduced to six CP's for Motorized units and three CP's for non-motorized units (see Terrain Effects Chart, Case 8.37).
+
+[23.22] If an Engineer unit or a HQ with Engineer capability remains in an Enemy Minefield hex for an entire Operations Stage without expending any CP's, that Minefield is removed at the end of the Operations Stage.
+
+[23.23] Engineer units and HQ's with Engineer capability may help to build fortifications, rebuild fortifications and bombed roads, build, rebuild and dismantle Temporary Repair Facilities, and build and rebuild Railroads and Air Facilities (see Section 24.0).
+
+[23.24] If an unpinned Engineer Battalion or HQs with Engineer capability is attached to units mounting a Close Assault against units in a fortified hex (not a Major City hex), the Assault Differential column may be adjusted one in favor of the assaulting units.
+
+[23.25] In addition to the above, Engineers and HQ's with Engineer capability have a variety of minor capabilities spread throughout the rules. Moreover, most of the above rules are covered in other Sections (e.g., Minefields).
+
+[23.26] Engineer units may not build or destroy 'bridges' (i.e., River/wadi crossings) nor affect escarpments.
+
+---
+[← 22.0 REPAIR](22-repair.md) · [24.0 CONSTRUCTION →](24-construction.md)
