@@ -87,18 +87,31 @@ def path_cost(tmap: TerrainMap, path: list[Coord], mobility: Mobility) -> float 
 
 
 def reachable(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
-              blocked: frozenset = frozenset()) -> dict[Coord, float]:
+              *, blocked: frozenset = frozenset(),
+              terminal=None, passable=None, start_cost: float = 0.0) -> dict[Coord, float]:
     """All hexes reachable from start within `budget` CP (Dijkstra). `blocked`
     hexes (e.g. enemy-occupied) cannot be entered. Continual Movement allows
-    exceeding CPA, so the caller passes whatever budget it is willing to spend."""
-    best: dict[Coord, float] = {start: 0.0}
-    pq: list[tuple[float, Coord]] = [(0.0, start)]
+    exceeding CPA, so the caller passes whatever budget it is willing to spend.
+
+    Two optional predicates let callers (e.g. zoc.py) layer rules on top of pure
+    terrain cost without re-implementing the search:
+      - terminal(coord): if True, the hex may be ENTERED but not expanded from
+        (rule 10.23 "must cease movement upon entering an enemy-controlled hex");
+      - passable(here, nb): if False, that specific step is forbidden
+        (rule 10.24 "no move from one enemy-controlled hex into another").
+    start_cost seeds the start hex (e.g. a break-off cost paid to leave a ZOC)."""
+    best: dict[Coord, float] = {start: start_cost}
+    pq: list[tuple[float, Coord]] = [(start_cost, start)]
     while pq:
         cost, here = heapq.heappop(pq)
         if cost > best.get(here, float("inf")):
             continue
+        if terminal is not None and here != start and terminal(here):
+            continue
         for nb in neighbors(here):
             if nb in blocked or not tmap.exists(nb):
+                continue
+            if passable is not None and not passable(here, nb):
                 continue
             step = step_cost(tmap, here, nb, mobility)
             if step is None:
