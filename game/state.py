@@ -1,35 +1,29 @@
-"""Immutable game state (brief §4.2).
+"""Immutable game state (brief §4.2), now on the real land model.
 
-Never serialised whole into an LLM context — the Phase-1 agent layer receives
-role-scoped *views*, not this object. State is rebuilt by folding events
-(game.apply). All updates return new objects (frozen dataclasses +
-dataclasses.replace); for the toy scenario the O(n) copy on each change is
-irrelevant. The brief's perf note (§5) defers optimising the engine step until
-it is proven a bottleneck (Phase 3 / RL only) — correctness single-threaded
-first.
+The static map is a TerrainMap (game.movement); only `control` changes during
+play, so it is the lone dynamic map field. Units carry the real CNA attributes
+the land game needs — CPA, mobility, stacking points, defensive strength,
+cohesion — and structurally satisfy the ZocUnit / StackUnit protocols so the
+engine can hand them straight to game.zoc / game.stacking.
+
+Multi-commodity supply (fuel/water/ammo/food) and combat ratings are added in
+their own slices; this model carries movement + ZOC + stacking + placeholder
+combat. All updates return new objects (frozen dataclasses + replace).
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
 from .events import Control, Phase, Side
-
-Coord = tuple[int, int]
-
-
-def adjacent(a: Coord, b: Coord) -> bool:
-    return abs(a[0] - b[0]) + abs(a[1] - b[1]) == 1
-
-
-def neighbors(coord: Coord) -> tuple[Coord, ...]:
-    x, y = coord
-    return ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1))
+from .hexmap import Coord
+from .movement import TerrainMap
+from .terrain import Mobility
 
 
 @dataclass(frozen=True, slots=True)
 class StepRecord:
-    """One sub-unit's step. The brief's load-bearing fact (§4.2): a counter is a
-    *record*, not a scalar — step losses live here, not in a single strength."""
+    """One sub-unit's step (brief §4.2): a counter is a record, not a scalar —
+    combat step-losses live here."""
     label: str
     strength: int
 
@@ -40,7 +34,16 @@ class Unit:
     side: Side
     hex: Coord
     steps: tuple[StepRecord, ...]
-    fuel: float
+    mobility: Mobility
+    cpa: int                       # Capability Point Allowance per OpStage (rule 6.0)
+    stacking_points: int
+    raw_defense: int               # raw defensive close-assault points (ZOC, §10.15)
+    cohesion: int = 0
+    cp_used: float = 0.0           # CP spent this OpStage; reset each turn
+    is_combat: bool = True         # False for truck convoys / bare HQs / air
+    is_first_line_truck: bool = False
+    is_pure_aa: bool = False
+    is_garrison_home: bool = False
 
     @property
     def strength(self) -> int:
@@ -49,14 +52,6 @@ class Unit:
     @property
     def alive(self) -> bool:
         return self.strength > 0
-
-
-@dataclass(frozen=True, slots=True)
-class Hex:
-    coord: Coord
-    terrain: str
-    move_cost: int
-    control: Control
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,24 +68,18 @@ class GameState:
     active_side: Side
     seed: int
     weather: str
-    move_modifier: int          # this turn's weather effect on movement allowance
+    move_modifier: int             # this turn's weather effect on effective CPA (placeholder)
     vp: VP
-    hexes: tuple[Hex, ...]
+    terrain: TerrainMap            # static map (terrain + hexsides + roads/tracks)
+    control: dict                  # Coord -> Control (dynamic)
     units: tuple[Unit, ...]
     target_hex: Coord
-    fuel_consumed: float        # running total, for the supply-conservation invariant
 
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:
         for u in self.units:
             if u.id == uid:
                 return u
-        return None
-
-    def hex_at(self, coord: Coord) -> Hex | None:
-        for h in self.hexes:
-            if h.coord == coord:
-                return h
         return None
 
     def units_at(self, coord: Coord) -> tuple[Unit, ...]:
@@ -102,11 +91,15 @@ class GameState:
     def enemies_at(self, coord: Coord, side: Side) -> tuple[Unit, ...]:
         return tuple(u for u in self.units_at(coord) if u.side != side)
 
+    def control_of(self, coord: Coord) -> Control:
+        return self.control.get(coord, Control.NEUTRAL)
+
     # --- functional updates (return new state) -------------------------------
     def with_unit(self, unit: Unit) -> "GameState":
         units = tuple(unit if u.id == unit.id else u for u in self.units)
         return replace(self, units=units)
 
-    def with_hex(self, hex_: Hex) -> "GameState":
-        hexes = tuple(hex_ if h.coord == hex_.coord else h for h in self.hexes)
-        return replace(self, hexes=hexes)
+    def with_control(self, coord: Coord, ctrl: Control) -> "GameState":
+        control = dict(self.control)
+        control[coord] = ctrl
+        return replace(self, control=control)
