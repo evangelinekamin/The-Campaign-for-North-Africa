@@ -27,6 +27,15 @@ def apply(state: GameState, event: Event) -> GameState:
         return state.with_unit(
             replace(u, hex=tuple(p["to"]), cp_used=u.cp_used + p["cp_spent"]))
 
+    if k == EventKind.SUPPLY_CONSUMED:
+        su = state.supply(p["supply_id"])
+        commodity = p["commodity"]
+        attr = commodity.lower()                       # "AMMO"->ammo, "FUEL"->fuel
+        drained = replace(su, **{attr: getattr(su, attr) - p["qty"]})
+        consumed = dict(state.consumed)
+        consumed[commodity] = consumed.get(commodity, 0) + p["qty"]
+        return replace(state.with_supply(drained), consumed=consumed)
+
     if k == EventKind.STEP_LOST:
         u = state.unit(p["unit_id"])
         return state.with_unit(replace(u, steps=_apply_step_loss(u.steps, p["amount"])))

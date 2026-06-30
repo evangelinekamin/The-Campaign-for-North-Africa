@@ -46,6 +46,8 @@ def _line(e: Event) -> str:
                 f"-> def {p['defender_loss_pct']}% / atk {p['attacker_loss_pct']}%")
     if k == EventKind.STEP_LOST:
         return f"      loss  {p['unit_id']} -{p['amount']} step ({p['role']})"
+    if k == EventKind.SUPPLY_CONSUMED:
+        return ""   # frequent; rolled into the summary rather than narrated per event
     if k == EventKind.HEX_CONTROL_CHANGED:
         return f"  control {tuple(p['coord'])} -> {p['control']}"
     if k == EventKind.VICTORY_CHECKED:
@@ -74,6 +76,8 @@ def summary(result: RunResult) -> None:
     print(f"  winner   : {result.winner.value}  ({result.reason})")
     print(f"  turns    : {s.turn}/{s.max_turns}   events: {len(result.events)}   "
           f"combats: {combats}   rejections: {rejects}")
+    print(f"  supply   : consumed {s.consumed['AMMO']}/{s.initial_supply['AMMO']} ammo, "
+          f"{s.consumed['FUEL']}/{s.initial_supply['FUEL']} fuel")
     print("  final order of battle:")
     for u in s.units:
         state = "destroyed" if not u.alive else f"str {u.strength} @ {u.hex}"

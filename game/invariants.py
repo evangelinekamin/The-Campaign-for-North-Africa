@@ -36,3 +36,13 @@ def check(state: GameState) -> None:
             raise InvariantViolation(
                 f"stacking exceeded at {coord}: {pts} points "
                 f"(limit {stacking.DEFAULT_HEX_LIMIT})")
+
+    # Supply conservation (rule 32): per commodity, on-hand + consumed == initial.
+    # Nothing is created except at sources (none modelled yet); nothing vanishes
+    # except defined consumption.
+    for commodity, initial in state.initial_supply.items():
+        on_hand = sum(getattr(su, commodity.lower()) for su in state.supplies)
+        if on_hand + state.consumed.get(commodity, 0) != initial:
+            raise InvariantViolation(
+                f"{commodity} not conserved: on_hand={on_hand} + "
+                f"consumed={state.consumed.get(commodity, 0)} != initial={initial}")

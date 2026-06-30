@@ -14,7 +14,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-from . import combat, stacking, tactics
+from . import combat, stacking, supply, tactics
 from .apply import apply
 from .events import Control, Event, EventKind, Phase, Side
 from .hexmap import is_adjacent
@@ -121,6 +121,14 @@ def _movement(r: _Run, policy: Policy, side: Side) -> None:
         if not stacking.within_hex_limit(present + [u], r.state.terrain.terrain[order.to]):
             _reject(r, side, actor, order, "destination over stacking limit")
             continue
+        if u.cp_used == 0:                          # first move this OpStage pays fuel (32.23)
+            draws = supply.plan_draw(r.state, u, supply.FUEL, supply.fuel_cost(u))
+            if draws is None:
+                _reject(r, side, actor, order, "out of supply: no fuel in range")
+                continue
+            for sid, qty in draws:
+                r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+                       {"supply_id": sid, "commodity": supply.FUEL, "qty": qty, "unit_id": u.id})
         r.emit(EventKind.UNIT_MOVED, side, actor,
                {"unit_id": u.id, "from": list(u.hex), "to": list(order.to),
                 "cp_spent": reach[order.to]})
@@ -149,18 +157,29 @@ def _combat(r: _Run, policy: Policy, side: Side) -> None:
 
 def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
                     target: Coord) -> None:
+    # Ammo gates participation (rule 32.21 / 15.15): a unit that cannot draw ammo
+    # cannot assault; an unarmed defender adds no defensive strength but still
+    # suffers losses. Charged before resolution (conservation holds per event).
+    armed_atk = [u for u in attackers if _charge_ammo(r, side, actor, u, phasing=True)]
+    if not armed_atk:
+        r.emit(EventKind.ORDER_REJECTED, side, actor,
+               {"order": "attack", "target": list(target),
+                "reason": "attackers out of ammo"})
+        return
+    armed_def = [u for u in defenders if _charge_ammo(r, side, actor, u, phasing=False)]
+
     # Close Assault via the real differential engine (rule 15 / §15.79 CRT).
-    feature = r.state.terrain.hexsides.get((attackers[0].hex, target))  # §15.33
+    feature = r.state.terrain.hexsides.get((armed_atk[0].hex, target))  # §15.33
     ab, asm, db, dsm = r.d6(), r.d6(), r.d6(), r.d6()
     res = combat.resolve(
-        attacker_raw=sum(u.raw_offense for u in attackers),
-        defender_raw=sum(u.raw_defense for u in defenders),
-        attacker_strength=sum(u.strength for u in attackers),
-        defender_strength=sum(u.strength for u in defenders),
+        attacker_raw=sum(u.raw_offense for u in armed_atk),
+        defender_raw=sum(u.raw_defense for u in armed_def),     # unarmed defenders -> 0
+        attacker_strength=sum(u.strength for u in armed_atk),
+        defender_strength=sum(u.strength for u in defenders),   # all defenders take losses
         def_terrain=r.state.terrain.terrain[target], attack_feature=feature,
         atk_roll=ab * 10 + asm, def_roll=db * 10 + dsm)
     r.emit(EventKind.COMBAT_RESOLVED, side, actor,
-           {"target": list(target), "attackers": [u.id for u in attackers],
+           {"target": list(target), "attackers": [u.id for u in armed_atk],
             "defenders": [u.id for u in defenders],
             "differential": res.differential, "column": res.column,
             "attacker_loss_pct": res.attacker_loss_pct,
@@ -169,9 +188,20 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     for uid, amount in _spread_losses(defenders, res.defender_steps_lost):
         r.emit(EventKind.STEP_LOST, side, actor,
                {"unit_id": uid, "amount": amount, "role": "defender"})
-    for uid, amount in _spread_losses(attackers, res.attacker_steps_lost):
+    for uid, amount in _spread_losses(armed_atk, res.attacker_steps_lost):
         r.emit(EventKind.STEP_LOST, side, actor,
                {"unit_id": uid, "amount": amount, "role": "attacker"})
+
+
+def _charge_ammo(r: _Run, side: Side, actor: str, unit, *, phasing: bool) -> bool:
+    draws = supply.plan_draw(r.state, unit, supply.AMMO,
+                             supply.ammo_cost(unit, phasing=phasing))
+    if draws is None:
+        return False
+    for sid, qty in draws:
+        r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+               {"supply_id": sid, "commodity": supply.AMMO, "qty": qty, "unit_id": unit.id})
+    return True
 
 
 def _spread_losses(units, total: int) -> list[tuple[str, int]]:

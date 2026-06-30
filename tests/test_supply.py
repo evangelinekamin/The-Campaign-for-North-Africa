@@ -1,0 +1,68 @@
+"""Tests for abstract logistics (rule 32): supply trace, costs, gating, and the
+per-commodity conservation invariant."""
+from __future__ import annotations
+
+import sys
+from dataclasses import replace
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from game import supply
+from game.engine import run
+from game.events import EventKind
+from game.events import Side
+from game.policy import ScriptedPolicy
+from game.scenario import coastal_corridor
+from game.terrain import Mobility
+
+
+def _run(seed: int = 1941):
+    pol = ScriptedPolicy(Side.AXIS)
+    return run(coastal_corridor(seed=seed), axis=pol, allied=pol)
+
+
+def test_fuel_cost_by_mobility():
+    s = coastal_corridor()
+    assert supply.fuel_cost(s.unit("DAK-5le")) == 2     # VEHICLE / tank bn-eq
+    assert supply.fuel_cost(s.unit("UK-9Aus")) == 0     # FOOT walks
+
+
+def test_ammo_cost_phasing_doubles():
+    dak = coastal_corridor().unit("DAK-5le")            # stacking_points 2
+    assert supply.ammo_cost(dak, phasing=False) == 2
+    assert supply.ammo_cost(dak, phasing=True) == 4
+
+
+def test_in_supply_when_colocated_with_dump():
+    s = coastal_corridor()
+    dak = s.unit("DAK-5le")                              # shares (0,0) with AX-Dump1
+    assert supply.plan_draw(s, dak, supply.FUEL, 2) is not None
+
+
+def test_out_of_supply_when_no_dump_in_range():
+    s = coastal_corridor()
+    stripped = replace(s, supplies=())                  # no dumps anywhere
+    assert supply.plan_draw(stripped, s.unit("DAK-5le"), supply.FUEL, 2) is None
+
+
+def test_movement_blocked_when_out_of_fuel():
+    s = coastal_corridor()
+    dry_axis = tuple(replace(su, fuel=0) if su.side == Side.AXIS else su
+                     for su in s.supplies)
+    init = {"AMMO": sum(su.ammo for su in dry_axis), "FUEL": sum(su.fuel for su in dry_axis)}
+    dry = replace(s, supplies=dry_axis, consumed={"AMMO": 0, "FUEL": 0},
+                  initial_supply=init)
+    result = run(dry, axis=ScriptedPolicy(Side.AXIS), allied=ScriptedPolicy(Side.AXIS))
+    fuel_rejects = [e for e in result.events
+                    if e.kind == EventKind.ORDER_REJECTED and "fuel" in e.payload.get("reason", "")]
+    assert fuel_rejects
+    assert result.final.unit("DAK-5le").hex == (0, 0)   # never moved without fuel
+
+
+def test_run_conserves_each_commodity():
+    final = _run().final
+    for commodity in ("AMMO", "FUEL"):
+        on_hand = sum(getattr(su, commodity.lower()) for su in final.supplies)
+        assert on_hand + final.consumed[commodity] == final.initial_supply[commodity]
+    assert final.consumed["FUEL"] > 0                   # logistics actually engaged

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from .events import Phase, Side
 from .movement import TerrainMap, edge
-from .state import GameState, StepRecord, Unit, VP
+from .state import GameState, StepRecord, SupplyUnit, Unit, VP
 from .terrain import Hexside, Mobility, Terrain
 
 LENGTH = 8
@@ -50,8 +50,21 @@ def coastal_corridor(seed: int = 1941) -> GameState:
              mobility=Mobility.FOOT, cpa=10, stacking_points=2, oca=5, dca=8),
     )
 
+    # One supply dump co-located with each combat unit (rule 32.15 max 40/60).
+    supplies = (
+        SupplyUnit("AX-Dump1", Side.AXIS, (0, 0), ammo=40, fuel=60),
+        SupplyUnit("AX-Dump2", Side.AXIS, (1, 1), ammo=40, fuel=60),
+        SupplyUnit("UK-Dump1", Side.ALLIED, (6, 0), ammo=40, fuel=60),
+        SupplyUnit("UK-Dump2", Side.ALLIED, target, ammo=40, fuel=60),
+    )
+    initial = {
+        "AMMO": sum(s.ammo for s in supplies),
+        "FUEL": sum(s.fuel for s in supplies),
+    }
+
     return GameState(
         turn=1, max_turns=MAX_TURNS, phase=Phase.WEATHER, active_side=Side.SYSTEM,
         seed=seed, weather="clear", move_modifier=0, vp=VP(),
         terrain=tmap, control={}, units=units, target_hex=target,
+        supplies=supplies, consumed={"AMMO": 0, "FUEL": 0}, initial_supply=initial,
     )

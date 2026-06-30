@@ -70,6 +70,22 @@ class VP:
 
 
 @dataclass(frozen=True, slots=True)
+class SupplyUnit:
+    """Abstract-logistics supply (rule 32.1): a dump holding <=40 Ammo + <=60 Fuel
+    that combat units draw on to move and fight. Stacking value 0 (rule 32.14)."""
+    id: str
+    side: Side
+    hex: Coord
+    ammo: int
+    fuel: int
+    is_dummy: bool = False
+
+    @property
+    def empty(self) -> bool:
+        return self.ammo <= 0 and self.fuel <= 0
+
+
+@dataclass(frozen=True, slots=True)
 class GameState:
     turn: int
     max_turns: int
@@ -83,6 +99,9 @@ class GameState:
     control: dict                  # Coord -> Control (dynamic)
     units: tuple[Unit, ...]
     target_hex: Coord
+    supplies: tuple[SupplyUnit, ...]
+    consumed: dict                 # commodity -> int spent so far ("AMMO"/"FUEL")
+    initial_supply: dict           # commodity -> int total at t0 (conservation check)
 
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:
@@ -103,6 +122,16 @@ class GameState:
     def control_of(self, coord: Coord) -> Control:
         return self.control.get(coord, Control.NEUTRAL)
 
+    def supply(self, sid: str) -> "SupplyUnit | None":
+        for s in self.supplies:
+            if s.id == sid:
+                return s
+        return None
+
+    def active_supplies(self, side: Side) -> tuple["SupplyUnit", ...]:
+        return tuple(s for s in self.supplies
+                     if s.side == side and not s.is_dummy and not s.empty)
+
     # --- functional updates (return new state) -------------------------------
     def with_unit(self, unit: Unit) -> "GameState":
         units = tuple(unit if u.id == unit.id else u for u in self.units)
@@ -112,3 +141,7 @@ class GameState:
         control = dict(self.control)
         control[coord] = ctrl
         return replace(self, control=control)
+
+    def with_supply(self, su: "SupplyUnit") -> "GameState":
+        supplies = tuple(su if s.id == su.id else s for s in self.supplies)
+        return replace(self, supplies=supplies)
