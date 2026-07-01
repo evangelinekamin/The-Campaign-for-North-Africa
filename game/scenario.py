@@ -12,8 +12,11 @@ drives the road for the port (7,0); the Commonwealth holds it.
 """
 from __future__ import annotations
 
-from . import cna_map, coords
+from dataclasses import replace
+
+from . import cna_map, coords, oob
 from .events import Phase, Side
+from .hexmap import neighbors
 from .movement import TerrainMap, edge
 from .state import GameState, StepRecord, SupplyUnit, Unit, VP
 from .terrain import Hexside, Mobility, Terrain
@@ -111,4 +114,36 @@ def battle_for_tobruk(seed: int = 1941) -> GameState:
         seed=seed, weather="clear", move_modifier=0, vp=VP(),
         terrain=tmap, control={}, units=units, target_hex=target,
         supplies=supplies, consumed={"AMMO": 0, "FUEL": 0}, initial_supply=initial,
+    )
+
+
+def rommels_arrival(seed: int = 1941) -> GameState:
+    """The REAL Rommel's Arrival OOB (rule 61.2), parsed from the VASSAL setup and
+    placed on the connected El-Agheila -> Tobruk corridor (Maps A/B/C, real
+    colour-sampled terrain). Unit stats come from the Characteristics Charts as a
+    close-assault approximation (see data/unit_stats.json and game.oob). The Axis
+    (Rommel/DAK, artillery, the 300th Oasis companies) starts around El Agheila;
+    the Commonwealth screen (9th Australian, 2nd Armoured, 3rd Indian) is spread
+    across Cyrenaica; the objective is Tobruk. Air/naval/barrage/anti-armor/morale
+    and reinforcement arrival are not yet modelled -- this is the faithful
+    land-movement + close-assault slice of the scenario."""
+    tmap, _ = cna_map.load_sections("ABC")
+    units, supplies = oob.build(sections="ABC")   # corridor only (drops rear Map-D units)
+
+    # A hex where a land unit stands is land: coastal ports (El Agheila, Tobruk,
+    # ...) colour-sample as sea, so add every occupied hex as coastal CLEAR.
+    terrain = dict(tmap.terrain)
+    for piece in (*units, *supplies):
+        terrain.setdefault(piece.hex, Terrain.CLEAR)
+    tmap = replace(tmap, terrain=terrain)
+
+    target = coords.to_axial(coords.parse("C4807"))               # Tobruk
+    initial = {"AMMO": sum(s.ammo for s in supplies),
+               "FUEL": sum(s.fuel for s in supplies)}
+    return GameState(
+        turn=1, max_turns=12, phase=Phase.WEATHER, active_side=Side.SYSTEM,
+        seed=seed, weather="clear", move_modifier=0, vp=VP(),
+        terrain=tmap, control={}, units=tuple(units), target_hex=target,
+        supplies=tuple(supplies), consumed={"AMMO": 0, "FUEL": 0},
+        initial_supply=initial,
     )

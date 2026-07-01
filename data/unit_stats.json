@@ -1,0 +1,22 @@
+{
+  "_comment": "Role-based unit stats for the Rommel's Arrival OOB, derived from the CNA Unit Characteristics Charts (German [4.46c], Commonwealth [4.46a]) in the VASSAL mod -- see memory cna-unit-stats-source. Each role notes the chart type code it is taken from. IMPORTANT: this is a CLOSE-ASSAULT-ONLY approximation for the current engine. CPA and Close Assault Off/Def come straight from the charts for infantry/recon; but barrage (artillery), anti-armor (AT), the tank-model close-assault system (rule 15.4), morale, and reinforcement arrival are DEFERRED engine mechanics -- so artillery/AT are given oca 0 (no close-assault punch, they defend only) and tanks a representative close-assault value from their historical models. steps = starting TOE strength (charted Maximum TOE, i.e. full strength).",
+  "GE": {
+    "hq":        {"type": "a",  "cpa": 60, "oca": 0, "dca": 1, "steps": 1, "mobility": "MOTORIZED", "is_combat": false},
+    "oasis":     {"type": "r",  "cpa": 25, "oca": 1, "dca": 1, "steps": 1, "mobility": "FOOT"},
+    "infantry":  {"type": "g",  "cpa": 25, "oca": 3, "dca": 2, "steps": 7, "mobility": "FOOT"},
+    "motor_infantry": {"type": "j", "cpa": 10, "oca": 2, "dca": 2, "steps": 7, "mobility": "MOTORIZED"},
+    "tank":      {"type": "f",  "cpa": 25, "oca": 4, "dca": 4, "steps": 10, "mobility": "VEHICLE"},
+    "recon":     {"type": "ee", "cpa": 45, "oca": 3, "dca": 3, "steps": 8, "mobility": "RECCE"},
+    "artillery": {"type": "u",  "cpa": 20, "oca": 0, "dca": 1, "steps": 6, "mobility": "MOTORIZED"},
+    "antitank":  {"type": "x",  "cpa": 20, "oca": 1, "dca": 2, "steps": 8, "mobility": "MOTORIZED"}
+  },
+  "CW": {
+    "hq":        {"type": "a",  "cpa": 30, "oca": 0, "dca": 1, "steps": 1, "mobility": "MOTORIZED", "is_combat": false},
+    "infantry":  {"type": "p",  "cpa": 10, "oca": 1, "dca": 2, "steps": 6, "mobility": "FOOT"},
+    "motor_infantry": {"type": "l", "cpa": 10, "oca": 2, "dca": 2, "steps": 6, "mobility": "MOTORIZED"},
+    "mg":        {"type": "u",  "cpa": 20, "oca": 4, "dca": 6, "steps": 3, "mobility": "MOTORIZED"},
+    "tank":      {"type": "g",  "cpa": 25, "oca": 3, "dca": 3, "steps": 8, "mobility": "VEHICLE"},
+    "recon":     {"type": "pp", "cpa": 45, "oca": 2, "dca": 3, "steps": 6, "mobility": "RECCE"},
+    "artillery": {"type": "x",  "cpa": 20, "oca": 0, "dca": 1, "steps": 6, "mobility": "MOTORIZED"}
+  }
+}

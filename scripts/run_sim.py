@@ -22,9 +22,11 @@ from game.apply import fold                                     # noqa: E402
 from game.engine import RunResult, determinism_signature, run  # noqa: E402
 from game.events import Event, EventKind, Side                  # noqa: E402
 from game.policy import ScriptedPolicy                          # noqa: E402
-from game.scenario import battle_for_tobruk, coastal_corridor   # noqa: E402
+from game.scenario import (                                     # noqa: E402
+    battle_for_tobruk, coastal_corridor, rommels_arrival)
 
-SCENARIOS = {"corridor": coastal_corridor, "tobruk": battle_for_tobruk}
+SCENARIOS = {"corridor": coastal_corridor, "tobruk": battle_for_tobruk,
+             "rommel": rommels_arrival}
 
 
 def narrate(result: RunResult) -> None:
@@ -67,7 +69,7 @@ def verify(result: RunResult, factory) -> None:
     replayed = fold(result.initial, result.events)
     assert replayed == result.final, "replay-equivalence FAILED: fold(log) != live state"
     again = run(factory(seed=result.initial.seed),
-                ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.AXIS))
+                ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
     assert determinism_signature(again.events) == determinism_signature(result.events), \
         "determinism FAILED: same seed produced a different event log"
     print("\n--- self-checks ---")
@@ -101,8 +103,10 @@ def main() -> int:
     seed = int(args[1]) if len(args) > 1 else random.randrange(1, 1_000_000)
 
     print(f"scenario: {which}   seed: {seed}")
-    pol = ScriptedPolicy(Side.AXIS)
-    result = run(factory(seed=seed), axis=pol, allied=pol)
+    # Each side runs its own objective-seeking doctrine, so a contested objective
+    # (e.g. Rommel's race for Tobruk) becomes a real race, not a walkover.
+    result = run(factory(seed=seed),
+                 axis=ScriptedPolicy(Side.AXIS), allied=ScriptedPolicy(Side.ALLIED))
     narrate(result)
     verify(result, factory)
     summary(result)
