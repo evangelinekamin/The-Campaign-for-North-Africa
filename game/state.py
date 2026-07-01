@@ -51,6 +51,7 @@ class Unit:
     cp_used: float = 0.0           # CP spent this OpStage; reset each turn
     is_combat: bool = True         # False for truck convoys / bare HQs / air
     is_tank: bool = False          # a Tank (combined arms 15.4 -- NOT recce/SP)
+    arrival_turn: int = 0          # game-turn it enters play (<=start = on-map; rule 20)
     is_first_line_truck: bool = False
     is_pure_aa: bool = False
     is_garrison_home: bool = False
@@ -135,11 +136,14 @@ class GameState:
                 return u
         return None
 
+    def on_map(self, u: Unit) -> bool:
+        return u.alive and self.turn >= u.arrival_turn      # reinforcements (rule 20)
+
     def units_at(self, coord: Coord) -> tuple[Unit, ...]:
-        return tuple(u for u in self.units if u.hex == coord and u.alive)
+        return tuple(u for u in self.units if u.hex == coord and self.on_map(u))
 
     def living(self, side: Side) -> tuple[Unit, ...]:
-        return tuple(u for u in self.units if u.side == side and u.alive)
+        return tuple(u for u in self.units if u.side == side and self.on_map(u))
 
     def enemies_at(self, coord: Coord, side: Side) -> tuple[Unit, ...]:
         return tuple(u for u in self.units_at(coord) if u.side != side)

@@ -31,7 +31,7 @@ def check(state: GameState) -> None:
     # Stacking limits, checked at rest (rule 9.31): no hex over its point limit.
     occupied: dict = {}
     for u in state.units:
-        if u.alive:
+        if state.on_map(u):                        # off-map reinforcements don't stack yet
             occupied.setdefault(u.hex, []).append(u)
     for coord, units in occupied.items():
         terrain = state.terrain.terrain[coord]

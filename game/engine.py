@@ -73,6 +73,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
     reason = "campaign reached final turn"
     while True:
         _weather(r)
+        _reinforcements(r)
         for side in (Side.AXIS, Side.ALLIED):
             r.go(Phase.MOVEMENT, side)
             _movement(r, policies[side], side)
@@ -94,6 +95,17 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
 
 
 # --- phases ------------------------------------------------------------------
+
+def _reinforcements(r: _Run) -> None:
+    """Bring on any units scheduled to enter this game-turn (rule 20). Each is
+    already in state at its entry hex but dormant (off-map, state.on_map) until its
+    arrival_turn; this records the arrival. The scenario must give entry hexes room
+    to stack (checked by the invariant on arrival)."""
+    for u in r.state.units:
+        if u.arrival_turn == r.state.turn and u.alive:
+            r.emit(EventKind.REINFORCEMENT_ARRIVED, u.side, "SYSTEM",
+                   {"unit_id": u.id, "hex": list(u.hex), "turn": r.state.turn})
+
 
 def _weather(r: _Run) -> None:
     die = r.d6()

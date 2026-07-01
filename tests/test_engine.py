@@ -123,6 +123,21 @@ def test_scenarios_robust_across_seeds():
             assert determinism_signature(a.events) == determinism_signature(b.events)
 
 
+def test_reinforcement_enters_on_its_arrival_turn():
+    # off-map until its arrival_turn, then on-map (rule 20). The 15th Panzer tank
+    # battalions arrive mid-scenario; a CW tank battalion arrives to hold Tobruk.
+    from game.events import EventKind
+    from game.scenario import rommels_arrival
+    init = rommels_arrival(seed=1941)
+    tank = init.unit("GE-I-8-Pz")
+    assert tank is not None and not init.on_map(tank)         # exists but dormant at turn 1
+    assert tank not in init.living(Side.AXIS)
+    res = run(rommels_arrival(seed=1941), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    arrivals = {e.payload["unit_id"]: e.turn
+                for e in res.events if e.kind == EventKind.REINFORCEMENT_ARRIVED}
+    assert arrivals.get("GE-I-8-Pz") == 6 and arrivals.get("BR-4-RTR") == 4
+
+
 def test_surrender_at_collapsed_cohesion():
     # the 17.4 row for Cohesion <= -17 is all-Surrender; a stack there surrenders
     # (17.25) unless its Basic Morale is +1 or better (17.26 exception).

@@ -73,18 +73,19 @@ def classify(counter: str, group: str) -> str | None:
     return "infantry"                                # sensible default
 
 
-def build(oob_file: str = "oob_desert_fox.json",
-          sections: str | None = None) -> tuple[list[Unit], list[SupplyUnit]]:
+def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
+          reinforcements_file: str | None = "reinforcements_desert_fox.json",
+          ) -> tuple[list[Unit], list[SupplyUnit]]:
     """Build engine units/supplies from an OOB file. If `sections` is given (e.g.
     "ABC"), only pieces whose hex is in those map sections are kept (rear units on
-    unloaded sections are dropped)."""
-    oob = _load(oob_file)
+    unloaded sections are dropped). `reinforcements_file` (rule 20) adds off-map
+    units that enter on their arrival_turn at an axial entry hex."""
     stats = _load("unit_stats.json")
     units: list[Unit] = []
     supplies: list[SupplyUnit] = []
     seen: dict[str, int] = {}
 
-    for rec in oob:
+    for rec in _load(oob_file):
         hexlbl = rec["hex"]
         if sections is not None and hexlbl[0] not in sections:
             continue
@@ -97,26 +98,36 @@ def build(oob_file: str = "oob_desert_fox.json",
             continue
         if rec["kind"] != "unit":
             continue                                 # features are not engine units
-
         role = classify(rec["counter"], rec["group"])
-        if role is None:
-            continue
-        s = stats[_nationality(rec["side"])][role]
-        uid = _uid(seen, rec["counter"])
-        units.append(Unit(
-            uid, side, ax,
-            (StepRecord(role, s["steps"]),),
-            mobility=Mobility[s["mobility"]],
-            cpa=s["cpa"], stacking_points=1,
-            oca=s["oca"], dca=s["dca"],
-            barrage=s.get("barrage", 0), anti_armor=s.get("anti_armor", 0),
-            armor_protection=s.get("armor_protection", 0),
-            vulnerability=s.get("vulnerability", 0),
-            is_tank=s.get("is_tank", False),
-            morale=_morale_for(rec["group"], rec["counter"]),
-            is_combat=s.get("is_combat", True),
-        ))
+        if role is not None:
+            units.append(_make_unit(rec, side, ax, role, stats, seen, 0))
+
+    for rec in (_load(reinforcements_file).get("reinforcements", []) if reinforcements_file else []):
+        side = Side.AXIS if rec["side"] == "AXIS" else Side.ALLIED
+        role = rec.get("role") or classify(rec["counter"], rec["group"])
+        if role is not None:
+            units.append(_make_unit(rec, side, tuple(rec["hex"]), role, stats, seen,
+                                    rec["arrival_turn"]))
     return units, supplies
+
+
+def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
+               arrival_turn: int) -> Unit:
+    s = stats[_nationality(rec["side"])][role]
+    return Unit(
+        _uid(seen, rec["counter"]), side, ax,
+        (StepRecord(role, s["steps"]),),
+        mobility=Mobility[s["mobility"]],
+        cpa=s["cpa"], stacking_points=1,
+        oca=s["oca"], dca=s["dca"],
+        barrage=s.get("barrage", 0), anti_armor=s.get("anti_armor", 0),
+        armor_protection=s.get("armor_protection", 0),
+        vulnerability=s.get("vulnerability", 0),
+        is_tank=s.get("is_tank", False),
+        morale=_morale_for(rec["group"], rec["counter"]),
+        is_combat=s.get("is_combat", True),
+        arrival_turn=arrival_turn,
+    )
 
 
 def _uid(seen: dict[str, int], base: str) -> str:

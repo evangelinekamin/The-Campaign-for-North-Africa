@@ -47,6 +47,8 @@ def _line(e: Event) -> str:
     p, k = e.payload, e.kind
     if k == EventKind.WEATHER_ROLLED:
         return f"  weather: {p['weather']} (CPA {p['move_modifier']:+d})  [d6={e.rng_draws[0]}]"
+    if k == EventKind.REINFORCEMENT_ARRIVED:
+        return f"  +++ reinforcement {p['unit_id']} enters at {tuple(p['hex'])}"
     if k == EventKind.UNIT_MOVED:
         return (f"  move  {p['unit_id']:<11} {tuple(p['from'])} -> {tuple(p['to'])}"
                 f"  (CP {p['cp_spent']:g})")

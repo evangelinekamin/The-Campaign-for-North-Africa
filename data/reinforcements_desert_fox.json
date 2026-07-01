@@ -1,0 +1,17 @@
+{
+  "_comment": "Rommel's Arrival reinforcement schedule (rule 20 / 61.2), a representative slice of the full Reinforcement Schedule ([4.43a/b], [4.45c] in the charts). arrival_turn maps the scenario Game-Turn to the engine turn (my_turn = GT - 25, so GT26=1 .. GT38=13; the engine caps at max_turns 12). Axis 15th Panzer enters around El Agheila (the west setup zone standing in for the Tripoli port) and road-marches east; each unit gets a DISTINCT entry hex so arrivals never over-stack. Commonwealth armour enters east of Tobruk to reinforce the garrison. hex is axial [q,r]; role is explicit. NOT the full ~40-unit roster -- the 15th Panzer armour + a CW armour slice, enough to exercise reinforcement arrival + the armour/anti-armor model. Full per-unit GT/OpStage list is in the reinforcement subagent report.",
+  "reinforcements": [
+    {"counter": "GE 15 Krad",   "group": "GE 15th Panzer Division", "side": "AXIS",   "hex": [45, -6], "arrival_turn": 2, "role": "recon"},
+    {"counter": "GE I-104 Sch", "group": "GE 15th Panzer Division", "side": "AXIS",   "hex": [46, -6], "arrival_turn": 3, "role": "motor_infantry"},
+    {"counter": "GE 33 Pio",    "group": "GE 15th Panzer Division", "side": "AXIS",   "hex": [45, -7], "arrival_turn": 3, "role": "infantry"},
+    {"counter": "GE II-104 Sch","group": "GE 15th Panzer Division", "side": "AXIS",   "hex": [46, -7], "arrival_turn": 4, "role": "motor_infantry"},
+    {"counter": "GE I-115 Sch", "group": "GE 15th Panzer Division", "side": "AXIS",   "hex": [45, -5], "arrival_turn": 5, "role": "motor_infantry"},
+    {"counter": "GE II-115 Sch","group": "GE 15th Panzer Division", "side": "AXIS",   "hex": [46, -5], "arrival_turn": 5, "role": "motor_infantry"},
+    {"counter": "GE I-33 Art",  "group": "GE 15th Panzer Division", "side": "AXIS",   "hex": [47, -6], "arrival_turn": 5, "role": "artillery"},
+    {"counter": "GE I-8 Pz",    "group": "GE 15th Panzer Division", "side": "AXIS",   "hex": [46, -8], "arrival_turn": 6, "role": "tank"},
+    {"counter": "GE II-8 Pz",   "group": "GE 15th Panzer Division", "side": "AXIS",   "hex": [47, -7], "arrival_turn": 7, "role": "tank"},
+    {"counter": "GE 33 Art Rgt","group": "GE 15th Panzer Division", "side": "AXIS",   "hex": [47, -5], "arrival_turn": 8, "role": "artillery"},
+    {"counter": "BR 4 RTR",     "group": "BR 2nd Armoured Division", "side": "ALLIED", "hex": [18, 66], "arrival_turn": 4, "role": "tank"},
+    {"counter": "BR Tiger",     "group": "BR 2nd Armoured Division", "side": "ALLIED", "hex": [20, 66], "arrival_turn": 7, "role": "tank"}
+  ]
+}

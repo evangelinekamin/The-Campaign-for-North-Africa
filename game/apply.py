@@ -17,8 +17,8 @@ def apply(state: GameState, event: Event) -> GameState:
 
     if k in (EventKind.GAME_INITIALIZED, EventKind.ORDER_REJECTED,
              EventKind.COMBAT_RESOLVED, EventKind.BARRAGE_RESOLVED,
-             EventKind.ANTI_ARMOR_RESOLVED):
-        return state  # markers / audit records — losses come as separate STEP_LOST
+             EventKind.ANTI_ARMOR_RESOLVED, EventKind.REINFORCEMENT_ARRIVED):
+        return state  # markers / audit records — a reinforcement is on-map by turn>=arrival_turn
 
     if k == EventKind.WEATHER_ROLLED:
         return replace(state, weather=p["weather"], move_modifier=p["move_modifier"])
