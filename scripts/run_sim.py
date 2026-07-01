@@ -69,6 +69,13 @@ def _line(e: Event) -> str:
         return (f"  COMBAT @ {tuple(p['target'])}: {'+'.join(p['attackers'])} vs "
                 f"{'+'.join(p['defenders'])} | diff {p['differential']:+d} (col {p['column']}) "
                 f"-> def {p['defender_loss_pct']}% / atk {p['attacker_loss_pct']}%{extra}")
+    if k == EventKind.ANTI_ARMOR_RESOLVED:
+        return (f"  ANTI-ARMOR @ {tuple(p['target'])} by {'+'.join(p['firers'])}: "
+                f"{p['actual']} pts -> {p['damage']} armor damage")
+    if k == EventKind.BARRAGE_RESOLVED:
+        res = p.get("result", "")
+        return (f"  BARRAGE @ {tuple(p['target'])} by {'+'.join(p['firers'])}: "
+                f"{p['actual']} pts vs {p['target_class']} -> {res}")
     if k == EventKind.STEP_LOST:
         return f"      loss  {p['unit_id']} -{p['amount']} step ({p['role']})"
     if k == EventKind.UNIT_RETREATED:

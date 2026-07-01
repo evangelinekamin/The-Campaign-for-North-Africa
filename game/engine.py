@@ -78,7 +78,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             _movement(r, policies[side], side)
             _supply_movement(r, policies[side], side)   # supply follows the army (32.3)
             r.go(Phase.COMBAT, side)
-            _combat(r, policies[side], side)
+            _combat(r, policies, side)
         r.go(Phase.RECORD, Side.SYSTEM)
         _record_control(r)
         winner, reason = _victory(r)
@@ -175,9 +175,19 @@ def _reject_supply(r: _Run, side: Side, actor: str, order, reason: str) -> None:
             "to": list(order.to), "reason": reason})
 
 
-def _combat(r: _Run, policy: Policy, side: Side) -> None:
+def _other(side: Side) -> Side:
+    return Side.ALLIED if side is Side.AXIS else Side.AXIS
+
+
+def _combat(r: _Run, policies: dict, side: Side) -> None:
+    """One Combat Segment (rule 11.0), the Phasing side = `side`. Barrage and Anti-
+    Armor are fought by BOTH players (their losses land before Close Assault); then
+    the Phasing player Close Assaults. Retreat-Before-Assault (13) is deferred."""
+    enemy = _other(side)
+    _barrage_step(r, policies, side, enemy)
+    _anti_armor_step(r, side, enemy)
     actor = f"{side.value}/Front"
-    for order in policy.combat(r.state, side):
+    for order in policies[side].combat(r.state, side):
         attackers = [r.state.unit(a) for a in order.attacker_ids]
         attackers = [u for u in attackers
                      if u and u.alive and u.side == side and is_adjacent(u.hex, order.target)]
@@ -188,6 +198,64 @@ def _combat(r: _Run, policy: Policy, side: Side) -> None:
                     "reason": "no valid attackers or empty target"})
             continue
         _resolve_combat(r, side, actor, attackers, defenders, order.target)
+
+
+def _barrage_step(r: _Run, policies: dict, phasing: Side, enemy: Side) -> None:
+    pass    # rule 12 -- implemented in the barrage slice
+
+
+def _anti_armor_step(r: _Run, phasing: Side, enemy: Side) -> None:
+    """Anti-Armor Fire (rule 14): both sides fire at each other's adjacent armor,
+    simultaneously (target strengths are read before any loss lands), and all armor
+    losses precede Close Assault. Each unit with an Anti-Armor rating fires at one
+    adjacent enemy hex holding armor, combining with others onto that target; firing
+    costs ammunition (14.24). Voluntary withholding and splitting TOE between anti-
+    armor and assault are deferred -- all committed armor fires and is a target."""
+    state0 = r.state
+    plan: list[tuple] = []
+    for firing in (phasing, enemy):
+        is_phasing = firing is phasing
+        actor = f"{firing.value}/Front"
+        by_target: dict[Coord, list] = {}
+        for u in state0.living(firing):
+            if u.anti_armor <= 0 or not u.is_combat:
+                continue
+            for nb in neighbors(u.hex):
+                if any(t.is_armor for t in state0.enemies_at(nb, firing)):
+                    by_target.setdefault(nb, []).append(u)
+                    break
+        for tgt, firers in by_target.items():
+            armed = [u for u in firers if _charge_ammo(r, firing, actor, u, phasing=is_phasing)]
+            raw = sum(u.raw_anti_armor for u in armed)
+            if raw <= 0:
+                continue
+            d1, d2 = r.d6(), r.d6()
+            dmg = combat_tables.anti_armor_damage(combat.actual_points(raw, False),
+                                                   d1 * 10 + d2, phasing=is_phasing)
+            plan.append((firing, actor, tgt, [u.id for u in armed], raw, (d1, d2), dmg))
+    for firing, actor, tgt, firer_ids, raw, dice, dmg in plan:
+        r.emit(EventKind.ANTI_ARMOR_RESOLVED, firing, actor,
+               {"target": list(tgt), "firers": firer_ids, "raw": raw,
+                "actual": combat.actual_points(raw, False), "damage": dmg},
+               rng_draws=dice)
+        _apply_armor_losses(r, firing, actor, tgt, dmg)
+
+
+def _apply_armor_losses(r: _Run, firing: Side, actor: str, target: Coord, damage: int) -> None:
+    """Remove armored TOE from the target hex to absorb >= `damage` Armor-Protection
+    Points; each step absorbs that unit's Armor Protection rating (rule 14.42/43).
+    Excess beyond destroying all armor there is ignored (14.45)."""
+    remaining = damage
+    for u in r.state.enemies_at(target, firing):
+        if remaining <= 0:
+            break
+        if not u.is_armor or not u.alive:
+            continue
+        steps = min(u.strength, math.ceil(remaining / u.armor_protection))
+        if steps > 0:
+            r.emit(EventKind.STEP_LOST, firing, actor,
+                   {"unit_id": u.id, "amount": steps, "role": "armor"})
+            remaining -= steps * u.armor_protection
 
 
 def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,

@@ -123,6 +123,30 @@ def test_scenarios_robust_across_seeds():
             assert determinism_signature(a.events) == determinism_signature(b.events)
 
 
+def test_anti_armor_fire_damages_adjacent_armor():
+    # an AT unit fires anti-armor at an adjacent enemy tank; the tank loses TOE to
+    # absorb the damage (rule 14). Needs ammo in range to fire (14.24).
+    from game.engine import _Run, _anti_armor_step
+    from game.events import Phase
+    from game.movement import TerrainMap
+    from game.state import GameState, SupplyUnit, Unit, VP
+    from game.terrain import Mobility, Terrain
+    terr = {(q, 0): Terrain.CLEAR for q in range(4)}
+    at = Unit("AT", Side.AXIS, (0, 0), (StepRecord("at", 8),), mobility=Mobility.MOTORIZED,
+              cpa=20, stacking_points=1, oca=1, dca=2, anti_armor=6, vulnerability=2)
+    tank = Unit("TK", Side.ALLIED, (1, 0), (StepRecord("tk", 8),), mobility=Mobility.VEHICLE,
+                cpa=25, stacking_points=1, oca=3, dca=3, is_tank=True, armor_protection=3)
+    dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=40, fuel=60)
+    st = GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS,
+                   seed=5, weather="clear", move_modifier=0, vp=VP(),
+                   terrain=TerrainMap(terrain=terr), control={}, units=(at, tank),
+                   target_hex=(3, 0), supplies=(dump,),
+                   consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 40, "FUEL": 60})
+    r = _Run(st)
+    _anti_armor_step(r, Side.AXIS, Side.ALLIED)
+    assert r.state.unit("TK").strength < 8             # tank absorbed anti-armor damage
+
+
 def test_combined_arms_penalty():
     from game.engine import _combined_arms_penalty
     from game.terrain import Mobility

@@ -146,6 +146,13 @@ def test_morale_shift_moves_the_column():
     assert up.column == base.column + 2
 
 
+def test_anti_armor_crt():
+    assert ct.anti_armor_damage(5, 35) == 7            # rule 14.43 worked example
+    assert ct.anti_armor_damage(0, 11) == 0            # low points, low roll -> nothing
+    assert ct.anti_armor_damage(16, 66) == 32          # max column, max roll
+    assert ct.anti_armor_damage(8, 55, phasing=True) <= ct.anti_armor_damage(8, 55)
+
+
 def test_combined_arms_reduces_actual_points():
     # §15.2xx worked example: Axis 63 raw -> 6 Actual (21 inf TOE >= 3 tank -> no
     # penalty); CW 38 raw -> 4 Actual, tanks (7) exceed inf (5) by 2 -> -1 Actual

@@ -16,7 +16,8 @@ def apply(state: GameState, event: Event) -> GameState:
     p = event.payload
 
     if k in (EventKind.GAME_INITIALIZED, EventKind.ORDER_REJECTED,
-             EventKind.COMBAT_RESOLVED):
+             EventKind.COMBAT_RESOLVED, EventKind.BARRAGE_RESOLVED,
+             EventKind.ANTI_ARMOR_RESOLVED):
         return state  # markers / audit records — losses come as separate STEP_LOST
 
     if k == EventKind.WEATHER_ROLLED:

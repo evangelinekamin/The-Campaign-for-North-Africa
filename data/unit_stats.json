@@ -15,8 +15,8 @@
     "infantry":  {"type": "p",  "cpa": 10, "oca": 1, "dca": 2, "steps": 6, "mobility": "FOOT"},
     "motor_infantry": {"type": "l", "cpa": 10, "oca": 2, "dca": 2, "steps": 6, "mobility": "MOTORIZED"},
     "mg":        {"type": "u",  "cpa": 20, "oca": 4, "dca": 6, "steps": 3, "mobility": "MOTORIZED"},
-    "tank":      {"type": "g",  "cpa": 25, "oca": 3, "dca": 3, "steps": 8, "mobility": "VEHICLE"},
-    "recon":     {"type": "pp", "cpa": 45, "oca": 2, "dca": 3, "steps": 6, "mobility": "RECCE"},
-    "artillery": {"type": "x",  "cpa": 20, "oca": 0, "dca": 1, "steps": 6, "mobility": "MOTORIZED"}
+    "tank":      {"type": "g",  "cpa": 25, "oca": 3, "dca": 3, "steps": 8, "mobility": "VEHICLE", "is_tank": true, "armor_protection": 3, "anti_armor": 4},
+    "recon":     {"type": "pp", "cpa": 45, "oca": 2, "dca": 3, "steps": 6, "mobility": "RECCE", "armor_protection": 2, "anti_armor": 2},
+    "artillery": {"type": "x",  "cpa": 20, "oca": 0, "dca": 1, "steps": 6, "mobility": "MOTORIZED", "barrage": 8, "vulnerability": 5}
   }
 }

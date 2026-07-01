@@ -212,6 +212,43 @@ def morale_modifier(cohesion: int, roll: int) -> "int | str":
     return 0
 
 
+# [14.6] ANTI-ARMOR FIRE CRT: rows = the 36 d66 outcomes paired (11,12 / 13,14 /
+# ... / 65,66) -> 18 rows; columns = Actual Anti-Armor Points fired (0* then 1..16+,
+# capped). Cell = Damage Points (Armor Protection Points the target must lose).
+# Transcribed from the chart; verified against the worked example (5 pts, roll 35
+# -> 7). The 0* column is usable only when the firer has 1-4 RAW points (Actual 0).
+_ANTI_ARMOR: tuple[tuple[int, ...], ...] = (
+    (0, 0, 0, 1, 2, 3, 4, 6, 8, 10, 11, 12, 14, 16, 18, 20, 22),   # 11,12
+    (0, 0, 0, 1, 3, 4, 5, 6, 8, 10, 11, 13, 15, 17, 19, 20, 22),   # 13,14
+    (0, 0, 1, 1, 3, 4, 5, 7, 9, 10, 12, 13, 15, 17, 19, 21, 23),   # 15,16
+    (0, 0, 1, 2, 4, 5, 6, 8, 9, 11, 12, 14, 16, 18, 20, 21, 23),   # 21,22
+    (0, 0, 1, 2, 4, 5, 6, 8, 10, 11, 13, 14, 16, 18, 20, 22, 24),  # 23,24
+    (0, 0, 2, 3, 4, 6, 7, 9, 10, 12, 13, 15, 17, 19, 20, 22, 24),  # 25,26
+    (0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 19, 21, 23, 25),  # 31,32
+    (0, 1, 2, 3, 5, 7, 8, 10, 11, 13, 14, 16, 18, 20, 21, 23, 25),  # 33,34
+    (0, 1, 3, 4, 5, 7, 9, 10, 12, 13, 15, 16, 18, 20, 22, 24, 26),  # 35,36
+    (0, 2, 3, 4, 6, 7, 9, 11, 12, 14, 15, 17, 19, 21, 22, 24, 26),  # 41,42
+    (0, 2, 3, 5, 6, 8, 10, 11, 13, 14, 16, 17, 19, 21, 23, 25, 27),  # 43,44
+    (0, 2, 4, 5, 7, 8, 10, 12, 13, 15, 16, 18, 20, 22, 23, 25, 27),  # 45,46
+    (1, 3, 4, 6, 7, 9, 11, 12, 14, 15, 17, 19, 20, 22, 24, 26, 28),  # 51,52
+    (1, 3, 4, 6, 8, 9, 11, 13, 14, 16, 17, 20, 21, 23, 25, 27, 29),  # 53,54
+    (1, 3, 5, 7, 8, 10, 12, 13, 15, 16, 19, 21, 22, 24, 26, 28, 30),  # 55,56
+    (1, 4, 5, 7, 8, 10, 12, 14, 15, 17, 19, 22, 23, 25, 27, 29, 31),  # 61,62
+    (1, 4, 6, 8, 9, 11, 13, 14, 16, 18, 21, 22, 24, 26, 28, 29, 32),  # 63,64
+    (2, 4, 6, 8, 9, 11, 13, 15, 17, 19, 21, 23, 24, 26, 28, 30, 32),  # 65,66
+)
+
+
+def anti_armor_damage(actual_points: int, roll: int, *, phasing: bool = False) -> int:
+    """Rule 14.6: Armor-Protection Points the target must lose, from Actual Anti-
+    Armor Points and a d66 roll (10*dieA + dieB). The Phasing firer shifts one row
+    toward 11 (a defender's-advantage penalty; 11/12 unaffected, 14.x)."""
+    row = (roll // 10 - 1) * 3 + (roll % 10 - 1) // 2
+    if phasing:
+        row = max(0, row - 1)
+    return _ANTI_ARMOR[row][max(0, min(16, actual_points))]
+
+
 # Close-Assault column shifts from the Terrain Effects Chart (8.37): negative =
 # columns left (favours defender), positive = right (favours attacker).
 HEX_CA_SHIFT: dict[Terrain, int] = {
