@@ -117,12 +117,13 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
 MODEL_DEFAULTS = {
     ("GE", "tank"): "pz3h", ("GE", "antitank"): "pak38", ("GE", "artillery"): "lefh18",
     ("CW", "tank"): "a13", ("CW", "artillery"): "25pdr",
+    ("IT", "tank"): "m13",
 }
 
 
 def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
                arrival_turn: int) -> Unit:
-    nat = _nationality(rec["side"])
+    nat = rec.get("nationality") or _nationality(rec["side"])    # IT units set it explicitly
     s = stats[nat][role]
     model = stats.get("models", {}).get(rec.get("model") or MODEL_DEFAULTS.get((nat, role)), {})
 

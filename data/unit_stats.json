@@ -19,6 +19,17 @@
     "recon":     {"type": "pp", "cpa": 45, "oca": 2, "dca": 3, "steps": 6, "mobility": "RECCE", "armor_protection": 2, "anti_armor": 2},
     "artillery": {"type": "x",  "cpa": 20, "oca": 0, "dca": 1, "steps": 6, "mobility": "MOTORIZED", "barrage": 8, "vulnerability": 5}
   },
+  "IT": {
+    "_comment": "Italian role stats -- representative (weaker CA, older kit than German); tank/gun MODELS (M13/M14 etc.) come from the [4.48] chart via each unit's model. Flagged for [4.46] Italian Unit Characteristics Chart verification.",
+    "hq":        {"type": "a",  "cpa": 30, "oca": 0, "dca": 1, "steps": 1, "mobility": "MOTORIZED", "is_combat": false, "sp": 0},
+    "oasis":     {"type": "r",  "cpa": 20, "oca": 1, "dca": 1, "steps": 1, "mobility": "FOOT", "sp": 0},
+    "infantry":  {"type": "p",  "cpa": 10, "oca": 1, "dca": 2, "steps": 6, "mobility": "FOOT"},
+    "motor_infantry": {"type": "l", "cpa": 15, "oca": 2, "dca": 2, "steps": 6, "mobility": "MOTORIZED"},
+    "tank":      {"type": "m",  "cpa": 20, "oca": 3, "dca": 3, "steps": 8, "mobility": "VEHICLE", "is_tank": true, "armor_protection": 3, "anti_armor": 3},
+    "recon":     {"type": "r",  "cpa": 40, "oca": 2, "dca": 2, "steps": 6, "mobility": "RECCE", "armor_protection": 2, "anti_armor": 2},
+    "artillery": {"type": "u",  "cpa": 15, "oca": 0, "dca": 1, "steps": 6, "mobility": "MOTORIZED", "barrage": 6, "vulnerability": 4},
+    "antitank":  {"type": "x",  "cpa": 15, "oca": 1, "dca": 2, "steps": 6, "mobility": "MOTORIZED", "anti_armor": 4, "vulnerability": 2}
+  },
   "_models_comment": "Per-model combat ratings from the Tank & Gun Characteristics Charts (4.47/4.48/4.49), extracted this session. A unit may name a 'model' to override its role's combat ratings (only the fields present are overridden; steps/cpa/mobility stay from the role). Tank models set oca/dca/anti_armor/armor_protection/is_tank; gun models set anti_armor/vulnerability; artillery set barrage/vulnerability (25pdr also anti_armor).",
   "models": {
     "pz2":       {"oca": 2, "dca": 3, "anti_armor": 1, "armor_protection": 2, "is_tank": true},

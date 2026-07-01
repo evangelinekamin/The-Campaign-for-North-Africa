@@ -463,12 +463,19 @@ def _retreat(r: _Run, atk_side: Side, actor: str, defender_ids: list[str],
     blocked = (enemy_zoc - friendly) | enemy_occ
     supplies = [s.hex for s in r.state.active_supplies(def_side)]
 
+    surv_ids = {u.id for u in survivors}
+
+    def _fits(nb: Coord) -> bool:                    # the retreating stack must fit (rule 9.31)
+        here = [x for x in r.state.units_at(nb) if x.side == def_side and x.id not in surv_ids]
+        return stacking.within_hex_limit(here + survivors, r.state.terrain.terrain[nb])
+
     cur = survivors[0].hex
     done = 0
     for _ in range(n):
         cands = [nb for nb in neighbors(cur)
                  if nb in r.state.terrain.terrain and nb not in blocked
-                 and distance(nb, attacker_hex) > distance(cur, attacker_hex)]
+                 and distance(nb, attacker_hex) > distance(cur, attacker_hex)
+                 and _fits(nb)]
         if not cands:
             break
         occupied = frozenset(u.hex for u in r.state.living(def_side))

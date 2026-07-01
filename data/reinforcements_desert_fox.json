@@ -2,6 +2,56 @@
   "_comment": "Off-OOB units the VASSAL save aggregated or omitted, keyed by arrival_turn (0 = on-map at start, >0 = reinforcement per rule 20 / 61.2). The 5th Light Panzer Division's combat battalions (I/5 + II/5 Panzer, 2nd + 8th MG, 3rd Aufklarungs) are on-map at El Agheila from the start -- the historical Tobruk assault force the vsav had folded into the 'GE 5 Le' HQ counter. The 15th Panzer (arrival_turn 2-8) enters piecemeal near El Agheila and road-marches east; its 8th Panzer Regt tank battalions arrive turns 6-7 (GT31-32). CW armour enters east of Tobruk. Each unit has a distinct entry hex so arrivals never over-stack. Representative slice; full roster in the reinforcement subagent report.",
   "reinforcements": [
     {
+      "counter": "IT 132 Pz I",
+      "group": "IT Ariete Armoured Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        45,
+        -4
+      ],
+      "arrival_turn": 0,
+      "role": "tank",
+      "model": "m13"
+    },
+    {
+      "counter": "IT 132 Pz II",
+      "group": "IT Ariete Armoured Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        45,
+        -3
+      ],
+      "arrival_turn": 0,
+      "role": "tank",
+      "model": "m13"
+    },
+    {
+      "counter": "IT 8 Bers",
+      "group": "IT Ariete Armoured Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        46,
+        -4
+      ],
+      "arrival_turn": 0,
+      "role": "motor_infantry"
+    },
+    {
+      "counter": "IT 132 Art",
+      "group": "IT Ariete Armoured Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        46,
+        -3
+      ],
+      "arrival_turn": 0,
+      "role": "artillery"
+    },
+    {
       "counter": "GE I-5 Pz",
       "group": "GE 5th Light Panzer Division",
       "side": "AXIS",
