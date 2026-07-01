@@ -62,9 +62,11 @@ def distance(a: Hex, b: Hex) -> int:
     return (abs(aq - bq) + abs(aq + ar - bq - br) + abs(ar - br)) // 2
 
 
-# --- Map C pixel mapping (provisional, ~30px; data/cna_map_calibration.json) ---
-_MAPC_PX = (5824.30, 39.34, 84.34)   # px = c0 + c1*q + c2*r
-_MAPC_PY = (4669.75, -76.16, -3.99)  # py = c0 + c1*q + c2*r
+# --- Map C pixel mapping (town-dot calibrated, ~20px; town dots aren't exactly
+# at hex centres so this caps ~20px — fine for sampling a small central patch,
+# validated by the terrain overlay). data/cna_map_calibration.json ---
+_MAPC_PX = (5788.138, 40.1934, 84.8042)   # px = c0 + c1*q + c2*r
+_MAPC_PY = (4599.947, -73.4760, -0.5699)  # py = c0 + c1*q + c2*r
 
 
 def to_pixel_mapc(h: Hex) -> tuple[float, float]:
