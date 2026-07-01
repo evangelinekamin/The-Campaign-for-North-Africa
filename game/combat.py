@@ -6,10 +6,17 @@ and reads loss percentages off the §15.79 CRT (combat_tables). Losses are appli
 as a percentage of committed TOE strength (attacker rounds up, defender rounds
 down, §15.83c).
 
-DEFERRED + FLAGGED for later slices: morale shift (15.6), combined-arms (15.4),
-the organizational-size table beyond 2:1 (15.52/15.53), Retreat / Engaged results,
-Captured / prisoners (15.85), guns & vulnerability (15.84), Probe (15.9), and the
-other combat types — Anti-Armor (14), Barrage (12).
+Also resolves the CRT's special results (rule 15.79) from the dice SUM: the
+defender's RETREAT (n hexes) or CAPT, and the attacker's ENG (Engaged) or CAPT.
+Retreat takes priority over Engaged (15.74). The engine executes the retreat and
+the Engaged marker; advance-after-combat is not a CRT result (the attacker simply
+moves into a vacated hex next phase, rule 10.24).
+
+DEFERRED + FLAGGED for later slices: the Prisoners Captured % table (15.89 — Capt
+here just records that some already-counted losses are prisoners, no board effect),
+combined-arms (15.4), the organizational-size table beyond 2:1 (15.52/15.53),
+guns & vulnerability (15.84), Probe (15.9), and the other combat types — Anti-Armor
+(14), Barrage (12). Morale (15.6) is a column shift, applied via `morale_shift`.
 """
 from __future__ import annotations
 
@@ -28,6 +35,9 @@ class CombatResult:
     defender_loss_pct: int
     attacker_steps_lost: int
     defender_steps_lost: int
+    attacker_result: str | None = None   # "CAPT" | "ENG" | None (from atk dice sum)
+    defender_result: str | None = None   # "CAPT" | "RETREAT" | None (from def dice sum)
+    retreat_hexes: int = 0               # defender retreat distance if RETREAT
 
 
 def _round_half_up(x: float) -> int:
@@ -45,7 +55,8 @@ def actual_points(raw: int, both_small: bool) -> int:
 def resolve(*, attacker_raw: int, defender_raw: int,
             attacker_strength: int, defender_strength: int,
             def_terrain: Terrain, attack_feature: Hexside | None,
-            atk_roll: int, def_roll: int, extra_shift: int = 0) -> CombatResult:
+            atk_roll: int, def_roll: int,
+            extra_shift: int = 0, morale_shift: int = 0) -> CombatResult:
     both_small = attacker_raw < 10 and defender_raw < 10
     diff = actual_points(attacker_raw, both_small) - actual_points(defender_raw, both_small)
 
@@ -56,14 +67,21 @@ def resolve(*, attacker_raw: int, defender_raw: int,
         shift += 2
     elif attacker_raw > 0 and defender_raw >= 2 * attacker_raw:
         shift -= 2
-    shift += extra_shift
+    shift += morale_shift + extra_shift                         # 15.62 morale column shift
 
     col = max(0, min(ct.N_COLS - 1, ct.diff_to_column(diff) + shift))
     a_pct = ct.attacker_loss_pct(col, atk_roll)
     d_pct = ct.defender_loss_pct(col, def_roll)
+
+    # Special results read the SAME dice as an arithmetic sum (rule 15.79).
+    a_res = ct.attacker_result(col, atk_roll // 10 + atk_roll % 10)
+    d_res, retreat = ct.defender_result(col, def_roll // 10 + def_roll % 10)
+    if d_res == "RETREAT" and a_res == "ENG":                   # 15.74 retreat beats engaged
+        a_res = None
     return CombatResult(
         differential=diff, column=col,
         attacker_loss_pct=a_pct, defender_loss_pct=d_pct,
         attacker_steps_lost=math.ceil(a_pct / 100 * attacker_strength),
         defender_steps_lost=math.floor(d_pct / 100 * defender_strength),
+        attacker_result=a_res, defender_result=d_res, retreat_hexes=retreat,
     )

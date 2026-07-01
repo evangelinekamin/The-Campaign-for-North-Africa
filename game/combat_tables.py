@@ -1,15 +1,15 @@
 """The Close Assault Combat Results Table (rule 15.79) and Close-Assault terrain
 column shifts (rule 8.37 / 15.3).
 
-VERIFY AGAINST THE SCAN: this is the densest chart in the game. The loss-% rows
-below are transcribed from docs/rules/90-charts-tables-and-play-aids.md and are
-guarded by a partition test (test_combat: every legal d6d6 roll maps to exactly
-one loss row per column) plus the rulebook's own worked example (§15.64). The
-table's Retreat / Engaged / Captured sub-rows had unrecoverable OCR ambiguity and
-are NOT encoded here — they are deferred to a scan-verified pass (the engine
-applies losses only for now).
+The loss-% rows are transcribed from the CRT and guarded by a partition test
+(test_combat: every legal d6d6 roll maps to exactly one loss row per column) plus
+the rulebook's worked example (§15.64). The Retreat / Engaged / Captured sub-rows
+are now transcribed too — from the authoritative chart image (15.79 in the VASSAL
+mod, read directly), which recovered what the OCR had lost.
 
-Dice are read SEQUENTIALLY for losses (large die first: a 2 and a 5 -> 25).
+DICE, read TWO ways from the same 2d6 per side (rule 15.79):
+  * SEQUENTIALLY (large die first: a 2 and a 5 -> 25, range 11..66) for the LOSS %.
+  * as an ARITHMETIC SUM (2 + 5 = 7, range 2..12) for the CAPT / ENG / RETREAT rows.
 Columns are the Final Assault Differential; a column SHIFT (terrain/size/morale)
 moves the differential left (toward the defender) or right (toward the attacker).
 """
@@ -111,6 +111,57 @@ def attacker_loss_pct(col: int, roll: int) -> int:
 
 def defender_loss_pct(col: int, roll: int) -> int:
     return _lookup(_DEFENDER, col, roll)
+
+
+# --- CRT special results (rule 15.79): read the SAME 2 dice as an ARITHMETIC SUM
+# (2..12). Capt + Retreat are DEFENDER results; Capt + Eng are ATTACKER results
+# (the attacker is never forced to retreat). Transcribed cell-for-cell from the
+# 15.79 chart image and cross-checked vs the §15.73b worked example (+3 column:
+# defender 1-hex retreat on 4-7, attacker Eng on 8-10/12). Least-certain cells:
+# the 3-hex-retreat overrun row and a couple of overrun 1-hex cells.
+_ATK_CAPT = ["2-7", "2-6", "2-5", "2-4", "2-3", "2", "", "", "", "", "", "", "", "", "", "", "", ""]
+_ATK_ENG = ["10-12", "10-11", "11-12", "12", "11-12", "10-11", "10-12", "9-10,12",
+            "9-11", "9-12", "8-10,12", "8-10", "9-10,12", "10-12", "9-11", "", "", ""]
+_DEF_CAPT = ["", "", "", "", "", "", "", "2", "2", "2", "2-3", "2-3", "2-4", "2-4",
+             "2-5", "2-6", "2-7", "2-8"]
+_DEF_RET1 = ["", "", "", "", "10", "9", "8", "5-6", "4-6", "5-7", "4-7", "3-7", "7-9",
+             "7-9,12", "4-7,12", "3-4,6-9", "2,5-7,9,11", "2-9,11"]
+_DEF_RET2 = ["", "", "", "", "", "", "", "", "", "", "11", "11", "5", "5", "8", "12", "8,10", "10"]
+_DEF_RET3 = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "11", "12", "12"]
+
+
+def _sum_in(cell: str, s: int) -> bool:
+    """Is arithmetic dice-sum s in a cell like '2-4', '7-9,12' or '2,5-7,9,11'?"""
+    if not cell:
+        return False
+    for part in cell.split(","):
+        if "-" in part:
+            lo, hi = (int(x) for x in part.split("-"))
+            if lo <= s <= hi:
+                return True
+        elif int(part) == s:
+            return True
+    return False
+
+
+def attacker_result(col: int, dice_sum: int) -> str | None:
+    """'CAPT' | 'ENG' | None from the attacker's dice SUM (rule 15.79)."""
+    if _sum_in(_ATK_CAPT[col], dice_sum):
+        return "CAPT"
+    if _sum_in(_ATK_ENG[col], dice_sum):
+        return "ENG"
+    return None
+
+
+def defender_result(col: int, dice_sum: int) -> tuple[str | None, int]:
+    """('CAPT', 0) | ('RETREAT', n) | (None, 0) from the defender's dice SUM. Capt
+    takes precedence over Retreat where the overrun ranges overlap."""
+    if _sum_in(_DEF_CAPT[col], dice_sum):
+        return ("CAPT", 0)
+    for hexes, row in ((3, _DEF_RET3), (2, _DEF_RET2), (1, _DEF_RET1)):
+        if _sum_in(row[col], dice_sum):
+            return ("RETREAT", hexes)
+    return (None, 0)
 
 
 # Close-Assault column shifts from the Terrain Effects Chart (8.37): negative =

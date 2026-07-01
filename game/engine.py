@@ -11,13 +11,14 @@ still a placeholder CRT (the real land combat — rule 11 — is the next slice)
 """
 from __future__ import annotations
 
+import math
 import random
 from dataclasses import dataclass
 
 from . import combat, stacking, supply, tactics
 from .apply import apply
 from .events import Control, Event, EventKind, Phase, Side
-from .hexmap import is_adjacent
+from .hexmap import distance, is_adjacent, neighbors
 from .invariants import check
 from .policy import AttackOrder, MoveOrder, Policy
 from .state import Coord, GameState
@@ -217,7 +218,10 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
             "defenders": [u.id for u in defenders],
             "differential": res.differential, "column": res.column,
             "attacker_loss_pct": res.attacker_loss_pct,
-            "defender_loss_pct": res.defender_loss_pct},
+            "defender_loss_pct": res.defender_loss_pct,
+            "attacker_result": res.attacker_result,
+            "defender_result": res.defender_result,
+            "retreat_hexes": res.retreat_hexes},
            rng_draws=(ab, asm, db, dsm))
     for uid, amount in _spread_losses(defenders, res.defender_steps_lost):
         r.emit(EventKind.STEP_LOST, side, actor,
@@ -225,6 +229,52 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     for uid, amount in _spread_losses(armed_atk, res.attacker_steps_lost):
         r.emit(EventKind.STEP_LOST, side, actor,
                {"unit_id": uid, "amount": amount, "role": "attacker"})
+    if res.defender_result == "RETREAT":                        # rule 15.8 / 15.82
+        _retreat(r, side, actor, [d.id for d in defenders], armed_atk[0].hex, res.retreat_hexes)
+
+
+def _retreat(r: _Run, atk_side: Side, actor: str, defender_ids: list[str],
+             attacker_hex: Coord, n: int) -> None:
+    """Retreat the surviving defenders n hexes away from the attacker, toward the
+    nearest friendly supply/city, never into enemy ZOC or enemy units (rule 15.82);
+    each hex that cannot be retreated costs an extra 10% loss. The stack retreats
+    together. Retreat CP cost (15.82) is not charged yet (flagged)."""
+    survivors = [u for u in (r.state.unit(uid) for uid in defender_ids) if u and u.alive]
+    if not survivors:
+        return
+    def_side = survivors[0].side
+    enemy_zoc, enemy_occ = tactics.enemy_zoc_and_occupied(r.state, def_side)
+    friendly = frozenset(u.hex for u in r.state.living(def_side))
+    blocked = (enemy_zoc - friendly) | enemy_occ
+    supplies = [s.hex for s in r.state.active_supplies(def_side)]
+
+    cur = survivors[0].hex
+    done = 0
+    for _ in range(n):
+        cands = [nb for nb in neighbors(cur)
+                 if nb in r.state.terrain.terrain and nb not in blocked
+                 and distance(nb, attacker_hex) > distance(cur, attacker_hex)]
+        if not cands:
+            break
+        occupied = frozenset(u.hex for u in r.state.living(def_side))
+
+        def _key(nb):
+            sup = min((distance(nb, s) for s in supplies), default=0)
+            return (nb in occupied, sup, -distance(nb, attacker_hex), nb)
+        cur = min(cands, key=_key)
+        done += 1
+
+    if done > 0:
+        for u in survivors:
+            r.emit(EventKind.UNIT_RETREATED, atk_side, actor,
+                   {"unit_id": u.id, "from": list(u.hex), "to": list(cur), "hexes": done})
+    for _ in range(n - done):                                   # 15.82: 10% per un-retreated hex
+        for u in survivors:
+            cur_u = r.state.unit(u.id)
+            extra = math.ceil(0.10 * cur_u.strength)
+            if extra > 0:
+                r.emit(EventKind.STEP_LOST, atk_side, actor,
+                       {"unit_id": u.id, "amount": min(extra, cur_u.strength), "role": "defender"})
 
 
 def _charge_ammo(r: _Run, side: Side, actor: str, unit, *, phasing: bool) -> bool:

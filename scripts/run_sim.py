@@ -59,6 +59,8 @@ def _line(e: Event) -> str:
                 f"-> def {p['defender_loss_pct']}% / atk {p['attacker_loss_pct']}%")
     if k == EventKind.STEP_LOST:
         return f"      loss  {p['unit_id']} -{p['amount']} step ({p['role']})"
+    if k == EventKind.UNIT_RETREATED:
+        return f"      retreat {p['unit_id']} {tuple(p['from'])} -> {tuple(p['to'])} ({p['hexes']} hex)"
     if k == EventKind.SUPPLY_CONSUMED:
         return ""   # frequent; rolled into the summary rather than narrated per event
     if k == EventKind.HEX_CONTROL_CHANGED:

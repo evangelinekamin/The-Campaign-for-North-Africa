@@ -84,6 +84,32 @@ def test_invariant_detects_overstacking():
         check(piled)
 
 
+def test_retreat_relocates_defender_away_from_attacker():
+    # a defender with room retreats the mandated hexes away from the assaulting
+    # unit (rule 15.82); with no supply to bias toward, it moves as far as told.
+    from game.engine import _Run, _retreat
+    from game.events import Phase
+    from game.hexmap import distance
+    from game.movement import TerrainMap
+    from game.state import GameState, SupplyUnit, Unit, VP
+    from game.terrain import Mobility, Terrain
+    terr = {(q, 0): Terrain.CLEAR for q in range(6)}
+    defender = Unit("D", Side.ALLIED, (3, 0), (StepRecord("inf", 4),),
+                    mobility=Mobility.FOOT, cpa=10, stacking_points=1, oca=2, dca=2)
+    attacker = Unit("A", Side.AXIS, (2, 0), (StepRecord("inf", 4),),
+                    mobility=Mobility.FOOT, cpa=10, stacking_points=1, oca=3, dca=3)
+    st = GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS,
+                   seed=1, weather="clear", move_modifier=0, vp=VP(),
+                   terrain=TerrainMap(terrain=terr), control={}, units=(defender, attacker),
+                   target_hex=(5, 0), supplies=(), consumed={"AMMO": 0, "FUEL": 0},
+                   initial_supply={"AMMO": 0, "FUEL": 0})
+    r = _Run(st)
+    _retreat(r, Side.AXIS, "AXIS/Front", ["D"], (2, 0), 2)
+    moved = r.state.unit("D")
+    assert moved.hex != (3, 0)
+    assert distance(moved.hex, (2, 0)) >= 3                # retreated 2 hexes away
+
+
 def test_engine_rejects_illegal_orders_without_mutating_state():
     result = run(coastal_corridor(), axis=_BadPolicy(), allied=ScriptedPolicy(Side.AXIS))
     rejected = [e for e in result.events if e.kind == EventKind.ORDER_REJECTED]

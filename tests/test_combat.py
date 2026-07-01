@@ -80,6 +80,41 @@ def test_small_raw_uses_raw_as_actual():
     assert res.differential == 2
 
 
+def test_defender_and_attacker_result_tables():
+    c = ct.diff_to_column(3)                       # +3 column (index 10)
+    assert ct.defender_result(c, 2) == ("CAPT", 0)         # sum 2 -> captured
+    assert ct.defender_result(c, 5) == ("RETREAT", 1)      # 4-7 -> retreat 1
+    assert ct.defender_result(c, 11) == ("RETREAT", 2)     # 11 -> retreat 2
+    assert ct.defender_result(c, 8) == (None, 0)           # in contact
+    assert ct.attacker_result(c, 8) == "ENG"               # 8-10,12 -> engaged
+    assert ct.attacker_result(c, 2) is None                # attacker capt only on -diff
+
+
+def test_retreat_takes_priority_over_engaged():
+    # +3 column: defender sum 5 -> retreat 1; attacker sum 8 -> eng, but the
+    # retreat drops the eng (rule 15.74).
+    res = combat.resolve(attacker_raw=45, defender_raw=24,
+                         attacker_strength=10, defender_strength=10,
+                         def_terrain=Terrain.CLEAR, attack_feature=None,
+                         atk_roll=26, def_roll=14)          # sums: atk 8, def 5
+    assert res.column == 10
+    assert res.defender_result == "RETREAT" and res.retreat_hexes == 1
+    assert res.attacker_result is None
+
+
+def test_morale_shift_moves_the_column():
+    # +2 morale (e.g. 15th Panzer +3 vs +1) shifts the assault two columns right.
+    base = combat.resolve(attacker_raw=30, defender_raw=30,
+                          attacker_strength=10, defender_strength=10,
+                          def_terrain=Terrain.CLEAR, attack_feature=None,
+                          atk_roll=11, def_roll=11)
+    up = combat.resolve(attacker_raw=30, defender_raw=30,
+                        attacker_strength=10, defender_strength=10,
+                        def_terrain=Terrain.CLEAR, attack_feature=None,
+                        atk_roll=11, def_roll=11, morale_shift=2)
+    assert up.column == base.column + 2
+
+
 def test_loss_rounding_attacker_up_defender_down():
     # column 0 differential, both sides 6 actual -> diff 0 (col 7)
     res = combat.resolve(attacker_raw=60, defender_raw=60,
