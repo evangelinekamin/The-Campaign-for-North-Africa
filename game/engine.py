@@ -526,14 +526,37 @@ def _record_control(r: _Run) -> None:
                    {"coord": list(coord), "control": new.value})
 
 
+BARDIA: Coord = (20, 77)          # C4321, east of Tobruk -> Axis Decisive Victory (61.8)
+
+
+def _degree_of_success(r: _Run) -> tuple[int, int, bool, bool]:
+    """The Axis high-water mark toward Tobruk, as a graded signal (rule 61.8 is a
+    binary hold, but this scenario's interest is HOW FAR the Axis got -- the Race
+    for Tobruk). Returns (advance %, closest-reach hexes, holds Tobruk, holds
+    Bardia). Advance % = fraction of the opening Axis->Tobruk gap closed by the
+    furthest Axis-controlled or Axis-occupied hex."""
+    s = r.state
+    tobruk = s.target_hex
+    axis = [h for h, c in s.control.items() if c == Control.AXIS]
+    axis += [u.hex for u in s.living(Side.AXIS)]
+    reach = min((distance(h, tobruk) for h in axis), default=99)
+    start = min((distance(u.hex, tobruk) for u in r.initial.living(Side.AXIS)), default=99)
+    advance = max(0, min(100, round(100 * (start - reach) / max(1, start))))
+    return advance, reach, s.control_of(tobruk) == Control.AXIS, s.control_of(BARDIA) == Control.AXIS
+
+
+def _axis_win_reason(holds_bardia: bool) -> str:
+    return ("Axis Decisive Victory: Tobruk and Bardia held (61.8)" if holds_bardia
+            else "Axis Victory: Tobruk captured and held (61.8)")
+
+
 def _victory(r: _Run) -> tuple[Side | None, str]:
     s = r.state
-    ctrl = s.control_of(s.target_hex)
+    advance, reach, holds_tobruk, holds_bardia = _degree_of_success(r)
     r.emit(EventKind.VICTORY_CHECKED, Side.SYSTEM, "SYSTEM",
-           {"axis": 100 if ctrl == Control.AXIS else 0,
-            "allied": 100 if ctrl == Control.ALLIED else 0})
-    if ctrl == Control.AXIS:
-        return Side.AXIS, "Axis strategic victory: objective captured and held"
+           {"axis": advance, "allied": 100 - advance, "axis_reach": reach})
+    if holds_tobruk:
+        return Side.AXIS, _axis_win_reason(holds_bardia)
     if not s.living(Side.ALLIED):
         return Side.AXIS, "Axis victory by annihilation"
     if not s.living(Side.AXIS):
@@ -542,9 +565,14 @@ def _victory(r: _Run) -> tuple[Side | None, str]:
 
 
 def _final_decision(r: _Run) -> tuple[Side, str]:
-    if r.state.control_of(r.state.target_hex) == Control.AXIS:
-        return Side.AXIS, "Axis held the objective at the final turn"
-    return Side.ALLIED, "Allied held the line to the final turn"
+    advance, reach, holds_tobruk, holds_bardia = _degree_of_success(r)
+    if holds_tobruk:
+        return Side.AXIS, _axis_win_reason(holds_bardia)
+    if reach <= 2:
+        return Side.ALLIED, f"Commonwealth marginal victory: Tobruk held but invested (Axis {advance}% of the way)"
+    if advance >= 50:
+        return Side.ALLIED, f"Commonwealth victory: Tobruk held, Axis reached within {reach} hexes ({advance}% advance)"
+    return Side.ALLIED, f"Commonwealth decisive victory: Axis advance stalled {reach} hexes short ({advance}% advance)"
 
 
 def determinism_signature(events: list[Event]) -> str:
