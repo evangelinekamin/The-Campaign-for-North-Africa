@@ -56,7 +56,11 @@ def build_movement_prompt(obs: dict) -> str:
         "For each combat unit you move, pick its destination FROM that unit's "
         "can_move_to list (those are the only hexes it can legally reach this turn; "
         "lower dist = closer to the objective). Advance toward the objective and "
-        "keep stacks together.\n"
+        "keep stacks together. Combined arms: units with a 'barrage' (artillery) or "
+        "'anti_armor' (guns/tanks) rating automatically bombard ADJACENT enemies -- "
+        "move them onto a can_move_to hex marked firing_position to soften a target "
+        "before assaulting it. Tanks (is_tank) need at least an equal infantry "
+        "strength stacked with them or they lose close-assault power.\n"
         'Reply with ONLY JSON: {"reasoning":"one sentence","moves":'
         '[{"unit":"<id>","to":[q,r]}]}. Use a [q,r] taken from that unit\'s '
         "can_move_to; omit units that should hold.")

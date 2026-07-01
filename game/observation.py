@@ -49,11 +49,26 @@ def observe(state: GameState, side: Side) -> dict:
             "mobility": u.mobility.name,
             "is_combat": u.is_combat,
         }
+        # Combat arm, surfaced only when non-zero so the agent can place its
+        # support weapons: barrage (artillery) + anti_armor auto-fire at ADJACENT
+        # enemies (range 1); armor/tanks are the anti-armor targets.
+        for key, val in (("barrage", u.barrage), ("anti_armor", u.anti_armor),
+                         ("armor_protection", u.armor_protection)):
+            if val:
+                v[key] = val
+        if u.is_tank:
+            v["is_tank"] = True
         if moving and u.is_combat:
             reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occ)
             dests = sorted((h for h in reach if h != u.hex), key=lambda h: distance(h, target))
-            v["can_move_to"] = [{"hex": list(h), "dist": distance(h, target)}
-                                for h in dests[:REACH_LIMIT]]
+            support = u.barrage > 0 or u.anti_armor > 0
+            entries = []
+            for h in dests[:REACH_LIMIT]:
+                e = {"hex": list(h), "dist": distance(h, target)}
+                if support and any(state.enemies_at(nb, side) for nb in neighbors(h)):
+                    e["firing_position"] = True     # barrage / anti-armor fires from here
+                entries.append(e)
+            v["can_move_to"] = entries
         return v
 
     # Limited intelligence: aggregate the enemy to per-hex stack sightings only.
