@@ -44,19 +44,33 @@ KNOWN_TERRAIN = {
 }
 
 
-def classify(rgb) -> str:
-    R, G, B = (int(v) for v in rgb)
-    if B > R + 12 and B > 120:
+SAMPLE_RADIUS = 24        # patch half-size (px); covers most of a ~85px hex
+SEA_FRACTION = 0.55       # a hex is sea only if it is MOSTLY water
+
+
+def _masks(patch: np.ndarray) -> dict:
+    """Per-pixel terrain masks over an HxWx3 patch (vectorised; sea wins ties so a
+    coastal hex with real land is still land)."""
+    R, G, B = patch[..., 0], patch[..., 1], patch[..., 2]
+    sea = (B > R + 12) & (B > 120)
+    veg = (G > R + 8) & (G > B + 8) & ~sea
+    desert = (R > 195) & (G > 150) & (B < 135) & (R - B > 70) & ~sea & ~veg
+    clear = (R > 200) & (G > 195) & (B > 165) & ~sea & ~veg & ~desert
+    rough = ((R > 120) & (R < 215) & (G > 115) & (G < 200) & (B < 160)
+             & (np.abs(R - G) < 45) & ~sea & ~veg & ~desert & ~clear)
+    return {"sea": sea, "vegetation": veg, "desert": desert, "clear": clear, "rough": rough}
+
+
+def classify_patch(patch: np.ndarray) -> str:
+    """Classify a hex from a patch: sea only if mostly water, else the dominant
+    land terrain. This keeps thin coastal land (ports, the coast road corridor)
+    on the map instead of drowning it."""
+    m = _masks(patch)
+    total = patch.shape[0] * patch.shape[1]
+    if m["sea"].sum() >= SEA_FRACTION * total:
         return "sea"
-    if G > R + 8 and G > B + 8:
-        return "vegetation"
-    if R > 195 and G > 150 and B < 135 and R - B > 70:
-        return "desert"
-    if R > 200 and G > 195 and B > 165:
-        return "clear"
-    if 120 < R < 215 and 115 < G < 200 and B < 160 and abs(R - G) < 45:
-        return "rough"          # includes escarpment bands (hexsides refined later)
-    return "unknown"
+    land = {k: int(v.sum()) for k, v in m.items() if k != "sea"}
+    return max(land, key=land.get) if any(land.values()) else "clear"
 
 
 def _bbox(section: str) -> tuple[int, int, int, int]:
@@ -77,6 +91,7 @@ def extract(section: str, arr: np.ndarray) -> dict:
     ny_lo = int(math.floor((bx0 - s.y0) / s.dy)) - 1
     ny_hi = int(math.ceil((bx1 - s.y0) / s.dy)) + 1
     H, W = arr.shape[:2]
+    R = SAMPLE_RADIUS
     out: dict = {}
     for nx in range(nx_lo, nx_hi + 1):
         for ny in range(ny_lo, ny_hi + 1):
@@ -85,11 +100,10 @@ def extract(section: str, arr: np.ndarray) -> dict:
             xi, yi = int(round(x)), int(round(y))
             if not (bx0 <= xi <= bx1 and by0 <= yi <= by1):
                 continue
-            if not (9 <= xi < W - 9 and 9 <= yi < H - 9):
+            if not (R <= xi < W - R and R <= yi < H - R):
                 continue
-            patch = arr[yi - 9:yi + 9, xi - 9:xi + 9].reshape(-1, 3)
-            med = np.median(patch, axis=0)
-            out[h.label] = KNOWN_TERRAIN.get(h.label) or classify(med)
+            patch = arr[yi - R:yi + R, xi - R:xi + R].astype(np.int16)
+            out[h.label] = KNOWN_TERRAIN.get(h.label) or classify_patch(patch)
     return out
 
 

@@ -12,6 +12,7 @@ drives the road for the port (7,0); the Commonwealth holds it.
 """
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import replace
 
 from . import cna_map, coords, oob
@@ -117,6 +118,57 @@ def battle_for_tobruk(seed: int = 1941) -> GameState:
     )
 
 
+def _connect_pieces(terrain: dict, hexes) -> None:
+    """In-place: bridge coastal pieces to the mainland across the few sea hexes
+    between them (the coast road runs along here), so isolated ports/salients like
+    El Agheila join the map and their supply can trace. Gaps are 2-3 hexes; this
+    is a stopgap until roads/coastal terrain are extracted as line features.
+    Deterministic (sorted scans, fixed neighbour order, bounded search)."""
+    def largest_component() -> set:
+        seen: set = set()
+        best: set = set()
+        for start in sorted(terrain):
+            if start in seen:
+                continue
+            comp = {start}
+            dq = deque([start])
+            while dq:
+                x = dq.popleft()
+                for n in neighbors(x):
+                    if n in terrain and n not in comp:
+                        comp.add(n)
+                        dq.append(n)
+            seen |= comp
+            if len(comp) > len(best):
+                best = comp
+        return best
+
+    main = largest_component()
+    for h in sorted(set(hexes)):
+        if h in main:
+            continue
+        prev = {h: None}
+        dq = deque([h])
+        hit = None
+        while dq and len(prev) < 3000:                 # bounded; real gaps are tiny
+            x = dq.popleft()
+            if x in main and x != h:
+                hit = x
+                break
+            for n in neighbors(x):
+                if n not in prev:
+                    prev[n] = x
+                    dq.append(n)
+        if hit is None:
+            continue
+        node = hit
+        while node != h:
+            terrain.setdefault(node, Terrain.CLEAR)     # coastal land along the road
+            main.add(node)
+            node = prev[node]
+        main.add(h)
+
+
 def rommels_arrival(seed: int = 1941) -> GameState:
     """The REAL Rommel's Arrival OOB (rule 61.2), parsed from the VASSAL setup and
     placed on the connected El-Agheila -> Tobruk corridor (Maps A/B/C, real
@@ -135,6 +187,7 @@ def rommels_arrival(seed: int = 1941) -> GameState:
     terrain = dict(tmap.terrain)
     for piece in (*units, *supplies):
         terrain.setdefault(piece.hex, Terrain.CLEAR)
+    _connect_pieces(terrain, [p.hex for p in (*units, *supplies)])
     tmap = replace(tmap, terrain=terrain)
 
     target = coords.to_axial(coords.parse("C4807"))               # Tobruk
