@@ -146,6 +146,18 @@ def test_morale_shift_moves_the_column():
     assert up.column == base.column + 2
 
 
+def test_combined_arms_reduces_actual_points():
+    # §15.2xx worked example: Axis 63 raw -> 6 Actual (21 inf TOE >= 3 tank -> no
+    # penalty); CW 38 raw -> 4 Actual, tanks (7) exceed inf (5) by 2 -> -1 Actual
+    # -> 3. Basic differential +3.
+    res = combat.resolve(attacker_raw=63, defender_raw=38,
+                         attacker_strength=24, defender_strength=12,
+                         def_terrain=Terrain.CLEAR, attack_feature=None,
+                         atk_roll=11, def_roll=11,
+                         attacker_ca_penalty=0, defender_ca_penalty=1)
+    assert res.differential == 3               # 6 - (4-1)
+
+
 def test_loss_rounding_attacker_up_defender_down():
     # column 0 differential, both sides 6 actual -> diff 0 (col 7)
     res = combat.resolve(attacker_raw=60, defender_raw=60,

@@ -123,6 +123,25 @@ def test_scenarios_robust_across_seeds():
             assert determinism_signature(a.events) == determinism_signature(b.events)
 
 
+def test_combined_arms_penalty():
+    from game.engine import _combined_arms_penalty
+    from game.terrain import Mobility
+
+    def mk(uid, n, **kw):
+        return __import__("game.state", fromlist=["Unit"]).Unit(
+            uid, Side.AXIS, (0, 0), (StepRecord("s", n),), mobility=Mobility.FOOT,
+            cpa=25, stacking_points=1, oca=2, dca=2, **kw)
+    tank = lambda n: mk("t" + str(n), n, is_tank=True, armor_protection=4)
+    inf = lambda n: mk("i" + str(n), n)
+    recce = lambda n: mk("r" + str(n), n, armor_protection=2)   # armor but NOT a tank
+    assert _combined_arms_penalty([tank(7), inf(5)]) == 1        # 2 unsupported -> ceil(2/3)
+    assert _combined_arms_penalty([tank(3), inf(21)]) == 0       # fully supported
+    assert _combined_arms_penalty([tank(4)]) == 2               # rulebook "/3" reading (§1)
+    assert _combined_arms_penalty([tank(20)]) == 4              # capped at 4
+    assert _combined_arms_penalty([recce(10)]) == 0            # recce/SP exempt (15.4)
+    assert _combined_arms_penalty([tank(6), recce(6)]) == 2     # recce does not support tanks
+
+
 def test_cohesion_changed_event_applies():
     from game.apply import apply as apply_event
     from game.events import Event, EventKind, Phase

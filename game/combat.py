@@ -12,11 +12,14 @@ Retreat takes priority over Engaged (15.74). The engine executes the retreat and
 the Engaged marker; advance-after-combat is not a CRT result (the attacker simply
 moves into a vacated hex next phase, rule 10.24).
 
+Combined arms (15.4) reduces each side's Actual close-assault points via the
+`*_ca_penalty` args (the engine computes them from the tank/infantry TOE mix).
+
 DEFERRED + FLAGGED for later slices: the Prisoners Captured % table (15.89 — Capt
 here just records that some already-counted losses are prisoners, no board effect),
-combined-arms (15.4), the organizational-size table beyond 2:1 (15.52/15.53),
-guns & vulnerability (15.84), Probe (15.9), and the other combat types — Anti-Armor
-(14), Barrage (12). Morale (15.6) is a column shift, applied via `morale_shift`.
+the organizational-size table beyond 2:1 (15.52/15.53), guns & vulnerability
+(15.84), Probe (15.9). Morale (15.6) is a column shift, applied via `morale_shift`.
+Anti-Armor (14) + Barrage (12) are their own combat steps in the engine segment.
 """
 from __future__ import annotations
 
@@ -57,9 +60,13 @@ def resolve(*, attacker_raw: int, defender_raw: int,
             attacker_strength: int, defender_strength: int,
             def_terrain: Terrain, attack_feature: Hexside | None,
             atk_roll: int, def_roll: int,
-            extra_shift: int = 0, morale_shift: int = 0) -> CombatResult:
+            extra_shift: int = 0, morale_shift: int = 0,
+            attacker_ca_penalty: int = 0, defender_ca_penalty: int = 0) -> CombatResult:
     both_small = attacker_raw < 10 and defender_raw < 10
-    diff = actual_points(attacker_raw, both_small) - actual_points(defender_raw, both_small)
+    # Combined-arms reduces each side's ACTUAL close-assault points (rule 15.4).
+    a_actual = max(0, actual_points(attacker_raw, both_small) - attacker_ca_penalty)
+    d_actual = max(0, actual_points(defender_raw, both_small) - defender_ca_penalty)
+    diff = a_actual - d_actual
 
     shift = ct.HEX_CA_SHIFT.get(def_terrain, 0)                 # 15.3 terrain
     if attack_feature is not None:

@@ -217,7 +217,9 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
         defender_strength=sum(u.strength for u in defenders),   # all defenders take losses
         def_terrain=r.state.terrain.terrain[target], attack_feature=feature,
         atk_roll=ab * 10 + asm, def_roll=db * 10 + dsm,
-        morale_shift=atk_m - def_m)
+        morale_shift=atk_m - def_m,
+        attacker_ca_penalty=_combined_arms_penalty(armed_atk),      # rule 15.4
+        defender_ca_penalty=_combined_arms_penalty(armed_def))
     r.emit(EventKind.COMBAT_RESOLVED, side, actor,
            {"target": list(target), "attackers": [u.id for u in armed_atk],
             "defenders": [u.id for u in defenders],
@@ -246,6 +248,20 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
             r.emit(EventKind.COHESION_CHANGED, side, actor, {"unit_id": u.id, "delta": -3})
     if res.retreat_hexes > 0:                                   # rule 15.8 / 15.82
         _retreat(r, side, actor, [d.id for d in defenders], armed_atk[0].hex, res.retreat_hexes)
+
+
+def _combined_arms_penalty(units) -> int:
+    """Combined arms (rule 15.4): tanks unsupported by an equal TOE of infantry /
+    MG / heavy-weapons units lose Actual close-assault points -- 1 for every 1-3
+    unsupported tank TOE points, capped at 4. Tanks only (recce and SP artillery,
+    which have Armor Protection but are not tanks, are exempt). Off and def alike."""
+    tank_toe = sum(u.strength for u in units if u.is_tank)
+    if tank_toe == 0:
+        return 0
+    support = sum(u.strength for u in units
+                  if u.is_combat and not u.is_tank and not u.is_armor and not u.is_gun)
+    unsupported = max(0, tank_toe - support)
+    return min(4, math.ceil(unsupported / 3))
 
 
 def _adjusted_morale(r: _Run, units) -> tuple[int, tuple[int, int]]:

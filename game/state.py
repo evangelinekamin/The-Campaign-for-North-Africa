@@ -39,10 +39,18 @@ class Unit:
     stacking_points: int
     oca: int                       # offensive close-assault rating (rule 11.15)
     dca: int                       # defensive close-assault rating (rule 11.15)
+    # The other four Land combat characteristics (rule 11.1). Barrage/anti-armor are
+    # Ratings used as Rating x TOE / 10 (11.3); armor-protection + vulnerability are
+    # CONSTANTS used directly for loss counts (11.38 -> 14.42 / 15.85).
+    barrage: int = 0               # Barrage Rating (artillery only, 11.11)
+    anti_armor: int = 0            # Anti-Armor Rating (11.13)
+    armor_protection: int = 0      # Armor Protection, constant (11.14; tanks/recce/SP)
+    vulnerability: int = 0         # Vulnerability, constant (11.12; guns)
     morale: int = 0                # Basic Morale, -3..+3 (rule 17.1, from the OA sheet)
     cohesion: int = 0              # Cohesion Level (17.2); feeds the deferred 17.4 roll
     cp_used: float = 0.0           # CP spent this OpStage; reset each turn
     is_combat: bool = True         # False for truck convoys / bare HQs / air
+    is_tank: bool = False          # a Tank (combined arms 15.4 -- NOT recce/SP)
     is_first_line_truck: bool = False
     is_pure_aa: bool = False
     is_garrison_home: bool = False
@@ -62,6 +70,22 @@ class Unit:
     @property
     def raw_defense(self) -> int:  # raw defensive CA points (ZOC §10.15, combat §15.4)
         return self.dca * self.strength
+
+    @property
+    def raw_barrage(self) -> int:  # raw barrage points (rule 11.32; artillery)
+        return self.barrage * self.strength
+
+    @property
+    def raw_anti_armor(self) -> int:  # raw anti-armor points (rule 11.32)
+        return self.anti_armor * self.strength
+
+    @property
+    def is_armor(self) -> bool:    # has Armor Protection -> a valid anti-armor target (11.14)
+        return self.armor_protection > 0
+
+    @property
+    def is_gun(self) -> bool:      # Artillery / Anti-Tank -- has a Vulnerability rating (11.12)
+        return self.vulnerability > 0
 
 
 @dataclass(frozen=True, slots=True)

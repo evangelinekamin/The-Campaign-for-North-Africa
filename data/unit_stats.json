@@ -5,10 +5,10 @@
     "oasis":     {"type": "r",  "cpa": 25, "oca": 1, "dca": 1, "steps": 1, "mobility": "FOOT"},
     "infantry":  {"type": "g",  "cpa": 25, "oca": 3, "dca": 2, "steps": 7, "mobility": "FOOT"},
     "motor_infantry": {"type": "j", "cpa": 10, "oca": 2, "dca": 2, "steps": 7, "mobility": "MOTORIZED"},
-    "tank":      {"type": "f",  "cpa": 25, "oca": 4, "dca": 4, "steps": 10, "mobility": "VEHICLE"},
-    "recon":     {"type": "ee", "cpa": 45, "oca": 3, "dca": 3, "steps": 8, "mobility": "RECCE"},
-    "artillery": {"type": "u",  "cpa": 20, "oca": 0, "dca": 1, "steps": 6, "mobility": "MOTORIZED"},
-    "antitank":  {"type": "x",  "cpa": 20, "oca": 1, "dca": 2, "steps": 8, "mobility": "MOTORIZED"}
+    "tank":      {"type": "f",  "cpa": 25, "oca": 4, "dca": 4, "steps": 10, "mobility": "VEHICLE", "is_tank": true, "armor_protection": 4, "anti_armor": 5},
+    "recon":     {"type": "ee", "cpa": 45, "oca": 3, "dca": 3, "steps": 8, "mobility": "RECCE", "armor_protection": 2, "anti_armor": 2},
+    "artillery": {"type": "u",  "cpa": 20, "oca": 0, "dca": 1, "steps": 6, "mobility": "MOTORIZED", "barrage": 9, "vulnerability": 2},
+    "antitank":  {"type": "x",  "cpa": 20, "oca": 1, "dca": 2, "steps": 8, "mobility": "MOTORIZED", "anti_armor": 6, "vulnerability": 2}
   },
   "CW": {
     "hq":        {"type": "a",  "cpa": 30, "oca": 0, "dca": 1, "steps": 1, "mobility": "MOTORIZED", "is_combat": false},
