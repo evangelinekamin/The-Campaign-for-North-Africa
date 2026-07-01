@@ -48,6 +48,10 @@ def apply(state: GameState, event: Event) -> GameState:
         u = state.unit(p["unit_id"])
         return state.with_unit(replace(u, steps=_apply_step_loss(u.steps, p["amount"])))
 
+    if k == EventKind.COHESION_CHANGED:
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, cohesion=u.cohesion + p["delta"]))
+
     if k == EventKind.HEX_CONTROL_CHANGED:
         return state.with_control(tuple(p["coord"]), Control(p["control"]))
 

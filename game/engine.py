@@ -15,7 +15,7 @@ import math
 import random
 from dataclasses import dataclass
 
-from . import combat, stacking, supply, tactics
+from . import combat, combat_tables, stacking, supply, tactics
 from .apply import apply
 from .events import Control, Event, EventKind, Phase, Side
 from .hexmap import distance, is_adjacent, neighbors
@@ -205,6 +205,10 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
 
     # Close Assault via the real differential engine (rule 15 / §15.79 CRT).
     feature = r.state.terrain.hexsides.get((armed_atk[0].hex, target))  # §15.33
+    # Morale is rolled FIRST (rule 15 order): each side's 17.4 roll adjusts its
+    # Basic Morale by Cohesion, and the difference shifts the assault column (15.62).
+    atk_m, atk_md = _adjusted_morale(r, armed_atk)
+    def_m, def_md = _adjusted_morale(r, defenders)
     ab, asm, db, dsm = r.d6(), r.d6(), r.d6(), r.d6()
     res = combat.resolve(
         attacker_raw=sum(u.raw_offense for u in armed_atk),
@@ -213,40 +217,53 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
         defender_strength=sum(u.strength for u in defenders),   # all defenders take losses
         def_terrain=r.state.terrain.terrain[target], attack_feature=feature,
         atk_roll=ab * 10 + asm, def_roll=db * 10 + dsm,
-        morale_shift=_morale(armed_atk) - _morale(defenders))    # rule 15.6 / 15.62
+        morale_shift=atk_m - def_m)
     r.emit(EventKind.COMBAT_RESOLVED, side, actor,
            {"target": list(target), "attackers": [u.id for u in armed_atk],
             "defenders": [u.id for u in defenders],
             "differential": res.differential, "column": res.column,
+            "morale_shift": atk_m - def_m,
             "attacker_loss_pct": res.attacker_loss_pct,
             "defender_loss_pct": res.defender_loss_pct,
             "attacker_captured": res.attacker_captured,
             "defender_captured": res.defender_captured,
             "attacker_engaged": res.attacker_engaged,
             "retreat_hexes": res.retreat_hexes},
-           rng_draws=(ab, asm, db, dsm))
+           rng_draws=(*atk_md, *def_md, ab, asm, db, dsm))
     for uid, amount in _spread_losses(defenders, res.defender_steps_lost):
         r.emit(EventKind.STEP_LOST, side, actor,
                {"unit_id": uid, "amount": amount, "role": "defender"})
     for uid, amount in _spread_losses(armed_atk, res.attacker_steps_lost):
         r.emit(EventKind.STEP_LOST, side, actor,
                {"unit_id": uid, "amount": amount, "role": "attacker"})
+    # Cohesion: 30%+ losses disorganize the involved units (rule 15.87). Recovery
+    # (Reorganization Points, rule 20) is deferred, so Cohesion only falls -- flagged.
+    if res.attacker_loss_pct >= 30:
+        for u in armed_atk:
+            r.emit(EventKind.COHESION_CHANGED, side, actor, {"unit_id": u.id, "delta": -3})
+    if res.defender_loss_pct >= 30:
+        for u in defenders:
+            r.emit(EventKind.COHESION_CHANGED, side, actor, {"unit_id": u.id, "delta": -3})
     if res.retreat_hexes > 0:                                   # rule 15.8 / 15.82
         _retreat(r, side, actor, [d.id for d in defenders], armed_atk[0].hex, res.retreat_hexes)
 
 
-def _morale(units) -> int:
+def _adjusted_morale(r: _Run, units) -> tuple[int, tuple[int, int]]:
     """Adjusted Morale of a close-assault stack (rule 15.6): the LARGEST unit's
-    Basic Morale (17.32), +1 if Rommel is present (17.28), clamped to -3..+3
-    (17.23). The Cohesion-based 17.4 modifier roll is deferred (units act as
-    Cohesion 0), so this is Basic Morale for fresh units -- flagged."""
+    Basic Morale (17.32), plus the 17.4 modifier rolled at its Cohesion level, +1
+    if Rommel is present (17.28), clamped to -3..+3 (17.23). Returns (morale, the
+    two dice rolled). A SURR result is taken as the -4 penalty -- full
+    surrender-elimination (17.25) is deferred + flagged."""
     live = [u for u in units if u.strength > 0]
     if not live:
-        return 0
-    m = max(live, key=lambda u: (u.stacking_points, u.strength)).morale
-    if any("Rommel" in u.id for u in live):
-        m += 1
-    return max(-3, min(3, m))
+        return 0, (0, 0)
+    largest = max(live, key=lambda u: (u.stacking_points, u.strength))
+    d1, d2 = r.d6(), r.d6()
+    mod = combat_tables.morale_modifier(largest.cohesion, d1 * 10 + d2)
+    if mod == "SURR":
+        mod = -4
+    m = largest.morale + mod + (1 if any("Rommel" in u.id for u in live) else 0)
+    return max(-3, min(3, m)), (d1, d2)
 
 
 def _retreat(r: _Run, atk_side: Side, actor: str, defender_ids: list[str],

@@ -110,6 +110,27 @@ def test_retreat_relocates_defender_away_from_attacker():
     assert distance(moved.hex, (2, 0)) >= 3                # retreated 2 hexes away
 
 
+def test_cohesion_changed_event_applies():
+    from game.apply import apply as apply_event
+    from game.events import Event, EventKind, Phase
+    s = coastal_corridor()
+    uid = s.units[0].id
+    e = Event(0, 1, Phase.COMBAT, Side.AXIS, "x", EventKind.COHESION_CHANGED,
+              {"unit_id": uid, "delta": -3})
+    assert apply_event(s, e).unit(uid).cohesion == -3
+
+
+def test_cohesion_decays_on_heavy_combat_losses():
+    # a 30%+ close-assault loss disorganizes the unit (rule 15.87); recovery is
+    # deferred, so Cohesion accumulates downward over repeated combats.
+    from game.events import EventKind
+    from game.scenario import battle_for_tobruk
+    res = run(battle_for_tobruk(seed=1), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    changes = [e for e in res.events if e.kind == EventKind.COHESION_CHANGED]
+    assert changes and all(e.payload["delta"] == -3 for e in changes)
+    assert res.final.unit(changes[0].payload["unit_id"]).cohesion < 0
+
+
 def test_engine_rejects_illegal_orders_without_mutating_state():
     result = run(coastal_corridor(), axis=_BadPolicy(), allied=ScriptedPolicy(Side.AXIS))
     rejected = [e for e in result.events if e.kind == EventKind.ORDER_REJECTED]
