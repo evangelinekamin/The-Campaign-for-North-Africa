@@ -51,24 +51,27 @@ def build_movement_prompt(obs: dict) -> str:
         f"You command the {obs['your_side']} forces. {_RULES}\n"
         f"MOVEMENT phase, game-turn {obs['turn']}/{obs['max_turns']}, weather "
         f"{obs['weather']}. Objective: hex {obj['hex']} (controlled by "
-        f"{obj['controlled_by']}); aim to control it by the final turn. Move combat "
-        f"units toward lower dist_to_objective, within each unit's cp_left.\n"
+        f"{obj['controlled_by']}); aim to control it by the final turn.\n"
         f"Situation (JSON):\n{json.dumps(obs)}\n"
+        "For each combat unit you move, pick its destination FROM that unit's "
+        "can_move_to list (those are the only hexes it can legally reach this turn; "
+        "lower dist = closer to the objective). Advance toward the objective and "
+        "keep stacks together.\n"
         'Reply with ONLY JSON: {"reasoning":"one sentence","moves":'
-        '[{"unit":"<id>","to":[q,r]}]}. Give a [q,r] destination for each unit you '
-        "move; omit units that hold.")
+        '[{"unit":"<id>","to":[q,r]}]}. Use a [q,r] taken from that unit\'s '
+        "can_move_to; omit units that should hold.")
 
 
 def build_combat_prompt(obs: dict) -> str:
     return (
         f"You command the {obs['your_side']} forces. {_RULES}\n"
-        f"COMBAT phase, game-turn {obs['turn']}/{obs['max_turns']}. You may "
-        f"close-assault enemy stacks adjacent to your units; attack where you have "
-        f"the advantage.\nSituation (JSON):\n{json.dumps(obs)}\n"
+        f"COMBAT phase, game-turn {obs['turn']}/{obs['max_turns']}. Close-assault "
+        f"using attack_options: each entry gives a target hex, the your_attackers "
+        f"adjacent to it, and the enemy_stacking_points there. Attack where your "
+        f"attackers outweigh the defender.\nSituation (JSON):\n{json.dumps(obs)}\n"
         'Reply with ONLY JSON: {"reasoning":"one sentence","attacks":'
-        '[{"attackers":["<id>"],"target":[q,r]}]}. target is an enemy hex adjacent '
-        "to your attackers; group all attackers on one target into one entry; omit "
-        "if not attacking.")
+        '[{"attackers":["<id>"],"target":[q,r]}]}. Take target + attackers from '
+        "attack_options; omit if you should not attack.")
 
 
 # --- tolerant parsing -------------------------------------------------------

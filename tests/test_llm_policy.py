@@ -42,6 +42,23 @@ def test_observation_hides_enemy_details():
         assert "strength" not in sighting and "oca" not in sighting
 
 
+def test_movement_observation_offers_only_legal_destinations():
+    # the fix for agents proposing unreachable hexes: each unit is handed the hexes
+    # it can actually reach this turn, and every one must pass the engine's own check.
+    from dataclasses import replace
+
+    from game.events import Phase
+    from game.tactics import enemy_zoc_and_occupied, reachable_for
+    s = replace(coastal_corridor(), phase=Phase.MOVEMENT)
+    obs = observe(s, Side.AXIS)
+    dak_obs = next(u for u in obs["your_units"] if u["id"] == "DAK-5le")
+    assert dak_obs["can_move_to"]                                     # legal moves offered
+    ez, eo = enemy_zoc_and_occupied(s, Side.AXIS)
+    legal = reachable_for(s, s.unit("DAK-5le"), ez, eo)
+    for d in dak_obs["can_move_to"]:
+        assert tuple(d["hex"]) in legal                              # every offer is reachable
+
+
 # --- tolerant parsing -------------------------------------------------------
 
 def test_parse_moves_and_attacks_from_clean_json():
