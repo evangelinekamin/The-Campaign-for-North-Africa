@@ -1,6 +1,63 @@
 {
-  "_comment": "Rommel's Arrival reinforcement schedule (rule 20 / 61.2), a representative slice of the full Reinforcement Schedule ([4.43a/b], [4.45c] in the charts). arrival_turn maps the scenario Game-Turn to the engine turn (my_turn = GT - 25, so GT26=1 .. GT38=13; the engine caps at max_turns 12). Axis 15th Panzer enters around El Agheila (the west setup zone standing in for the Tripoli port) and road-marches east; each unit gets a DISTINCT entry hex so arrivals never over-stack. Commonwealth armour enters east of Tobruk to reinforce the garrison. hex is axial [q,r]; role is explicit. NOT the full ~40-unit roster -- the 15th Panzer armour + a CW armour slice, enough to exercise reinforcement arrival + the armour/anti-armor model. Full per-unit GT/OpStage list is in the reinforcement subagent report.",
+  "_comment": "Off-OOB units the VASSAL save aggregated or omitted, keyed by arrival_turn (0 = on-map at start, >0 = reinforcement per rule 20 / 61.2). The 5th Light Panzer Division's combat battalions (I/5 + II/5 Panzer, 2nd + 8th MG, 3rd Aufklarungs) are on-map at El Agheila from the start -- the historical Tobruk assault force the vsav had folded into the 'GE 5 Le' HQ counter. The 15th Panzer (arrival_turn 2-8) enters piecemeal near El Agheila and road-marches east; its 8th Panzer Regt tank battalions arrive turns 6-7 (GT31-32). CW armour enters east of Tobruk. Each unit has a distinct entry hex so arrivals never over-stack. Representative slice; full roster in the reinforcement subagent report.",
   "reinforcements": [
+    {
+      "counter": "GE I-5 Pz",
+      "group": "GE 5th Light Panzer Division",
+      "side": "AXIS",
+      "hex": [
+        43,
+        -5
+      ],
+      "arrival_turn": 0,
+      "role": "tank",
+      "model": "pz3h"
+    },
+    {
+      "counter": "GE II-5 Pz",
+      "group": "GE 5th Light Panzer Division",
+      "side": "AXIS",
+      "hex": [
+        44,
+        -5
+      ],
+      "arrival_turn": 0,
+      "role": "tank",
+      "model": "pz3h"
+    },
+    {
+      "counter": "GE 2 MG",
+      "group": "GE 5th Light Panzer Division",
+      "side": "AXIS",
+      "hex": [
+        44,
+        -3
+      ],
+      "arrival_turn": 0,
+      "role": "motor_infantry"
+    },
+    {
+      "counter": "GE 8 MG",
+      "group": "GE 5th Light Panzer Division",
+      "side": "AXIS",
+      "hex": [
+        44,
+        -2
+      ],
+      "arrival_turn": 0,
+      "role": "motor_infantry"
+    },
+    {
+      "counter": "GE 3 Aufk",
+      "group": "GE 5th Light Panzer Division",
+      "side": "AXIS",
+      "hex": [
+        43,
+        -1
+      ],
+      "arrival_turn": 0,
+      "role": "recon"
+    },
     {
       "counter": "GE 15 Krad",
       "group": "GE 15th Panzer Division",
