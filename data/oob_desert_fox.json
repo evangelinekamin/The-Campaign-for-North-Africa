@@ -1,0 +1,453 @@
+[
+ {
+  "hex": "A2121",
+  "side": "ALLIED",
+  "kind": "dump",
+  "counter": "BR Supply Dump-01",
+  "group": "AL mSupply Dump/Mersa Brega",
+  "px": [
+   1795,
+   3045
+  ]
+ },
+ {
+  "hex": "B4005",
+  "side": "ALLIED",
+  "kind": "dump",
+  "counter": "BR Supply Dump-01",
+  "group": "AL mSupply Dump/Msus",
+  "px": [
+   3288,
+   1661
+  ]
+ },
+ {
+  "hex": "C4907",
+  "side": "ALLIED",
+  "kind": "dump",
+  "counter": "BR Supply Dump-01",
+  "group": "AL mSupply Dump/Tobruk",
+  "px": [
+   6233,
+   1005
+  ]
+ },
+ {
+  "hex": "E3409",
+  "side": "ALLIED",
+  "kind": "dump",
+  "counter": "BR Supply Dump-01",
+  "group": "AL mSupply Dump/Alex... S",
+  "px": [
+   12081,
+   2098
+  ]
+ },
+ {
+  "hex": "E3613",
+  "side": "ALLIED",
+  "kind": "dump",
+  "counter": "BR Supply Dump-01",
+  "group": "AL mSupply Dump/Alex... N",
+  "px": [
+   12422,
+   1952
+  ]
+ },
+ {
+  "hex": "A4927",
+  "side": "ALLIED",
+  "kind": "feature",
+  "counter": "BR Prison Camp-01",
+  "group": "AL mPrison Camp/",
+  "px": [
+   2306,
+   1003
+  ]
+ },
+ {
+  "hex": "C4908",
+  "side": "ALLIED",
+  "kind": "feature",
+  "counter": "Temp rep fac-01",
+  "group": "AL mTemp Facility/",
+  "px": [
+   6318,
+   1005
+  ]
+ },
+ {
+  "hex": "D3913",
+  "side": "ALLIED",
+  "kind": "feature",
+  "counter": "Temp rep fac-01",
+  "group": "AL mTemp Facility/",
+  "px": [
+   9564,
+   1734
+  ]
+ },
+ {
+  "hex": "A2020",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 2SPt - 2",
+  "group": "BR 2nd Armoured Division",
+  "px": [
+   1753,
+   3118
+  ]
+ },
+ {
+  "hex": "A2022",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 3 - 2",
+  "group": "BR 2nd Armoured Division",
+  "px": [
+   1923,
+   3118
+  ]
+ },
+ {
+  "hex": "A2628",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "AL SGSU 250RAF",
+  "group": "AL SGSU",
+  "px": [
+   2435,
+   2681
+  ]
+ },
+ {
+  "hex": "A4832",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "AU 2-48 - 26-9Aus",
+  "group": "AU 9th Australian Division",
+  "px": [
+   2776,
+   1076
+  ]
+ },
+ {
+  "hex": "A4933",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "AU 2-24Aus - 26-9Aus",
+  "group": "AU 9th Australian Division",
+  "px": [
+   2818,
+   1003
+  ]
+ },
+ {
+  "hex": "A5032",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "AU 26Aus - 9 Aus",
+  "group": "AU 9th Australian Division",
+  "px": [
+   2776,
+   930
+  ]
+ },
+ {
+  "hex": "A5033",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "AU 2-23Aus - 26-9Aus",
+  "group": "AU 9th Australian Division",
+  "px": [
+   2861,
+   930
+  ]
+ },
+ {
+  "hex": "A5233",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "AU 2-43Aus - 24-9Aus",
+  "group": "AU 9th Australian Division",
+  "px": [
+   2861,
+   784
+  ]
+ },
+ {
+  "hex": "A5433",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "AU 2-28Aus - 24-9Aus",
+  "group": "AU 9th Australian Division",
+  "px": [
+   2861,
+   638
+  ]
+ },
+ {
+  "hex": "A5633",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "AU 2-17Aus - 20-9Aus",
+  "group": "AU 9th Australian Division",
+  "px": [
+   2861,
+   492
+  ]
+ },
+ {
+  "hex": "B4006",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "Air Strip allied",
+  "group": "AL Airstrip/",
+  "px": [
+   3373,
+   1661
+  ]
+ },
+ {
+  "hex": "B4106",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "AL 1FMtMr - none",
+  "group": "AL Unasisgned Allied Units",
+  "px": [
+   3331,
+   1588
+  ]
+ },
+ {
+  "hex": "B5403",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "AL SGSU 260RAF",
+  "group": "AL SGSU",
+  "px": [
+   3118,
+   640
+  ]
+ },
+ {
+  "hex": "C4506",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "IN 3 In - none",
+  "group": "IN 3rd Indian Motorized Brigade",
+  "px": [
+   6148,
+   1297
+  ]
+ },
+ {
+  "hex": "C4808",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "Air Strip allied",
+  "group": "AL Airstrip/",
+  "px": [
+   6360,
+   1078
+  ]
+ },
+ {
+  "hex": "D3716",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 1 RNF - none",
+  "group": "BR Unassigned Infantry-Type Units",
+  "px": [
+   9819,
+   1880
+  ]
+ },
+ {
+  "hex": "D3716",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 7 Med - none",
+  "group": "BR Unassigned Artillery Units",
+  "px": [
+   9819,
+   1880
+  ]
+ },
+ {
+  "hex": "A1714",
+  "side": "AXIS",
+  "kind": "dump",
+  "counter": "IT Supply Dump",
+  "group": "GE mSupply Dump/A",
+  "px": [
+   1198,
+   3337
+  ]
+ },
+ {
+  "hex": "A1715",
+  "side": "AXIS",
+  "kind": "dump",
+  "counter": "IT Supply Dump",
+  "group": "GE mSupply Dump/B",
+  "px": [
+   1283,
+   3337
+  ]
+ },
+ {
+  "hex": "A1716",
+  "side": "AXIS",
+  "kind": "dump",
+  "counter": "IT Supply Dump",
+  "group": "GE mSupply Dump/C",
+  "px": [
+   1368,
+   3337
+  ]
+ },
+ {
+  "hex": "A1717",
+  "side": "AXIS",
+  "kind": "dump",
+  "counter": "IT Supply Dump",
+  "group": "GE mSupply Dump/D",
+  "px": [
+   1454,
+   3337
+  ]
+ },
+ {
+  "hex": "A1718",
+  "side": "AXIS",
+  "kind": "dump",
+  "counter": "IT Supply Dump",
+  "group": "GE mSupply Dump/E",
+  "px": [
+   1539,
+   3337
+  ]
+ },
+ {
+  "hex": "A1319",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "GE 1 - 300 OAS",
+  "group": "GE 300th Oasis Battalion",
+  "px": [
+   1624,
+   3629
+  ]
+ },
+ {
+  "hex": "A1320",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "GE 2 - 300 OAS",
+  "group": "GE 300th Oasis Battalion",
+  "px": [
+   1709,
+   3629
+  ]
+ },
+ {
+  "hex": "A1916",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "GE 3 - 300 OAS",
+  "group": "GE 300th Oasis Battalion",
+  "px": [
+   1368,
+   3191
+  ]
+ },
+ {
+  "hex": "A1916",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "GE 5 Le - none",
+  "group": "GE 5th Light Panzer Division",
+  "px": [
+   1368,
+   3191
+  ]
+ },
+ {
+  "hex": "A1916",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "GE Rommel - DAK",
+  "group": "GE Unassigned Infantry Units",
+  "px": [
+   1368,
+   3191
+  ]
+ },
+ {
+  "hex": "A1917",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "GE 33 - 15 (ATG)",
+  "group": "GE 15th Panzer Division",
+  "px": [
+   1454,
+   3191
+  ]
+ },
+ {
+  "hex": "A1918",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "GE II - 155 III",
+  "group": "GE Non-Divisional Artillery Units",
+  "px": [
+   1539,
+   3191
+  ]
+ },
+ {
+  "hex": "A1918",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "GE 528 - ArKo",
+  "group": "GE Non-Divisional Artillery Units",
+  "px": [
+   1539,
+   3191
+  ]
+ },
+ {
+  "hex": "A1918",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "GE 529 - none",
+  "group": "GE Non-Divisional Artillery Units",
+  "px": [
+   1539,
+   3191
+  ]
+ },
+ {
+  "hex": "A1918",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "GE 523 - none",
+  "group": "GE Non-Divisional Artillery Units",
+  "px": [
+   1539,
+   3191
+  ]
+ },
+ {
+  "hex": "A1918",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "GE 532 - none",
+  "group": "GE Non-Divisional Artillery Units",
+  "px": [
+   1539,
+   3191
+  ]
+ }
+]
