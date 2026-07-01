@@ -7,21 +7,31 @@ impassable terrain or enemy ZOC unoccupied by a friendly unit. Moving costs Fuel
 (rule 32.23-24, once per OpStage); fighting costs Ammo (rule 32.21). This is the
 heart of CNA — "less about combat, more about logistics".
 
-DEFERRED + FLAGGED: motorization of units via MP / supply-unit transport &
-movement (32.3/32.5), availability & convoy arrival (32.4/32.6), dummies (32.18),
-capture (32.13) and destruction (32.17) of dumps, the company-equivalent and
-MP-transport fuel sub-rates (32.24), and the defender out-of-ammo auto-surrender
-(15.15). Costs here approximate per-battalion-equivalent rates using a unit's
-mobility class and stacking points.
+MOBILE SUPPLY (rule 32.3) is now modelled: a supply unit relocates up to CPA 15
+(rule 32.58A) as medium-truck movement, costing a flat 1 Fuel Point per OpStage
+(rule 32.24), and must end stacked with a friendly combat unit (rule 32.33 — it
+moves with the army). See engine._supply_movement / policy.supply_orders.
+
+DEFERRED + FLAGGED: the 30-Motorization-Point requirement to carry a unit (32.32)
+and the MP pool itself (32.5) are abstracted (any dump with fuel may move); the
+separate Truck Convoy Phase and the "begins stacked" strictness of 32.33 (we
+require only "ends stacked"); availability & convoy arrival (32.4/32.6); dummies
+(32.18); capture (32.13) and destruction (32.17) of dumps; MP attrition (32.57-59,
+values not in OCR); and the defender out-of-ammo auto-surrender (15.15). Draw
+costs approximate per-battalion-equivalent rates via mobility class + stacking.
 """
 from __future__ import annotations
 
 from . import movement, tactics
-from .state import GameState, Unit
+from .state import GameState, SupplyUnit, Unit
 from .terrain import Mobility, NON_MOT_CLASSES
 
 AMMO = "AMMO"
 FUEL = "FUEL"
+
+SUPPLY_CPA = 15                     # CPA of an MP-carried supply unit (rule 32.58A)
+SUPPLY_MOVE_FUEL = 1               # Fuel to relocate a real supply unit / OpStage (32.24)
+SUPPLY_MOBILITY = Mobility.MOTORIZED  # carried as medium-truck points (rule 32.51)
 
 
 def fuel_cost(unit: Unit) -> int:
@@ -56,6 +66,17 @@ def reachable_supplies(state: GameState, unit: Unit, commodity: str):
            if su.hex in reach and _pool(su, commodity) > 0]
     out.sort(key=lambda su: (reach[su.hex], su.id))
     return out
+
+
+def reachable_moves(state: GameState, dump: SupplyUnit) -> dict:
+    """Hexes a carried supply unit can relocate to this OpStage: within CPA 15
+    (rule 32.58A) as medium-truck movement, blocked by enemy ZOC not negated by a
+    friendly unit (the 32.16 trace blocking, reused for the carry)."""
+    enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, dump.side)
+    friendly = frozenset(u.hex for u in state.living(dump.side))
+    blocked = (enemy_zoc - friendly) | enemy_occupied
+    return movement.reachable(state.terrain, dump.hex, SUPPLY_CPA, SUPPLY_MOBILITY,
+                              blocked=blocked)
 
 
 def plan_draw(state: GameState, unit: Unit, commodity: str, need: int):

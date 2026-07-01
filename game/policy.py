@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from . import stacking, tactics
+from . import stacking, supply, tactics
 from .events import Side
 from .hexmap import Coord, distance, neighbors
 from .state import GameState, Unit
@@ -28,7 +28,13 @@ class AttackOrder:
     target: Coord
 
 
-Order = MoveOrder | AttackOrder
+@dataclass(frozen=True, slots=True)
+class SupplyMoveOrder:
+    supply_id: str
+    to: Coord
+
+
+Order = MoveOrder | AttackOrder | SupplyMoveOrder
 
 
 class Policy:
@@ -37,6 +43,9 @@ class Policy:
 
     def combat(self, state: GameState, side: Side) -> list[AttackOrder]:
         raise NotImplementedError
+
+    def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
+        return []  # optional: relocate supply to follow the advance (rule 32.3)
 
 
 class ScriptedPolicy(Policy):
@@ -79,6 +88,28 @@ class ScriptedPolicy(Policy):
                 if state.enemies_at(nb, side):
                     by_target.setdefault(nb, []).append(u.id)
         return [AttackOrder(tuple(ids), tgt) for tgt, ids in by_target.items()]
+
+    def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
+        """Keep supply with the advance: relocate each fuelled dump (CPA 15) to the
+        most-forward friendly combat unit it can reach, ending stacked with it
+        (rule 32.33). Dumps thus leapfrog toward the objective behind the front."""
+        combat_units = [u for u in state.living(side) if u.is_combat]
+        if not combat_units:
+            return []
+        target = state.target_hex
+        orders: list[SupplyMoveOrder] = []
+        for su in state.active_supplies(side):
+            if su.fuel < supply.SUPPLY_MOVE_FUEL:
+                continue                              # no fuel to move (rule 32.24)
+            reach = supply.reachable_moves(state, su)
+            here = distance(su.hex, target)
+            forward = [u.hex for u in combat_units
+                       if u.hex in reach and u.hex != su.hex
+                       and distance(u.hex, target) < here]
+            if forward:
+                dest = min(forward, key=lambda c: (distance(c, target), reach[c], c))
+                orders.append(SupplyMoveOrder(su.id, dest))
+        return orders
 
     def _stacking_ok(self, state: GameState, unit: Unit, dest: Coord) -> bool:
         present = [u for u in state.units_at(dest) if u.side == unit.side]

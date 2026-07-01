@@ -9,12 +9,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from game import supply
-from game.engine import run
-from game.events import EventKind
-from game.events import Side
+from game.engine import _Run, _supply_movement, run
+from game.events import EventKind, Phase, Side
+from game.movement import TerrainMap
 from game.policy import ScriptedPolicy
 from game.scenario import coastal_corridor
-from game.terrain import Mobility
+from game.state import GameState, StepRecord, SupplyUnit, Unit, VP
+from game.terrain import Mobility, Terrain
 
 
 def _run(seed: int = 1941):
@@ -58,6 +59,41 @@ def test_movement_blocked_when_out_of_fuel():
                     if e.kind == EventKind.ORDER_REJECTED and "fuel" in e.payload.get("reason", "")]
     assert fuel_rejects
     assert result.final.unit("DAK-5le").hex == (0, 0)   # never moved without fuel
+
+
+def _mobile_state() -> GameState:
+    """A fuelled dump behind a combat unit that has advanced toward the objective."""
+    terr = {(q, 0): Terrain.CLEAR for q in range(6)}
+    units = (Unit("AX-1", Side.AXIS, (2, 0), (StepRecord("inf", 3),),
+                  mobility=Mobility.FOOT, cpa=10, stacking_points=1, oca=3, dca=3),)
+    dumps = (SupplyUnit("AX-D", Side.AXIS, (0, 0), ammo=10, fuel=10),)
+    return GameState(
+        turn=1, max_turns=4, phase=Phase.MOVEMENT, active_side=Side.AXIS, seed=1,
+        weather="clear", move_modifier=0, vp=VP(), terrain=TerrainMap(terrain=terr),
+        control={}, units=units, target_hex=(5, 0), supplies=dumps,
+        consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 10, "FUEL": 10})
+
+
+def test_supply_relocates_to_join_the_advance():
+    # a fuelled dump moves up to CPA 15 to the forward combat unit's hex (rule
+    # 32.33 stacked), burning exactly 1 Fuel (rule 32.24); fuel stays conserved.
+    r = _Run(_mobile_state())
+    _supply_movement(r, ScriptedPolicy(Side.AXIS), Side.AXIS)
+    d = r.state.supply("AX-D")
+    assert d.hex == (2, 0)                               # joined the advance
+    assert d.fuel == 9                                   # burned 1 Fuel to move
+    assert sum(e.kind == EventKind.SUPPLY_MOVED for e in r.events) == 1
+    on_hand = sum(su.fuel for su in r.state.supplies)
+    assert on_hand + r.state.consumed["FUEL"] == r.state.initial_supply["FUEL"]
+
+
+def test_supply_cannot_move_without_fuel():
+    dry = replace(_mobile_state(),
+                  supplies=(SupplyUnit("AX-D", Side.AXIS, (0, 0), ammo=10, fuel=0),),
+                  initial_supply={"AMMO": 10, "FUEL": 0})
+    r = _Run(dry)
+    _supply_movement(r, ScriptedPolicy(Side.AXIS), Side.AXIS)
+    assert r.state.supply("AX-D").hex == (0, 0)          # no fuel -> stays put
 
 
 def test_run_conserves_each_commodity():

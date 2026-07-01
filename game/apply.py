@@ -27,6 +27,10 @@ def apply(state: GameState, event: Event) -> GameState:
         return state.with_unit(
             replace(u, hex=tuple(p["to"]), cp_used=u.cp_used + p["cp_spent"]))
 
+    if k == EventKind.SUPPLY_MOVED:
+        su = state.supply(p["supply_id"])
+        return state.with_supply(replace(su, hex=tuple(p["to"])))
+
     if k == EventKind.SUPPLY_CONSUMED:
         su = state.supply(p["supply_id"])
         commodity = p["commodity"]

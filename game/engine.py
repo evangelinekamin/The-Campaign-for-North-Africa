@@ -75,6 +75,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
         for side in (Side.AXIS, Side.ALLIED):
             r.go(Phase.MOVEMENT, side)
             _movement(r, policies[side], side)
+            _supply_movement(r, policies[side], side)   # supply follows the army (32.3)
             r.go(Phase.COMBAT, side)
             _combat(r, policies[side], side)
         r.go(Phase.RECORD, Side.SYSTEM)
@@ -138,6 +139,39 @@ def _reject(r: _Run, side: Side, actor: str, order: MoveOrder, reason: str) -> N
     r.emit(EventKind.ORDER_REJECTED, side, actor,
            {"order": "move", "unit_id": order.unit_id, "to": list(order.to),
             "reason": reason})
+
+
+def _supply_movement(r: _Run, policy: Policy, side: Side) -> None:
+    """Relocate supply units with the advancing army (rule 32.3): a carried dump
+    moves up to CPA 15 as medium-truck, costs a flat 1 Fuel Point (32.24) drawn
+    from its own trucks, and must end stacked with a friendly combat unit (32.33).
+    Validated at the boundary like every other order."""
+    actor = f"{side.value}/Logistics"
+    for order in policy.supply_orders(r.state, side):
+        su = r.state.supply(order.supply_id)
+        if su is None or su.side != side or su.empty:
+            _reject_supply(r, side, actor, order, "no such active supply unit")
+            continue
+        if order.to == su.hex or order.to not in supply.reachable_moves(r.state, su):
+            _reject_supply(r, side, actor, order, "beyond CPA 15 or blocked by ZOC")
+            continue
+        if not any(u.side == side and u.is_combat for u in r.state.units_at(order.to)):
+            _reject_supply(r, side, actor, order, "must end stacked with a friendly combat unit")
+            continue
+        if su.fuel < supply.SUPPLY_MOVE_FUEL:
+            _reject_supply(r, side, actor, order, "out of fuel to move")
+            continue
+        r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+               {"supply_id": su.id, "commodity": supply.FUEL,
+                "qty": supply.SUPPLY_MOVE_FUEL, "unit_id": su.id})
+        r.emit(EventKind.SUPPLY_MOVED, side, actor,
+               {"supply_id": su.id, "from": list(su.hex), "to": list(order.to)})
+
+
+def _reject_supply(r: _Run, side: Side, actor: str, order, reason: str) -> None:
+    r.emit(EventKind.ORDER_REJECTED, side, actor,
+           {"order": "supply_move", "supply_id": order.supply_id,
+            "to": list(order.to), "reason": reason})
 
 
 def _combat(r: _Run, policy: Policy, side: Side) -> None:

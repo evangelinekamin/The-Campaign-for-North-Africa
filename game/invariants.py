@@ -24,6 +24,10 @@ def check(state: GameState) -> None:
         if not state.terrain.exists(u.hex):
             raise InvariantViolation(f"unit {u.id} on non-existent hex {u.hex}")
 
+    for su in state.supplies:                      # dumps relocate now (rule 32.3)
+        if not state.terrain.exists(su.hex):
+            raise InvariantViolation(f"supply {su.id} on non-existent hex {su.hex}")
+
     # Stacking limits, checked at rest (rule 9.31): no hex over its point limit.
     occupied: dict = {}
     for u in state.units:
