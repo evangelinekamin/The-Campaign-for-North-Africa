@@ -176,11 +176,27 @@ def rommels_arrival(seed: int = 1941) -> GameState:
     close-assault approximation (see data/unit_stats.json and game.oob). The Axis
     (Rommel/DAK, artillery, the 300th Oasis companies) starts around El Agheila;
     the Commonwealth screen (9th Australian, 2nd Armoured, 3rd Indian) is spread
-    across Cyrenaica; the objective is Tobruk. Air/naval/barrage/anti-armor/morale
-    and reinforcement arrival are not yet modelled -- this is the faithful
-    land-movement + close-assault slice of the scenario."""
+    across Cyrenaica; the objective is Tobruk. Models the full land Combat Segment
+    (barrage + anti-armor + close assault with combined arms, morale/cohesion,
+    retreat, surrender, org-size), reinforcement arrival (15th Panzer over turns),
+    per-model unit stats, and graded degree-of-success victory. Air/naval and the
+    full off-map OOB remain out of scope."""
     tmap, _ = cna_map.load_sections("ABC")
+    target = coords.to_axial(coords.parse("C4807"))               # Tobruk
     units, supplies = oob.build(sections="ABC")   # corridor only (drops rear Map-D units)
+
+    # Forward supply: the .vsav dumps sit near the start lines, so the spread-out
+    # Commonwealth screen in Cyrenaica and the Italian infantry deep in the west
+    # can be stranded > 1/2 CPA from a dump -- unable to move OR fight (32.12/32.23).
+    # Co-locate a dump with each concentration so the defence works and the OOB
+    # isn't inert (32.15: a dump per force concentration).
+    from .hexmap import distance as _dist
+    cyr = [u for u in units if u.side == Side.ALLIED and 18 <= _dist(u.hex, target) <= 55]
+    ital = [u for u in units if u.id.startswith("IT") and not u.is_tank and u.barrage == 0]
+    if cyr:
+        supplies.append(SupplyUnit("AL-Dump-Cyr", Side.ALLIED, cyr[len(cyr) // 2].hex, ammo=40, fuel=60))
+    if ital:
+        supplies.append(SupplyUnit("AX-Dump-It", Side.AXIS, ital[len(ital) // 2].hex, ammo=40, fuel=60))
 
     # A hex where a land unit stands is land: coastal ports (El Agheila, Tobruk,
     # ...) colour-sample as sea, so add every occupied hex as coastal CLEAR.
@@ -198,7 +214,6 @@ def rommels_arrival(seed: int = 1941) -> GameState:
     if spurs:
         tmap = replace(tmap, roads=tmap.roads | spurs)
 
-    target = coords.to_axial(coords.parse("C4807"))               # Tobruk
     initial = {"AMMO": sum(s.ammo for s in supplies),
                "FUEL": sum(s.fuel for s in supplies)}
     return GameState(
