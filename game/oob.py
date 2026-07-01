@@ -132,7 +132,7 @@ def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
         _uid(seen, rec["counter"]), side, ax,
         (StepRecord(role, s["steps"]),),
         mobility=Mobility[s["mobility"]],
-        cpa=s["cpa"], stacking_points=1,
+        cpa=s["cpa"], stacking_points=s.get("sp", 1),       # 1=battalion (rule 9.4)
         oca=model.get("oca", s["oca"]), dca=model.get("dca", s["dca"]),
         barrage=rating("barrage"), anti_armor=rating("anti_armor"),
         armor_protection=rating("armor_protection"), vulnerability=rating("vulnerability"),

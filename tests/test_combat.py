@@ -146,6 +146,14 @@ def test_morale_shift_moves_the_column():
     assert up.column == base.column + 2
 
 
+def test_org_size_shift():
+    assert ct.org_size_shift(1, 0) == 2        # battalion vs company -> +2 attacker (15.53)
+    assert ct.org_size_shift(0, 1) == -2       # company vs battalion -> defender
+    assert ct.org_size_shift(5, 1) == 4        # division vs battalion
+    assert ct.org_size_shift(1, 1) == 0        # equal sizes
+    assert ct.org_size_shift(3, 2) == 0        # super-brigade vs brigade
+
+
 def test_barrage_crt():
     assert ct.barrage_result("infantry", 11, 66) == (True, 1)    # col 5, 45-66 -> lose 1 + pin
     assert ct.barrage_result("infantry", 1, 11) == (False, 0)    # no effect

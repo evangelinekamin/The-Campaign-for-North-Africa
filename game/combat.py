@@ -61,7 +61,8 @@ def resolve(*, attacker_raw: int, defender_raw: int,
             def_terrain: Terrain, attack_feature: Hexside | None,
             atk_roll: int, def_roll: int,
             extra_shift: int = 0, morale_shift: int = 0,
-            attacker_ca_penalty: int = 0, defender_ca_penalty: int = 0) -> CombatResult:
+            attacker_ca_penalty: int = 0, defender_ca_penalty: int = 0,
+            attacker_size: int = 0, defender_size: int = 0) -> CombatResult:
     both_small = attacker_raw < 10 and defender_raw < 10
     # Combined-arms reduces each side's ACTUAL close-assault points (rule 15.4).
     a_actual = max(0, actual_points(attacker_raw, both_small) - attacker_ca_penalty)
@@ -75,6 +76,7 @@ def resolve(*, attacker_raw: int, defender_raw: int,
         shift += 2
     elif attacker_raw > 0 and defender_raw >= 2 * attacker_raw:
         shift -= 2
+    shift += ct.org_size_shift(attacker_size, defender_size)    # 15.53 organization size
     shift += morale_shift + extra_shift                         # 15.62 morale column shift
 
     col = max(0, min(ct.N_COLS - 1, ct.diff_to_column(diff) + shift))

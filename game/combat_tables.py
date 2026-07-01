@@ -288,6 +288,27 @@ def anti_armor_damage(actual_points: int, roll: int, *, phasing: bool = False) -
     return _ANTI_ARMOR[row][max(0, min(16, actual_points))]
 
 
+# [15.53] Organization-Size Close Assault Modifications: the column shift in favour
+# of the side whose largest participating unit is bigger, keyed by (larger SP,
+# smaller SP). Stacking points: 5=Division, 3=Super-Brigade, 2=Brigade/Battle Group,
+# 1=Battalion, 0=Company (rule 9.4). Division-level aggregation of a formation's
+# battalions (15.55, via the parent HQ) is deferred, so this fires only when the
+# participating units' own sizes differ (e.g. a battalion assaulting a company).
+_ORG_SIZE_SHIFT: dict[tuple[int, int], int] = {
+    (5, 3): 1, (5, 2): 2, (5, 1): 4, (5, 0): 8,
+    (3, 2): 0, (3, 1): 2, (3, 0): 4, (2, 1): 2, (2, 0): 4, (1, 0): 2,
+}
+
+
+def org_size_shift(attacker_sp: int, defender_sp: int) -> int:
+    """Column shift from organizational size (rule 15.53): + toward the attacker if
+    its largest unit is bigger, - toward the defender if the defender's is bigger."""
+    if attacker_sp == defender_sp:
+        return 0
+    shift = _ORG_SIZE_SHIFT.get((max(attacker_sp, defender_sp), min(attacker_sp, defender_sp)), 0)
+    return shift if attacker_sp > defender_sp else -shift
+
+
 # Close-Assault column shifts from the Terrain Effects Chart (8.37): negative =
 # columns left (favours defender), positive = right (favours attacker).
 HEX_CA_SHIFT: dict[Terrain, int] = {

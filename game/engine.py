@@ -359,7 +359,9 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
         atk_roll=ab * 10 + asm, def_roll=db * 10 + dsm,
         morale_shift=atk_m - def_m,
         attacker_ca_penalty=_combined_arms_penalty(armed_atk),      # rule 15.4
-        defender_ca_penalty=_combined_arms_penalty(armed_def))
+        defender_ca_penalty=_combined_arms_penalty(armed_def),
+        attacker_size=max((u.stacking_points for u in armed_atk), default=0),  # 15.53
+        defender_size=max((u.stacking_points for u in armed_def), default=0))
     r.emit(EventKind.COMBAT_RESOLVED, side, actor,
            {"target": list(target), "attackers": [u.id for u in armed_atk],
             "defenders": [u.id for u in defenders],
