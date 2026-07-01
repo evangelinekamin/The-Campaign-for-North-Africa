@@ -220,8 +220,9 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
             "differential": res.differential, "column": res.column,
             "attacker_loss_pct": res.attacker_loss_pct,
             "defender_loss_pct": res.defender_loss_pct,
-            "attacker_result": res.attacker_result,
-            "defender_result": res.defender_result,
+            "attacker_captured": res.attacker_captured,
+            "defender_captured": res.defender_captured,
+            "attacker_engaged": res.attacker_engaged,
             "retreat_hexes": res.retreat_hexes},
            rng_draws=(ab, asm, db, dsm))
     for uid, amount in _spread_losses(defenders, res.defender_steps_lost):
@@ -230,7 +231,7 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     for uid, amount in _spread_losses(armed_atk, res.attacker_steps_lost):
         r.emit(EventKind.STEP_LOST, side, actor,
                {"unit_id": uid, "amount": amount, "role": "attacker"})
-    if res.defender_result == "RETREAT":                        # rule 15.8 / 15.82
+    if res.retreat_hexes > 0:                                   # rule 15.8 / 15.82
         _retreat(r, side, actor, [d.id for d in defenders], armed_atk[0].hex, res.retreat_hexes)
 
 

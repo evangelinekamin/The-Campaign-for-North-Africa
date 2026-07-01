@@ -35,9 +35,10 @@ class CombatResult:
     defender_loss_pct: int
     attacker_steps_lost: int
     defender_steps_lost: int
-    attacker_result: str | None = None   # "CAPT" | "ENG" | None (from atk dice sum)
-    defender_result: str | None = None   # "CAPT" | "RETREAT" | None (from def dice sum)
-    retreat_hexes: int = 0               # defender retreat distance if RETREAT
+    attacker_captured: bool = False      # some attacker losses become prisoners (15.85)
+    defender_captured: bool = False      # some defender losses become prisoners
+    attacker_engaged: bool = False       # attacker locked in contact (15.81)
+    retreat_hexes: int = 0               # defender must retreat this many hexes (15.82)
 
 
 def _round_half_up(x: float) -> int:
@@ -74,14 +75,15 @@ def resolve(*, attacker_raw: int, defender_raw: int,
     d_pct = ct.defender_loss_pct(col, def_roll)
 
     # Special results read the SAME dice as an arithmetic sum (rule 15.79).
-    a_res = ct.attacker_result(col, atk_roll // 10 + atk_roll % 10)
-    d_res, retreat = ct.defender_result(col, def_roll // 10 + def_roll % 10)
-    if d_res == "RETREAT" and a_res == "ENG":                   # 15.74 retreat beats engaged
-        a_res = None
+    a_capt, a_eng = ct.attacker_result(col, atk_roll // 10 + atk_roll % 10)
+    d_capt, retreat = ct.defender_result(col, def_roll // 10 + def_roll % 10)
+    if retreat > 0:                                            # 15.74 retreat beats engaged
+        a_eng = False
     return CombatResult(
         differential=diff, column=col,
         attacker_loss_pct=a_pct, defender_loss_pct=d_pct,
         attacker_steps_lost=math.ceil(a_pct / 100 * attacker_strength),
         defender_steps_lost=math.floor(d_pct / 100 * defender_strength),
-        attacker_result=a_res, defender_result=d_res, retreat_hexes=retreat,
+        attacker_captured=a_capt, defender_captured=d_capt,
+        attacker_engaged=a_eng, retreat_hexes=retreat,
     )

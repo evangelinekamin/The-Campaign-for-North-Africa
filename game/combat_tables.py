@@ -144,24 +144,23 @@ def _sum_in(cell: str, s: int) -> bool:
     return False
 
 
-def attacker_result(col: int, dice_sum: int) -> str | None:
-    """'CAPT' | 'ENG' | None from the attacker's dice SUM (rule 15.79)."""
-    if _sum_in(_ATK_CAPT[col], dice_sum):
-        return "CAPT"
-    if _sum_in(_ATK_ENG[col], dice_sum):
-        return "ENG"
-    return None
+def attacker_result(col: int, dice_sum: int) -> tuple[bool, bool]:
+    """(captured, engaged) from the attacker's dice SUM (rule 15.79). Independent
+    results (though the chart's ranges make them mutually exclusive per sum)."""
+    return (_sum_in(_ATK_CAPT[col], dice_sum), _sum_in(_ATK_ENG[col], dice_sum))
 
 
-def defender_result(col: int, dice_sum: int) -> tuple[str | None, int]:
-    """('CAPT', 0) | ('RETREAT', n) | (None, 0) from the defender's dice SUM. Capt
-    takes precedence over Retreat where the overrun ranges overlap."""
-    if _sum_in(_DEF_CAPT[col], dice_sum):
-        return ("CAPT", 0)
+def defender_result(col: int, dice_sum: int) -> tuple[bool, int]:
+    """(captured, retreat_hexes) from the defender's dice SUM. Both can occur from
+    one sum — some already-counted losses become prisoners AND the unit retreats
+    (rule 15.73; the §15.2xx example rolls sum 3 at +4 = captured + retreat 1)."""
+    capt = _sum_in(_DEF_CAPT[col], dice_sum)
+    retreat = 0
     for hexes, row in ((3, _DEF_RET3), (2, _DEF_RET2), (1, _DEF_RET1)):
         if _sum_in(row[col], dice_sum):
-            return ("RETREAT", hexes)
-    return (None, 0)
+            retreat = hexes
+            break
+    return (capt, retreat)
 
 
 # Close-Assault column shifts from the Terrain Effects Chart (8.37): negative =

@@ -82,12 +82,12 @@ def test_small_raw_uses_raw_as_actual():
 
 def test_defender_and_attacker_result_tables():
     c = ct.diff_to_column(3)                       # +3 column (index 10)
-    assert ct.defender_result(c, 2) == ("CAPT", 0)         # sum 2 -> captured
-    assert ct.defender_result(c, 5) == ("RETREAT", 1)      # 4-7 -> retreat 1
-    assert ct.defender_result(c, 11) == ("RETREAT", 2)     # 11 -> retreat 2
-    assert ct.defender_result(c, 8) == (None, 0)           # in contact
-    assert ct.attacker_result(c, 8) == "ENG"               # 8-10,12 -> engaged
-    assert ct.attacker_result(c, 2) is None                # attacker capt only on -diff
+    assert ct.defender_result(c, 2) == (True, 0)           # sum 2 -> captured only
+    assert ct.defender_result(c, 5) == (False, 1)          # 4-7 -> retreat 1
+    assert ct.defender_result(c, 11) == (False, 2)         # 11 -> retreat 2
+    assert ct.defender_result(c, 8) == (False, 0)          # in contact
+    assert ct.attacker_result(c, 8) == (False, True)       # 8-10,12 -> engaged
+    assert ct.attacker_result(c, 2) == (False, False)      # attacker capt only on -diff
 
 
 def test_retreat_takes_priority_over_engaged():
@@ -98,8 +98,18 @@ def test_retreat_takes_priority_over_engaged():
                          def_terrain=Terrain.CLEAR, attack_feature=None,
                          atk_roll=26, def_roll=14)          # sums: atk 8, def 5
     assert res.column == 10
-    assert res.defender_result == "RETREAT" and res.retreat_hexes == 1
-    assert res.attacker_result is None
+    assert res.retreat_hexes == 1 and res.attacker_engaged is False
+
+
+def test_combat_example_captured_and_retreat_together():
+    # The rulebook combat example (§15.2xx) resolves on the +4 column: the defender
+    # rolls 21 -> 15% loss, and its dice SUM 3 (2+1) is BOTH captured (2-3) AND a
+    # 1-hex retreat (3-7) -- the two results co-occur (rule 15.73). Attacker 32 -> 5%.
+    col = ct.diff_to_column(4)
+    assert col == 11
+    assert ct.defender_loss_pct(col, 21) == 15
+    assert ct.defender_result(col, 3) == (True, 1)
+    assert ct.attacker_loss_pct(col, 32) == 5
 
 
 def test_morale_shift_moves_the_column():
