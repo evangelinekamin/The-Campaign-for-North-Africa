@@ -212,7 +212,8 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
         attacker_strength=sum(u.strength for u in armed_atk),
         defender_strength=sum(u.strength for u in defenders),   # all defenders take losses
         def_terrain=r.state.terrain.terrain[target], attack_feature=feature,
-        atk_roll=ab * 10 + asm, def_roll=db * 10 + dsm)
+        atk_roll=ab * 10 + asm, def_roll=db * 10 + dsm,
+        morale_shift=_morale(armed_atk) - _morale(defenders))    # rule 15.6 / 15.62
     r.emit(EventKind.COMBAT_RESOLVED, side, actor,
            {"target": list(target), "attackers": [u.id for u in armed_atk],
             "defenders": [u.id for u in defenders],
@@ -231,6 +232,20 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
                {"unit_id": uid, "amount": amount, "role": "attacker"})
     if res.defender_result == "RETREAT":                        # rule 15.8 / 15.82
         _retreat(r, side, actor, [d.id for d in defenders], armed_atk[0].hex, res.retreat_hexes)
+
+
+def _morale(units) -> int:
+    """Adjusted Morale of a close-assault stack (rule 15.6): the LARGEST unit's
+    Basic Morale (17.32), +1 if Rommel is present (17.28), clamped to -3..+3
+    (17.23). The Cohesion-based 17.4 modifier roll is deferred (units act as
+    Cohesion 0), so this is Basic Morale for fresh units -- flagged."""
+    live = [u for u in units if u.strength > 0]
+    if not live:
+        return 0
+    m = max(live, key=lambda u: (u.stacking_points, u.strength)).morale
+    if any("Rommel" in u.id for u in live):
+        m += 1
+    return max(-3, min(3, m))
 
 
 def _retreat(r: _Run, atk_side: Side, actor: str, defender_ids: list[str],

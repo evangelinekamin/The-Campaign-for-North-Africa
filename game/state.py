@@ -39,7 +39,8 @@ class Unit:
     stacking_points: int
     oca: int                       # offensive close-assault rating (rule 11.15)
     dca: int                       # defensive close-assault rating (rule 11.15)
-    cohesion: int = 0
+    morale: int = 0                # Basic Morale, -3..+3 (rule 17.1, from the OA sheet)
+    cohesion: int = 0              # Cohesion Level (17.2); feeds the deferred 17.4 roll
     cp_used: float = 0.0           # CP spent this OpStage; reset each turn
     is_combat: bool = True         # False for truck convoys / bare HQs / air
     is_first_line_truck: bool = False

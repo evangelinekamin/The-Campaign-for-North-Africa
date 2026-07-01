@@ -36,6 +36,14 @@ def test_oob_classify_prefers_counter_identity_over_group():
     assert oob.classify("AL SGSU 250RAF", "AL SGSU") is None       # air base -> skip
 
 
+def test_oob_assigns_basic_morale_by_formation():
+    m = {u.id: u.morale for u in oob.build(sections="ABC")[0]}
+    assert next(v for k, v in m.items() if "5-Le" in k) == 2        # 5th Light Panzer +2
+    assert next(v for k, v in m.items() if "Aus" in k) == 1         # 9th Australian +1
+    assert next(v for k, v in m.items() if "Rommel" in k) == 1      # DAK HQ +1
+    assert next(v for k, v in m.items() if "OAS" in k) == 0         # 300th Oasis 0
+
+
 def test_rommels_arrival_runs_soundly():
     st = rommels_arrival()
     assert any(u.side == Side.AXIS for u in st.units)

@@ -33,6 +33,22 @@ def _nationality(side: str) -> str:
     return "GE" if side == "AXIS" else "CW"
 
 
+# Basic Morale by formation (rule 17.1, from the OA sheets; see cna-unit-stats-source).
+FORMATION_MORALE = (
+    ("5th Light", 2), ("15th Panzer", 2), ("90th", 2), ("164th", 1), ("Ariete", 1),
+    ("2nd Armoured", 2), ("9th Australian", 1), ("Indian", 1), ("Oasis", 0),
+)
+
+
+def _morale_for(group: str, counter: str) -> int:
+    if "Rommel" in counter or "DAK" in counter:
+        return 1                                      # DAK HQ
+    for key, m in FORMATION_MORALE:
+        if key in group:
+            return m
+    return 0                                          # unknown formation -> neutral
+
+
 def classify(counter: str, group: str) -> str | None:
     """Map a counter to a stat role, or None to skip (feature / air base)."""
     c, g = counter, group
@@ -93,6 +109,7 @@ def build(oob_file: str = "oob_desert_fox.json",
             mobility=Mobility[s["mobility"]],
             cpa=s["cpa"], stacking_points=1,
             oca=s["oca"], dca=s["dca"],
+            morale=_morale_for(rec["group"], rec["counter"]),
             is_combat=s.get("is_combat", True),
         ))
     return units, supplies
