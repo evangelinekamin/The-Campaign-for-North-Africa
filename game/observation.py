@@ -93,10 +93,15 @@ def observe(state: GameState, side: Side) -> dict:
     if state.phase == Phase.COMBAT:
         by_target: dict = {}
         for u in state.living(side):
-            if u.is_combat:
-                for nb in neighbors(u.hex):
-                    if state.enemies_at(nb, side):
-                        by_target.setdefault(nb, []).append(u.id)
+            # Only offer a unit as an attacker if it can draw ammunition -- an
+            # out-of-ammo unit cannot assault (32.21), so listing it just invites a
+            # rejected order.
+            if not u.is_combat or supply.plan_draw(
+                    state, u, supply.AMMO, supply.ammo_cost(u, phasing=True)) is None:
+                continue
+            for nb in neighbors(u.hex):
+                if state.enemies_at(nb, side):
+                    by_target.setdefault(nb, []).append(u.id)
         for tgt, ids in sorted(by_target.items()):
             pts = sum(e.stacking_points for e in state.enemies_at(tgt, side))
             attack_options.append({"target": list(tgt), "your_attackers": ids,
