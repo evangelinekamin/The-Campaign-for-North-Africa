@@ -43,6 +43,8 @@
     "grant":     {"oca": 6, "dca": 5, "anti_armor": 7, "armor_protection": 4, "is_tank": true},
     "stuart":    {"oca": 4, "dca": 4, "anti_armor": 4, "armor_protection": 3, "is_tank": true},
     "m13":       {"oca": 3, "dca": 3, "anti_armor": 3, "armor_protection": 3, "is_tank": true},
+    "cv33":      {"oca": 1, "dca": 2, "anti_armor": 0, "armor_protection": 1, "is_tank": true},
+    "l6":        {"oca": 2, "dca": 2, "anti_armor": 1, "armor_protection": 2, "is_tank": true},
     "pak36":     {"anti_armor": 2, "vulnerability": 1},
     "pak38":     {"anti_armor": 5, "vulnerability": 2},
     "flak88":    {"anti_armor": 13, "vulnerability": 2},

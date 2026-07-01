@@ -37,6 +37,8 @@ def _nationality(side: str) -> str:
 FORMATION_MORALE = (
     ("5th Light", 2), ("15th Panzer", 2), ("90th", 2), ("164th", 1), ("Ariete", 1),
     ("2nd Armoured", 2), ("9th Australian", 1), ("Indian", 1), ("Oasis", 0),
+    ("Pavia", -1), ("Bologna", -1), ("Brescia", -1), ("Savona", -1),  # Italian semi-mot divs
+    ("Trento", 0), ("Sabratha", -1),
 )
 
 

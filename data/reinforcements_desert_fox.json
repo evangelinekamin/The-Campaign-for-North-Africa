@@ -2,42 +2,129 @@
   "_comment": "Off-OOB units the VASSAL save aggregated or omitted, keyed by arrival_turn (0 = on-map at start, >0 = reinforcement per rule 20 / 61.2). The 5th Light Panzer Division's combat battalions (I/5 + II/5 Panzer, 2nd + 8th MG, 3rd Aufklarungs) are on-map at El Agheila from the start -- the historical Tobruk assault force the vsav had folded into the 'GE 5 Le' HQ counter. The 15th Panzer (arrival_turn 2-8) enters piecemeal near El Agheila and road-marches east; its 8th Panzer Regt tank battalions arrive turns 6-7 (GT31-32). CW armour enters east of Tobruk. Each unit has a distinct entry hex so arrivals never over-stack. Representative slice; full roster in the reinforcement subagent report.",
   "reinforcements": [
     {
-      "counter": "IT 132 Pz I",
+      "counter": "IT VII(M) Pz",
       "group": "IT Ariete Armoured Division",
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        45,
-        -4
+        39,
+        -12
       ],
       "arrival_turn": 0,
       "role": "tank",
       "model": "m13"
     },
     {
-      "counter": "IT 132 Pz II",
+      "counter": "IT VIII(M) Pz",
       "group": "IT Ariete Armoured Division",
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        45,
-        -3
+        40,
+        -12
       ],
       "arrival_turn": 0,
       "role": "tank",
       "model": "m13"
     },
     {
-      "counter": "IT 8 Bers",
+      "counter": "IT IX(M) Pz",
+      "group": "IT Ariete Armoured Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        41,
+        -12
+      ],
+      "arrival_turn": 0,
+      "role": "tank",
+      "model": "m13"
+    },
+    {
+      "counter": "IT I(L) Pz",
+      "group": "IT Ariete Armoured Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        42,
+        -12
+      ],
+      "arrival_turn": 0,
+      "role": "tank",
+      "model": "cv33"
+    },
+    {
+      "counter": "IT II(L) Pz",
+      "group": "IT Ariete Armoured Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        43,
+        -12
+      ],
+      "arrival_turn": 0,
+      "role": "tank",
+      "model": "cv33"
+    },
+    {
+      "counter": "IT 3 Bers",
+      "group": "IT Ariete Armoured Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        44,
+        -12
+      ],
+      "arrival_turn": 0,
+      "role": "motor_infantry"
+    },
+    {
+      "counter": "IT 5 Bers",
+      "group": "IT Ariete Armoured Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        45,
+        -12
+      ],
+      "arrival_turn": 0,
+      "role": "motor_infantry"
+    },
+    {
+      "counter": "IT 12 Bers",
       "group": "IT Ariete Armoured Division",
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
         46,
-        -4
+        -12
       ],
       "arrival_turn": 0,
       "role": "motor_infantry"
+    },
+    {
+      "counter": "IT 2 AT",
+      "group": "IT Ariete Armoured Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        47,
+        -12
+      ],
+      "arrival_turn": 0,
+      "role": "antitank"
+    },
+    {
+      "counter": "IT Nizza",
+      "group": "IT Ariete Armoured Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        41,
+        -11
+      ],
+      "arrival_turn": 0,
+      "role": "recon"
     },
     {
       "counter": "IT 132 Art",
@@ -45,8 +132,200 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        46,
-        -3
+        42,
+        -11
+      ],
+      "arrival_turn": 0,
+      "role": "artillery"
+    },
+    {
+      "counter": "IT I-27",
+      "group": "IT Pavia Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        36,
+        -18
+      ],
+      "arrival_turn": 0,
+      "role": "infantry"
+    },
+    {
+      "counter": "IT II-27",
+      "group": "IT Pavia Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        37,
+        -18
+      ],
+      "arrival_turn": 0,
+      "role": "infantry"
+    },
+    {
+      "counter": "IT III-27",
+      "group": "IT Pavia Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        38,
+        -18
+      ],
+      "arrival_turn": 0,
+      "role": "infantry"
+    },
+    {
+      "counter": "IT 26 Art",
+      "group": "IT Pavia Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        39,
+        -18
+      ],
+      "arrival_turn": 0,
+      "role": "artillery"
+    },
+    {
+      "counter": "IT I-39",
+      "group": "IT Bologna Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        40,
+        -18
+      ],
+      "arrival_turn": 0,
+      "role": "infantry"
+    },
+    {
+      "counter": "IT II-39",
+      "group": "IT Bologna Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        41,
+        -18
+      ],
+      "arrival_turn": 0,
+      "role": "infantry"
+    },
+    {
+      "counter": "IT III-39",
+      "group": "IT Bologna Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        42,
+        -18
+      ],
+      "arrival_turn": 0,
+      "role": "infantry"
+    },
+    {
+      "counter": "IT 10 Art",
+      "group": "IT Bologna Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        43,
+        -18
+      ],
+      "arrival_turn": 0,
+      "role": "artillery"
+    },
+    {
+      "counter": "IT I-19",
+      "group": "IT Brescia Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        34,
+        -17
+      ],
+      "arrival_turn": 0,
+      "role": "infantry"
+    },
+    {
+      "counter": "IT II-19",
+      "group": "IT Brescia Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        35,
+        -17
+      ],
+      "arrival_turn": 0,
+      "role": "infantry"
+    },
+    {
+      "counter": "IT III-19",
+      "group": "IT Brescia Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        36,
+        -17
+      ],
+      "arrival_turn": 0,
+      "role": "infantry"
+    },
+    {
+      "counter": "IT 57 Art",
+      "group": "IT Brescia Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        37,
+        -17
+      ],
+      "arrival_turn": 0,
+      "role": "artillery"
+    },
+    {
+      "counter": "IT I-15",
+      "group": "IT Savona Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        38,
+        -17
+      ],
+      "arrival_turn": 0,
+      "role": "infantry"
+    },
+    {
+      "counter": "IT II-15",
+      "group": "IT Savona Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        39,
+        -17
+      ],
+      "arrival_turn": 0,
+      "role": "infantry"
+    },
+    {
+      "counter": "IT III-15",
+      "group": "IT Savona Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        40,
+        -17
+      ],
+      "arrival_turn": 0,
+      "role": "infantry"
+    },
+    {
+      "counter": "IT 12 Art",
+      "group": "IT Savona Division",
+      "side": "AXIS",
+      "nationality": "IT",
+      "hex": [
+        41,
+        -17
       ],
       "arrival_turn": 0,
       "role": "artillery"
