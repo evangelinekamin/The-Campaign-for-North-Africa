@@ -13,7 +13,10 @@ from __future__ import annotations
 import json
 import os
 
+from collections import defaultdict, deque
+
 from . import coords
+from .hexmap import neighbors
 from .movement import TerrainMap, edge
 from .terrain import Terrain
 
@@ -70,7 +73,58 @@ def _load_edges(sections: str, terrain: dict, index: dict):
                         terrain[c] = Terrain.CLEAR
                         index[lbl] = c
                 dst.add(edge(ax, bx))
+    _bridge_gaps(roads, terrain)                    # heal short CV gaps at road ends
     return frozenset(roads), frozenset(tracks)
+
+
+def _bridge_gaps(roads: set, terrain: dict) -> None:
+    """Heal short gaps the line CV leaves where roads curve: extend a road
+    dead-end across <=2 hexes to reconnect a separate road segment. In-place;
+    intermediate hexes are promoted to land. Deterministic (sorted scans)."""
+    adj: dict = defaultdict(set)
+    for e in roads:
+        a, b = tuple(e)
+        adj[a].add(b); adj[b].add(a)
+    comp: dict = {}
+    for start in sorted(adj):
+        if start in comp:
+            continue
+        comp[start] = start; stack = [start]
+        while stack:
+            x = stack.pop()
+            for n in adj[x]:
+                if n not in comp:
+                    comp[n] = start; stack.append(n)
+    road_hexes = set(adj)
+    for A in sorted(h for h in adj if len(adj[h]) <= 1):
+        prev = {A: None}; dq = deque([A]); hit = None
+        for _ in range(2):                          # up to a 2-hex gap
+            nxt = []
+            for x in list(dq):
+                for n in neighbors(x):
+                    if n in prev:
+                        continue
+                    prev[n] = x
+                    if n in road_hexes and comp.get(n) != comp.get(A):
+                        hit = n; break
+                    nxt.append(n)
+                if hit:
+                    break
+            dq = deque(nxt)
+            if hit:
+                break
+        if hit is None:
+            continue
+        node = hit
+        while node != A:                            # add the bridging edges
+            p = prev[node]
+            roads.add(edge(node, p))
+            terrain.setdefault(node, Terrain.CLEAR)
+            node = p
+        merged = comp.get(hit)
+        for h in list(comp):
+            if comp[h] == merged:
+                comp[h] = comp[A]
 
 
 def load_section(section: str) -> tuple[TerrainMap, dict]:

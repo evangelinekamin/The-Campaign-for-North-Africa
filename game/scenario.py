@@ -190,6 +190,14 @@ def rommels_arrival(seed: int = 1941) -> GameState:
     _connect_pieces(terrain, [p.hex for p in (*units, *supplies)])
     tmap = replace(tmap, terrain=terrain)
 
+    # A supply dump beside a road is on the supply net: add a short road spur so
+    # units can trace to it along the road (rule 32.16 trace is priced as roaded).
+    road_hexes = {c for e in tmap.roads for c in e}
+    spurs = {edge(s.hex, nb) for s in supplies for nb in neighbors(s.hex)
+             if nb in road_hexes}
+    if spurs:
+        tmap = replace(tmap, roads=tmap.roads | spurs)
+
     target = coords.to_axial(coords.parse("C4807"))               # Tobruk
     initial = {"AMMO": sum(s.ammo for s in supplies),
                "FUEL": sum(s.fuel for s in supplies)}
