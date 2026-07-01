@@ -110,6 +110,19 @@ def test_retreat_relocates_defender_away_from_attacker():
     assert distance(moved.hex, (2, 0)) >= 3                # retreated 2 hexes away
 
 
+def test_scenarios_robust_across_seeds():
+    # every scenario, across many dice, must finish with a winner, be replay-exact
+    # and deterministic, with invariants holding every event (checked inside run).
+    from game.scenario import battle_for_tobruk, coastal_corridor, rommels_arrival
+    for factory in (coastal_corridor, battle_for_tobruk, rommels_arrival):
+        for seed in range(1, 6):
+            a = run(factory(seed=seed), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+            assert a.winner in (Side.AXIS, Side.ALLIED)
+            assert fold(a.initial, a.events) == a.final
+            b = run(factory(seed=seed), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+            assert determinism_signature(a.events) == determinism_signature(b.events)
+
+
 def test_cohesion_changed_event_applies():
     from game.apply import apply as apply_event
     from game.events import Event, EventKind, Phase
