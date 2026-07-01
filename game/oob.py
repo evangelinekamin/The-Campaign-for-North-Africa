@@ -118,7 +118,7 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
 # record may override with its own "model" (e.g. Matildas vs cruisers).
 MODEL_DEFAULTS = {
     ("GE", "tank"): "pz3h", ("GE", "antitank"): "pak38", ("GE", "artillery"): "lefh18",
-    ("CW", "tank"): "a13", ("CW", "artillery"): "25pdr",
+    ("CW", "tank"): "a13", ("CW", "artillery"): "25pdr", ("CW", "antitank"): "2pdr",
     ("IT", "tank"): "m13",
 }
 

@@ -17,7 +17,8 @@
     "mg":        {"type": "u",  "cpa": 20, "oca": 4, "dca": 6, "steps": 3, "mobility": "MOTORIZED"},
     "tank":      {"type": "g",  "cpa": 25, "oca": 3, "dca": 3, "steps": 8, "mobility": "VEHICLE", "is_tank": true, "armor_protection": 3, "anti_armor": 4},
     "recon":     {"type": "pp", "cpa": 45, "oca": 2, "dca": 3, "steps": 6, "mobility": "RECCE", "armor_protection": 2, "anti_armor": 2},
-    "artillery": {"type": "x",  "cpa": 20, "oca": 0, "dca": 1, "steps": 6, "mobility": "MOTORIZED", "barrage": 8, "vulnerability": 5}
+    "artillery": {"type": "x",  "cpa": 20, "oca": 0, "dca": 1, "steps": 6, "mobility": "MOTORIZED", "barrage": 8, "vulnerability": 5},
+    "antitank":  {"type": "aa", "cpa": 15, "oca": 1, "dca": 2, "steps": 8, "mobility": "MOTORIZED", "anti_armor": 4, "vulnerability": 2}
   },
   "IT": {
     "_comment": "Italian role stats -- representative (weaker CA, older kit than German); tank/gun MODELS (M13/M14 etc.) come from the [4.48] chart via each unit's model. Flagged for [4.46] Italian Unit Characteristics Chart verification.",
@@ -42,6 +43,8 @@
     "matilda2":  {"oca": 3, "dca": 4, "anti_armor": 3, "armor_protection": 6, "is_tank": true},
     "grant":     {"oca": 6, "dca": 5, "anti_armor": 7, "armor_protection": 4, "is_tank": true},
     "stuart":    {"oca": 4, "dca": 4, "anti_armor": 4, "armor_protection": 3, "is_tank": true},
+    "mk6":       {"oca": 2, "dca": 2, "anti_armor": 0, "armor_protection": 1, "is_tank": true},
+    "a9":        {"oca": 3, "dca": 3, "anti_armor": 3, "armor_protection": 1, "is_tank": true},
     "m13":       {"oca": 3, "dca": 3, "anti_armor": 3, "armor_protection": 3, "is_tank": true},
     "cv33":      {"oca": 1, "dca": 2, "anti_armor": 0, "armor_protection": 1, "is_tank": true},
     "l6":        {"oca": 2, "dca": 2, "anti_armor": 1, "armor_protection": 2, "is_tank": true},

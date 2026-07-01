@@ -2,6 +2,141 @@
   "_comment": "Off-OOB units the VASSAL save aggregated or omitted, keyed by arrival_turn (0 = on-map at start, >0 = reinforcement per rule 20 / 61.2). The 5th Light Panzer Division's combat battalions (I/5 + II/5 Panzer, 2nd + 8th MG, 3rd Aufklarungs) are on-map at El Agheila from the start -- the historical Tobruk assault force the vsav had folded into the 'GE 5 Le' HQ counter. The 15th Panzer (arrival_turn 2-8) enters piecemeal near El Agheila and road-marches east; its 8th Panzer Regt tank battalions arrive turns 6-7 (GT31-32). CW armour enters east of Tobruk. Each unit has a distinct entry hex so arrivals never over-stack. Representative slice; full roster in the reinforcement subagent report.",
   "reinforcements": [
     {
+      "counter": "BR 5 RTR",
+      "group": "BR 2nd Armoured Division",
+      "side": "ALLIED",
+      "hex": [
+        45,
+        -4
+      ],
+      "arrival_turn": 0,
+      "role": "tank",
+      "model": "a13"
+    },
+    {
+      "counter": "BR 6 RTR",
+      "group": "BR 2nd Armoured Division",
+      "side": "ALLIED",
+      "hex": [
+        46,
+        -4
+      ],
+      "arrival_turn": 0,
+      "role": "tank",
+      "model": "m13"
+    },
+    {
+      "counter": "BR 3 Hus",
+      "group": "BR 2nd Armoured Division",
+      "side": "ALLIED",
+      "hex": [
+        45,
+        -3
+      ],
+      "arrival_turn": 0,
+      "role": "tank",
+      "model": "mk6"
+    },
+    {
+      "counter": "BR 2 RHA",
+      "group": "BR 2nd Armoured Division",
+      "side": "ALLIED",
+      "hex": [
+        46,
+        -3
+      ],
+      "arrival_turn": 0,
+      "role": "artillery"
+    },
+    {
+      "counter": "BR 102 AT",
+      "group": "BR 2nd Armoured Division",
+      "side": "ALLIED",
+      "hex": [
+        46,
+        -2
+      ],
+      "arrival_turn": 0,
+      "role": "antitank"
+    },
+    {
+      "counter": "BR 51 Fld",
+      "group": "BR 2nd Armoured Division",
+      "side": "ALLIED",
+      "hex": [
+        12,
+        23
+      ],
+      "arrival_turn": 0,
+      "role": "artillery"
+    },
+    {
+      "counter": "AU 2-3 AT",
+      "group": "AU 9th Australian Division",
+      "side": "ALLIED",
+      "hex": [
+        13,
+        23
+      ],
+      "arrival_turn": 0,
+      "role": "antitank"
+    },
+    {
+      "counter": "AU 2-32 Tob",
+      "group": "AU 9th Australian Division",
+      "side": "ALLIED",
+      "hex": [
+        14,
+        62
+      ],
+      "arrival_turn": 0,
+      "role": "infantry"
+    },
+    {
+      "counter": "AU 2-10 Tob",
+      "group": "AU 9th Australian Division",
+      "side": "ALLIED",
+      "hex": [
+        15,
+        62
+      ],
+      "arrival_turn": 0,
+      "role": "infantry"
+    },
+    {
+      "counter": "BR 1 RHA",
+      "group": "BR 2nd Armoured Division",
+      "side": "ALLIED",
+      "hex": [
+        17,
+        62
+      ],
+      "arrival_turn": 0,
+      "role": "artillery"
+    },
+    {
+      "counter": "BR 8 Fld",
+      "group": "BR 2nd Armoured Division",
+      "side": "ALLIED",
+      "hex": [
+        18,
+        62
+      ],
+      "arrival_turn": 0,
+      "role": "artillery"
+    },
+    {
+      "counter": "BR 65 AT",
+      "group": "BR 2nd Armoured Division",
+      "side": "ALLIED",
+      "hex": [
+        14,
+        63
+      ],
+      "arrival_turn": 0,
+      "role": "antitank"
+    },
+    {
       "counter": "IT VII(M) Pz",
       "group": "IT Ariete Armoured Division",
       "side": "AXIS",
