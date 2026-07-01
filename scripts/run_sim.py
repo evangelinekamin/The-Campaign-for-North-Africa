@@ -54,9 +54,21 @@ def _line(e: Event) -> str:
         who = p.get("unit_id", p.get("target"))
         return f"  REJECT {p['order']} {who}: {p['reason']}"
     if k == EventKind.COMBAT_RESOLVED:
+        tags = []
+        if p.get("morale_shift"):
+            tags.append(f"morale {p['morale_shift']:+d}")
+        if p.get("retreat_hexes"):
+            tags.append(f"DEF RETREAT {p['retreat_hexes']}")
+        if p.get("attacker_engaged"):
+            tags.append("ATK ENGAGED")
+        if p.get("defender_captured"):
+            tags.append("DEF CAPT")
+        if p.get("attacker_captured"):
+            tags.append("ATK CAPT")
+        extra = ("  [" + ", ".join(tags) + "]") if tags else ""
         return (f"  COMBAT @ {tuple(p['target'])}: {'+'.join(p['attackers'])} vs "
                 f"{'+'.join(p['defenders'])} | diff {p['differential']:+d} (col {p['column']}) "
-                f"-> def {p['defender_loss_pct']}% / atk {p['attacker_loss_pct']}%")
+                f"-> def {p['defender_loss_pct']}% / atk {p['attacker_loss_pct']}%{extra}")
     if k == EventKind.STEP_LOST:
         return f"      loss  {p['unit_id']} -{p['amount']} step ({p['role']})"
     if k == EventKind.UNIT_RETREATED:
