@@ -331,8 +331,12 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     feature = r.state.terrain.hexsides.get((armed_atk[0].hex, target))  # §15.33
     # Morale is rolled FIRST (rule 15 order): each side's 17.4 roll adjusts its
     # Basic Morale by Cohesion, and the difference shifts the assault column (15.62).
-    atk_m, atk_md = _adjusted_morale(r, armed_atk)
-    def_m, def_md = _adjusted_morale(r, defenders)
+    atk_m, atk_md, atk_surr = _adjusted_morale(r, armed_atk)
+    def_m, def_md, def_surr = _adjusted_morale(r, defenders)
+    if atk_surr or def_surr:                                    # rule 17.25: the stack surrenders
+        _resolve_surrender(r, side, actor, target, armed_atk, defenders,
+                           atk_surr, def_surr, atk_m - def_m, (*atk_md, *def_md))
+        return
     ab, asm, db, dsm = r.d6(), r.d6(), r.d6(), r.d6()
     res = combat.resolve(
         attacker_raw=sum(u.raw_offense for u in armed_atk),
@@ -388,22 +392,46 @@ def _combined_arms_penalty(units) -> int:
     return min(4, math.ceil(unsupported / 3))
 
 
-def _adjusted_morale(r: _Run, units) -> tuple[int, tuple[int, int]]:
+def _adjusted_morale(r: _Run, units) -> tuple[int, tuple[int, int], bool]:
     """Adjusted Morale of a close-assault stack (rule 15.6): the LARGEST unit's
     Basic Morale (17.32), plus the 17.4 modifier rolled at its Cohesion level, +1
     if Rommel is present (17.28), clamped to -3..+3 (17.23). Returns (morale, the
-    two dice rolled). A SURR result is taken as the -4 penalty -- full
-    surrender-elimination (17.25) is deferred + flagged."""
+    two dice, surrendered). A SURR result eliminates the stack (17.25) unless its
+    largest unit has Basic Morale >= +1 (17.26 exception), in which case it is taken
+    as the -4 penalty. The Cohesion<=-11 / enemy-3x sub-conditions of 17.26 are
+    deferred + flagged."""
     live = [u for u in units if u.strength > 0]
     if not live:
-        return 0, (0, 0)
+        return 0, (0, 0), False
     largest = max(live, key=lambda u: (u.stacking_points, u.strength))
     d1, d2 = r.d6(), r.d6()
     mod = combat_tables.morale_modifier(largest.cohesion, d1 * 10 + d2)
+    surrendered = mod == "SURR" and largest.morale < 1
     if mod == "SURR":
         mod = -4
     m = largest.morale + mod + (1 if any("Rommel" in u.id for u in live) else 0)
-    return max(-3, min(3, m)), (d1, d2)
+    return max(-3, min(3, m)), (d1, d2), surrendered
+
+
+def _resolve_surrender(r: _Run, side: Side, actor: str, target: Coord, attackers,
+                       defenders, atk_surr: bool, def_surr: bool,
+                       morale_shift: int, dice: tuple) -> None:
+    """A side whose morale collapses to Surrender (17.25) is eliminated in place.
+    Recorded as a normal COMBAT_RESOLVED + STEP_LOST so replay + conservation hold."""
+    surr = "both" if (atk_surr and def_surr) else "attacker" if atk_surr else "defender"
+    r.emit(EventKind.COMBAT_RESOLVED, side, actor,
+           {"target": list(target), "attackers": [u.id for u in attackers],
+            "defenders": [u.id for u in defenders], "surrender": surr,
+            "differential": 0, "column": 0, "morale_shift": morale_shift,
+            "attacker_loss_pct": 0, "defender_loss_pct": 0,
+            "attacker_captured": False, "defender_captured": False,
+            "attacker_engaged": False, "retreat_hexes": 0},
+           rng_draws=dice)
+    for u in (attackers if atk_surr else []) + (defenders if def_surr else []):
+        cur = r.state.unit(u.id)
+        if cur and cur.alive:
+            r.emit(EventKind.STEP_LOST, side, actor,
+                   {"unit_id": u.id, "amount": cur.strength, "role": "surrender"})
 
 
 def _retreat(r: _Run, atk_side: Side, actor: str, defender_ids: list[str],

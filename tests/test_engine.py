@@ -123,6 +123,28 @@ def test_scenarios_robust_across_seeds():
             assert determinism_signature(a.events) == determinism_signature(b.events)
 
 
+def test_surrender_at_collapsed_cohesion():
+    # the 17.4 row for Cohesion <= -17 is all-Surrender; a stack there surrenders
+    # (17.25) unless its Basic Morale is +1 or better (17.26 exception).
+    from game.engine import _Run, _adjusted_morale
+    from game.events import Phase
+    from game.movement import TerrainMap
+    from game.state import GameState, Unit, VP
+    from game.terrain import Mobility, Terrain
+
+    def mk(mor):
+        return Unit("U", Side.AXIS, (0, 0), (StepRecord("s", 6),), mobility=Mobility.FOOT,
+                    cpa=10, stacking_points=1, oca=2, dca=2, morale=mor, cohesion=-17)
+    st = GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS, seed=1,
+                   weather="clear", move_modifier=0, vp=VP(),
+                   terrain=TerrainMap(terrain={(0, 0): Terrain.CLEAR}), control={},
+                   units=(mk(0),), target_hex=(0, 0), supplies=(),
+                   consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 0, "FUEL": 0})
+    r = _Run(st)
+    assert _adjusted_morale(r, [mk(0)])[2] is True       # morale 0 -> surrenders
+    assert _adjusted_morale(r, [mk(1)])[2] is False      # morale +1 ignores surrender
+
+
 def test_barrage_fires_at_adjacent_enemy():
     # artillery barrages an adjacent enemy infantry hex (rule 12); the barrage is
     # resolved against the target's class and can pin / cost steps.

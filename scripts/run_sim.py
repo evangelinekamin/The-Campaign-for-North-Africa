@@ -54,6 +54,9 @@ def _line(e: Event) -> str:
         who = p.get("unit_id", p.get("target"))
         return f"  REJECT {p['order']} {who}: {p['reason']}"
     if k == EventKind.COMBAT_RESOLVED:
+        if p.get("surrender"):
+            return (f"  COMBAT @ {tuple(p['target'])}: SURRENDER ({p['surrender']}) "
+                    f"-- {'+'.join(p['attackers'])} vs {'+'.join(p['defenders'])}")
         tags = []
         if p.get("morale_shift"):
             tags.append(f"morale {p['morale_shift']:+d}")
