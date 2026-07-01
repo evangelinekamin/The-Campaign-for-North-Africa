@@ -19,7 +19,7 @@ distance-to-objective so the agent can tell which way is forward.
 """
 from __future__ import annotations
 
-from . import tactics
+from . import supply, tactics
 from .events import Phase, Side
 from .hexmap import distance, neighbors
 from .state import GameState
@@ -59,16 +59,23 @@ def observe(state: GameState, side: Side) -> dict:
         if u.is_tank:
             v["is_tank"] = True
         if moving and u.is_combat:
-            reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occ)
-            dests = sorted((h for h in reach if h != u.hex), key=lambda h: distance(h, target))
-            support = u.barrage > 0 or u.anti_armor > 0
-            entries = []
-            for h in dests[:REACH_LIMIT]:
-                e = {"hex": list(h), "dist": distance(h, target)}
-                if support and any(state.enemies_at(nb, side) for nb in neighbors(h)):
-                    e["firing_position"] = True     # barrage / anti-armor fires from here
-                entries.append(e)
-            v["can_move_to"] = entries
+            # A unit whose first move can't draw fuel is out of supply -- it cannot
+            # move this OpStage, so offer no destinations (32.23). Reflecting this
+            # keeps the agent from wasting orders on stranded units.
+            supplied = u.cp_used > 0 or supply.plan_draw(
+                state, u, supply.FUEL, supply.fuel_cost(u)) is not None
+            v["supplied"] = supplied
+            if supplied:
+                reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occ)
+                dests = sorted((h for h in reach if h != u.hex), key=lambda h: distance(h, target))
+                support = u.barrage > 0 or u.anti_armor > 0
+                entries = []
+                for h in dests[:REACH_LIMIT]:
+                    e = {"hex": list(h), "dist": distance(h, target)}
+                    if support and any(state.enemies_at(nb, side) for nb in neighbors(h)):
+                        e["firing_position"] = True   # barrage / anti-armor fires from here
+                    entries.append(e)
+                v["can_move_to"] = entries
         return v
 
     # Limited intelligence: aggregate the enemy to per-hex stack sightings only.
