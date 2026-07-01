@@ -1,12 +1,18 @@
-"""Phase-0 mini simulation: run the toy coastal-corridor scenario with a scripted
-(non-LLM) policy on the real land engine (CPA + ZOC + stacking movement), narrate
-it from the event log, and self-verify the two properties that make a "completion"
+"""Phase-0 mini simulation: run a scenario with a scripted (non-LLM) policy on the
+real land engine (CPA + ZOC + stacking movement, real combat + supply), narrate it
+from the event log, and self-verify the two properties that make a "completion"
 credible (brief §7): deterministic replay and replay-equivalence.
 
-    python3 -m scripts.run_sim          # from the project root
+    python3 -m scripts.run_sim                 # toy corridor, fresh random seed
+    python3 -m scripts.run_sim tobruk          # real Map C terrain, fresh seed
+    python3 -m scripts.run_sim tobruk 1941     # reproduce one exact game (fixed seed)
+
+Each run picks a NEW random seed (so the dice visibly differ run to run) and prints
+it; pass that seed back as the 2nd argument to replay a game byte-for-byte.
 """
 from __future__ import annotations
 
+import random
 import sys
 from pathlib import Path
 
@@ -87,14 +93,20 @@ def summary(result: RunResult) -> None:
 
 
 def main() -> int:
-    which = sys.argv[1] if len(sys.argv) > 1 else "corridor"
+    args = sys.argv[1:]
+    which = args[0] if args else "corridor"
     factory = SCENARIOS.get(which, coastal_corridor)
-    print(f"scenario: {which}")
+    # Fresh seed each run so the RNG is visibly alive; pass an explicit seed to
+    # replay a specific game (seed + log -> identical state, brief §7).
+    seed = int(args[1]) if len(args) > 1 else random.randrange(1, 1_000_000)
+
+    print(f"scenario: {which}   seed: {seed}")
     pol = ScriptedPolicy(Side.AXIS)
-    result = run(factory(seed=1941), axis=pol, allied=pol)
+    result = run(factory(seed=seed), axis=pol, allied=pol)
     narrate(result)
     verify(result, factory)
     summary(result)
+    print(f"\n  reproduce this exact game:  python3 -m scripts.run_sim {which} {seed}")
     return 0
 
 
