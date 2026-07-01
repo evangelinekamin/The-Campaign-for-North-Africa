@@ -111,19 +111,32 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
     return units, supplies
 
 
+# Default weapon model per (nationality, role) for units that don't name one, so
+# the role-level combat ratings resolve to a concrete period model (1941). A unit
+# record may override with its own "model" (e.g. Matildas vs cruisers).
+MODEL_DEFAULTS = {
+    ("GE", "tank"): "pz3h", ("GE", "antitank"): "pak38", ("GE", "artillery"): "lefh18",
+    ("CW", "tank"): "a13", ("CW", "artillery"): "25pdr",
+}
+
+
 def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
                arrival_turn: int) -> Unit:
-    s = stats[_nationality(rec["side"])][role]
+    nat = _nationality(rec["side"])
+    s = stats[nat][role]
+    model = stats.get("models", {}).get(rec.get("model") or MODEL_DEFAULTS.get((nat, role)), {})
+
+    def rating(key: str) -> int:                     # model overrides role, else 0
+        return model.get(key, s.get(key, 0))
     return Unit(
         _uid(seen, rec["counter"]), side, ax,
         (StepRecord(role, s["steps"]),),
         mobility=Mobility[s["mobility"]],
         cpa=s["cpa"], stacking_points=1,
-        oca=s["oca"], dca=s["dca"],
-        barrage=s.get("barrage", 0), anti_armor=s.get("anti_armor", 0),
-        armor_protection=s.get("armor_protection", 0),
-        vulnerability=s.get("vulnerability", 0),
-        is_tank=s.get("is_tank", False),
+        oca=model.get("oca", s["oca"]), dca=model.get("dca", s["dca"]),
+        barrage=rating("barrage"), anti_armor=rating("anti_armor"),
+        armor_protection=rating("armor_protection"), vulnerability=rating("vulnerability"),
+        is_tank=model.get("is_tank", s.get("is_tank", False)),
         morale=_morale_for(rec["group"], rec["counter"]),
         is_combat=s.get("is_combat", True),
         arrival_turn=arrival_turn,

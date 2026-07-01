@@ -18,5 +18,27 @@
     "tank":      {"type": "g",  "cpa": 25, "oca": 3, "dca": 3, "steps": 8, "mobility": "VEHICLE", "is_tank": true, "armor_protection": 3, "anti_armor": 4},
     "recon":     {"type": "pp", "cpa": 45, "oca": 2, "dca": 3, "steps": 6, "mobility": "RECCE", "armor_protection": 2, "anti_armor": 2},
     "artillery": {"type": "x",  "cpa": 20, "oca": 0, "dca": 1, "steps": 6, "mobility": "MOTORIZED", "barrage": 8, "vulnerability": 5}
+  },
+  "_models_comment": "Per-model combat ratings from the Tank & Gun Characteristics Charts (4.47/4.48/4.49), extracted this session. A unit may name a 'model' to override its role's combat ratings (only the fields present are overridden; steps/cpa/mobility stay from the role). Tank models set oca/dca/anti_armor/armor_protection/is_tank; gun models set anti_armor/vulnerability; artillery set barrage/vulnerability (25pdr also anti_armor).",
+  "models": {
+    "pz2":       {"oca": 2, "dca": 3, "anti_armor": 1, "armor_protection": 2, "is_tank": true},
+    "pz3h":      {"oca": 4, "dca": 4, "anti_armor": 4, "armor_protection": 4, "is_tank": true},
+    "pz3j":      {"oca": 7, "dca": 5, "anti_armor": 6, "armor_protection": 4, "is_tank": true},
+    "pz4d":      {"oca": 5, "dca": 4, "anti_armor": 6, "armor_protection": 3, "is_tank": true},
+    "pz4f2":     {"oca": 6, "dca": 5, "anti_armor": 8, "armor_protection": 4, "is_tank": true},
+    "a13":       {"oca": 2, "dca": 3, "anti_armor": 3, "armor_protection": 2, "is_tank": true},
+    "crusader2": {"oca": 4, "dca": 4, "anti_armor": 3, "armor_protection": 4, "is_tank": true},
+    "matilda2":  {"oca": 3, "dca": 4, "anti_armor": 3, "armor_protection": 6, "is_tank": true},
+    "grant":     {"oca": 6, "dca": 5, "anti_armor": 7, "armor_protection": 4, "is_tank": true},
+    "stuart":    {"oca": 4, "dca": 4, "anti_armor": 4, "armor_protection": 3, "is_tank": true},
+    "m13":       {"oca": 3, "dca": 3, "anti_armor": 3, "armor_protection": 3, "is_tank": true},
+    "pak36":     {"anti_armor": 2, "vulnerability": 1},
+    "pak38":     {"anti_armor": 5, "vulnerability": 2},
+    "flak88":    {"anti_armor": 13, "vulnerability": 2},
+    "2pdr":      {"anti_armor": 4, "vulnerability": 2},
+    "6pdr":      {"anti_armor": 7, "vulnerability": 2},
+    "lefh18":    {"barrage": 9, "vulnerability": 5},
+    "sfh18":     {"barrage": 15, "vulnerability": 7},
+    "25pdr":     {"barrage": 8, "anti_armor": 5, "vulnerability": 6}
   }
 }

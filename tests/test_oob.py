@@ -36,6 +36,14 @@ def test_oob_classify_prefers_counter_identity_over_group():
     assert oob.classify("AL SGSU 250RAF", "AL SGSU") is None       # air base -> skip
 
 
+def test_per_model_stats_override_role():
+    u = {x.id: x for x in oob.build(sections="ABC")[0]}
+    assert u["BR-4-RTR"].armor_protection == 6         # Matilda II -- heavy armour
+    assert u["BR-Tiger"].armor_protection == 4         # Crusader II
+    assert u["GE-I-8-Pz"].anti_armor == 4              # Pz III H
+    assert u["GE-33---15-(ATG)"].anti_armor == 5       # 5cm Pak 38 (GE antitank default)
+
+
 def test_oob_assigns_basic_morale_by_formation():
     m = {u.id: u.morale for u in oob.build(sections="ABC")[0]}
     assert next(v for k, v in m.items() if "5-Le" in k) == 2        # 5th Light Panzer +2
