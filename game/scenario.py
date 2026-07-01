@@ -12,6 +12,7 @@ drives the road for the port (7,0); the Commonwealth holds it.
 """
 from __future__ import annotations
 
+from . import cna_map, coords
 from .events import Phase, Side
 from .movement import TerrainMap, edge
 from .state import GameState, StepRecord, SupplyUnit, Unit, VP
@@ -64,6 +65,49 @@ def coastal_corridor(seed: int = 1941) -> GameState:
 
     return GameState(
         turn=1, max_turns=MAX_TURNS, phase=Phase.WEATHER, active_side=Side.SYSTEM,
+        seed=seed, weather="clear", move_modifier=0, vp=VP(),
+        terrain=tmap, control={}, units=units, target_hex=target,
+        supplies=supplies, consumed={"AMMO": 0, "FUEL": 0}, initial_supply=initial,
+    )
+
+
+def battle_for_tobruk(seed: int = 1941) -> GameState:
+    """A scenario on REAL Map C terrain (from the VASSAL map): an Axis push from
+    Bardia toward the Tobruk objective. Terrain is the colour-sampled background
+    (data/terrain_C.json); unit stats are placeholders until the OA charts are
+    transcribed. This is the map-pipeline -> engine integration proof, not yet
+    the full Rommel's Arrival (which needs Maps A/B and the real OOB)."""
+    tmap, _ = cna_map.load_section("C")
+
+    def ax(label: str):
+        return coords.to_axial(coords.parse(label))
+
+    target = ax("C4807")  # Tobruk (objective)
+    # Axis pressed up against the Tobruk perimeter (adjacent land hexes), each
+    # with a co-located dump — so they're supplied and in contact. (A static
+    # dump can't sustain a long advance until mobile supply lands; see notes.)
+    units = (
+        Unit("DAK-15Pz", Side.AXIS, ax("C4707"),                     # NW of Tobruk
+             (StepRecord("pz", 3), StepRecord("inf", 2)),
+             mobility=Mobility.VEHICLE, cpa=25, stacking_points=2, oca=6, dca=6),
+        Unit("IT-Ariete", Side.AXIS, ax("C4607"),                    # N of El Adem
+             (StepRecord("tank", 3), StepRecord("inf", 2)),
+             mobility=Mobility.VEHICLE, cpa=20, stacking_points=2, oca=5, dca=5),
+        Unit("UK-Tobruk", Side.ALLIED, target,                       # Tobruk garrison
+             (StepRecord("inf", 4),),
+             mobility=Mobility.FOOT, cpa=10, stacking_points=2, oca=5, dca=8),
+        Unit("UK-7Armd", Side.ALLIED, ax("C4507"),                   # El Adem
+             (StepRecord("cruiser", 3),),
+             mobility=Mobility.VEHICLE, cpa=20, stacking_points=2, oca=6, dca=6),
+    )
+    supplies = (
+        SupplyUnit("AX-Dump1", Side.AXIS, ax("C4707"), ammo=40, fuel=60),
+        SupplyUnit("AX-Dump2", Side.AXIS, ax("C4607"), ammo=40, fuel=60),
+        SupplyUnit("UK-Dump", Side.ALLIED, target, ammo=40, fuel=60),
+    )
+    initial = {"AMMO": sum(s.ammo for s in supplies), "FUEL": sum(s.fuel for s in supplies)}
+    return GameState(
+        turn=1, max_turns=12, phase=Phase.WEATHER, active_side=Side.SYSTEM,
         seed=seed, weather="clear", move_modifier=0, vp=VP(),
         terrain=tmap, control={}, units=units, target_hex=target,
         supplies=supplies, consumed={"AMMO": 0, "FUEL": 0}, initial_supply=initial,

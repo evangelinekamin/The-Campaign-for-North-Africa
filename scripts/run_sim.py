@@ -16,7 +16,9 @@ from game.apply import fold                                     # noqa: E402
 from game.engine import RunResult, determinism_signature, run  # noqa: E402
 from game.events import Event, EventKind, Side                  # noqa: E402
 from game.policy import ScriptedPolicy                          # noqa: E402
-from game.scenario import coastal_corridor                      # noqa: E402
+from game.scenario import battle_for_tobruk, coastal_corridor   # noqa: E402
+
+SCENARIOS = {"corridor": coastal_corridor, "tobruk": battle_for_tobruk}
 
 
 def narrate(result: RunResult) -> None:
@@ -55,10 +57,10 @@ def _line(e: Event) -> str:
     return ""
 
 
-def verify(result: RunResult) -> None:
+def verify(result: RunResult, factory) -> None:
     replayed = fold(result.initial, result.events)
     assert replayed == result.final, "replay-equivalence FAILED: fold(log) != live state"
-    again = run(coastal_corridor(seed=result.initial.seed),
+    again = run(factory(seed=result.initial.seed),
                 ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.AXIS))
     assert determinism_signature(again.events) == determinism_signature(result.events), \
         "determinism FAILED: same seed produced a different event log"
@@ -85,10 +87,13 @@ def summary(result: RunResult) -> None:
 
 
 def main() -> int:
+    which = sys.argv[1] if len(sys.argv) > 1 else "corridor"
+    factory = SCENARIOS.get(which, coastal_corridor)
+    print(f"scenario: {which}")
     pol = ScriptedPolicy(Side.AXIS)
-    result = run(coastal_corridor(seed=1941), axis=pol, allied=pol)
+    result = run(factory(seed=1941), axis=pol, allied=pol)
     narrate(result)
-    verify(result)
+    verify(result, factory)
     summary(result)
     return 0
 
