@@ -24,7 +24,7 @@ from .events import Phase, Side
 from .hexmap import distance, neighbors
 from .state import GameState
 
-REACH_LIMIT = 8            # legal destinations offered per unit (nearest to objective)
+REACH_LIMIT = 6            # legal destinations offered per unit (nearest to objective)
 
 
 def _other(side: Side) -> Side:
@@ -37,17 +37,16 @@ def observe(state: GameState, side: Side) -> dict:
     enemy_zoc, enemy_occ = tactics.enemy_zoc_and_occupied(state, side) if moving else (None, None)
 
     def unit_view(u) -> dict:
+        # Lean view: cpa/cp_left/mobility are redundant with can_move_to (which
+        # already encodes what this unit can reach this OpStage), so they're omitted
+        # to keep the prompt -- and the benchmark's token cost -- down.
         v = {
             "id": u.id,
             "hex": list(u.hex),
             "dist_to_objective": distance(u.hex, target),
             "strength": u.strength,
-            "cpa": u.cpa,
-            "cp_left": round(u.cpa - u.cp_used, 1),
             "oca": u.oca,
             "dca": u.dca,
-            "mobility": u.mobility.name,
-            "is_combat": u.is_combat,
         }
         # Combat arm, surfaced only when non-zero so the agent can place its
         # support weapons: barrage (artillery) + anti_armor auto-fire at ADJACENT
