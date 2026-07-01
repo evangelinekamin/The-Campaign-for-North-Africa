@@ -1,22 +1,73 @@
-"""CNA hex-label coordinate system (rulebook labels <-> axial <-> neighbours).
+"""CNA hex-label coordinate system, built on the VASSAL map's exact geometry.
 
 A rulebook hex is "S####" — a section letter (A-E, or M=Malta) plus a 4-digit
-XXYY label (e.g. "C4807" = section C, column 48, row 07). The geometry was
-calibrated from the VASSAL map (see data/cna_map_calibration.json): flat-top
-hexes with XX as the (roughly N-S) staggering column axis, even-q offset. That
-makes neighbours and distances EXACT and pixel-independent — which is all the
-game engine needs. Pixel mapping (for terrain sampling off the map image) is a
-separate, per-section calibration and only Map C is pinned so far.
+XXYY label (e.g. "C4807"). Each map section is a VASSAL HexGrid whose parameters
+(dx, dy, x0, y0, hOff, vOff, stagger) live in data/cna_map_grid.json. Those
+parameters, run through VASSAL's own numbering + placement maths, give BOTH the
+board-image pixel of every hex centre (for terrain sampling) AND — because the
+raw grid indices (nx, ny) are continuous across the whole board — a single GLOBAL
+axial coordinate that stitches the sections together with no seam data.
 
-Cross-section adjacency (a hex on one section's seam touching the next section)
-is NOT handled here — sections have independent XX/YY numbering. For a bounded
-sub-region the few seam links are supplied as explicit map data.
+Geometry (decoded from VASSAL HexGrid/HexGridNumbering; every CNA section is
+sideways with vDescend and no hDescend):
+
+    gMR   = floor(zone_bbox_height / dx + 0.5)          # getMaxRows (zone, not board)
+    nx    = gMR + hOff - XX                              # raw column (staggering axis)
+    ny    = YY - vOff - (1 if stagger and nx odd else 0) # raw row
+    px    = dy*ny + (dy/2 if nx odd else 0) + y0         # board-image pixel (sideways
+    py    = dx*nx + x0                                   #   swap already applied)
+
+The raw grid is odd-q offset (odd nx columns carry the +dy/2 shift), so the global
+axial is q = nx, r = ny - (nx - (nx & 1)) // 2. Neighbours and distances follow
+exactly and are pixel-independent. See memory: vassal-coordinate-formula.
 """
 from __future__ import annotations
 
+import json
+import math
+import os
 from dataclasses import dataclass
 
 AXIAL_DIRS = ((1, 0), (1, -1), (0, -1), (-1, 0), (-1, 1), (0, 1))
+
+_GRID_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "cna_map_grid.json")
+
+
+@dataclass(frozen=True, slots=True)
+class Section:
+    """One map section's VASSAL grid parameters (all distances in board pixels)."""
+    letter: str
+    dx: float
+    dy: float
+    x0: float
+    y0: float
+    hOff: int
+    vOff: int
+    stagger: bool
+    gMR: int          # getMaxRows for this zone
+
+
+def _load_sections() -> dict[str, Section]:
+    with open(os.path.normpath(_GRID_PATH)) as f:
+        grid = json.load(f)
+    out: dict[str, Section] = {}
+    for z in grid["zones"]:
+        hg, nm, name = z.get("hexgrid"), z.get("numbering"), z["name"]
+        if not hg or not nm:
+            continue                       # holding boxes / tracks have no grid
+        letter = "M" if name == "Malta" else name.split()[-1]
+        if len(letter) != 1:
+            continue
+        bx0, by0, bx1, by1 = z["bbox"]
+        out[letter] = Section(
+            letter=letter, dx=hg["dx"], dy=hg["dy"], x0=hg["x0"], y0=hg["y0"],
+            hOff=nm["hOff"], vOff=nm["vOff"], stagger=nm.get("stagger", False),
+            gMR=int(math.floor((by1 - by0) / hg["dx"] + 0.5)),
+        )
+    return out
+
+
+SECTIONS: dict[str, Section] = _load_sections()
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,46 +86,53 @@ def parse(label: str) -> Hex:
     return Hex(label[0].upper(), int(label[1:3]), int(label[3:5]))
 
 
-def to_axial(h: Hex) -> tuple[int, int]:
-    """Even-q offset -> axial (col = XX is the staggering axis)."""
-    q = h.xx
-    r = h.yy - (h.xx + (h.xx & 1)) // 2
-    return q, r
+# --- label <-> raw VASSAL grid index (nx, ny), board-global ------------------
+
+def to_raw(h: Hex) -> tuple[int, int]:
+    s = SECTIONS[h.section]
+    nx = s.gMR + s.hOff - h.xx
+    ny = h.yy - s.vOff - (1 if s.stagger and (nx & 1) else 0)
+    return nx, ny
 
 
-def from_axial(section: str, q: int, r: int) -> Hex:
-    xx = q
-    yy = r + (xx + (xx & 1)) // 2
+def from_raw(section: str, nx: int, ny: int) -> Hex:
+    s = SECTIONS[section]
+    xx = s.gMR + s.hOff - nx
+    yy = ny + s.vOff + (1 if s.stagger and (nx & 1) else 0)
     return Hex(section, xx, yy)
 
 
+# --- global axial (odd-q on the raw grid) -----------------------------------
+
+def to_axial(h: Hex) -> tuple[int, int]:
+    nx, ny = to_raw(h)
+    return nx, ny - (nx - (nx & 1)) // 2
+
+
+def from_axial(section: str, q: int, r: int) -> Hex:
+    nx = q
+    ny = r + (nx - (nx & 1)) // 2
+    return from_raw(section, nx, ny)
+
+
 def neighbours(h: Hex) -> list[Hex]:
-    """The 6 same-section neighbours. Callers filter to hexes that exist in the
-    scenario map; cross-section seams are added as explicit data."""
+    """The 6 neighbours as labels in h's own section. Cross-section adjacency is
+    carried by the global axial (to_axial), which the engine uses directly."""
     q, r = to_axial(h)
     return [from_axial(h.section, q + dq, r + dr) for dq, dr in AXIAL_DIRS]
 
 
 def distance(a: Hex, b: Hex) -> int:
-    """Hex distance (only meaningful within one section here)."""
     aq, ar = to_axial(a)
     bq, br = to_axial(b)
     return (abs(aq - bq) + abs(aq + ar - bq - br) + abs(ar - br)) // 2
 
 
-# --- Map C pixel mapping (town-dot calibrated, ~20px; town dots aren't exactly
-# at hex centres so this caps ~20px — fine for sampling a small central patch,
-# validated by the terrain overlay). data/cna_map_calibration.json ---
-_MAPC_PX = (5788.138, 40.1934, 84.8042)   # px = c0 + c1*q + c2*r
-_MAPC_PY = (4599.947, -73.4760, -0.5699)  # py = c0 + c1*q + c2*r
+# --- board-image pixel of a hex centre (exact; for terrain sampling) ---------
 
-
-def to_pixel_mapc(h: Hex) -> tuple[float, float]:
-    """Approximate map-image pixel of a Map C hex centre (for terrain sampling).
-    Provisional until dot detection is refined to <10px."""
-    if h.section != "C":
-        raise ValueError("only Map C is pixel-calibrated so far")
-    q, r = to_axial(h)
-    px = _MAPC_PX[0] + _MAPC_PX[1] * q + _MAPC_PX[2] * r
-    py = _MAPC_PY[0] + _MAPC_PY[1] * q + _MAPC_PY[2] * r
+def to_pixel(h: Hex) -> tuple[float, float]:
+    s = SECTIONS[h.section]
+    nx, ny = to_raw(h)
+    px = s.dy * ny + (s.dy / 2 if nx & 1 else 0) + s.y0
+    py = s.dx * nx + s.x0
     return px, py

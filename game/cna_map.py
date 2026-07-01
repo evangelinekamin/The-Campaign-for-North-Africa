@@ -1,11 +1,12 @@
 """Load extracted CNA map terrain into an engine TerrainMap.
 
-Bridges the map pipeline (data/terrain_<section>.json, produced by
-tools/vassal/extract_terrain.py) to the engine's geometry. Hex labels are
-converted to axial via game.coords (same axial system the engine's movement
-uses); sea hexes are dropped so land units simply cannot enter them; hexside
-features (roads/tracks/escarpments) are not present yet (v1 background terrain).
-Single-section only for now — cross-section global axial is a later step.
+Bridges the map pipeline (data/terrain_<section>.json, from
+tools/vassal/extract_terrain.py) to the engine's geometry. Hex labels convert to
+a BOARD-GLOBAL axial via game.coords (the same axial the engine's movement uses),
+so several sections merge into one continuous map with cross-section adjacency for
+free — no seam data. Sea hexes are dropped so land units simply cannot enter them;
+hexside features (roads/tracks/escarpments) are not present yet (v1 background
+terrain only).
 """
 from __future__ import annotations
 
@@ -26,17 +27,27 @@ _TERRAIN = {
 _DATA = os.path.join(os.path.dirname(__file__), "..", "data")
 
 
-def load_section(section: str) -> tuple[TerrainMap, dict]:
-    """Return (TerrainMap, label->axial index) for one map section's land hexes."""
+def _read(section: str) -> dict:
     path = os.path.normpath(os.path.join(_DATA, f"terrain_{section}.json"))
     with open(path) as f:
-        raw = json.load(f)
+        return json.load(f)
+
+
+def load_sections(sections: str) -> tuple[TerrainMap, dict]:
+    """Return (TerrainMap, label->axial index) for the given sections' land hexes,
+    merged into one board-global map. `sections` is a string like "ABC"."""
     terrain: dict = {}
     index: dict = {}
-    for label, t in raw.items():
-        if t == "sea":
-            continue                # sea is off the land map -> impassable
-        ax = coords.to_axial(coords.parse(label))
-        terrain[ax] = _TERRAIN.get(t, Terrain.CLEAR)
-        index[label] = ax
+    for section in sections:
+        for label, t in _read(section).items():
+            if t == "sea":
+                continue                # sea is off the land map -> impassable
+            ax = coords.to_axial(coords.parse(label))
+            terrain[ax] = _TERRAIN.get(t, Terrain.CLEAR)
+            index[label] = ax
     return TerrainMap(terrain=terrain), index
+
+
+def load_section(section: str) -> tuple[TerrainMap, dict]:
+    """Convenience wrapper for a single section (e.g. "C")."""
+    return load_sections(section)

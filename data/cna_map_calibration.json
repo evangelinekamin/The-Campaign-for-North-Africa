@@ -1,5 +1,5 @@
 {
-  "_comment": "Empirical calibration of the CNA VASSAL map hex lattice (map: CNA Map Vassal Mitch Guthrie 2021.png, 14310x4632). Derived by detecting town-dot pixels for rules-confirmed hex labels and fitting. See tools/vassal/extract_grid.py for the raw grid params.",
+  "_comment": "SUPERSEDED 2026-06-30: game/coords.py now derives hex<->pixel<->global-axial from the EXACT VASSAL grid formula (data/cna_map_grid.json), not from these fits. Retained as historical reference; clean_points_map_c are still handy as ground-truth town pixels. Empirical calibration of the CNA VASSAL map hex lattice (map: CNA Map Vassal Mitch Guthrie 2021.png, 14310x4632), derived by detecting town-dot pixels for rules-confirmed hex labels and fitting.",
   "convention": {
     "orientation": "flat-top hexes in vertical columns (VASSAL sideways=true)",
     "offset_to_axial": "col=XX (first two digits) is the staggering axis; even-q offset. r = YY - (XX + (XX & 1)) / 2; q = XX.",

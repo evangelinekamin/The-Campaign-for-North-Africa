@@ -47,12 +47,34 @@ def test_known_town_distances():
 
 
 def test_pixel_lattice_consistency():
-    # Every neighbour must be ~one hex-spacing (85.25 px) away on the map image.
-    # This cross-validates the even-q convention against the fitted pixel lattice.
-    for lbl in ("C4507", "C4414", "C4321", "C4020", "C4218"):
+    # Every neighbour must be ~one hex-spacing away on the map image. This
+    # cross-validates the odd-q convention against the exact VASSAL pixel formula,
+    # across several sections (not just Map C).
+    for lbl in ("C4507", "C4414", "C4218", "B4827", "B4004", "A2021", "A2629"):
         h = parse(lbl)
-        hx, hy = coords.to_pixel_mapc(h)
+        hx, hy = coords.to_pixel(h)
         for n in coords.neighbours(h):
-            nx, ny = coords.to_pixel_mapc(n)
+            nx, ny = coords.to_pixel(n)
             d = math.hypot(nx - hx, ny - hy)
             assert 80 <= d <= 91, f"{h.label}->{n.label} spacing {d:.1f}px off-lattice"
+
+
+def test_cross_section_adjacency_is_seamless():
+    # The raw grid is board-global, so a Map B hex on the B/C seam and the Map C
+    # hex one column east of it are axial-distance 1 despite being in different
+    # sections (verified geometrically: same raw nx, consecutive raw ny ~ one hex).
+    b_edge = coords.from_raw("B", 30, 66)
+    c_edge = coords.from_raw("C", 30, 67)
+    assert coords.distance(b_edge, c_edge) == 1
+    bx, by = coords.to_pixel(b_edge)
+    cx, cy = coords.to_pixel(c_edge)
+    assert 80 <= math.hypot(cx - bx, cy - by) <= 91
+
+
+def test_map_c_pixels_match_detected_town_dots():
+    # The exact formula must land on real Map C town-dot pixels (dots sit a little
+    # off-centre, so allow the ~35px dot-offset floor). Guards the whole chain.
+    known = {"C4507": (6267, 1299), "C4414": (6876, 1362), "C4108": (6320, 1595)}
+    for lbl, (px, py) in known.items():
+        x, y = coords.to_pixel(parse(lbl))
+        assert math.hypot(x - px, y - py) <= 35, f"{lbl} off by too much"
