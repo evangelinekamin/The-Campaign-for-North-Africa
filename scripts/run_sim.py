@@ -73,9 +73,13 @@ def _line(e: Event) -> str:
         return (f"  ANTI-ARMOR @ {tuple(p['target'])} by {'+'.join(p['firers'])}: "
                 f"{p['actual']} pts -> {p['damage']} armor damage")
     if k == EventKind.BARRAGE_RESOLVED:
-        res = p.get("result", "")
+        eff = []
+        if p.get("loss"):
+            eff.append(f"lose {p['loss']}")
+        if p.get("pinned"):
+            eff.append("PIN")
         return (f"  BARRAGE @ {tuple(p['target'])} by {'+'.join(p['firers'])}: "
-                f"{p['actual']} pts vs {p['target_class']} -> {res}")
+                f"{p['actual']} pts vs {p['target_class']} -> {'+'.join(eff) or 'no effect'}")
     if k == EventKind.STEP_LOST:
         return f"      loss  {p['unit_id']} -{p['amount']} step ({p['role']})"
     if k == EventKind.UNIT_RETREATED:

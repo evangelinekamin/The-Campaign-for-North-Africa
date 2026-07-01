@@ -146,6 +146,18 @@ def test_morale_shift_moves_the_column():
     assert up.column == base.column + 2
 
 
+def test_barrage_crt():
+    assert ct.barrage_result("infantry", 11, 66) == (True, 1)    # col 5, 45-66 -> lose 1 + pin
+    assert ct.barrage_result("infantry", 1, 11) == (False, 0)    # no effect
+    assert ct.barrage_result("gun", 13, 66) == (False, 2)        # guns never Pinned
+    assert ct.barrage_result("armor", 2, 66) == (True, 0)        # pinned, no loss
+
+
+def test_barrage_strength_worked_example():
+    # rule 11.35: 90th Leichte artillery = 108 raw barrage -> 11 Actual Points.
+    assert combat.actual_points(108, False) == 11
+
+
 def test_anti_armor_crt():
     assert ct.anti_armor_damage(5, 35) == 7            # rule 14.43 worked example
     assert ct.anti_armor_damage(0, 11) == 0            # low points, low roll -> nothing

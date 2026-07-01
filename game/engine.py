@@ -184,8 +184,9 @@ def _combat(r: _Run, policies: dict, side: Side) -> None:
     Armor are fought by BOTH players (their losses land before Close Assault); then
     the Phasing player Close Assaults. Retreat-Before-Assault (13) is deferred."""
     enemy = _other(side)
-    _barrage_step(r, policies, side, enemy)
-    _anti_armor_step(r, side, enemy)
+    pinned: set[str] = set()          # units Pinned by barrage this segment (12.44)
+    _barrage_step(r, side, enemy, pinned)
+    _anti_armor_step(r, side, enemy, pinned)
     actor = f"{side.value}/Front"
     for order in policies[side].combat(r.state, side):
         attackers = [r.state.unit(a) for a in order.attacker_ids]
@@ -197,14 +198,66 @@ def _combat(r: _Run, policies: dict, side: Side) -> None:
                    {"order": "attack", "target": list(order.target),
                     "reason": "no valid attackers or empty target"})
             continue
-        _resolve_combat(r, side, actor, attackers, defenders, order.target)
+        _resolve_combat(r, side, actor, attackers, defenders, order.target, pinned)
 
 
-def _barrage_step(r: _Run, policies: dict, phasing: Side, enemy: Side) -> None:
-    pass    # rule 12 -- implemented in the barrage slice
+def _barrage_class(u) -> str:
+    return "armor" if u.is_armor else "gun" if u.is_gun else "infantry"
 
 
-def _anti_armor_step(r: _Run, phasing: Side, enemy: Side) -> None:
+def _barrage_target(enemies) -> "object | None":
+    """The firer bombards one target in the hex; blind, so a reasonable default is
+    the strongest combat unit present."""
+    combatants = [u for u in enemies if u.is_combat and u.alive]
+    return max(combatants, key=lambda u: u.strength, default=None)
+
+
+def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str]) -> None:
+    """Barrage (rule 12): both sides' artillery bombard adjacent enemy hexes first,
+    simultaneously (strengths read pre-loss). Each barrage resolves against one
+    target unit's class on the 12.6 CRT -> Pin and/or step loss; a Pin suppresses
+    that unit for the rest of the segment (no anti-armor, no close assault, 12.44).
+    Terrain column-shifts and the separate truck roll (12.46) are deferred."""
+    state0 = r.state
+    plan: list[tuple] = []
+    for firing in (phasing, enemy):
+        actor = f"{firing.value}/Front"
+        is_phasing = firing is phasing
+        by_target: dict[Coord, list] = {}
+        for u in state0.living(firing):
+            if u.barrage <= 0 or not u.is_combat:
+                continue
+            for nb in neighbors(u.hex):
+                if state0.enemies_at(nb, firing):
+                    by_target.setdefault(nb, []).append(u)
+                    break
+        for tgt, firers in by_target.items():
+            armed = [u for u in firers if _charge_ammo(r, firing, actor, u, phasing=is_phasing)]
+            raw = sum(u.raw_barrage for u in armed)
+            target_unit = _barrage_target(state0.enemies_at(tgt, firing))
+            if raw <= 0 or target_unit is None:
+                continue
+            cls = _barrage_class(target_unit)
+            d1, d2 = r.d6(), r.d6()
+            pin, loss = combat_tables.barrage_result(
+                cls, combat.actual_points(raw, False), d1 * 10 + d2)
+            plan.append((firing, actor, tgt, [u.id for u in armed],
+                         combat.actual_points(raw, False), cls, target_unit.id, (d1, d2), pin, loss))
+    for firing, actor, tgt, firer_ids, actual, cls, tgt_id, dice, pin, loss in plan:
+        r.emit(EventKind.BARRAGE_RESOLVED, firing, actor,
+               {"target": list(tgt), "firers": firer_ids, "actual": actual,
+                "target_class": cls, "target_unit": tgt_id, "pinned": pin, "loss": loss},
+               rng_draws=dice)
+        if loss > 0:
+            tu = r.state.unit(tgt_id)
+            if tu and tu.alive:
+                r.emit(EventKind.STEP_LOST, firing, actor,
+                       {"unit_id": tgt_id, "amount": min(loss, tu.strength), "role": "barrage"})
+        if pin:
+            pinned.add(tgt_id)
+
+
+def _anti_armor_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str]) -> None:
     """Anti-Armor Fire (rule 14): both sides fire at each other's adjacent armor,
     simultaneously (target strengths are read before any loss lands), and all armor
     losses precede Close Assault. Each unit with an Anti-Armor rating fires at one
@@ -218,7 +271,7 @@ def _anti_armor_step(r: _Run, phasing: Side, enemy: Side) -> None:
         actor = f"{firing.value}/Front"
         by_target: dict[Coord, list] = {}
         for u in state0.living(firing):
-            if u.anti_armor <= 0 or not u.is_combat:
+            if u.anti_armor <= 0 or not u.is_combat or u.id in pinned:   # 12.44 pinned can't fire
                 continue
             for nb in neighbors(u.hex):
                 if any(t.is_armor for t in state0.enemies_at(nb, firing)):
@@ -259,17 +312,20 @@ def _apply_armor_losses(r: _Run, firing: Side, actor: str, target: Coord, damage
 
 
 def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
-                    target: Coord) -> None:
-    # Ammo gates participation (rule 32.21 / 15.15): a unit that cannot draw ammo
-    # cannot assault; an unarmed defender adds no defensive strength but still
-    # suffers losses. Charged before resolution (conservation holds per event).
-    armed_atk = [u for u in attackers if _charge_ammo(r, side, actor, u, phasing=True)]
+                    target: Coord, pinned: set[str]) -> None:
+    # Ammo gates participation (rule 32.21 / 15.15) and Pin suppresses it (12.44):
+    # a unit that cannot draw ammo or is Pinned cannot assault; a Pinned or unarmed
+    # defender adds no defensive strength but still suffers losses. Charged before
+    # resolution (conservation holds per event).
+    armed_atk = [u for u in attackers
+                 if u.id not in pinned and _charge_ammo(r, side, actor, u, phasing=True)]
     if not armed_atk:
         r.emit(EventKind.ORDER_REJECTED, side, actor,
                {"order": "attack", "target": list(target),
-                "reason": "attackers out of ammo"})
+                "reason": "attackers out of ammo or pinned"})
         return
-    armed_def = [u for u in defenders if _charge_ammo(r, side, actor, u, phasing=False)]
+    armed_def = [u for u in defenders
+                 if u.id not in pinned and _charge_ammo(r, side, actor, u, phasing=False)]
 
     # Close Assault via the real differential engine (rule 15 / §15.79 CRT).
     feature = r.state.terrain.hexsides.get((armed_atk[0].hex, target))  # §15.33

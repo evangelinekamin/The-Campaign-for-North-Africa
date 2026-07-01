@@ -239,6 +239,45 @@ _ANTI_ARMOR: tuple[tuple[int, ...], ...] = (
 )
 
 
+# [12.6] BARRAGE AGAINST LAND UNITS CRT. Columns = Actual Barrage Points banded
+# (1-2, 3-4, ... 17+); roll is a sequential d66 (11-66). Result by the target's
+# class: No effect / Pinned / lose 1 / lose 2. For Infantry + Armor a numeric loss
+# ALSO Pins; Guns are never Pinned (12.44). The No-effect band is the complement,
+# so only the Pin / 1 / 2 roll-ranges are stored. Trucks (a separate 12.46 roll)
+# are deferred (abstract logistics 32.56 says barrage never hits trucks).
+_BARRAGE: dict[str, dict[str, list[str]]] = {
+    "infantry": {
+        "pin": ["54-66", "45-66", "42-65", "35-64", "25-61", "21-44", "11-35", "11-32", "11-31"],
+        "1":   ["", "", "66", "65-66", "62-66", "45-66", "36-64", "33-56", "32-55"],
+        "2":   ["", "", "", "", "", "", "65-66", "61-66", "56-66"],
+    },
+    "armor": {
+        "pin": ["63-66", "55-66", "46-66", "41-66", "32-66", "23-66", "15-63", "11-62", "11-54"],
+        "1":   ["", "", "", "", "", "", "64-66", "63-66", "55-66"],
+    },
+    "gun": {   # never Pinned
+        "1": ["62-66", "55-66", "51-66", "41-66", "31-66", "23-64", "13-56", "11-54", "11-36"],
+        "2": ["", "", "", "", "", "65-66", "61-66", "55-66", "41-66"],
+    },
+}
+
+
+def barrage_result(target_class: str, actual_points: int, roll: int) -> tuple[bool, int]:
+    """Rule 12.6: (pinned, steps_lost) for a barrage of `actual_points` Actual
+    Barrage Points against a target of the given class ('infantry'/'armor'/'gun'),
+    on a sequential d66 roll. Numeric losses also Pin infantry and armor (12.6)."""
+    col = min(8, (actual_points - 1) // 2)
+    if col < 0:
+        return (False, 0)
+    block = _BARRAGE[target_class]
+    for loss in ("2", "1"):
+        if loss in block and roll in expand(block[loss][col]):
+            return (target_class != "gun", int(loss))       # guns are not pinned
+    if "pin" in block and roll in expand(block["pin"][col]):
+        return (True, 0)
+    return (False, 0)
+
+
 def anti_armor_damage(actual_points: int, roll: int, *, phasing: bool = False) -> int:
     """Rule 14.6: Armor-Protection Points the target must lose, from Actual Anti-
     Armor Points and a d66 roll (10*dieA + dieB). The Phasing firer shifts one row

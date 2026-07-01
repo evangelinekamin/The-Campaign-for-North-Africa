@@ -123,6 +123,32 @@ def test_scenarios_robust_across_seeds():
             assert determinism_signature(a.events) == determinism_signature(b.events)
 
 
+def test_barrage_fires_at_adjacent_enemy():
+    # artillery barrages an adjacent enemy infantry hex (rule 12); the barrage is
+    # resolved against the target's class and can pin / cost steps.
+    from game.engine import _Run, _barrage_step
+    from game.events import EventKind, Phase
+    from game.movement import TerrainMap
+    from game.state import GameState, SupplyUnit, Unit, VP
+    from game.terrain import Mobility, Terrain
+    terr = {(q, 0): Terrain.CLEAR for q in range(4)}
+    arty = Unit("AR", Side.AXIS, (0, 0), (StepRecord("ar", 8),), mobility=Mobility.MOTORIZED,
+                cpa=20, stacking_points=1, oca=0, dca=1, barrage=15, vulnerability=5)
+    inf = Unit("IN", Side.ALLIED, (1, 0), (StepRecord("in", 6),), mobility=Mobility.FOOT,
+               cpa=10, stacking_points=1, oca=2, dca=2)
+    dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=40, fuel=60)
+    st = GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS,
+                   seed=3, weather="clear", move_modifier=0, vp=VP(),
+                   terrain=TerrainMap(terrain=terr), control={}, units=(arty, inf),
+                   target_hex=(3, 0), supplies=(dump,),
+                   consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 40, "FUEL": 60})
+    r = _Run(st)
+    _barrage_step(r, Side.AXIS, Side.ALLIED, set())
+    resolved = [e for e in r.events if e.kind == EventKind.BARRAGE_RESOLVED]
+    assert resolved and resolved[0].payload["target_class"] == "infantry"
+    assert resolved[0].payload["actual"] == 12          # 15 x 8 / 10 = 12 Actual Barrage Points
+
+
 def test_anti_armor_fire_damages_adjacent_armor():
     # an AT unit fires anti-armor at an adjacent enemy tank; the tank loses TOE to
     # absorb the damage (rule 14). Needs ammo in range to fire (14.24).
@@ -143,7 +169,7 @@ def test_anti_armor_fire_damages_adjacent_armor():
                    target_hex=(3, 0), supplies=(dump,),
                    consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 40, "FUEL": 60})
     r = _Run(st)
-    _anti_armor_step(r, Side.AXIS, Side.ALLIED)
+    _anti_armor_step(r, Side.AXIS, Side.ALLIED, set())
     assert r.state.unit("TK").strength < 8             # tank absorbed anti-armor damage
 
 
