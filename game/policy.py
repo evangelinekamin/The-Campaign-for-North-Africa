@@ -67,6 +67,20 @@ class ScriptedPolicy(Policy):
                 continue
             reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
             here_dist = distance(u.hex, target)
+            # Barrage/anti-armor units seek a firing position -- adjacent to an
+            # enemy (their range is 1) without falling back -- so support arms
+            # actually engage (rules 12/14) instead of trailing the infantry.
+            if u.barrage > 0 or u.anti_armor > 0:
+                firing = [
+                    c for c in reach
+                    if c != u.hex and distance(c, target) <= here_dist
+                    and self._stacking_ok(state, u, c)
+                    and any(state.enemies_at(nb, side) for nb in neighbors(c))
+                ]
+                if firing:
+                    dest = min(firing, key=lambda c: (distance(c, target), reach[c], c))
+                    orders.append(MoveOrder(u.id, dest))
+                    continue
             candidates = [
                 c for c in reach
                 if c != u.hex
