@@ -14,7 +14,7 @@ import json
 import os
 
 from . import coords
-from .movement import TerrainMap
+from .movement import TerrainMap, edge
 from .terrain import Terrain
 
 _TERRAIN = {
@@ -45,7 +45,32 @@ def load_sections(sections: str) -> tuple[TerrainMap, dict]:
             ax = coords.to_axial(coords.parse(label))
             terrain[ax] = _TERRAIN.get(t, Terrain.CLEAR)
             index[label] = ax
-    return TerrainMap(terrain=terrain), index
+    roads, tracks = _load_edges(sections, terrain, index)
+    return TerrainMap(terrain=terrain, roads=roads, tracks=tracks), index
+
+
+def _load_edges(sections: str, terrain: dict, index: dict):
+    """Load road/track edges (extract_roads.py output) as axial hex-pairs. A road
+    runs on land, so any endpoint that colour-sampled as sea (coastal road hexes)
+    is added as coastal CLEAR -- this also stitches the coast into one land mass."""
+    roads: set = set()
+    tracks: set = set()
+    for section in sections:
+        path = os.path.normpath(os.path.join(_DATA, f"roads_{section}.json"))
+        if not os.path.exists(path):
+            continue
+        with open(path) as f:
+            data = json.load(f)
+        for key, dst in (("roads", roads), ("tracks", tracks)):
+            for a, b in data.get(key, ()):
+                ax = coords.to_axial(coords.parse(a))
+                bx = coords.to_axial(coords.parse(b))
+                for lbl, c in ((a, ax), (b, bx)):
+                    if c not in terrain:
+                        terrain[c] = Terrain.CLEAR
+                        index[lbl] = c
+                dst.add(edge(ax, bx))
+    return frozenset(roads), frozenset(tracks)
 
 
 def load_section(section: str) -> tuple[TerrainMap, dict]:
