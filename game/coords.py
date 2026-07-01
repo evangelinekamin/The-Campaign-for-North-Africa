@@ -44,7 +44,8 @@ class Section:
     hOff: int
     vOff: int
     stagger: bool
-    gMR: int          # getMaxRows for this zone
+    gMR: int                        # getMaxRows for this zone
+    bbox: tuple[int, int, int, int]  # zone bounding box (x0, y0, x1, y1)
 
 
 def _load_sections() -> dict[str, Section]:
@@ -63,6 +64,7 @@ def _load_sections() -> dict[str, Section]:
             letter=letter, dx=hg["dx"], dy=hg["dy"], x0=hg["x0"], y0=hg["y0"],
             hOff=nm["hOff"], vOff=nm["vOff"], stagger=nm.get("stagger", False),
             gMR=int(math.floor((by1 - by0) / hg["dx"] + 0.5)),
+            bbox=(bx0, by0, bx1, by1),
         )
     return out
 
@@ -136,3 +138,23 @@ def to_pixel(h: Hex) -> tuple[float, float]:
     px = s.dy * ny + (s.dy / 2 if nx & 1 else 0) + s.y0
     py = s.dx * nx + s.x0
     return px, py
+
+
+def from_pixel(px: float, py: float) -> Hex | None:
+    """Inverse of to_pixel: the hex whose centre is nearest a board-image pixel.
+    Picks the section whose bbox contains the point and whose hex centre is
+    closest (sections abut, so a seam pixel can fall in two bboxes). Returns None
+    if the point is off every map section."""
+    best: tuple[float, Hex] | None = None
+    for s in SECTIONS.values():
+        bx0, by0, bx1, by1 = s.bbox
+        if not (bx0 <= px <= bx1 and by0 <= py <= by1):
+            continue
+        nx = round((py - s.x0) / s.dx)
+        ny = round((px - s.y0 - (s.dy / 2 if nx & 1 else 0)) / s.dy)
+        h = from_raw(s.letter, nx, ny)
+        cx, cy = to_pixel(h)
+        d = (cx - px) ** 2 + (cy - py) ** 2
+        if best is None or d < best[0]:
+            best = (d, h)
+    return best[1] if best else None

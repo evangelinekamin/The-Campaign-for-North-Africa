@@ -71,6 +71,17 @@ def test_cross_section_adjacency_is_seamless():
     assert 80 <= math.hypot(cx - bx, cy - by) <= 91
 
 
+def test_from_pixel_inverts_to_pixel():
+    for lbl in ("C4507", "A1816", "A5633", "B4827", "D3716", "E3613"):
+        h = parse(lbl)
+        assert coords.from_pixel(*coords.to_pixel(h)) == h
+    # a piece nudged off-centre (< half a hex) still snaps to the right hex
+    px, py = coords.to_pixel(parse("C4507"))
+    assert coords.from_pixel(px + 25, py - 20) == parse("C4507")
+    # a point off every map section is None
+    assert coords.from_pixel(10, 10) is None
+
+
 def test_map_c_pixels_match_detected_town_dots():
     # The exact formula must land on real Map C town-dot pixels (dots sit a little
     # off-centre, so allow the ~35px dot-offset floor). Guards the whole chain.

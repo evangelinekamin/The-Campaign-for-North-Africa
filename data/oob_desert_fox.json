@@ -8,7 +8,8 @@
   "px": [
    1795,
    3045
-  ]
+  ],
+  "stale_oldloc": "A2121"
  },
  {
   "hex": "B4005",
@@ -19,7 +20,8 @@
   "px": [
    3288,
    1661
-  ]
+  ],
+  "stale_oldloc": "B4005"
  },
  {
   "hex": "C4907",
@@ -30,7 +32,8 @@
   "px": [
    6233,
    1005
-  ]
+  ],
+  "stale_oldloc": "C4907"
  },
  {
   "hex": "E3409",
@@ -41,7 +44,8 @@
   "px": [
    12081,
    2098
-  ]
+  ],
+  "stale_oldloc": "E3409"
  },
  {
   "hex": "E3613",
@@ -52,7 +56,8 @@
   "px": [
    12422,
    1952
-  ]
+  ],
+  "stale_oldloc": "E3613"
  },
  {
   "hex": "A4927",
@@ -63,7 +68,8 @@
   "px": [
    2306,
    1003
-  ]
+  ],
+  "stale_oldloc": "A4927"
  },
  {
   "hex": "C4908",
@@ -74,7 +80,8 @@
   "px": [
    6318,
    1005
-  ]
+  ],
+  "stale_oldloc": "C4908"
  },
  {
   "hex": "D3913",
@@ -85,18 +92,20 @@
   "px": [
    9564,
    1734
-  ]
+  ],
+  "stale_oldloc": "D3913"
  },
  {
-  "hex": "A2020",
+  "hex": "A2021",
   "side": "ALLIED",
   "kind": "unit",
   "counter": "BR 2SPt - 2",
   "group": "BR 2nd Armoured Division",
   "px": [
-   1753,
+   1838,
    3118
-  ]
+  ],
+  "stale_oldloc": "A2020"
  },
  {
   "hex": "A2022",
@@ -107,18 +116,20 @@
   "px": [
    1923,
    3118
-  ]
+  ],
+  "stale_oldloc": "A2022"
  },
  {
-  "hex": "A2628",
+  "hex": "A2629",
   "side": "ALLIED",
   "kind": "unit",
   "counter": "AL SGSU 250RAF",
   "group": "AL SGSU",
   "px": [
-   2435,
+   2520,
    2681
-  ]
+  ],
+  "stale_oldloc": "A2628"
  },
  {
   "hex": "A4832",
@@ -129,7 +140,8 @@
   "px": [
    2776,
    1076
-  ]
+  ],
+  "stale_oldloc": "A4832"
  },
  {
   "hex": "A4933",
@@ -140,7 +152,8 @@
   "px": [
    2818,
    1003
-  ]
+  ],
+  "stale_oldloc": "A4933"
  },
  {
   "hex": "A5032",
@@ -151,7 +164,8 @@
   "px": [
    2776,
    930
-  ]
+  ],
+  "stale_oldloc": "A5032"
  },
  {
   "hex": "A5033",
@@ -162,7 +176,8 @@
   "px": [
    2861,
    930
-  ]
+  ],
+  "stale_oldloc": "A5033"
  },
  {
   "hex": "A5233",
@@ -173,7 +188,8 @@
   "px": [
    2861,
    784
-  ]
+  ],
+  "stale_oldloc": "A5233"
  },
  {
   "hex": "A5433",
@@ -184,7 +200,8 @@
   "px": [
    2861,
    638
-  ]
+  ],
+  "stale_oldloc": "A5433"
  },
  {
   "hex": "A5633",
@@ -195,7 +212,20 @@
   "px": [
    2861,
    492
-  ]
+  ],
+  "stale_oldloc": "A5633"
+ },
+ {
+  "hex": "B4004",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "AL 1FMtMr - none",
+  "group": "AL Unasisgned Allied Units",
+  "px": [
+   3203,
+   1661
+  ],
+  "stale_oldloc": "B4106"
  },
  {
   "hex": "B4006",
@@ -206,40 +236,32 @@
   "px": [
    3373,
    1661
-  ]
+  ],
+  "stale_oldloc": "B4006"
  },
  {
-  "hex": "B4106",
-  "side": "ALLIED",
-  "kind": "unit",
-  "counter": "AL 1FMtMr - none",
-  "group": "AL Unasisgned Allied Units",
-  "px": [
-   3331,
-   1588
-  ]
- },
- {
-  "hex": "B5403",
+  "hex": "B5504",
   "side": "ALLIED",
   "kind": "unit",
   "counter": "AL SGSU 260RAF",
   "group": "AL SGSU",
   "px": [
-   3118,
-   640
-  ]
+   3161,
+   567
+  ],
+  "stale_oldloc": "B5403"
  },
  {
-  "hex": "C4506",
+  "hex": "C4507",
   "side": "ALLIED",
   "kind": "unit",
   "counter": "IN 3 In - none",
   "group": "IN 3rd Indian Motorized Brigade",
   "px": [
-   6148,
+   6233,
    1297
-  ]
+  ],
+  "stale_oldloc": "C4506"
  },
  {
   "hex": "C4808",
@@ -250,29 +272,32 @@
   "px": [
    6360,
    1078
-  ]
+  ],
+  "stale_oldloc": "C4808"
  },
  {
-  "hex": "D3716",
+  "hex": "D3714",
   "side": "ALLIED",
   "kind": "unit",
   "counter": "BR 1 RNF - none",
   "group": "BR Unassigned Infantry-Type Units",
   "px": [
-   9819,
+   9649,
    1880
-  ]
+  ],
+  "stale_oldloc": "D3716"
  },
  {
-  "hex": "D3716",
+  "hex": "D3714",
   "side": "ALLIED",
   "kind": "unit",
   "counter": "BR 7 Med - none",
   "group": "BR Unassigned Artillery Units",
   "px": [
-   9819,
+   9649,
    1880
-  ]
+  ],
+  "stale_oldloc": "D3716"
  },
  {
   "hex": "A1714",
@@ -283,7 +308,8 @@
   "px": [
    1198,
    3337
-  ]
+  ],
+  "stale_oldloc": "A1714"
  },
  {
   "hex": "A1715",
@@ -294,7 +320,8 @@
   "px": [
    1283,
    3337
-  ]
+  ],
+  "stale_oldloc": "A1715"
  },
  {
   "hex": "A1716",
@@ -305,7 +332,8 @@
   "px": [
    1368,
    3337
-  ]
+  ],
+  "stale_oldloc": "A1716"
  },
  {
   "hex": "A1717",
@@ -316,7 +344,8 @@
   "px": [
    1454,
    3337
-  ]
+  ],
+  "stale_oldloc": "A1717"
  },
  {
   "hex": "A1718",
@@ -327,127 +356,139 @@
   "px": [
    1539,
    3337
-  ]
+  ],
+  "stale_oldloc": "A1718"
  },
  {
-  "hex": "A1319",
-  "side": "AXIS",
-  "kind": "unit",
-  "counter": "GE 1 - 300 OAS",
-  "group": "GE 300th Oasis Battalion",
-  "px": [
-   1624,
-   3629
-  ]
- },
- {
-  "hex": "A1320",
+  "hex": "A0817",
   "side": "AXIS",
   "kind": "unit",
   "counter": "GE 2 - 300 OAS",
   "group": "GE 300th Oasis Battalion",
   "px": [
-   1709,
-   3629
-  ]
+   1497,
+   3994
+  ],
+  "stale_oldloc": "A1320"
  },
  {
-  "hex": "A1916",
+  "hex": "A1318",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "GE 1 - 300 OAS",
+  "group": "GE 300th Oasis Battalion",
+  "px": [
+   1539,
+   3629
+  ],
+  "stale_oldloc": "A1319"
+ },
+ {
+  "hex": "A2016",
   "side": "AXIS",
   "kind": "unit",
   "counter": "GE 3 - 300 OAS",
   "group": "GE 300th Oasis Battalion",
   "px": [
-   1368,
-   3191
-  ]
+   1400,
+   3093
+  ],
+  "stale_oldloc": "A1916"
  },
  {
-  "hex": "A1916",
+  "hex": "A2016",
   "side": "AXIS",
   "kind": "unit",
   "counter": "GE 5 Le - none",
   "group": "GE 5th Light Panzer Division",
   "px": [
-   1368,
-   3191
-  ]
+   1400,
+   3093
+  ],
+  "stale_oldloc": "A1916"
  },
  {
-  "hex": "A1916",
+  "hex": "A2016",
   "side": "AXIS",
   "kind": "unit",
   "counter": "GE Rommel - DAK",
   "group": "GE Unassigned Infantry Units",
   "px": [
-   1368,
-   3191
-  ]
+   1400,
+   3093
+  ],
+  "stale_oldloc": "A1916"
  },
  {
-  "hex": "A1917",
+  "hex": "A2017",
   "side": "AXIS",
   "kind": "unit",
   "counter": "GE 33 - 15 (ATG)",
   "group": "GE 15th Panzer Division",
   "px": [
-   1454,
-   3191
-  ]
+   1486,
+   3093
+  ],
+  "stale_oldloc": "A1917"
  },
  {
-  "hex": "A1918",
+  "hex": "A2018",
   "side": "AXIS",
   "kind": "unit",
   "counter": "GE II - 155 III",
   "group": "GE Non-Divisional Artillery Units",
   "px": [
-   1539,
-   3191
-  ]
+   1571,
+   3093
+  ],
+  "stale_oldloc": "A1918"
  },
  {
-  "hex": "A1918",
+  "hex": "A2018",
   "side": "AXIS",
   "kind": "unit",
   "counter": "GE 528 - ArKo",
   "group": "GE Non-Divisional Artillery Units",
   "px": [
-   1539,
-   3191
-  ]
+   1571,
+   3093
+  ],
+  "stale_oldloc": "A1918"
  },
  {
-  "hex": "A1918",
+  "hex": "A2018",
   "side": "AXIS",
   "kind": "unit",
   "counter": "GE 529 - none",
   "group": "GE Non-Divisional Artillery Units",
   "px": [
-   1539,
-   3191
-  ]
+   1571,
+   3093
+  ],
+  "stale_oldloc": "A1918"
  },
  {
-  "hex": "A1918",
+  "hex": "A2018",
   "side": "AXIS",
   "kind": "unit",
   "counter": "GE 523 - none",
   "group": "GE Non-Divisional Artillery Units",
   "px": [
-   1539,
-   3191
-  ]
+   1571,
+   3093
+  ],
+  "stale_oldloc": "A1918"
  },
  {
-  "hex": "A1918",
+  "hex": "A2018",
   "side": "AXIS",
   "kind": "unit",
   "counter": "GE 532 - none",
   "group": "GE Non-Divisional Artillery Units",
   "px": [
-   1539,
-   3191
-  ]
+   1571,
+   3093
+  ],
+  "stale_oldloc": "A1918"
  }
 ]

@@ -67,6 +67,20 @@ def _category(image: str, name: str) -> str:
     return "unit"
 
 
+def _current_xy(c: str) -> tuple[int, int] | None:
+    """The piece's CURRENT board pixel (where it is drawn = where it starts).
+    Unstacked pieces store it as `Map0;n;x,y`; stacked pieces (in a Map<N> stack)
+    store it as OldX/OldY. The OldLocationName field is a STALE snapshot and can be
+    off by a hex, so it is NOT used for placement (see memory: vassal-map-source)."""
+    m = re.search(r"Map0;\d+;(\d+),(\d+)", c)
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    ox, oy = _kv(c, "OldX"), _kv(c, "OldY")
+    if ox and oy:
+        return int(ox), int(oy)
+    return None
+
+
 def extract(text: str) -> list[dict]:
     out: list[dict] = []
     for c in text.split("\x1b"):
@@ -83,19 +97,24 @@ def extract(text: str) -> list[dict]:
         kind = _category(image, group)
         if kind == "label":
             continue
-        loc = _kv(c, "OldLocationName") or ""
-        mm = re.search(r"(\d{4})$", loc)
-        if not mm:
+        cur = _current_xy(c)
+        if cur is None:
             continue
-        hexlbl = zone.split()[1] + mm.group(1)
+        h = coords.from_pixel(*cur)
+        if h is None:
+            continue
         counter = re.sub(r"\.(svg|gif|png)$", "", image)
+        stale = _kv(c, "OldLocationName") or ""
+        smm = re.search(r"(\d{4})$", stale)
+        stale_hex = (zone.split()[1] + smm.group(1)) if smm else None
         out.append({
-            "hex": hexlbl,
+            "hex": h.label,              # current on-map position = start hex
             "side": _side(group),
             "kind": kind,
             "counter": counter,          # authoritative identity (front - back)
             "group": group,              # sendto label (organisational grouping)
-            "px": [int(_kv(c, "OldX")), int(_kv(c, "OldY"))],
+            "px": list(cur),
+            "stale_oldloc": stale_hex,   # VASSAL's stale marker (kept for reference)
         })
     out.sort(key=lambda r: (r["side"], r["kind"], r["hex"]))
     return out
@@ -109,11 +128,12 @@ def main() -> int:
     saved = zipfile.ZipFile(io.BytesIO(vsav)).read("savedGame")
     oob = extract(deobfuscate(saved))
 
-    # verify placements against the exact coordinate formula (VASSAL's own pixels)
-    worst = 0.0
-    for r in oob:
-        px, py = coords.to_pixel(coords.parse(r["hex"]))
-        worst = max(worst, ((px - r["px"][0]) ** 2 + (py - r["px"][1]) ** 2) ** 0.5)
+    # how far each piece sits from its hex centre (nudge), and how many current
+    # positions correct the stale OldLocationName marker
+    worst = max((((coords.to_pixel(coords.parse(r["hex"]))[0] - r["px"][0]) ** 2 +
+                  (coords.to_pixel(coords.parse(r["hex"]))[1] - r["px"][1]) ** 2) ** 0.5)
+                for r in oob)
+    corrected = sum(1 for r in oob if r["stale_oldloc"] and r["stale_oldloc"] != r["hex"])
 
     slug = re.sub(r"[^a-z0-9]+", "_", setup.lower().replace(".vsav", "")).strip("_")
     slug = re.sub(r"^setup_", "", slug)
@@ -122,9 +142,9 @@ def main() -> int:
         json.dump(oob, f, indent=1)
     n_units = sum(1 for r in oob if r["kind"] == "unit")
     n_dumps = sum(1 for r in oob if r["kind"] == "dump")
-    print(f"{setup}: {len(oob)} pieces ({n_units} units, {n_dumps} dumps) "
-          f"-> {path}")
-    print(f"  placement vs coords.to_pixel: worst {worst:.1f}px (counter nudge in stacks)")
+    print(f"{setup}: {len(oob)} pieces ({n_units} units, {n_dumps} dumps) -> {path}")
+    print(f"  current pos vs hex centre: worst {worst:.1f}px (off-centre nudge)")
+    print(f"  current pos corrected the stale OldLocationName for {corrected} pieces")
     return 0
 
 
