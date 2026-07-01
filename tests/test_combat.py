@@ -36,6 +36,27 @@ def test_defender_table_partitions_every_column():
     _partition(ct._DEFENDER)
 
 
+def test_morale_table_partitions_every_row():
+    # every cohesion row must map each of the 36 legal rolls to exactly one modifier
+    for lvl, cells in ct._MORALE_TABLE.items():
+        seen: dict[int, int] = {}
+        for cell in cells:
+            for roll in ct.expand(cell):
+                seen[roll] = seen.get(roll, 0) + 1
+        assert set(seen) == set(VALID_ROLLS), f"cohesion {lvl} gap: {set(VALID_ROLLS) - set(seen)}"
+        assert all(c == 1 for c in seen.values()), f"cohesion {lvl} overlapping cells"
+
+
+def test_morale_modifier_matches_rulebook_rolls():
+    # the four rolls the rules cite (15.64 + 15.2xx example) + the table corners
+    assert ct.morale_modifier(-4, 43) == -2
+    assert ct.morale_modifier(2, 63) == 0
+    assert ct.morale_modifier(-2, 21) == 0
+    assert ct.morale_modifier(-3, 53) == -2
+    assert ct.morale_modifier(8, 11) == 4
+    assert ct.morale_modifier(-17, 66) == "SURR"
+
+
 def test_worked_example_15_64():
     # §15.64: assault resolved on the +4 column; attacker rolls 32 -> 5% loss,
     # defender rolls 21 -> 15% loss.

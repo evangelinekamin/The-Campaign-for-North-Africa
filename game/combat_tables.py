@@ -163,6 +163,55 @@ def defender_result(col: int, dice_sum: int) -> tuple[bool, int]:
     return (capt, retreat)
 
 
+# [17.4] MORALE MODIFIER TABLE: row = Cohesion/Disorganization level, columns =
+# the modifier applied to Basic Morale for one combat. Cells are sequential-dice
+# ranges (11-66). Transcribed from the 17.4 chart image; every row partitions the
+# 36 legal rolls (guarded by test_combat) and the rulebook's four in-text rolls
+# validate (43@-4 -> -2, 63@+2 -> NO, 21@-2 -> NO, 53@-3 -> -2). The one cell the
+# image left ambiguous, -4's "-2" column, is 42-56 (partition-forced: else roll 56
+# maps nowhere).
+_MORALE_MODS = (4, 3, 2, 1, 0, -1, -2, -3, -4, "SURR")
+_MORALE_TABLE: dict[int, list[str]] = {
+    8:   ["11-26", "31-46", "51-65", "66", "", "", "", "", "", ""],
+    7:   ["11-16", "21-36", "41-56", "61-66", "", "", "", "", "", ""],
+    6:   ["11-12", "13-25", "26-36", "41-66", "", "", "", "", "", ""],
+    5:   ["11", "12-21", "22-33", "34-65", "66", "", "", "", "", ""],
+    4:   ["", "11-14", "15-31", "32-56", "61-66", "", "", "", "", ""],
+    3:   ["", "11-13", "14-21", "22-44", "45-66", "", "", "", "", ""],
+    2:   ["", "", "11-12", "13-36", "41-66", "", "", "", "", ""],
+    1:   ["", "", "", "11-26", "31-66", "", "", "", "", ""],
+    0:   ["", "", "", "11", "12-65", "66", "", "", "", ""],
+    -1:  ["", "", "", "", "11-54", "55-65", "66", "", "", ""],
+    -2:  ["", "", "", "", "11-46", "51-56", "61-66", "", "", ""],
+    -3:  ["", "", "", "", "11-42", "43-46", "51-66", "", "", ""],
+    -4:  ["", "", "", "", "11-33", "34-41", "42-56", "61-66", "", ""],
+    -5:  ["", "", "", "", "11-23", "24-32", "33-46", "51-66", "", ""],
+    -6:  ["", "", "", "", "11-12", "13-25", "26-36", "41-63", "64-66", ""],
+    -7:  ["", "", "", "", "11", "12-16", "21-33", "34-51", "52-63", "64-66"],
+    -8:  ["", "", "", "", "", "11-13", "14-31", "32-44", "45-61", "62-66"],
+    -9:  ["", "", "", "", "", "11", "12-26", "31-41", "42-55", "56-66"],
+    -10: ["", "", "", "", "", "", "11-21", "22-34", "35-53", "54-66"],
+    -11: ["", "", "", "", "", "", "11-14", "15-33", "34-46", "51-66"],
+    -12: ["", "", "", "", "", "", "11", "12-26", "31-44", "45-66"],
+    -13: ["", "", "", "", "", "", "11", "12-21", "22-36", "41-66"],
+    -14: ["", "", "", "", "", "", "", "11-16", "21-33", "34-66"],
+    -15: ["", "", "", "", "", "", "", "11", "12-26", "31-66"],
+    -16: ["", "", "", "", "", "", "", "", "11-21", "22-66"],
+    -17: ["", "", "", "", "", "", "", "", "", "11-66"],
+}
+
+
+def morale_modifier(cohesion: int, roll: int) -> "int | str":
+    """Rule 17.4: the modifier applied to Basic Morale for one combat, from the
+    unit's Cohesion level and a sequential 2d6 roll. Returns an int, or 'SURR'
+    (surrender). Cohesion is clamped to the table's [-17, +8]."""
+    cells = _MORALE_TABLE[max(-17, min(8, cohesion))]
+    for mod, cell in zip(_MORALE_MODS, cells):
+        if roll in expand(cell):
+            return mod
+    return 0
+
+
 # Close-Assault column shifts from the Terrain Effects Chart (8.37): negative =
 # columns left (favours defender), positive = right (favours attacker).
 HEX_CA_SHIFT: dict[Terrain, int] = {
