@@ -1,0 +1,29 @@
+{
+  "_comment": "Empirical calibration of the CNA VASSAL map hex lattice (map: CNA Map Vassal Mitch Guthrie 2021.png, 14310x4632). Derived by detecting town-dot pixels for rules-confirmed hex labels and fitting. See tools/vassal/extract_grid.py for the raw grid params.",
+  "convention": {
+    "orientation": "flat-top hexes in vertical columns (VASSAL sideways=true)",
+    "offset_to_axial": "col=XX (first two digits) is the staggering axis; even-q offset. r = YY - (XX + (XX & 1)) / 2; q = XX.",
+    "note": "This convention was the clear winner in a linear-fit search (max residual 34px vs 56-87px for col=YY / odd-q). Hex neighbours follow exactly from the axial conversion and do NOT depend on pixel precision.",
+    "axes": "XX (1st 2 digits) ~ north-south (higher XX = north); YY (2nd 2 digits) ~ east-west (higher YY = east). Confirmed vs map: Tobruk C4807 is coastal/north of El Adem C4507; Bardia C4321 is east of Tobruk.",
+    "hex_spacing_px": 85.25,
+    "row_spacing_px": 72.95
+  },
+  "map_c_fit": {
+    "_note": "px,py = f(q,r) linear fit, Map C only, ~25px mean residual (dot-detection noise). Refine with cleaner dot detection before using for terrain sampling.",
+    "px": {"const": 5824.3, "q": 39.34, "r": 84.34},
+    "py": {"const": 4669.75, "q": -76.16, "r": -3.99}
+  },
+  "clean_points_map_c": [
+    {"label": "C4507", "town": "El Adem", "XX": 45, "YY": 7, "px": 6267, "py": 1299},
+    {"label": "C4414", "town": "Gambut", "XX": 44, "YY": 14, "px": 6876, "py": 1362},
+    {"label": "C4108", "town": "Bir el Gubi", "XX": 41, "YY": 8, "px": 6320, "py": 1595},
+    {"label": "C4218", "town": "Sidi Azeiz", "XX": 42, "YY": 18, "px": 7227, "py": 1516},
+    {"label": "C4321", "town": "Bardia", "XX": 43, "YY": 21, "px": 7406, "py": 1376},
+    {"label": "C4021", "town": "Sollum", "XX": 40, "YY": 21, "px": 7508, "py": 1610}
+  ],
+  "todo": [
+    "Robustify dot detection (exact town-dot colour + roundness) to drop residual to <10px for terrain-grade pixel mapping.",
+    "Establish cross-section continuity (global axial across Maps A-E): either derive VASSAL's exact numbering formula from the per-section hOff/vOff/vDescend params, or calibrate one reference town per section.",
+    "Build game/coords.py (label<->axial<->pixel + neighbours) on this convention and validate."
+  ]
+}
