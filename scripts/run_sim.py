@@ -3,12 +3,15 @@ real land engine (CPA + ZOC + stacking movement, real combat + supply), narrate 
 from the event log, and self-verify the two properties that make a "completion"
 credible (brief §7): deterministic replay and replay-equivalence.
 
-    python3 -m scripts.run_sim                 # toy corridor, fresh random seed
-    python3 -m scripts.run_sim tobruk          # real Map C terrain, fresh seed
-    python3 -m scripts.run_sim tobruk 1941     # reproduce one exact game (fixed seed)
+    python3 -m scripts.run_sim                     # toy corridor, fresh random seed
+    python3 -m scripts.run_sim tobruk 1941         # real Map C terrain, fixed seed
+    python3 -m scripts.run_sim rommel              # Rommel's Arrival, scripted agents
+    python3 -m scripts.run_sim rommel llm:deepseek/deepseek-chat   # LLM agents
 
-Each run picks a NEW random seed (so the dice visibly differ run to run) and prints
-it; pass that seed back as the 2nd argument to replay a game byte-for-byte.
+Each run picks a NEW random seed (so the dice visibly differ) and prints it; pass a
+seed to replay a scripted game byte-for-byte. `llm:<model>` runs LLM Front
+Commanders (needs OPENROUTER_API_KEY); LLM runs aren't re-runnable bit-for-bit but
+their event log still folds back to the exact final state.
 """
 from __future__ import annotations
 
@@ -65,16 +68,19 @@ def _line(e: Event) -> str:
     return ""
 
 
-def verify(result: RunResult, factory) -> None:
+def verify(result: RunResult, factory, *, check_determinism: bool = True) -> None:
     replayed = fold(result.initial, result.events)
     assert replayed == result.final, "replay-equivalence FAILED: fold(log) != live state"
-    again = run(factory(seed=result.initial.seed),
-                ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
-    assert determinism_signature(again.events) == determinism_signature(result.events), \
-        "determinism FAILED: same seed produced a different event log"
     print("\n--- self-checks ---")
     print(f"  replay-equivalence : OK  (fold over {len(result.events)} events == live state)")
-    print(f"  determinism        : OK  (seed {result.initial.seed} reproduced byte-identical log)")
+    if check_determinism:
+        again = run(factory(seed=result.initial.seed),
+                    ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+        assert determinism_signature(again.events) == determinism_signature(result.events), \
+            "determinism FAILED: same seed produced a different event log"
+        print(f"  determinism        : OK  (seed {result.initial.seed} reproduced byte-identical log)")
+    else:
+        print("  determinism        : n/a (LLM is non-deterministic; the event log replays exactly)")
     print("  invariants         : OK  (held after every event during the run)")
 
 
@@ -94,23 +100,39 @@ def summary(result: RunResult) -> None:
         print(f"    {u.id:<11} {state}")
 
 
+def _policies(model):
+    """Scripted doctrine by default; LLM Front Commanders if a model is given
+    (`llm:<model>`). Each side plays its own side (a contested objective is a real
+    race). LLM agents need OPENROUTER_API_KEY in the environment."""
+    if model is None:
+        return ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED)
+    from game.llm import OpenRouterClient
+    from game.llm_policy import LLMPolicy
+    client = OpenRouterClient(model)
+    return LLMPolicy(Side.AXIS, client), LLMPolicy(Side.ALLIED, client)
+
+
 def main() -> int:
     args = sys.argv[1:]
-    which = args[0] if args else "corridor"
+    model = next((a.split(":", 1)[1] for a in args if a.startswith("llm:")), None)
+    positional = [a for a in args if not a.startswith("llm:")]
+    which = next((a for a in positional if not a.isdigit()), "corridor")
     factory = SCENARIOS.get(which, coastal_corridor)
     # Fresh seed each run so the RNG is visibly alive; pass an explicit seed to
     # replay a specific game (seed + log -> identical state, brief §7).
-    seed = int(args[1]) if len(args) > 1 else random.randrange(1, 1_000_000)
+    seed = next((int(a) for a in positional if a.isdigit()), random.randrange(1, 1_000_000))
 
-    print(f"scenario: {which}   seed: {seed}")
-    # Each side runs its own objective-seeking doctrine, so a contested objective
-    # (e.g. Rommel's race for Tobruk) becomes a real race, not a walkover.
-    result = run(factory(seed=seed),
-                 axis=ScriptedPolicy(Side.AXIS), allied=ScriptedPolicy(Side.ALLIED))
+    axis, allied = _policies(model)
+    print(f"scenario: {which}   seed: {seed}   agents: "
+          f"{'LLM (' + model + ')' if model else 'scripted'}")
+    result = run(factory(seed=seed), axis=axis, allied=allied)
     narrate(result)
-    verify(result, factory)
+    verify(result, factory, check_determinism=model is None)
     summary(result)
-    print(f"\n  reproduce this exact game:  python3 -m scripts.run_sim {which} {seed}")
+    if model:
+        print("\n  (LLM run: the event log is the exact record; fold replays it deterministically)")
+    else:
+        print(f"\n  reproduce this exact game:  python3 -m scripts.run_sim {which} {seed}")
     return 0
 
 
