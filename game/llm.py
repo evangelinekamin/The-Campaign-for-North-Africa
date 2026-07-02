@@ -45,11 +45,12 @@ class OpenRouterClient:
     URL = "https://openrouter.ai/api/v1/chat/completions"
 
     def __init__(self, model: str, *, temperature: float = 0.3, timeout: float = 60.0,
-                 retries: int = 2):
+                 retries: int = 2, reasoning_effort: str | None = None):
         self.model = model
         self.temperature = temperature
         self.timeout = timeout
         self.retries = retries
+        self.reasoning_effort = reasoning_effort   # "low"/"medium"/"high" or None (provider default)
         self.calls = 0                 # usage accumulators (for benchmarking cost)
         self.failures = 0
         self.prompt_tokens = 0
@@ -64,11 +65,14 @@ class OpenRouterClient:
         key = os.environ.get("OPENROUTER_API_KEY")
         if not key:
             raise RuntimeError("OPENROUTER_API_KEY not set")
-        body = json.dumps({
+        payload = {
             "model": self.model,
             "temperature": self.temperature,
             "messages": messages,
-        }).encode()
+        }
+        if self.reasoning_effort:
+            payload["reasoning"] = {"effort": self.reasoning_effort}
+        body = json.dumps(payload).encode()
         for attempt in range(self.retries + 1):
             try:
                 req = urllib.request.Request(

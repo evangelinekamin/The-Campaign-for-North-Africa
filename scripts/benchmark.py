@@ -66,6 +66,12 @@ def game_metrics(result) -> dict:
     def count_axis(kind: EventKind) -> int:                     # LLM-side only (decision quality)
         return sum(1 for e in ev if e.kind == kind and e.side == Side.AXIS)
 
+    reject_reasons: dict = {}                                   # why the LLM's orders bounced
+    for e in ev:
+        if e.kind == EventKind.ORDER_REJECTED and e.side == Side.AXIS:
+            key = e.payload.get("reason", "?")[:44]
+            reject_reasons[key] = reject_reasons.get(key, 0) + 1
+
     victory = [e for e in ev if e.kind == EventKind.VICTORY_CHECKED]
     advance = victory[-1].payload.get("axis", 0) if victory else 0
     axis_lost = _strength(result.initial, Side.AXIS) - _strength(result.final, Side.AXIS)
@@ -78,6 +84,7 @@ def game_metrics(result) -> dict:
         "anti_armor": count(EventKind.ANTI_ARMOR_RESOLVED),
         "close_assaults": count(EventKind.COMBAT_RESOLVED),
         "rejections": count_axis(EventKind.ORDER_REJECTED),
+        "reject_reasons": reject_reasons,
         "moves": count_axis(EventKind.UNIT_MOVED),
         "axis_losses": axis_lost,
         "allied_losses": allied_lost,
@@ -85,11 +92,12 @@ def game_metrics(result) -> dict:
 
 
 def run_model(model: str, games: int, mock: bool, mode: str = "stateless",
-              base_seed: int = 4200) -> dict:
+              reasoning: str | None = None, base_seed: int = 4200) -> dict:
     """N games of LLM(Axis) vs scripted(Commonwealth) in the given memory `mode`.
     Returns the aggregate row. A fresh client per model accumulates usage; the
     policy is reset between games so stateful/hybrid memory doesn't leak across them."""
-    client = MockClient(_mock_axis) if mock else OpenRouterClient(model)
+    client = (MockClient(_mock_axis) if mock else
+              OpenRouterClient(model, reasoning_effort=reasoning, timeout=45, retries=1))
     axis = LLMPolicy(Side.AXIS, client, mode=mode)
     defender = ScriptedPolicy(Side.ALLIED)
     per_game = []
@@ -110,6 +118,11 @@ def _aggregate(model: str, per_game: list[dict], usage: dict, mode: str = "state
     kill_ratio = mean(g["allied_losses"] / max(1, g["axis_losses"]) for g in per_game)
     orders = sum(g["moves"] + g["close_assaults"] + g["rejections"] for g in per_game)
     reject_rate = round(100 * sum(g["rejections"] for g in per_game) / max(1, orders), 1)
+    reasons: dict = {}
+    for g in per_game:
+        for k, v in g.get("reject_reasons", {}).items():
+            reasons[k] = reasons.get(k, 0) + v
+    reasons = dict(sorted(reasons.items(), key=lambda kv: -kv[1]))
     p_in, p_out = PRICES.get(model, (0.0, 0.0))
     cost = (usage.get("prompt_tokens", 0) * p_in + usage.get("completion_tokens", 0) * p_out) / 1e6
     return {
@@ -122,6 +135,7 @@ def _aggregate(model: str, per_game: list[dict], usage: dict, mode: str = "state
         "mean_kill_ratio": round(kill_ratio, 2),
         "mean_close_assaults": round(mean(g["close_assaults"] for g in per_game), 1),
         "reject_rate_pct": reject_rate,
+        "reject_reasons": reasons,
         "llm_calls": usage.get("calls", 0),
         "llm_failures": usage.get("failures", 0),
         "prompt_tokens": usage.get("prompt_tokens", 0),
@@ -191,6 +205,8 @@ def main() -> int:
     ap.add_argument("--mode", default="stateless",
                     help="memory mode(s), comma-list: stateless,stateful,hybrid")
     ap.add_argument("--mock", action="store_true", help="free dry-run, no API calls")
+    ap.add_argument("--reasoning", default=None,
+                    help="reasoning effort for reasoning models: low|medium|high (default: provider)")
     ap.add_argument("--out", default="benchmark_results.json")
     args = ap.parse_args()
 
@@ -200,8 +216,8 @@ def main() -> int:
     for mode in modes:
         for model in models:
             print(f"\n>>> [{mode}] {model} ({args.games} games){'  [MOCK]' if args.mock else ''}")
-            rows.append(run_model(model, args.games, args.mock, mode))
-    Path(args.out).write_text(json.dumps({"rows": rows}, indent=2))
+            rows.append(run_model(model, args.games, args.mock, mode, args.reasoning))
+            Path(args.out).write_text(json.dumps({"rows": rows}, indent=2))  # save after each config
     leaderboard(rows)
     print(f"\nwrote {args.out}")
     return 0
