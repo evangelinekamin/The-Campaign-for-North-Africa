@@ -52,11 +52,12 @@ PRICES = {
     "deepseek/deepseek-v4-pro":          (0.435, 0.87),
 }
 
-# Route to the fastest HIGH-PRECISION endpoint. Many DeepSeek providers serve at
-# 15-20 tok/s and stall runs; and fp4 (4-bit) endpoints vary model quality game-to-
-# game, which would be unfair for a benchmark. Sorting by throughput needs no
-# provider list to maintain; the quantization floor keeps quality consistent.
-FAST_PROVIDER = {"sort": "throughput", "quantizations": ["fp8", "bf16", "fp16"]}
+# Route to the fastest live endpoint. Many DeepSeek providers serve at 15-20 tok/s and
+# stall runs; throughput-sort picks the fastest (no provider list to maintain), and the
+# slow fp4 endpoints happen to also BE the slowest here, so sorting sidesteps them
+# naturally. (A quantizations floor breaks single-provider native models like OpenAI/
+# Anthropic -- their endpoint carries no quantization tag, so a floor matches nothing.)
+FAST_PROVIDER = {"sort": "throughput"}
 
 
 def _strength(state, side: Side) -> int:
@@ -150,23 +151,29 @@ def game_metrics(result) -> dict:
 
 def run_model(model: str, games: int, mock: bool, mode: str = "stateless",
               reasoning: str | None = None, base_seed: int = 4200) -> dict:
-    """N games of LLM(Axis) vs scripted(Commonwealth) in the given memory `mode`.
-    Returns the aggregate row. A fresh client per model accumulates usage; the
-    policy is reset between games so stateful/hybrid memory doesn't leak across them."""
-    client = (MockClient(_mock_axis) if mock else
-              OpenRouterClient(model, reasoning_effort=reasoning, timeout=45, retries=1,
-                               provider=FAST_PROVIDER))
-    axis = LLMPolicy(Side.AXIS, client, mode=mode)
-    defender = ScriptedPolicy(Side.ALLIED)
-    per_game = []
-    for i in range(games):
-        axis.reset()
-        result = run(rommels_arrival(seed=base_seed + i), axis=axis, allied=defender)
-        per_game.append(game_metrics(result))
-        print(f"    [{mode}] {model}  game {i + 1}/{games}: advance "
-              f"{per_game[-1]['advance_pct']}% ({result.winner.value}), "
-              f"{per_game[-1]['rejections']} rejects", flush=True)
-    usage = client.usage() if hasattr(client, "usage") else {}
+    """N games of LLM(Axis) vs scripted(Commonwealth) in the given memory `mode`,
+    run CONCURRENTLY. Each game gets its own client + policy so stateful/hybrid memory
+    and usage never collide across threads; the API round-trips are I/O-bound, so the
+    engine (pure, per-game state) parallelizes safely. Usages are summed."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _play(i: int) -> tuple[dict, dict]:
+        client = (MockClient(_mock_axis) if mock else
+                  OpenRouterClient(model, reasoning_effort=reasoning, timeout=45, retries=1,
+                                   provider=FAST_PROVIDER))
+        axis = LLMPolicy(Side.AXIS, client, mode=mode)
+        result = run(rommels_arrival(seed=base_seed + i), axis=axis, allied=ScriptedPolicy(Side.ALLIED))
+        g = game_metrics(result)
+        print(f"    [{mode}] {model}  game {i + 1}/{games}: score {g['score']} "
+              f"(combat {g['combat']}, {g['rejections']} rejects)", flush=True)
+        return g, (client.usage() if hasattr(client, "usage") else {})
+
+    workers = 1 if mock else min(games, 5)          # cap concurrency to be gentle on the API
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        outs = list(ex.map(_play, range(games)))
+    per_game = [g for g, _ in outs]
+    usage = {k: sum(u.get(k, 0) for _, u in outs)
+             for k in ("calls", "failures", "prompt_tokens", "completion_tokens")}
     return _aggregate(model, per_game, usage, mode)
 
 

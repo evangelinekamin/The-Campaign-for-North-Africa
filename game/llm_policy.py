@@ -61,7 +61,10 @@ class LLMPolicy(ScriptedPolicy):
         return parse_moves(self._ask(build_movement_prompt(observe(state, side))))
 
     def combat(self, state: GameState, side: Side) -> list[AttackOrder]:
-        return parse_attacks(self._ask(build_combat_prompt(observe(state, side))))
+        obs = observe(state, side)
+        if not obs.get("attack_options"):
+            return []              # nothing adjacent to assault -- skip the API call entirely
+        return parse_attacks(self._ask(build_combat_prompt(obs)))
 
     # supply_orders(): inherited scripted logistics (dumps follow the advance).
 
