@@ -19,7 +19,7 @@ distance-to-objective so the agent can tell which way is forward.
 """
 from __future__ import annotations
 
-from . import supply, tactics
+from . import stacking, supply, tactics
 from .events import Phase, Side
 from .hexmap import distance, neighbors
 from .state import GameState
@@ -43,7 +43,10 @@ def observe(state: GameState, side: Side) -> dict:
     # to prioritise rather than trusting every "supplied" unit will move.
     fuel_ok: set = set()
     contended: set = set()
+    friendly_sp: dict = {}          # stacking points already on each friendly hex (B3)
     if moving:
+        for u in roster:
+            friendly_sp[u.hex] = friendly_sp.get(u.hex, 0) + u.stacking_points
         dump_fuel = {s.id: s.fuel for s in state.supplies if s.side == side}
         demand: dict = {}
         dump_of: dict = {}
@@ -100,6 +103,8 @@ def observe(state: GameState, side: Side) -> dict:
                 entries = []
                 for h in dests[:REACH_LIMIT]:
                     e = {"hex": list(h), "dist": distance(h, target)}
+                    if friendly_sp.get(h):
+                        e["points_used"] = friendly_sp[h]   # already-stacked SP here (B3)
                     if support and any(state.enemies_at(nb, side) for nb in neighbors(h)):
                         e["firing_position"] = True   # barrage / anti-armor fires from here
                     entries.append(e)
@@ -141,6 +146,7 @@ def observe(state: GameState, side: Side) -> dict:
         "phase": state.phase.value,
         "weather": state.weather,
         "your_side": side.value,
+        "stack_limit": stacking.DEFAULT_HEX_LIMIT,
         "objective": {"hex": list(target), "controlled_by": state.control_of(target).value},
         "your_units": [unit_view(u) for u in state.living(side)],
         "your_supplies": [

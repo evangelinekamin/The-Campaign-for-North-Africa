@@ -90,7 +90,9 @@ def build_movement_prompt(obs: dict) -> str:
         "before assaulting it. Tanks (is_tank) need at least an equal infantry "
         "strength stacked with them or they lose close-assault power. Supply: a unit "
         "with supplied:false cannot move this turn; supply_contended:true means its "
-        "dump is oversubscribed, so prioritise -- not every contended unit gets fuel.\n"
+        "dump is oversubscribed, so prioritise -- not every contended unit gets fuel. "
+        "Don't exceed stack_limit stacking points on one hex (a destination's "
+        "points_used is the SP already there).\n"
         'Reply with ONLY JSON: {"reasoning":"one sentence","moves":'
         '[{"unit":"<id>","to":[q,r]}]}. Use a [q,r] taken from that unit\'s '
         "can_move_to; omit units that should hold.")
