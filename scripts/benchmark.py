@@ -45,6 +45,11 @@ PRICES = {
     "google/gemini-2.5-pro":             (1.25, 10.00),
     "anthropic/claude-3.7-sonnet":       (3.00, 15.00),
     "openai/o4-mini":                    (1.10, 4.40),
+    # mode-test roster (real OpenRouter prices, mid-2026)
+    "anthropic/claude-haiku-4.5":        (1.00, 5.00),
+    "openai/gpt-5.4-mini":               (0.75, 4.50),
+    "deepseek/deepseek-v4-flash":        (0.09, 0.18),
+    "deepseek/deepseek-v4-pro":          (0.435, 0.87),
 }
 
 
