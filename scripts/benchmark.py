@@ -74,6 +74,11 @@ def game_metrics(result) -> dict:
 
     victory = [e for e in ev if e.kind == EventKind.VICTORY_CHECKED]
     advance = victory[-1].payload.get("axis", 0) if victory else 0
+    # Speed discriminator: first turn the Axis invests Tobruk (reach <= 2). Advance %
+    # is saturated (~99% for every capable model), so *how fast* separates them.
+    invested = next((i + 1 for i, e in enumerate(victory)
+                     if e.payload.get("axis_reach", 99) <= 2), None)
+    turn_invested = invested if invested is not None else result.final.turn + 1
     axis_lost = _strength(result.initial, Side.AXIS) - _strength(result.final, Side.AXIS)
     allied_lost = _strength(result.initial, Side.ALLIED) - _strength(result.final, Side.ALLIED)
     return {
@@ -85,6 +90,7 @@ def game_metrics(result) -> dict:
         "close_assaults": count(EventKind.COMBAT_RESOLVED),
         "rejections": count_axis(EventKind.ORDER_REJECTED),
         "reject_reasons": reject_reasons,
+        "turn_invested": turn_invested,
         "moves": count_axis(EventKind.UNIT_MOVED),
         "axis_losses": axis_lost,
         "allied_losses": allied_lost,
@@ -132,6 +138,7 @@ def _aggregate(model: str, per_game: list[dict], usage: dict, mode: str = "state
         "axis_win_rate": round(100 * axis_wins / n, 1),
         "mean_advance_pct": round(mean(g["advance_pct"] for g in per_game), 1),
         "best_advance_pct": max(g["advance_pct"] for g in per_game),
+        "mean_turn_invested": round(mean(g["turn_invested"] for g in per_game), 1),
         "mean_kill_ratio": round(kill_ratio, 2),
         "mean_close_assaults": round(mean(g["close_assaults"] for g in per_game), 1),
         "reject_rate_pct": reject_rate,
@@ -188,13 +195,40 @@ def _extract(prompt: str) -> dict:
 def leaderboard(rows: list[dict]) -> None:
     rows = sorted(rows, key=lambda r: r["mean_advance_pct"], reverse=True)
     print("\n=== LEADERBOARD (Axis on Rommel's Arrival, higher advance = better) ===")
-    hdr = (f"{'model':<28}{'mode':>10}{'adv%':>6}{'best':>6}{'kill':>6}"
+    hdr = (f"{'model':<26}{'mode':>10}{'adv%':>6}{'invT':>6}{'kill':>6}"
            f"{'rej%':>6}{'calls':>7}{'$/game':>9}")
     print(hdr + "\n" + "-" * len(hdr))
     for r in rows:
-        print(f"{r['model']:<28}{r.get('mode', ''):>10}{r['mean_advance_pct']:>6}"
-              f"{r['best_advance_pct']:>6}{r['mean_kill_ratio']:>6}{r['reject_rate_pct']:>6}"
+        print(f"{r['model'][:25]:<26}{r.get('mode', ''):>10}{r['mean_advance_pct']:>6}"
+              f"{r.get('mean_turn_invested', 0):>6}{r['mean_kill_ratio']:>6}{r['reject_rate_pct']:>6}"
               f"{r['llm_calls']:>7}{r['cost_per_game_usd']:>9}")
+
+
+def _merge_write(path: str, new_rows: list[dict]) -> list[dict]:
+    """Merge rows into the output by (model, mode) key, replacing any match. Called
+    after each config so a crash (this env segfaults / restarts often) never loses a
+    completed config."""
+    p = Path(path)
+    existing = []
+    if p.exists():
+        try:
+            existing = json.loads(p.read_text()).get("rows", [])
+        except ValueError:
+            existing = []
+    keys = {(r["model"], r.get("mode")) for r in new_rows}
+    merged = [r for r in existing if (r["model"], r.get("mode")) not in keys] + new_rows
+    p.write_text(json.dumps({"rows": merged}, indent=2))
+    return merged
+
+
+def _done_configs(path: str) -> set:
+    p = Path(path)
+    if not p.exists():
+        return set()
+    try:
+        return {(r["model"], r.get("mode")) for r in json.loads(p.read_text()).get("rows", [])}
+    except ValueError:
+        return set()
 
 
 def main() -> int:
@@ -207,18 +241,26 @@ def main() -> int:
     ap.add_argument("--mock", action="store_true", help="free dry-run, no API calls")
     ap.add_argument("--reasoning", default=None,
                     help="reasoning effort for reasoning models: low|medium|high (default: provider)")
+    ap.add_argument("--resume", action="store_true",
+                    help="skip (model,mode) configs already present in --out (crash recovery)")
     ap.add_argument("--out", default="benchmark_results.json")
     args = ap.parse_args()
 
     models = [m.strip() for m in args.models.split(",") if m.strip()]
     modes = [m.strip() for m in args.mode.split(",") if m.strip()]
+    done = _done_configs(args.out) if args.resume else set()
     rows = []
     for mode in modes:
         for model in models:
+            if (model, mode) in done:
+                print(f"\n>>> [{mode}] {model}: SKIP (already in {args.out})")
+                continue
             print(f"\n>>> [{mode}] {model} ({args.games} games){'  [MOCK]' if args.mock else ''}")
-            rows.append(run_model(model, args.games, args.mock, mode, args.reasoning))
-            Path(args.out).write_text(json.dumps({"rows": rows}, indent=2))  # save after each config
-    leaderboard(rows)
+            row = run_model(model, args.games, args.mock, mode, args.reasoning)
+            rows.append(row)
+            _merge_write(args.out, [row])       # crash-safe: persist after each config
+    all_rows = json.loads(Path(args.out).read_text())["rows"] if Path(args.out).exists() else rows
+    leaderboard(all_rows)
     print(f"\nwrote {args.out}")
     return 0
 
