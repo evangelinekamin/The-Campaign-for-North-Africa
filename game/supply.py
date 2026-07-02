@@ -43,10 +43,14 @@ def fuel_cost(unit: Unit) -> int:
     return 1                           # motorized / recce / gun battalion-equivalent
 
 
-def ammo_cost(unit: Unit, *, phasing: bool) -> int:
-    """Ammo to take part in a Close Assault (rule 32.21): 1 per non-phasing
-    bn-eq, doubled for the phasing attacker. We proxy bn-eq count by stacking."""
-    return (2 if phasing else 1) * unit.stacking_points
+def ammo_cost(unit: Unit, *, phasing: bool, activity: str = "assault") -> int:
+    """Ammo to fire (rule 32.21), per bn-equivalent, doubled for the phasing player:
+    assault costs 1/bn-eq (non-phasing), BARRAGE costs 2/bn-eq. We proxy bn-eq by
+    stacking points, floored at 1 so a company (SP 0) still expends ammo (otherwise
+    it would fight free and bypass the supply gate)."""
+    bn_eq = max(1, unit.stacking_points)
+    base = 2 if activity == "barrage" else 1
+    return base * (2 if phasing else 1) * bn_eq
 
 
 def _pool(su, commodity: str) -> int:

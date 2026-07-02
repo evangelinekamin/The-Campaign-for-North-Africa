@@ -65,6 +65,9 @@ class ScriptedPolicy(Policy):
         for u in state.living(side):
             if not u.is_combat:
                 continue
+            if u.cp_used == 0 and supply.plan_draw(
+                    state, u, supply.FUEL, supply.fuel_cost(u)) is None:
+                continue          # out of fuel -- don't propose a move the engine will reject
             reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
             here_dist = distance(u.hex, target)
             # Barrage/anti-armor units seek a firing position -- adjacent to an
@@ -96,8 +99,9 @@ class ScriptedPolicy(Policy):
         # Batch attackers by the hex they assault — one resolved call per target.
         by_target: dict[Coord, list[str]] = {}
         for u in state.living(side):
-            if not u.is_combat:
-                continue
+            if not u.is_combat or supply.plan_draw(
+                    state, u, supply.AMMO, supply.ammo_cost(u, phasing=True)) is None:
+                continue          # out of ammo -- can't assault (don't propose it)
             for nb in neighbors(u.hex):
                 if state.enemies_at(nb, side):
                     by_target.setdefault(nb, []).append(u.id)

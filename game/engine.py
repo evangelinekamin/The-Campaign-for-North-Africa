@@ -265,7 +265,8 @@ def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str]) -> None
                     by_target.setdefault(nb, []).append(u)
                     break
         for tgt, firers in by_target.items():
-            armed = [u for u in firers if _charge_ammo(r, firing, actor, u, phasing=is_phasing)]
+            armed = [u for u in firers
+                     if _charge_ammo(r, firing, actor, u, phasing=is_phasing, activity="barrage")]
             raw = sum(u.raw_barrage for u in armed)
             target_unit = _barrage_target(state0.enemies_at(tgt, firing))
             if raw <= 0 or target_unit is None:
@@ -530,9 +531,10 @@ def _retreat(r: _Run, atk_side: Side, actor: str, defender_ids: list[str],
                        {"unit_id": u.id, "amount": min(extra, cur_u.strength), "role": "defender"})
 
 
-def _charge_ammo(r: _Run, side: Side, actor: str, unit, *, phasing: bool) -> bool:
+def _charge_ammo(r: _Run, side: Side, actor: str, unit, *, phasing: bool,
+                 activity: str = "assault") -> bool:
     draws = supply.plan_draw(r.state, unit, supply.AMMO,
-                             supply.ammo_cost(unit, phasing=phasing))
+                             supply.ammo_cost(unit, phasing=phasing, activity=activity))
     if draws is None:
         return False
     for sid, qty in draws:

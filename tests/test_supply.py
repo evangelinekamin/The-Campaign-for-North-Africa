@@ -48,17 +48,32 @@ def test_out_of_supply_when_no_dump_in_range():
 
 
 def test_movement_blocked_when_out_of_fuel():
+    # The scripted policy now pre-filters out-of-fuel units, so probe the ENGINE
+    # gate directly: a policy that forces the move onto a reachable hex must still
+    # be rejected for fuel, and the unit must stay put.
+    from game import tactics
+    from game.policy import MoveOrder, Policy
     s = coastal_corridor()
     dry_axis = tuple(replace(su, fuel=0) if su.side == Side.AXIS else su
                      for su in s.supplies)
     init = {"AMMO": sum(su.ammo for su in dry_axis), "FUEL": sum(su.fuel for su in dry_axis)}
-    dry = replace(s, supplies=dry_axis, consumed={"AMMO": 0, "FUEL": 0},
-                  initial_supply=init)
-    result = run(dry, axis=ScriptedPolicy(Side.AXIS), allied=ScriptedPolicy(Side.AXIS))
-    fuel_rejects = [e for e in result.events
-                    if e.kind == EventKind.ORDER_REJECTED and "fuel" in e.payload.get("reason", "")]
+    dry = replace(s, supplies=dry_axis, consumed={"AMMO": 0, "FUEL": 0}, initial_supply=init)
+    ez, eo = tactics.enemy_zoc_and_occupied(dry, Side.AXIS)
+    dak = dry.unit("DAK-5le")
+    dest = min((h for h in tactics.reachable_for(dry, dak, ez, eo) if h != dak.hex),
+               key=lambda h: h)
+
+    class ForceMove(Policy):
+        def movement(self, st, side):
+            return [MoveOrder("DAK-5le", dest)] if side == Side.AXIS else []
+
+        def combat(self, st, side):
+            return []
+    result = run(dry, axis=ForceMove(), allied=ForceMove())
+    fuel_rejects = [e for e in result.events if e.kind == EventKind.ORDER_REJECTED
+                    and "fuel" in e.payload.get("reason", "")]
     assert fuel_rejects
-    assert result.final.unit("DAK-5le").hex == (0, 0)   # never moved without fuel
+    assert result.final.unit("DAK-5le").hex == dak.hex   # never moved without fuel
 
 
 def _mobile_state() -> GameState:
