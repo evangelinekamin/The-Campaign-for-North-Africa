@@ -15,9 +15,29 @@ from __future__ import annotations
 
 import json
 
-from .events import Side
+from .events import EventKind, Side
 from .observation import observe
 from .policy import AttackOrder, MoveOrder, ScriptedPolicy
+
+# Briefing-mode intent: whitelisted fields + per-field char caps (a rambling model
+# cannot smuggle a transcript back in through the intent field -- that's the stateful
+# firehose re-entering by the back door).
+_INTENT_FIELDS = {"objective": 140, "scheme": 200, "supply": 140, "milestone": 120, "risks": 140}
+_INTENT_INSTRUCTION = (
+    ' Also include "intent": an object with short-string fields objective, scheme, '
+    'supply, milestone, risks, and lessons (<=3 short strings) -- your EVOLVING campaign '
+    'plan, rewritten from scratch to fit the CURRENT board (never copy it forward verbatim).')
+
+
+def _clean_intent(raw: dict) -> dict:
+    out = {k: raw[k].strip()[:cap] for k, cap in _INTENT_FIELDS.items()
+           if isinstance(raw.get(k), str) and raw[k].strip()}
+    lessons = raw.get("lessons")
+    if isinstance(lessons, list):
+        clean = [str(x).strip()[:100] for x in lessons[:3] if isinstance(x, str) and str(x).strip()]
+        if clean:
+            out["lessons"] = clean
+    return out
 from .state import GameState
 
 
@@ -36,10 +56,25 @@ class LLMPolicy(ScriptedPolicy):
         self.mode = mode
         self.history: list = []       # stateful: running [user/assistant] conversation
         self.plan = ""                # hybrid: the model's carried standing plan
+        self.brief_events: list = []  # briefing: engine dispatches since the last decision
+        self.intent: dict | None = None   # briefing: carried structured commander's intent
+        self.intent_turn = 0
+        self.stale_turns = 0          # turns the intent has gone unchanged
+        self.steps_since_intent = 0   # own steps lost since the intent last changed
 
     def reset(self) -> None:          # clear memory between games (benchmark calls per game)
         self.history = []
         self.plan = ""
+        self.brief_events = []
+        self.intent = None
+        self.intent_turn = 0
+        self.stale_turns = 0
+        self.steps_since_intent = 0
+
+    def debrief(self, events: list) -> None:
+        """Engine hook (briefing mode): the dispatches since this side last acted --
+        rejected orders, losses, ground changes. Formatted into the next prompt."""
+        self.brief_events = list(events)
 
     def _ask(self, prompt: str) -> str:
         if self.mode == "stateful":
@@ -58,13 +93,95 @@ class LLMPolicy(ScriptedPolicy):
         return self.client.complete(prompt)           # stateless
 
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
-        return parse_moves(self._ask(build_movement_prompt(observe(state, side))))
+        obs = observe(state, side)
+        if self.mode == "briefing":
+            text = self.client.complete(self._briefing(state) + "\n"
+                                        + build_movement_prompt(obs) + _INTENT_INSTRUCTION)
+            self._update_intent(text, state.turn)
+            return parse_moves(text)
+        return parse_moves(self._ask(build_movement_prompt(obs)))
 
     def combat(self, state: GameState, side: Side) -> list[AttackOrder]:
         obs = observe(state, side)
         if not obs.get("attack_options"):
             return []              # nothing adjacent to assault -- skip the API call entirely
+        if self.mode == "briefing":
+            return parse_attacks(self.client.complete(self._briefing(state) + "\n"
+                                                      + build_combat_prompt(obs)))
         return parse_attacks(self._ask(build_combat_prompt(obs)))
+
+    # --- briefing mode: engine-authored FACTS + model-authored evolving INTENT -------
+
+    def _briefing(self, state: GameState) -> str:
+        return ("COMMANDER'S BRIEFING (staff facts since your last orders -- trust these):\n"
+                + "\n".join(self._section_a(state)) + "\n"
+                + "\n".join(self._section_b(state.turn)))
+
+    def _section_a(self, state: GameState) -> list[str]:
+        """Engine-authored, deterministic, identical quality for every model."""
+        rej, mine, enemy = [], [], {}
+        my_lost = 0
+        for e in self.brief_events:
+            p = e.payload
+            if e.kind == EventKind.ORDER_REJECTED and e.side == self.side:
+                who = p.get("unit_id") or ",".join(p.get("attacker_ids", []) or []) or "?"
+                rej.append(f"{who}->{p.get('to') or p.get('target') or '?'}: {p.get('reason', '?')}")
+            elif e.kind == EventKind.STEP_LOST:
+                u = state.unit(p.get("unit_id", ""))
+                if u is None:
+                    continue
+                if u.side == self.side:                          # my unit lost steps
+                    mine.append(f"{u.id} -{p.get('amount', 0)} ({p.get('role', '?')})")
+                    my_lost += p.get("amount", 0)
+                else:                                            # enemy: per-hex counts only (3.6)
+                    enemy[u.hex] = enemy.get(u.hex, 0) + p.get("amount", 0)
+        self.steps_since_intent += my_lost
+        vc = [e for e in self.brief_events if e.kind == EventKind.VICTORY_CHECKED]
+        reinf = [f"{e.payload.get('unit_id', '?')}@{e.payload.get('hex', '?')}"
+                 for e in self.brief_events
+                 if e.kind == EventKind.REINFORCEMENT_ARRIVED and e.side == self.side]
+        out = [
+            "- FAILED orders (these units did NOT act -- reissue or work around them): "
+            + ("; ".join(rej[:8]) + (f" (+{len(rej) - 8} more)" if len(rej) > 8 else "")
+               if rej else "none"),
+            "- Your losses: " + ("; ".join(mine[:6]) if mine else "none"),
+            "- Enemy losses you inflicted: "
+            + ("; ".join(f"{list(h)}:-{n}" for h, n in list(enemy.items())[:5]) if enemy else "none"),
+        ]
+        if vc:
+            out.append(f"- Ground: advance {vc[-1].payload.get('axis', '?')}%")
+        if reinf:
+            out.append("- Reinforcements arrived: " + "; ".join(reinf[:2]))
+        return out
+
+    def _section_b(self, turn: int) -> list[str]:
+        """Model-authored, carried, ADVISORY -- with challenge triggers (anti-anchor)."""
+        if not self.intent:
+            return ["YOUR STANDING INTENT: none yet -- author one this turn."]
+        out = [f"YOUR STANDING INTENT (written turn {self.intent_turn}, "
+               f"{turn - self.intent_turn} turn(s) ago; ADVISORY not binding -- the board "
+               "has moved, revise it if it no longer fits):", json.dumps(self.intent)]
+        n_rej = sum(1 for e in self.brief_events
+                    if e.kind == EventKind.ORDER_REJECTED and e.side == self.side)
+        if n_rej >= 3:
+            out.append(f"  ! {n_rej} orders failed last turn -- this intent may assume moves that never happened.")
+        if self.steps_since_intent >= 10:
+            out.append(f"  ! you have lost {self.steps_since_intent} steps since writing this intent.")
+        if self.stale_turns >= 3:
+            out.append("  ! this intent is unchanged for 3 turns -- confirm it still fits the board.")
+        return out
+
+    def _update_intent(self, text: str, turn: int) -> None:
+        raw = _extract_json(text).get("intent")
+        if not isinstance(raw, dict) or not (new := _clean_intent(raw)):
+            self.stale_turns += 1        # didn't (re)author -> carry the old, flag staleness
+            return
+        changed = json.dumps(new, sort_keys=True) != json.dumps(self.intent or {}, sort_keys=True)
+        self.intent, self.intent_turn = new, turn
+        if changed:
+            self.stale_turns = self.steps_since_intent = 0
+        else:
+            self.stale_turns += 1
 
     # supply_orders(): inherited scripted logistics (dumps follow the advance).
 

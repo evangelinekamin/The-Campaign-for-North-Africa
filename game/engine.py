@@ -71,13 +71,27 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
 
     winner: Side | None = None
     reason = "campaign reached final turn"
+    cursor = {Side.AXIS: 0, Side.ALLIED: 0}
+
+    def _debrief(side: Side) -> None:
+        # Hand the policy the events since it last acted (its rejected orders, losses,
+        # ground changes, enemy sorties) -- a commander receives dispatches between
+        # decisions. Optional (hasattr): scripted policies ignore it. Pure function of
+        # the seeded event log, so replay stays deterministic.
+        pol = policies[side]
+        if hasattr(pol, "debrief"):
+            pol.debrief(r.events[cursor[side]:])
+        cursor[side] = len(r.events)
+
     while True:
         _weather(r)
         _reinforcements(r)
         for side in (Side.AXIS, Side.ALLIED):
+            _debrief(side)                              # enemy turn + own last combat
             r.go(Phase.MOVEMENT, side)
             _movement(r, policies[side], side)
             _supply_movement(r, policies[side], side)   # supply follows the army (32.3)
+            _debrief(side)                              # which moves/pincers actually formed
             r.go(Phase.COMBAT, side)
             _combat(r, policies, side)
         r.go(Phase.RECORD, Side.SYSTEM)
