@@ -22,18 +22,46 @@ from .state import GameState
 
 
 class LLMPolicy(ScriptedPolicy):
-    def __init__(self, side: Side, client):
+    """`mode` controls how much the model remembers between decisions -- the memory
+    variable we benchmark separately from the model:
+      * stateless -- each call is a fresh prompt, no memory (cheapest).
+      * stateful  -- the full running conversation is sent each call (most tokens).
+      * hybrid    -- fresh prompt + the model's own one-line plan carried forward.
+    """
+
+    def __init__(self, side: Side, client, mode: str = "stateless"):
         super().__init__(attacker=side)
         self.side = side
         self.client = client
+        self.mode = mode
+        self.history: list = []       # stateful: running [user/assistant] conversation
+        self.plan = ""                # hybrid: the model's carried standing plan
+
+    def reset(self) -> None:          # clear memory between games (benchmark calls per game)
+        self.history = []
+        self.plan = ""
+
+    def _ask(self, prompt: str) -> str:
+        if self.mode == "stateful":
+            self.history.append({"role": "user", "content": prompt})
+            text = self.client.chat(self.history)
+            self.history.append({"role": "assistant", "content": text})
+            return text
+        if self.mode == "hybrid":
+            if self.plan:
+                prompt = f"Your standing plan (carried from last turn): {self.plan}\n\n{prompt}"
+            text = self.client.complete(prompt)
+            reasoning = _reasoning(text)
+            if reasoning:
+                self.plan = reasoning
+            return text
+        return self.client.complete(prompt)           # stateless
 
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
-        text = self.client.complete(build_movement_prompt(observe(state, side)))
-        return parse_moves(text)
+        return parse_moves(self._ask(build_movement_prompt(observe(state, side))))
 
     def combat(self, state: GameState, side: Side) -> list[AttackOrder]:
-        text = self.client.complete(build_combat_prompt(observe(state, side)))
-        return parse_attacks(text)
+        return parse_attacks(self._ask(build_combat_prompt(observe(state, side))))
 
     # supply_orders(): inherited scripted logistics (dumps follow the advance).
 
@@ -93,6 +121,12 @@ def _extract_json(text: str) -> dict:
         return obj if isinstance(obj, dict) else {}
     except (ValueError, TypeError):
         return {}
+
+
+def _reasoning(text: str) -> str:
+    """The model's one-line 'reasoning' field, for the hybrid mode's carried plan."""
+    r = _extract_json(text).get("reasoning")
+    return r if isinstance(r, str) else ""
 
 
 def _hex(v) -> tuple | None:

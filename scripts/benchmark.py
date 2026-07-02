@@ -79,24 +79,27 @@ def game_metrics(result) -> dict:
     }
 
 
-def run_model(model: str, games: int, mock: bool, base_seed: int = 4200) -> dict:
-    """N games of LLM(Axis) vs scripted(Commonwealth). Returns the aggregate row."""
-    # A mock that plays a plausible-but-simple Axis so a dry-run exercises the pipeline
-    # for free: advance the first offered destination, attack the first option.
+def run_model(model: str, games: int, mock: bool, mode: str = "stateless",
+              base_seed: int = 4200) -> dict:
+    """N games of LLM(Axis) vs scripted(Commonwealth) in the given memory `mode`.
+    Returns the aggregate row. A fresh client per model accumulates usage; the
+    policy is reset between games so stateful/hybrid memory doesn't leak across them."""
     client = MockClient(_mock_axis) if mock else OpenRouterClient(model)
-    axis = LLMPolicy(Side.AXIS, client)
+    axis = LLMPolicy(Side.AXIS, client, mode=mode)
     defender = ScriptedPolicy(Side.ALLIED)
     per_game = []
     for i in range(games):
+        axis.reset()
         result = run(rommels_arrival(seed=base_seed + i), axis=axis, allied=defender)
         per_game.append(game_metrics(result))
-        print(f"    {model}  game {i + 1}/{games}: advance {per_game[-1]['advance_pct']}% "
-              f"({result.winner.value}), {per_game[-1]['rejections']} rejects", flush=True)
+        print(f"    [{mode}] {model}  game {i + 1}/{games}: advance "
+              f"{per_game[-1]['advance_pct']}% ({result.winner.value}), "
+              f"{per_game[-1]['rejections']} rejects", flush=True)
     usage = client.usage() if hasattr(client, "usage") else {}
-    return _aggregate(model, per_game, usage)
+    return _aggregate(model, per_game, usage, mode)
 
 
-def _aggregate(model: str, per_game: list[dict], usage: dict) -> dict:
+def _aggregate(model: str, per_game: list[dict], usage: dict, mode: str = "stateless") -> dict:
     n = len(per_game)
     axis_wins = sum(1 for g in per_game if g["winner"] == "AXIS")
     kill_ratio = mean(g["allied_losses"] / max(1, g["axis_losses"]) for g in per_game)
@@ -106,6 +109,7 @@ def _aggregate(model: str, per_game: list[dict], usage: dict) -> dict:
     cost = (usage.get("prompt_tokens", 0) * p_in + usage.get("completion_tokens", 0) * p_out) / 1e6
     return {
         "model": model,
+        "mode": mode,
         "games": n,
         "axis_win_rate": round(100 * axis_wins / n, 1),
         "mean_advance_pct": round(mean(g["advance_pct"] for g in per_game), 1),
@@ -165,12 +169,13 @@ def _extract(prompt: str) -> dict:
 def leaderboard(rows: list[dict]) -> None:
     rows = sorted(rows, key=lambda r: r["mean_advance_pct"], reverse=True)
     print("\n=== LEADERBOARD (Axis on Rommel's Arrival, higher advance = better) ===")
-    hdr = f"{'model':<38}{'adv%':>6}{'best':>6}{'kill':>6}{'rej%':>6}{'calls':>7}{'$/game':>9}"
+    hdr = (f"{'model':<28}{'mode':>10}{'adv%':>6}{'best':>6}{'kill':>6}"
+           f"{'rej%':>6}{'calls':>7}{'$/game':>9}")
     print(hdr + "\n" + "-" * len(hdr))
     for r in rows:
-        print(f"{r['model']:<38}{r['mean_advance_pct']:>6}{r['best_advance_pct']:>6}"
-              f"{r['mean_kill_ratio']:>6}{r['reject_rate_pct']:>6}{r['llm_calls']:>7}"
-              f"{r['cost_per_game_usd']:>9}")
+        print(f"{r['model']:<28}{r.get('mode', ''):>10}{r['mean_advance_pct']:>6}"
+              f"{r['best_advance_pct']:>6}{r['mean_kill_ratio']:>6}{r['reject_rate_pct']:>6}"
+              f"{r['llm_calls']:>7}{r['cost_per_game_usd']:>9}")
 
 
 def main() -> int:
@@ -178,15 +183,19 @@ def main() -> int:
     ap.add_argument("--models", default="deepseek/deepseek-chat",
                     help="comma-separated OpenRouter model slugs")
     ap.add_argument("--games", type=int, default=3)
+    ap.add_argument("--mode", default="stateless",
+                    help="memory mode(s), comma-list: stateless,stateful,hybrid")
     ap.add_argument("--mock", action="store_true", help="free dry-run, no API calls")
     ap.add_argument("--out", default="benchmark_results.json")
     args = ap.parse_args()
 
     models = [m.strip() for m in args.models.split(",") if m.strip()]
+    modes = [m.strip() for m in args.mode.split(",") if m.strip()]
     rows = []
-    for model in models:
-        print(f"\n>>> {model} ({args.games} games){'  [MOCK]' if args.mock else ''}")
-        rows.append(run_model(model, args.games, args.mock))
+    for mode in modes:
+        for model in models:
+            print(f"\n>>> [{mode}] {model} ({args.games} games){'  [MOCK]' if args.mock else ''}")
+            rows.append(run_model(model, args.games, args.mock, mode))
     Path(args.out).write_text(json.dumps({"rows": rows}, indent=2))
     leaderboard(rows)
     print(f"\nwrote {args.out}")

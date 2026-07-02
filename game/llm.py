@@ -18,6 +18,7 @@ from typing import Callable, Protocol
 
 class LLMClient(Protocol):
     def complete(self, prompt: str) -> str: ...
+    def chat(self, messages: list) -> str: ...
 
 
 class MockClient:
@@ -30,6 +31,11 @@ class MockClient:
     def complete(self, prompt: str) -> str:
         r = self._responder
         return r(prompt) if callable(r) else r
+
+    def chat(self, messages: list) -> str:
+        """Respond to the latest user turn (stateful mode sends a message list)."""
+        last = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
+        return self.complete(last)
 
 
 class OpenRouterClient:
@@ -50,13 +56,18 @@ class OpenRouterClient:
         self.completion_tokens = 0
 
     def complete(self, prompt: str) -> str:
+        return self.chat([{"role": "user", "content": prompt}])
+
+    def chat(self, messages: list) -> str:
+        """Multi-turn completion (the stateful mode sends the running conversation).
+        Usage accumulates across calls regardless of turn count."""
         key = os.environ.get("OPENROUTER_API_KEY")
         if not key:
             raise RuntimeError("OPENROUTER_API_KEY not set")
         body = json.dumps({
             "model": self.model,
             "temperature": self.temperature,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
         }).encode()
         for attempt in range(self.retries + 1):
             try:
