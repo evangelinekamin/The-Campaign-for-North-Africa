@@ -88,7 +88,9 @@ def build_movement_prompt(obs: dict) -> str:
         "'anti_armor' (guns/tanks) rating automatically bombard ADJACENT enemies -- "
         "move them onto a can_move_to hex marked firing_position to soften a target "
         "before assaulting it. Tanks (is_tank) need at least an equal infantry "
-        "strength stacked with them or they lose close-assault power.\n"
+        "strength stacked with them or they lose close-assault power. Supply: a unit "
+        "with supplied:false cannot move this turn; supply_contended:true means its "
+        "dump is oversubscribed, so prioritise -- not every contended unit gets fuel.\n"
         'Reply with ONLY JSON: {"reasoning":"one sentence","moves":'
         '[{"unit":"<id>","to":[q,r]}]}. Use a [q,r] taken from that unit\'s '
         "can_move_to; omit units that should hold.")
@@ -100,7 +102,9 @@ def build_combat_prompt(obs: dict) -> str:
         f"COMBAT phase, game-turn {obs['turn']}/{obs['max_turns']}. Close-assault "
         f"using attack_options: each entry gives a target hex, the your_attackers "
         f"adjacent to it, and the enemy_stacking_points there. Attack where your "
-        f"attackers outweigh the defender.\nSituation (JSON):\n{json.dumps(obs)}\n"
+        f"attackers outweigh the defender. A unit with defensible:false is out of ammo "
+        f"and defends at 0 strength, so don't leave such units exposed adjacent to the "
+        f"enemy.\nSituation (JSON):\n{json.dumps(obs)}\n"
         'Reply with ONLY JSON: {"reasoning":"one sentence","attacks":'
         '[{"attackers":["<id>"],"target":[q,r]}]}. Take target + attackers from '
         "attack_options; omit if you should not attack.")

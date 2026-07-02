@@ -35,6 +35,28 @@ def observe(state: GameState, side: Side) -> dict:
     target = state.target_hex
     moving = state.phase == Phase.MOVEMENT
     enemy_zoc, enemy_occ = tactics.enemy_zoc_and_occupied(state, side) if moving else (None, None)
+    roster = state.living(side) if moving else None    # phase-start snapshot the engine also uses
+
+    # Fuel is a SHARED, drainable dump resource: each unit's plan_draw succeeds
+    # independently, but if a dump's total demand exceeds its fuel only some of the
+    # units drawing on it actually move. Flag those as contended so the agent knows
+    # to prioritise rather than trusting every "supplied" unit will move.
+    fuel_ok: set = set()
+    contended: set = set()
+    if moving:
+        dump_fuel = {s.id: s.fuel for s in state.supplies if s.side == side}
+        demand: dict = {}
+        dump_of: dict = {}
+        for u in state.living(side):
+            if not u.is_combat or u.cp_used > 0:
+                continue
+            draws = supply.plan_draw(state, u, supply.FUEL, supply.fuel_cost(u))
+            if draws:
+                fuel_ok.add(u.id)
+                did = draws[0][0]
+                demand[did] = demand.get(did, 0) + supply.fuel_cost(u)
+                dump_of[u.id] = did
+        contended = {uid for uid, did in dump_of.items() if demand[did] > dump_fuel.get(did, 0)}
 
     def unit_view(u) -> dict:
         # Lean view: cpa/cp_left/mobility are redundant with can_move_to (which
@@ -57,15 +79,22 @@ def observe(state: GameState, side: Side) -> dict:
                 v[key] = val
         if u.is_tank:
             v["is_tank"] = True
+        # Defensive-supply: a unit that can't draw ammo defends at ZERO strength (it
+        # still takes losses). Surfacing this lets the agent avoid parking unarmed
+        # units where they'll be sortied (32.21 / 15.15).
+        if u.is_combat:
+            v["defensible"] = supply.plan_draw(
+                state, u, supply.AMMO, supply.ammo_cost(u, phasing=False)) is not None
         if moving and u.is_combat:
             # A unit whose first move can't draw fuel is out of supply -- it cannot
             # move this OpStage, so offer no destinations (32.23). Reflecting this
             # keeps the agent from wasting orders on stranded units.
-            supplied = u.cp_used > 0 or supply.plan_draw(
-                state, u, supply.FUEL, supply.fuel_cost(u)) is not None
+            supplied = u.cp_used > 0 or u.id in fuel_ok
             v["supplied"] = supplied
+            if u.id in contended:
+                v["supply_contended"] = True     # dump oversubscribed; may not get fuel
             if supplied:
-                reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occ)
+                reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occ, roster)
                 dests = sorted((h for h in reach if h != u.hex), key=lambda h: distance(h, target))
                 support = u.barrage > 0 or u.anti_armor > 0
                 entries = []

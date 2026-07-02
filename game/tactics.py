@@ -28,11 +28,15 @@ def enemy_zoc_and_occupied(state: GameState, mover_side: Side) -> tuple[frozense
 
 
 def reachable_for(state: GameState, unit: Unit, enemy_zoc: frozenset,
-                  enemy_occupied: frozenset) -> dict[Coord, float]:
-    """Hexes `unit` can legally reach this segment within its remaining CPA."""
+                  enemy_occupied: frozenset, roster: tuple | None = None) -> dict[Coord, float]:
+    """Hexes `unit` can legally reach this segment within its remaining CPA. Pass a
+    `roster` (the friendly units snapshotted at phase start) so a unit's legal set
+    is computed against the phase-start board -- otherwise ZOC-negation shifts as
+    earlier units move and the observation ends up offering hexes the engine then
+    rejects (the observation/validation must agree on ONE snapshot)."""
     budget = max(0.0, unit.cpa + state.move_modifier - unit.cp_used)
-    negators = frozenset(u.hex for u in state.living(unit.side)
-                         if u.is_combat and u.id != unit.id)        # §10.26
+    src = roster if roster is not None else state.living(unit.side)
+    negators = frozenset(u.hex for u in src if u.is_combat and u.id != unit.id)  # §10.26
     return zoc.reachable_with_zoc(
         state.terrain, unit.hex, budget, unit.mobility,
         enemy_zoc=enemy_zoc, friendly_negators=negators, enemy_occupied=enemy_occupied)

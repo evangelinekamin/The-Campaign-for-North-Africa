@@ -120,13 +120,15 @@ def _weather(r: _Run) -> None:
 def _movement(r: _Run, policy: Policy, side: Side) -> None:
     actor = f"{side.value}/Front"
     enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(r.state, side)
+    roster = r.state.living(side)          # phase-start snapshot (matches the observation)
     for order in policy.movement(r.state, side):
         u = r.state.unit(order.unit_id)
         if u is None or not u.alive or u.side != side:
             _reject(r, side, actor, order, "no such living unit under this command")
             continue
-        # Re-validate against current state — earlier moves this phase count.
-        reach = tactics.reachable_for(r.state, u, enemy_zoc, enemy_occupied)
+        # Reachability is computed against the phase-start roster so a unit's legal
+        # set doesn't depend on the order earlier units moved (matches observe()).
+        reach = tactics.reachable_for(r.state, u, enemy_zoc, enemy_occupied, roster)
         if order.to == u.hex or order.to not in reach:
             _reject(r, side, actor, order,
                     "destination unreachable within CPA or blocked by ZOC")
