@@ -229,6 +229,66 @@ def test_combined_arms_penalty():
     assert _combined_arms_penalty([tank(6), recce(6)]) == 2     # recce does not support tanks
 
 
+def _combat_state(units, supplies):
+    from game.events import Phase
+    from game.movement import TerrainMap
+    from game.state import GameState, VP
+    from game.terrain import Terrain
+    terr = {(q, 0): Terrain.CLEAR for q in range(4)}
+    return GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS, seed=1,
+                     weather="clear", move_modifier=0, vp=VP(),
+                     terrain=TerrainMap(terrain=terr), control={}, units=tuple(units),
+                     target_hex=(3, 0), supplies=tuple(supplies),
+                     consumed={"AMMO": 0, "FUEL": 0},
+                     initial_supply={"AMMO": sum(s.ammo for s in supplies),
+                                     "FUEL": sum(s.fuel for s in supplies)})
+
+
+def test_combat_boundary_guards_exploits():
+    # duplicate attacker ids must not multiply strength; a non-combat HQ must not
+    # attack; a hex must not be close-assaulted twice in one segment (15.23/15.24).
+    from game.engine import _Run, _combat
+    from game.events import EventKind, Phase
+    from game.movement import TerrainMap
+    from game.state import SupplyUnit, Unit
+    from game.terrain import Mobility, Terrain
+    atk = Unit("A", Side.AXIS, (0, 0), (StepRecord("i", 6),), mobility=Mobility.FOOT,
+               cpa=25, stacking_points=1, oca=3, dca=2)
+    hq = Unit("HQ", Side.AXIS, (0, 0), (StepRecord("hq", 1),), mobility=Mobility.MOTORIZED,
+              cpa=30, stacking_points=0, oca=5, dca=1, is_combat=False)
+    dfd = Unit("D", Side.ALLIED, (1, 0), (StepRecord("i", 6),), mobility=Mobility.FOOT,
+               cpa=10, stacking_points=1, oca=1, dca=2)
+    supplies = (SupplyUnit("DA", Side.AXIS, (0, 0), ammo=40, fuel=60),
+                SupplyUnit("DL", Side.ALLIED, (1, 0), ammo=40, fuel=60))
+    from game.policy import AttackOrder, Policy
+
+    class Exploit(Policy):
+        def movement(self, s, side):
+            return []
+
+        def combat(self, s, side):
+            return [AttackOrder(("A", "A", "HQ"), (1, 0)), AttackOrder(("A",), (1, 0))] \
+                if side == Side.AXIS else []
+    r = _Run(_combat_state([atk, hq, dfd], supplies))
+    _combat(r, {Side.AXIS: Exploit(), Side.ALLIED: Exploit()}, Side.AXIS)
+    resolved = [e for e in r.events if e.kind == EventKind.COMBAT_RESOLVED]
+    assert len(resolved) == 1                                # the repeat assault was rejected
+    assert resolved[0].payload["attackers"] == ["A"]         # deduped + HQ (non-combat) dropped
+
+
+def test_only_combat_units_hold_ground():
+    # a lone non-combat HQ must not capture a hex (rule: control by combat units)
+    from game.engine import _Run, _record_control
+    from game.events import Control
+    from game.state import Unit
+    from game.terrain import Mobility
+    hq = Unit("HQ", Side.AXIS, (2, 0), (StepRecord("hq", 1),), mobility=Mobility.MOTORIZED,
+              cpa=30, stacking_points=0, oca=0, dca=1, is_combat=False)
+    r = _Run(_combat_state([hq], []))
+    _record_control(r)
+    assert r.state.control_of((2, 0)) == Control.NEUTRAL     # HQ alone does not capture
+
+
 def test_cohesion_changed_event_applies():
     from game.apply import apply as apply_event
     from game.events import Event, EventKind, Phase

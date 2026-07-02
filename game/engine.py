@@ -160,10 +160,14 @@ def _supply_movement(r: _Run, policy: Policy, side: Side) -> None:
     from its own trucks, and must end stacked with a friendly combat unit (32.33).
     Validated at the boundary like every other order."""
     actor = f"{side.value}/Logistics"
+    moved: set = set()               # a dump relocates at most once per OpStage (32.58A)
     for order in policy.supply_orders(r.state, side):
         su = r.state.supply(order.supply_id)
         if su is None or su.side != side or su.empty:
             _reject_supply(r, side, actor, order, "no such active supply unit")
+            continue
+        if su.id in moved:
+            _reject_supply(r, side, actor, order, "already moved this OpStage (CPA 15/stage)")
             continue
         if order.to == su.hex or order.to not in supply.reachable_moves(r.state, su):
             _reject_supply(r, side, actor, order, "beyond CPA 15 or blocked by ZOC")
@@ -179,6 +183,7 @@ def _supply_movement(r: _Run, policy: Policy, side: Side) -> None:
                 "qty": supply.SUPPLY_MOVE_FUEL, "unit_id": su.id})
         r.emit(EventKind.SUPPLY_MOVED, side, actor,
                {"supply_id": su.id, "from": list(su.hex), "to": list(order.to)})
+        moved.add(su.id)
 
 
 def _reject_supply(r: _Run, side: Side, actor: str, order, reason: str) -> None:
@@ -200,17 +205,31 @@ def _combat(r: _Run, policies: dict, side: Side) -> None:
     _barrage_step(r, side, enemy, pinned)
     _anti_armor_step(r, side, enemy, pinned)
     actor = f"{side.value}/Front"
+    assaulted: set = set()            # 15.23: each hex is close-assaulted at most once/segment
+    committed: set = set()            # 15.24: each unit joins at most one assault/segment
     for order in policies[side].combat(r.state, side):
-        attackers = [r.state.unit(a) for a in order.attacker_ids]
-        attackers = [u for u in attackers
-                     if u and u.alive and u.side == side and is_adjacent(u.hex, order.target)]
-        defenders = list(r.state.enemies_at(order.target, side))
+        target = order.target
+        # Dedupe attacker ids (else a repeated id multiplies strength), drop units
+        # already committed to another assault this segment, and require is_combat
+        # (an HQ costs 0 ammo and would otherwise farm assaults / Rommel's +1).
+        ids = [a for a in dict.fromkeys(order.attacker_ids) if a not in committed]
+        attackers = [r.state.unit(a) for a in ids]
+        attackers = [u for u in attackers if u and u.alive and u.is_combat
+                     and u.side == side and is_adjacent(u.hex, target)]
+        defenders = list(r.state.enemies_at(target, side))
+        if target in assaulted:
+            r.emit(EventKind.ORDER_REJECTED, side, actor,
+                   {"order": "attack", "target": list(target),
+                    "reason": "hex already close-assaulted this segment"})
+            continue
         if not attackers or not defenders:
             r.emit(EventKind.ORDER_REJECTED, side, actor,
-                   {"order": "attack", "target": list(order.target),
+                   {"order": "attack", "target": list(target),
                     "reason": "no valid attackers or empty target"})
             continue
-        _resolve_combat(r, side, actor, attackers, defenders, order.target, pinned)
+        _resolve_combat(r, side, actor, attackers, defenders, target, pinned)
+        assaulted.add(target)
+        committed.update(u.id for u in attackers)
 
 
 def _barrage_class(u) -> str:
@@ -345,6 +364,16 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     # Basic Morale by Cohesion, and the difference shifts the assault column (15.62).
     atk_m, atk_md, atk_surr = _adjusted_morale(r, armed_atk)
     def_m, def_md, def_surr = _adjusted_morale(r, defenders)
+    if atk_surr and def_surr:                                   # 17.25: mutual surrender is IGNORED --
+        r.emit(EventKind.COMBAT_RESOLVED, side, actor,          # no assault occurs, both Engaged
+               {"target": list(target), "attackers": [u.id for u in armed_atk],
+                "defenders": [u.id for u in defenders], "surrender": "mutual-ignored",
+                "differential": 0, "column": 0, "morale_shift": atk_m - def_m,
+                "attacker_loss_pct": 0, "defender_loss_pct": 0,
+                "attacker_captured": False, "defender_captured": False,
+                "attacker_engaged": True, "retreat_hexes": 0},
+               rng_draws=(*atk_md, *def_md))
+        return
     if atk_surr or def_surr:                                    # rule 17.25: the stack surrenders
         _resolve_surrender(r, side, actor, target, armed_atk, defenders,
                            atk_surr, def_surr, atk_m - def_m, (*atk_md, *def_md))
@@ -361,7 +390,7 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
         attacker_ca_penalty=_combined_arms_penalty(armed_atk),      # rule 15.4
         defender_ca_penalty=_combined_arms_penalty(armed_def),
         attacker_size=max((u.stacking_points for u in armed_atk), default=0),  # 15.53
-        defender_size=max((u.stacking_points for u in armed_def), default=0))
+        defender_size=max((u.stacking_points for u in defenders), default=0))  # incl. pinned (15.12)
     r.emit(EventKind.COMBAT_RESOLVED, side, actor,
            {"target": list(target), "attackers": [u.id for u in armed_atk],
             "defenders": [u.id for u in defenders],
@@ -525,7 +554,9 @@ def _spread_losses(units, total: int) -> list[tuple[str, int]]:
 
 def _record_control(r: _Run) -> None:
     for coord in r.state.terrain.terrain:
-        occ = r.state.units_at(coord)
+        occ = [u for u in r.state.units_at(coord) if u.is_combat]   # only combat units hold ground
+        if not occ:
+            continue
         sides = {u.side for u in occ}
         new = CONTROL_OF[next(iter(sides))] if len(sides) == 1 else r.state.control_of(coord)
         if new != r.state.control_of(coord):
