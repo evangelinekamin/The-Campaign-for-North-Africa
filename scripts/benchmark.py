@@ -264,6 +264,25 @@ def leaderboard(rows: list[dict]) -> None:
               f"{r['reject_rate_pct']:>6}{r['cost_per_game_usd']:>7}")
 
 
+def _ensure_scored(rows: list[dict]) -> list[dict]:
+    """Backfill score fields for rows saved before scoring existed (a mixed old/new
+    result file) so leaderboard + paired ranking don't KeyError. Recomputes per-game
+    combat from the raw losses, using close_assaults as the axis_assaults proxy."""
+    for r in rows:
+        gl = r.get("games_detail", [])
+        for g in gl:
+            if "combat" not in g:
+                proxy = {**g, "axis_assaults": g.get("close_assaults", 0),
+                         "defender_strength": g.get("defender_strength", 163)}
+                g.update(_score(proxy, 12))
+        if gl and "mean_score" not in r:
+            r["mean_score"] = round(mean(g["score"] for g in gl), 1)
+            r["mean_combat"] = round(mean(g["combat"] for g in gl), 3)
+            r["mean_clean"] = round(mean(g["clean"] for g in gl), 3)
+            r["mean_tempo"] = round(mean(g["tempo"] for g in gl), 3)
+    return rows
+
+
 def paired_ranking(rows: list[dict]) -> None:
     """Primary ranking (subagent's rec): matched-seed head-to-head on the combat
     metric. Every entrant plays the same seeds (identical engine dice), so pairing
@@ -349,6 +368,7 @@ def main() -> int:
             rows.append(row)
             _merge_write(args.out, [row])       # crash-safe: persist after each config
     all_rows = json.loads(Path(args.out).read_text())["rows"] if Path(args.out).exists() else rows
+    _ensure_scored(all_rows)
     leaderboard(all_rows)
     paired_ranking(all_rows)
     print(f"\nwrote {args.out}")
