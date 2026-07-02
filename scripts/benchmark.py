@@ -57,6 +57,44 @@ def _strength(state, side: Side) -> int:
     return sum(u.strength for u in state.units if u.side == side)
 
 
+# --- Axis-generalship score (0-125) --------------------------------------------
+# The scenario's real skill is cracking a hard defense with sustained combined arms.
+# advance% saturates (~99% for all) and a naive beeliner invests FASTEST, so scoring
+# on advance/speed rewards NON-fighting -- an adversarial review broke the first
+# attempt (a pacifist marcher and a one-kill farmer out-scored a real assaulter).
+# This rewards DESTROYING the defense efficiently, gates tempo on real combat, and
+# treats advance as a qualifier. Constants calibrated to the measured distribution:
+# D0~163 defender steps; capable models inflict ~45-51 & lose ~64-70; a naive
+# scripted charge nets ~29 (allied_lost - 0.5*axis_lost).
+_LAMBDA = 0.5         # own losses discounted vs enemy destroyed (attacker's loss disadvantage)
+_SCALE = 0.25         # net-destroying this fraction of the defense = full combat score
+_TMIN = 6             # fastest realistic investment turn (measured)
+_FIGHT_FLOOR = 0.20   # tempo counts only above this much real combat (defeats farm-one-kill)
+_CLEAN_CAP = 20.0     # Axis reject% at/above which cleanliness scores 0
+
+
+def _clamp(x: float) -> float:
+    return max(0.0, min(1.0, x))
+
+
+def _score(g: dict, max_turns: int) -> dict:
+    """Per-game generalship score (0-125) + its 0-1 components. combat (net defence
+    destroyed) is primary; clean (order discipline) secondary; tempo (speed) a minor
+    term GATED on having actually fought; advance is a multiplier + a capture bonus."""
+    d0 = max(1, g["defender_strength"])
+    combat = _clamp((g["allied_losses"] - _LAMBDA * g["axis_losses"]) / (_SCALE * d0))
+    axis_orders = g["moves"] + g["axis_assaults"] + g["rejections"]
+    reject_rate = 100 * g["rejections"] / max(1, axis_orders)
+    clean = _clamp(1 - reject_rate / _CLEAN_CAP)
+    tempo = (_clamp((max_turns - g["turn_invested"]) / (max_turns - _TMIN))
+             if combat > _FIGHT_FLOOR else 0.0)
+    adv_mult = 0.5 + 0.5 * g["advance_pct"] / 100
+    capture = 25.0 if g["advance_pct"] >= 100 else 0.0
+    score = adv_mult * 100 * (0.60 * combat + 0.25 * clean + 0.15 * tempo) + capture
+    return {"combat": round(combat, 3), "clean": round(clean, 3), "tempo": round(tempo, 3),
+            "reject_rate_game": round(reject_rate, 1), "score": round(score, 1)}
+
+
 def game_metrics(result) -> dict:
     ev = result.events
 
@@ -81,20 +119,27 @@ def game_metrics(result) -> dict:
     turn_invested = invested if invested is not None else result.final.turn + 1
     axis_lost = _strength(result.initial, Side.AXIS) - _strength(result.final, Side.AXIS)
     allied_lost = _strength(result.initial, Side.ALLIED) - _strength(result.final, Side.ALLIED)
-    return {
+    supply_rejects = sum(v for k, v in reject_reasons.items()
+                         if any(w in k for w in ("supply", "fuel", "ammo")))
+    g = {
         "winner": result.winner.value,
         "advance_pct": advance,
         "turns": result.final.turn,
         "barrages": count(EventKind.BARRAGE_RESOLVED),
         "anti_armor": count(EventKind.ANTI_ARMOR_RESOLVED),
         "close_assaults": count(EventKind.COMBAT_RESOLVED),
+        "axis_assaults": count_axis(EventKind.COMBAT_RESOLVED),   # Axis-initiated only
         "rejections": count_axis(EventKind.ORDER_REJECTED),
         "reject_reasons": reject_reasons,
+        "supply_rejects": supply_rejects,
         "turn_invested": turn_invested,
         "moves": count_axis(EventKind.UNIT_MOVED),
         "axis_losses": axis_lost,
         "allied_losses": allied_lost,
+        "defender_strength": _strength(result.initial, Side.ALLIED),
     }
+    g.update(_score(g, result.final.max_turns))
+    return g
 
 
 def run_model(model: str, games: int, mock: bool, mode: str = "stateless",
@@ -122,7 +167,9 @@ def _aggregate(model: str, per_game: list[dict], usage: dict, mode: str = "state
     n = len(per_game)
     axis_wins = sum(1 for g in per_game if g["winner"] == "AXIS")
     kill_ratio = mean(g["allied_losses"] / max(1, g["axis_losses"]) for g in per_game)
-    orders = sum(g["moves"] + g["close_assaults"] + g["rejections"] for g in per_game)
+    # AXIS-only order denominator (close_assaults counted BOTH sides -- a bug that let
+    # provoking enemy counterattacks lower your reject rate).
+    orders = sum(g["moves"] + g["axis_assaults"] + g["rejections"] for g in per_game)
     reject_rate = round(100 * sum(g["rejections"] for g in per_game) / max(1, orders), 1)
     reasons: dict = {}
     for g in per_game:
@@ -136,11 +183,16 @@ def _aggregate(model: str, per_game: list[dict], usage: dict, mode: str = "state
         "mode": mode,
         "games": n,
         "axis_win_rate": round(100 * axis_wins / n, 1),
+        "mean_score": round(mean(g["score"] for g in per_game), 1),
+        "mean_combat": round(mean(g["combat"] for g in per_game), 3),
+        "mean_clean": round(mean(g["clean"] for g in per_game), 3),
+        "mean_tempo": round(mean(g["tempo"] for g in per_game), 3),
+        "score_spread": [min(g["score"] for g in per_game), max(g["score"] for g in per_game)],
         "mean_advance_pct": round(mean(g["advance_pct"] for g in per_game), 1),
         "best_advance_pct": max(g["advance_pct"] for g in per_game),
         "mean_turn_invested": round(mean(g["turn_invested"] for g in per_game), 1),
         "mean_kill_ratio": round(kill_ratio, 2),
-        "mean_close_assaults": round(mean(g["close_assaults"] for g in per_game), 1),
+        "mean_supply_rejects": round(mean(g["supply_rejects"] for g in per_game), 1),
         "reject_rate_pct": reject_rate,
         "reject_reasons": reasons,
         "llm_calls": usage.get("calls", 0),
@@ -193,15 +245,45 @@ def _extract(prompt: str) -> dict:
 
 
 def leaderboard(rows: list[dict]) -> None:
-    rows = sorted(rows, key=lambda r: r["mean_advance_pct"], reverse=True)
-    print("\n=== LEADERBOARD (Axis on Rommel's Arrival, higher advance = better) ===")
-    hdr = (f"{'model':<26}{'mode':>10}{'adv%':>6}{'invT':>6}{'kill':>6}"
-           f"{'rej%':>6}{'calls':>7}{'$/game':>9}")
+    rows = sorted(rows, key=lambda r: r.get("mean_score", 0), reverse=True)
+    print("\n=== LEADERBOARD (Axis generalship score; combat=net defence destroyed) ===")
+    hdr = (f"{'model':<23}{'mode':>9}{'SCORE':>7}{'cbt':>6}{'cln':>6}{'tmp':>6}"
+           f"{'adv':>5}{'invT':>6}{'rej%':>6}{'$/gm':>7}")
     print(hdr + "\n" + "-" * len(hdr))
     for r in rows:
-        print(f"{r['model'][:25]:<26}{r.get('mode', ''):>10}{r['mean_advance_pct']:>6}"
-              f"{r.get('mean_turn_invested', 0):>6}{r['mean_kill_ratio']:>6}{r['reject_rate_pct']:>6}"
-              f"{r['llm_calls']:>7}{r['cost_per_game_usd']:>9}")
+        print(f"{r['model'][:22]:<23}{r.get('mode', ''):>9}{r.get('mean_score', 0):>7}"
+              f"{r.get('mean_combat', 0):>6}{r.get('mean_clean', 0):>6}{r.get('mean_tempo', 0):>6}"
+              f"{r['mean_advance_pct']:>5.0f}{r.get('mean_turn_invested', 0):>6}"
+              f"{r['reject_rate_pct']:>6}{r['cost_per_game_usd']:>7}")
+
+
+def paired_ranking(rows: list[dict]) -> None:
+    """Primary ranking (subagent's rec): matched-seed head-to-head on the combat
+    metric. Every entrant plays the same seeds (identical engine dice), so pairing
+    cancels the dice luck that a raw composite at small n launders into a point score."""
+    import itertools
+    entries = [(f"{r['model']}/{r.get('mode', '')}", [g["combat"] for g in r.get("games_detail", [])])
+               for r in rows]
+    entries = [(name, c) for name, c in entries if c]
+    if len(entries) < 2:
+        return
+    wins = {name: 0.0 for name, _ in entries}
+    played = {name: 0 for name, _ in entries}
+    for (na, ca), (nb, cb) in itertools.combinations(entries, 2):
+        for i in range(min(len(ca), len(cb))):                  # same index == same seed
+            played[na] += 1
+            played[nb] += 1
+            if ca[i] > cb[i]:
+                wins[na] += 1
+            elif cb[i] > ca[i]:
+                wins[nb] += 1
+            else:
+                wins[na] += 0.5
+                wins[nb] += 0.5
+    print("\n=== PAIRED SAME-SEED RANKING (combat metric win-rate vs the field) ===")
+    for name in sorted(wins, key=lambda k: -wins[k] / max(1, played[k])):
+        print(f"  {name:<42} {100 * wins[name] / max(1, played[name]):>3.0f}%  "
+              f"({wins[name]:.1f}/{played[name]})")
 
 
 def _merge_write(path: str, new_rows: list[dict]) -> list[dict]:
@@ -261,6 +343,7 @@ def main() -> int:
             _merge_write(args.out, [row])       # crash-safe: persist after each config
     all_rows = json.loads(Path(args.out).read_text())["rows"] if Path(args.out).exists() else rows
     leaderboard(all_rows)
+    paired_ranking(all_rows)
     print(f"\nwrote {args.out}")
     return 0
 
