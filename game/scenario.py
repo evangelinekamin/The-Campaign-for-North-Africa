@@ -185,26 +185,37 @@ def rommels_arrival(seed: int = 1941) -> GameState:
     target = coords.to_axial(coords.parse("C4807"))               # Tobruk
     units, supplies = oob.build(sections="ABC")   # corridor only (drops rear Map-D units)
 
-    # Forward supply: the .vsav dumps sit near the start lines, so the spread-out
-    # Commonwealth screen in Cyrenaica and the Italian infantry deep in the west
-    # can be stranded > 1/2 CPA from a dump -- unable to move OR fight (32.12/32.23).
-    # Co-locate a dump with each concentration so the defence works and the OOB
-    # isn't inert (32.15: a dump per force concentration).
-    from .hexmap import distance as _dist
-    cyr = [u for u in units if u.side == Side.ALLIED and 18 <= _dist(u.hex, target) <= 55]
-    ital = [u for u in units if u.id.startswith("IT") and not u.is_tank and u.barrage == 0]
-    if cyr:
-        supplies.append(SupplyUnit("AL-Dump-Cyr", Side.ALLIED, cyr[len(cyr) // 2].hex, ammo=40, fuel=60))
-    if ital:
-        supplies.append(SupplyUnit("AX-Dump-It", Side.AXIS, ital[len(ital) // 2].hex, ammo=40, fuel=60))
-
     # A hex where a land unit stands is land: coastal ports (El Agheila, Tobruk,
-    # ...) colour-sample as sea, so add every occupied hex as coastal CLEAR.
+    # ...) colour-sample as sea, so add every occupied hex as coastal CLEAR + connect.
     terrain = dict(tmap.terrain)
     for piece in (*units, *supplies):
         terrain.setdefault(piece.hex, Terrain.CLEAR)
     _connect_pieces(terrain, [p.hex for p in (*units, *supplies)])
     tmap = replace(tmap, terrain=terrain)
+
+    # Forward supply (32.15: a dump per force concentration): the .vsav dumps sit on
+    # the start lines, so spread-out units (the Cyrenaica screen, the Italian rear)
+    # can be stranded > 1/2 CPA from a dump -- unable to move OR fight (32.12/32.23).
+    # Add dumps at still-stranded units until every combat unit can actually trace
+    # both fuel AND ammo -- using the real supply trace, not a hex proxy, so costly
+    # terrain can't hide a gap. New dumps co-locate on existing unit hexes (already
+    # land + connected), so the terrain needs no rework.
+    from . import supply as _supply
+
+    def _unsupplied(side: Side) -> list[Unit]:
+        ps = GameState(turn=1, max_turns=12, phase=Phase.MOVEMENT, active_side=Side.SYSTEM,
+                       seed=seed, weather="clear", move_modifier=0, vp=VP(), terrain=tmap,
+                       control={}, units=tuple(units), target_hex=target, supplies=tuple(supplies),
+                       consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 0, "FUEL": 0})
+        return [u for u in units if u.side == side and u.is_combat and not (
+            _supply.plan_draw(ps, u, _supply.FUEL, _supply.fuel_cost(u)) is not None
+            and _supply.plan_draw(ps, u, _supply.AMMO, _supply.ammo_cost(u, phasing=True)) is not None)]
+
+    for side, prefix in ((Side.AXIS, "AX"), (Side.ALLIED, "AL")):
+        i = 0
+        while (stranded := _unsupplied(side)) and i < 40:
+            supplies.append(SupplyUnit(f"{prefix}-Fwd{i}", side, stranded[0].hex, ammo=40, fuel=60))
+            i += 1
 
     # A supply dump beside a road is on the supply net: add a short road spur so
     # units can trace to it along the road (rule 32.16 trace is priced as roaded).

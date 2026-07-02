@@ -6,8 +6,8 @@
       "group": "BR 2nd Armoured Division",
       "side": "ALLIED",
       "hex": [
-        45,
-        -4
+        41,
+        3
       ],
       "arrival_turn": 0,
       "role": "tank",
@@ -18,8 +18,8 @@
       "group": "BR 2nd Armoured Division",
       "side": "ALLIED",
       "hex": [
-        46,
-        -4
+        42,
+        3
       ],
       "arrival_turn": 0,
       "role": "tank",
@@ -30,8 +30,8 @@
       "group": "BR 2nd Armoured Division",
       "side": "ALLIED",
       "hex": [
-        45,
-        -3
+        43,
+        1
       ],
       "arrival_turn": 0,
       "role": "tank",
@@ -42,8 +42,8 @@
       "group": "BR 2nd Armoured Division",
       "side": "ALLIED",
       "hex": [
-        46,
-        -3
+        43,
+        2
       ],
       "arrival_turn": 0,
       "role": "artillery"
@@ -53,8 +53,8 @@
       "group": "BR 2nd Armoured Division",
       "side": "ALLIED",
       "hex": [
-        46,
-        -2
+        40,
+        4
       ],
       "arrival_turn": 0,
       "role": "antitank"
@@ -64,8 +64,8 @@
       "group": "BR 2nd Armoured Division",
       "side": "ALLIED",
       "hex": [
-        12,
-        23
+        9,
+        27
       ],
       "arrival_turn": 0,
       "role": "artillery"
@@ -75,8 +75,8 @@
       "group": "AU 9th Australian Division",
       "side": "ALLIED",
       "hex": [
-        13,
-        23
+        11,
+        26
       ],
       "arrival_turn": 0,
       "role": "antitank"
@@ -86,8 +86,8 @@
       "group": "AU 9th Australian Division",
       "side": "ALLIED",
       "hex": [
-        14,
-        62
+        15,
+        66
       ],
       "arrival_turn": 0,
       "role": "infantry"
@@ -98,7 +98,7 @@
       "side": "ALLIED",
       "hex": [
         15,
-        62
+        65
       ],
       "arrival_turn": 0,
       "role": "infantry"
@@ -108,8 +108,8 @@
       "group": "BR 2nd Armoured Division",
       "side": "ALLIED",
       "hex": [
-        17,
-        62
+        16,
+        65
       ],
       "arrival_turn": 0,
       "role": "artillery"
@@ -119,8 +119,8 @@
       "group": "BR 2nd Armoured Division",
       "side": "ALLIED",
       "hex": [
-        18,
-        62
+        16,
+        66
       ],
       "arrival_turn": 0,
       "role": "artillery"
@@ -130,8 +130,8 @@
       "group": "BR 2nd Armoured Division",
       "side": "ALLIED",
       "hex": [
-        14,
-        63
+        15,
+        64
       ],
       "arrival_turn": 0,
       "role": "antitank"
@@ -142,8 +142,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        39,
-        -12
+        47,
+        -5
       ],
       "arrival_turn": 0,
       "role": "tank",
@@ -155,8 +155,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        40,
-        -12
+        46,
+        -4
       ],
       "arrival_turn": 0,
       "role": "tank",
@@ -168,8 +168,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        41,
-        -12
+        47,
+        -4
       ],
       "arrival_turn": 0,
       "role": "tank",
@@ -181,8 +181,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        42,
-        -12
+        48,
+        -6
       ],
       "arrival_turn": 0,
       "role": "tank",
@@ -194,8 +194,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        43,
-        -12
+        48,
+        -5
       ],
       "arrival_turn": 0,
       "role": "tank",
@@ -207,8 +207,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        44,
-        -12
+        45,
+        -4
       ],
       "arrival_turn": 0,
       "role": "motor_infantry"
@@ -220,7 +220,7 @@
       "nationality": "IT",
       "hex": [
         45,
-        -12
+        -3
       ],
       "arrival_turn": 0,
       "role": "motor_infantry"
@@ -232,7 +232,7 @@
       "nationality": "IT",
       "hex": [
         46,
-        -12
+        -3
       ],
       "arrival_turn": 0,
       "role": "motor_infantry"
@@ -244,7 +244,7 @@
       "nationality": "IT",
       "hex": [
         47,
-        -12
+        -3
       ],
       "arrival_turn": 0,
       "role": "antitank"
@@ -255,8 +255,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        41,
-        -11
+        48,
+        -7
       ],
       "arrival_turn": 0,
       "role": "recon"
@@ -267,8 +267,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        42,
-        -11
+        49,
+        -6
       ],
       "arrival_turn": 0,
       "role": "artillery"
@@ -279,8 +279,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        36,
-        -18
+        37,
+        -14
       ],
       "arrival_turn": 0,
       "role": "infantry"
@@ -291,8 +291,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        37,
-        -18
+        36,
+        -14
       ],
       "arrival_turn": 0,
       "role": "infantry"
@@ -303,8 +303,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        38,
-        -18
+        37,
+        -15
       ],
       "arrival_turn": 0,
       "role": "infantry"
@@ -315,8 +315,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        39,
-        -18
+        38,
+        -15
       ],
       "arrival_turn": 0,
       "role": "artillery"
@@ -327,8 +327,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        40,
-        -18
+        38,
+        -14
       ],
       "arrival_turn": 0,
       "role": "infantry"
@@ -339,8 +339,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        41,
-        -18
+        35,
+        -14
       ],
       "arrival_turn": 0,
       "role": "infantry"
@@ -351,8 +351,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        42,
-        -18
+        36,
+        -15
       ],
       "arrival_turn": 0,
       "role": "infantry"
@@ -363,8 +363,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        43,
-        -18
+        37,
+        -16
       ],
       "arrival_turn": 0,
       "role": "artillery"
@@ -375,8 +375,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        34,
-        -17
+        38,
+        -16
       ],
       "arrival_turn": 0,
       "role": "infantry"
@@ -387,8 +387,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        35,
-        -17
+        38,
+        -13
       ],
       "arrival_turn": 0,
       "role": "infantry"
@@ -399,8 +399,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        36,
-        -17
+        39,
+        -16
       ],
       "arrival_turn": 0,
       "role": "infantry"
@@ -411,8 +411,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        37,
-        -17
+        39,
+        -15
       ],
       "arrival_turn": 0,
       "role": "artillery"
@@ -423,8 +423,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        38,
-        -17
+        39,
+        -14
       ],
       "arrival_turn": 0,
       "role": "infantry"
@@ -435,8 +435,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        39,
-        -17
+        35,
+        -15
       ],
       "arrival_turn": 0,
       "role": "infantry"
@@ -447,8 +447,8 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        40,
-        -17
+        36,
+        -16
       ],
       "arrival_turn": 0,
       "role": "infantry"
@@ -459,7 +459,7 @@
       "side": "AXIS",
       "nationality": "IT",
       "hex": [
-        41,
+        37,
         -17
       ],
       "arrival_turn": 0,
@@ -470,8 +470,8 @@
       "group": "GE 5th Light Panzer Division",
       "side": "AXIS",
       "hex": [
-        43,
-        -5
+        44,
+        -9
       ],
       "arrival_turn": 0,
       "role": "tank",
@@ -482,8 +482,8 @@
       "group": "GE 5th Light Panzer Division",
       "side": "AXIS",
       "hex": [
-        44,
-        -5
+        46,
+        -8
       ],
       "arrival_turn": 0,
       "role": "tank",
@@ -494,8 +494,8 @@
       "group": "GE 5th Light Panzer Division",
       "side": "AXIS",
       "hex": [
-        44,
-        -3
+        46,
+        -7
       ],
       "arrival_turn": 0,
       "role": "motor_infantry"
@@ -505,8 +505,8 @@
       "group": "GE 5th Light Panzer Division",
       "side": "AXIS",
       "hex": [
-        44,
-        -2
+        46,
+        -6
       ],
       "arrival_turn": 0,
       "role": "motor_infantry"
@@ -517,7 +517,7 @@
       "side": "AXIS",
       "hex": [
         43,
-        -1
+        -10
       ],
       "arrival_turn": 0,
       "role": "recon"
@@ -527,8 +527,8 @@
       "group": "GE 15th Panzer Division",
       "side": "AXIS",
       "hex": [
-        45,
-        -6
+        47,
+        -8
       ],
       "arrival_turn": 2,
       "role": "recon"
@@ -539,7 +539,7 @@
       "side": "AXIS",
       "hex": [
         46,
-        -6
+        -10
       ],
       "arrival_turn": 3,
       "role": "motor_infantry"
@@ -549,8 +549,8 @@
       "group": "GE 15th Panzer Division",
       "side": "AXIS",
       "hex": [
-        45,
-        -7
+        47,
+        -10
       ],
       "arrival_turn": 3,
       "role": "infantry"
@@ -560,7 +560,7 @@
       "group": "GE 15th Panzer Division",
       "side": "AXIS",
       "hex": [
-        46,
+        47,
         -7
       ],
       "arrival_turn": 4,
@@ -571,8 +571,8 @@
       "group": "GE 15th Panzer Division",
       "side": "AXIS",
       "hex": [
-        45,
-        -5
+        48,
+        -10
       ],
       "arrival_turn": 5,
       "role": "motor_infantry"
@@ -582,8 +582,8 @@
       "group": "GE 15th Panzer Division",
       "side": "AXIS",
       "hex": [
-        46,
-        -5
+        48,
+        -8
       ],
       "arrival_turn": 5,
       "role": "motor_infantry"
@@ -593,8 +593,8 @@
       "group": "GE 15th Panzer Division",
       "side": "AXIS",
       "hex": [
-        47,
-        -6
+        46,
+        -5
       ],
       "arrival_turn": 5,
       "role": "artillery"
@@ -604,8 +604,8 @@
       "group": "GE 15th Panzer Division",
       "side": "AXIS",
       "hex": [
-        46,
-        -8
+        47,
+        -11
       ],
       "arrival_turn": 6,
       "role": "tank",
@@ -617,7 +617,7 @@
       "side": "AXIS",
       "hex": [
         47,
-        -7
+        -6
       ],
       "arrival_turn": 7,
       "role": "tank",
@@ -628,8 +628,8 @@
       "group": "GE 15th Panzer Division",
       "side": "AXIS",
       "hex": [
-        47,
-        -5
+        48,
+        -11
       ],
       "arrival_turn": 8,
       "role": "artillery"
@@ -639,8 +639,8 @@
       "group": "BR 2nd Armoured Division",
       "side": "ALLIED",
       "hex": [
-        18,
-        66
+        11,
+        27
       ],
       "arrival_turn": 4,
       "role": "tank",
@@ -651,8 +651,8 @@
       "group": "BR 2nd Armoured Division",
       "side": "ALLIED",
       "hex": [
-        20,
-        66
+        8,
+        28
       ],
       "arrival_turn": 7,
       "role": "tank",
