@@ -52,6 +52,12 @@ PRICES = {
     "deepseek/deepseek-v4-pro":          (0.435, 0.87),
 }
 
+# Route to the fastest HIGH-PRECISION endpoint. Many DeepSeek providers serve at
+# 15-20 tok/s and stall runs; and fp4 (4-bit) endpoints vary model quality game-to-
+# game, which would be unfair for a benchmark. Sorting by throughput needs no
+# provider list to maintain; the quantization floor keeps quality consistent.
+FAST_PROVIDER = {"sort": "throughput", "quantizations": ["fp8", "bf16", "fp16"]}
+
 
 def _strength(state, side: Side) -> int:
     return sum(u.strength for u in state.units if u.side == side)
@@ -148,7 +154,8 @@ def run_model(model: str, games: int, mock: bool, mode: str = "stateless",
     Returns the aggregate row. A fresh client per model accumulates usage; the
     policy is reset between games so stateful/hybrid memory doesn't leak across them."""
     client = (MockClient(_mock_axis) if mock else
-              OpenRouterClient(model, reasoning_effort=reasoning, timeout=45, retries=1))
+              OpenRouterClient(model, reasoning_effort=reasoning, timeout=45, retries=1,
+                               provider=FAST_PROVIDER))
     axis = LLMPolicy(Side.AXIS, client, mode=mode)
     defender = ScriptedPolicy(Side.ALLIED)
     per_game = []

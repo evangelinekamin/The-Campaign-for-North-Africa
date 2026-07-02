@@ -45,12 +45,16 @@ class OpenRouterClient:
     URL = "https://openrouter.ai/api/v1/chat/completions"
 
     def __init__(self, model: str, *, temperature: float = 0.3, timeout: float = 60.0,
-                 retries: int = 2, reasoning_effort: str | None = None):
+                 retries: int = 2, reasoning_effort: str | None = None,
+                 provider: dict | None = None):
         self.model = model
         self.temperature = temperature
         self.timeout = timeout
         self.retries = retries
         self.reasoning_effort = reasoning_effort   # "low"/"medium"/"high" or None (provider default)
+        # OpenRouter provider routing (e.g. {"sort": "throughput"} to always pick the
+        # fastest live endpoint -- many DeepSeek providers run 15-20 tok/s and stall runs).
+        self.provider = provider
         self.calls = 0                 # usage accumulators (for benchmarking cost)
         self.failures = 0
         self.prompt_tokens = 0
@@ -72,6 +76,8 @@ class OpenRouterClient:
         }
         if self.reasoning_effort:
             payload["reasoning"] = {"effort": self.reasoning_effort}
+        if self.provider:
+            payload["provider"] = self.provider
         body = json.dumps(payload).encode()
         for attempt in range(self.retries + 1):
             try:
