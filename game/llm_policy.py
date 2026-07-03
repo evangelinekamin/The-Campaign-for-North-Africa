@@ -94,10 +94,12 @@ class LLMPolicy(ScriptedPolicy):
 
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
         obs = observe(state, side)
-        if self.mode == "briefing":
-            text = self.client.complete(self._briefing(state) + "\n"
-                                        + build_movement_prompt(obs) + _INTENT_INSTRUCTION)
-            self._update_intent(text, state.turn)
+        if self.mode in ("briefing", "brief_facts"):
+            full = self.mode == "briefing"                       # brief_facts = Section A only
+            prompt = self._briefing(state, full) + "\n" + build_movement_prompt(obs)
+            text = self.client.complete(prompt + (_INTENT_INSTRUCTION if full else ""))
+            if full:
+                self._update_intent(text, state.turn)
             return parse_moves(text)
         return parse_moves(self._ask(build_movement_prompt(obs)))
 
@@ -105,17 +107,17 @@ class LLMPolicy(ScriptedPolicy):
         obs = observe(state, side)
         if not obs.get("attack_options"):
             return []              # nothing adjacent to assault -- skip the API call entirely
-        if self.mode == "briefing":
-            return parse_attacks(self.client.complete(self._briefing(state) + "\n"
-                                                      + build_combat_prompt(obs)))
+        if self.mode in ("briefing", "brief_facts"):
+            prompt = self._briefing(state, self.mode == "briefing") + "\n" + build_combat_prompt(obs)
+            return parse_attacks(self.client.complete(prompt))
         return parse_attacks(self._ask(build_combat_prompt(obs)))
 
     # --- briefing mode: engine-authored FACTS + model-authored evolving INTENT -------
 
-    def _briefing(self, state: GameState) -> str:
-        return ("COMMANDER'S BRIEFING (staff facts since your last orders -- trust these):\n"
-                + "\n".join(self._section_a(state)) + "\n"
-                + "\n".join(self._section_b(state.turn)))
+    def _briefing(self, state: GameState, full: bool = True) -> str:
+        head = ("COMMANDER'S BRIEFING (staff facts since your last orders -- trust these):\n"
+                + "\n".join(self._section_a(state)))
+        return head + "\n" + "\n".join(self._section_b(state.turn)) if full else head
 
     def _section_a(self, state: GameState) -> list[str]:
         """Engine-authored, deterministic, identical quality for every model."""

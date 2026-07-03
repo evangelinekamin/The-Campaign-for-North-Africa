@@ -50,6 +50,8 @@ PRICES = {
     "openai/gpt-5.4-mini":               (0.75, 4.50),
     "deepseek/deepseek-v4-flash":        (0.09, 0.18),
     "deepseek/deepseek-v4-pro":          (0.435, 0.87),
+    "qwen/qwen3.7-max":                  (1.25, 3.75),
+    "z-ai/glm-5.2":                      (0.93, 3.00),
 }
 
 # Route to the fastest live endpoint. Many DeepSeek providers serve at 15-20 tok/s and
