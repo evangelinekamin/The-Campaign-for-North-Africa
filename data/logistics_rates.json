@@ -34,7 +34,7 @@
       "german_tank": {"pz1": 2, "pz2": 2, "pz3e": 3, "pz3h": 3, "pz3j": 3, "pz4d": 4, "pz4e": 4, "pz4f2": 4},
       "german_gun_typical": 1,
       "german_sp_gun": 2,
-      "commonwealth_tank": {"a9": 2, "a10": 2, "a13": 2, "churchill2": 7, "crusader1": 3, "crusader2": 3, "crusader3": 3, "grant": 6, "mk6_light": 1, "matilda2": 3, "sherman": 6, "stuart": 4, "valentine2": 3},
+      "commonwealth_tank": {"a9": 2, "a10": 2, "a13": 2, "churchill2": 7, "crusader1": 3, "crusader2": 3, "crusader3": 3, "grant": 7, "mk6_light": 1, "matilda2": 3, "sherman": 6, "stuart": 4, "valentine2": 3},
       "commonwealth_gun_typical": 1,
       "commonwealth_sp_gun": 3,
       "italian_tank": {"cv33": 1, "l6": 2, "m11": 2, "m13": 2, "m14": 2},
@@ -209,6 +209,23 @@
     }
   },
 
+  "port_supply_tonnage_55_3": {
+    "_comment": "[55.3] PORT CAPACITY AND EFFICIENCY LEVEL CHART -- the MAXIMUM TONNAGE (supply) column, read directly from the scanned chart (PDF page 138/139, book-chart page 15; this column did NOT survive OCR into ports_55_3.efficiency_and_stacking, which only carried the Stacking-Point in/out schedule). Per 55.13/55.14 this is the tonnage of supplies (fuel/ammo/stores/water) a port may ship IN and/or OUT per Operations Stage AT PEAK EFFICIENCY; convert tonnage<->Points via equivalent_weights_54_5. A port reduced to Efficiency Level L of max M ships M/L -- i.e. L/M -- of this tonnage, rounded UP to the nearest ton (55.14; Benghazi example: 2500 t, max eff 3, reduced to 1 => 834 t). The rulebook stresses the stacking-point and tonnage schedules are INDEPENDENT (they do not gate each other), and that Axis-convoy replacement points off-load by the stacking-point schedule, not tonnage. All values below read cleanly; none are FLAGGED. efficiency_level is the same rating carried in ports_55_3.efficiency_and_stacking and is repeated here so the 55.14 tonnage-reduction math is self-contained.",
+    "max_supply_tonnage_per_opstage": {
+      "tripoli":      {"tons": 15000, "efficiency_level": 10},
+      "bizerta":      {"tons": 3333,  "efficiency_level": 10, "note": "Axis-unusable before Game-Turn 35"},
+      "alexandria":   {"tons": 15000, "efficiency_level": 10},
+      "tobruk":       {"tons": 1700,  "efficiency_level": 5, "note": "starts below eff 5 -- San Giorgio partially blocks harbour"},
+      "benghazi":     {"tons": 2500,  "efficiency_level": 3, "note": "matches the 55.14 worked example"},
+      "mersa_matruh": {"tons": 250,   "efficiency_level": 1},
+      "bardia":       {"tons": 400,   "efficiency_level": 1},
+      "sollum":       {"tons": 250,   "efficiency_level": 1},
+      "derna":        {"tons": 300,   "efficiency_level": 1},
+      "all_others":   {"tons": 100,   "efficiency_level": 1}
+    },
+    "reduction_rule_55_14": "at efficiency level L of maximum M, tonnage = ceil(max_tons * L / M)"
+  },
+
   "axis_naval_convoys_56": {
     "_comment": "The Axis Naval Convoy System (chapter 56). Convoy CAPACITY is a TONNAGE that must be converted to supply Points via [54.5]. Replacement Points and Truck/Motorization Points shipped by convoy draw VARIABLE tonnage from the Axis Replacement Pool (see [54.5] and 56 -- there is NO fixed per-point tonnage for those). ENGINE PROXY: game/scenario.py _rommel_convoys ships whole Supply-Unit loads / port-loads on a static timetable; the 56.4 monthly level and 56.5 tonnage-by-die are not modelled.",
     "convoy_level_chart_56_4": {
@@ -230,6 +247,38 @@
     },
     "air_distance_chart_56_18": {
       "_comment": "[56.18] AXIS NAVAL CONVOY AIR DISTANCE CHART -- distance in hexes from an air-base box (Sicily/Italy/Crete/Malta/Benghazi/Derna/Tobruk) to each shipping lane's Rally Point, for interdiction range checks. Not a logistics MAGNITUDE (it gates air missions against convoys); recorded as a reference only. Lanes: 1 Sicily->Bizerta, 2 Sicily->Tripoli, 3 Italy->Benghazi, 4 Greece->Benghazi, 5 Greece->Tobruk, 6 Italy->Tobruk. Full grid in docs/rules/90 lines ~173-188."
+    }
+  },
+
+  "scenario_61_desert_fox_initial_supply": {
+    "_comment": "Initial supply placement and port states for the Desert Fox scenario group (docs/rules/61-scenario-group-two-the-desert-fox.md). DATA ONLY: the engine's game/scenario.py currently seeds proxy dumps/ports (see supply_dump_capacity_54_12.engine_proxy_dump_seeds and ports_55_3.engine_proxy). The percentage figures are PLACEMENT constraints on how the pool is split across dumps, not consumption rates. Line numbers cite the current markdown transcription.",
+    "axis_dump_split_61_44": {
+      "_comment": "[61.44] Supply (docs/rules/61 line 196): the Axis Player divides this pool among his THREE ACTIVE dumps (he receives five dumps total, two of which are Dummies -- line 194); no more than 50% of each commodity may sit at any one dump.",
+      "fuel": 9600, "ammo": 2500, "stores": 950, "water": 1100,
+      "active_dumps": 3, "max_percent_per_dump": 50
+    },
+    "axis_tripoli_builtin_61_44": {
+      "_comment": "[61.44] (line 198): Tripoli box built-in supplies, in addition to the dump split above.",
+      "fuel": 3000, "ammo": 1500, "stores": 500
+    },
+    "commonwealth_dump_split_61_36": {
+      "_comment": "[61.36] Supply (line 112): the Commonwealth Player divides this pool among his NINE Dumps (he receives nine Dumps plus three Dummy Dumps -- line 104); no more than 25% of each item at any one dump, and every ACTUAL dump must hold at least 50 of each item.",
+      "fuel": 2550, "ammo": 1700, "stores": 1600,
+      "dumps": 9, "max_percent_per_dump": 25, "min_per_item_per_actual_dump": 50
+    },
+    "commonwealth_tobruk_builtin_61_36": {
+      "_comment": "[61.36] (line 110): Tobruk built-in supplies (Tobruk is itself a supply dump -- line 104), in addition to the dump split.",
+      "fuel": 500, "ammo": 1500, "stores": 1000
+    },
+    "commonwealth_benghazi_builtin_61_36": {
+      "_comment": "[61.36] (line 108): Benghazi built-in supplies (Benghazi is also a supply dump); Benghazi additionally holds 10 Points of Italian Prisoners, a POW Camp, and one Commonwealth Guard.",
+      "fuel": 100, "ammo": 50, "stores": 150
+    },
+    "initial_port_states_61_6": {
+      "_comment": "[61.6] Construction on the map at start (line 210): all ports begin at their full (listed 55.3) Efficiency Level EXCEPT the two below -- Benghazi scuttled to zero, Tobruk at seven with the San Giorgio still blocking the harbour. FLAG: Tobruk's scenario start of 7 exceeds the 55.3 listed maximum of 5 (and the -3 San Giorgio penalty per 55.25 is unaccounted for); transcribed faithfully verbatim as the rulebook states it -- do not silently reconcile.",
+      "benghazi_efficiency": 0,
+      "tobruk_efficiency": 7,
+      "all_other_ports": "full listed 55.3 efficiency level"
     }
   }
 }
