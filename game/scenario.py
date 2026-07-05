@@ -17,9 +17,9 @@ from dataclasses import replace
 
 from . import cna_map, coords, oob
 from .events import Phase, Side
-from .hexmap import neighbors
+from .hexmap import distance, neighbors
 from .movement import TerrainMap, edge
-from .state import GameState, StepRecord, SupplyUnit, Unit, VP
+from .state import Convoy, GameState, StepRecord, SupplyUnit, Unit, VP
 from .terrain import Hexside, Mobility, Terrain
 
 LENGTH = 8
@@ -241,6 +241,14 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
                 supplies.append(SupplyUnit(f"{prefix}-Fwd{i}", side, stranded[0].hex, ammo=40, fuel=60))
                 i += 1
 
+    # Tobruk sea lifeline (rules 30/56.3/56.28/32.36): a supply dump built into the
+    # port, co-located ON the objective (the uncapturable MAJOR_CITY, 15.82). The
+    # garrison traces to it at distance 0, and the per-turn ferry (below) refills it,
+    # so the fortress can always draw Close-Assault ammunition and never starves out
+    # (15.15). Placed here rather than reusing the adjacent AL-Dump#3 (which the Axis
+    # can overrun) makes the lifeline robust.
+    supplies.append(SupplyUnit("AL-Tobruk", Side.ALLIED, target, ammo=40, fuel=60))
+
     # A supply dump beside a road is on the supply net: add a short road spur so
     # units can trace to it along the road (rule 32.16 trace is priced as roaded).
     road_hexes = {c for e in tmap.roads for c in e}
@@ -249,15 +257,50 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
     if spurs:
         tmap = replace(tmap, roads=tmap.roads | spurs)
 
+    max_turns = 12
+    convoys = _rommel_convoys(supplies, target, max_turns)
     initial = {"AMMO": sum(s.ammo for s in supplies),
                "FUEL": sum(s.fuel for s in supplies)}
     return GameState(
-        turn=1, max_turns=12, phase=Phase.WEATHER, active_side=Side.SYSTEM,
+        turn=1, max_turns=max_turns, phase=Phase.WEATHER, active_side=Side.SYSTEM,
         seed=seed, weather="clear", move_modifier=0, vp=VP(),
         terrain=tmap, control={}, units=tuple(units), target_hex=target,
         supplies=tuple(supplies), consumed={"AMMO": 0, "FUEL": 0},
-        initial_supply=initial,
+        initial_supply=initial, convoys=convoys,
     )
+
+
+def _rommel_convoys(supplies, target, max_turns: int) -> tuple[Convoy, ...]:
+    """The Rommel's Arrival supply SOURCE as a static, deterministic timetable (56.2:
+    'reflect Axis supplies as they actually occurred'). Three lanes, each landing
+    whole Supply Units into an EXISTING destination dump (capped at 40/60, so a full
+    dump lands nothing -- the faucet only makes good what was drawn down):
+
+      - SEA-TOBRUK (56.3/30): the Tobruk ferry, every game-turn, feeding AL-Tobruk --
+        the load-bearing lifeline that un-breaks the benchmark.
+      - CW-RAILHEAD (rule 57): Cairo's rail always refills the rear Egyptian dump; the
+        bottleneck is hauling it forward (trucks are CHUNK 4), so this is lean here.
+      - Axis lane "1" (56.11): a modest Tripoli/Benghazi rear faucet on the 32.43 +2
+        cadence -- deliberately kept lean so scarcity still bites the desert advance.
+
+    Destinations are chosen by geography (rearmost Axis dump; easternmost CW dump)
+    so the timetable is robust to the OOB's generated dump ids."""
+    axis_dumps = [s for s in supplies if s.side == Side.AXIS]
+    cw_rear = [s for s in supplies if s.side == Side.ALLIED and s.id != "AL-Tobruk"]
+    turns = range(1, max_turns + 1)
+
+    convoys: list[Convoy] = [
+        Convoy(f"ferry-t{t}", Side.ALLIED, t, "SEA-TOBRUK", "AL-Tobruk",
+               {"AMMO": 40, "FUEL": 60}) for t in turns]
+    if cw_rear:
+        railhead = max(cw_rear, key=lambda s: (distance(s.hex, target), s.id))
+        convoys += [Convoy(f"rail-t{t}", Side.ALLIED, t, "CW-RAILHEAD", railhead.id,
+                           {"AMMO": 40, "FUEL": 60}) for t in turns]
+    if axis_dumps:
+        rear = max(axis_dumps, key=lambda s: (distance(s.hex, target), s.id))
+        convoys += [Convoy(f"axis-l1-t{t}", Side.AXIS, t, "1", rear.id,
+                           {"AMMO": 40, "FUEL": 60}) for t in range(2, max_turns + 1, 2)]
+    return tuple(convoys)
 
 
 def siege_of_tobruk(seed: int = 1941) -> GameState:

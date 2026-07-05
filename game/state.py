@@ -113,6 +113,25 @@ class SupplyUnit:
 
 
 @dataclass(frozen=True, slots=True)
+class Convoy:
+    """A scheduled naval-convoy delivery (rules 48/56) -- the supply SOURCE, the
+    exact dual of the SUPPLY_CONSUMED drain. A static timetable entry (the twin of
+    Unit.arrival_turn): on its arrival_turn it lands whole Supply Units of cargo at
+    a destination dump. `lane` is a legible label ("1".."6" Axis convoy lanes 56.11,
+    "SEA-TOBRUK" the Tobruk ferry 56.3, "CW-RAILHEAD" the Cairo-forwarded rail 57);
+    `dest` is the destination dump id; `cargo` maps commodity -> points
+    ({"AMMO": 40, "FUEL": 60}). The die-rolled tonnage-planning layer (56.21) and
+    interdiction (56.13/41.6) are later refinements; this is the deterministic
+    56.2 timetable ("reflect Axis supplies as they actually occurred")."""
+    id: str
+    side: Side
+    arrival_turn: int
+    lane: str
+    dest: str
+    cargo: dict
+
+
+@dataclass(frozen=True, slots=True)
 class GameState:
     turn: int
     max_turns: int
@@ -128,13 +147,18 @@ class GameState:
     target_hex: Coord
     supplies: tuple[SupplyUnit, ...]
     consumed: dict                 # commodity -> int spent so far ("AMMO"/"FUEL")
-    initial_supply: dict           # commodity -> int total at t0 (conservation check)
+    initial_supply: dict           # commodity -> int total EVER INTRODUCED (t0 dumps +
+                                   # every SUPPLY_ARRIVED faucet); conservation check
     # Siege of Tobruk (rule 25.14 / 25.16): when siege_rules is on, artillery barrage
     # batters fortifications down. fort_levels is the dynamic overlay of reduced
     # levels (hex -> current level); an absent hex reads its static base from
     # terrain.fortifications. Default OFF / empty keeps the canonical benchmark exact.
     siege_rules: bool = False
     fort_levels: dict = field(default_factory=dict)
+    # Naval-convoy timetable (rules 48/56): the supply SOURCE. Default () keeps every
+    # convoy-less scenario byte-identical; the engine fires the faucet only on a
+    # convoy's arrival_turn (game.engine._naval_convoys).
+    convoys: tuple[Convoy, ...] = ()
 
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:

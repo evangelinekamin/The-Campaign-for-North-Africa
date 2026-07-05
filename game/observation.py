@@ -177,4 +177,13 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
         ],
         "enemy_sightings": sorted(sightings.values(), key=lambda s: s["hex"]),
         "attack_options": attack_options,
+        # Incoming supply on this side's convoy timetable (rules 48/56/57): the
+        # Quartermaster's countdown -- 'the shells land turn 6 on lane 1' -- so
+        # rationing fuel now vs the next arrival is an actionable decision.
+        "pending_convoys": [
+            {"lane": c.lane, "eta": c.arrival_turn - state.turn,
+             "dest": c.dest, "cargo": dict(c.cargo)}
+            for c in sorted(state.convoys, key=lambda c: (c.arrival_turn, c.id))
+            if c.side == side and c.arrival_turn >= state.turn
+        ][:REACH_LIMIT],
     }

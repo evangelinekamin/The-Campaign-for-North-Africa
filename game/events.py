@@ -28,15 +28,16 @@ class Control(str, Enum):
 
 class Phase(str, Enum):
     WEATHER = "WEATHER"
+    LOGISTICS = "LOGISTICS"        # naval-convoy arrival (rule 48 V.C.7/V.D); SYSTEM-owned
     MOVEMENT = "MOVEMENT"
     COMBAT = "COMBAT"
     RECORD = "RECORD"
 
 
-# System owns WEATHER and RECORD; the active side's Front Commander owns
+# System owns WEATHER, LOGISTICS and RECORD; the active side's Front Commander owns
 # MOVEMENT and COMBAT. This is the seam the orchestrator uses to decide which
 # role/agent to invoke per phase (brief §4.3).
-SYSTEM_PHASES = (Phase.WEATHER, Phase.RECORD)
+SYSTEM_PHASES = (Phase.WEATHER, Phase.LOGISTICS, Phase.RECORD)
 
 
 class EventKind(str, Enum):
@@ -48,6 +49,12 @@ class EventKind(str, Enum):
     UNIT_RETREATED = "UNIT_RETREATED"
     SUPPLY_MOVED = "SUPPLY_MOVED"
     SUPPLY_CONSUMED = "SUPPLY_CONSUMED"
+    # Naval-convoy faucet (rules 48/56). SUPPLY_ARRIVED is the LOAD-BEARING dual of
+    # SUPPLY_CONSUMED: it tops up a dump with the (post-cap) landed cargo and raises
+    # initial_supply by the same qty, so conservation holds untouched. CONVOY_CANCELLED
+    # (56.15: a convoy to an enemy-captured port never sails) is a marker / no-op fold.
+    SUPPLY_ARRIVED = "SUPPLY_ARRIVED"
+    CONVOY_CANCELLED = "CONVOY_CANCELLED"
     BARRAGE_RESOLVED = "BARRAGE_RESOLVED"
     ANTI_ARMOR_RESOLVED = "ANTI_ARMOR_RESOLVED"
     COMBAT_RESOLVED = "COMBAT_RESOLVED"

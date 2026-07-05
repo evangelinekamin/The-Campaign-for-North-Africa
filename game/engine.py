@@ -94,6 +94,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
     while True:
         _weather(r)
         _reinforcements(r)
+        _naval_convoys(r)                               # V.C.7 + V.D: convoy arrival (SYSTEM)
         for side in (Side.AXIS, Side.ALLIED):
             _debrief(side)                              # enemy turn + own last combat
             r.go(Phase.MOVEMENT, side)
@@ -127,6 +128,44 @@ def _reinforcements(r: _Run) -> None:
         if u.arrival_turn == r.state.turn and u.alive:
             r.emit(EventKind.REINFORCEMENT_ARRIVED, u.side, "SYSTEM",
                    {"unit_id": u.id, "hex": list(u.hex), "turn": r.state.turn})
+
+
+DUMP_CAP: dict[str, int] = {"AMMO": 40, "FUEL": 60}   # rule 32.15 (becomes the 54.12 port cap in CHUNK 3)
+
+
+def interdict(convoy, state: GameState, rng) -> dict:
+    """Commonwealth attrition of a convoy in transit (56.13/41.6). CHUNK 1: the ferry
+    is invulnerable -- the cargo arrives verbatim. This is the seam CHUNK 6 fills with
+    the 32.66 Naval Convoy Bombing chart + Mediterranean-Fleet suppression, emitting
+    CONVOY_INTERDICTED beside a reduced SUPPLY_ARRIVED (56.65B min-1-point rule)."""
+    return dict(convoy.cargo)
+
+
+def _naval_convoys(r: _Run) -> None:
+    """Naval Convoy Arrival (rule 48 V.C.7 Tactical Shipping + V.D Convoy Arrival): the
+    supply SOURCE lands each due convoy's cargo into its destination dump, capped at the
+    dump capacity (32.15 -- overflow is simply never credited, a miniature port throttle,
+    CHUNK 3 makes it the real 55.14 efficiency gauge). A convoy to an enemy-captured port
+    never sails (56.15). Fires ONLY when convoys are due this game-turn, so every convoy-
+    less scenario stays byte-identical (no Phase.LOGISTICS is emitted)."""
+    due = [c for c in r.state.convoys if c.arrival_turn == r.state.turn]
+    if not due:
+        return
+    r.go(Phase.LOGISTICS, Side.SYSTEM)
+    for c in sorted(due, key=lambda c: c.id):           # deterministic arrival order
+        dump = r.state.supply(c.dest)
+        enemy_ctrl = CONTROL_OF[_other(c.side)]
+        if dump is None or r.state.control_of(dump.hex) == enemy_ctrl:   # 56.15
+            r.emit(EventKind.CONVOY_CANCELLED, c.side, "SYSTEM",
+                   {"convoy_id": c.id, "lane": c.lane, "dest": c.dest, "reason": "port captured"})
+            continue
+        cargo = interdict(c, r.state, r.rng)            # CHUNK 1: identity -> dict(c.cargo)
+        landed = {k: min(DUMP_CAP.get(k, v), getattr(dump, k.lower()) + v) - getattr(dump, k.lower())
+                  for k, v in cargo.items()}
+        landed = {k: q for k, q in landed.items() if q > 0}
+        if landed:                                      # nothing to land into a full dump
+            r.emit(EventKind.SUPPLY_ARRIVED, c.side, "SYSTEM",
+                   {"supply_id": c.dest, "cargo": landed, "lane": c.lane, "convoy_id": c.id})
 
 
 def _weather(r: _Run) -> None:

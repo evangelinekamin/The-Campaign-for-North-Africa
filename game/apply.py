@@ -18,9 +18,23 @@ def apply(state: GameState, event: Event) -> GameState:
     if k in (EventKind.GAME_INITIALIZED, EventKind.ORDER_REJECTED,
              EventKind.COMBAT_RESOLVED, EventKind.BARRAGE_RESOLVED,
              EventKind.ANTI_ARMOR_RESOLVED, EventKind.REINFORCEMENT_ARRIVED,
+             EventKind.CONVOY_CANCELLED,
              EventKind.STAFF_INTENT, EventKind.STAFF_PROPOSAL, EventKind.STAFF_CONSTRAINT,
              EventKind.STAFF_ADJUDICATION, EventKind.STAFF_DISSENT):
         return state  # markers / audit records — a reinforcement is on-map by turn>=arrival_turn
+
+    if k == EventKind.SUPPLY_ARRIVED:
+        # Faucet, the dual of SUPPLY_CONSUMED (cargo is ALREADY post-cap -- the engine
+        # baked the landed amounts, per the event-sourcing rule that outcomes are facts).
+        # Top up the dump AND raise initial_supply by the same qty, so the conservation
+        # identity on_hand+consumed==initial holds untouched.
+        su = state.supply(p["supply_id"])
+        init = dict(state.initial_supply)
+        for commodity, qty in p["cargo"].items():
+            attr = commodity.lower()
+            su = replace(su, **{attr: getattr(su, attr) + qty})
+            init[commodity] = init.get(commodity, 0) + qty
+        return replace(state.with_supply(su), initial_supply=init)
 
     if k == EventKind.WEATHER_ROLLED:
         return replace(state, weather=p["weather"], move_modifier=p["move_modifier"])
