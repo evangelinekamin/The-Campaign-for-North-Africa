@@ -2,9 +2,11 @@
 
 Computes Actual Close Assault points (rule 11.3 / 15.4), the adjusted Assault
 Differential (terrain column-shifts 15.3 + the two-to-one raw size shift 15.51),
-and reads loss percentages off the §15.79 CRT (combat_tables). Losses are applied
-as a percentage of committed TOE strength (attacker rounds up, defender rounds
-down, §15.83c).
+and reads loss percentages off the §15.79 CRT (combat_tables). Per §15.83b/c the
+loss percentage is taken of the total RAW assault points (attacker rounds up,
+defender rounds down) to yield the raw points lost; the engine then removes TOE
+steps to ABSORB those raw points via each unit's close-assault rating (§15.83d),
+so a high-rated (elite) unit loses fewer steps than a weak one for the same loss.
 
 Also resolves the CRT's special results (rule 15.79) from the dice SUM: the
 defender's RETREAT (n hexes) or CAPT, and the attacker's ENG (Engaged) or CAPT.
@@ -36,8 +38,8 @@ class CombatResult:
     column: int
     attacker_loss_pct: int
     defender_loss_pct: int
-    attacker_steps_lost: int
-    defender_steps_lost: int
+    attacker_points_lost: int            # raw assault points to absorb (15.83c, rounded up)
+    defender_points_lost: int            # raw assault points to absorb (15.83c, rounded down)
     attacker_captured: bool = False      # some attacker losses become prisoners (15.85)
     defender_captured: bool = False      # some defender losses become prisoners
     attacker_engaged: bool = False       # attacker locked in contact (15.81)
@@ -57,7 +59,6 @@ def actual_points(raw: int, both_small: bool) -> int:
 
 
 def resolve(*, attacker_raw: int, defender_raw: int,
-            attacker_strength: int, defender_strength: int,
             def_terrain: Terrain, attack_feature: Hexside | None,
             atk_roll: int, def_roll: int,
             extra_shift: int = 0, morale_shift: int = 0,
@@ -92,11 +93,15 @@ def resolve(*, attacker_raw: int, defender_raw: int,
     d_capt, retreat = ct.defender_result(col, def_roll // 10 + def_roll % 10)
     if retreat > 0:                                            # 15.74 retreat beats engaged
         a_eng = False
+    # 15.83b/c: the loss percentage is taken of the TOTAL RAW assault points, not
+    # of TOE steps. Attacker rounds up, defender rounds down (overrun rounds the
+    # defender up under 15.77 -- deferred). Steps to absorb these are chosen per
+    # unit in the engine via each unit's close-assault rating (15.83d).
     return CombatResult(
         differential=diff, column=col,
         attacker_loss_pct=a_pct, defender_loss_pct=d_pct,
-        attacker_steps_lost=math.ceil(a_pct / 100 * attacker_strength),
-        defender_steps_lost=math.floor(d_pct / 100 * defender_strength),
+        attacker_points_lost=math.ceil(a_pct / 100 * attacker_raw),
+        defender_points_lost=math.floor(d_pct / 100 * defender_raw),
         attacker_captured=a_capt, defender_captured=d_capt,
         attacker_engaged=a_eng, retreat_hexes=retreat,
     )

@@ -431,8 +431,6 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     res = combat.resolve(
         attacker_raw=sum(u.raw_offense for u in armed_atk),
         defender_raw=sum(u.raw_defense for u in armed_def),     # unarmed defenders -> 0
-        attacker_strength=sum(u.strength for u in armed_atk),
-        defender_strength=sum(u.strength for u in defenders),   # all defenders take losses
         def_terrain=r.state.terrain.terrain[target], attack_feature=feature,
         atk_roll=ab * 10 + asm, def_roll=db * 10 + dsm,
         morale_shift=atk_m - def_m,
@@ -453,10 +451,12 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
             "attacker_engaged": res.attacker_engaged,
             "retreat_hexes": res.retreat_hexes},
            rng_draws=(*atk_md, *def_md, ab, asm, db, dsm))
-    for uid, amount in _spread_losses(defenders, res.defender_steps_lost):
+    # 15.83d: steps are removed to ABSORB the raw points lost, each step soaking up
+    # its unit's close-assault rating (dca defending, oca attacking) worth of points.
+    for uid, amount in _absorb_losses(defenders, res.defender_points_lost, lambda u: u.dca):
         r.emit(EventKind.STEP_LOST, side, actor,
                {"unit_id": uid, "amount": amount, "role": "defender"})
-    for uid, amount in _spread_losses(armed_atk, res.attacker_steps_lost):
+    for uid, amount in _absorb_losses(armed_atk, res.attacker_points_lost, lambda u: u.oca):
         r.emit(EventKind.STEP_LOST, side, actor,
                {"unit_id": uid, "amount": amount, "role": "attacker"})
     # Cohesion: 30%+ losses disorganize the involved units (rule 15.87). Recovery
@@ -594,16 +594,24 @@ def _charge_ammo(r: _Run, side: Side, actor: str, unit, *, phasing: bool,
     return True
 
 
-def _spread_losses(units, total: int) -> list[tuple[str, int]]:
+def _absorb_losses(units, points: int, rating_of) -> list[tuple[str, int]]:
+    """Rule 15.83d: remove enough TOE steps to ABSORB the raw points lost. Each step
+    soaks up its unit's close-assault rating worth of raw points, so a high-rated
+    (elite) unit sheds fewer steps than a weak one for the same points. Steps come
+    off the largest units first; a fractional remainder still costs a whole step
+    (enough must be removed to fully absorb the loss). Units with no rating cannot
+    absorb (they contribute nothing to the raw total either)."""
     out: list[tuple[str, int]] = []
-    remaining = total
+    remaining = points
     for u in sorted(units, key=lambda x: -x.strength):
         if remaining <= 0:
             break
-        take = min(remaining, u.strength)
-        if take > 0:
-            out.append((u.id, take))
-            remaining -= take
+        rating = rating_of(u)
+        if rating <= 0 or u.strength <= 0:
+            continue
+        take = min(u.strength, math.ceil(remaining / rating))
+        out.append((u.id, take))
+        remaining -= take * rating
     return out
 
 

@@ -77,7 +77,6 @@ def test_diff_to_column_grouping():
 def test_two_to_one_raw_shifts_two_columns_right():
     # 60 vs 30 raw -> actual 6 vs 3 (diff +3, base col 10); 2:1 raw adds +2 -> col 12
     res = combat.resolve(attacker_raw=60, defender_raw=30,
-                         attacker_strength=10, defender_strength=10,
                          def_terrain=Terrain.CLEAR, attack_feature=None,
                          atk_roll=11, def_roll=11)
     assert res.differential == 3 and res.column == 12
@@ -86,7 +85,6 @@ def test_two_to_one_raw_shifts_two_columns_right():
 def test_terrain_shift_favours_defender():
     # diff +2 (base col 9); 2:1 raw (+2) cancelled by Rough terrain (-2) -> col 9
     res = combat.resolve(attacker_raw=40, defender_raw=20,
-                         attacker_strength=8, defender_strength=4,
                          def_terrain=Terrain.ROUGH, attack_feature=None,
                          atk_roll=11, def_roll=11)
     assert res.column == 9
@@ -95,7 +93,6 @@ def test_terrain_shift_favours_defender():
 def test_small_raw_uses_raw_as_actual():
     # both < 10 raw -> raw used directly: 8 - 6 = diff 2
     res = combat.resolve(attacker_raw=8, defender_raw=6,
-                         attacker_strength=4, defender_strength=3,
                          def_terrain=Terrain.CLEAR, attack_feature=None,
                          atk_roll=11, def_roll=11)
     assert res.differential == 2
@@ -115,7 +112,6 @@ def test_retreat_takes_priority_over_engaged():
     # +3 column: defender sum 5 -> retreat 1; attacker sum 8 -> eng, but the
     # retreat drops the eng (rule 15.74).
     res = combat.resolve(attacker_raw=45, defender_raw=24,
-                         attacker_strength=10, defender_strength=10,
                          def_terrain=Terrain.CLEAR, attack_feature=None,
                          atk_roll=26, def_roll=14)          # sums: atk 8, def 5
     assert res.column == 10
@@ -136,11 +132,9 @@ def test_combat_example_captured_and_retreat_together():
 def test_morale_shift_moves_the_column():
     # +2 morale (e.g. 15th Panzer +3 vs +1) shifts the assault two columns right.
     base = combat.resolve(attacker_raw=30, defender_raw=30,
-                          attacker_strength=10, defender_strength=10,
                           def_terrain=Terrain.CLEAR, attack_feature=None,
                           atk_roll=11, def_roll=11)
     up = combat.resolve(attacker_raw=30, defender_raw=30,
-                        attacker_strength=10, defender_strength=10,
                         def_terrain=Terrain.CLEAR, attack_feature=None,
                         atk_roll=11, def_roll=11, morale_shift=2)
     assert up.column == base.column + 2
@@ -157,9 +151,8 @@ def test_org_size_shift():
 def test_fortification_shifts_columns_toward_defender():
     # a static fortification shifts the assault toward the defender by
     # FORT_CA_SHIFT per level (rule 15.82); level 0 (default) is unchanged.
-    kw = dict(attacker_raw=60, defender_raw=30, attacker_strength=10,
-              defender_strength=10, def_terrain=Terrain.CLEAR, attack_feature=None,
-              atk_roll=11, def_roll=11)
+    kw = dict(attacker_raw=60, defender_raw=30, def_terrain=Terrain.CLEAR,
+              attack_feature=None, atk_roll=11, def_roll=11)
     base = combat.resolve(**kw)
     fort = combat.resolve(**kw, fortification_level=2)
     assert fort.column == base.column + 2 * ct.FORT_CA_SHIFT
@@ -170,9 +163,8 @@ def test_fortification_shifts_columns_toward_defender():
 def test_minefield_shifts_column_toward_defender():
     # a defensive minefield belt shifts the assault toward the defender
     # (MINEFIELD_CA_SHIFT); default False is unchanged.
-    kw = dict(attacker_raw=60, defender_raw=30, attacker_strength=10,
-              defender_strength=10, def_terrain=Terrain.CLEAR, attack_feature=None,
-              atk_roll=11, def_roll=11)
+    kw = dict(attacker_raw=60, defender_raw=30, def_terrain=Terrain.CLEAR,
+              attack_feature=None, atk_roll=11, def_roll=11)
     base = combat.resolve(**kw)
     mined = combat.resolve(**kw, in_enemy_minefield=True)
     assert mined.column == base.column + ct.MINEFIELD_CA_SHIFT
@@ -263,7 +255,6 @@ def test_combined_arms_reduces_actual_points():
     # penalty); CW 38 raw -> 4 Actual, tanks (7) exceed inf (5) by 2 -> -1 Actual
     # -> 3. Basic differential +3.
     res = combat.resolve(attacker_raw=63, defender_raw=38,
-                         attacker_strength=24, defender_strength=12,
                          def_terrain=Terrain.CLEAR, attack_feature=None,
                          atk_roll=11, def_roll=11,
                          attacker_ca_penalty=0, defender_ca_penalty=1)
@@ -271,11 +262,45 @@ def test_combined_arms_reduces_actual_points():
 
 
 def test_loss_rounding_attacker_up_defender_down():
-    # column 0 differential, both sides 6 actual -> diff 0 (col 7)
+    # 15.83b/c: the loss percentage is taken of the total RAW assault points, and
+    # the attacker rounds the raw points lost UP while the defender rounds DOWN.
+    # col 7, both 10% of 60 raw = 6.0 -> 6 points each (exact, no rounding gap).
     res = combat.resolve(attacker_raw=60, defender_raw=60,
-                         attacker_strength=10, defender_strength=10,
                          def_terrain=Terrain.CLEAR, attack_feature=None,
                          atk_roll=25, def_roll=24)   # col 7: atk 25->10%, def 24->10%
     assert res.column == 7
     assert res.attacker_loss_pct == 10 and res.defender_loss_pct == 10
-    assert res.attacker_steps_lost == 1 and res.defender_steps_lost == 1
+    assert res.attacker_points_lost == 6 and res.defender_points_lost == 6
+
+
+def test_15_83c_loss_pct_applies_to_raw_points_rounding_directions():
+    # 15.83c: 15% of 43 raw = 6.45 -> attacker rounds UP to 7, defender rounds DOWN
+    # to 6. Proves the percentage is taken of RAW assault points (not TOE steps) and
+    # that the two players round opposite directions on the same fractional loss.
+    res = combat.resolve(attacker_raw=43, defender_raw=43,
+                         def_terrain=Terrain.CLEAR, attack_feature=None,
+                         atk_roll=21, def_roll=21)   # col 7: 21 -> 15% both sides
+    assert res.attacker_loss_pct == 15 and res.defender_loss_pct == 15
+    assert res.attacker_points_lost == 7      # ceil(6.45)
+    assert res.defender_points_lost == 6      # floor(6.45)
+
+
+def test_15_83d_elite_absorbs_fewer_steps_than_weak_at_same_loss():
+    # 15.83d: steps are removed to ABSORB the raw points lost, each step soaking up
+    # its unit's close-assault rating. For the SAME raw points lost, an elite unit
+    # (high rating/step) sheds fewer steps than a weak one (low rating/step).
+    from game.engine import _absorb_losses
+    from game.state import Side, StepRecord, Unit
+    from game.terrain import Mobility
+
+    def _u(uid, rating):
+        return Unit(uid, Side.AXIS, (0, 0), (StepRecord("s", 10),),
+                    mobility=Mobility.MOTORIZED, cpa=10, stacking_points=1,
+                    oca=rating, dca=rating)
+
+    points = 8
+    elite = _absorb_losses([_u("elite", 4)], points, lambda u: u.oca)
+    weak = _absorb_losses([_u("weak", 1)], points, lambda u: u.oca)
+    assert elite == [("elite", 2)]     # ceil(8 / 4) = 2 steps absorb 8 raw points
+    assert weak == [("weak", 8)]       # ceil(8 / 1) = 8 steps for the same 8 points
+    assert sum(a for _, a in elite) < sum(a for _, a in weak)
