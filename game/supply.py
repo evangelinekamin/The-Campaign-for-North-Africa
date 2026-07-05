@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import math
 
-from . import movement, tactics
+from . import logistics_data, movement, tactics
 from .state import GameState, Port, SupplyUnit, Unit
 from .terrain import Mobility, NON_MOT_CLASSES, Terrain
 
@@ -39,9 +39,10 @@ COMMODITIES = (AMMO, FUEL, STORES, WATER)
 # dump hex is "Other Terrain". Villages (2500/8000/3000/1000) are not distinctly
 # modelled on the colour-sampled map, so a non-city dump reads the Other row. The
 # faucet fills UP TO these ceilings (game.engine._naval_convoys); overflow is never
-# credited, so conservation stays exact.
+# credited, so conservation stays exact. Sourced from data/logistics_rates.json so the
+# ceiling is the rulebook's ([54.12] Other-Terrain), not a magic number.
 _UNLIMITED = 10 ** 9
-_OTHER_CAP = {AMMO: 1500, FUEL: 5000, STORES: 1000, WATER: 1000}
+_OTHER_CAP = logistics_data.dump_other_terrain_cap()
 
 
 def dump_capacity(terrain: Terrain) -> dict:
@@ -53,7 +54,10 @@ def dump_capacity(terrain: Terrain) -> dict:
 
 # 54.5 Equivalent Weights: tons per one supply Point (Ammo 4t, Fuel 1/8t, Stores 1t,
 # Water 1/6t). The ONLY place tonnage meets points -- confined to the port/rail landing
-# edge (the plan keeps the tonnage lever out of the per-hex model).
+# edge (the plan keeps the tonnage lever out of the per-hex model). Kept as EXACT
+# rulebook fractions (Fuel 1/8, Water 1/6): the data file transcribes Water as the
+# rounded decimal 0.1667, so sourcing it from JSON would inject a rounding error into
+# the conservation math -- these are exact-faithful already, so they stay literals.
 TONS_PER_POINT: dict = {AMMO: 4.0, FUEL: 1 / 8, STORES: 1.0, WATER: 1 / 6}
 
 
@@ -85,20 +89,18 @@ SUPPLY_MOVE_FUEL = 1               # Fuel to relocate a real supply unit / OpSta
 SUPPLY_MOBILITY = Mobility.MOTORIZED  # carried as medium-truck points (rule 32.51)
 
 
-# 49.19 Fuel Consumption Rate PROXY by mobility class. Transcription of the chart
-# column is deferred (the field Unit.fuel_rate overrides this once transcribed); these
-# are clearly-flagged placeholder magnitudes. Foot/camel consume no fuel (49.12).
-# Scaled to the engine's 40/60-point proxy dumps (NOT the rulebook's literal tank
-# rate of 4, which is sized for thousand-point dumps): these equal the old flat
-# per-OpStage charge for a short move (<=5 CP), so the tuned benchmark stays
-# harmless, while the faithful law rate x ceil(CP/5) makes a long dash cost more.
-_FUEL_RATE_PROXY: dict = {
-    Mobility.VEHICLE: 2,           # tanks / AFVs / SP artillery
-    Mobility.MOTORIZED: 1,         # truck-borne infantry, towed guns
-    Mobility.RECCE: 1,
-    Mobility.LIGHT_TRUCK: 1,
-    Mobility.MOTORCYCLE: 1,
-}
+# 49.19 Fuel Consumption Rate PROXY by mobility class (sourced from the engine_proxy
+# block of data/logistics_rates.json -- the single documented home for the proxy the
+# faithful chart replaces). Foot/camel consume no fuel (49.12). These are FLAGGED
+# placeholder magnitudes scaled to the engine's 40/60-point proxy dumps: they equal
+# the old flat per-OpStage charge for a short move (<=5 CP), while the faithful law
+# rate x ceil(CP/5) makes a long dash cost more. The two remaining proxy gaps -- the
+# per-model [4.47-4.49] rates (1-7, e.g. Grant 6) and the omitted x TOE-strength
+# factor (49.13) -- are coupled to the real-scale reservoir rescale (dumps/convoys/
+# ports are ~1-2 orders of magnitude below [54.12]); wiring the fuel magnitude alone
+# against proxy dumps would strand every vehicle in ~2 moves, so it is left for the
+# coordinated CHUNK-4 fork. See logistics_data and the task scale_decision.
+_FUEL_RATE_PROXY: dict = logistics_data.fuel_rate_proxy()
 
 
 def fuel_rate(unit: Unit) -> int:
@@ -120,10 +122,11 @@ def fuel_cost(unit: Unit, cp_spent: float) -> int:
     return fuel_rate(unit) * math.ceil(cp_spent / 5)
 
 
-# 50.2 Ammunition Consumption Rates (Ammo Points per TOE Strength Point committed,
-# rule 50.14). Barrage/flak = 4 is the only charted value; assault and anti-armor are
-# clearly-flagged PROXY magnitudes until the 50.2 chart is transcribed.
-AMMO_RATE: dict = {"barrage": 4, "anti_armor": 2, "assault": 1}
+# [50.2] Ammunition Consumption Rates (Ammo Points per TOE Strength Point committed to
+# the function, rule 50.14), sourced from data/logistics_rates.json ('Logistics Game
+# Played' land rates). Now FAITHFUL to the chart: barrage 4, anti-armor 3, close-assault
+# 2 -- the earlier proxy under-charged anti-armor (was 2) and close-assault (was 1).
+AMMO_RATE: dict = logistics_data.ammo_rates()
 
 
 def ammo_cost(unit: Unit, *, phasing: bool = True, activity: str = "assault") -> int:
@@ -161,11 +164,14 @@ def is_infantry(unit: Unit) -> bool:
     return unit.is_combat and not _is_vehicle_type(unit)
 
 
+_STORES_RATE = logistics_data.stores_rates()   # 51.11/51.13, from the rulebook chart
+
+
 def stores_cost(unit: Unit) -> int:
     """Stores a unit needs per GAME-TURN (rule 51.11): 4 per TOE Strength Point, or 1
     per TOE for HQ/engineer units (51.13). Non-combat pieces (bare HQs, trucks) proxy
     the reduced rate; a dedicated engineer flag is deferred."""
-    rate = 1 if not unit.is_combat else 4
+    rate = _STORES_RATE["combat"] if unit.is_combat else _STORES_RATE["noncombat"]
     return rate * max(1, unit.strength)
 
 

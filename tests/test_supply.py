@@ -90,13 +90,29 @@ def test_fuelled_but_far_unit_strands():
 
 
 def test_ammo_cost_per_toe_function():
-    # 50.14: rate x TOE Strength Points; barrage=4 charted, assault/anti-armor PROXY.
+    # 50.14: rate x TOE Strength Points. Now FAITHFUL to the [50.2] chart (from
+    # data/logistics_rates.json): barrage 4, anti-armor 3, close-assault 2 -- so a
+    # strength-5 DAK unit spends 10 / 15 / 20 (the earlier proxy under-charged
+    # close-assault at 1 -> 5 and anti-armor at 2 -> 10).
     dak = coastal_corridor().unit("DAK-5le")            # strength 5
-    assert supply.ammo_cost(dak, activity="assault") == 5
-    assert supply.ammo_cost(dak, activity="anti_armor") == 10
-    assert supply.ammo_cost(dak, activity="barrage") == 20
+    assert supply.ammo_cost(dak, activity="assault") == 10      # [50.2] close-assault 2
+    assert supply.ammo_cost(dak, activity="anti_armor") == 15   # [50.2] anti-armor 3
+    assert supply.ammo_cost(dak, activity="barrage") == 20      # [50.2] barrage 4
     # rule 50 draws no phasing distinction -- the cost is phasing-independent
     assert supply.ammo_cost(dak, phasing=False) == supply.ammo_cost(dak, phasing=True)
+
+
+def test_logistics_rates_are_sourced_from_the_chart():
+    # The consumption magnitudes are the RULEBOOK'S, loaded from
+    # data/logistics_rates.json rather than hardcoded -- so the balance is the chart's.
+    assert supply.AMMO_RATE == {"barrage": 4, "anti_armor": 3, "assault": 2}   # [50.2]
+    assert supply._OTHER_CAP == {"AMMO": 1500, "FUEL": 5000,                   # [54.12] Other
+                                 "STORES": 1000, "WATER": 1000}
+    assert supply.TONS_PER_POINT == {"AMMO": 4, "FUEL": 0.125,                 # [54.5]
+                                     "STORES": 1, "WATER": 1 / 6}
+    # 51.11/51.13 stores: 4 per TOE combat, 1 per TOE non-combat.
+    inf = coastal_corridor().unit("UK-9Aus")            # combat, strength 4
+    assert supply.stores_cost(inf) == 16
 
 
 def test_in_supply_when_colocated_with_dump():

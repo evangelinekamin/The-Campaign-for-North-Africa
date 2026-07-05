@@ -339,6 +339,9 @@ def test_anti_armor_fire_damages_adjacent_armor():
     r = _Run(st)
     _anti_armor_step(r, Side.AXIS, Side.ALLIED, set())
     assert r.state.unit("TK").strength < 8             # tank absorbed anti-armor damage
+    # 14.24 / [50.2]: anti-armor fire draws the anti-armor rate (3) x TOE (8) = 24 Ammo,
+    # NOT the close-assault rate -- the faithful chart value from data/logistics_rates.json.
+    assert r.state.supply("D").ammo == 40 - 24
 
 
 def test_combined_arms_penalty():

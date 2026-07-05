@@ -15,7 +15,7 @@ import math
 import random
 from dataclasses import dataclass
 
-from . import combat, combat_tables, stacking, supply, tactics
+from . import combat, combat_tables, logistics_data, stacking, supply, tactics
 from .apply import apply
 from .events import Control, Event, EventKind, Phase, Side
 from .hexmap import distance, is_adjacent, neighbors
@@ -226,11 +226,14 @@ def _logistics(r: _Run) -> None:
         _water_distribution(r, side, hot)
 
 
+_EVAP = logistics_data.evaporation_percent()   # 49.3/52.44, from the rulebook
+
+
 def _evaporate(r: _Run, hot: bool) -> None:
     """49.3 / 52.44: each game-turn, on-map Fuel and Water lose 6% (rounded down), plus
     a further 5% in hot weather. A SINK into consumed[] (the 9% Sep40-Aug41 Commonwealth
     container rate is deferred). Deterministic: sorted dumps, fuel then water."""
-    pct = 6 + (5 if hot else 0)
+    pct = _EVAP["base"] + (_EVAP["hot_additional"] if hot else 0)
     for sid in sorted(su.id for su in r.state.supplies):
         for commodity in (supply.FUEL, supply.WATER):
             amt = getattr(r.state.supply(sid), commodity.lower())
@@ -633,7 +636,9 @@ def _anti_armor_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str]) -> N
                     by_target.setdefault(nb, []).append(u)
                     break
         for tgt, firers in by_target.items():
-            armed = [u for u in firers if _charge_ammo(r, firing, actor, u, phasing=is_phasing)]
+            armed = [u for u in firers                       # 14.24/50.2: anti-armor fire draws
+                     if _charge_ammo(r, firing, actor, u, phasing=is_phasing,
+                                     activity="anti_armor")]  # the anti-armor rate (3/TOE)
             raw = sum(u.raw_anti_armor for u in armed)
             if raw <= 0:
                 continue

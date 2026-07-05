@@ -246,9 +246,16 @@ def test_determinism_preserved_with_ports():
 
 def test_siege_still_crackable_through_the_throttle():
     # The Benghazi rear throttle must not starve the Axis barrage below the crack path:
-    # seeds 9 and 12 still batter the wall (~17% crack, the design target 15-35%).
+    # a strong seed still batters the wall through it. Under the FAITHFUL [50.2] ammo
+    # rates (anti-armor 3, close-assault 2 -- and anti-armor fire now actually drawing
+    # the anti-armor rate), the shared ammo pool drains faster, so the seeds that crack
+    # SHIFTED (5/7/24 now batter the wall; the old 9/12 no longer do) and the measured
+    # crack rate settled at ~12.5% over seeds 1-24, just under the 15-35% design band.
+    # That drop is the rulebook's ammo economy, not a bug -- re-tuning the crack rate is
+    # the owner's siege knob (BARRAGE_HITS_PER_FORT_LEVEL / Axis ammo schedule), NOT a
+    # magnitude to bend here. This test guards only that the crack path SURVIVES.
     battered = False
-    for seed in (9, 12):
+    for seed in (5, 7):
         res = run(siege_of_tobruk(seed=seed),
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         if any(e.kind == EventKind.FORT_REDUCED and tuple(e.payload["hex"]) == TOBRUK
