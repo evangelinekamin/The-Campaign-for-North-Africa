@@ -402,6 +402,16 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
                {"order": "attack", "target": list(target),
                 "reason": "attackers out of ammo or pinned"})
         return
+    # 15.15 / 15.88: an assaulted stack that is entirely out of Close-Assault ammo,
+    # or whose (largest) unit's Cohesion has collapsed to -17 or worse, automatically
+    # Surrenders the instant it is assaulted -- BEFORE it rolls morale or spends a
+    # round of ammunition. This is the fix that lets a besieged, cut-off garrison
+    # (a dry Tobruk) finally be forced to capitulate instead of holding at zero
+    # defensive strength in perpetuity.
+    if _defenders_capitulate(r, defenders):
+        _resolve_surrender(r, side, actor, target, armed_atk, defenders,
+                           atk_surr=False, def_surr=True, morale_shift=0, dice=())
+        return
     armed_def = [u for u in defenders
                  if u.id not in pinned and _charge_ammo(r, side, actor, u, phasing=False)]
 
@@ -412,7 +422,13 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     # Morale is rolled FIRST (rule 15 order): each side's 17.4 roll adjusts its
     # Basic Morale by Cohesion, and the difference shifts the assault column (15.62).
     atk_m, atk_md, atk_surr = _adjusted_morale(r, armed_atk)
-    def_m, def_md, def_surr = _adjusted_morale(r, defenders)
+    # 17.26(b): a defender whose largest unit has Basic Morale +1 or better may NOT
+    # shrug off a rolled SURR when the assaulting enemy fields at least three times
+    # its strength (Enemy Raw Offensive Assault : Friendly Raw Defensive). The
+    # cohesion-based 17.26(a) reprieve-void is handled per-unit in _adjusted_morale.
+    overwhelms = (sum(u.raw_offense for u in armed_atk)
+                  >= 3 * sum(u.raw_defense for u in armed_def))
+    def_m, def_md, def_surr = _adjusted_morale(r, defenders, enemy_overwhelms=overwhelms)
     if atk_surr and def_surr:                                   # 17.25: mutual surrender is IGNORED --
         r.emit(EventKind.COMBAT_RESOLVED, side, actor,          # no assault occurs, both Engaged
                {"target": list(target), "attackers": [u.id for u in armed_atk],
@@ -485,21 +501,35 @@ def _combined_arms_penalty(units) -> int:
     return min(4, math.ceil(unsupported / 3))
 
 
-def _adjusted_morale(r: _Run, units) -> tuple[int, tuple[int, int], bool]:
+def _honors_surrender(morale: int, cohesion: int, enemy_overwhelms: bool) -> bool:
+    """Does a rolled SURR (17.4 Surrender column) actually stick? By 17.25 the stack
+    Surrenders -- UNLESS its (largest) unit's Basic Morale is +1 or better, in which
+    case 17.26 lets it treat the SURR as a mere -4 adjustment and fight on. That
+    reprieve is voided, and the Surrender enforced, when either 17.26 exception holds:
+    (a) the unit's Cohesion has collapsed to -11 or worse, or (b) the assaulting enemy
+    brings at least three times the strength (Enemy Raw Offensive : Friendly Raw
+    Defensive), passed in as `enemy_overwhelms`."""
+    if morale < 1:
+        return True
+    return cohesion <= -11 or enemy_overwhelms
+
+
+def _adjusted_morale(r: _Run, units, *,
+                     enemy_overwhelms: bool = False) -> tuple[int, tuple[int, int], bool]:
     """Adjusted Morale of a close-assault stack (rule 15.6): the LARGEST unit's
     Basic Morale (17.32), plus the 17.4 modifier rolled at its Cohesion level, +1
     if Rommel is present (17.28), clamped to -3..+3 (17.23). Returns (morale, the
-    two dice, surrendered). A SURR result eliminates the stack (17.25) unless its
-    largest unit has Basic Morale >= +1 (17.26 exception), in which case it is taken
-    as the -4 penalty. The Cohesion<=-11 / enemy-3x sub-conditions of 17.26 are
-    deferred + flagged."""
+    two dice, surrendered). A SURR result eliminates the stack (17.25); the 17.26
+    reprieve and its (a) cohesion / (b) enemy-3x exceptions are decided by
+    _honors_surrender. When SURR is shrugged off it counts as the -4 penalty."""
     live = [u for u in units if u.strength > 0]
     if not live:
         return 0, (0, 0), False
     largest = max(live, key=lambda u: (u.stacking_points, u.strength))
     d1, d2 = r.d6(), r.d6()
     mod = combat_tables.morale_modifier(largest.cohesion, d1 * 10 + d2)
-    surrendered = mod == "SURR" and largest.morale < 1
+    surrendered = mod == "SURR" and _honors_surrender(
+        largest.morale, largest.cohesion, enemy_overwhelms)
     if mod == "SURR":
         mod = -4
     m = largest.morale + mod + (1 if any("Rommel" in u.id for u in live) else 0)
@@ -580,6 +610,30 @@ def _retreat(r: _Run, atk_side: Side, actor: str, defender_ids: list[str],
             if extra > 0:
                 r.emit(EventKind.STEP_LOST, atk_side, actor,
                        {"unit_id": u.id, "amount": min(extra, cur_u.strength), "role": "defender"})
+
+
+def _has_ammo(state: GameState, unit, *, phasing: bool) -> bool:
+    """Can this unit draw its Close-Assault ammunition right now (rule 32.21 / 50)?
+    A non-mutating mirror of the _charge_ammo supply gate, used to detect the 15.15
+    all-out-of-ammunition condition without expending anything."""
+    return supply.plan_draw(state, unit, supply.AMMO,
+                            supply.ammo_cost(unit, phasing=phasing, activity="assault")) is not None
+
+
+def _defenders_capitulate(r: _Run, defenders) -> bool:
+    """Hard surrender thresholds on an assaulted defending stack, ahead of the 17.4
+    roll (15.88 -- units so afflicted automatically Surrender). Returns True when:
+      - 15.15: EVERY defender is out of Close-Assault ammunition, so a cut-off, dry
+        garrison capitulates en masse rather than defend on at zero strength; or
+      - 15.88: the stack's largest unit's Cohesion has collapsed to -17 or worse
+        (17.24 '-17 et seq'; 17.27 Largest Unit Rule)."""
+    live = [u for u in defenders if u.strength > 0]
+    if not live:
+        return False
+    largest = max(live, key=lambda u: (u.stacking_points, u.strength))
+    if largest.cohesion <= -17:                                        # 15.88
+        return True
+    return all(not _has_ammo(r.state, u, phasing=False) for u in live)  # 15.15
 
 
 def _charge_ammo(r: _Run, side: Side, actor: str, unit, *, phasing: bool,

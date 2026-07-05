@@ -182,7 +182,9 @@ def test_reinforcement_enters_on_its_arrival_turn():
 
 def test_surrender_at_collapsed_cohesion():
     # the 17.4 row for Cohesion <= -17 is all-Surrender; a stack there surrenders
-    # (17.25) unless its Basic Morale is +1 or better (17.26 exception).
+    # (17.25). A Basic Morale of +1 or better normally shrugs the SURR off (17.26),
+    # but that reprieve is VOIDED when Cohesion is -11 or worse (17.26a) -- so at
+    # Cohesion -17 even a +1-morale stack must Surrender.
     from game.engine import _Run, _adjusted_morale
     from game.events import Phase
     from game.movement import TerrainMap
@@ -199,7 +201,94 @@ def test_surrender_at_collapsed_cohesion():
                    consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 0, "FUEL": 0})
     r = _Run(st)
     assert _adjusted_morale(r, [mk(0)])[2] is True       # morale 0 -> surrenders
-    assert _adjusted_morale(r, [mk(1)])[2] is False      # morale +1 ignores surrender
+    assert _adjusted_morale(r, [mk(1)])[2] is True       # 17.26a: -17 cohesion voids the +1 reprieve
+
+
+def test_honors_surrender_17_25_and_17_26():
+    # 17.25 / 17.26: a rolled SURR sticks unless the largest unit's Basic Morale is
+    # +1 or better -- but that reprieve is void with collapsed cohesion (17.26a) or an
+    # enemy at 3x strength (17.26b).
+    from game.engine import _honors_surrender
+    assert _honors_surrender(0, -5, False) is True        # 17.25: morale < +1 always surrenders
+    assert _honors_surrender(-3, 0, False) is True        # 17.25: bad morale, still surrenders
+    assert _honors_surrender(1, -5, False) is False       # 17.26: +1 morale shrugs SURR off
+    assert _honors_surrender(3, -10, False) is False      # 17.26: +3 morale, cohesion > -11, shrugs off
+    assert _honors_surrender(1, -11, False) is True       # 17.26a: cohesion -11 voids the reprieve
+    assert _honors_surrender(2, -12, False) is True       # 17.26a: worse cohesion, void
+    assert _honors_surrender(1, -5, True) is True         # 17.26b: enemy 3x voids the reprieve
+
+
+def _lone_hex_state(units, supplies=(), *, seed=1):
+    from game.events import Phase
+    from game.movement import TerrainMap
+    from game.state import GameState, VP
+    from game.terrain import Terrain
+    ammo = sum(s.ammo for s in supplies)
+    fuel = sum(s.fuel for s in supplies)
+    return GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS, seed=seed,
+                     weather="clear", move_modifier=0, vp=VP(),
+                     terrain=TerrainMap(terrain={(0, 0): Terrain.CLEAR, (1, 0): Terrain.CLEAR}),
+                     control={}, units=tuple(units), target_hex=(0, 0), supplies=tuple(supplies),
+                     consumed={"AMMO": 0, "FUEL": 0},
+                     initial_supply={"AMMO": ammo, "FUEL": fuel})
+
+
+def test_all_dry_defenders_capitulate_15_15():
+    # 15.15: if EVERY non-Phasing defender in an assaulted hex is out of Close-Assault
+    # ammunition, the stack automatically Surrenders en masse. With no reachable dump
+    # the garrison cannot draw ammo, so _defenders_capitulate fires; a supplied stack
+    # (a dump in-hex) does not.
+    from game.engine import _Run, _defenders_capitulate
+    from game.state import SupplyUnit, Unit
+    from game.terrain import Mobility
+
+    def garrison(coh=0):
+        return Unit("G", Side.ALLIED, (0, 0), (StepRecord("g", 6),), mobility=Mobility.FOOT,
+                    cpa=10, stacking_points=1, oca=2, dca=2, morale=2, cohesion=coh)
+    dry = _Run(_lone_hex_state([garrison()]))
+    assert _defenders_capitulate(dry, [garrison()]) is True          # cut off, no ammo -> 15.15
+
+    dump = SupplyUnit("DUMP", Side.ALLIED, (0, 0), ammo=40, fuel=0)
+    fed = _Run(_lone_hex_state([garrison()], supplies=[dump]))
+    assert _defenders_capitulate(fed, [garrison()]) is False         # supplied -> fights on
+
+
+def test_collapsed_cohesion_defender_capitulates_15_88():
+    # 15.88: an assaulted unit with Cohesion -17 or worse automatically Surrenders,
+    # even fully supplied (the Largest Unit Rule 17.27 keys off the biggest defender).
+    from game.engine import _Run, _defenders_capitulate
+    from game.state import SupplyUnit, Unit
+    from game.terrain import Mobility
+
+    broken = Unit("B", Side.ALLIED, (0, 0), (StepRecord("b", 6),), mobility=Mobility.FOOT,
+                  cpa=10, stacking_points=1, oca=2, dca=2, morale=3, cohesion=-17)
+    dump = SupplyUnit("DUMP", Side.ALLIED, (0, 0), ammo=40, fuel=0)
+    r = _Run(_lone_hex_state([broken], supplies=[dump]))
+    assert _defenders_capitulate(r, [broken]) is True
+
+    steady = replace(broken, cohesion=-16)
+    r2 = _Run(_lone_hex_state([steady], supplies=[dump]))
+    assert _defenders_capitulate(r2, [steady]) is False              # -16 does not auto-surrender
+
+
+def test_starved_garrison_surrenders_in_close_assault_15_15():
+    # End-to-end: a cut-off, dry defender that is assaulted is eliminated by en-masse
+    # Surrender (15.15), not merely reduced. The COMBAT_RESOLVED event marks it as a
+    # defender surrender and the garrison loses all its steps.
+    from game.engine import _Run, _resolve_combat
+    from game.state import SupplyUnit, Unit
+    from game.terrain import Mobility
+
+    attacker = Unit("A", Side.AXIS, (1, 0), (StepRecord("a", 6),), mobility=Mobility.FOOT,
+                    cpa=10, stacking_points=1, oca=3, dca=3, morale=1, cohesion=0)
+    garrison = Unit("G", Side.ALLIED, (0, 0), (StepRecord("g", 6),), mobility=Mobility.FOOT,
+                    cpa=10, stacking_points=1, oca=2, dca=2, morale=2, cohesion=0)
+    dump = SupplyUnit("AXDUMP", Side.AXIS, (1, 0), ammo=40, fuel=0)   # only the attacker is supplied
+    r = _Run(_lone_hex_state([attacker, garrison], supplies=[dump]))
+    _resolve_combat(r, Side.AXIS, "AXIS/Front", [attacker], [garrison], (0, 0), set())
+    resolved = [e for e in r.events if e.kind == EventKind.COMBAT_RESOLVED]
+    assert resolved and resolved[-1].payload["surrender"] == "defender"
+    assert r.state.unit("G").strength == 0                           # garrison captured en masse
 
 
 def test_barrage_fires_at_adjacent_enemy():
