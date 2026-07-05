@@ -196,10 +196,13 @@ def _movement(r: _Run, policy: Policy, side: Side) -> None:
         if not stacking.within_hex_limit(present + [u], r.state.terrain.terrain[order.to]):
             _reject(r, side, actor, order, "destination over stacking limit")
             continue
-        if u.cp_used == 0:                          # first move this OpStage pays fuel (32.23)
-            draws = supply.plan_draw(r.state, u, supply.FUEL, supply.fuel_cost(u))
+        if u.cp_used == 0:                          # first move this OpStage pays fuel (49.16)
+            # Distance-based fuel (49.13): rate x ceil(CP/5) for THIS move's path cost,
+            # drawn in the hex the move begins -- so a long dash outruns its fuel.
+            draws = supply.plan_draw(r.state, u, supply.FUEL,
+                                     supply.fuel_cost(u, reach[order.to]))
             if draws is None:
-                _reject(r, side, actor, order, "out of supply: no fuel in range")
+                _reject(r, side, actor, order, "out of supply: no fuel for this move")
                 continue
             for sid, qty in draws:
                 r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
@@ -338,10 +341,11 @@ def _retreat_before_assault(r: _Run, policy: Policy, side: Side, phasing: Side,
             _reject(r, side, actor, order, "destination over stacking limit",
                     order_kind="retreat_before_assault")
             continue
-        if u.cp_used == 0:                          # first move this OpStage pays fuel (32.23)
-            draws = supply.plan_draw(r.state, u, supply.FUEL, supply.fuel_cost(u))
+        if u.cp_used == 0:                          # first move this OpStage pays fuel (49.16)
+            draws = supply.plan_draw(r.state, u, supply.FUEL,
+                                     supply.fuel_cost(u, reach[order.to]))
             if draws is None:
-                _reject(r, side, actor, order, "out of supply: no fuel in range",
+                _reject(r, side, actor, order, "out of supply: no fuel for this move",
                         order_kind="retreat_before_assault")
                 continue
             for sid, qty in draws:

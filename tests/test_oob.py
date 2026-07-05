@@ -21,7 +21,7 @@ def _stranded_combat(state, side):
     """Combat units of `side` on-map at start that cannot trace fuel and/or ammo
     (missing either strands it) from the placed dumps (the real 32.16 supply gate)."""
     return [u for u in state.living(side) if u.is_combat and not (
-        supply.plan_draw(state, u, supply.FUEL, supply.fuel_cost(u)) is not None
+        supply.plan_draw(state, u, supply.FUEL, supply.fuel_rate(u)) is not None
         and supply.plan_draw(state, u, supply.AMMO, supply.ammo_cost(u, phasing=True)) is not None)]
 
 

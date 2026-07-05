@@ -23,10 +23,70 @@ def _run(seed: int = 1941):
     return run(coastal_corridor(seed=seed), axis=pol, allied=pol)
 
 
-def test_fuel_cost_by_mobility():
+def test_fuel_rate_by_mobility():
     s = coastal_corridor()
-    assert supply.fuel_cost(s.unit("DAK-5le")) == 2     # VEHICLE / tank bn-eq
-    assert supply.fuel_cost(s.unit("UK-9Aus")) == 0     # FOOT walks
+    assert supply.fuel_rate(s.unit("DAK-5le")) == 2     # VEHICLE proxy (49.19)
+    assert supply.fuel_rate(s.unit("UK-9Aus")) == 0     # FOOT walks -- no fuel (49.12)
+
+
+def test_fuel_cost_is_distance_based():
+    # 49.13: rate x ceil(CP/5). A long dash costs strictly more than a short hop, but
+    # a short move (<=5 CP) equals the old flat charge (rate 2 for a VEHICLE).
+    dak = coastal_corridor().unit("DAK-5le")            # rate 2
+    assert supply.fuel_cost(dak, 0) == 0                # did not move
+    assert supply.fuel_cost(dak, 3) == 2                # one 5-CP group
+    assert supply.fuel_cost(dak, 10) == 4               # two groups
+    assert supply.fuel_cost(dak, 22) == 10              # five groups (ceil 22/5)
+    assert supply.fuel_cost(dak, 10) > supply.fuel_cost(dak, 3)
+
+
+def test_fuel_rate_field_overrides_proxy():
+    dak = replace(coastal_corridor().unit("DAK-5le"), fuel_rate=6)   # transcribed value wins
+    assert supply.fuel_rate(dak) == 6
+    assert supply.fuel_cost(dak, 5) == 6
+
+
+def _z() -> dict:
+    return {"AMMO": 0, "FUEL": 0, "STORES": 0, "WATER": 0}
+
+
+def _init(supplies) -> dict:
+    return {c: sum(getattr(s, c.lower()) for s in supplies)
+            for c in ("AMMO", "FUEL", "STORES", "WATER")}
+
+
+def test_fuelled_but_far_unit_strands():
+    # A vehicle (rate 2) with only 6 fuel can afford a short hop (4 hexes = 8 CP ->
+    # 2*ceil(8/5)=4 fuel) but not a long dash (8 hexes = 16 CP -> 2*ceil(16/5)=8 fuel):
+    # the engine rejects the far move and the unit stays put. The dash-outruns-fuel
+    # law, restored by distance-based fuel.
+    from game.policy import MoveOrder, Policy
+    terr = {(q, 0): Terrain.CLEAR for q in range(9)}    # clear row, no roads: 2 CP/hex motorized
+    unit = Unit("V", Side.AXIS, (0, 0), (StepRecord("pz", 3),),
+                mobility=Mobility.VEHICLE, cpa=30, stacking_points=1, oca=6, dca=6)
+    dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=40, fuel=6)
+    st = GameState(
+        turn=1, max_turns=4, phase=Phase.WEATHER, active_side=Side.SYSTEM, seed=1,
+        weather="clear", move_modifier=0, vp=VP(), terrain=TerrainMap(terrain=terr),
+        control={}, units=(unit,), target_hex=(8, 0), supplies=(dump,),
+        consumed=_z(), initial_supply=_init((dump,)))
+    assert supply.fuel_cost(unit, 16) == 8 and supply.fuel_cost(unit, 8) == 4
+
+    class ForceMove(Policy):
+        def __init__(self, dest):
+            self.dest = dest
+
+        def movement(self, s2, side):
+            return [MoveOrder("V", self.dest)] if side == Side.AXIS else []
+
+        def combat(self, s2, side):
+            return []
+    near = run(st, axis=ForceMove((4, 0)), allied=ForceMove((4, 0)))     # 8 CP -> 4 fuel, ok
+    assert near.final.unit("V").hex == (4, 0)
+    far = run(st, axis=ForceMove((8, 0)), allied=ForceMove((8, 0)))      # 16 CP -> 8 fuel, denied
+    assert any(e.kind == EventKind.ORDER_REJECTED and "fuel" in e.payload.get("reason", "")
+               for e in far.events)
+    assert far.final.unit("V").hex == (0, 0)            # never made the unaffordable dash
 
 
 def test_ammo_cost_phasing_doubles():

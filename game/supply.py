@@ -22,6 +22,8 @@ costs approximate per-battalion-equivalent rates via mobility class + stacking.
 """
 from __future__ import annotations
 
+import math
+
 from . import movement, tactics
 from .state import GameState, SupplyUnit, Unit
 from .terrain import Mobility, NON_MOT_CLASSES, Terrain
@@ -53,13 +55,39 @@ SUPPLY_MOVE_FUEL = 1               # Fuel to relocate a real supply unit / OpSta
 SUPPLY_MOBILITY = Mobility.MOTORIZED  # carried as medium-truck points (rule 32.51)
 
 
-def fuel_cost(unit: Unit) -> int:
-    """Fuel to move this unit in an OpStage (rule 32.24, bn-eq approximation)."""
+# 49.19 Fuel Consumption Rate PROXY by mobility class. Transcription of the chart
+# column is deferred (the field Unit.fuel_rate overrides this once transcribed); these
+# are clearly-flagged placeholder magnitudes. Foot/camel consume no fuel (49.12).
+# Scaled to the engine's 40/60-point proxy dumps (NOT the rulebook's literal tank
+# rate of 4, which is sized for thousand-point dumps): these equal the old flat
+# per-OpStage charge for a short move (<=5 CP), so the tuned benchmark stays
+# harmless, while the faithful law rate x ceil(CP/5) makes a long dash cost more.
+_FUEL_RATE_PROXY: dict = {
+    Mobility.VEHICLE: 2,           # tanks / AFVs / SP artillery
+    Mobility.MOTORIZED: 1,         # truck-borne infantry, towed guns
+    Mobility.RECCE: 1,
+    Mobility.LIGHT_TRUCK: 1,
+    Mobility.MOTORCYCLE: 1,
+}
+
+
+def fuel_rate(unit: Unit) -> int:
+    """The unit's Fuel Consumption Rate (49.13): Fuel Points burned per five CP (or
+    fraction) spent on movement. A transcribed Unit.fuel_rate wins; otherwise a
+    mobility-class proxy. Non-motorized classes walk and burn nothing (49.12)."""
     if unit.mobility in NON_MOT_CLASSES:
-        return 0                       # leg infantry walks — no fuel
-    if unit.mobility == Mobility.VEHICLE:
-        return 2                       # tank battalion-equivalent
-    return 1                           # motorized / recce / gun battalion-equivalent
+        return 0
+    return unit.fuel_rate or _FUEL_RATE_PROXY.get(unit.mobility, 2)
+
+
+def fuel_cost(unit: Unit, cp_spent: float) -> int:
+    """Fuel consumed to move `unit` spending `cp_spent` Capability Points (rule
+    49.13): rate x ceil(CP / 5). A dash that expends many CP outruns its fuel; a
+    short hop is cheap. Fuel is charged only for movement, in the hex the move
+    begins (49.16). cp_spent<=0 (a unit that did not move) costs nothing."""
+    if cp_spent <= 0:
+        return 0
+    return fuel_rate(unit) * math.ceil(cp_spent / 5)
 
 
 def ammo_cost(unit: Unit, *, phasing: bool, activity: str = "assault") -> int:

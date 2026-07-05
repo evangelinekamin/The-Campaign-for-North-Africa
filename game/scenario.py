@@ -241,7 +241,7 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
                            control={}, units=tuple(units), target_hex=target, supplies=tuple(supplies),
                            consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 0, "FUEL": 0})
             return [u for u in units if u.side == side and u.is_combat and not (
-                _supply.plan_draw(ps, u, _supply.FUEL, _supply.fuel_cost(u)) is not None
+                _supply.plan_draw(ps, u, _supply.FUEL, _supply.fuel_rate(u)) is not None
                 and _supply.plan_draw(ps, u, _supply.AMMO, _supply.ammo_cost(u, phasing=True)) is not None)]
 
         for side, prefix in ((Side.AXIS, "AX"), (Side.ALLIED, "AL")):

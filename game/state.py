@@ -56,6 +56,7 @@ class Unit:
     is_pure_aa: bool = False
     is_garrison_home: bool = False
     formation: str = ''            # OOB organisational group; the staff layer addresses by it
+    fuel_rate: int = 0             # 49.19 Fuel Consumption Rate; 0 -> supply.fuel_rate proxy
 
     @property
     def strength(self) -> int:

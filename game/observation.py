@@ -69,11 +69,15 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
         for u in state.living(side):
             if not u.is_combat or u.cp_used > 0:
                 continue
-            draws = supply.plan_draw(state, u, supply.FUEL, supply.fuel_cost(u))
+            # A move costs at least one 5-CP group of fuel (49.13); gate and estimate
+            # dump demand on that minimum -- a longer path may cost (and be rejected for)
+            # more, which the engine decides once the destination is chosen.
+            need = supply.fuel_rate(u)
+            draws = supply.plan_draw(state, u, supply.FUEL, need)
             if draws:
                 fuel_ok.add(u.id)
                 did = draws[0][0]
-                demand[did] = demand.get(did, 0) + supply.fuel_cost(u)
+                demand[did] = demand.get(did, 0) + need
                 dump_of[u.id] = did
         contended = {uid for uid, did in dump_of.items() if demand[did] > dump_fuel.get(did, 0)}
 

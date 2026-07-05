@@ -106,7 +106,7 @@ def _oversubscribed_dumps(state: GameState, orders: list) -> list[Conflict]:
         u = state.unit(o.unit_id)
         if u is None or u.cp_used != 0:            # only the first move pays fuel (32.23)
             continue
-        plan = supply.plan_draw(state, u, supply.FUEL, supply.fuel_cost(u))
+        plan = supply.plan_draw(state, u, supply.FUEL, supply.fuel_rate(u))
         if not plan:
             continue
         for sid, qty in plan:
