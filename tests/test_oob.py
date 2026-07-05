@@ -9,12 +9,20 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from game import oob
+from game import oob, supply
 from game.apply import fold
 from game.engine import determinism_signature, run
 from game.events import Side
 from game.policy import ScriptedPolicy
 from game.scenario import rommels_arrival
+
+
+def _stranded_combat(state, side):
+    """Combat units of `side` on-map at start that cannot trace fuel and/or ammo
+    (missing either strands it) from the placed dumps (the real 32.16 supply gate)."""
+    return [u for u in state.living(side) if u.is_combat and not (
+        supply.plan_draw(state, u, supply.FUEL, supply.fuel_cost(u)) is not None
+        and supply.plan_draw(state, u, supply.AMMO, supply.ammo_cost(u, phasing=True)) is not None)]
 
 
 def test_oob_builds_both_sides_with_chart_stats():
@@ -50,6 +58,30 @@ def test_oob_assigns_basic_morale_by_formation():
     assert next(v for k, v in m.items() if "Aus" in k) == 1         # 9th Australian +1
     assert next(v for k, v in m.items() if "Rommel" in k) == 1      # DAK HQ +1
     assert next(v for k, v in m.items() if "OAS" in k) == 0         # 300th Oasis 0
+
+
+def test_default_supply_is_faithfully_scarce():
+    # The FAITHFUL default keeps only the authored start-line dumps: the spread-out
+    # periphery (Italian rear divisions, the Cyrenaica screen) starts genuinely
+    # out of supply (rule 32.16), so the Quartermaster has something to ration and
+    # "outrun your supply" is possible. The advance is sustained by MOVING dumps
+    # forward (rule 32.3), not by blanketing every unit with a co-located dump.
+    faithful = rommels_arrival()                         # default: blanket_supply=False
+    blanket = rommels_arrival(blanket_supply=True)       # the old auto-pad crutch
+
+    # Scarcity is real: at least one combat unit per side cannot trace supply at t1.
+    assert _stranded_combat(faithful, Side.AXIS)
+    assert _stranded_combat(faithful, Side.ALLIED)
+    # Total map fuel is far below a full 12-turn advance's demand -- fuel must be
+    # husbanded, not spent freely. Axis per-op-stage fuel demand alone is ~33.
+    axis_fuel = sum(s.fuel for s in faithful.supplies if s.side == Side.AXIS)
+    assert axis_fuel < 12 * 33                           # 12 turns * ~33 fuel/stage
+
+    # The crutch (blanket_supply=True) leaves nobody stranded and pads the map with
+    # far more dumps -- the exact over-supply we are removing.
+    assert not _stranded_combat(blanket, Side.AXIS)
+    assert not _stranded_combat(blanket, Side.ALLIED)
+    assert len(blanket.supplies) > len(faithful.supplies)
 
 
 def test_rommels_arrival_runs_soundly():

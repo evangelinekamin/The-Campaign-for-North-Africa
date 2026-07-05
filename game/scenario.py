@@ -169,7 +169,7 @@ def _connect_pieces(terrain: dict, hexes) -> None:
         main.add(h)
 
 
-def rommels_arrival(seed: int = 1941) -> GameState:
+def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameState:
     """The REAL Rommel's Arrival OOB (rule 61.2), parsed from the VASSAL setup and
     placed on the connected El-Agheila -> Tobruk corridor (Maps A/B/C, real
     colour-sampled terrain). Unit stats come from the Characteristics Charts as a
@@ -193,29 +193,34 @@ def rommels_arrival(seed: int = 1941) -> GameState:
     _connect_pieces(terrain, [p.hex for p in (*units, *supplies)])
     tmap = replace(tmap, terrain=terrain)
 
-    # Forward supply (32.15: a dump per force concentration): the .vsav dumps sit on
-    # the start lines, so spread-out units (the Cyrenaica screen, the Italian rear)
-    # can be stranded > 1/2 CPA from a dump -- unable to move OR fight (32.12/32.23).
-    # Add dumps at still-stranded units until every combat unit can actually trace
-    # both fuel AND ammo -- using the real supply trace, not a hex proxy, so costly
-    # terrain can't hide a gap. New dumps co-locate on existing unit hexes (already
-    # land + connected), so the terrain needs no rework.
-    from . import supply as _supply
+    # FAITHFUL SUPPLY (default): keep ONLY the authored start-line dumps (rule 32.15,
+    # a dump per force concentration). The concentrated attacking core (5th Light and
+    # Ariete panzers, the German artillery) can trace both fuel and ammo at t1; the
+    # spread-out periphery (the Italian rear divisions, the Cyrenaica screen) starts
+    # stranded > 1/2 CPA from a dump and stays so until MOVING supply forward (rule
+    # 32.3, engine._supply_movement) reaches it. Scarcity is the point -- the
+    # Quartermaster rations fuel and the Axis can outrun its supply.
+    #
+    # blanket_supply=True restores the old auto-pad crutch (a full 40/60 dump on every
+    # stranded unit until nobody is stranded) -- kept only for back-compat/comparison;
+    # it erases scarcity and is NOT faithful.
+    if blanket_supply:
+        from . import supply as _supply
 
-    def _unsupplied(side: Side) -> list[Unit]:
-        ps = GameState(turn=1, max_turns=12, phase=Phase.MOVEMENT, active_side=Side.SYSTEM,
-                       seed=seed, weather="clear", move_modifier=0, vp=VP(), terrain=tmap,
-                       control={}, units=tuple(units), target_hex=target, supplies=tuple(supplies),
-                       consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 0, "FUEL": 0})
-        return [u for u in units if u.side == side and u.is_combat and not (
-            _supply.plan_draw(ps, u, _supply.FUEL, _supply.fuel_cost(u)) is not None
-            and _supply.plan_draw(ps, u, _supply.AMMO, _supply.ammo_cost(u, phasing=True)) is not None)]
+        def _unsupplied(side: Side) -> list[Unit]:
+            ps = GameState(turn=1, max_turns=12, phase=Phase.MOVEMENT, active_side=Side.SYSTEM,
+                           seed=seed, weather="clear", move_modifier=0, vp=VP(), terrain=tmap,
+                           control={}, units=tuple(units), target_hex=target, supplies=tuple(supplies),
+                           consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 0, "FUEL": 0})
+            return [u for u in units if u.side == side and u.is_combat and not (
+                _supply.plan_draw(ps, u, _supply.FUEL, _supply.fuel_cost(u)) is not None
+                and _supply.plan_draw(ps, u, _supply.AMMO, _supply.ammo_cost(u, phasing=True)) is not None)]
 
-    for side, prefix in ((Side.AXIS, "AX"), (Side.ALLIED, "AL")):
-        i = 0
-        while (stranded := _unsupplied(side)) and i < 40:
-            supplies.append(SupplyUnit(f"{prefix}-Fwd{i}", side, stranded[0].hex, ammo=40, fuel=60))
-            i += 1
+        for side, prefix in ((Side.AXIS, "AX"), (Side.ALLIED, "AL")):
+            i = 0
+            while (stranded := _unsupplied(side)) and i < 40:
+                supplies.append(SupplyUnit(f"{prefix}-Fwd{i}", side, stranded[0].hex, ammo=40, fuel=60))
+                i += 1
 
     # A supply dump beside a road is on the supply net: add a short road spur so
     # units can trace to it along the road (rule 32.16 trace is priced as roaded).
