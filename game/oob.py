@@ -143,6 +143,7 @@ def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
         morale=_morale_for(rec["group"], rec["counter"]),
         is_combat=s.get("is_combat", True),
         arrival_turn=arrival_turn,
+        formation=rec["group"],
     )
 
 

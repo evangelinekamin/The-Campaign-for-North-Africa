@@ -55,6 +55,7 @@ class Unit:
     is_first_line_truck: bool = False
     is_pure_aa: bool = False
     is_garrison_home: bool = False
+    formation: str = ''            # OOB organisational group; the staff layer addresses by it
 
     @property
     def strength(self) -> int:

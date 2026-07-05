@@ -57,6 +57,13 @@ class EventKind(str, Enum):
     PHASE_ADVANCED = "PHASE_ADVANCED"
     TURN_ADVANCED = "TURN_ADVANCED"
     VICTORY_CHECKED = "VICTORY_CHECKED"
+    # STAFF_* are narrative / no-op audit events: staff chatter the board is
+    # invariant to (they fold to state unchanged; see game.apply, game.staff_events).
+    STAFF_INTENT = "STAFF_INTENT"
+    STAFF_PROPOSAL = "STAFF_PROPOSAL"
+    STAFF_CONSTRAINT = "STAFF_CONSTRAINT"
+    STAFF_ADJUDICATION = "STAFF_ADJUDICATION"
+    STAFF_DISSENT = "STAFF_DISSENT"
 
 
 @dataclass(frozen=True, slots=True)

@@ -17,7 +17,9 @@ def apply(state: GameState, event: Event) -> GameState:
 
     if k in (EventKind.GAME_INITIALIZED, EventKind.ORDER_REJECTED,
              EventKind.COMBAT_RESOLVED, EventKind.BARRAGE_RESOLVED,
-             EventKind.ANTI_ARMOR_RESOLVED, EventKind.REINFORCEMENT_ARRIVED):
+             EventKind.ANTI_ARMOR_RESOLVED, EventKind.REINFORCEMENT_ARRIVED,
+             EventKind.STAFF_INTENT, EventKind.STAFF_PROPOSAL, EventKind.STAFF_CONSTRAINT,
+             EventKind.STAFF_ADJUDICATION, EventKind.STAFF_DISSENT):
         return state  # markers / audit records — a reinforcement is on-map by turn>=arrival_turn
 
     if k == EventKind.WEATHER_ROLLED:
