@@ -71,6 +71,13 @@ class EventKind(str, Enum):
     WATER_SHORTFALL = "WATER_SHORTFALL"
     STORES_RESTORED = "STORES_RESTORED"
     WATER_RESTORED = "WATER_RESTORED"
+    # Ports (rules 55/56.28). PORT_UNLOADED is the legible per-commodity beat of a convoy
+    # coming ashore through the harbour throttle {port_id, commodity, qty, tons, eff} -- a
+    # marker whose load-bearing state change rides the paired SUPPLY_ARRIVED (so it folds
+    # to identity). PORT_EFFICIENCY_CHANGED {port_id, level} sets a port's Efficiency Level
+    # (55.14): the 55.18 +1/OpStage regeneration, and later bomb/mine reductions (41.3).
+    PORT_UNLOADED = "PORT_UNLOADED"
+    PORT_EFFICIENCY_CHANGED = "PORT_EFFICIENCY_CHANGED"
     BARRAGE_RESOLVED = "BARRAGE_RESOLVED"
     ANTI_ARMOR_RESOLVED = "ANTI_ARMOR_RESOLVED"
     COMBAT_RESOLVED = "COMBAT_RESOLVED"

@@ -25,7 +25,7 @@ from __future__ import annotations
 import math
 
 from . import movement, tactics
-from .state import GameState, SupplyUnit, Unit
+from .state import GameState, Port, SupplyUnit, Unit
 from .terrain import Mobility, NON_MOT_CLASSES, Terrain
 
 AMMO = "AMMO"
@@ -49,6 +49,36 @@ def dump_capacity(terrain: Terrain) -> dict:
     if terrain == Terrain.MAJOR_CITY:
         return {c: _UNLIMITED for c in COMMODITIES}
     return dict(_OTHER_CAP)
+
+
+# 54.5 Equivalent Weights: tons per one supply Point (Ammo 4t, Fuel 1/8t, Stores 1t,
+# Water 1/6t). The ONLY place tonnage meets points -- confined to the port/rail landing
+# edge (the plan keeps the tonnage lever out of the per-hex model).
+TONS_PER_POINT: dict = {AMMO: 4.0, FUEL: 1 / 8, STORES: 1.0, WATER: 1 / 6}
+
+
+def tons_to_points(tons: float, commodity: str) -> int:
+    """54.5: how many Points of `commodity` a tonnage allowance holds (floored)."""
+    return math.floor(tons / TONS_PER_POINT[commodity])
+
+
+def points_to_tons(points: int, commodity: str) -> int:
+    """54.5: the tonnage a Point count of `commodity` weighs (for port narration)."""
+    return math.ceil(points * TONS_PER_POINT[commodity])
+
+
+def port_landing_cap(port: Port, commodity: str) -> int:
+    """55.14: a port's effective per-OpStage receiving cap for `commodity` at its current
+    Efficiency Level -- the smaller of the explicit per-commodity Point cap and the 54.5
+    tonnage-derived cap, scaled by eff/max_eff. 'Round all reductions upward' (55.14)."""
+    cap = min(getattr(port, "cap_" + commodity.lower()), tons_to_points(port.cap_tons, commodity))
+    return math.ceil(cap * port.eff / port.max_eff)
+
+
+def regen_eff(port: Port) -> int | None:
+    """55.18: a port regains one Efficiency Level per OpStage, up to its assigned maximum.
+    Returns the new level, or None if already at max_eff (nothing to regenerate)."""
+    return port.eff + 1 if port.eff < port.max_eff else None
 
 SUPPLY_CPA = 15                     # CPA of an MP-carried supply unit (rule 32.58A)
 SUPPLY_MOVE_FUEL = 1               # Fuel to relocate a real supply unit / OpStage (32.24)

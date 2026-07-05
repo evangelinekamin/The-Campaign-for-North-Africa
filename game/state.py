@@ -143,6 +143,33 @@ class Convoy:
 
 
 @dataclass(frozen=True, slots=True)
+class Port:
+    """A port and its built-in supply dump (rule 56.28 -- every port of arrival has a
+    dump 'built in, as it were'). The port THROTTLES what a convoy lands: its effective
+    per-OpStage receiving capacity is ceil(cap * eff / max_eff) (rule 55.14), so a
+    harbour crippled by a scuttled ship lands only a fraction of a convoy's cargo. Each
+    commodity has a Point cap (cap_ammo..cap_water, proxy magnitudes for the untranscribed
+    55.3 chart); cap_tons is the port's tonnage rating (55.13), crossed to Points at the
+    landing edge via the 54.5 Equivalent Weights (game.supply.port_landing_cap). `eff` is
+    the current Efficiency Level, `max_eff` the assigned maximum (55.12); Tobruk seeds
+    eff=2/max_eff=5 -- the San Giorgio scuttled in the harbour costs it three levels
+    (30.17 / 55.25). `kind` is "major" (men + supplies) or "minor" (supplies only, 55.11).
+    Efficiency regenerates +1/OpStage up to max_eff (55.18), except a permanent harbour
+    BLOCK that only engineers clear (55.26; see game.engine.HARBOUR_BLOCKED)."""
+    id: str
+    side: Side
+    hex: Coord
+    kind: str
+    max_eff: int
+    eff: int
+    cap_ammo: int
+    cap_fuel: int
+    cap_stores: int
+    cap_water: int
+    cap_tons: int
+
+
+@dataclass(frozen=True, slots=True)
 class GameState:
     turn: int
     max_turns: int
@@ -170,6 +197,10 @@ class GameState:
     # convoy-less scenario byte-identical; the engine fires the faucet only on a
     # convoy's arrival_turn (game.engine._naval_convoys).
     convoys: tuple[Convoy, ...] = ()
+    # Ports (rules 55/56.28): the harbour-efficiency throttle a convoy lands through.
+    # Default () keeps every port-less scenario byte-identical (the engine applies the
+    # throttle only when a landing dump belongs to a port; game.engine._naval_convoys).
+    ports: tuple[Port, ...] = ()
 
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:
@@ -208,6 +239,19 @@ class GameState:
         return tuple(s for s in self.supplies
                      if s.side == side and not s.is_dummy and not s.empty)
 
+    def port(self, pid: str) -> "Port | None":
+        for p in self.ports:
+            if p.id == pid:
+                return p
+        return None
+
+    def port_at(self, coord: Coord) -> "Port | None":
+        """The port whose built-in dump sits on `coord` (56.28), or None."""
+        for p in self.ports:
+            if p.hex == coord:
+                return p
+        return None
+
     # --- functional updates (return new state) -------------------------------
     def with_unit(self, unit: Unit) -> "GameState":
         units = tuple(unit if u.id == unit.id else u for u in self.units)
@@ -226,3 +270,7 @@ class GameState:
     def with_supply(self, su: "SupplyUnit") -> "GameState":
         supplies = tuple(su if s.id == su.id else s for s in self.supplies)
         return replace(self, supplies=supplies)
+
+    def with_port(self, p: "Port") -> "GameState":
+        ports = tuple(p if q.id == p.id else q for q in self.ports)
+        return replace(self, ports=ports)

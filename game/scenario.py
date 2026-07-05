@@ -19,7 +19,7 @@ from . import cna_map, coords, oob
 from .events import Phase, Side
 from .hexmap import distance, neighbors
 from .movement import TerrainMap, edge
-from .state import Convoy, GameState, StepRecord, SupplyUnit, Unit, VP
+from .state import Convoy, GameState, Port, StepRecord, SupplyUnit, Unit, VP
 from .supply import COMMODITIES
 from .terrain import Hexside, Mobility, Terrain
 
@@ -269,14 +269,65 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
 
     max_turns = 12
     convoys = _rommel_convoys(supplies, target, max_turns)
+    ports = _rommel_ports(supplies, target)
     initial = _initial_supply(supplies)
     return GameState(
         turn=1, max_turns=max_turns, phase=Phase.WEATHER, active_side=Side.SYSTEM,
         seed=seed, weather="clear", move_modifier=0, vp=VP(),
         terrain=tmap, control={}, units=tuple(units), target_hex=target,
         supplies=tuple(supplies), consumed=_zero_consumed(),
-        initial_supply=initial, convoys=convoys,
+        initial_supply=initial, convoys=convoys, ports=ports,
     )
+
+
+# Port capacities (proxy magnitudes for the untranscribed 55.3 Port Capacity Chart --
+# FLAGGED). Tobruk's is sized so that at the San Giorgio 2/5 efficiency (30.17/55.25) the
+# ferry still lands ~40% -- enough to keep the garrison and the units tracing to AL-Tobruk
+# in Stores/Water/Ammo (the peak measured draw is ~176 Stores/turn; 40% of 500 = 200).
+# The rear ports carry one Supply-Unit load. cap_tons is a 54.5-consistent tonnage rating.
+TOBRUK_PORT_CAP: dict = {"AMMO": 300, "FUEL": 100, "STORES": 500, "WATER": 150}
+TOBRUK_PORT_TONS = 1200
+
+
+def _load_cargo() -> dict:
+    return {"AMMO": oob.DUMP_AMMO, "FUEL": oob.DUMP_FUEL,
+            "STORES": oob.DUMP_STORES, "WATER": oob.DUMP_WATER}
+
+
+def _caps(points: dict, tons: int) -> dict:
+    return {"cap_ammo": points["AMMO"], "cap_fuel": points["FUEL"],
+            "cap_stores": points["STORES"], "cap_water": points["WATER"], "cap_tons": tons}
+
+
+def _axis_rear(supplies, target):
+    axis = [s for s in supplies if s.side == Side.AXIS]
+    return max(axis, key=lambda s: (distance(s.hex, target), s.id)) if axis else None
+
+
+def _cw_railhead(supplies, target):
+    cw = [s for s in supplies if s.side == Side.ALLIED and s.id != "AL-Tobruk"]
+    return max(cw, key=lambda s: (distance(s.hex, target), s.id)) if cw else None
+
+
+def _rommel_ports(supplies, target) -> tuple[Port, ...]:
+    """The scenario's ports and their built-in dumps (56.28). Tobruk is the load-bearing
+    throttle: the San Giorgio scuttled in the harbour pins it at Efficiency 2 of 5 (30.17
+    / 55.25), so the ferry lands 40% of a convoy (game.engine.HARBOUR_BLOCKED keeps it from
+    regenerating -- only engineers clear a scuttled ship, 55.26). The Axis rear proxies the
+    scuttled Benghazi (55.2, a permanent block at ~2/3), keeping the desert faucet lean;
+    the Commonwealth base (Cairo/Alexandria, 57) runs at full efficiency. Efficiencies are
+    proxies for the untranscribed 55.3 chart and are FLAGGED as such."""
+    ports = [Port("PORT-Tobruk", Side.ALLIED, target, "major", max_eff=5, eff=2,
+                  **_caps(TOBRUK_PORT_CAP, TOBRUK_PORT_TONS))]
+    axis_rear = _axis_rear(supplies, target)
+    if axis_rear is not None:
+        ports.append(Port("PORT-Benghazi", Side.AXIS, axis_rear.hex, "major",
+                          max_eff=3, eff=2, **_caps(_load_cargo(), 480)))
+    cw_rail = _cw_railhead(supplies, target)
+    if cw_rail is not None:
+        ports.append(Port("PORT-Cairo", Side.ALLIED, cw_rail.hex, "major",
+                          max_eff=5, eff=5, **_caps(_load_cargo(), 480)))
+    return tuple(ports)
 
 
 def _rommel_convoys(supplies, target, max_turns: int) -> tuple[Convoy, ...]:
@@ -293,26 +344,25 @@ def _rommel_convoys(supplies, target, max_turns: int) -> tuple[Convoy, ...]:
         cadence -- deliberately kept lean so scarcity still bites the desert advance.
 
     Destinations are chosen by geography (rearmost Axis dump; easternmost CW dump)
-    so the timetable is robust to the OOB's generated dump ids."""
-    axis_dumps = [s for s in supplies if s.side == Side.AXIS]
-    cw_rear = [s for s in supplies if s.side == Side.ALLIED and s.id != "AL-Tobruk"]
-    turns = range(1, max_turns + 1)
+    so the timetable is robust to the OOB's generated dump ids.
 
-    # A whole Supply Unit of all four commodities (CHUNK 2): the ferry must now refill
-    # Stores and Water too, or the garrison would disorganize and starve out under 51/52.
-    cargo = {"AMMO": oob.DUMP_AMMO, "FUEL": oob.DUMP_FUEL,
-             "STORES": oob.DUMP_STORES, "WATER": oob.DUMP_WATER}
+    CHUNK 3: the ferry now lands THROUGH the Tobruk port throttle (San Giorgio, 2/5), so
+    it carries a full PORT-LOAD (TOBRUK_PORT_CAP) rather than one Supply Unit -- 40% of a
+    port-load still exceeds the garrison's per-turn draw, keeping AL-Tobruk supplied while
+    the harbour visibly runs at 2/5. The rear lanes still carry one Supply Unit."""
+    turns = range(1, max_turns + 1)
+    load = _load_cargo()          # one Supply Unit of all four commodities (CHUNK 2)
 
     convoys: list[Convoy] = [
-        Convoy(f"ferry-t{t}", Side.ALLIED, t, "SEA-TOBRUK", "AL-Tobruk", dict(cargo))
+        Convoy(f"ferry-t{t}", Side.ALLIED, t, "SEA-TOBRUK", "AL-Tobruk", dict(TOBRUK_PORT_CAP))
         for t in turns]
-    if cw_rear:
-        railhead = max(cw_rear, key=lambda s: (distance(s.hex, target), s.id))
-        convoys += [Convoy(f"rail-t{t}", Side.ALLIED, t, "CW-RAILHEAD", railhead.id, dict(cargo))
+    railhead = _cw_railhead(supplies, target)
+    if railhead is not None:
+        convoys += [Convoy(f"rail-t{t}", Side.ALLIED, t, "CW-RAILHEAD", railhead.id, dict(load))
                     for t in turns]
-    if axis_dumps:
-        rear = max(axis_dumps, key=lambda s: (distance(s.hex, target), s.id))
-        convoys += [Convoy(f"axis-l1-t{t}", Side.AXIS, t, "1", rear.id, dict(cargo))
+    rear = _axis_rear(supplies, target)
+    if rear is not None:
+        convoys += [Convoy(f"axis-l1-t{t}", Side.AXIS, t, "1", rear.id, dict(load))
                     for t in range(2, max_turns + 1, 2)]
     return tuple(convoys)
 

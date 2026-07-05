@@ -32,6 +32,14 @@ CONTROL_OF: dict[Side, Control] = {Side.AXIS: Control.AXIS, Side.ALLIED: Control
 # this (and the Axis ammo/dump schedule) with the benchmark harness.
 BARRAGE_HITS_PER_FORT_LEVEL: int = 1
 
+# 55.2 harbour BLOCKING (a scuttled ship) permanently cripples a port until Friendly
+# engineers clear the wreck (55.26) -- it is NOT bomb damage, so the 55.18 +1/OpStage
+# regeneration does NOT restore it. The San Giorgio scuttled in Tobruk (30.17 / 55.25,
+# -3 levels) and the Axis scuttling of Benghazi (55.2, "reduced to almost zero ... during
+# the entire war") are such blocks: they stay pinned at their seeded Efficiency Level.
+# Bomb/mine reductions (41.3), which DO regenerate, arrive with the air subsystem (CHUNK 6).
+HARBOUR_BLOCKED: frozenset = frozenset({"PORT-Tobruk", "PORT-Benghazi"})
+
 
 @dataclass(frozen=True, slots=True)
 class RunResult:
@@ -147,8 +155,10 @@ def _naval_convoys(r: _Run) -> None:
     never sails (56.15). Fires ONLY when convoys are due this game-turn, so every convoy-
     less scenario stays byte-identical (no Phase.LOGISTICS is emitted)."""
     due = [c for c in r.state.convoys if c.arrival_turn == r.state.turn]
-    if not due:
-        return
+    regenable = [p for p in r.state.ports
+                 if p.id not in HARBOUR_BLOCKED and p.eff < p.max_eff]
+    if not due and not regenable:
+        return                                          # convoy-/port-less stays byte-identical
     r.go(Phase.LOGISTICS, Side.SYSTEM)
     for c in sorted(due, key=lambda c: c.id):           # deterministic arrival order
         dump = r.state.supply(c.dest)
@@ -159,12 +169,39 @@ def _naval_convoys(r: _Run) -> None:
             continue
         cargo = interdict(c, r.state, r.rng)            # CHUNK 1: identity -> dict(c.cargo)
         cap = supply.dump_capacity(r.state.terrain.terrain[dump.hex])   # 54.12, keyed by dump terrain
-        landed = {k: min(cap[k], getattr(dump, k.lower()) + v) - getattr(dump, k.lower())
-                  for k, v in cargo.items()}
-        landed = {k: q for k, q in landed.items() if q > 0}
+        port = r.state.port_at(dump.hex)                # 56.28: a port's built-in dump
+        landed: dict = {}
+        for k, v in cargo.items():
+            onhand = getattr(dump, k.lower())
+            room = min(cap[k], onhand + v) - onhand     # 54.12 dump headroom
+            if port is not None:
+                room = min(room, supply.port_landing_cap(port, k))   # 55.14 harbour throttle
+            if room > 0:
+                landed[k] = room
+        if port is not None:                            # legible per-commodity landing beat
+            for k in sorted(landed):
+                r.emit(EventKind.PORT_UNLOADED, c.side, "SYSTEM",
+                       {"port_id": port.id, "commodity": k, "qty": landed[k],
+                        "tons": supply.points_to_tons(landed[k], k), "eff": port.eff})
         if landed:                                      # nothing to land into a full dump
             r.emit(EventKind.SUPPLY_ARRIVED, c.side, "SYSTEM",
                    {"supply_id": c.dest, "cargo": landed, "lane": c.lane, "convoy_id": c.id})
+    _port_regen(r)      # 55.18: the port worked this OpStage at its current eff, then recovers
+
+
+def _port_regen(r: _Run) -> None:
+    """55.18: every port regains one Efficiency Level per OpStage (up to its assigned
+    maximum), emitted as PORT_EFFICIENCY_CHANGED -- except a permanent harbour BLOCK
+    (HARBOUR_BLOCKED: San Giorgio, scuttled Benghazi), which only engineers clear (55.26).
+    Deterministic (sorted by id). No bomb/mine reductions exist yet (CHUNK 6), so in the
+    current scenarios only bomb-free ports below max would climb -- the seeded blocks stay."""
+    for p in sorted(r.state.ports, key=lambda p: p.id):
+        if p.id in HARBOUR_BLOCKED:
+            continue
+        level = supply.regen_eff(p)
+        if level is not None:
+            r.emit(EventKind.PORT_EFFICIENCY_CHANGED, p.side, "SYSTEM",
+                   {"port_id": p.id, "level": level})
 
 
 def _logistics(r: _Run) -> None:

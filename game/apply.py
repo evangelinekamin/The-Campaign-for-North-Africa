@@ -18,10 +18,15 @@ def apply(state: GameState, event: Event) -> GameState:
     if k in (EventKind.GAME_INITIALIZED, EventKind.ORDER_REJECTED,
              EventKind.COMBAT_RESOLVED, EventKind.BARRAGE_RESOLVED,
              EventKind.ANTI_ARMOR_RESOLVED, EventKind.REINFORCEMENT_ARRIVED,
-             EventKind.CONVOY_CANCELLED, EventKind.PASTA_DENIED,
+             EventKind.CONVOY_CANCELLED, EventKind.PASTA_DENIED, EventKind.PORT_UNLOADED,
              EventKind.STAFF_INTENT, EventKind.STAFF_PROPOSAL, EventKind.STAFF_CONSTRAINT,
              EventKind.STAFF_ADJUDICATION, EventKind.STAFF_DISSENT):
-        return state  # markers / audit records — a reinforcement is on-map by turn>=arrival_turn
+        return state  # markers / audit records — PORT_UNLOADED's top-up rides SUPPLY_ARRIVED
+
+    if k == EventKind.PORT_EFFICIENCY_CHANGED:
+        # 55.14/55.18: set a port's Efficiency Level (regen, or later bomb/mine damage).
+        port = state.port(p["port_id"])
+        return state.with_port(replace(port, eff=p["level"]))
 
     if k == EventKind.SUPPLY_EVAPORATED:
         # 49.3 / 52.44: fuel/water lost to evaporation & spillage. Folds exactly like a
