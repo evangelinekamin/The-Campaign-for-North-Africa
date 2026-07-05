@@ -57,6 +57,11 @@ class Unit:
     is_garrison_home: bool = False
     formation: str = ''            # OOB organisational group; the staff layer addresses by it
     fuel_rate: int = 0             # 49.19 Fuel Consumption Rate; 0 -> supply.fuel_rate proxy
+    # Consecutive-shortfall counters (rules 51/52), folded via replace. Reset when the
+    # unit is resupplied; drive 51.21 disorganization + 51.22/52.53 attrition.
+    turns_without_stores: int = 0  # consecutive game-turns without Stores (51.22)
+    stages_without_water: int = 0  # consecutive Operations Stages without Water (52.53)
+    disorganization: int = 0       # accumulated Disorganization Points (51.21)
 
     @property
     def strength(self) -> int:

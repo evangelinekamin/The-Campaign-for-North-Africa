@@ -208,11 +208,42 @@ def _stores_expenditure(r: _Run, side: Side, hot: bool) -> None:
     for u in sorted(r.state.living(side), key=lambda u: u.id):
         draws = supply.plan_draw(r.state, u, supply.STORES, supply.stores_cost(u))
         if draws is None:
-            continue                                    # unsupplied -> SUB-STEP D attrition
+            _stores_shortfall(r, side, actor, u)        # 51.21/51.22
+            continue
         for sid, qty in draws:
             r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
                    {"supply_id": sid, "commodity": supply.STORES, "qty": qty, "unit_id": u.id})
+        if u.turns_without_stores > 0:                  # resupplied -> reset the consecutive count
+            r.emit(EventKind.STORES_RESTORED, side, actor, {"unit_id": u.id})
         _pasta_point(r, side, actor, u)                 # 52.6: got stores -> needs its pasta water
+
+
+# A unit only DISORGANIZES (a cohesion hit that feeds the 15.88/17 surrender path) once
+# its Stores shortfall is SUSTAINED, not on a single turn out of trace -- the rules stress
+# "consecutive" shortfall, and a unit briefly outrunning its stores while advancing must
+# not have its morale collapse (which would unravel the whole combat trajectory). The
+# Disorganization Point itself (51.21) still accrues every short turn in the counter.
+DISORGANIZED_AFTER: int = 6        # consecutive short game-turns before cohesion bites
+
+
+def _stores_shortfall(r: _Run, side: Side, actor: str, u) -> None:
+    """A unit that cannot draw its Stores this game-turn (51.2). It earns a
+    Disorganization Point every turn (51.21, accrued in the counter); once sustained
+    (>= DISORGANIZED_AFTER consecutive turns) it disorganizes, routed through
+    COHESION_CHANGED so it feeds the live 15.88/17 surrender. Every second consecutive
+    short turn an INFANTRY unit sheds that turn's percentage of its TOE Strength Points
+    (51.22: 2% at 2 turns, 4% at 4 ...) via STEP_LOST role='attrition'. Guns/tanks are
+    exempt from the step loss (51.22)."""
+    r.emit(EventKind.STORES_SHORTFALL, side, actor, {"unit_id": u.id})
+    cur = r.state.unit(u.id)
+    n = cur.turns_without_stores
+    if n >= DISORGANIZED_AFTER:                          # 51.21 disorganization bites (sustained)
+        r.emit(EventKind.COHESION_CHANGED, side, actor, {"unit_id": u.id, "delta": -1})
+    if supply.is_infantry(cur) and n >= 2 and n % 2 == 0:
+        loss = round(n / 100 * cur.strength)            # 51.22 n% of TOE, nearest whole
+        if loss > 0:
+            r.emit(EventKind.STEP_LOST, side, actor,
+                   {"unit_id": u.id, "amount": min(loss, cur.strength), "role": "attrition"})
 
 
 def _pasta_point(r: _Run, side: Side, actor: str, u) -> None:
@@ -242,10 +273,25 @@ def _water_distribution(r: _Run, side: Side, hot: bool) -> None:
     for u in sorted(r.state.living(side), key=lambda u: u.id):
         draws = supply.plan_draw(r.state, u, supply.WATER, supply.water_cost(u, hot=hot))
         if draws is None:
-            continue                                    # unsupplied -> SUB-STEP D attrition
+            _water_shortfall(r, side, actor, u)         # 52.53
+            continue
         for sid, qty in draws:
             r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
                    {"supply_id": sid, "commodity": supply.WATER, "qty": qty, "unit_id": u.id})
+        if u.stages_without_water > 0:                  # resupplied -> reset the consecutive count
+            r.emit(EventKind.WATER_RESTORED, side, actor, {"unit_id": u.id})
+
+
+def _water_shortfall(r: _Run, side: Side, actor: str, u) -> None:
+    """A unit deprived of Water this Operations Stage (52.5). For every consecutive stage
+    AFTER the first, an INFANTRY unit loses one TOE Strength Point (52.53), via the
+    existing STEP_LOST role='attrition'. (Vehicles-can't-move / defend-at-half, 52.51-52,
+    are deferred; the attrition is the load-bearing degradation.)"""
+    r.emit(EventKind.WATER_SHORTFALL, side, actor, {"unit_id": u.id})
+    cur = r.state.unit(u.id)
+    if supply.is_infantry(cur) and cur.stages_without_water >= 2:    # after the first stage
+        r.emit(EventKind.STEP_LOST, side, actor,
+               {"unit_id": u.id, "amount": min(1, cur.strength), "role": "attrition"})
 
 
 def _weather(r: _Run) -> None:

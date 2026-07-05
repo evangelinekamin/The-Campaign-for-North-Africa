@@ -63,6 +63,14 @@ class EventKind(str, Enum):
     # the fold is identity; the cohesion collapse rides the existing COHESION_CHANGED).
     SUPPLY_EVAPORATED = "SUPPLY_EVAPORATED"
     PASTA_DENIED = "PASTA_DENIED"
+    # Shortfall counters (51/52). A SHORTFALL increments the unit's consecutive counter
+    # (STORES also +1 Disorganization, 51.21); a RESTORED resets it when supply resumes.
+    # Attrition (51.22 stores / 52.53 water) rides the existing STEP_LOST role='attrition'
+    # and the 51.21 disorganization rides COHESION_CHANGED, feeding the live 17.x surrender.
+    STORES_SHORTFALL = "STORES_SHORTFALL"
+    WATER_SHORTFALL = "WATER_SHORTFALL"
+    STORES_RESTORED = "STORES_RESTORED"
+    WATER_RESTORED = "WATER_RESTORED"
     BARRAGE_RESOLVED = "BARRAGE_RESOLVED"
     ANTI_ARMOR_RESOLVED = "ANTI_ARMOR_RESOLVED"
     COMBAT_RESOLVED = "COMBAT_RESOLVED"

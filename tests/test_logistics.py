@@ -140,3 +140,96 @@ def test_logistics_skipped_when_no_stores_or_water():
     r = _Run(_state([unit], [dump]))
     _logistics(r)
     assert not r.events                                 # inert: no LOGISTICS phase, byte-identical
+
+
+# --- SUB-STEP D: shortfall counters + attrition ------------------------------
+
+def _cutoff(unit) -> _Run:
+    """A unit at (0,0) with a stocked dump stranded far away at (9,9): the two hexes
+    are disconnected, so nothing can be traced -- the unit is cut off (but the scenario
+    still models full logistics, so the phase engages)."""
+    dump = SupplyUnit("D", Side.AXIS, (9, 9), ammo=0, fuel=0, stores=500, water=500)
+    return _Run(_state([unit], [dump]))
+
+
+def test_cutoff_unit_accrues_shortfalls_and_conserves():
+    r = _cutoff(_inf("U"))
+    _logistics(r)
+    assert any(e.kind == EventKind.STORES_SHORTFALL and e.payload["unit_id"] == "U"
+               for e in r.events)
+    assert any(e.kind == EventKind.WATER_SHORTFALL and e.payload["unit_id"] == "U"
+               for e in r.events)
+    u = r.state.unit("U")
+    assert (u.turns_without_stores, u.stages_without_water, u.disorganization) == (1, 1, 1)
+    assert _conserves(r.state)
+
+
+def test_sustained_stores_shortfall_disorganizes():
+    # 51.21: after DISORGANIZED_AFTER (6) consecutive short turns the unit disorganizes
+    # via COHESION_CHANGED, feeding the surrender path; earlier turns only accrue points.
+    # Water is supplied (co-located dump has water, no stores) so the unit survives long
+    # enough for the stores disorganization to bite (a cut-off unit dies of thirst first).
+    from game.engine import DISORGANIZED_AFTER
+    dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=0, fuel=0, stores=0, water=500)
+    r = _Run(_state([_inf("U", strength=3)], [dump]))
+    for _ in range(DISORGANIZED_AFTER - 1):
+        _logistics(r)
+    assert not any(e.kind == EventKind.COHESION_CHANGED for e in r.events)   # not yet
+    _logistics(r)                                       # the DISORGANIZED_AFTER-th short turn
+    assert any(e.kind == EventKind.COHESION_CHANGED and e.payload["unit_id"] == "U"
+               for e in r.events)
+    assert r.state.unit("U").turns_without_stores == DISORGANIZED_AFTER
+
+
+def test_two_consecutive_turns_without_stores_attrit_infantry():
+    # 51.22: 2% of TOE at 2 consecutive short game-turns (infantry only). Water is
+    # supplied here (co-located dump has water, no stores) to isolate the stores loss.
+    dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=0, fuel=0, stores=0, water=500)
+    r = _Run(_state([_inf("U", strength=100)], [dump]))
+    _logistics(r)
+    assert not any(e.kind == EventKind.STEP_LOST for e in r.events)          # first short turn: none
+    _logistics(r)                                       # second consecutive short turn
+    losses = [e for e in r.events if e.kind == EventKind.STEP_LOST
+              and e.payload.get("role") == "attrition"]
+    assert losses and losses[0].payload["amount"] == 2                       # 2% of 100
+    assert r.state.unit("U").strength == 98
+
+
+def test_water_shortfall_costs_a_step_after_the_first_stage():
+    # 52.53: one TOE per consecutive Operations Stage AFTER the first without water.
+    # Stores supplied (co-located dump has stores, no water) to isolate the water loss.
+    dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=0, fuel=0, stores=500, water=0)
+    r = _Run(_state([_inf("U", strength=5)], [dump]))
+    _logistics(r)
+    assert not any(e.kind == EventKind.STEP_LOST for e in r.events)          # first stage: none
+    _logistics(r)                                       # second consecutive dry stage
+    losses = [e for e in r.events if e.kind == EventKind.STEP_LOST
+              and e.payload.get("role") == "attrition"]
+    assert losses and losses[0].payload["amount"] == 1
+    assert r.state.unit("U").strength == 4
+
+
+def test_guns_are_exempt_from_shortfall_attrition():
+    # 51.22: only infantry-type TOE may be eliminated. A gun (artillery) starves without
+    # losing steps.
+    gun = replace(_inf("G", strength=100), vulnerability=5)   # is_gun -> not infantry
+    dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=0, fuel=0, stores=0, water=500)
+    r = _Run(_state([gun], [dump]))
+    _logistics(r)
+    _logistics(r)
+    assert not any(e.kind == EventKind.STEP_LOST for e in r.events)
+    assert r.state.unit("G").strength == 100
+
+
+def test_resupply_resets_the_consecutive_counter():
+    # A unit that had gone short but now draws stores/water resets its consecutive count
+    # (Disorganization persists -- recovery is the deferred Reorganization, 19/20).
+    unit = replace(_inf("U"), turns_without_stores=3, stages_without_water=2, disorganization=3)
+    dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=0, fuel=0, stores=500, water=500)
+    r = _Run(_state([unit], [dump]))
+    _logistics(r)
+    assert any(e.kind == EventKind.STORES_RESTORED for e in r.events)
+    assert any(e.kind == EventKind.WATER_RESTORED for e in r.events)
+    u = r.state.unit("U")
+    assert (u.turns_without_stores, u.stages_without_water) == (0, 0)
+    assert u.disorganization == 3                       # persists

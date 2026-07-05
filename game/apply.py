@@ -80,6 +80,23 @@ def apply(state: GameState, event: Event) -> GameState:
         u = state.unit(p["unit_id"])
         return state.with_unit(replace(u, cohesion=u.cohesion + p["delta"]))
 
+    if k == EventKind.STORES_SHORTFALL:
+        u = state.unit(p["unit_id"])                   # 51.21/51.22: +1 turn short, +1 disorg
+        return state.with_unit(replace(u, turns_without_stores=u.turns_without_stores + 1,
+                                       disorganization=u.disorganization + 1))
+
+    if k == EventKind.WATER_SHORTFALL:
+        u = state.unit(p["unit_id"])                   # 52.53: +1 op-stage short of water
+        return state.with_unit(replace(u, stages_without_water=u.stages_without_water + 1))
+
+    if k == EventKind.STORES_RESTORED:                 # resupplied: consecutive count resets
+        u = state.unit(p["unit_id"])                   # (Disorganization persists; recovery is 19/20)
+        return state.with_unit(replace(u, turns_without_stores=0))
+
+    if k == EventKind.WATER_RESTORED:
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, stages_without_water=0))
+
     if k == EventKind.FORT_REDUCED:
         return state.with_fort_level(tuple(p["hex"]), p["level"])
 

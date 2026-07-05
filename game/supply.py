@@ -124,6 +124,13 @@ def _is_vehicle_type(unit: Unit) -> bool:
             or unit.is_first_line_truck)
 
 
+def is_infantry(unit: Unit) -> bool:
+    """An infantry-type combat unit -- the only kind whose TOE Strength Points may be
+    eliminated by stores/water shortfall attrition (51.22 / 52.53). Guns and tanks are
+    exempt (51.22)."""
+    return unit.is_combat and not _is_vehicle_type(unit)
+
+
 def stores_cost(unit: Unit) -> int:
     """Stores a unit needs per GAME-TURN (rule 51.11): 4 per TOE Strength Point, or 1
     per TOE for HQ/engineer units (51.13). Non-combat pieces (bare HQs, trucks) proxy
