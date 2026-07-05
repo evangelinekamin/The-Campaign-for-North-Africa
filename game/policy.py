@@ -34,7 +34,21 @@ class SupplyMoveOrder:
     to: Coord
 
 
-Order = MoveOrder | AttackOrder | SupplyMoveOrder
+@dataclass(frozen=True, slots=True)
+class TruckOrder:
+    """One truck-convoy order (rule 48 Stage V.J): optionally LOAD `load` ({commodity:
+    qty}) from the dump `load_from` at the truck's hex, MOVE to `to`, then UNLOAD `unload`
+    into the dump `unload_to` at the destination. Any leg may be omitted (None) so a bare
+    load, a bare relocation, or a full port->forward relay all fit one order shape."""
+    truck_id: str
+    load_from: str | None = None
+    load: dict | None = None
+    to: Coord | None = None
+    unload_to: str | None = None
+    unload: dict | None = None
+
+
+Order = MoveOrder | AttackOrder | SupplyMoveOrder | TruckOrder
 
 
 class Policy:
@@ -50,6 +64,9 @@ class Policy:
     def retreat_before_assault(self, state: GameState, side: Side,
                                pinned: frozenset[str]) -> list[MoveOrder]:
         return []  # optional: slip non-phasing units out of an assault (rule 13.0)
+
+    def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
+        return []  # optional: haul supply forward with 2nd/3rd-line truck convoys (rule 48 V.J)
 
 
 class ScriptedPolicy(Policy):

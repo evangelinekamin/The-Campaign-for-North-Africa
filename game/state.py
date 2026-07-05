@@ -170,6 +170,30 @@ class Port:
 
 
 @dataclass(frozen=True, slots=True)
+class TruckFormation:
+    """An unattached 2nd/3rd-line truck convoy (rules 53-54): the inland DISTRIBUTION
+    layer that hauls supply forward from a rear port/base dump to the forward dumps front
+    units trace to (54.16). `truck_class` is Light/Medium/Heavy (the 54.2 Truck
+    Characteristics rows); `points` is Truck Points (1 Point = 10 trucks, 53.0); `line`
+    is a legible 2|3 label only -- 53.13 makes 3rd-line 'similar in all ways to 2nd, the
+    sole exception the name'. The four carried-cargo pools ride ON the formation between a
+    TRUCK_LOADED and a TRUCK_UNLOADED (demanded by the 53.24/53.25 load/leapfrog rules);
+    each defaults 0 so a truck-less scenario stays byte-identical. is_combat is implicitly
+    False (stacking value 0). A load is admissible iff sum_c(qty_c / cap_per_point_c) <=
+    points (53.12; game.supply.truck_load_admissible)."""
+    id: str
+    side: Side
+    hex: Coord
+    truck_class: str               # 'light' | 'medium' | 'heavy' (the 54.2 chart rows)
+    points: int                    # Truck Points; 1 Point = 10 trucks (53.0)
+    line: int = 2                  # 2nd or 3rd line -- a legible label only (53.13)
+    ammo: int = 0
+    fuel: int = 0
+    stores: int = 0
+    water: int = 0
+
+
+@dataclass(frozen=True, slots=True)
 class GameState:
     turn: int
     max_turns: int
@@ -201,6 +225,10 @@ class GameState:
     # Default () keeps every port-less scenario byte-identical (the engine applies the
     # throttle only when a landing dump belongs to a port; game.engine._naval_convoys).
     ports: tuple[Port, ...] = ()
+    # Truck convoys (rules 53-54): the inland distribution layer that hauls supply forward
+    # from rear dumps. Default () keeps every truck-less scenario byte-identical -- the V.J
+    # Truck Convoy Phase fires only when a side fields formations (game.engine._truck_convoys).
+    trucks: tuple[TruckFormation, ...] = ()
 
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:
@@ -252,6 +280,15 @@ class GameState:
                 return p
         return None
 
+    def truck(self, tid: str) -> "TruckFormation | None":
+        for t in self.trucks:
+            if t.id == tid:
+                return t
+        return None
+
+    def trucks_at(self, coord: Coord) -> tuple["TruckFormation", ...]:
+        return tuple(t for t in self.trucks if t.hex == coord)
+
     # --- functional updates (return new state) -------------------------------
     def with_unit(self, unit: Unit) -> "GameState":
         units = tuple(unit if u.id == unit.id else u for u in self.units)
@@ -274,3 +311,7 @@ class GameState:
     def with_port(self, p: "Port") -> "GameState":
         ports = tuple(p if q.id == p.id else q for q in self.ports)
         return replace(self, ports=ports)
+
+    def with_truck(self, tf: "TruckFormation") -> "GameState":
+        trucks = tuple(tf if t.id == tf.id else t for t in self.trucks)
+        return replace(self, trucks=trucks)

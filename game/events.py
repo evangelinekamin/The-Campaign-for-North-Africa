@@ -78,6 +78,21 @@ class EventKind(str, Enum):
     # (55.14): the 55.18 +1/OpStage regeneration, and later bomb/mine reductions (41.3).
     PORT_UNLOADED = "PORT_UNLOADED"
     PORT_EFFICIENCY_CHANGED = "PORT_EFFICIENCY_CHANGED"
+    # Truck convoys (rules 53-54, the inland DISTRIBUTION layer). All three fold PURELY:
+    # TRUCK_LOADED {truck_id, supply_id, cargo} and TRUCK_UNLOADED {truck_id, supply_id,
+    # cargo} are CONSERVING transfers between a dump and a co-located truck formation (the
+    # grand total is unchanged -- invariants.check sums truck cargo alongside the dumps).
+    # TRUCK_MOVED {truck_id, from, to, cp_spent, fuel} relocates a formation and burns
+    # `fuel` of its OWN cargo fuel (49.18) -- folded like a consume (truck fuel down,
+    # consumed[FUEL] up), so on_hand+consumed==initial holds.
+    TRUCK_LOADED = "TRUCK_LOADED"
+    TRUCK_MOVED = "TRUCK_MOVED"
+    TRUCK_UNLOADED = "TRUCK_UNLOADED"
+    # Commonwealth railroad (rule 54.3, the inland rail DISTRIBUTION layer). RAIL_HAULED
+    # {from_dump, to_dump, commodity, qty} is a CONSERVING dump->dump transfer over the
+    # rail network (both dumps rail-connected; qty <= 1500 tons/OpStage of ONE commodity,
+    # 54.33) -- conservation holds trivially (a single transfer, grand total unchanged).
+    RAIL_HAULED = "RAIL_HAULED"
     BARRAGE_RESOLVED = "BARRAGE_RESOLVED"
     ANTI_ARMOR_RESOLVED = "ANTI_ARMOR_RESOLVED"
     COMBAT_RESOLVED = "COMBAT_RESOLVED"

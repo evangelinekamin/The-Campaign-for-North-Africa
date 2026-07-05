@@ -101,6 +101,28 @@ def fuel_rate_by_model() -> dict:
     return out
 
 
+def truck_characteristics() -> dict:
+    """[54.2] Truck Characteristics Chart, reduced to what the CHUNK-4 haulage layer
+    consumes, keyed by class ('light'|'medium'|'heavy'): the per-Truck-Point supply-point
+    capacity of each commodity (the chart's 'Supplies' columns), the convoy CPA (the
+    chart's Supplies CPA, which EQUALS the 53.22 extended allowance -- Light 40,
+    Medium/Heavy 30), the truck's own Fuel Capacity (self-tank), and its Fuel Consumption
+    Factor (1 for every class). Verified cell-by-cell against docs/rules/90."""
+    chart = _data()["truck_characteristics_54_2"]
+    out: dict = {}
+    for cls in ("light", "medium", "heavy"):
+        row = chart[cls]
+        cap = row["supply_point_capacity"]
+        out[cls] = {
+            "capacity": {"AMMO": cap["ammo"], "FUEL": cap["fuel"],
+                         "STORES": cap["stores"], "WATER": cap["water"]},
+            "convoy_cpa": row["cpa"]["supplies"],
+            "fuel_capacity": row["fuel_capacity"],
+            "fuel_factor": row["fuel_consumption_factor"],
+        }
+    return out
+
+
 def _scenario_61() -> dict:
     return _data()["scenario_61_desert_fox_initial_supply"]
 

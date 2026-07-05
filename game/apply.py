@@ -77,6 +77,51 @@ def apply(state: GameState, event: Event) -> GameState:
         consumed[commodity] = consumed.get(commodity, 0) + p["qty"]
         return replace(state.with_supply(drained), consumed=consumed)
 
+    if k == EventKind.TRUCK_LOADED:
+        # 53.24: conserving transfer dump -> truck (both on the same hex). The grand total
+        # is unchanged and initial/consumed untouched (invariants.check sums truck cargo).
+        su = state.supply(p["supply_id"])
+        tf = state.truck(p["truck_id"])
+        for commodity, qty in p["cargo"].items():
+            attr = commodity.lower()
+            su = replace(su, **{attr: getattr(su, attr) - qty})
+            tf = replace(tf, **{attr: getattr(tf, attr) + qty})
+        return state.with_supply(su).with_truck(tf)
+
+    if k == EventKind.TRUCK_UNLOADED:
+        # 53.24: conserving transfer truck -> dump (the exact dual of TRUCK_LOADED).
+        su = state.supply(p["supply_id"])
+        tf = state.truck(p["truck_id"])
+        for commodity, qty in p["cargo"].items():
+            attr = commodity.lower()
+            tf = replace(tf, **{attr: getattr(tf, attr) - qty})
+            su = replace(su, **{attr: getattr(su, attr) + qty})
+        return state.with_supply(su).with_truck(tf)
+
+    if k == EventKind.TRUCK_MOVED:
+        # 53.21 / 49.18: relocate the formation, burning `fuel` of its OWN cargo fuel to
+        # move -- folds like a consume (truck fuel down, consumed[FUEL] up) so conservation
+        # holds with truck cargo summed into on_hand.
+        tf = state.truck(p["truck_id"])
+        fuel = p["fuel"]
+        st = state.with_truck(replace(tf, hex=tuple(p["to"]), fuel=tf.fuel - fuel))
+        if fuel:
+            consumed = dict(st.consumed)
+            consumed["FUEL"] = consumed.get("FUEL", 0) + fuel
+            st = replace(st, consumed=consumed)
+        return st
+
+    if k == EventKind.RAIL_HAULED:
+        # 54.3: conserving transfer between two rail-connected dumps. Grand total unchanged,
+        # so on_hand+consumed==initial holds untouched.
+        src = state.supply(p["from_dump"])
+        dst = state.supply(p["to_dump"])
+        attr = p["commodity"].lower()
+        qty = p["qty"]
+        src = replace(src, **{attr: getattr(src, attr) - qty})
+        dst = replace(dst, **{attr: getattr(dst, attr) + qty})
+        return state.with_supply(src).with_supply(dst)
+
     if k == EventKind.STEP_LOST:
         u = state.unit(p["unit_id"])
         return state.with_unit(replace(u, steps=_apply_step_loss(u.steps, p["amount"])))

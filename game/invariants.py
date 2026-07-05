@@ -40,9 +40,13 @@ def check(state: GameState) -> None:
 
     # Supply conservation (rule 32): per commodity, on-hand + consumed == initial.
     # Nothing is created except at sources (none modelled yet); nothing vanishes
-    # except defined consumption.
+    # except defined consumption. on-hand sums the dumps AND any cargo riding on truck
+    # convoys (rules 53-54) -- a TRUCK_LOADED merely moves supply from a dump onto a
+    # truck, so the truck's pools are the single new conservation surface.
     for commodity, initial in state.initial_supply.items():
-        on_hand = sum(getattr(su, commodity.lower()) for su in state.supplies)
+        attr = commodity.lower()
+        on_hand = (sum(getattr(su, attr) for su in state.supplies)
+                   + sum(getattr(t, attr) for t in state.trucks))
         if on_hand + state.consumed.get(commodity, 0) != initial:
             raise InvariantViolation(
                 f"{commodity} not conserved: on_hand={on_hand} + "

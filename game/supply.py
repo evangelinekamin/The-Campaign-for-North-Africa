@@ -25,7 +25,8 @@ from __future__ import annotations
 import math
 
 from . import logistics_data, movement, tactics
-from .state import GameState, Port, SupplyUnit, Unit
+from .hexmap import Coord
+from .state import GameState, Port, SupplyUnit, TruckFormation, Unit
 from .terrain import Mobility, NON_MOT_CLASSES, Terrain
 
 AMMO = "AMMO"
@@ -212,6 +213,82 @@ def reachable_moves(state: GameState, dump: SupplyUnit) -> dict:
     blocked = (enemy_zoc - friendly) | enemy_occupied
     return movement.reachable(state.terrain, dump.hex, SUPPLY_CPA, SUPPLY_MOBILITY,
                               blocked=blocked)
+
+
+# --- truck convoys (rules 53-54, the inland distribution layer) ---------------
+# [54.2] Truck Characteristics: per-Truck-Point commodity capacity, the 53.22 extended
+# convoy CPA, the truck's own Fuel Capacity and its Fuel Consumption Factor, keyed by
+# class. Sourced once from the JSON so the numbers stay the rulebook's.
+TRUCK_CHARS: dict = logistics_data.truck_characteristics()
+
+
+def truck_capacity(truck_class: str) -> dict:
+    """54.2 per-Truck-Point supply-point capacity of each commodity for `truck_class`."""
+    return TRUCK_CHARS[truck_class]["capacity"]
+
+
+def truck_convoy_cpa(truck_class: str) -> int:
+    """53.22 extended convoy CPA of a truck formation (the 54.2 'Supplies' column): Light
+    40, Medium/Heavy 30."""
+    return TRUCK_CHARS[truck_class]["convoy_cpa"]
+
+
+def truck_load_admissible(truck: TruckFormation, added: dict) -> bool:
+    """53.12 load admissibility: a formation of N Truck Points may carry any mix whose
+    fractional capacity use sums to <= N -- sum_c(cargo_c / cap_per_point_c) <= points,
+    evaluated on the cargo the truck would hold AFTER adding `added`. (A truck 'may carry
+    anything', 53.12, so the four commodities share the Points fractionally.)"""
+    cap = truck_capacity(truck.truck_class)
+    frac = sum((getattr(truck, c.lower()) + added.get(c, 0)) / cap[c] for c in COMMODITIES)
+    return frac <= truck.points + 1e-9
+
+
+def truck_move_fuel(truck: TruckFormation, cp_spent: float) -> int:
+    """49.13 / 49.18: Fuel a truck formation burns to relocate, drawn from its OWN cargo
+    fuel -- Fuel Consumption Factor (1 for every class, 54.2) x ceil(CP / 5) x Truck
+    Points. A short hop is cheap; a long convoy leg over the desert eats its own load."""
+    if cp_spent <= 0:
+        return 0
+    return TRUCK_CHARS[truck.truck_class]["fuel_factor"] * math.ceil(cp_spent / 5) * truck.points
+
+
+def reachable_truck_moves(state: GameState, truck: TruckFormation) -> dict:
+    """Hexes a truck convoy can relocate to this Truck Convoy Phase: within its 53.22
+    extended convoy CPA as medium-truck movement, blocked by enemy ZOC not negated by a
+    friendly unit (the identical 32.16 trace-blocking reused from reachable_moves)."""
+    enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, truck.side)
+    friendly = frozenset(u.hex for u in state.living(truck.side))
+    blocked = (enemy_zoc - friendly) | enemy_occupied
+    return movement.reachable(state.terrain, truck.hex,
+                              truck_convoy_cpa(truck.truck_class), SUPPLY_MOBILITY,
+                              blocked=blocked)
+
+
+# --- Commonwealth railroad (rule 54.3) ----------------------------------------
+RAIL_TONNAGE_54_3 = 1500          # 54.3: tons of ONE commodity hauled per Operations Stage
+
+
+def rail_haul_cap(commodity: str) -> int:
+    """54.3 / 54.33: the Points of `commodity` the Commonwealth rail may haul in one
+    Operations Stage -- 1500 tons crossed to Points at the 54.5 Equivalent Weights."""
+    return tons_to_points(RAIL_TONNAGE_54_3, commodity)
+
+
+def rail_reachable(tmap: movement.TerrainMap, start: Coord) -> frozenset:
+    """The hexes rail-connected to `start` over the map's rail edge-set (54.3) -- a
+    graph-reachability twin of movement.reachable, but over rails rather than terrain
+    cost. Gates a RAIL_HAULED transfer: both dumps must sit on the one network."""
+    seen = {start}
+    frontier = [start]
+    while frontier:
+        here = frontier.pop()
+        for e in tmap.rails:
+            if here in e:
+                other = next(iter(e - {here}))
+                if other not in seen:
+                    seen.add(other)
+                    frontier.append(other)
+    return frozenset(seen)
 
 
 def plan_draw(state: GameState, unit: Unit, commodity: str, need: int):

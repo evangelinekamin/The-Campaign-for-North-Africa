@@ -112,6 +112,8 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             _debrief(side)                              # which moves/pincers actually formed
             r.go(Phase.COMBAT, side)
             _combat(r, policies, side)
+        for side in (Side.AXIS, Side.ALLIED):
+            _truck_convoys(r, policies[side], side)     # V.J: 2nd/3rd-line truck convoys (48)
         r.go(Phase.RECORD, Side.SYSTEM)
         _record_control(r)
         winner, reason = _victory(r)
@@ -423,6 +425,94 @@ def _reject_supply(r: _Run, side: Side, actor: str, order, reason: str) -> None:
     r.emit(EventKind.ORDER_REJECTED, side, actor,
            {"order": "supply_move", "supply_id": order.supply_id,
             "to": list(order.to), "reason": reason})
+
+
+def _truck_convoys(r: _Run, policy: Policy, side: Side) -> None:
+    """Truck Convoy Movement Phase (rule 48 Stage V.J): the unattached 2nd/3rd-line truck
+    convoys (rule 53) haul supply forward. Each order may LOAD from a co-located dump, MOVE
+    up to the 53.22 extended convoy CPA (Light 40, Medium/Heavy 30) reusing the 32.16
+    trace-blocking verbatim while burning its OWN cargo fuel (49.18), then UNLOAD into a
+    forward dump (respecting the 54.12 ceiling). Fires ONLY when the side fields truck
+    formations, so every truck-less scenario stays byte-identical."""
+    if not any(t.side == side for t in r.state.trucks):
+        return
+    r.go(Phase.LOGISTICS, side)
+    actor = f"{side.value}/Logistics"
+    moved: set = set()               # a formation relocates at most once per phase (53.21)
+    for order in policy.truck_orders(r.state, side):
+        _truck_order(r, side, actor, order, moved)
+
+
+def _truck_order(r: _Run, side: Side, actor: str, order, moved: set) -> None:
+    truck = r.state.truck(order.truck_id)
+    if truck is None or truck.side != side:
+        _reject_truck(r, side, actor, order, "no such truck formation under this command")
+        return
+    if order.load and not _truck_load(r, side, actor, order, r.state.truck(truck.id)):
+        return
+    if order.to is not None and not _truck_move(r, side, actor, order, r.state.truck(truck.id), moved):
+        return
+    if order.unload:
+        _truck_unload(r, side, actor, order, r.state.truck(truck.id))
+
+
+def _truck_load(r: _Run, side: Side, actor: str, order, truck) -> bool:
+    dump = r.state.supply(order.load_from)
+    if dump is None or dump.side != side or dump.hex != truck.hex:
+        _reject_truck(r, side, actor, order, "no co-located friendly dump to load from")
+        return False
+    cargo = {c: q for c, q in order.load.items() if q > 0}
+    if any(getattr(dump, c.lower()) < q for c, q in cargo.items()):
+        _reject_truck(r, side, actor, order, "dump lacks the ordered load")
+        return False
+    if not supply.truck_load_admissible(truck, cargo):
+        _reject_truck(r, side, actor, order, "load exceeds truck capacity (53.12)")
+        return False
+    r.emit(EventKind.TRUCK_LOADED, side, actor,
+           {"truck_id": truck.id, "supply_id": dump.id, "cargo": cargo})
+    return True
+
+
+def _truck_move(r: _Run, side: Side, actor: str, order, truck, moved: set) -> bool:
+    if truck.id in moved:
+        _reject_truck(r, side, actor, order, "already moved this Truck Convoy Phase")
+        return False
+    reach = supply.reachable_truck_moves(r.state, truck)
+    to = tuple(order.to)
+    if to == truck.hex or to not in reach:
+        _reject_truck(r, side, actor, order, "beyond convoy CPA or blocked by ZOC")
+        return False
+    fuel = supply.truck_move_fuel(truck, reach[to])
+    if truck.fuel < fuel:
+        _reject_truck(r, side, actor, order, "out of cargo fuel to move (49.18)")
+        return False
+    r.emit(EventKind.TRUCK_MOVED, side, actor,
+           {"truck_id": truck.id, "from": list(truck.hex), "to": list(to),
+            "cp_spent": reach[to], "fuel": fuel})
+    moved.add(truck.id)
+    return True
+
+
+def _truck_unload(r: _Run, side: Side, actor: str, order, truck) -> None:
+    dump = r.state.supply(order.unload_to)
+    if dump is None or dump.side != side or dump.hex != truck.hex:
+        _reject_truck(r, side, actor, order, "no co-located friendly dump to unload into")
+        return
+    cap = supply.dump_capacity(r.state.terrain.terrain[dump.hex])     # 54.12 ceiling
+    cargo: dict = {}
+    for c, q in order.unload.items():
+        onhand = getattr(dump, c.lower())
+        landed = min(q, getattr(truck, c.lower()), min(cap[c], onhand + q) - onhand)
+        if landed > 0:
+            cargo[c] = landed
+    if cargo:
+        r.emit(EventKind.TRUCK_UNLOADED, side, actor,
+               {"truck_id": truck.id, "supply_id": dump.id, "cargo": cargo})
+
+
+def _reject_truck(r: _Run, side: Side, actor: str, order, reason: str) -> None:
+    r.emit(EventKind.ORDER_REJECTED, side, actor,
+           {"order": "truck_convoy", "truck_id": order.truck_id, "reason": reason})
 
 
 def _other(side: Side) -> Side:

@@ -34,6 +34,7 @@ class TerrainMap:
     tracks: frozenset = frozenset()                     # of edge(a, b)
     fortifications: dict[Coord, int] = field(default_factory=dict)  # hex -> fort level (15.82)
     minefields: frozenset = frozenset()                 # of Coord: defensive minefield belt
+    rails: frozenset = frozenset()                      # of edge(a, b): Commonwealth railroad (54.3)
 
     def exists(self, coord: Coord) -> bool:
         return coord in self.terrain
