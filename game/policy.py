@@ -161,13 +161,16 @@ class ScriptedPolicy(Policy):
         commander can see (game.observation fogs enemy strength and presence). Two
         signals, both read straight off the map:
           - the stack is SIGHTED (within sighting range of a friendly unit), and
-          - it is ISOLATED -- no other enemy stack in an adjacent hex to support it,
-            a lone forward stack a reserve can pounce on.
+          - it is ISOLATED -- no other SIGHTED enemy stack in an adjacent hex to
+            support it, a lone forward stack a reserve can pounce on. Support on an
+            UNSIGHTED neighbour does not count: a commander cannot see it, so it
+            cannot stay his sortie (the isolation test itself must respect the fog).
         `sighted` is game.observation._sighted_hexes(state, side), passed in so the
         defender and the observation share ONE fog seam."""
         if enemy_hex not in sighted:
             return False
-        return not any(state.enemies_at(nb, side) for nb in neighbors(enemy_hex))
+        return not any(nb in sighted and state.enemies_at(nb, side)
+                       for nb in neighbors(enemy_hex))
 
     def _uncovers(self, state: GameState, side: Side, unit: Unit, dest: Coord) -> bool:
         """Would moving `unit` to `dest` leave the objective undefended -- no other

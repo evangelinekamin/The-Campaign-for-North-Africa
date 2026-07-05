@@ -1,10 +1,12 @@
 """Tests for the scripted policy's defender (game.policy.ScriptedPolicy).
 
-The defender must be worth fighting: a mobile RESERVE sorties out to strike an
-EXPOSED enemy stack (unsupported armor, or cut off from ammo) while the garrison
-ANCHOR never vacates the objective. With nothing exposed it holds -- the tragedy
-(a sally that butchers unsupported panzers) must EMERGE from these primitives,
-never be hand-scripted into recklessness.
+The defender must be worth fighting: a mobile RESERVE sorties out to strike a
+visibly EXPOSED enemy stack (a SIGHTED, isolated forward stack with no VISIBLE
+support -- observable presence only, never the enemy's private supply/ammo or
+hidden composition) while the garrison ANCHOR never vacates the objective, nor
+sallies out of its fort to counter-attack. With nothing exposed it holds -- the
+tragedy (a sally that butchers unsupported panzers) must EMERGE from these
+primitives, never be hand-scripted into recklessness.
 """
 from __future__ import annotations
 
@@ -116,16 +118,37 @@ def test_is_exposed_requires_the_stack_to_be_sighted():
 
 
 def test_is_exposed_false_when_enemy_stack_has_visible_support():
-    """A sighted stack with another enemy stack in an adjacent hex is SUPPORTED by
-    what is visible -- not an isolated forward stack, so not exposed."""
+    """A sighted stack with another SIGHTED enemy stack in an adjacent hex is
+    SUPPORTED by what is visible -- not an isolated forward stack, so not exposed."""
     state = _defender_state_with_exposed_tank()
     supporter = Unit("AX-Inf", Side.AXIS, (4, 0), (StepRecord("inf", 3),),
                      mobility=Mobility.FOOT, cpa=10, stacking_points=2, oca=5, dca=5)
     state = replace(state, units=state.units + (supporter,))
     policy = ScriptedPolicy()
     sighted = _sighted_hexes(state, Side.ALLIED)
-    assert EXPOSED_HEX in sighted
+    assert EXPOSED_HEX in sighted and (4, 0) in sighted   # both the stack and its supporter are seen
     assert not policy._is_exposed(state, Side.ALLIED, EXPOSED_HEX, sighted)
+
+
+def test_is_exposed_ignores_unsighted_support():
+    """The support must be VISIBLE: a sighted stack whose only adjacent enemy sits
+    on an UNSIGHTED hex still reads as an isolated forward stack -- a real commander
+    cannot see the supporter, so it must not suppress the sortie. Guards against the
+    residual leak of judging isolation off true (fogged) enemy presence."""
+    base = replace(coastal_corridor(), phase=Phase.MOVEMENT)
+    # (4,0) is sighted at range 2 from the reserve; its neighbour (3,0) is range 3 -- unseen.
+    tank = Unit("AX-Tank", Side.AXIS, (4, 0), (StepRecord("pz", 3),),
+                mobility=Mobility.VEHICLE, cpa=20, stacking_points=2,
+                oca=6, dca=6, is_tank=True)
+    hidden = Unit("AX-Hidden", Side.AXIS, (3, 0), (StepRecord("inf", 3),),
+                  mobility=Mobility.FOOT, cpa=10, stacking_points=2, oca=5, dca=5)
+    reserve = next(u for u in base.units if u.id == "UK-2Armd")   # (6,0)
+    garrison = next(u for u in base.units if u.id == "UK-9Aus")   # (7,0)
+    state = replace(base, units=(tank, hidden, reserve, garrison))
+    policy = ScriptedPolicy()
+    sighted = _sighted_hexes(state, Side.ALLIED)
+    assert (4, 0) in sighted and (3, 0) not in sighted   # supporter is invisible
+    assert policy._is_exposed(state, Side.ALLIED, (4, 0), sighted)
 
 
 # --- FIX 2: the garrison anchor never counter-assaults OUT of the objective -----
