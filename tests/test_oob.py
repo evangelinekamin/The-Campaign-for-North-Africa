@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from game import oob, supply
+from game import logistics_data, oob, supply
 from game.apply import fold
 from game.engine import determinism_signature, run
 from game.events import Side
@@ -72,10 +72,15 @@ def test_default_supply_is_faithfully_scarce():
     # Scarcity is real: at least one combat unit per side cannot trace supply at t1.
     assert _stranded_combat(faithful, Side.AXIS)
     assert _stranded_combat(faithful, Side.ALLIED)
-    # Total map fuel is far below a full 12-turn advance's demand -- fuel must be
-    # husbanded, not spent freely. Axis per-op-stage fuel demand alone is ~33.
+    # The reservoir is REAL-SCALE now (Regime B): the Axis dumps hold the whole [61.44]
+    # start-line pool, so scarcity is no longer a gross shortage but a DISTRIBUTION
+    # problem -- the fuel exists, but the 32.16 trace strands the periphery (asserted
+    # above) and the 49.13 x-TOE-strength demand is itself real-scale (~5-8x the old proxy).
     axis_fuel = sum(s.fuel for s in faithful.supplies if s.side == Side.AXIS)
-    assert axis_fuel < 12 * 33                           # 12 turns * ~33 fuel/stage
+    assert axis_fuel == logistics_data.axis_dump_pool_61_44()["FUEL"]   # [61.44] the real pool
+    demand = sum(supply.fuel_cost(u, 1) for u in faithful.living(Side.AXIS)
+                 if u.is_combat and supply.fuel_rate(u) > 0)
+    assert demand > 5 * 33                               # per-stage floor now dwarfs the old ~33
 
     # The crutch (blanket_supply=True) leaves nobody stranded and pads the map with
     # far more dumps -- the exact over-supply we are removing.

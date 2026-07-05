@@ -185,26 +185,32 @@ def test_blocked_harbour_does_not_regen():
 
 # --- San Giorgio seeds Tobruk at 2/5 -----------------------------------------
 
-def test_san_giorgio_seeds_tobruk_at_two_of_five():
+def test_tobruk_seeded_at_full_efficiency_per_61_6():
     s = rommels_arrival()
     tob = s.port_at(TOBRUK)
     assert tob is not None, "Tobruk must have a built-in port (56.28)"
-    assert (tob.eff, tob.max_eff) == (2, 5)               # San Giorgio -3 (30.17/55.25)
-    assert tob.id in HARBOUR_BLOCKED                      # permanent block, no regen
+    # [61.6] the rulebook seeds Tobruk at Efficiency 7 of 7 verbatim (above its 55.3
+    # listed max of 5; San Giorgio penalty unaccounted -- transcribed, not reconciled).
+    assert (tob.eff, tob.max_eff) == (7, 7)
+    assert tob.cap_tons == 1700                           # [55.3] Tobruk supply tonnage
+    assert tob.id in HARBOUR_BLOCKED                      # San Giorgio block: no regen (moot at max)
     # the built-in dump lives at the port hex (56.28)
     assert s.supply("AL-Tobruk").hex == tob.hex == TOBRUK
 
 
-def test_tobruk_ferry_sized_to_feed_the_garrison_at_forty_percent():
-    # The ferry cargo is >= the port cap, so the binding limit is the 2/5 throttle;
-    # 40% of it must still exceed the garrison's per-turn draw at AL-Tobruk.
+def test_tobruk_ferry_feeds_the_garrison_at_full_efficiency():
+    # At the 61.6 Efficiency 7/7 the ferry lands min(cargo, 55.14 tonnage throttle) each
+    # turn; that effective delivery must still cover the garrison's per-turn draw (peak
+    # ~176 Stores). Now the CARGO binds for some commodities and the 1700 t throttle for
+    # others -- either way each lands a positive amount and Stores clears the draw.
     s = rommels_arrival()
     tob = s.port_at(TOBRUK)
     ferry = next(c for c in s.convoys if c.lane == "SEA-TOBRUK")
     for c in supply.COMMODITIES:
-        landed = supply.port_landing_cap(tob, c)
-        assert ferry.cargo[c] >= landed                   # cargo doesn't bind first
-    assert supply.port_landing_cap(tob, "STORES") >= 180  # covers the ~176 peak draw
+        landed = min(ferry.cargo[c], supply.port_landing_cap(tob, c))
+        assert landed > 0                                 # every commodity lands something
+    stores_landed = min(ferry.cargo["STORES"], supply.port_landing_cap(tob, "STORES"))
+    assert stores_landed >= 180                           # covers the ~176 Stores peak draw
 
 
 # --- port-less scenarios stay byte-identical ---------------------------------
@@ -226,16 +232,16 @@ def _def_surrender_at_objective(events) -> bool:
                for e in events)
 
 
-def test_tobruk_holds_6_of_6_through_the_throttle():
+def test_tobruk_holds_6_of_6_through_the_port():
     for seed in range(1, 7):
         res = run(rommels_arrival(seed=seed),
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         assert res.final.control_of(TOBRUK) != Control.AXIS, f"Tobruk fell (seed {seed})"
         assert not _def_surrender_at_objective(res.events), f"garrison surrendered (seed {seed})"
-        # the throttle is genuinely active: the ferry unloads at San Giorgio's 2/5
+        # the ferry lands through PORT-Tobruk at its 61.6 Efficiency 7
         beats = [e for e in res.events if e.kind == EventKind.PORT_UNLOADED
                  and e.payload["port_id"] == "PORT-Tobruk"]
-        assert beats and all(b.payload["eff"] == 2 for b in beats), f"ferry not throttled (seed {seed})"
+        assert beats and all(b.payload["eff"] == 7 for b in beats), f"ferry not landing at eff 7 (seed {seed})"
 
 
 def test_determinism_preserved_with_ports():

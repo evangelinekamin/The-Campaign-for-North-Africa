@@ -14,20 +14,35 @@ from __future__ import annotations
 import json
 import os
 
-from . import coords
+from . import coords, logistics_data
 from .events import Side
 from .state import StepRecord, SupplyUnit, Unit
-from .terrain import Mobility
+from .terrain import Mobility, NON_MOT_CLASSES
 
 _DATA = os.path.join(os.path.dirname(__file__), "..", "data")
-# Start-line dump stock (well under the 54.12 Other-Terrain ceilings). Ammo/Fuel keep
-# the historic 40/60; Stores/Water are seeded generously so a dump reliably supplies
-# the force concentration co-located with it, leaving scarcity to bite units the
-# advance strands out of trace (the intended full-logistics drama).
-DUMP_AMMO = 120
-DUMP_FUEL = 60
-DUMP_STORES = 150
-DUMP_WATER = 100
+
+_COMMODITIES = ("AMMO", "FUEL", "STORES", "WATER")
+
+# A representative real-scale (Regime B) Supply-Unit load = Tobruk's [61.36] built-in
+# supply (500 Fuel / 1500 Ammo / 1000 Stores), plus a FLAGGED wells/rail Water proxy
+# (52.7/54.3 deferred; 61.36 charts no Tobruk dump water). Used for the Tobruk lifeline
+# dump and the rail/ferry per-turn loads (game.scenario). The field dumps are seeded
+# separately from the 61.44/61.36 pools (see _place_dumps).
+_TOBRUK_BUILTIN = logistics_data.tobruk_builtin_61_36()
+DUMP_AMMO = _TOBRUK_BUILTIN["AMMO"]      # 1500 [61.36]
+DUMP_FUEL = _TOBRUK_BUILTIN["FUEL"]      # 500  [61.36]
+DUMP_STORES = _TOBRUK_BUILTIN["STORES"]  # 1000 [61.36]
+DUMP_WATER = 1000                        # FLAGGED wells/rail proxy (52.7/54.3 deferred)
+
+# [61.44]/[61.36] FULL-LOGISTICS start-line supply pools, distributed over each side's
+# dumps by _place_dumps (authored, deterministic even split, clipped to the 54.12 caps).
+_AXIS_DUMP_POOL = logistics_data.axis_dump_pool_61_44()   # AMMO/FUEL/STORES/WATER
+_CW_DUMP_POOL = logistics_data.cw_dump_pool_61_36()        # AMMO/FUEL/STORES (no charted water)
+_CW_WATER_PROXY = 1600                                     # FLAGGED wells/rail Water (52.7/54.3)
+_OTHER_CAP = logistics_data.dump_other_terrain_cap()       # [54.12] Other-Terrain ceilings
+
+# [49.13]/[4.47-4.49] per-model Fuel Consumption Rate, keyed by model name.
+_FUEL_RATE_BY_MODEL = logistics_data.fuel_rate_by_model()
 
 
 def _load(name: str) -> dict | list:
@@ -90,7 +105,7 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
     units that enter on their arrival_turn at an axial entry hex."""
     stats = _load("unit_stats.json")
     units: list[Unit] = []
-    supplies: list[SupplyUnit] = []
+    dumps_meta: list[tuple[str, Side, tuple]] = []   # (uid, side, hex) placed after the loop
     seen: dict[str, int] = {}
 
     for rec in _load(oob_file):
@@ -101,15 +116,16 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
         ax = coords.to_axial(coords.parse(hexlbl))
 
         if rec["kind"] == "dump":
-            uid = _uid(seen, f"{rec['side'][:2]}-Dump")
-            supplies.append(SupplyUnit(uid, side, ax, ammo=DUMP_AMMO, fuel=DUMP_FUEL,
-                                       stores=DUMP_STORES, water=DUMP_WATER))
+            uid = _uid(seen, f"{rec['side'][:2]}-Dump")   # uid order preserved
+            dumps_meta.append((uid, side, ax))
             continue
         if rec["kind"] != "unit":
             continue                                 # features are not engine units
         role = classify(rec["counter"], rec["group"])
         if role is not None:
             units.append(_make_unit(rec, side, ax, role, stats, seen, 0))
+
+    supplies: list[SupplyUnit] = _place_dumps(dumps_meta)
 
     for rec in (_load(reinforcements_file).get("reinforcements", []) if reinforcements_file else []):
         side = Side.AXIS if rec["side"] == "AXIS" else Side.ALLIED
@@ -118,6 +134,52 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
             units.append(_make_unit(rec, side, tuple(rec["hex"]), role, stats, seen,
                                     rec["arrival_turn"]))
     return units, supplies
+
+
+def _dump_pool(side: Side) -> dict:
+    """The [61.44]/[61.36] start-line supply pool for `side`, as commodity->points.
+    The Axis pool carries its charted Water (61.44); the Commonwealth pool has no
+    charted dump Water, so a FLAGGED wells/rail proxy is layered on (52.7/54.3)."""
+    if side == Side.AXIS:
+        return dict(_AXIS_DUMP_POOL)
+    return {**_CW_DUMP_POOL, "WATER": _CW_WATER_PROXY}
+
+
+def _share(total: int, n: int, i: int) -> int:
+    """Deterministic even split of `total` over `n` slots; the first `total % n`
+    slots carry the extra point so the pool is conserved exactly."""
+    return total // n + (1 if i < total % n else 0)
+
+
+def _place_dumps(dumps_meta: list[tuple[str, Side, tuple]]) -> list[SupplyUnit]:
+    """Authored, deterministic placement of each side's 61.44/61.36 supply pool over
+    its dump hexes: an even split (remainder to the earliest dumps) clipped to the
+    54.12 Other-Terrain ceilings. Real-scale (Regime B) start-line reservoir -- the
+    fuel the 49.13 x-strength demand draws on. The rulebook's <=50% (Axis) / <=25%
+    (CW) per-dump placement caps are honoured wherever the (abstracted) corridor's
+    dump count allows; the binding ceiling here is 54.12, which every share clears."""
+    by_side: dict[Side, list[tuple[str, tuple]]] = {}
+    for uid, side, ax in dumps_meta:
+        by_side.setdefault(side, []).append((uid, ax))
+    out: list[SupplyUnit] = []
+    for side, lst in by_side.items():
+        pool = _dump_pool(side)
+        n = len(lst)
+        for i, (uid, ax) in enumerate(lst):
+            amt = {c: min(_share(pool.get(c, 0), n, i), _OTHER_CAP[c]) for c in _COMMODITIES}
+            out.append(SupplyUnit(uid, side, ax, ammo=amt["AMMO"], fuel=amt["FUEL"],
+                                  stores=amt["STORES"], water=amt["WATER"]))
+    return out
+
+
+def _fuel_role_default(mobility: Mobility) -> int:
+    """49.12/49.13 fallback Fuel Consumption Rate for a unit the per-model chart does
+    not name: gun-class / anti-tank / HQ-with-TOE and truck-borne infantry / recce burn
+    at rate 1 (the 54.2 truck Fuel Consumption Factor); foot / camel / motorcycle burn
+    nothing (49.12). SP guns would be 2 (GE) / 3 (CW), but this OOB fields no SP role."""
+    if mobility in NON_MOT_CLASSES or mobility == Mobility.MOTORCYCLE:
+        return 0
+    return 1
 
 
 # Default weapon model per (nationality, role) for units that don't name one, so
@@ -134,14 +196,19 @@ def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
                arrival_turn: int) -> Unit:
     nat = rec.get("nationality") or _nationality(rec["side"])    # IT units set it explicitly
     s = stats[nat][role]
-    model = stats.get("models", {}).get(rec.get("model") or MODEL_DEFAULTS.get((nat, role)), {})
+    model_name = rec.get("model") or MODEL_DEFAULTS.get((nat, role))
+    model = stats.get("models", {}).get(model_name, {})
+    mob = Mobility[s["mobility"]]
+    # 49.13 per-model Fuel Consumption Rate ([4.47-4.49]); the role default (49.12)
+    # covers guns/AT/HQ/truck-borne/recce and zeroes foot/camel/motorcycle.
+    fuel_rate = _FUEL_RATE_BY_MODEL.get(model_name, _fuel_role_default(mob))
 
     def rating(key: str) -> int:                     # model overrides role, else 0
         return model.get(key, s.get(key, 0))
     return Unit(
         _uid(seen, rec["counter"]), side, ax,
         (StepRecord(role, s["steps"]),),
-        mobility=Mobility[s["mobility"]],
+        mobility=mob,
         cpa=s["cpa"], stacking_points=s.get("sp", 1),       # 1=battalion (rule 9.4)
         oca=model.get("oca", s["oca"]), dca=model.get("dca", s["dca"]),
         barrage=rating("barrage"), anti_armor=rating("anti_armor"),
@@ -151,6 +218,7 @@ def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
         is_combat=s.get("is_combat", True),
         arrival_turn=arrival_turn,
         formation=rec["group"],
+        fuel_rate=fuel_rate,
     )
 
 

@@ -89,24 +89,20 @@ SUPPLY_MOVE_FUEL = 1               # Fuel to relocate a real supply unit / OpSta
 SUPPLY_MOBILITY = Mobility.MOTORIZED  # carried as medium-truck points (rule 32.51)
 
 
-# 49.19 Fuel Consumption Rate PROXY by mobility class (sourced from the engine_proxy
-# block of data/logistics_rates.json -- the single documented home for the proxy the
-# faithful chart replaces). Foot/camel consume no fuel (49.12). These are FLAGGED
-# placeholder magnitudes scaled to the engine's 40/60-point proxy dumps: they equal
-# the old flat per-OpStage charge for a short move (<=5 CP), while the faithful law
-# rate x ceil(CP/5) makes a long dash cost more. The two remaining proxy gaps -- the
-# per-model [4.47-4.49] rates (1-7, e.g. Grant 6) and the omitted x TOE-strength
-# factor (49.13) -- are coupled to the real-scale reservoir rescale (dumps/convoys/
-# ports are ~1-2 orders of magnitude below [54.12]); wiring the fuel magnitude alone
-# against proxy dumps would strand every vehicle in ~2 moves, so it is left for the
-# coordinated CHUNK-4 fork. See logistics_data and the task scale_decision.
+# 49.19 Fuel Consumption Rate FALLBACK by mobility class (sourced from the engine_proxy
+# block of data/logistics_rates.json). Foot/camel consume no fuel (49.12). This is the
+# fallback ONLY for units carrying no transcribed Unit.fuel_rate -- the toy coastal
+# corridor; the real Desert Fox OOB carries the per-model [4.47-4.49] rate (game.oob via
+# logistics_data.fuel_rate_by_model), which the 49.13 x-TOE-strength law in fuel_cost
+# then scales. See logistics_data.
 _FUEL_RATE_PROXY: dict = logistics_data.fuel_rate_proxy()
 
 
 def fuel_rate(unit: Unit) -> int:
     """The unit's Fuel Consumption Rate (49.13): Fuel Points burned per five CP (or
-    fraction) spent on movement. A transcribed Unit.fuel_rate wins; otherwise a
-    mobility-class proxy. Non-motorized classes walk and burn nothing (49.12)."""
+    fraction) per TOE Strength Point spent on movement. A transcribed Unit.fuel_rate
+    (the per-model [4.47-4.49] rate) wins; otherwise a mobility-class fallback.
+    Non-motorized classes walk and burn nothing (49.12)."""
     if unit.mobility in NON_MOT_CLASSES:
         return 0
     return unit.fuel_rate or _FUEL_RATE_PROXY.get(unit.mobility, 2)
@@ -114,12 +110,15 @@ def fuel_rate(unit: Unit) -> int:
 
 def fuel_cost(unit: Unit, cp_spent: float) -> int:
     """Fuel consumed to move `unit` spending `cp_spent` Capability Points (rule
-    49.13): rate x ceil(CP / 5). A dash that expends many CP outruns its fuel; a
-    short hop is cheap. Fuel is charged only for movement, in the hex the move
-    begins (49.16). cp_spent<=0 (a unit that did not move) costs nothing."""
+    49.13): rate x ceil(CP / 5) x TOE Strength Points. The full-logistics (Regime B)
+    law -- every TOE Strength Point of vehicles burns its rate, so a full-strength
+    formation costs strength-fold more than a single step (49.13 worked example). A
+    dash that expends many CP outruns its fuel; a short hop is cheap. Fuel is charged
+    only for movement, in the hex the move begins (49.16). cp_spent<=0 (a unit that
+    did not move) costs nothing."""
     if cp_spent <= 0:
         return 0
-    return fuel_rate(unit) * math.ceil(cp_spent / 5)
+    return fuel_rate(unit) * math.ceil(cp_spent / 5) * max(1, unit.strength)
 
 
 # [50.2] Ammunition Consumption Rates (Ammo Points per TOE Strength Point committed to

@@ -76,7 +76,7 @@ class ScriptedPolicy(Policy):
             if not u.is_combat:
                 continue
             if u.cp_used == 0 and supply.plan_draw(
-                    state, u, supply.FUEL, supply.fuel_rate(u)) is None:
+                    state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None:
                 continue          # out of fuel -- don't propose a move the engine will reject
             reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
             here_dist = distance(u.hex, target)
@@ -165,7 +165,7 @@ class ScriptedPolicy(Policy):
             if not self._in_contact(state, side, u.hex):
                 continue                       # only units about to be assaulted bother to slip
             if u.cp_used == 0 and supply.plan_draw(
-                    state, u, supply.FUEL, supply.fuel_rate(u)) is None:
+                    state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None:
                 continue                       # no fuel to move -- don't propose it
             reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
             escapes = [c for c in reach
@@ -238,7 +238,7 @@ class ScriptedPolicy(Policy):
             if not u.is_combat or u.id in anchors:
                 continue
             if u.cp_used == 0 and supply.plan_draw(
-                    state, u, supply.FUEL, supply.fuel_rate(u)) is None:
+                    state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None:
                 continue          # out of fuel -- don't propose a move the engine rejects
             reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
             best: tuple[tuple[int, float, Coord], Coord] | None = None

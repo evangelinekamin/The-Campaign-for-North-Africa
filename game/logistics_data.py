@@ -10,19 +10,19 @@ WIRED FAITHFULLY here (magnitudes now equal to the chart values):
   - 51.11/51.13 Stores -- 4 per TOE (combat), 1 per TOE (HQ/engineer/non-combat).
   - [49.3]/52.44 Fuel & Water evaporation -- 6% base, +5% hot.
   - [54.12] Supply Dump Capacity (Other-Terrain ceilings) and the Major-City U.
+  - [49.13]/[4.47-4.49] per-model Fuel Consumption Rate (fuel_rate_by_model) -- now
+    wired onto Unit.fuel_rate (game.oob) with the x TOE-strength law (game.supply.
+    fuel_cost). This is the Regime-B FULL-LOGISTICS fuel demand.
+  - 61.44/61.36 real-scale Desert Fox dump pools + 55.3 per-port supply tonnage --
+    the reservoir the real fuel demand draws on (game.oob / game.scenario).
 
 ([54.5] Equivalent Weights stay as exact fractions in supply.TONS_PER_POINT: the
 data file rounds Water to 0.1667, so sourcing it here would inject a rounding error
 into the conservation math -- they are exact-faithful already.)
 
-STILL PROXY (recorded here as the engine_proxy the chart replaces, and FLAGGED for
-the CHUNK-4 real-scale fork): the per-mobility Fuel Rate (flat 2/1 instead of the
-per-model [4.47-4.49] rates 1-7) and the omitted x TOE-strength fuel factor (49.13).
-Those two are coupled to a real-scale rescale of the dump/convoy/port RESERVOIRS
-(their per-point magnitudes are ~1-2 orders of magnitude below [54.12]); wiring the
-fuel magnitude alone against proxy-scale dumps would make scarcity incoherent, so it
-is deliberately left for the coordinated rescale. See data/logistics_rates.json
-scale_observation and this task's scale_decision.
+STILL PROXY: the per-MOBILITY Fuel Rate (fuel_rate_proxy, flat 2/1) survives only as
+the fallback for scenarios whose units carry no transcribed Unit.fuel_rate (the toy
+coastal corridor); the real Desert Fox OOB now uses the per-model chart above.
 """
 from __future__ import annotations
 
@@ -79,9 +79,65 @@ def dump_other_terrain_cap() -> dict:
 
 
 def fuel_rate_proxy() -> dict:
-    """PROXY (flagged): the per-mobility-class Fuel Consumption Rate the engine uses
-    until the per-model [4.47-4.49] rates and the 49.13 x-strength factor land with the
-    real-scale reservoir rescale (CHUNK 4). Recorded in the data file's engine_proxy
-    block so the proxy has a single, documented home."""
+    """PROXY fallback: the per-mobility-class Fuel Consumption Rate used only for units
+    that carry no transcribed Unit.fuel_rate (the toy coastal-corridor scenario). The
+    real Desert Fox OOB carries the per-model rate from fuel_rate_by_model(). Recorded
+    in the data file's engine_proxy block so the proxy has a single, documented home."""
     by_name = _data()["fuel_consumption"]["engine_proxy"]["fuel_rate_by_mobility"]
     return {Mobility[name]: rate for name, rate in by_name.items()}
+
+
+def fuel_rate_by_model() -> dict:
+    """[49.13]/[4.47-4.49] per-model Fuel Consumption Rate, flattened from the three
+    tank Characteristics sub-charts (german_tank / commonwealth_tank / italian_tank)
+    into a single {model_name: rate} map. Model names mirror data/unit_stats.json
+    'models'. The gun/SP scalars in the same chart are role-level defaults (they are
+    not per-model), so game.oob applies them as role defaults rather than reading them
+    here. Tanks span rate 1 (Mk VI light) to 7 (Grant / Churchill)."""
+    chart = _data()["fuel_consumption"]["fuel_consumption_rate_by_model"]
+    out: dict = {}
+    for nation_key in ("german_tank", "commonwealth_tank", "italian_tank"):
+        out.update(chart[nation_key])
+    return out
+
+
+def _scenario_61() -> dict:
+    return _data()["scenario_61_desert_fox_initial_supply"]
+
+
+def axis_dump_pool_61_44() -> dict:
+    """[61.44] the FULL-LOGISTICS Axis start-line supply pool, split across the Axis
+    dumps (game.oob authored placement). Keyed by engine commodity name."""
+    p = _scenario_61()["axis_dump_split_61_44"]
+    return {"AMMO": p["ammo"], "FUEL": p["fuel"], "STORES": p["stores"], "WATER": p["water"]}
+
+
+def cw_dump_pool_61_36() -> dict:
+    """[61.36] the FULL-LOGISTICS Commonwealth start-line supply pool (fuel/ammo/stores),
+    split across the CW dumps. Note 61.36 charts NO dump Water for the Commonwealth --
+    CW water comes from the 52.7 wells and the 54.3 rail, both deferred -- so game.oob
+    seeds a FLAGGED wells/rail Water proxy on top of this."""
+    p = _scenario_61()["commonwealth_dump_split_61_36"]
+    return {"AMMO": p["ammo"], "FUEL": p["fuel"], "STORES": p["stores"]}
+
+
+def tobruk_builtin_61_36() -> dict:
+    """[61.36] Tobruk's built-in supply (fuel/ammo/stores); Tobruk is itself a dump."""
+    p = _scenario_61()["commonwealth_tobruk_builtin_61_36"]
+    return {"AMMO": p["ammo"], "FUEL": p["fuel"], "STORES": p["stores"]}
+
+
+def port_supply_tonnage_55_3() -> dict:
+    """[55.3] per-port MAXIMUM supply tonnage per Operations Stage + its Efficiency
+    Level, keyed by port name (game.scenario crosses tonnage->points via 54.5)."""
+    return _data()["port_supply_tonnage_55_3"]["max_supply_tonnage_per_opstage"]
+
+
+def convoy_level_56_4() -> dict:
+    """[56.4] Axis Naval Convoy Level letter (A-G / '-') by calendar year and month."""
+    return _data()["axis_naval_convoys_56"]["convoy_level_chart_56_4"]
+
+
+def convoy_capacity_56_5() -> dict:
+    """[56.5] Axis Naval Convoy capacity by Level: fixed_tons + variable_tons_per_die x die."""
+    return _data()["axis_naval_convoys_56"]["convoy_capacity_table_56_5"]

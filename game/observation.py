@@ -69,10 +69,12 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
         for u in state.living(side):
             if not u.is_combat or u.cp_used > 0:
                 continue
-            # A move costs at least one 5-CP group of fuel (49.13); gate and estimate
-            # dump demand on that minimum -- a longer path may cost (and be rejected for)
-            # more, which the engine decides once the destination is chosen.
-            need = supply.fuel_rate(u)
+            # A move costs at least one 5-CP group of fuel per TOE Strength Point (49.13);
+            # gate and estimate dump demand on that strength-scaled minimum (fuel_cost with
+            # cp_spent=1) -- a longer path may cost (and be rejected for) more, which the
+            # engine decides once the destination is chosen. This floor MUST match the
+            # engine's charge, else the agent sees "supplied" where the engine now rejects.
+            need = supply.fuel_cost(u, 1)
             draws = supply.plan_draw(state, u, supply.FUEL, need)
             if draws:
                 fuel_ok.add(u.id)

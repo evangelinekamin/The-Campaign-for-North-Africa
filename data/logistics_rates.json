@@ -30,11 +30,11 @@
       "cp_50": {"1": 10, "2": 20, "3": 30, "4": 40, "5": 50, "6": 60}
     },
     "fuel_consumption_rate_by_model": {
-      "_comment": "The per-model 'Fuel Rate' column of the Tank & Gun Characteristics Charts ([4.47] Commonwealth, [4.48] Italian, [4.49] German) -- this is the '1..6' index into chart_49_19. Guns are almost all rate 1; SP guns 2-3; tanks 2-7. These belong on the unit/model and mirror data/unit_stats.json 'models'. Faithful values, engine currently proxies all vehicles to 2.",
+      "_comment": "The per-model 'Fuel Rate' column of the Tank & Gun Characteristics Charts ([4.47] Commonwealth, [4.48] Italian, [4.49] German) -- this is the '1..6' index into chart_49_19. Guns are almost all rate 1; SP guns 2-3; tanks 1-7. These belong on the unit/model and mirror data/unit_stats.json 'models'. WIRED: game/logistics_data.py fuel_rate_by_model() flattens the three tank sub-dicts onto Unit.fuel_rate (game/oob.py); the gun/SP scalars are oob role defaults. Under the Regime-B FULL-LOGISTICS fuel law (49.13, game/supply.py fuel_cost) the rate is multiplied by ceil(CP/5) x TOE-strength.",
       "german_tank": {"pz1": 2, "pz2": 2, "pz3e": 3, "pz3h": 3, "pz3j": 3, "pz4d": 4, "pz4e": 4, "pz4f2": 4},
       "german_gun_typical": 1,
       "german_sp_gun": 2,
-      "commonwealth_tank": {"a9": 2, "a10": 2, "a13": 2, "churchill2": 7, "crusader1": 3, "crusader2": 3, "crusader3": 3, "grant": 7, "mk6_light": 1, "matilda2": 3, "sherman": 6, "stuart": 4, "valentine2": 3},
+      "commonwealth_tank": {"a9": 2, "a10": 2, "a13": 2, "churchill2": 7, "crusader1": 3, "crusader2": 3, "crusader3": 3, "grant": 7, "mk6": 1, "matilda2": 3, "sherman": 6, "stuart": 4, "valentine2": 3},
       "commonwealth_gun_typical": 1,
       "commonwealth_sp_gun": 3,
       "italian_tank": {"cv33": 1, "l6": 2, "m11": 2, "m13": 2, "m14": 2},

@@ -12,15 +12,17 @@ drives the road for the port (7,0); the Commonwealth holds it.
 """
 from __future__ import annotations
 
+import math
+import random
 from collections import deque
 from dataclasses import replace
 
-from . import cna_map, coords, oob
+from . import cna_map, coords, logistics_data, oob
 from .events import Phase, Side
 from .hexmap import distance, neighbors
 from .movement import TerrainMap, edge
 from .state import Convoy, GameState, Port, StepRecord, SupplyUnit, Unit, VP
-from .supply import COMMODITIES
+from .supply import COMMODITIES, _UNLIMITED, tons_to_points
 from .terrain import Hexside, Mobility, Terrain
 
 LENGTH = 8
@@ -268,7 +270,7 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
         tmap = replace(tmap, roads=tmap.roads | spurs)
 
     max_turns = 12
-    convoys = _rommel_convoys(supplies, target, max_turns)
+    convoys = _rommel_convoys(supplies, target, max_turns, seed)
     ports = _rommel_ports(supplies, target)
     initial = _initial_supply(supplies)
     return GameState(
@@ -280,23 +282,25 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
     )
 
 
-# Port capacities (proxy magnitudes for the untranscribed 55.3 Port Capacity Chart --
-# FLAGGED). Tobruk's is sized so that at the San Giorgio 2/5 efficiency (30.17/55.25) the
-# ferry still lands ~40% -- enough to keep the garrison and the units tracing to AL-Tobruk
-# in Stores/Water/Ammo (the peak measured draw is ~176 Stores/turn; 40% of 500 = 200).
-# The rear ports carry one Supply-Unit load. cap_tons is a 54.5-consistent tonnage rating.
-TOBRUK_PORT_CAP: dict = {"AMMO": 300, "FUEL": 100, "STORES": 500, "WATER": 150}
-TOBRUK_PORT_TONS = 1200
+# [55.3] per-port MAXIMUM supply tonnage per Operations Stage (the real chart, from
+# Step 0). Under 55.14 the tonnage IS the gate; the per-commodity Point caps drop to the
+# _UNLIMITED sentinel so tonnage is the sole valve (crossed to Points via 54.5 at the
+# landing edge, game.supply.port_landing_cap).
+_PORT_TONS = logistics_data.port_supply_tonnage_55_3()
 
 
 def _load_cargo() -> dict:
+    """One representative real-scale (Regime B) Supply-Unit load -- the ferry and rail
+    per-turn cargo (game.oob DUMP_* = Tobruk's 61.36 built-in + a wells/rail Water proxy)."""
     return {"AMMO": oob.DUMP_AMMO, "FUEL": oob.DUMP_FUEL,
             "STORES": oob.DUMP_STORES, "WATER": oob.DUMP_WATER}
 
 
-def _caps(points: dict, tons: int) -> dict:
-    return {"cap_ammo": points["AMMO"], "cap_fuel": points["FUEL"],
-            "cap_stores": points["STORES"], "cap_water": points["WATER"], "cap_tons": tons}
+def _caps_tonnage(tons: int) -> dict:
+    """55.14 port caps: per-commodity Point caps _UNLIMITED (so tonnage is the sole gate)
+    plus the 55.3 tonnage rating crossed to Points at the landing edge (54.5)."""
+    return {"cap_ammo": _UNLIMITED, "cap_fuel": _UNLIMITED, "cap_stores": _UNLIMITED,
+            "cap_water": _UNLIMITED, "cap_tons": tons}
 
 
 def _axis_rear(supplies, target):
@@ -310,51 +314,74 @@ def _cw_railhead(supplies, target):
 
 
 def _rommel_ports(supplies, target) -> tuple[Port, ...]:
-    """The scenario's ports and their built-in dumps (56.28). Tobruk is the load-bearing
-    throttle: the San Giorgio scuttled in the harbour pins it at Efficiency 2 of 5 (30.17
-    / 55.25), so the ferry lands 40% of a convoy (game.engine.HARBOUR_BLOCKED keeps it from
-    regenerating -- only engineers clear a scuttled ship, 55.26). The Axis rear proxies the
-    scuttled Benghazi (55.2, a permanent block at ~2/3), keeping the desert faucet lean;
-    the Commonwealth base (Cairo/Alexandria, 57) runs at full efficiency. Efficiencies are
-    proxies for the untranscribed 55.3 chart and are FLAGGED as such."""
-    ports = [Port("PORT-Tobruk", Side.ALLIED, target, "major", max_eff=5, eff=2,
-                  **_caps(TOBRUK_PORT_CAP, TOBRUK_PORT_TONS))]
+    """The scenario's ports and their built-in dumps (56.28), seeded from the real 55.3
+    tonnages + the 61.6 scenario Efficiency Levels. Tonnage is the sole 55.14 gate (the
+    per-commodity caps are _UNLIMITED). Per 61.6: Tobruk starts at Efficiency 7 of 7 (the
+    rulebook seeds 7 verbatim -- above its 55.3 listed max of 5, San Giorgio penalty
+    unaccounted; transcribed as stated, not silently reconciled) and Benghazi is scuttled
+    to Efficiency 0 of 3 (the Axis wrecked it -- it lands nothing until engineers clear it,
+    game.engine.HARBOUR_BLOCKED). The Commonwealth base proxies Alexandria (55.3 15000 t)
+    at full efficiency. Tonnages are the real 55.3 chart; the port geography (rearmost
+    Axis dump / easternmost CW dump) is the scenario proxy for off-corridor Tripoli/Cairo."""
+    ports = [Port("PORT-Tobruk", Side.ALLIED, target, "major", max_eff=7, eff=7,
+                  **_caps_tonnage(_PORT_TONS["tobruk"]["tons"]))]        # 61.6 eff 7; 55.3 1700 t
     axis_rear = _axis_rear(supplies, target)
     if axis_rear is not None:
         ports.append(Port("PORT-Benghazi", Side.AXIS, axis_rear.hex, "major",
-                          max_eff=3, eff=2, **_caps(_load_cargo(), 480)))
+                          max_eff=3, eff=0,                              # 61.6 scuttled to 0; 55.3 2500 t
+                          **_caps_tonnage(_PORT_TONS["benghazi"]["tons"])))
     cw_rail = _cw_railhead(supplies, target)
     if cw_rail is not None:
         ports.append(Port("PORT-Cairo", Side.ALLIED, cw_rail.hex, "major",
-                          max_eff=5, eff=5, **_caps(_load_cargo(), 480)))
+                          max_eff=10, eff=10,                            # CW base @ Alexandria (55.3 15000 t)
+                          **_caps_tonnage(_PORT_TONS["alexandria"]["tons"])))
     return tuple(ports)
 
 
-def _rommel_convoys(supplies, target, max_turns: int) -> tuple[Convoy, ...]:
-    """The Rommel's Arrival supply SOURCE as a static, deterministic timetable (56.2:
-    'reflect Axis supplies as they actually occurred'). Three lanes, each landing
-    whole Supply Units into an EXISTING destination dump (capped at 40/60, so a full
-    dump lands nothing -- the faucet only makes good what was drawn down):
+# The Race for Tobruk spans March-August 1941 (61.2); the 12-turn clock pairs into the
+# six calendar months whose Axis Naval Convoy Levels (56.4) are F,E,D,G,C,E.
+_RACE_MONTHS_1941 = ("mar", "apr", "may", "jun", "jul", "aug")
+_CONVOY_LEVEL_56_4 = logistics_data.convoy_level_56_4()
+_CONVOY_CAP_56_5 = logistics_data.convoy_capacity_56_5()
+# [56.22] the Axis Player's tonnage allocation across commodities (a player knob, defaulted
+# here); Water is NOT a convoy commodity (56.22) -- it comes from wells (52.7) and rail.
+_CONVOY_SPLIT_56_22 = {"FUEL": 0.60, "AMMO": 0.25, "STORES": 0.15}
 
-      - SEA-TOBRUK (56.3/30): the Tobruk ferry, every game-turn, feeding AL-Tobruk --
-        the load-bearing lifeline that un-breaks the benchmark.
-      - CW-RAILHEAD (rule 57): Cairo's rail always refills the rear Egyptian dump; the
-        bottleneck is hauling it forward (trucks are CHUNK 4), so this is lean here.
-      - Axis lane "1" (56.11): a modest Tripoli/Benghazi rear faucet on the 32.43 +2
-        cadence -- deliberately kept lean so scarcity still bites the desert advance.
 
-    Destinations are chosen by geography (rearmost Axis dump; easternmost CW dump)
-    so the timetable is robust to the OOB's generated dump ids.
+def _axis_convoy_cargo(turn: int, rng: random.Random) -> dict:
+    """[56.4]x[56.5]x[54.5] Axis naval-convoy cargo for `turn`. The month's Convoy Level
+    (56.4) sets the 56.5 tonnage = fixed + variable x die (die from the seeded rng, rounded
+    UP to the nearest 1000 t); the 56.22 split apportions it across fuel/ammo/stores by
+    tonnage; 54.5 crosses each to supply Points. Real-scale, deterministic per seed."""
+    month = _RACE_MONTHS_1941[min((turn - 1) // 2, len(_RACE_MONTHS_1941) - 1)]
+    cap = _CONVOY_CAP_56_5[_CONVOY_LEVEL_56_4["1941"][month]]
+    die = rng.randint(1, 6)
+    tonnage = math.ceil((cap["fixed_tons"] + cap["variable_tons_per_die"] * die) / 1000) * 1000
+    return {c: tons_to_points(tonnage * frac, c) for c, frac in _CONVOY_SPLIT_56_22.items()}
 
-    CHUNK 3: the ferry now lands THROUGH the Tobruk port throttle (San Giorgio, 2/5), so
-    it carries a full PORT-LOAD (TOBRUK_PORT_CAP) rather than one Supply Unit -- 40% of a
-    port-load still exceeds the garrison's per-turn draw, keeping AL-Tobruk supplied while
-    the harbour visibly runs at 2/5. The rear lanes still carry one Supply Unit."""
+
+def _rommel_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy, ...]:
+    """The Rommel's Arrival supply SOURCE as a deterministic timetable (56.2: 'reflect
+    Axis supplies as they actually occurred'). Three lanes, each landing into an EXISTING
+    destination dump (clipped by the 54.12 dump cap then the 55.14 port throttle):
+
+      - SEA-TOBRUK (56.3/30): the Tobruk ferry, every game-turn, feeding AL-Tobruk through
+        PORT-Tobruk (61.6 eff 7/7 = full) -- the load-bearing garrison lifeline.
+      - CW-RAILHEAD (rule 57): Cairo's rail refills the rear Egyptian dump through the
+        full-efficiency CW base; hauling it forward is the CHUNK-4 truck layer.
+      - Axis lane "1" (56.4/56.11): the real 56.5 tonnage-by-die faucet, landing at the
+        rearmost Axis dump. In this scenario that dump carries scuttled Benghazi (61.6
+        eff 0), so it lands NOTHING until Step 5 repoints the lane to a working port --
+        the Axis lives off its 61.44 start-line reservoir, the intended desert scarcity.
+        No Axis convoy on turn 1 (61.44).
+
+    Destinations are chosen by geography (rearmost Axis dump; easternmost CW dump) so the
+    timetable is robust to the OOB's generated dump ids."""
     turns = range(1, max_turns + 1)
-    load = _load_cargo()          # one Supply Unit of all four commodities (CHUNK 2)
+    load = _load_cargo()          # one representative real-scale Supply Unit (61.36)
 
     convoys: list[Convoy] = [
-        Convoy(f"ferry-t{t}", Side.ALLIED, t, "SEA-TOBRUK", "AL-Tobruk", dict(TOBRUK_PORT_CAP))
+        Convoy(f"ferry-t{t}", Side.ALLIED, t, "SEA-TOBRUK", "AL-Tobruk", dict(load))
         for t in turns]
     railhead = _cw_railhead(supplies, target)
     if railhead is not None:
@@ -362,7 +389,8 @@ def _rommel_convoys(supplies, target, max_turns: int) -> tuple[Convoy, ...]:
                     for t in turns]
     rear = _axis_rear(supplies, target)
     if rear is not None:
-        convoys += [Convoy(f"axis-l1-t{t}", Side.AXIS, t, "1", rear.id, dict(load))
+        rng = random.Random(seed)                    # seed-driven 56.5 die (deterministic)
+        convoys += [Convoy(f"axis-l1-t{t}", Side.AXIS, t, "1", rear.id, _axis_convoy_cargo(t, rng))
                     for t in range(2, max_turns + 1, 2)]
     return tuple(convoys)
 
