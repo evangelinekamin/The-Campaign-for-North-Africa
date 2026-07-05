@@ -130,9 +130,6 @@ def _reinforcements(r: _Run) -> None:
                    {"unit_id": u.id, "hex": list(u.hex), "turn": r.state.turn})
 
 
-DUMP_CAP: dict[str, int] = {"AMMO": 40, "FUEL": 60}   # rule 32.15 (becomes the 54.12 port cap in CHUNK 3)
-
-
 def interdict(convoy, state: GameState, rng) -> dict:
     """Commonwealth attrition of a convoy in transit (56.13/41.6). CHUNK 1: the ferry
     is invulnerable -- the cargo arrives verbatim. This is the seam CHUNK 6 fills with
@@ -160,7 +157,8 @@ def _naval_convoys(r: _Run) -> None:
                    {"convoy_id": c.id, "lane": c.lane, "dest": c.dest, "reason": "port captured"})
             continue
         cargo = interdict(c, r.state, r.rng)            # CHUNK 1: identity -> dict(c.cargo)
-        landed = {k: min(DUMP_CAP.get(k, v), getattr(dump, k.lower()) + v) - getattr(dump, k.lower())
+        cap = supply.dump_capacity(r.state.terrain.terrain[dump.hex])   # 54.12, keyed by dump terrain
+        landed = {k: min(cap[k], getattr(dump, k.lower()) + v) - getattr(dump, k.lower())
                   for k, v in cargo.items()}
         landed = {k: q for k, q in landed.items() if q > 0}
         if landed:                                      # nothing to land into a full dump

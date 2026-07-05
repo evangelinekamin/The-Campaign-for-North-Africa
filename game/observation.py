@@ -172,7 +172,8 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
         "objective": {"hex": list(target), "controlled_by": state.control_of(target).value},
         "your_units": [unit_view(u) for u in state.living(side)],
         "your_supplies": [
-            {"id": s.id, "hex": list(s.hex), "ammo": s.ammo, "fuel": s.fuel}
+            {"id": s.id, "hex": list(s.hex), "ammo": s.ammo, "fuel": s.fuel,
+             "stores": s.stores, "water": s.water}
             for s in state.active_supplies(side)
         ],
         "enemy_sightings": sorted(sightings.values(), key=lambda s: s["hex"]),

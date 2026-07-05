@@ -24,10 +24,29 @@ from __future__ import annotations
 
 from . import movement, tactics
 from .state import GameState, SupplyUnit, Unit
-from .terrain import Mobility, NON_MOT_CLASSES
+from .terrain import Mobility, NON_MOT_CLASSES, Terrain
 
 AMMO = "AMMO"
 FUEL = "FUEL"
+STORES = "STORES"
+WATER = "WATER"
+COMMODITIES = (AMMO, FUEL, STORES, WATER)
+
+# 54.12 Supply Dump Capacity Chart (points), keyed by the dump-hex terrain. A major
+# city (and the Tunis/Tripoli off-map boxes) holds an unlimited amount; any other
+# dump hex is "Other Terrain". Villages (2500/8000/3000/1000) are not distinctly
+# modelled on the colour-sampled map, so a non-city dump reads the Other row. The
+# faucet fills UP TO these ceilings (game.engine._naval_convoys); overflow is never
+# credited, so conservation stays exact.
+_UNLIMITED = 10 ** 9
+_OTHER_CAP = {AMMO: 1500, FUEL: 5000, STORES: 1000, WATER: 1000}
+
+
+def dump_capacity(terrain: Terrain) -> dict:
+    """The 54.12 per-commodity ceiling for a dump on `terrain`."""
+    if terrain == Terrain.MAJOR_CITY:
+        return {c: _UNLIMITED for c in COMMODITIES}
+    return dict(_OTHER_CAP)
 
 SUPPLY_CPA = 15                     # CPA of an MP-carried supply unit (rule 32.58A)
 SUPPLY_MOVE_FUEL = 1               # Fuel to relocate a real supply unit / OpStage (32.24)
@@ -54,7 +73,7 @@ def ammo_cost(unit: Unit, *, phasing: bool, activity: str = "assault") -> int:
 
 
 def _pool(su, commodity: str) -> int:
-    return su.ammo if commodity == AMMO else su.fuel
+    return getattr(su, commodity.lower())          # one path for all four commodities
 
 
 def reachable_supplies(state: GameState, unit: Unit, commodity: str):

@@ -98,18 +98,23 @@ class VP:
 
 @dataclass(frozen=True, slots=True)
 class SupplyUnit:
-    """Abstract-logistics supply (rule 32.1): a dump holding <=40 Ammo + <=60 Fuel
-    that combat units draw on to move and fight. Stacking value 0 (rule 32.14)."""
+    """A supply dump holding the four full-logistics commodities (rules 49-52):
+    Ammunition, Fuel, Stores, Water. Ceilings come from the 54.12 Supply Dump
+    Capacity Chart keyed by the dump-hex terrain (game.supply.dump_capacity), not
+    from the field itself. Stores/Water default 0 so every pre-full-logistics
+    scenario stays byte-identical. Stacking value 0 (rule 32.14)."""
     id: str
     side: Side
     hex: Coord
     ammo: int
     fuel: int
+    stores: int = 0
+    water: int = 0
     is_dummy: bool = False
 
     @property
     def empty(self) -> bool:
-        return self.ammo <= 0 and self.fuel <= 0
+        return self.ammo <= 0 and self.fuel <= 0 and self.stores <= 0 and self.water <= 0
 
 
 @dataclass(frozen=True, slots=True)

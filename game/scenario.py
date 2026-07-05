@@ -20,10 +20,22 @@ from .events import Phase, Side
 from .hexmap import distance, neighbors
 from .movement import TerrainMap, edge
 from .state import Convoy, GameState, StepRecord, SupplyUnit, Unit, VP
+from .supply import COMMODITIES
 from .terrain import Hexside, Mobility, Terrain
 
 LENGTH = 8
 MAX_TURNS = 8
+
+
+def _zero_consumed() -> dict:
+    return {c: 0 for c in COMMODITIES}
+
+
+def _initial_supply(supplies) -> dict:
+    """Total of each commodity ever introduced at t0 (54.5 conservation base). The
+    faucet (SUPPLY_ARRIVED) raises these at runtime; game.invariants checks
+    on_hand + consumed == initial per commodity."""
+    return {c: sum(getattr(s, c.lower()) for s in supplies) for c in COMMODITIES}
 
 # Fortified major cities of the corridor (rule 15.82): label -> fortification
 # level. A MAJOR_CITY hex both exempts its garrison from retreat/eviction and, at
@@ -80,16 +92,13 @@ def coastal_corridor(seed: int = 1941) -> GameState:
         SupplyUnit("UK-Dump1", Side.ALLIED, (6, 0), ammo=40, fuel=60),
         SupplyUnit("UK-Dump2", Side.ALLIED, target, ammo=40, fuel=60),
     )
-    initial = {
-        "AMMO": sum(s.ammo for s in supplies),
-        "FUEL": sum(s.fuel for s in supplies),
-    }
+    initial = _initial_supply(supplies)
 
     return GameState(
         turn=1, max_turns=MAX_TURNS, phase=Phase.WEATHER, active_side=Side.SYSTEM,
         seed=seed, weather="clear", move_modifier=0, vp=VP(),
         terrain=tmap, control={}, units=units, target_hex=target,
-        supplies=supplies, consumed={"AMMO": 0, "FUEL": 0}, initial_supply=initial,
+        supplies=supplies, consumed=_zero_consumed(), initial_supply=initial,
     )
 
 
@@ -127,12 +136,12 @@ def battle_for_tobruk(seed: int = 1941) -> GameState:
         SupplyUnit("AX-Dump2", Side.AXIS, ax("C4607"), ammo=40, fuel=60),
         SupplyUnit("UK-Dump", Side.ALLIED, target, ammo=40, fuel=60),
     )
-    initial = {"AMMO": sum(s.ammo for s in supplies), "FUEL": sum(s.fuel for s in supplies)}
+    initial = _initial_supply(supplies)
     return GameState(
         turn=1, max_turns=12, phase=Phase.WEATHER, active_side=Side.SYSTEM,
         seed=seed, weather="clear", move_modifier=0, vp=VP(),
         terrain=tmap, control={}, units=units, target_hex=target,
-        supplies=supplies, consumed={"AMMO": 0, "FUEL": 0}, initial_supply=initial,
+        supplies=supplies, consumed=_zero_consumed(), initial_supply=initial,
     )
 
 
@@ -259,13 +268,12 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
 
     max_turns = 12
     convoys = _rommel_convoys(supplies, target, max_turns)
-    initial = {"AMMO": sum(s.ammo for s in supplies),
-               "FUEL": sum(s.fuel for s in supplies)}
+    initial = _initial_supply(supplies)
     return GameState(
         turn=1, max_turns=max_turns, phase=Phase.WEATHER, active_side=Side.SYSTEM,
         seed=seed, weather="clear", move_modifier=0, vp=VP(),
         terrain=tmap, control={}, units=tuple(units), target_hex=target,
-        supplies=tuple(supplies), consumed={"AMMO": 0, "FUEL": 0},
+        supplies=tuple(supplies), consumed=_zero_consumed(),
         initial_supply=initial, convoys=convoys,
     )
 

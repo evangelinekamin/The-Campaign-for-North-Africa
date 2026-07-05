@@ -66,26 +66,59 @@ def test_supply_arrived_folds_and_conserves():
 # --- the engine capacity throttle (post-cap landed amounts are baked) --------
 
 def test_supply_arrived_caps_at_capacity():
-    dump = SupplyUnit("D", Side.ALLIED, (0, 0), ammo=30, fuel=55)
+    # A CLEAR dump hex reads the 54.12 "Other Terrain" ceiling (1500 ammo / 5000 fuel).
+    dump = SupplyUnit("D", Side.ALLIED, (0, 0), ammo=1495, fuel=4998)
     conv = Convoy("c1", Side.ALLIED, 1, "SEA-TOBRUK", "D", {"AMMO": 40, "FUEL": 60})
     r = _Run(_mini(dump, [conv]))
     _naval_convoys(r)
     arrived = [e for e in r.events if e.kind == EventKind.SUPPLY_ARRIVED]
     assert len(arrived) == 1
-    # dump was 30/55, cap 40/60 -> only 10 ammo + 5 fuel land (over-cap never credited)
-    assert arrived[0].payload["cargo"] == {"AMMO": 10, "FUEL": 5}
+    # 1495/4998 under the 1500/5000 cap -> only 5 ammo + 2 fuel land (over-cap never credited)
+    assert arrived[0].payload["cargo"] == {"AMMO": 5, "FUEL": 2}
     d = r.state.supply("D")
-    assert (d.ammo, d.fuel) == (40, 60)
+    assert (d.ammo, d.fuel) == (1500, 5000)
     check(r.state)                                       # no conservation fault on over-cap
 
 
 def test_full_dump_lands_nothing_but_no_fault():
-    dump = SupplyUnit("D", Side.ALLIED, (0, 0), ammo=40, fuel=60)
+    dump = SupplyUnit("D", Side.ALLIED, (0, 0), ammo=1500, fuel=5000)   # at the Other cap
     conv = Convoy("c1", Side.ALLIED, 1, "SEA-TOBRUK", "D", {"AMMO": 40, "FUEL": 60})
     r = _Run(_mini(dump, [conv]))
     _naval_convoys(r)
     assert not any(e.kind == EventKind.SUPPLY_ARRIVED for e in r.events)  # nothing to land
     check(r.state)
+
+
+def test_major_city_dump_is_unlimited():
+    from game import supply
+    from game.terrain import Terrain
+    cap = supply.dump_capacity(Terrain.MAJOR_CITY)
+    assert all(cap[c] >= 10 ** 9 for c in supply.COMMODITIES)
+    other = supply.dump_capacity(Terrain.CLEAR)
+    assert (other["AMMO"], other["FUEL"], other["STORES"], other["WATER"]) == (1500, 5000, 1000, 1000)
+
+
+def test_supply_arrived_folds_all_four_commodities():
+    # The faucet routes all four commodities through one getattr path and conserves each.
+    dump = SupplyUnit("D", Side.ALLIED, (0, 0), ammo=0, fuel=0, stores=0, water=0)
+    s = GameState(
+        turn=1, max_turns=4, phase=Phase.LOGISTICS, active_side=Side.SYSTEM, seed=1,
+        weather="clear", move_modifier=0, vp=VP(),
+        terrain=TerrainMap(terrain={(0, 0): Terrain.CLEAR}, fortifications={}),
+        control={}, units=(), target_hex=(0, 0), supplies=(dump,),
+        consumed={c: 0 for c in ("AMMO", "FUEL", "STORES", "WATER")},
+        initial_supply={c: 0 for c in ("AMMO", "FUEL", "STORES", "WATER")})
+    e = Event(0, 1, Phase.LOGISTICS, Side.ALLIED, "SYSTEM", EventKind.SUPPLY_ARRIVED,
+              {"supply_id": "D", "cargo": {"STORES": 12, "WATER": 7},
+               "lane": "SEA-TOBRUK", "convoy_id": "c1"})
+    s2 = apply(s, e)
+    d = s2.supply("D")
+    assert (d.stores, d.water) == (12, 7)
+    assert s2.initial_supply["STORES"] == 12 and s2.initial_supply["WATER"] == 7
+    check(s2)
+    for c in ("STORES", "WATER"):
+        on_hand = sum(getattr(su, c.lower()) for su in s2.supplies)
+        assert on_hand + s2.consumed[c] == s2.initial_supply[c]
 
 
 # --- 56.15 a convoy to an enemy-captured port never sails --------------------
