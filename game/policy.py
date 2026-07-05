@@ -58,7 +58,7 @@ class ScriptedPolicy(Policy):
 
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
         if side != self.attacker:
-            return []  # defender holds the line
+            return self._defender_moves(state, side)
         enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, side)
         target = state.target_hex
         orders: list[MoveOrder] = []
@@ -127,6 +127,74 @@ class ScriptedPolicy(Policy):
             if forward:
                 dest = min(forward, key=lambda c: (distance(c, target), reach[c], c))
                 orders.append(SupplyMoveOrder(su.id, dest))
+        return orders
+
+    # --- defender: hold the objective, sortie against exposed enemies ---------
+    def _anchor_ids(self, state: GameState, side: Side) -> frozenset[str]:
+        """Combat units holding (or, if none stands on it, covering) the objective.
+        Anchors never vacate it -- the garrison that makes the position worth
+        taking, so a reserve's sortie can never strip the objective bare."""
+        target = state.target_hex
+        combat = [u for u in state.living(side) if u.is_combat]
+        holders = frozenset(u.id for u in combat if u.hex == target)
+        if holders:
+            return holders
+        return frozenset(u.id for u in combat if distance(u.hex, target) == 1)
+
+    def _is_exposed(self, state: GameState, enemy_stack) -> bool:
+        """True if `enemy_stack` is UNSUPPORTED ARMOR (tanks whose non-tank support
+        is deficient -- the engine's combined-arms test, rule 15.4) OR OUT OF SUPPLY
+        (a combat unit in it cannot draw ammo -- supply.plan_draw is None)."""
+        combat = [u for u in enemy_stack if u.is_combat]
+        if not combat:
+            return False
+        tank_toe = sum(u.strength for u in combat if u.is_tank)
+        support = sum(u.strength for u in combat
+                      if not u.is_tank and not u.is_armor and not u.is_gun)
+        if tank_toe > support:              # unsupported armor (mirror engine 15.4)
+            return True
+        return any(supply.plan_draw(state, u, supply.AMMO,
+                                    supply.ammo_cost(u, phasing=True)) is None
+                   for u in combat)         # cut off from ammo -- can't fight
+
+    def _uncovers(self, state: GameState, side: Side, unit: Unit, dest: Coord) -> bool:
+        """Would moving `unit` to `dest` leave the objective undefended -- no other
+        friendly combat unit holding-or-covering it, and the mover not ending on
+        its perimeter either?"""
+        target = state.target_hex
+        others_hold = any(u.is_combat and distance(u.hex, target) <= 1
+                          for u in state.living(side) if u.id != unit.id)
+        return not (others_hold or distance(dest, target) <= 1)
+
+    def _defender_moves(self, state: GameState, side: Side) -> list[MoveOrder]:
+        """A reserve (non-anchor mobile unit) sorties to a hex ADJACENT to an
+        exposed enemy stack it can legally reach, without uncovering the objective.
+        No exposed stack reachable -> HOLD (empty), never reckless."""
+        enemy = tactics.other(side)
+        exposed = sorted(h for h in {u.hex for u in state.living(enemy) if u.is_combat}
+                         if self._is_exposed(state, state.enemies_at(h, side)))
+        if not exposed:
+            return []
+        anchors = self._anchor_ids(state, side)
+        enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, side)
+        orders: list[MoveOrder] = []
+        for u in state.living(side):
+            if not u.is_combat or u.id in anchors:
+                continue
+            if u.cp_used == 0 and supply.plan_draw(
+                    state, u, supply.FUEL, supply.fuel_cost(u)) is None:
+                continue          # out of fuel -- don't propose a move the engine rejects
+            reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
+            best: tuple[tuple[int, float, Coord], Coord] | None = None
+            for h in exposed:
+                for c in neighbors(h):
+                    if (c != u.hex and c in reach and self._stacking_ok(state, u, c)
+                            and not self._uncovers(state, side, u, c)):
+                        key = (distance(c, h), reach[c], c)
+                        if best is None or key < best[0]:
+                            best = (key, c)
+            if best is not None:
+                orders.append(MoveOrder(u.id, best[1]))
         return orders
 
     def _stacking_ok(self, state: GameState, unit: Unit, dest: Coord) -> bool:
