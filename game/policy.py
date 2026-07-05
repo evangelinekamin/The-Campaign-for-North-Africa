@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from . import stacking, supply, tactics
+from . import observation, stacking, supply, tactics
 from .events import Side
 from .hexmap import Coord, distance, neighbors
 from .state import GameState, Unit
@@ -103,8 +103,14 @@ class ScriptedPolicy(Policy):
 
     def combat(self, state: GameState, side: Side) -> list[AttackOrder]:
         # Batch attackers by the hex they assault — one resolved call per target.
+        # When defending, the objective's anchor HOLDS (same exemption
+        # _defender_moves uses): it never sorties out of the fortress to counter-
+        # assault, so the garrison keeps its terrain/fort defense (rule 15.82).
+        anchors = self._anchor_ids(state, side) if side != self.attacker else frozenset()
         by_target: dict[Coord, list[str]] = {}
         for u in state.living(side):
+            if u.id in anchors:
+                continue
             if not u.is_combat or supply.plan_draw(
                     state, u, supply.AMMO, supply.ammo_cost(u, phasing=True)) is None:
                 continue          # out of ammo -- can't assault (don't propose it)
@@ -147,21 +153,21 @@ class ScriptedPolicy(Policy):
             return holders
         return frozenset(u.id for u in combat if distance(u.hex, target) == 1)
 
-    def _is_exposed(self, state: GameState, enemy_stack) -> bool:
-        """True if `enemy_stack` is UNSUPPORTED ARMOR (tanks whose non-tank support
-        is deficient -- the engine's combined-arms test, rule 15.4) OR OUT OF SUPPLY
-        (a combat unit in it cannot draw ammo -- supply.plan_draw is None)."""
-        combat = [u for u in enemy_stack if u.is_combat]
-        if not combat:
+    def _is_exposed(self, state: GameState, side: Side, enemy_hex: Coord,
+                    sighted: frozenset[Coord] | set[Coord]) -> bool:
+        """True if the enemy stack on `enemy_hex` looks exposed by what THIS side can
+        LEGALLY observe (rule 3.6 fog of presence) -- never the enemy's private
+        supply/ammo ledger or hidden tank/support composition, which no real
+        commander can see (game.observation fogs enemy strength and presence). Two
+        signals, both read straight off the map:
+          - the stack is SIGHTED (within sighting range of a friendly unit), and
+          - it is ISOLATED -- no other enemy stack in an adjacent hex to support it,
+            a lone forward stack a reserve can pounce on.
+        `sighted` is game.observation._sighted_hexes(state, side), passed in so the
+        defender and the observation share ONE fog seam."""
+        if enemy_hex not in sighted:
             return False
-        tank_toe = sum(u.strength for u in combat if u.is_tank)
-        support = sum(u.strength for u in combat
-                      if not u.is_tank and not u.is_armor and not u.is_gun)
-        if tank_toe > support:              # unsupported armor (mirror engine 15.4)
-            return True
-        return any(supply.plan_draw(state, u, supply.AMMO,
-                                    supply.ammo_cost(u, phasing=True)) is None
-                   for u in combat)         # cut off from ammo -- can't fight
+        return not any(state.enemies_at(nb, side) for nb in neighbors(enemy_hex))
 
     def _uncovers(self, state: GameState, side: Side, unit: Unit, dest: Coord) -> bool:
         """Would moving `unit` to `dest` leave the objective undefended -- no other
@@ -177,8 +183,9 @@ class ScriptedPolicy(Policy):
         exposed enemy stack it can legally reach, without uncovering the objective.
         No exposed stack reachable -> HOLD (empty), never reckless."""
         enemy = tactics.other(side)
+        sighted = observation._sighted_hexes(state, side)   # the legal fog seam
         exposed = sorted(h for h in {u.hex for u in state.living(enemy) if u.is_combat}
-                         if self._is_exposed(state, state.enemies_at(h, side)))
+                         if self._is_exposed(state, side, h, sighted))
         if not exposed:
             return []
         anchors = self._anchor_ids(state, side)
