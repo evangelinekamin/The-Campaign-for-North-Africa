@@ -55,6 +55,9 @@ def apply(state: GameState, event: Event) -> GameState:
         u = state.unit(p["unit_id"])
         return state.with_unit(replace(u, cohesion=u.cohesion + p["delta"]))
 
+    if k == EventKind.FORT_REDUCED:
+        return state.with_fort_level(tuple(p["hex"]), p["level"])
+
     if k == EventKind.HEX_CONTROL_CHANGED:
         return state.with_control(tuple(p["coord"]), Control(p["control"]))
 

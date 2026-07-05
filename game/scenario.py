@@ -258,3 +258,20 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
         supplies=tuple(supplies), consumed={"AMMO": 0, "FUEL": 0},
         initial_supply=initial,
     )
+
+
+def siege_of_tobruk(seed: int = 1941) -> GameState:
+    """The Siege of Tobruk (rule 25.14 / 25.16): Rommel's Arrival with the siege-
+    artillery rule LIVE. It is the SAME battle -- identical OOB, placement, supply,
+    the 12-turn clock, the garrison morale and the base fort level are all reused
+    from rommels_arrival untouched -- but siege_rules is on, so a sustained Axis
+    barrage can batter Tobruk's fortifications down one level at a time (the wall the
+    intact works present to a close assault comes off turn by turn). This is what
+    makes the fortress crackable SOMETIMES rather than never: a strong attacker who
+    brings up artillery and ammunition can open the works, then storm them.
+
+    The no-eviction rule (15.82), the clock, the garrison and the base level stay
+    faithful and load-bearing. The crack rate is tuned -- deliberately NOT here --
+    with engine.BARRAGE_HITS_PER_FORT_LEVEL and the Axis ammo/dump schedule via the
+    benchmark harness (design target ~15-35% under strong play)."""
+    return replace(rommels_arrival(seed=seed), siege_rules=True)

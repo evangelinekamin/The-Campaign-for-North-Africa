@@ -12,7 +12,7 @@ combat. All updates return new objects (frozen dataclasses + replace).
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 
 from .events import Control, Phase, Side
 from .hexmap import Coord
@@ -129,6 +129,12 @@ class GameState:
     supplies: tuple[SupplyUnit, ...]
     consumed: dict                 # commodity -> int spent so far ("AMMO"/"FUEL")
     initial_supply: dict           # commodity -> int total at t0 (conservation check)
+    # Siege of Tobruk (rule 25.14 / 25.16): when siege_rules is on, artillery barrage
+    # batters fortifications down. fort_levels is the dynamic overlay of reduced
+    # levels (hex -> current level); an absent hex reads its static base from
+    # terrain.fortifications. Default OFF / empty keeps the canonical benchmark exact.
+    siege_rules: bool = False
+    fort_levels: dict = field(default_factory=dict)
 
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:
@@ -152,6 +158,11 @@ class GameState:
     def control_of(self, coord: Coord) -> Control:
         return self.control.get(coord, Control.NEUTRAL)
 
+    def fort_level(self, coord: Coord) -> int:
+        """Current fortification level of a hex (rule 15.82 / 25.14): the dynamic
+        overlay if the wall has been battered, else the static base from the map."""
+        return self.fort_levels.get(coord, self.terrain.fortifications.get(coord, 0))
+
     def supply(self, sid: str) -> "SupplyUnit | None":
         for s in self.supplies:
             if s.id == sid:
@@ -171,6 +182,11 @@ class GameState:
         control = dict(self.control)
         control[coord] = ctrl
         return replace(self, control=control)
+
+    def with_fort_level(self, coord: Coord, level: int) -> "GameState":
+        fort_levels = dict(self.fort_levels)
+        fort_levels[coord] = level
+        return replace(self, fort_levels=fort_levels)
 
     def with_supply(self, su: "SupplyUnit") -> "GameState":
         supplies = tuple(su if s.id == su.id else s for s in self.supplies)

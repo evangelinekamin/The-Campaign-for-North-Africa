@@ -26,6 +26,12 @@ from .terrain import Terrain
 
 CONTROL_OF: dict[Side, Control] = {Side.AXIS: Control.AXIS, Side.ALLIED: Control.ALLIED}
 
+# Siege of Tobruk tuning knob (rule 25.14): how many effective barrages (a Pin or a
+# step loss) it takes to batter a fortification down one level. 1 = each effective
+# barrage drops a level. Raise it to make cracking Tobruk harder; the lead tunes
+# this (and the Axis ammo/dump schedule) with the benchmark harness.
+BARRAGE_HITS_PER_FORT_LEVEL: int = 1
+
 
 @dataclass(frozen=True, slots=True)
 class RunResult:
@@ -46,6 +52,7 @@ class _Run:
         self.rng = random.Random(initial.seed)
         self.events: list[Event] = []
         self._seq = 0
+        self.fort_hits: dict[Coord, int] = {}   # accumulated barrage hits per hex (25.14)
 
     def emit(self, kind: EventKind, side: Side, actor: str, payload: dict,
              rng_draws: tuple[int, ...] = ()) -> None:
@@ -304,6 +311,23 @@ def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str]) -> None
                        {"unit_id": tgt_id, "amount": min(loss, tu.strength), "role": "barrage"})
         if pin:
             pinned.add(tgt_id)
+        _batter_fort(r, firing, actor, tgt, effective=pin or loss > 0)
+
+
+def _batter_fort(r: _Run, firing: Side, actor: str, tgt: Coord, *, effective: bool) -> None:
+    """Siege of Tobruk (rule 25.14): an EFFECTIVE artillery barrage (a Pin or a step
+    loss) on a fortified hex batters its wall. After BARRAGE_HITS_PER_FORT_LEVEL such
+    hits the fortification drops one level (floored at 0), emitted as FORT_REDUCED so
+    the reduction folds into GameState.fort_levels and close assault reads the lower
+    wall. Gated behind siege_rules -- inert (and silent) in the canonical benchmark.
+    Barrage NEVER evicts and NEVER touches the static base map: only the level falls."""
+    if not r.state.siege_rules or not effective or r.state.fort_level(tgt) <= 0:
+        return
+    r.fort_hits[tgt] = r.fort_hits.get(tgt, 0) + 1
+    if r.fort_hits[tgt] >= BARRAGE_HITS_PER_FORT_LEVEL:
+        r.fort_hits[tgt] = 0
+        r.emit(EventKind.FORT_REDUCED, firing, actor,
+               {"hex": list(tgt), "level": r.state.fort_level(tgt) - 1})
 
 
 def _anti_armor_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str]) -> None:
@@ -378,7 +402,7 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
 
     # Close Assault via the real differential engine (rule 15 / §15.79 CRT).
     feature = r.state.terrain.hexsides.get((armed_atk[0].hex, target))  # §15.33
-    fort = r.state.terrain.fortifications.get(target, 0)         # §15.82 static fortification
+    fort = r.state.fort_level(target)          # §15.82 current level (25.14 may have reduced it)
     mined = target in r.state.terrain.minefields                # defensive minefield belt
     # Morale is rolled FIRST (rule 15 order): each side's 17.4 roll adjusts its
     # Basic Morale by Cohesion, and the difference shifts the assault column (15.62).
