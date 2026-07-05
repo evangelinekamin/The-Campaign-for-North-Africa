@@ -262,11 +262,15 @@ _BARRAGE: dict[str, dict[str, list[str]]] = {
 }
 
 
-def barrage_result(target_class: str, actual_points: int, roll: int) -> tuple[bool, int]:
+def barrage_result(target_class: str, actual_points: int, roll: int,
+                   *, column_shift: int = 0) -> tuple[bool, int]:
     """Rule 12.6: (pinned, steps_lost) for a barrage of `actual_points` Actual
     Barrage Points against a target of the given class ('infantry'/'armor'/'gun'),
-    on a sequential d66 roll. Numeric losses also Pin infantry and armor (12.6)."""
-    col = min(8, (actual_points - 1) // 2)
+    on a sequential d66 roll. Numeric losses also Pin infantry and armor (12.6).
+    `column_shift` (<= 0) moves the Barrage-Points band left for a target in
+    protective terrain or a fortification (12.33); shifted off the low end of the
+    table the barrage has no effect (rule 12.34)."""
+    col = min(8, (actual_points - 1) // 2) + column_shift
     if col < 0:
         return (False, 0)
     block = _BARRAGE[target_class]
@@ -278,14 +282,19 @@ def barrage_result(target_class: str, actual_points: int, roll: int) -> tuple[bo
     return (False, 0)
 
 
-def anti_armor_damage(actual_points: int, roll: int, *, phasing: bool = False) -> int:
+def anti_armor_damage(actual_points: int, roll: int, *, phasing: bool = False,
+                      terrain_shift: int = 0) -> int:
     """Rule 14.6: Armor-Protection Points the target must lose, from Actual Anti-
-    Armor Points and a d66 roll (10*dieA + dieB). The Phasing firer shifts one row
-    toward 11 (a defender's-advantage penalty; 11/12 unaffected, 14.x)."""
+    Armor Points and a d66 roll (10*dieA + dieB). The Phasing firer decreases his
+    dice roll one row (14.6 CRT Modifiers: "Phasing Player decreases his dice roll
+    by one row (an 11 or 12 is unaffected)"). `terrain_shift` (<= 0) shifts the
+    Actual Anti-Armor Points column LEFT when the target sits in protective terrain
+    or a fortification (rule 14.32/14.33); a shift below the '0' column is treated as
+    zero Anti-Armor Points (rule 14.35)."""
     row = (roll // 10 - 1) * 3 + (roll % 10 - 1) // 2
     if phasing:
         row = max(0, row - 1)
-    return _ANTI_ARMOR[row][max(0, min(16, actual_points))]
+    return _ANTI_ARMOR[row][max(0, min(16, actual_points + terrain_shift))]
 
 
 # [15.53] Organization-Size Close Assault Modifications: the column shift in favour
@@ -312,12 +321,16 @@ def org_size_shift(attacker_sp: int, defender_sp: int) -> int:
 # Static fortification defense (rule 15.82): each fortification level shifts the
 # Close Assault this many columns toward the defender. Applied as a flat static
 # modifier; dynamic fort-reduction by successive assault (rule 25.14) is DEFERRED.
+# NOTE: 8.37 grades close-assault fort as L2/L3/L4 for levels 1/2/3, so level*this
+# over-shifts at levels 2-3 -- flagged for a close-assault slice (out of scope here).
 FORT_CA_SHIFT: int = -2
 
 # Defensive minefield belt: a flat column shift toward the defender when the
-# assault crosses into a mined hex. The clearing / reveal minigame (rule 24) is
-# DEFERRED -- this models only the belt's static drag on the assault.
-MINEFIELD_CA_SHIFT: int = -2
+# assault crosses into a mined hex. Rule 26.26 ("the defending Player adjusts all
+# columns ONE in his favor") and 8.37 (minefield close-assault = L1) both fix this
+# at a single column. The clearing / reveal minigame (rule 26.1) is DEFERRED --
+# this models only the belt's static one-column drag on the assault.
+MINEFIELD_CA_SHIFT: int = -1
 
 
 # Close-Assault column shifts from the Terrain Effects Chart (8.37): negative =
@@ -336,3 +349,61 @@ HEXSIDE_CA_SHIFT: dict[Hexside, int] = {
     Hexside.UP_ESCARPMENT: -3, Hexside.DOWN_ESCARPMENT: +1,
     Hexside.WADI: -1, Hexside.MAJOR_RIVER: -6, Hexside.MINOR_RIVER: -2,
 }
+
+
+# Anti-Armor Fire terrain column shifts from the Terrain Effects Chart (8.37) and
+# the 14.6 CRT Modifiers: negative = the Actual Anti-Armor Points column moves LEFT
+# (fewer points -> the defending armor is harder to kill, rule 14.32). Fortification
+# and hexside additions are handled by anti_armor_terrain_shift.
+HEX_AA_SHIFT: dict[Terrain, int] = {
+    Terrain.CLEAR: 0, Terrain.GRAVEL: 0, Terrain.SALT_MARSH: 0,
+    Terrain.DELTA: 0, Terrain.DESERT: 0,
+    Terrain.HEAVY_VEG: -1,         # L1
+    Terrain.ROUGH: -1,             # L1
+    Terrain.MOUNTAIN: -2,          # L2
+    Terrain.MAJOR_CITY: 0,         # fortification benefit applied separately (8.37 note 12)
+}
+
+# Anti-Armor fortification column shifts (8.37): Level 1 = L1, Levels 2/3 = L2.
+# By 8.37 note 12 armour targets get this ONLY in a Major City hex -- and every
+# anti-armor target IS armour -- so anti_armor_terrain_shift gates it on MAJOR_CITY.
+FORT_AA_SHIFT: dict[int, int] = {1: -1, 2: -2, 3: -2}
+
+
+def anti_armor_terrain_shift(terrain: Terrain, fort_level: int) -> int:
+    """Rule 14.32/14.33: the Actual-Anti-Armor-Points column shift (<= 0, columns
+    left) protecting armour in a target hex. The defender takes the BEST of the hex
+    terrain OR the fortification -- they are NOT cumulative (14.33). The fortification
+    anti-armor benefit reaches armour targets only in a Major City hex (8.37 note 12).
+    Hexside additions (14.33) are deferred: the anti-armor step combines firers from
+    several hexes, so no single 'all attackers through this hexside' feature exists."""
+    terrain_shift = HEX_AA_SHIFT.get(terrain, 0)
+    fort_shift = FORT_AA_SHIFT.get(fort_level, -2) if terrain == Terrain.MAJOR_CITY and fort_level > 0 else 0
+    return min(terrain_shift, fort_shift)
+
+
+# Barrage terrain column-band shifts from the Terrain Effects Chart (8.37): negative
+# = the Barrage-Points band moves LEFT, benefitting the defender (rule 12.33). Only
+# Rough (L1) and Mountain (L2) shift barrage; every other terrain is "-" on the chart.
+HEX_BARRAGE_SHIFT: dict[Terrain, int] = {
+    Terrain.CLEAR: 0, Terrain.GRAVEL: 0, Terrain.SALT_MARSH: 0, Terrain.HEAVY_VEG: 0,
+    Terrain.DELTA: 0, Terrain.DESERT: 0, Terrain.MAJOR_CITY: 0,
+    Terrain.ROUGH: -1,             # L1
+    Terrain.MOUNTAIN: -2,          # L2
+}
+
+# Barrage fortification column-band shifts (8.37): Level 1 = L1, Levels 2/3 = L2
+# (matching the 12.33 worked example: Level Two Fortification = two bands left).
+FORT_BARRAGE_SHIFT: dict[int, int] = {1: -1, 2: -2, 3: -2}
+
+
+def barrage_terrain_shift(terrain: Terrain, fort_level: int, target_class: str) -> int:
+    """Rule 12.33/12.34: the Barrage-Points column-band shift (<= 0, bands left)
+    benefitting a barraged unit in protective terrain or a fortification. The defender
+    takes the BEST of terrain OR fortification -- they are NOT cumulative (12.34).
+    Armour-class targets receive the fortification benefit only in a Major City hex
+    (8.37 note 12); infantry/gun targets get it in any fortified hex."""
+    terrain_shift = HEX_BARRAGE_SHIFT.get(terrain, 0)
+    fort_applies = fort_level > 0 and (target_class != "armor" or terrain == Terrain.MAJOR_CITY)
+    fort_shift = FORT_BARRAGE_SHIFT.get(fort_level, -2) if fort_applies else 0
+    return min(terrain_shift, fort_shift)

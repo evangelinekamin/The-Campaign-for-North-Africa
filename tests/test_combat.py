@@ -199,6 +199,65 @@ def test_anti_armor_crt():
     assert ct.anti_armor_damage(8, 55, phasing=True) <= ct.anti_armor_damage(8, 55)
 
 
+def test_minefield_shift_is_one_column_rule_26_26():
+    # Rule 26.26: "the defending Player adjusts all columns ONE in his favor" (8.37
+    # gives the minefield close-assault effect as L1). The belt is a single column,
+    # not two -- pins the corrected magnitude.
+    assert ct.MINEFIELD_CA_SHIFT == -1
+
+
+def test_phasing_anti_armor_row_shift_rule_14_6():
+    # 14.6 CRT Modifiers: "Phasing Player decreases his dice roll by one row (an 11
+    # or 12 is unaffected)." Phasing on roll 35 must equal non-phasing on roll 33
+    # (the row directly below), and rolls 11/12 (the top row) are unaffected.
+    assert ct.anti_armor_damage(8, 35, phasing=True) == ct.anti_armor_damage(8, 33)
+    assert ct.anti_armor_damage(8, 12, phasing=True) == ct.anti_armor_damage(8, 12)
+
+
+def test_anti_armor_terrain_shift_rule_14_32():
+    # 8.37 / 14.32: the defending armour's hex terrain shifts the Actual Anti-Armor
+    # Points column LEFT -- Rough & Heavy Vegetation L1, Mountain L2, Clear none.
+    assert ct.anti_armor_terrain_shift(Terrain.ROUGH, 0) == -1
+    assert ct.anti_armor_terrain_shift(Terrain.HEAVY_VEG, 0) == -1
+    assert ct.anti_armor_terrain_shift(Terrain.MOUNTAIN, 0) == -2
+    assert ct.anti_armor_terrain_shift(Terrain.CLEAR, 0) == 0
+    # 14.32 worked example: 9 Actual Anti-Armor Points into Rough resolve on the 8
+    # column (a one-column-left shift).
+    assert ct.anti_armor_damage(9, 55, terrain_shift=-1) == ct.anti_armor_damage(8, 55)
+
+
+def test_anti_armor_fortification_gated_to_major_city_note_12():
+    # 8.37 note 12: an armour target (every anti-armor target IS armour) receives the
+    # fortification anti-armor benefit ONLY in a Major City hex -- so a Level-2 fort in
+    # Clear terrain gives nothing, but the same fort at Tobruk (Major City) gives L2.
+    assert ct.anti_armor_terrain_shift(Terrain.CLEAR, 2) == 0
+    assert ct.anti_armor_terrain_shift(Terrain.MAJOR_CITY, 1) == -1
+    assert ct.anti_armor_terrain_shift(Terrain.MAJOR_CITY, 2) == -2
+    assert ct.anti_armor_terrain_shift(Terrain.MAJOR_CITY, 3) == -2
+
+
+def test_barrage_terrain_shift_rule_12_33():
+    # 8.37: only Rough (L1) and Mountain (L2) shift barrage; every other terrain none.
+    assert ct.barrage_terrain_shift(Terrain.ROUGH, 0, "infantry") == -1
+    assert ct.barrage_terrain_shift(Terrain.MOUNTAIN, 0, "infantry") == -2
+    assert ct.barrage_terrain_shift(Terrain.CLEAR, 0, "infantry") == 0
+    # 12.33 worked example: a gun in a Level-Two Fortification (Clear terrain) barraged
+    # by 12 Barrage Points (the 11-12 band) resolves on the 7-8 band -- two bands left.
+    assert ct.barrage_terrain_shift(Terrain.CLEAR, 2, "gun") == -2
+    assert ct.barrage_result("gun", 12, 51, column_shift=-2) == ct.barrage_result("gun", 8, 51)
+    # 12.34: a shift off the low end of the table means the barrage had no effect.
+    assert ct.barrage_result("infantry", 2, 66, column_shift=-2) == (False, 0)
+
+
+def test_barrage_fortification_armor_gated_to_major_city_note_12():
+    # 8.37 note 12: an ARMOUR-class barrage target gets the fort benefit only in a
+    # Major City hex; infantry and gun targets get it in any fortified hex.
+    assert ct.barrage_terrain_shift(Terrain.CLEAR, 2, "armor") == 0
+    assert ct.barrage_terrain_shift(Terrain.MAJOR_CITY, 2, "armor") == -2
+    assert ct.barrage_terrain_shift(Terrain.CLEAR, 2, "infantry") == -2
+    assert ct.barrage_terrain_shift(Terrain.CLEAR, 1, "gun") == -1
+
+
 def test_combined_arms_reduces_actual_points():
     # §15.2xx worked example: Axis 63 raw -> 6 Actual (21 inf TOE >= 3 tank -> no
     # penalty); CW 38 raw -> 4 Actual, tanks (7) exceed inf (5) by 2 -> -1 Actual

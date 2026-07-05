@@ -295,8 +295,10 @@ def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str]) -> None
                 continue
             cls = _barrage_class(target_unit)
             d1, d2 = r.d6(), r.d6()
+            shift = combat_tables.barrage_terrain_shift(          # 12.33 terrain / fortification
+                state0.terrain.terrain[tgt], state0.fort_level(tgt), cls)
             pin, loss = combat_tables.barrage_result(
-                cls, combat.actual_points(raw, False), d1 * 10 + d2)
+                cls, combat.actual_points(raw, False), d1 * 10 + d2, column_shift=shift)
             plan.append((firing, actor, tgt, [u.id for u in armed],
                          combat.actual_points(raw, False), cls, target_unit.id, (d1, d2), pin, loss))
     for firing, actor, tgt, firer_ids, actual, cls, tgt_id, dice, pin, loss in plan:
@@ -356,8 +358,11 @@ def _anti_armor_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str]) -> N
             if raw <= 0:
                 continue
             d1, d2 = r.d6(), r.d6()
+            shift = combat_tables.anti_armor_terrain_shift(      # 14.32 terrain / fortification
+                state0.terrain.terrain[tgt], state0.fort_level(tgt))
             dmg = combat_tables.anti_armor_damage(combat.actual_points(raw, False),
-                                                   d1 * 10 + d2, phasing=is_phasing)
+                                                   d1 * 10 + d2, phasing=is_phasing,
+                                                   terrain_shift=shift)
             plan.append((firing, actor, tgt, [u.id for u in armed], raw, (d1, d2), dmg))
     for firing, actor, tgt, firer_ids, raw, dice, dmg in plan:
         r.emit(EventKind.ANTI_ARMOR_RESOLVED, firing, actor,
