@@ -18,10 +18,21 @@ def apply(state: GameState, event: Event) -> GameState:
     if k in (EventKind.GAME_INITIALIZED, EventKind.ORDER_REJECTED,
              EventKind.COMBAT_RESOLVED, EventKind.BARRAGE_RESOLVED,
              EventKind.ANTI_ARMOR_RESOLVED, EventKind.REINFORCEMENT_ARRIVED,
-             EventKind.CONVOY_CANCELLED,
+             EventKind.CONVOY_CANCELLED, EventKind.PASTA_DENIED,
              EventKind.STAFF_INTENT, EventKind.STAFF_PROPOSAL, EventKind.STAFF_CONSTRAINT,
              EventKind.STAFF_ADJUDICATION, EventKind.STAFF_DISSENT):
         return state  # markers / audit records — a reinforcement is on-map by turn>=arrival_turn
+
+    if k == EventKind.SUPPLY_EVAPORATED:
+        # 49.3 / 52.44: fuel/water lost to evaporation & spillage. Folds exactly like a
+        # consume -- drain the dump, credit consumed[] -- so on_hand+consumed==initial holds.
+        su = state.supply(p["supply_id"])
+        commodity = p["commodity"]
+        attr = commodity.lower()
+        drained = replace(su, **{attr: getattr(su, attr) - p["qty"]})
+        consumed = dict(state.consumed)
+        consumed[commodity] = consumed.get(commodity, 0) + p["qty"]
+        return replace(state.with_supply(drained), consumed=consumed)
 
     if k == EventKind.SUPPLY_ARRIVED:
         # Faucet, the dual of SUPPLY_CONSUMED (cargo is ALREADY post-cap -- the engine

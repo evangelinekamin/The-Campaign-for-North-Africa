@@ -93,6 +93,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
 
     while True:
         _weather(r)
+        _logistics(r)                                   # Stage IV: stores/water expenditure + evaporation
         _reinforcements(r)
         _naval_convoys(r)                               # V.C.7 + V.D: convoy arrival (SYSTEM)
         for side in (Side.AXIS, Side.ALLIED):
@@ -164,6 +165,87 @@ def _naval_convoys(r: _Run) -> None:
         if landed:                                      # nothing to land into a full dump
             r.emit(EventKind.SUPPLY_ARRIVED, c.side, "SYSTEM",
                    {"supply_id": c.dest, "cargo": landed, "lane": c.lane, "convoy_id": c.id})
+
+
+def _logistics(r: _Run) -> None:
+    """Stores Expenditure Stage (rule 48 Stage IV) at the top of the game-turn: both
+    sides expend STORES (51, once/game-turn) and WATER (52, per Operations Stage --
+    coincident with the game-turn under the current one-ops-stage cadence), after fuel
+    and water have evaporated (49.3/52.44). A unit draws each commodity from the dumps
+    it can trace (the 32.16 gate, reused via supply.plan_draw); an Italian battalion
+    that gets its stores also needs a Pasta Point of water (52.6). Shortfall attrition
+    for units that go unsupplied lands in SUB-STEP D.
+
+    Fires ONLY for scenarios that model full logistics (some dump seeds Stores/Water);
+    an ammo/fuel-only scenario skips it entirely and stays byte-identical."""
+    s = r.state
+    if not s.initial_supply.get(supply.STORES, 0) and not s.initial_supply.get(supply.WATER, 0):
+        return
+    r.go(Phase.LOGISTICS, Side.SYSTEM)
+    hot = s.weather == "hot"
+    _evaporate(r, hot)
+    for side in (Side.AXIS, Side.ALLIED):
+        _stores_expenditure(r, side, hot)
+        _water_distribution(r, side, hot)
+
+
+def _evaporate(r: _Run, hot: bool) -> None:
+    """49.3 / 52.44: each game-turn, on-map Fuel and Water lose 6% (rounded down), plus
+    a further 5% in hot weather. A SINK into consumed[] (the 9% Sep40-Aug41 Commonwealth
+    container rate is deferred). Deterministic: sorted dumps, fuel then water."""
+    pct = 6 + (5 if hot else 0)
+    for sid in sorted(su.id for su in r.state.supplies):
+        for commodity in (supply.FUEL, supply.WATER):
+            amt = getattr(r.state.supply(sid), commodity.lower())
+            loss = amt * pct // 100
+            if loss > 0:
+                r.emit(EventKind.SUPPLY_EVAPORATED, Side.SYSTEM, "SYSTEM",
+                       {"supply_id": sid, "commodity": commodity, "qty": loss})
+
+
+def _stores_expenditure(r: _Run, side: Side, hot: bool) -> None:
+    actor = f"{side.value}/Logistics"
+    for u in sorted(r.state.living(side), key=lambda u: u.id):
+        draws = supply.plan_draw(r.state, u, supply.STORES, supply.stores_cost(u))
+        if draws is None:
+            continue                                    # unsupplied -> SUB-STEP D attrition
+        for sid, qty in draws:
+            r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+                   {"supply_id": sid, "commodity": supply.STORES, "qty": qty, "unit_id": u.id})
+        _pasta_point(r, side, actor, u)                 # 52.6: got stores -> needs its pasta water
+
+
+def _pasta_point(r: _Run, side: Side, actor: str, u) -> None:
+    """52.6 the Italian Pasta Rule: an Italian battalion, when it receives its Stores,
+    must also receive one Water Point to cook its pasta. Denied it, the battalion may
+    not voluntarily exceed its CPA that turn (a no-op in the CPA-bounded engine, flagged
+    by the PASTA_DENIED marker), and if it is already shaky (Cohesion -10 or worse) it
+    immediately disorganizes as if at -26 -- feeding the live 15.88/17 surrender path.
+    Recovery on later receipt of the Pasta Point (52.6) is deferred, like all Cohesion
+    recovery."""
+    if not supply.is_italian(u) or not u.is_combat:
+        return
+    draws = supply.plan_draw(r.state, u, supply.WATER, 1)
+    if draws is not None:
+        for sid, qty in draws:
+            r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+                   {"supply_id": sid, "commodity": supply.WATER, "qty": qty, "unit_id": u.id})
+        return
+    r.emit(EventKind.PASTA_DENIED, side, actor, {"unit_id": u.id})
+    if u.cohesion <= -10:
+        r.emit(EventKind.COHESION_CHANGED, side, actor,
+               {"unit_id": u.id, "delta": -26 - u.cohesion})
+
+
+def _water_distribution(r: _Run, side: Side, hot: bool) -> None:
+    actor = f"{side.value}/Logistics"
+    for u in sorted(r.state.living(side), key=lambda u: u.id):
+        draws = supply.plan_draw(r.state, u, supply.WATER, supply.water_cost(u, hot=hot))
+        if draws is None:
+            continue                                    # unsupplied -> SUB-STEP D attrition
+        for sid, qty in draws:
+            r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+                   {"supply_id": sid, "commodity": supply.WATER, "qty": qty, "unit_id": u.id})
 
 
 def _weather(r: _Run) -> None:

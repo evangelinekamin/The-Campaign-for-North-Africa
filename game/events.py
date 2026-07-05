@@ -55,6 +55,14 @@ class EventKind(str, Enum):
     # (56.15: a convoy to an enemy-captured port never sails) is a marker / no-op fold.
     SUPPLY_ARRIVED = "SUPPLY_ARRIVED"
     CONVOY_CANCELLED = "CONVOY_CANCELLED"
+    # Full-logistics consumption (rules 49-52). SUPPLY_EVAPORATED (49.3/52.44: 6% of
+    # on-map fuel + water per game-turn, +5% hot) folds like a consume -- it drains the
+    # dump and adds to consumed[], so it "left the system" and conservation stays exact.
+    # PASTA_DENIED (52.6) is a legible marker: an Italian battalion that got no water for
+    # its pasta may not exceed its CPA that turn (a no-op in the CPA-bounded engine, so
+    # the fold is identity; the cohesion collapse rides the existing COHESION_CHANGED).
+    SUPPLY_EVAPORATED = "SUPPLY_EVAPORATED"
+    PASTA_DENIED = "PASTA_DENIED"
     BARRAGE_RESOLVED = "BARRAGE_RESOLVED"
     ANTI_ARMOR_RESOLVED = "ANTI_ARMOR_RESOLVED"
     COMBAT_RESOLVED = "COMBAT_RESOLVED"

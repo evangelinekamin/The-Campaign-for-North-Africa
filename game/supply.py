@@ -90,14 +90,56 @@ def fuel_cost(unit: Unit, cp_spent: float) -> int:
     return fuel_rate(unit) * math.ceil(cp_spent / 5)
 
 
-def ammo_cost(unit: Unit, *, phasing: bool, activity: str = "assault") -> int:
-    """Ammo to fire (rule 32.21), per bn-equivalent, doubled for the phasing player:
-    assault costs 1/bn-eq (non-phasing), BARRAGE costs 2/bn-eq. We proxy bn-eq by
-    stacking points, floored at 1 so a company (SP 0) still expends ammo (otherwise
-    it would fight free and bypass the supply gate)."""
-    bn_eq = max(1, unit.stacking_points)
-    base = 2 if activity == "barrage" else 1
-    return base * (2 if phasing else 1) * bn_eq
+# 50.2 Ammunition Consumption Rates (Ammo Points per TOE Strength Point committed,
+# rule 50.14). Barrage/flak = 4 is the only charted value; assault and anti-armor are
+# clearly-flagged PROXY magnitudes until the 50.2 chart is transcribed.
+AMMO_RATE: dict = {"barrage": 4, "anti_armor": 2, "assault": 1}
+
+
+def ammo_cost(unit: Unit, *, phasing: bool = True, activity: str = "assault") -> int:
+    """Ammunition to use `activity` this combat (rule 50.14): the per-function
+    consumption rate times the TOE Strength Points committed, floored at one TOE so a
+    spent single-step unit still expends ammo and stays supply-gated. Rule 50 draws no
+    phasing distinction, so `phasing` is retained only for call-site symmetry with the
+    fuel/combat gates and does NOT change the cost."""
+    del phasing                                        # 50.14 ammo is phasing-independent
+    return AMMO_RATE.get(activity, 1) * max(1, unit.strength)
+
+
+_ITALIAN_FORMATIONS = ("Ariete", "Pavia", "Bologna", "Brescia", "Savona", "Trento",
+                       "Sabratha", "Trieste", "Italian")
+
+
+def is_italian(unit: Unit) -> bool:
+    """PROXY nationality test for the 52.6 pasta rule: an Italian unit by id prefix or
+    formation name (the OOB carries no explicit nationality field on Unit yet)."""
+    return unit.id.startswith("IT") or any(k in unit.formation for k in _ITALIAN_FORMATIONS)
+
+
+def _is_vehicle_type(unit: Unit) -> bool:
+    """Water classing (52.42): tanks/AFVs (VEHICLE/armor), guns (artillery/AT) and
+    first-line trucks are 'vehicle/truck' (1 Water per TOE); everything else -- foot
+    and truck-borne infantry -- is 'infantry' (52.41: 1 Water flat, regardless of TOE)."""
+    return (unit.mobility == Mobility.VEHICLE or unit.is_gun or unit.is_armor
+            or unit.is_first_line_truck)
+
+
+def stores_cost(unit: Unit) -> int:
+    """Stores a unit needs per GAME-TURN (rule 51.11): 4 per TOE Strength Point, or 1
+    per TOE for HQ/engineer units (51.13). Non-combat pieces (bare HQs, trucks) proxy
+    the reduced rate; a dedicated engineer flag is deferred."""
+    rate = 1 if not unit.is_combat else 4
+    return rate * max(1, unit.strength)
+
+
+def water_cost(unit: Unit, *, hot: bool = False) -> int:
+    """Water a unit needs this Operations Stage (rule 52.4). Infantry: 1 flat (52.41,
+    regardless of TOE). Vehicle/gun/truck: 1 per TOE Strength Point (52.42). Hot
+    weather adds a further point (52.43; the exact addition is not charted -- PROXY +1).
+    52.42's 'if it used any CPA' condition is charged for every on-map mobile unit under
+    the one-Operations-Stage cadence; true per-stage gating waits for CHUNK 5."""
+    base = max(1, unit.strength) if _is_vehicle_type(unit) else 1
+    return base + (1 if hot else 0)
 
 
 def _pool(su, commodity: str) -> int:

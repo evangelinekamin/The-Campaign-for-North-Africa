@@ -89,10 +89,14 @@ def test_fuelled_but_far_unit_strands():
     assert far.final.unit("V").hex == (0, 0)            # never made the unaffordable dash
 
 
-def test_ammo_cost_phasing_doubles():
-    dak = coastal_corridor().unit("DAK-5le")            # stacking_points 2
-    assert supply.ammo_cost(dak, phasing=False) == 2
-    assert supply.ammo_cost(dak, phasing=True) == 4
+def test_ammo_cost_per_toe_function():
+    # 50.14: rate x TOE Strength Points; barrage=4 charted, assault/anti-armor PROXY.
+    dak = coastal_corridor().unit("DAK-5le")            # strength 5
+    assert supply.ammo_cost(dak, activity="assault") == 5
+    assert supply.ammo_cost(dak, activity="anti_armor") == 10
+    assert supply.ammo_cost(dak, activity="barrage") == 20
+    # rule 50 draws no phasing distinction -- the cost is phasing-independent
+    assert supply.ammo_cost(dak, phasing=False) == supply.ammo_cost(dak, phasing=True)
 
 
 def test_in_supply_when_colocated_with_dump():

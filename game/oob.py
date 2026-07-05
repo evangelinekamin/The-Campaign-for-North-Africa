@@ -20,8 +20,14 @@ from .state import StepRecord, SupplyUnit, Unit
 from .terrain import Mobility
 
 _DATA = os.path.join(os.path.dirname(__file__), "..", "data")
-DUMP_AMMO = 40      # rule 32.15 dump capacity
+# Start-line dump stock (well under the 54.12 Other-Terrain ceilings). Ammo/Fuel keep
+# the historic 40/60; Stores/Water are seeded generously so a dump reliably supplies
+# the force concentration co-located with it, leaving scarcity to bite units the
+# advance strands out of trace (the intended full-logistics drama).
+DUMP_AMMO = 120
 DUMP_FUEL = 60
+DUMP_STORES = 150
+DUMP_WATER = 100
 
 
 def _load(name: str) -> dict | list:
@@ -96,7 +102,8 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
 
         if rec["kind"] == "dump":
             uid = _uid(seen, f"{rec['side'][:2]}-Dump")
-            supplies.append(SupplyUnit(uid, side, ax, ammo=DUMP_AMMO, fuel=DUMP_FUEL))
+            supplies.append(SupplyUnit(uid, side, ax, ammo=DUMP_AMMO, fuel=DUMP_FUEL,
+                                       stores=DUMP_STORES, water=DUMP_WATER))
             continue
         if rec["kind"] != "unit":
             continue                                 # features are not engine units

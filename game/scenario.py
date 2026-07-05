@@ -256,7 +256,8 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
     # so the fortress can always draw Close-Assault ammunition and never starves out
     # (15.15). Placed here rather than reusing the adjacent AL-Dump#3 (which the Axis
     # can overrun) makes the lifeline robust.
-    supplies.append(SupplyUnit("AL-Tobruk", Side.ALLIED, target, ammo=40, fuel=60))
+    supplies.append(SupplyUnit("AL-Tobruk", Side.ALLIED, target, ammo=oob.DUMP_AMMO,
+                               fuel=oob.DUMP_FUEL, stores=oob.DUMP_STORES, water=oob.DUMP_WATER))
 
     # A supply dump beside a road is on the supply net: add a short road spur so
     # units can trace to it along the road (rule 32.16 trace is priced as roaded).
@@ -297,17 +298,22 @@ def _rommel_convoys(supplies, target, max_turns: int) -> tuple[Convoy, ...]:
     cw_rear = [s for s in supplies if s.side == Side.ALLIED and s.id != "AL-Tobruk"]
     turns = range(1, max_turns + 1)
 
+    # A whole Supply Unit of all four commodities (CHUNK 2): the ferry must now refill
+    # Stores and Water too, or the garrison would disorganize and starve out under 51/52.
+    cargo = {"AMMO": oob.DUMP_AMMO, "FUEL": oob.DUMP_FUEL,
+             "STORES": oob.DUMP_STORES, "WATER": oob.DUMP_WATER}
+
     convoys: list[Convoy] = [
-        Convoy(f"ferry-t{t}", Side.ALLIED, t, "SEA-TOBRUK", "AL-Tobruk",
-               {"AMMO": 40, "FUEL": 60}) for t in turns]
+        Convoy(f"ferry-t{t}", Side.ALLIED, t, "SEA-TOBRUK", "AL-Tobruk", dict(cargo))
+        for t in turns]
     if cw_rear:
         railhead = max(cw_rear, key=lambda s: (distance(s.hex, target), s.id))
-        convoys += [Convoy(f"rail-t{t}", Side.ALLIED, t, "CW-RAILHEAD", railhead.id,
-                           {"AMMO": 40, "FUEL": 60}) for t in turns]
+        convoys += [Convoy(f"rail-t{t}", Side.ALLIED, t, "CW-RAILHEAD", railhead.id, dict(cargo))
+                    for t in turns]
     if axis_dumps:
         rear = max(axis_dumps, key=lambda s: (distance(s.hex, target), s.id))
-        convoys += [Convoy(f"axis-l1-t{t}", Side.AXIS, t, "1", rear.id,
-                           {"AMMO": 40, "FUEL": 60}) for t in range(2, max_turns + 1, 2)]
+        convoys += [Convoy(f"axis-l1-t{t}", Side.AXIS, t, "1", rear.id, dict(cargo))
+                    for t in range(2, max_turns + 1, 2)]
     return tuple(convoys)
 
 

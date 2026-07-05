@@ -35,13 +35,14 @@ def _siege_state(*, siege: bool, fort: int = 2, atk_barrage: int = 25,
                 cpa=20, stacking_points=1, oca=0, dca=1, barrage=atk_barrage, vulnerability=5)
     gar = Unit("GAR", Side.ALLIED, (1, 0), (StepRecord("in", 6),), mobility=Mobility.FOOT,
                cpa=10, stacking_points=2, oca=5, dca=8, is_garrison_home=True)
-    dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=40, fuel=60)
+    # Ammo sized for several barrages: barrage now costs 4 x TOE (50.14) = 4*8 = 32.
+    dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=200, fuel=60)
     return GameState(
         turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS, seed=3,
         weather="clear", move_modifier=0, vp=VP(),
         terrain=TerrainMap(terrain=terr, fortifications={(1, 0): fort}),
         control={}, units=(arty, gar), target_hex=(1, 0), supplies=(dump,),
-        consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 40, "FUEL": 60},
+        consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 200, "FUEL": 60},
         siege_rules=siege, fort_levels=dict(fort_levels or {}))
 
 
