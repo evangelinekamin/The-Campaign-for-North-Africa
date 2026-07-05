@@ -309,6 +309,17 @@ def org_size_shift(attacker_sp: int, defender_sp: int) -> int:
     return shift if attacker_sp > defender_sp else -shift
 
 
+# Static fortification defense (rule 15.82): each fortification level shifts the
+# Close Assault this many columns toward the defender. Applied as a flat static
+# modifier; dynamic fort-reduction by successive assault (rule 25.14) is DEFERRED.
+FORT_CA_SHIFT: int = -2
+
+# Defensive minefield belt: a flat column shift toward the defender when the
+# assault crosses into a mined hex. The clearing / reveal minigame (rule 24) is
+# DEFERRED -- this models only the belt's static drag on the assault.
+MINEFIELD_CA_SHIFT: int = -2
+
+
 # Close-Assault column shifts from the Terrain Effects Chart (8.37): negative =
 # columns left (favours defender), positive = right (favours attacker).
 HEX_CA_SHIFT: dict[Terrain, int] = {

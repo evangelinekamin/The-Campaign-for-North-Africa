@@ -25,6 +25,24 @@ from .terrain import Hexside, Mobility, Terrain
 LENGTH = 8
 MAX_TURNS = 8
 
+# Fortified major cities of the corridor (rule 15.82): label -> fortification
+# level. A MAJOR_CITY hex both exempts its garrison from retreat/eviction and, at
+# the given level, stiffens the close-assault defense. Extensible -- add a label to
+# fortify another town. Tobruk (C4807) and Bardia (C4321) are the victory hexes.
+MAJOR_CITIES: dict[str, int] = {"C4807": 2, "C4321": 2}
+
+
+def _apply_major_cities(terrain: dict) -> dict:
+    """Mark each MAJOR_CITIES hex as MAJOR_CITY terrain (in place, fixing the data
+    bug where coastal towns colour-sample as CLEAR) and return the fortification
+    map (hex -> level) for the TerrainMap."""
+    forts: dict = {}
+    for label, level in MAJOR_CITIES.items():
+        h = coords.to_axial(coords.parse(label))
+        terrain[h] = Terrain.MAJOR_CITY
+        forts[h] = level
+    return forts
+
 
 def coastal_corridor(seed: int = 1941) -> GameState:
     terrain: dict = {}
@@ -191,7 +209,8 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
     for piece in (*units, *supplies):
         terrain.setdefault(piece.hex, Terrain.CLEAR)
     _connect_pieces(terrain, [p.hex for p in (*units, *supplies)])
-    tmap = replace(tmap, terrain=terrain)
+    forts = _apply_major_cities(terrain)          # Tobruk/Bardia -> fortified MAJOR_CITY (15.82)
+    tmap = replace(tmap, terrain=terrain, fortifications=forts)
 
     # FAITHFUL SUPPLY (default): keep ONLY the authored start-line dumps (rule 32.15,
     # a dump per force concentration). The concentrated attacking core (5th Light and

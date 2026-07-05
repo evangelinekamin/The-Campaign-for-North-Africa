@@ -154,6 +154,32 @@ def test_org_size_shift():
     assert ct.org_size_shift(3, 2) == 0        # super-brigade vs brigade
 
 
+def test_fortification_shifts_columns_toward_defender():
+    # a static fortification shifts the assault toward the defender by
+    # FORT_CA_SHIFT per level (rule 15.82); level 0 (default) is unchanged.
+    kw = dict(attacker_raw=60, defender_raw=30, attacker_strength=10,
+              defender_strength=10, def_terrain=Terrain.CLEAR, attack_feature=None,
+              atk_roll=11, def_roll=11)
+    base = combat.resolve(**kw)
+    fort = combat.resolve(**kw, fortification_level=2)
+    assert fort.column == base.column + 2 * ct.FORT_CA_SHIFT
+    assert fort.column < base.column                       # measurably better defense
+    assert combat.resolve(**kw, fortification_level=0) == base   # default = today
+
+
+def test_minefield_shifts_column_toward_defender():
+    # a defensive minefield belt shifts the assault toward the defender
+    # (MINEFIELD_CA_SHIFT); default False is unchanged.
+    kw = dict(attacker_raw=60, defender_raw=30, attacker_strength=10,
+              defender_strength=10, def_terrain=Terrain.CLEAR, attack_feature=None,
+              atk_roll=11, def_roll=11)
+    base = combat.resolve(**kw)
+    mined = combat.resolve(**kw, in_enemy_minefield=True)
+    assert mined.column == base.column + ct.MINEFIELD_CA_SHIFT
+    assert mined.column < base.column
+    assert combat.resolve(**kw, in_enemy_minefield=False) == base
+
+
 def test_barrage_crt():
     assert ct.barrage_result("infantry", 11, 66) == (True, 1)    # col 5, 45-66 -> lose 1 + pin
     assert ct.barrage_result("infantry", 1, 11) == (False, 0)    # no effect

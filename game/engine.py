@@ -22,6 +22,7 @@ from .hexmap import distance, is_adjacent, neighbors
 from .invariants import check
 from .policy import AttackOrder, MoveOrder, Policy
 from .state import Coord, GameState
+from .terrain import Terrain
 
 CONTROL_OF: dict[Side, Control] = {Side.AXIS: Control.AXIS, Side.ALLIED: Control.ALLIED}
 
@@ -377,6 +378,8 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
 
     # Close Assault via the real differential engine (rule 15 / §15.79 CRT).
     feature = r.state.terrain.hexsides.get((armed_atk[0].hex, target))  # §15.33
+    fort = r.state.terrain.fortifications.get(target, 0)         # §15.82 static fortification
+    mined = target in r.state.terrain.minefields                # defensive minefield belt
     # Morale is rolled FIRST (rule 15 order): each side's 17.4 roll adjusts its
     # Basic Morale by Cohesion, and the difference shifts the assault column (15.62).
     atk_m, atk_md, atk_surr = _adjusted_morale(r, armed_atk)
@@ -407,7 +410,8 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
         attacker_ca_penalty=_combined_arms_penalty(armed_atk),      # rule 15.4
         defender_ca_penalty=_combined_arms_penalty(armed_def),
         attacker_size=max((u.stacking_points for u in armed_atk), default=0),  # 15.53
-        defender_size=max((u.stacking_points for u in defenders), default=0))  # incl. pinned (15.12)
+        defender_size=max((u.stacking_points for u in defenders), default=0),  # incl. pinned (15.12)
+        fortification_level=fort, in_enemy_minefield=mined)
     r.emit(EventKind.COMBAT_RESOLVED, side, actor,
            {"target": list(target), "attackers": [u.id for u in armed_atk],
             "defenders": [u.id for u in defenders],
@@ -502,6 +506,10 @@ def _retreat(r: _Run, atk_side: Side, actor: str, defender_ids: list[str],
     together. Retreat CP cost (15.82) is not charged yet (flagged)."""
     survivors = [u for u in (r.state.unit(uid) for uid in defender_ids) if u and u.alive]
     if not survivors:
+        return
+    # Rule 15.82: a unit invested in a MAJOR CITY is not evicted -- it holds the
+    # city (Tobruk/Bardia sit out the siege) rather than retreat or take losses.
+    if r.state.terrain.terrain.get(survivors[0].hex) == Terrain.MAJOR_CITY:
         return
     def_side = survivors[0].side
     enemy_zoc, enemy_occ = tactics.enemy_zoc_and_occupied(r.state, def_side)

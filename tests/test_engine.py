@@ -110,6 +110,48 @@ def test_retreat_relocates_defender_away_from_attacker():
     assert distance(moved.hex, (2, 0)) >= 3                # retreated 2 hexes away
 
 
+def test_major_city_defender_is_not_evicted():
+    # rule 15.82: a defender invested in a MAJOR CITY holds rather than retreat --
+    # Tobruk sits out the siege. Same setup as the plain retreat test but the
+    # defender's hex is a city: it must NOT move and take no eviction loss.
+    from game.engine import _Run, _retreat
+    from game.events import Phase
+    from game.movement import TerrainMap
+    from game.state import GameState, Unit, VP
+    from game.terrain import Mobility, Terrain
+    terr = {(q, 0): Terrain.CLEAR for q in range(6)}
+    terr[(3, 0)] = Terrain.MAJOR_CITY
+    defender = Unit("D", Side.ALLIED, (3, 0), (StepRecord("inf", 4),),
+                    mobility=Mobility.FOOT, cpa=10, stacking_points=1, oca=2, dca=2)
+    attacker = Unit("A", Side.AXIS, (2, 0), (StepRecord("inf", 4),),
+                    mobility=Mobility.FOOT, cpa=10, stacking_points=1, oca=3, dca=3)
+    st = GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS,
+                   seed=1, weather="clear", move_modifier=0, vp=VP(),
+                   terrain=TerrainMap(terrain=terr), control={}, units=(defender, attacker),
+                   target_hex=(5, 0), supplies=(), consumed={"AMMO": 0, "FUEL": 0},
+                   initial_supply={"AMMO": 0, "FUEL": 0})
+    r = _Run(st)
+    _retreat(r, Side.AXIS, "AXIS/Front", ["D"], (2, 0), 2)
+    held = r.state.unit("D")
+    assert held.hex == (3, 0)         # invested, not evicted (15.82)
+    assert held.strength == 4         # no 10%/un-retreated-hex eviction loss
+
+
+def test_rommels_arrival_fortifies_major_cities():
+    # the data-bug fix: Tobruk (C4807) and Bardia (C4321) -- the victory hexes --
+    # load as fortified MAJOR_CITY, not CLEAR, so the 15.82 exemption can fire.
+    from game import coords
+    from game.scenario import rommels_arrival
+    from game.terrain import Terrain
+    s = rommels_arrival(seed=1941)
+    tobruk = coords.to_axial(coords.parse("C4807"))
+    bardia = coords.to_axial(coords.parse("C4321"))
+    assert s.terrain.terrain[tobruk] == Terrain.MAJOR_CITY
+    assert s.terrain.terrain[bardia] == Terrain.MAJOR_CITY
+    assert s.terrain.fortifications.get(tobruk) == 2
+    assert s.terrain.fortifications.get(bardia) == 2
+
+
 def test_scenarios_robust_across_seeds():
     # every scenario, across many dice, must finish with a winner, be replay-exact
     # and deterministic, with invariants holding every event (checked inside run).

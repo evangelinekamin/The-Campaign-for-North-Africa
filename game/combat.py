@@ -62,7 +62,8 @@ def resolve(*, attacker_raw: int, defender_raw: int,
             atk_roll: int, def_roll: int,
             extra_shift: int = 0, morale_shift: int = 0,
             attacker_ca_penalty: int = 0, defender_ca_penalty: int = 0,
-            attacker_size: int = 0, defender_size: int = 0) -> CombatResult:
+            attacker_size: int = 0, defender_size: int = 0,
+            fortification_level: int = 0, in_enemy_minefield: bool = False) -> CombatResult:
     both_small = attacker_raw < 10 and defender_raw < 10
     # Combined-arms reduces each side's ACTUAL close-assault points (rule 15.4).
     a_actual = max(0, actual_points(attacker_raw, both_small) - attacker_ca_penalty)
@@ -78,6 +79,9 @@ def resolve(*, attacker_raw: int, defender_raw: int,
         shift -= 2
     shift += ct.org_size_shift(attacker_size, defender_size)    # 15.53 organization size
     shift += morale_shift + extra_shift                         # 15.62 morale column shift
+    shift += fortification_level * ct.FORT_CA_SHIFT             # 15.82 static fortification
+    if in_enemy_minefield:                                      # defensive minefield belt
+        shift += ct.MINEFIELD_CA_SHIFT
 
     col = max(0, min(ct.N_COLS - 1, ct.diff_to_column(diff) + shift))
     a_pct = ct.attacker_loss_pct(col, atk_roll)

@@ -32,6 +32,8 @@ class TerrainMap:
     hexsides: dict[tuple[Coord, Coord], Hexside] = field(default_factory=dict)  # directed
     roads: frozenset = frozenset()                      # of edge(a, b)
     tracks: frozenset = frozenset()                     # of edge(a, b)
+    fortifications: dict[Coord, int] = field(default_factory=dict)  # hex -> fort level (15.82)
+    minefields: frozenset = frozenset()                 # of Coord: defensive minefield belt
 
     def exists(self, coord: Coord) -> bool:
         return coord in self.terrain
