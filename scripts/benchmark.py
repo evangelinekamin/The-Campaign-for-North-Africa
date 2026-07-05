@@ -164,7 +164,7 @@ def run_model(model: str, games: int, mock: bool, mode: str = "stateless",
                   OpenRouterClient(model, reasoning_effort=reasoning, timeout=45, retries=1,
                                    provider=FAST_PROVIDER))
         axis = LLMPolicy(Side.AXIS, client, mode=mode)
-        result = run(rommels_arrival(seed=base_seed + i), axis=axis, allied=ScriptedPolicy(Side.ALLIED))
+        result = run(rommels_arrival(seed=base_seed + i), axis=axis, allied=ScriptedPolicy(attacker=Side.AXIS))
         g = game_metrics(result)
         print(f"    [{mode}] {model}  game {i + 1}/{games}: score {g['score']} "
               f"(combat {g['combat']}, {g['rejections']} rejects)", flush=True)

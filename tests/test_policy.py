@@ -62,3 +62,20 @@ def test_defender_holds_when_nothing_is_exposed():
     # so nothing is exposed -- the defender must not regress into recklessness.
     state = replace(coastal_corridor(), phase=Phase.MOVEMENT)
     assert ScriptedPolicy().movement(state, Side.ALLIED) == []
+
+
+def test_commonwealth_defender_wiring_is_not_the_footgun():
+    # Regression guard for the ScriptedPolicy(attacker=...) footgun that silently
+    # killed the garrison sortie in every benchmark/live game: the Commonwealth
+    # defender MUST be built with the scenario's attacker (attacker=Side.AXIS), NOT
+    # ScriptedPolicy(Side.ALLIED). The engine only ever calls the Commonwealth policy
+    # with side=ALLIED, so attacker=ALLIED sends it down the attacker-advance branch
+    # and _defender_moves never runs.
+    state = _defender_state_with_exposed_tank()
+
+    correct = ScriptedPolicy(attacker=Side.AXIS).movement(state, Side.ALLIED)
+    assert any(o.unit_id == "UK-2Armd" and distance(o.to, EXPOSED_HEX) == 1
+               for o in correct), "correct wiring: the reserve sorties"
+
+    footgun = ScriptedPolicy(Side.ALLIED).movement(state, Side.ALLIED)
+    assert correct != footgun, "the attacker= arg must change the Commonwealth's behavior"

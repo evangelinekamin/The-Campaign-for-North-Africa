@@ -51,7 +51,13 @@ class Policy:
 class ScriptedPolicy(Policy):
     """Simple desert doctrine: the attacker presses toward the objective along the
     cheapest legal path; the defender holds and counter-attacks anything adjacent.
-    Proposals are pre-filtered for legality, but the engine re-validates."""
+    Proposals are pre-filtered for legality, but the engine re-validates.
+
+    `attacker` is the SCENARIO'S attacking side, not the side this policy plays: the
+    policy attacks when asked to move for `attacker` and otherwise defends (holds +
+    sorties). So a Commonwealth defender in an Axis-attacker scenario is
+    ScriptedPolicy(attacker=Side.AXIS) -- NOT ScriptedPolicy(Side.ALLIED), which sets
+    attacker=ALLIED and silently makes the Commonwealth run the attacker branch."""
 
     def __init__(self, attacker: Side = Side.AXIS):
         self.attacker = attacker

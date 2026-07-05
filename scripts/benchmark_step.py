@@ -59,7 +59,7 @@ def main() -> int:
     try:
         result = run(rommels_arrival(seed=SEED),
                      axis=LLMPolicy(Side.AXIS, _Replay()),
-                     allied=ScriptedPolicy(Side.ALLIED))
+                     allied=ScriptedPolicy(attacker=Side.AXIS))
     except _Stop as s:
         print(f"CALL {s.idx}")
         print(s.prompt)

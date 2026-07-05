@@ -105,7 +105,7 @@ def verify(result: RunResult, factory, *, check_determinism: bool = True) -> Non
     print(f"  replay-equivalence : OK  (fold over {len(result.events)} events == live state)")
     if check_determinism:
         again = run(factory(seed=result.initial.seed),
-                    ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+                    ScriptedPolicy(Side.AXIS), ScriptedPolicy(attacker=Side.AXIS))
         assert determinism_signature(again.events) == determinism_signature(result.events), \
             "determinism FAILED: same seed produced a different event log"
         print(f"  determinism        : OK  (seed {result.initial.seed} reproduced byte-identical log)")
@@ -135,7 +135,7 @@ def _policies(model):
     (`llm:<model>`). Each side plays its own side (a contested objective is a real
     race). LLM agents need OPENROUTER_API_KEY in the environment."""
     if model is None:
-        return ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED)
+        return ScriptedPolicy(Side.AXIS), ScriptedPolicy(attacker=Side.AXIS)
     from game.llm import OpenRouterClient
     from game.llm_policy import LLMPolicy
     client = OpenRouterClient(model)
