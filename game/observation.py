@@ -25,13 +25,29 @@ from .hexmap import distance, neighbors
 from .state import GameState
 
 REACH_LIMIT = 6            # legal destinations offered per unit (nearest to objective)
+SIGHTING = 2              # flat sighting radius (hexes) -- the v1 fog-of-presence dial
 
 
 def _other(side: Side) -> Side:
     return Side.ALLIED if side == Side.AXIS else Side.AXIS
 
 
-def observe(state: GameState, side: Side) -> dict:
+def _sighted_hexes(state: GameState, side: Side) -> set:
+    """The hexes within SIGHTING (hex distance) of ANY living friendly unit of
+    `side` -- the fog-of-presence seam. A flat graph radius today (BFS over
+    neighbors); a per-unit sighting range or true line-of-sight drops in here
+    later without touching the observation schema."""
+    sighted: set = set()
+    for u in state.living(side):
+        ring = {u.hex}
+        sighted |= ring
+        for _ in range(SIGHTING):
+            ring = {n for h in ring for n in neighbors(h)} - sighted
+            sighted |= ring
+    return sighted
+
+
+def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
     target = state.target_hex
     moving = state.phase == Phase.MOVEMENT
     enemy_zoc, enemy_occ = tactics.enemy_zoc_and_occupied(state, side) if moving else (None, None)
@@ -112,8 +128,14 @@ def observe(state: GameState, side: Side) -> dict:
         return v
 
     # Limited intelligence: aggregate the enemy to per-hex stack sightings only.
+    # Fog of presence: unless reveal_all (the viewer/god-view), an enemy stack is
+    # listed only when it stands on a hex this side can currently see (within
+    # SIGHTING of a living friendly). Unsighted stacks are simply omitted.
+    sighted = None if reveal_all else _sighted_hexes(state, side)
     sightings: dict = {}
     for e in state.living(_other(side)):
+        if sighted is not None and e.hex not in sighted:
+            continue
         s = sightings.setdefault(e.hex, {
             "hex": list(e.hex), "dist_to_objective": distance(e.hex, target),
             "stacking_points": 0, "unit_count": 0,

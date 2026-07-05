@@ -59,6 +59,37 @@ def test_movement_observation_offers_only_legal_destinations():
         assert tuple(d["hex"]) in legal                              # every offer is reachable
 
 
+# --- fog of presence --------------------------------------------------------
+
+def test_fog_hides_distant_enemy():
+    # The playing staff (reveal_all False, the default) sees enemy PRESENCE only
+    # within sighting. Both Commonwealth stacks sit far east of the two Axis units,
+    # so a fogged Axis observation lists no enemy at all.
+    obs = observe(coastal_corridor(), Side.AXIS)
+    assert obs["enemy_sightings"] == []
+
+
+def test_fog_reveals_adjacent_enemy():
+    from dataclasses import replace
+
+    s = coastal_corridor()
+    # Put a Commonwealth unit right next to DAK-5le (0,0); the other stays far east.
+    near = tuple(replace(u, hex=(1, 0)) if u.id == "UK-2Armd" else u for u in s.units)
+    s = replace(s, units=near)
+    obs = observe(s, Side.AXIS)
+    seen = {tuple(x["hex"]) for x in obs["enemy_sightings"]}
+    assert (1, 0) in seen                          # adjacent enemy is sighted
+    assert next(u for u in s.units if u.id == "UK-9Aus").hex not in seen  # distant one hidden
+
+
+def test_reveal_all_restores_full_visibility():
+    # The viewer / god-view opts into reveal_all and sees every enemy stack.
+    s = coastal_corridor()
+    obs = observe(s, Side.AXIS, reveal_all=True)
+    seen = {tuple(x["hex"]) for x in obs["enemy_sightings"]}
+    assert {u.hex for u in s.living(Side.ALLIED)} <= seen
+
+
 # --- tolerant parsing -------------------------------------------------------
 
 def test_parse_moves_and_attacks_from_clean_json():
