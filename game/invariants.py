@@ -7,7 +7,7 @@ now we guard step counts, legal positions, and stacking limits.
 """
 from __future__ import annotations
 
-from . import stacking
+from . import adjudication, stacking
 from .state import GameState
 
 
@@ -29,17 +29,14 @@ def check(state: GameState) -> None:
             raise InvariantViolation(f"supply {su.id} on non-existent hex {su.hex}")
 
     # Stacking limits, checked at rest (rule 9.31): no hex over its point limit.
-    occupied: dict = {}
-    for u in state.units:
-        if state.on_map(u):                        # off-map reinforcements don't stack yet
-            occupied.setdefault(u.hex, []).append(u)
-    for coord, units in occupied.items():
-        terrain = state.terrain.terrain[coord]
-        if not stacking.within_hex_limit(units, terrain):
-            pts = stacking.hex_points(units, terrain)
-            raise InvariantViolation(
-                f"stacking exceeded at {coord}: {pts} points "
-                f"(limit {stacking.DEFAULT_HEX_LIMIT})")
+    # The detection lives in adjudication.stacking_violations (single source of
+    # truth); here we fail loud on the first, preserving the historic raise-order.
+    for c in adjudication.stacking_violations(state):
+        units = state.units_at(c.hex)
+        pts = stacking.hex_points(units, state.terrain.terrain[c.hex])
+        raise InvariantViolation(
+            f"stacking exceeded at {c.hex}: {pts} points "
+            f"(limit {stacking.DEFAULT_HEX_LIMIT})")
 
     # Supply conservation (rule 32): per commodity, on-hand + consumed == initial.
     # Nothing is created except at sources (none modelled yet); nothing vanishes
