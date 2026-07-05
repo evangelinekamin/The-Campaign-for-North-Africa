@@ -172,9 +172,10 @@ def _movement(r: _Run, policy: Policy, side: Side) -> None:
                 "cp_spent": reach[order.to]})
 
 
-def _reject(r: _Run, side: Side, actor: str, order: MoveOrder, reason: str) -> None:
+def _reject(r: _Run, side: Side, actor: str, order: MoveOrder, reason: str,
+            order_kind: str = "move") -> None:
     r.emit(EventKind.ORDER_REJECTED, side, actor,
-           {"order": "move", "unit_id": order.unit_id, "to": list(order.to),
+           {"order": order_kind, "unit_id": order.unit_id, "to": list(order.to),
             "reason": reason})
 
 
@@ -223,10 +224,13 @@ def _other(side: Side) -> Side:
 def _combat(r: _Run, policies: dict, side: Side) -> None:
     """One Combat Segment (rule 11.0), the Phasing side = `side`. Barrage and Anti-
     Armor are fought by BOTH players (their losses land before Close Assault); then
-    the Phasing player Close Assaults. Retreat-Before-Assault (13) is deferred."""
+    the Phasing player Close Assaults. Retreat-Before-Assault (13.0) slots in after
+    all Barrages and before the ensuing Anti-Armor / Close Assault sub-segments
+    (13.28): the NON-PHASING side may slip UNPINNED units out of contact."""
     enemy = _other(side)
     pinned: set[str] = set()          # units Pinned by barrage this segment (12.44)
     _barrage_step(r, side, enemy, pinned)
+    _retreat_before_assault(r, policies[enemy], enemy, side, pinned)
     _anti_armor_step(r, side, enemy, pinned)
     actor = f"{side.value}/Front"
     assaulted: set = set()            # 15.23: each hex is close-assaulted at most once/segment
@@ -254,6 +258,76 @@ def _combat(r: _Run, policies: dict, side: Side) -> None:
         _resolve_combat(r, side, actor, attackers, defenders, target, pinned)
         assaulted.add(target)
         committed.update(u.id for u in attackers)
+
+
+def _retreat_before_assault(r: _Run, policy: Policy, side: Side, phasing: Side,
+                            pinned: set[str]) -> None:
+    """Retreat Before Assault (rule 13.0): once all Barrages are complete, the NON-
+    PHASING side (`side`) may pull units out of contact before the assault lands. It
+    is Voluntary Movement (13.21) -- it spends CP (and Fuel for vehicles) and obeys
+    enemy ZOC, break-off cost and the no-ZOC-to-ZOC rule (13.22 / 13.26) exactly as
+    ordinary movement does (tactics.reachable_for already models all three). So an
+    unpinned reserve can slip an assault while the Pinned garrison stays and is
+    close-assaulted -- the elastic desert defense. Units Pinned by barrage, or at a
+    Cohesion Level of -26 or worse, may NOT retreat before assault (13.1). Suscep-
+    tibility of a unit that retreats INTO an attacked hex (13.28) is deferred."""
+    actor = f"{side.value}/Front"
+    enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(r.state, side)
+    roster = r.state.living(side)          # phase-start snapshot (matches reachability)
+    for order in policy.retreat_before_assault(r.state, side, frozenset(pinned)):
+        u = r.state.unit(order.unit_id)
+        if u is None or not u.alive or u.side != side:
+            _reject(r, side, actor, order, "no such living unit under this command",
+                    order_kind="retreat_before_assault")
+            continue
+        if u.id in pinned:                                      # 13.1: Pinned may not retreat
+            _reject(r, side, actor, order, "pinned units may not retreat before assault (13.1)",
+                    order_kind="retreat_before_assault")
+            continue
+        if u.cohesion <= -26:                                   # 13.1: -26 or worse may not
+            _reject(r, side, actor, order,
+                    "cohesion -26 or worse may not retreat before assault (13.1)",
+                    order_kind="retreat_before_assault")
+            continue
+        reach = _rba_cp_cap(r.state, u, tactics.reachable_for(
+            r.state, u, enemy_zoc, enemy_occupied, roster))
+        if order.to == u.hex or order.to not in reach:
+            _reject(r, side, actor, order,
+                    "destination unreachable within CPA or blocked by ZOC",
+                    order_kind="retreat_before_assault")
+            continue
+        present = [x for x in r.state.units_at(order.to) if x.side == side]
+        if not stacking.within_hex_limit(present + [u], r.state.terrain.terrain[order.to]):
+            _reject(r, side, actor, order, "destination over stacking limit",
+                    order_kind="retreat_before_assault")
+            continue
+        if u.cp_used == 0:                          # first move this OpStage pays fuel (32.23)
+            draws = supply.plan_draw(r.state, u, supply.FUEL, supply.fuel_cost(u))
+            if draws is None:
+                _reject(r, side, actor, order, "out of supply: no fuel in range",
+                        order_kind="retreat_before_assault")
+                continue
+            for sid, qty in draws:
+                r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+                       {"supply_id": sid, "commodity": supply.FUEL, "qty": qty, "unit_id": u.id})
+        r.emit(EventKind.UNIT_MOVED, side, actor,        # 13.21: retreat-before-assault IS movement
+               {"unit_id": u.id, "from": list(u.hex), "to": list(order.to),
+                "cp_spent": reach[order.to]})
+
+
+def _rba_cp_cap(state: GameState, unit, reach: dict) -> dict:
+    """CP ceiling on a Retreat Before Assault (13.23 / 13.24): a unit that BEGINS the
+    step adjacent to an enemy combat unit may expend as many CP as it likes (13.23);
+    one that does not may expend at most four CP -- or move a single hex, whichever
+    is greater (13.24). The reachable set from tactics.reachable_for already bounds
+    the unit's remaining CPA; this trims it to the 13.24 allowance when out of
+    contact, but always leaves any directly-adjacent hex it can afford."""
+    in_contact = any(e.is_combat for nb in neighbors(unit.hex)
+                     for e in state.enemies_at(nb, unit.side))
+    if in_contact:
+        return reach
+    return {c: cost for c, cost in reach.items()
+            if cost <= 4.0 or distance(unit.hex, c) == 1}
 
 
 def _barrage_class(u) -> str:

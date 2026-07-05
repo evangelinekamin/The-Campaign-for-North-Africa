@@ -181,3 +181,46 @@ def test_anchor_does_not_counter_assault_in_combat():
     assert "UK-9Aus" not in attackers, "the anchor holds the fortress, it does not sortie"
     assert "UK-2Armd" in attackers, "the non-anchor reserve still counter-attacks"
     assert any(o.target == (6, 0) for o in orders)
+
+
+# --- Retreat Before Assault (rule 13.0) --------------------------------------
+
+def _rba_defender_state():
+    """A clear row with an Axis attacker at (2,0) flanked by two Commonwealth
+    reserves in contact -- (1,0) and (3,0) -- and the objective off at (20,0) so
+    neither reserve is the garrison anchor."""
+    from game.movement import TerrainMap
+    from game.state import GameState, VP
+    from game.terrain import Terrain
+
+    def inf(uid, side, hex_):
+        return Unit(uid, side, hex_, (StepRecord("in", 4),), mobility=Mobility.FOOT,
+                    cpa=10, stacking_points=1, oca=3, dca=3)
+
+    terr = {(q, 0): Terrain.CLEAR for q in range(8)}
+    units = (inf("A", Side.AXIS, (2, 0)),
+             inf("D1", Side.ALLIED, (1, 0)),
+             inf("D2", Side.ALLIED, (3, 0)))
+    return GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS,
+                     seed=1, weather="clear", move_modifier=0, vp=VP(),
+                     terrain=TerrainMap(terrain=terr), control={}, units=units,
+                     target_hex=(20, 0), supplies=(),
+                     consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 0, "FUEL": 0})
+
+
+def test_scripted_defender_slips_unpinned_reserves_not_pinned_ones():
+    # rule 13.0/13.1: the defender proposes a retreat for the UNPINNED reserve in
+    # contact but never for the Pinned one (which must stay to be assaulted).
+    st = _rba_defender_state()
+    pol = ScriptedPolicy(attacker=Side.AXIS)              # ALLIED defends
+    orders = pol.retreat_before_assault(st, Side.ALLIED, frozenset({"D1"}))
+    ids = {o.unit_id for o in orders}
+    assert "D2" in ids and "D1" not in ids               # unpinned slips; pinned held
+
+
+def test_scripted_attacker_never_retreats_before_its_own_assault():
+    # rule 13: only the NON-phasing side may retreat. The scripted attacker, briefly
+    # non-phasing during the enemy's combat, must not slip -- it presses on.
+    st = _rba_defender_state()
+    pol = ScriptedPolicy(attacker=Side.AXIS)
+    assert pol.retreat_before_assault(st, Side.AXIS, frozenset()) == []

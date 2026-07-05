@@ -447,3 +447,99 @@ def test_engine_rejects_illegal_orders_without_mutating_state():
     assert rejected and all("reason" in e.payload for e in rejected)
     assert result.final.unit("DAK-5le").hex == (0, 0)      # never moved
     assert result.final.unit("IT-Ariete").hex == (1, 1)
+
+
+# --- Retreat Before Assault (rule 13.0) --------------------------------------
+
+def _rba_state(units):
+    from game.events import Phase
+    from game.movement import TerrainMap
+    from game.state import GameState, VP
+    from game.terrain import Terrain
+    # A long clear row; the objective sits far off (20,0) so none of the defenders
+    # count as the garrison anchor -- they are all free reserves for rule 13.
+    terr = {(q, 0): Terrain.CLEAR for q in range(8)}
+    return GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS,
+                     seed=1, weather="clear", move_modifier=0, vp=VP(),
+                     terrain=TerrainMap(terrain=terr), control={}, units=tuple(units),
+                     target_hex=(20, 0), supplies=(),
+                     consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 0, "FUEL": 0})
+
+
+def _rba_infantry(uid, side, hex_, cohesion=0):
+    from game.state import Unit
+    from game.terrain import Mobility
+    return Unit(uid, side, hex_, (StepRecord("in", 4),), mobility=Mobility.FOOT,
+                cpa=10, stacking_points=1, oca=3, dca=3, cohesion=cohesion)
+
+
+def test_unpinned_defender_slips_before_assault():
+    # rule 13.0/13.1: after barrage, a non-phasing, UNPINNED unit in contact may
+    # Retreat Before Assault -- slipping out of contact so the ensuing Close Assault
+    # cannot reach it. A Pinned neighbour (12.44) may NOT and stays to be assaulted.
+    from game.engine import _Run, _retreat_before_assault
+    from game.hexmap import is_adjacent
+    from game.events import EventKind
+    atk = _rba_infantry("A", Side.AXIS, (2, 0))
+    d_free = _rba_infantry("D_free", Side.ALLIED, (3, 0))
+    d_pin = _rba_infantry("D_pin", Side.ALLIED, (1, 0))
+    r = _Run(_rba_state([atk, d_free, d_pin]))
+    # AXIS is the phasing attacker; ALLIED is the non-phasing defender.
+    _retreat_before_assault(r, ScriptedPolicy(Side.AXIS), Side.ALLIED, Side.AXIS, {"D_pin"})
+    moved = r.state.unit("D_free")
+    assert moved.hex != (3, 0)                              # it slipped
+    assert not is_adjacent(moved.hex, (2, 0))               # ...out of contact with the attacker
+    assert r.state.unit("D_pin").hex == (1, 0)             # the Pinned unit stayed
+    assert any(e.kind == EventKind.UNIT_MOVED and e.payload["unit_id"] == "D_free"
+               for e in r.events)
+
+
+def test_pinned_unit_proposal_is_rejected_at_the_boundary():
+    # even if a policy proposes it, the engine refuses to retreat a Pinned unit (13.1).
+    from game.engine import _Run, _retreat_before_assault
+    from game.events import EventKind
+    from game.policy import MoveOrder, Policy
+
+    class _RetreatPinned(Policy):
+        def movement(self, state, side):
+            return []
+
+        def combat(self, state, side):
+            return []
+
+        def retreat_before_assault(self, state, side, pinned):
+            return [MoveOrder("D_pin", (0, 0))]
+
+    atk = _rba_infantry("A", Side.AXIS, (2, 0))
+    d_pin = _rba_infantry("D_pin", Side.ALLIED, (1, 0))
+    r = _Run(_rba_state([atk, d_pin]))
+    _retreat_before_assault(r, _RetreatPinned(), Side.ALLIED, Side.AXIS, {"D_pin"})
+    assert r.state.unit("D_pin").hex == (1, 0)             # never moved
+    rej = [e for e in r.events if e.kind == EventKind.ORDER_REJECTED]
+    assert rej and "pinned" in rej[0].payload["reason"]
+    assert rej[0].payload["order"] == "retreat_before_assault"
+
+
+def test_broken_cohesion_unit_may_not_retreat_before_assault():
+    # rule 13.1: a unit at Cohesion Level -26 or worse may not Retreat Before Assault.
+    from game.engine import _Run, _retreat_before_assault
+    from game.events import EventKind
+    from game.policy import MoveOrder, Policy
+
+    class _RetreatBroken(Policy):
+        def movement(self, state, side):
+            return []
+
+        def combat(self, state, side):
+            return []
+
+        def retreat_before_assault(self, state, side, pinned):
+            return [MoveOrder("D_broken", (4, 0))]
+
+    atk = _rba_infantry("A", Side.AXIS, (2, 0))
+    d_broken = _rba_infantry("D_broken", Side.ALLIED, (3, 0), cohesion=-26)
+    r = _Run(_rba_state([atk, d_broken]))
+    _retreat_before_assault(r, _RetreatBroken(), Side.ALLIED, Side.AXIS, set())
+    assert r.state.unit("D_broken").hex == (3, 0)          # held -- too broken to retreat
+    rej = [e for e in r.events if e.kind == EventKind.ORDER_REJECTED]
+    assert rej and "cohesion" in rej[0].payload["reason"]

@@ -47,6 +47,10 @@ class Policy:
     def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
         return []  # optional: relocate supply to follow the advance (rule 32.3)
 
+    def retreat_before_assault(self, state: GameState, side: Side,
+                               pinned: frozenset[str]) -> list[MoveOrder]:
+        return []  # optional: slip non-phasing units out of an assault (rule 13.0)
+
 
 class ScriptedPolicy(Policy):
     """Simple desert doctrine: the attacker presses toward the objective along the
@@ -140,6 +144,42 @@ class ScriptedPolicy(Policy):
                 dest = min(forward, key=lambda c: (distance(c, target), reach[c], c))
                 orders.append(SupplyMoveOrder(su.id, dest))
         return orders
+
+    def retreat_before_assault(self, state: GameState, side: Side,
+                               pinned: frozenset[str]) -> list[MoveOrder]:
+        """Elastic desert defense (rule 13.0): when defending, slip each non-anchor,
+        UNPINNED combat unit that is in contact with the phasing enemy out of the
+        assault -- to the cheapest reachable hex that is itself out of contact --
+        while the garrison (anchors) and any Pinned unit stay and are assaulted. The
+        attacking side never retreats before its own assault. Units at Cohesion -26
+        or worse may not retreat (13.1); the engine re-validates every proposal."""
+        if side == self.attacker:
+            return []                          # the attacker presses on; it does not slip
+        anchors = self._anchor_ids(state, side)
+        enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, side)
+        orders: list[MoveOrder] = []
+        for u in state.living(side):
+            if (not u.is_combat or u.id in anchors or u.id in pinned
+                    or u.cohesion <= -26):
+                continue
+            if not self._in_contact(state, side, u.hex):
+                continue                       # only units about to be assaulted bother to slip
+            if u.cp_used == 0 and supply.plan_draw(
+                    state, u, supply.FUEL, supply.fuel_cost(u)) is None:
+                continue                       # no fuel to move -- don't propose it
+            reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
+            escapes = [c for c in reach
+                       if c != u.hex and self._stacking_ok(state, u, c)
+                       and not self._in_contact(state, side, c)]
+            if escapes:
+                orders.append(MoveOrder(u.id, min(escapes, key=lambda c: (reach[c], c))))
+        return orders
+
+    def _in_contact(self, state: GameState, side: Side, hex_: Coord) -> bool:
+        """True if `hex_` is adjacent to an enemy combat unit -- a hex that would be
+        (or expose the unit to) a close assault this segment."""
+        return any(e.is_combat for nb in neighbors(hex_)
+                   for e in state.enemies_at(nb, side))
 
     # --- defender: hold the objective, sortie against exposed enemies ---------
     def _anchor_ids(self, state: GameState, side: Side) -> frozenset[str]:
