@@ -356,6 +356,9 @@ def _movement(r: _Run, policy: Policy, side: Side) -> None:
         if u is None or not u.alive or u.side != side:
             _reject(r, side, actor, order, "no such living unit under this command")
             continue
+        if u.effective_strength == 0:                   # 21.44: all vehicles broken down
+            _reject(r, side, actor, order, "all vehicles broken down, may not move (21.44)")
+            continue
         # Reachability is computed against the phase-start roster so a unit's legal
         # set doesn't depend on the order earlier units moved (matches observe()).
         reach = tactics.reachable_for(r.state, u, enemy_zoc, enemy_occupied, roster)

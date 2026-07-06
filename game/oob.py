@@ -219,6 +219,12 @@ def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
         arrival_turn=arrival_turn,
         formation=rec["group"],
         fuel_rate=fuel_rate,
+        # [21.12]/[4.47-4.49] Breakdown Adjustment Rating, per-model (mirror of fuel_rate):
+        # 0 for a unit whose model carries none (guns never break down, 21.11). The German
+        # early-war "+1R until Game-Turn 1/31" gate (4.49 note *) is moot for the seeded
+        # Rommel's-Arrival / Desert-Fox scenarios, which begin after that gate -- so the
+        # chart's steady post-gate value in unit_stats.json is faithful here.
+        bar=model.get("bar", 0),
     )
 
 

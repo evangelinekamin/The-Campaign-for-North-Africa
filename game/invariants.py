@@ -23,6 +23,11 @@ def check(state: GameState) -> None:
                     f"unit {u.id} step {s.label!r} has negative strength {s.strength}")
         if not state.terrain.exists(u.hex):
             raise InvariantViolation(f"unit {u.id} on non-existent hex {u.hex}")
+        # Broken-down TOE is a subset of the unit's strength (rule 21.44): it is
+        # peeled off the operational pool, never below zero nor above total strength.
+        if not 0 <= u.broken_down <= u.strength:
+            raise InvariantViolation(
+                f"unit {u.id} broken_down={u.broken_down} out of [0, {u.strength}]")
 
     for su in state.supplies:                      # dumps relocate now (rule 32.3)
         if not state.terrain.exists(su.hex):

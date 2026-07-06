@@ -119,3 +119,65 @@ def test_rainstorm_treats_road_as_track():
                  roads=[edge((0, 0), (1, 0))])
     assert breakdown_points(tmap, (0, 0), (1, 0), Mobility.VEHICLE, "clear") == 0.5
     assert breakdown_points(tmap, (0, 0), (1, 0), Mobility.VEHICLE, "rain") == 4 + 4
+
+
+# --- Step 2: Unit breakdown state + effective_strength + BAR -----------------
+
+from dataclasses import replace
+
+from game.events import Side
+from game.invariants import InvariantViolation, check
+from game.state import StepRecord, Unit
+
+
+def _tank(broken: int = 0, strength: int = 10, **kw) -> Unit:
+    return Unit("T1", Side.AXIS, (0, 0), (StepRecord("tank", strength),),
+                mobility=Mobility.VEHICLE, cpa=20, stacking_points=1,
+                oca=4, dca=3, barrage=0, anti_armor=5, armor_protection=6,
+                is_tank=True, broken_down=broken, **kw)
+
+
+def test_effective_strength_deducts_broken():
+    u = _tank(broken=4, strength=10)
+    assert u.strength == 10
+    assert u.effective_strength == 6
+
+
+def test_broken_vehicles_neither_attack_defend_nor_fire():
+    full = _tank(broken=0)
+    half = _tank(broken=5)
+    assert half.raw_offense == full.raw_offense // 2 == 4 * 5
+    assert half.raw_defense == 3 * 5
+    assert half.raw_anti_armor == 5 * 5
+    dead = _tank(broken=10)
+    assert dead.raw_offense == dead.raw_defense == dead.raw_anti_armor == 0
+
+
+def test_breaks_down_is_armor_only():
+    assert _tank().breaks_down                                   # a tank
+    gun = Unit("G", Side.AXIS, (0, 0), (StepRecord("atg", 6),), mobility=Mobility.MOTORIZED,
+               cpa=10, stacking_points=1, oca=1, dca=2, anti_armor=8, vulnerability=4)
+    assert not gun.breaks_down                                   # inherent transport (21.11)
+
+
+def test_invariant_rejects_broken_over_strength():
+    from game.movement import TerrainMap
+    from game.state import GameState, VP
+    from game.events import Phase
+    tmap = TerrainMap(terrain={(0, 0): Terrain.CLEAR})
+    bad = _tank(broken=12, strength=10)
+    st = GameState(turn=1, max_turns=2, phase=Phase.MOVEMENT, active_side=Side.AXIS,
+                   seed=1, weather="clear", move_modifier=0, vp=VP(), terrain=tmap,
+                   control={}, units=(bad,), target_hex=(0, 0), supplies=(),
+                   consumed={}, initial_supply={})
+    with pytest.raises(InvariantViolation):
+        check(st)
+
+
+def test_bar_sourced_from_unit_stats_in_oob():
+    from game import oob
+    units, _ = oob.build()
+    by_bar = {u.bar for u in units if u.is_tank}
+    assert by_bar                                                # tanks exist and carry a BAR
+    # Italian CV33 = +2R, German panzers = 0 (post-gate); every gun carries none.
+    assert all(u.bar == 0 for u in units if u.is_gun)

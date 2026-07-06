@@ -62,10 +62,26 @@ class Unit:
     turns_without_stores: int = 0  # consecutive game-turns without Stores (51.22)
     stages_without_water: int = 0  # consecutive Operations Stages without Water (52.53)
     disorganization: int = 0       # accumulated Disorganization Points (51.21)
+    # --- Vehicle breakdown (rules 21/22). bar is a static column shift on the 21.38
+    # table (+ = Right/more breakdown, - = Left); the three counters below fold via
+    # replace. bp_accumulated + bp_checked_column reset each OpStage (TURN_ADVANCED);
+    # broken_down (immobile TOE) PERSISTS across turns until repaired. Defaults 0 keep
+    # every pre-breakdown scenario byte-identical.
+    bar: int = 0                   # Breakdown Adjustment Rating (21.12/21.14)
+    bp_accumulated: float = 0.0    # Breakdown Points this OpStage (21.25)
+    bp_checked_column: int = -1    # highest 21.38 column already checked (21.26 gate)
+    broken_down: int = 0           # TOE Strength Points broken down / immobile (21.44)
 
     @property
     def strength(self) -> int:
         return sum(s.strength for s in self.steps)
+
+    @property
+    def effective_strength(self) -> int:
+        """Operational TOE: total strength less the broken-down vehicles, which may
+        not move, defend, attack or barrage (rule 21.44). The single choke point every
+        combat/ZOC read passes through, so a broken vehicle contributes nothing."""
+        return self.strength - self.broken_down
 
     @property
     def alive(self) -> bool:
@@ -73,23 +89,30 @@ class Unit:
 
     @property
     def raw_offense(self) -> int:  # raw offensive close-assault points (rule 11.32)
-        return self.oca * self.strength
+        return self.oca * self.effective_strength
 
     @property
     def raw_defense(self) -> int:  # raw defensive CA points (ZOC §10.15, combat §15.4)
-        return self.dca * self.strength
+        return self.dca * self.effective_strength
 
     @property
     def raw_barrage(self) -> int:  # raw barrage points (rule 11.32; artillery)
-        return self.barrage * self.strength
+        return self.barrage * self.effective_strength
 
     @property
     def raw_anti_armor(self) -> int:  # raw anti-armor points (rule 11.32)
-        return self.anti_armor * self.strength
+        return self.anti_armor * self.effective_strength
 
     @property
     def is_armor(self) -> bool:    # has Armor Protection -> a valid anti-armor target (11.14)
         return self.armor_protection > 0
+
+    @property
+    def breaks_down(self) -> bool:
+        """Subject to Breakdown (21.11): tank / armored-car-recce / SP-gun vehicles
+        (all carry Armor Protection). Gun units have inherent transport that never
+        breaks (21.11), foot/camel are not vehicles -- neither is is_armor."""
+        return self.is_armor
 
     @property
     def is_gun(self) -> bool:      # Artillery / Anti-Tank -- has a Vulnerability rating (11.12)
