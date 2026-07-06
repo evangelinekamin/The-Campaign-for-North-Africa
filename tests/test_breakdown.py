@@ -335,3 +335,100 @@ def test_engine_no_breakdown_for_non_vehicles():
                cpa=10, stacking_points=1, oca=3, dca=3, bp_accumulated=99.0)
     r = _run_breakdown(inf)
     assert not r.events                                          # inherent transport (21.11)
+
+
+# --- Step 5: the Repair beat + 22.8 / 22.15 ---------------------------------
+
+from game.state import SupplyUnit
+
+
+class _FixedDie:                                                # force a known 22.8 field die
+    def __init__(self, val):
+        self.val = val
+
+    def randint(self, a, b):
+        return self.val
+
+
+def test_field_repair_table_matches_chart_of_record():
+    by_die = _BRK["broken_down_vehicle_repair_22_8"]["by_die"]
+    for die_str, row in by_die.items():
+        die = int(die_str)
+        if die > 6:
+            continue                                            # 7/8 are 'na' for field
+        assert ct.field_repair("truck", die) == int(row[0])
+        assert ct.field_repair("ac_recce", die) == int(row[1])
+        assert ct.field_repair("tank", die) == int(row[2].rstrip("%"))
+
+
+def test_field_repair_tank_schedule():
+    assert [ct.field_repair("tank", d) for d in range(1, 7)] == [25, 100, 100, 100, 0, 0]
+
+
+def _repair_run(tank, *, weather="clear", die=3, fuel=50):
+    from game.engine import _Run, _repair
+    from game.movement import TerrainMap
+    from game.state import GameState, VP
+    tmap = TerrainMap(terrain={(0, 0): Terrain.DESERT})
+    dump = SupplyUnit("AX-Dump", Side.AXIS, (0, 0), ammo=0, fuel=fuel)
+    st = GameState(turn=1, max_turns=9, phase=Phase.COMBAT, active_side=Side.AXIS,
+                   seed=1, weather=weather, move_modifier=0, vp=VP(), terrain=tmap,
+                   control={}, units=(tank,), target_hex=(0, 0), supplies=(dump,),
+                   consumed={}, initial_supply={"FUEL": fuel})
+    r = _Run(st)
+    r.state = st
+    r.rng = _FixedDie(die)
+    _repair(r, Side.AXIS)
+    return r
+
+
+def test_field_workshop_revives_a_fraction():
+    r = _repair_run(_tank(broken=8, strength=10), die=3)          # die 3 -> 100% of the broken pool
+    assert r.state.unit("T1").broken_down == 0                    # the counter-beat
+    assert any(e.kind == EventKind.VEHICLE_REPAIRED for e in r.events)
+
+
+def test_field_repair_charges_fuel_and_conserves():
+    r = _repair_run(_tank(broken=6, strength=10), die=3, fuel=50)
+    consumed = [e for e in r.events if e.kind == EventKind.SUPPLY_CONSUMED]
+    assert consumed and consumed[0].payload["commodity"] == "FUEL"
+    # conservation is asserted inside every emit(); on_hand + consumed == initial holds.
+    assert r.state.consumed["FUEL"] + r.state.supply("AX-Dump").fuel == 50
+
+
+def test_no_field_repair_in_rain_or_sandstorm():
+    for w in ("rain", "sandstorm", "storm"):
+        r = _repair_run(_tank(broken=6), weather=w, die=3)
+        assert not r.events                                      # 22.13d
+        assert r.state.unit("T1").broken_down == 6
+
+
+def test_no_repair_without_fuel():
+    r = _repair_run(_tank(broken=6), die=3, fuel=0)
+    assert r.state.unit("T1").broken_down == 6                   # 22.13b: no supplies, no repair
+
+
+def test_failed_roll_leaves_broken_untouched():
+    r = _repair_run(_tank(broken=6, strength=10), die=5)          # die 5 -> 0%
+    assert r.state.unit("T1").broken_down == 6
+    assert not any(e.kind == EventKind.VEHICLE_REPAIRED for e in r.events)
+
+
+def test_repair_skipped_in_enemy_controlled_hex():
+    from game.events import Control
+    from game.engine import _Run, _repair
+    from game.movement import TerrainMap
+    from game.state import GameState, VP
+    tmap = TerrainMap(terrain={(0, 0): Terrain.DESERT})
+    tank = _tank(broken=6, strength=10)
+    dump = SupplyUnit("AX-Dump", Side.AXIS, (0, 0), ammo=0, fuel=50)
+    st = GameState(turn=1, max_turns=9, phase=Phase.COMBAT, active_side=Side.AXIS,
+                   seed=1, weather="clear", move_modifier=0, vp=VP(), terrain=tmap,
+                   control={(0, 0): Control.ALLIED}, units=(tank,), target_hex=(0, 0),
+                   supplies=(dump,), consumed={}, initial_supply={"FUEL": 50})
+    r = _Run(st)
+    r.state = st
+    r.rng = _FixedDie(3)
+    _repair(r, Side.AXIS)
+    assert not r.events                                          # 22.13a
+    assert r.state.unit("T1").broken_down == 6

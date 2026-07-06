@@ -31,6 +31,7 @@ class Phase(str, Enum):
     LOGISTICS = "LOGISTICS"        # naval-convoy arrival (rule 48 V.C.7/V.D); SYSTEM-owned
     MOVEMENT = "MOVEMENT"
     COMBAT = "COMBAT"
+    REPAIR = "REPAIR"              # vehicle repair (rule 22.12); the active side's own beat
     RECORD = "RECORD"
 
 

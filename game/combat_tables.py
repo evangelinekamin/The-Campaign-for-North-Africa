@@ -449,6 +449,26 @@ def breakdown_result(bp: float, bar: int, weather_shift: int, roll: int) -> int:
     return 0
 
 
+# [22.8] BROKEN DOWN VEHICLE REPAIR TABLE, the two FIELD columns (Fork B repairs only
+# in the field; the Temporary/Major Facility columns are deferred). One die: for a tank/
+# SPA the cell is a PERCENTAGE of that type repaired; for an armored-car/recce it is a
+# number of TOE Strength Points; for a truck a number of Truck Points. Transcribed from
+# data/breakdown_rates.json (chart-of-record) and bound to it by test_breakdown. Die 0
+# is reachable only via the deferred TDS/Major-city modifiers; a bare d6 rolls 1..6.
+_FIELD_REPAIR: dict[str, dict[int, int]] = {
+    "truck":    {0: 2, 1: 2, 2: 1, 3: 0, 4: 0, 5: 0, 6: 0},   # Truck Points
+    "ac_recce": {0: 1, 1: 1, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0},   # TOE Strength Points
+    "tank":     {0: 25, 1: 25, 2: 100, 3: 100, 4: 100, 5: 0, 6: 0},  # percentage of the type
+}
+
+
+def field_repair(vclass: str, die: int) -> int:
+    """Rule 22.8 Field column: for a 'tank' (tank/SPA/TD) the percentage of that type
+    repaired; for 'ac_recce' the TOE Strength Points repaired; for 'truck' the Truck
+    Points repaired. Rolls off the table are 0 (no repair)."""
+    return _FIELD_REPAIR[vclass].get(die, 0)
+
+
 def weather_breakdown_shift(weather: str) -> int:
     """Rule 21.37: Hot Weather and Sandstorms each shift the Breakdown column one higher
     (1R). Keyed off the weather label; Rainstorm acts on Breakdown Points via road-as-

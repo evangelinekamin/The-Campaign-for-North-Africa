@@ -115,6 +115,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             r.go(Phase.COMBAT, side)
             _combat(r, policies, side)
             _breakdown(r, _other(side))                 # 21.22: the enemy's retreats accrued BP too
+            _repair(r, side)                            # 22.12: the phasing side's Repair Phase
         for side in (Side.AXIS, Side.ALLIED):
             _truck_convoys(r, policies[side], side)     # V.J: 2nd/3rd-line truck convoys (48)
         r.go(Phase.RECORD, Side.SYSTEM)
@@ -426,6 +427,65 @@ def _breakdown(r: _Run, side: Side) -> None:
         if broken > 0:
             r.emit(EventKind.VEHICLE_BROKE_DOWN, side, actor,
                    {"unit_id": u.id, "amount": broken})
+
+
+# Field tank/SPA repair expends Fuel (22.15/22.26). Fork B charges it per repair
+# ATTEMPT (one unit's roll) rather than per TOE point -- the design's documented proxy;
+# armored-car / recce field repair is free (22.24).
+_REPAIR_FUEL: int = 1
+
+
+def _field_repair_blocked(weather: str) -> bool:
+    """22.13d: no Field Repair while the Weather is Rainstorm or Sandstorm (a global
+    proxy for the per-hex test until Step-6 per-section weather lands)."""
+    return weather in ("rain", "rainstorm", "storm", "sandstorm")
+
+
+def _repaired_count(vclass: str, result: int, broken: int) -> int:
+    """TOE Strength Points a 22.8 field result repairs, capped at the broken pool. A
+    tank result is a percentage (fractions round up, 22.25); an armored-car/recce or
+    truck result is a flat point count (22.23/22.24)."""
+    if broken <= 0:
+        return 0
+    if vclass == "tank":
+        if broken == 1 and result == 10:                # 22.25 single-TOE ignores 10%
+            return 0
+        return min(broken, math.ceil(result / 100 * broken))
+    return min(result, broken)
+
+
+def _repair(r: _Run, side: Side) -> None:
+    """Repair Phase (rule 22.12): the phasing side field-repairs its broken-down vehicles.
+    Each such unit in a non-enemy hex (22.13a), weather permitting (22.13d), expends the
+    22.15 Fuel and rolls one die on the 22.8 Field column; the repaired TOE flows back to
+    the operational pool (VEHICLE_REPAIRED). Fires only when the side actually has broken
+    vehicles to repair, so every pre-breakdown scenario stays byte-identical."""
+    if _field_repair_blocked(r.state.weather):          # 22.13d: whole-map proxy, no field repair
+        return
+    enemy_ctrl = CONTROL_OF[_other(side)]
+    repairable = [u for u in r.state.living(side)
+                  if u.broken_down > 0 and u.breaks_down
+                  and r.state.control_of(u.hex) != enemy_ctrl]     # 22.13a
+    if not repairable:
+        return
+    r.go(Phase.REPAIR, side)
+    actor = f"{side.value}/Repair"
+    for u in sorted(repairable, key=lambda u: u.id):
+        cur = r.state.unit(u.id)
+        vclass = "tank" if cur.is_tank else "ac_recce"
+        if vclass == "tank":                            # 22.26: expend Fuel before rolling
+            draws = supply.plan_draw(r.state, cur, supply.FUEL, _REPAIR_FUEL)
+            if draws is None:
+                continue                                # 22.13b: no supplies -> no repair
+            for sid, qty in draws:
+                r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+                       {"supply_id": sid, "commodity": supply.FUEL, "qty": qty, "unit_id": cur.id})
+        die = r.d6()
+        cur = r.state.unit(u.id)                        # re-read after the fuel draw
+        repaired = _repaired_count(vclass, combat_tables.field_repair(vclass, die), cur.broken_down)
+        if repaired > 0:
+            r.emit(EventKind.VEHICLE_REPAIRED, side, actor,
+                   {"unit_id": cur.id, "amount": repaired})
 
 
 def _reject(r: _Run, side: Side, actor: str, order: MoveOrder, reason: str,
