@@ -1,0 +1,15 @@
+{
+  "_source": "6.3 CAPABILITY POINT EXPENDITURE SUMMARY (Charts & Tables Common to Both Players)",
+  "_note": "Transcribed verbatim from the 6.3 chart. The combat engine wires the assault/defend and break-contact/disengage rows; the probe and undergo-barrage rows are transcribed for the record but not yet consumed (the engine does not model a distinct Probe). Terrain/minefield (TEC/CPA formulae), detach/attach, load/unload, construction, paradrop and air-readiness rows are out of scope here -- movement already charges its own CP via UNIT_MOVED.cp_spent.",
+  "phasing_unit": {
+    "barrage_or_assault": 5,
+    "undergo_barrage": 3,
+    "probe": 2
+  },
+  "non_phasing_unit": {
+    "barrage_or_defend": 3,
+    "defend_probe": 2
+  },
+  "break_contact": 2,
+  "disengage": 4
+}
