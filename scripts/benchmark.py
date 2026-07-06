@@ -248,6 +248,21 @@ def _mock_axis(prompt: str) -> str:
     return json.dumps({"reasoning": "assault", "attacks": attacks})
 
 
+def _mock_staff(prompt: str) -> str:
+    """Deterministic staff stub (extends _mock_axis to the staff shape): the Chief
+    returns a canned structured intent; the two GOCs get the ordinary movement/combat
+    reply built from the FILTERED role brief embedded in their prompt. Zero tokens."""
+    if "COMMANDER'S INTENT" in prompt:
+        return json.dumps({"intent": {
+            "objective": "Seize Tobruk",
+            "scheme": "combined-arms coastal push, armour leading",
+            "supply": "fuel the panzers first, husband Italian fuel",
+            "milestone": "close the El Agheila-Tobruk gap",
+            "risks": "Italian fuel starvation on the shared dumps",
+        }})
+    return _mock_axis(prompt)
+
+
 def _extract(prompt: str) -> dict:
     """Pull the embedded observation object out of a prompt: the first BALANCED
     {...} after the 'Situation (JSON):' marker (the naive first-brace/last-brace
