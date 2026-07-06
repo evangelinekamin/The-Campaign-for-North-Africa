@@ -6,7 +6,7 @@ engine<->policy import cycle and guarantees decider and validator agree.
 """
 from __future__ import annotations
 
-from . import movement, zoc
+from . import cp_costs, movement, zoc
 from .events import Side
 from .hexmap import Coord
 from .state import GameState, Unit
@@ -14,6 +14,13 @@ from .state import GameState, Unit
 
 def other(side: Side) -> Side:
     return Side.ALLIED if side == Side.AXIS else Side.AXIS
+
+
+def _break_off_cost(unit: Unit) -> float:
+    """The CP a unit pays to LEAVE an enemy ZOC it starts in (rule 6.3): Disengage = 4
+    while it carries the 15.81 Engaged marker (it was in a Close Assault this stage),
+    else Break Contact = 2. Sourced from the 6.3 chart-of-record (game.cp_costs)."""
+    return float(cp_costs.disengage_cost() if unit.engaged else cp_costs.break_contact_cost())
 
 
 def enemy_zoc_and_occupied(state: GameState, mover_side: Side) -> tuple[frozenset, frozenset]:
@@ -40,7 +47,7 @@ def reachable_for(state: GameState, unit: Unit, enemy_zoc: frozenset,
     return zoc.reachable_with_zoc(
         state.terrain, unit.hex, budget, unit.mobility,
         enemy_zoc=enemy_zoc, friendly_negators=negators, enemy_occupied=enemy_occupied,
-        weather=state.weather)
+        break_off=_break_off_cost(unit), weather=state.weather)
 
 
 def reachable_for_prev(state: GameState, unit: Unit, enemy_zoc: frozenset,
@@ -54,7 +61,7 @@ def reachable_for_prev(state: GameState, unit: Unit, enemy_zoc: frozenset,
     return zoc.reachable_with_zoc_prev(
         state.terrain, unit.hex, budget, unit.mobility,
         enemy_zoc=enemy_zoc, friendly_negators=negators, enemy_occupied=enemy_occupied,
-        weather=state.weather)
+        break_off=_break_off_cost(unit), weather=state.weather)
 
 
 def breakdown_points_over(state: GameState, unit: Unit, path: list[Coord]) -> float:

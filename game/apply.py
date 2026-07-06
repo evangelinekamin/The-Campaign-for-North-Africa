@@ -16,7 +16,7 @@ def apply(state: GameState, event: Event) -> GameState:
     p = event.payload
 
     if k in (EventKind.GAME_INITIALIZED, EventKind.ORDER_REJECTED,
-             EventKind.COMBAT_RESOLVED, EventKind.BARRAGE_RESOLVED,
+             EventKind.BARRAGE_RESOLVED,
              EventKind.ANTI_ARMOR_RESOLVED, EventKind.REINFORCEMENT_ARRIVED,
              EventKind.CONVOY_CANCELLED, EventKind.PASTA_DENIED, EventKind.PORT_UNLOADED,
              EventKind.STAFF_INTENT, EventKind.STAFF_PROPOSAL, EventKind.STAFF_CONSTRAINT,
@@ -148,6 +148,18 @@ def apply(state: GameState, event: Event) -> GameState:
             u2 = replace(u2, broken_down=u2.strength)
         return state.with_unit(u2)
 
+    if k == EventKind.COMBAT_RESOLVED:
+        # 15.81: every unit that took part in a Close Assault carries the Engaged marker
+        # for the rest of the Operations Stage -- leaving contact then costs 4 CP (Disengage)
+        # instead of 2 (Break Contact). A pure marker fold (no supply surface); cleared by
+        # _reset_opstage at the stage boundary. Dead participants are skipped (harmless).
+        st = state
+        for uid in list(p.get("attackers", [])) + list(p.get("defenders", [])):
+            u = st.unit(uid)
+            if u is not None and u.alive and not u.engaged:
+                st = st.with_unit(replace(u, engaged=True))
+        return st
+
     if k == EventKind.CP_EXPENDED:
         # 6.3: charge a unit its combat Capability Points. Folds into cp_used -- the same
         # per-OpStage accumulator movement feeds (6.14) and _reset_opstage clears (6.16).
@@ -215,9 +227,10 @@ def apply(state: GameState, event: Event) -> GameState:
 def _reset_opstage(units: tuple) -> tuple:
     """The Operations-Stage boundary reset (rules 6.16 / 21.25): every unit's CPA refreshes
     and the Breakdown-Point accumulator + 21.26 re-check gate clear. broken_down (immobile
-    TOE) persists across the boundary until repaired (21.44). Shared by STAGE_ADVANCED and
+    TOE) persists across the boundary until repaired (21.44). The 15.81 Engaged marker is
+    also removed here (it lasts one Operations Stage). Shared by STAGE_ADVANCED and
     TURN_ADVANCED so the two clock boundaries carry one reset semantic."""
-    return tuple(replace(u, cp_used=0.0, bp_accumulated=0.0, bp_checked_column=-1)
+    return tuple(replace(u, cp_used=0.0, bp_accumulated=0.0, bp_checked_column=-1, engaged=False)
                  for u in units)
 
 

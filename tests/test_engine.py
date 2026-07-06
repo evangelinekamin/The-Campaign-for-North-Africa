@@ -319,6 +319,32 @@ def test_collapsed_cohesion_defender_capitulates_15_88():
     assert _defenders_capitulate(r2, [steady]) is False              # -16 does not auto-surrender
 
 
+def test_close_assault_sets_engaged_marker_and_disengage_cost_15_81():
+    # 15.81: units in a Close Assault carry the Engaged marker, raising the CP to leave
+    # contact from 2 (Break Contact) to 4 (Disengage); the marker clears at the stage boundary.
+    from dataclasses import replace
+
+    from game.apply import _reset_opstage, apply
+    from game.events import Event, EventKind, Phase
+    from game.state import Unit
+    from game.tactics import _break_off_cost
+    from game.terrain import Mobility
+    atk = Unit("A", Side.AXIS, (1, 0), (StepRecord("a", 6),), mobility=Mobility.FOOT,
+               cpa=10, stacking_points=1, oca=3, dca=3)
+    dfn = Unit("D", Side.ALLIED, (0, 0), (StepRecord("d", 6),), mobility=Mobility.FOOT,
+               cpa=10, stacking_points=1, oca=2, dca=2)
+    st = _two_side_state([atk, dfn], [])
+    assert _break_off_cost(st.unit("A")) == 2.0                   # 6.3 Break Contact before engaging
+    ev = Event(seq=0, turn=1, phase=Phase.COMBAT, side=Side.AXIS, actor="AXIS/Front",
+               kind=EventKind.COMBAT_RESOLVED,
+               payload={"target": [0, 0], "attackers": ["A"], "defenders": ["D"]})
+    st2 = apply(st, ev)
+    assert st2.unit("A").engaged and st2.unit("D").engaged        # 15.81 marker on both sides
+    assert _break_off_cost(st2.unit("A")) == 4.0                  # 6.3 Disengage while Engaged
+    st3 = replace(st2, units=_reset_opstage(st2.units))
+    assert not st3.unit("A").engaged                             # cleared at the OpStage boundary
+
+
 def test_idle_stage_recovers_cohesion_6_24_1():
     # 6.24.1: an on-map unit that spends NO CP in an Operations Stage earns 5 RP, capped so
     # it never climbs above Cohesion 0. A busy unit (cp_used > 0) recovers nothing this way.

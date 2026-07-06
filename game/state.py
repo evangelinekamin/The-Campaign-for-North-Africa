@@ -49,6 +49,9 @@ class Unit:
     morale: int = 0                # Basic Morale, -3..+3 (rule 17.1, from the OA sheet)
     cohesion: int = 0              # Cohesion Level (17.2); feeds the deferred 17.4 roll
     cp_used: float = 0.0           # CP spent this OpStage; reset each turn
+    engaged: bool = False          # 15.81 Engaged marker (was in a Close Assault); leaving
+                                   # costs 4 CP (Disengage) not 2 (Break Contact). Cleared at
+                                   # the OpStage boundary. Default False keeps scenarios intact.
     is_combat: bool = True         # False for truck convoys / bare HQs / air
     is_tank: bool = False          # a Tank (combined arms 15.4 -- NOT recce/SP)
     arrival_turn: int = 0          # game-turn it enters play (<=start = on-map; rule 20)
