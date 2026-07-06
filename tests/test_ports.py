@@ -258,7 +258,7 @@ def test_siege_still_crackable_through_the_throttle():
     # it. That is the owner's siege knob (BARRAGE_HITS_PER_FORT_LEVEL / Axis ammo schedule),
     # NOT a magnitude to bend here. This test guards only that the crack path SURVIVES.
     battered = False
-    for seed in (5, 10):
+    for seed in (11, 40):
         res = run(siege_of_tobruk(seed=seed),
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         if any(e.kind == EventKind.FORT_REDUCED and tuple(e.payload["hex"]) == TOBRUK

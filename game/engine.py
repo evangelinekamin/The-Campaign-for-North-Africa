@@ -519,7 +519,10 @@ def _movement(r: _Run, policy: Policy, side: Side) -> None:
         bp = tactics.bp_for_move(r.state, u, prev, order.to)     # 21.21 accrual (0 for non-vehicles)
         if bp:
             payload["bp"] = bp
+        old_cp = r.state.unit(u.id).cp_used
         r.emit(EventKind.UNIT_MOVED, side, actor, payload)
+        _disorganize_overage(r, side, actor, u.id, old_cp,        # 6.21: overrun past CPA (8.16/8.17)
+                             old_cp + reach[order.to], u.cpa)
 
 
 def _broken_count(pct: int, effective: int) -> int:
@@ -908,7 +911,10 @@ def _retreat_before_assault(r: _Run, policy: Policy, side: Side, phasing: Side,
         bp = tactics.bp_for_move(r.state, u, prev, order.to)     # 21.22: reaction/retreat accrues BP
         if bp:
             payload["bp"] = bp
+        old_cp = r.state.unit(u.id).cp_used
         r.emit(EventKind.UNIT_MOVED, side, actor, payload)   # 13.21: retreat-before-assault IS movement
+        _disorganize_overage(r, side, actor, u.id, old_cp,       # 6.21: retreat past CPA earns DP too
+                             old_cp + reach[order.to], u.cpa)
 
 
 def _rba_cp_cap(state: GameState, unit, reach: dict) -> dict:

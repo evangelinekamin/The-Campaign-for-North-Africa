@@ -319,6 +319,48 @@ def test_collapsed_cohesion_defender_capitulates_15_88():
     assert _defenders_capitulate(r2, [steady]) is False              # -16 does not auto-surrender
 
 
+def test_cp_ceiling_lifts_movement_to_8_17():
+    # 8.17: non-motorized (CPA <= 10) may spend up to 150% of base CPA; motorized (CPA > 10)
+    # has no rule ceiling, bounded only by the 2x-CPA compute soft-bound.
+    from game.state import Unit
+    from game.tactics import _cp_ceiling
+    from game.terrain import Mobility
+
+    def _u(cpa, mob=Mobility.FOOT):
+        return Unit("U", Side.AXIS, (0, 0), (StepRecord("s", 6),), mobility=mob,
+                    cpa=cpa, stacking_points=1, oca=2, dca=2)
+    assert _cp_ceiling(_u(8)) == 12.0                  # 8 -> 12 (8.17)
+    assert _cp_ceiling(_u(10)) == 15.0                 # 10 -> 15 (8.17)
+    assert _cp_ceiling(_u(20, Mobility.MOTORIZED)) == 40.0    # motorized: 2x compute bound
+
+
+def test_voluntary_overrun_disorganizes_8_16():
+    # 8.16/6.21: a foot unit (CPA 8) may now dash to a hex costing 12 CP (150% ceiling), and
+    # the 4 CP over its CPA earn 4 Disorganization Points -- a Cohesion bleed on the overrun.
+    from game.engine import _Run, _movement
+    from game.events import Phase
+    from game.movement import TerrainMap
+    from game.policy import MoveOrder
+    from game.state import GameState, Unit, VP
+    from game.terrain import Mobility, Terrain
+    terr = {(q, 0): Terrain.CLEAR for q in range(8)}
+    u = Unit("U", Side.AXIS, (0, 0), (StepRecord("s", 6),), mobility=Mobility.FOOT,
+             cpa=8, stacking_points=1, oca=2, dca=2, cohesion=0)
+    st = GameState(turn=1, max_turns=4, phase=Phase.MOVEMENT, active_side=Side.AXIS, seed=1,
+                   weather="clear", vp=VP(), terrain=TerrainMap(terrain=terr), control={},
+                   units=(u,), target_hex=(7, 0), supplies=(),
+                   consumed={"FUEL": 0}, initial_supply={"FUEL": 0})
+
+    class _P:
+        def movement(self, state, side):
+            return [MoveOrder("U", (6, 0))]            # cost 12 CP (2/clear hex)
+    r = _Run(st)
+    _movement(r, _P(), Side.AXIS)
+    assert r.state.unit("U").hex == (6, 0)
+    assert r.state.unit("U").cp_used == 12.0           # 150% of CPA 8
+    assert r.state.unit("U").cohesion == -4            # 12 - 8 = 4 DP (6.21)
+
+
 def test_close_assault_sets_engaged_marker_and_disengage_cost_15_81():
     # 15.81: units in a Close Assault carry the Engaged marker, raising the CP to leave
     # contact from 2 (Break Contact) to 4 (Disengage); the marker clears at the stage boundary.
