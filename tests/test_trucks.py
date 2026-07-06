@@ -67,8 +67,16 @@ class _TruckPolicy(Policy):
 
 def test_trucks_default_empty():
     assert GameState.__dataclass_fields__["trucks"].default == ()
-    assert coastal_corridor().trucks == ()
-    assert rommels_arrival().trucks == ()      # CHUNK 4 seeds nowhere yet (dormant)
+    assert coastal_corridor().trucks == ()     # toy corridor stays truck-less (dormant)
+
+
+def test_rommels_arrival_seeds_the_axis_truck_pool():
+    # Step 5 activation: Rommel's Arrival now fields the representative Axis 2nd/3rd-line
+    # motor-transport pool at the rear supply port (where PORT-Tripoli lands its convoys).
+    trucks = rommels_arrival().trucks
+    assert {t.id for t in trucks} == {"AX-Truck-H", "AX-Truck-M"}
+    assert all(t.side == Side.AXIS for t in trucks)
+    assert {t.truck_class for t in trucks} == {"heavy", "medium"}
 
 
 def test_truck_formation_defaults():
@@ -263,7 +271,18 @@ def test_truckless_scenario_byte_identical():
     assert not any(e.kind in truck_kinds for e in a.events)
 
 
-def test_rommels_arrival_has_no_truck_events():
+def test_rommels_arrival_runs_the_truck_relay():
+    # Step 5 activation: with the Axis pool seeded, the V.J phase now fires -- the trucks
+    # load at the rear supply port and haul fuel forward through the load/move/unload triple.
     res = run(rommels_arrival(seed=3), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
     truck_kinds = {EventKind.TRUCK_LOADED, EventKind.TRUCK_MOVED, EventKind.TRUCK_UNLOADED}
-    assert not any(e.kind in truck_kinds for e in res.events)
+    assert all(any(e.kind == k for e in res.events) for k in truck_kinds)
+    # every hauled Fuel Point is deposited into a friendly dump strictly forward of the port
+    from game.hexmap import distance
+    rear = max((s for s in res.final.supplies if s.side == Side.AXIS),
+               key=lambda s: distance(s.hex, res.final.target_hex))
+    delivered = [e for e in res.events if e.kind == EventKind.TRUCK_UNLOADED]
+    assert delivered and all(e.payload["cargo"].get("FUEL", 0) > 0 for e in delivered)
+    for e in delivered:
+        dump = res.final.supply(e.payload["supply_id"])
+        assert distance(dump.hex, res.final.target_hex) < distance(rear.hex, res.final.target_hex)

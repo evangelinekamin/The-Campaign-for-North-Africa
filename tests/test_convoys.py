@@ -175,6 +175,40 @@ def test_tobruk_ferry_seeded():
     assert s.supply("AL-Tobruk").hex == TOBRUK
 
 
+# --- Step 5: the Axis distribution switch-on (Tripoli port + truck relay) -----
+
+def test_axis_convoy_lands_at_working_tripoli():
+    # Step 5 repointed the Axis naval convoy from the scuttled Benghazi (eff 0, landed
+    # nothing) to the WORKING rear harbour Tripoli (55.3 eff 10). The convoy now lands its
+    # tonnage there each due turn, emitted as PORT_UNLOADED beats at full efficiency.
+    s = rommels_arrival()
+    tri = s.port_at(s.supply("AX-Tripoli").hex)
+    assert tri is not None and tri.id == "PORT-Tripoli"
+    assert (tri.side, tri.eff, tri.max_eff) == (Side.AXIS, 10, 10)
+    assert all(c.dest == "AX-Tripoli" for c in s.convoys if c.side == Side.AXIS)
+    res = run(rommels_arrival(seed=7), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    beats = [e for e in res.events if e.kind == EventKind.PORT_UNLOADED
+             and e.payload["port_id"] == "PORT-Tripoli"]
+    assert beats and all(b.payload["eff"] == 10 for b in beats)
+
+
+def test_axis_trucks_relay_supply_off_tripoli():
+    # The lean truck pool hauls tonnage off the anchored harbour and deposits it into a
+    # field dump strictly forward of the port -- the load/move/unload relay (53.14). The
+    # harbour stays put (it is a port), so its ongoing convoy tonnage can ONLY reach the
+    # front by truck: the faithful Tripoli->front haulage bottleneck.
+    res = run(rommels_arrival(seed=7), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    from game.hexmap import distance
+    port_dist = distance(res.final.supply("AX-Tripoli").hex, TOBRUK)
+    delivered = [e for e in res.events if e.kind == EventKind.TRUCK_UNLOADED]
+    assert delivered, "the Axis truck relay must move tonnage forward"
+    for e in delivered:
+        dump = res.final.supply(e.payload["supply_id"])
+        assert distance(dump.hex, TOBRUK) < port_dist          # deposited forward of Tripoli
+    # the harbour is anchored -- it never leapfrogs off its port hex (a fixed installation)
+    assert res.final.port_at(res.final.supply("AX-Tripoli").hex) is not None
+
+
 # --- ACCEPTANCE: the lifeline holds Tobruk vs pure land-starvation -----------
 
 def _def_surrender_at_objective(events) -> bool:

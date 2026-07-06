@@ -76,8 +76,11 @@ def test_default_supply_is_faithfully_scarce():
     # start-line pool, so scarcity is no longer a gross shortage but a DISTRIBUTION
     # problem -- the fuel exists, but the 32.16 trace strands the periphery (asserted
     # above) and the 49.13 x-TOE-strength demand is itself real-scale (~5-8x the old proxy).
+    # Step 5 also seeds the [61.44] Tripoli-box built-in (held at the rear harbour, IN
+    # ADDITION to the field-dump split), so the Axis total is the field pool + that box.
     axis_fuel = sum(s.fuel for s in faithful.supplies if s.side == Side.AXIS)
-    assert axis_fuel == logistics_data.axis_dump_pool_61_44()["FUEL"]   # [61.44] the real pool
+    assert axis_fuel == (logistics_data.axis_dump_pool_61_44()["FUEL"]
+                         + logistics_data.tripoli_builtin_61_44()["FUEL"])   # [61.44] pool + box
     demand = sum(supply.fuel_cost(u, 1) for u in faithful.living(Side.AXIS)
                  if u.is_combat and supply.fuel_rate(u) > 0)
     assert demand > 5 * 33                               # per-stage floor now dwarfs the old ~33

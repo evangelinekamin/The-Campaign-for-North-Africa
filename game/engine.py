@@ -35,10 +35,11 @@ BARRAGE_HITS_PER_FORT_LEVEL: int = 1
 # 55.2 harbour BLOCKING (a scuttled ship) permanently cripples a port until Friendly
 # engineers clear the wreck (55.26) -- it is NOT bomb damage, so the 55.18 +1/OpStage
 # regeneration does NOT restore it. The San Giorgio scuttled in Tobruk (30.17 / 55.25,
-# -3 levels) and the Axis scuttling of Benghazi (55.2, "reduced to almost zero ... during
-# the entire war") are such blocks: they stay pinned at their seeded Efficiency Level.
+# -3 levels) is such a block: it stays pinned at its seeded Efficiency Level. (The Axis
+# rear harbour in the Desert Fox corridor is the WORKING PORT-Tripoli, not the scuttled
+# Benghazi -- Step 5 -- so no Axis port is blocked here.)
 # Bomb/mine reductions (41.3), which DO regenerate, arrive with the air subsystem (CHUNK 6).
-HARBOUR_BLOCKED: frozenset = frozenset({"PORT-Tobruk", "PORT-Benghazi"})
+HARBOUR_BLOCKED: frozenset = frozenset({"PORT-Tobruk"})
 
 
 @dataclass(frozen=True, slots=True)

@@ -149,6 +149,13 @@ def tobruk_builtin_61_36() -> dict:
     return {"AMMO": p["ammo"], "FUEL": p["fuel"], "STORES": p["stores"]}
 
 
+def tripoli_builtin_61_44() -> dict:
+    """[61.44] the Tripoli box built-in supply (fuel/ammo/stores), held IN ADDITION to the
+    61.44 field-dump split -- the standing stock at the rear Axis harbour."""
+    p = _scenario_61()["axis_tripoli_builtin_61_44"]
+    return {"AMMO": p["ammo"], "FUEL": p["fuel"], "STORES": p["stores"]}
+
+
 def port_supply_tonnage_55_3() -> dict:
     """[55.3] per-port MAXIMUM supply tonnage per Operations Stage + its Efficiency
     Level, keyed by port name (game.scenario crosses tonnage->points via 54.5)."""

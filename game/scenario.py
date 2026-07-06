@@ -21,7 +21,8 @@ from . import cna_map, coords, logistics_data, oob
 from .events import Phase, Side
 from .hexmap import distance, neighbors
 from .movement import TerrainMap, edge
-from .state import Convoy, GameState, Port, StepRecord, SupplyUnit, Unit, VP
+from .state import (Convoy, GameState, Port, StepRecord, SupplyUnit,
+                    TruckFormation, Unit, VP)
 from .supply import COMMODITIES, _UNLIMITED, tons_to_points
 from .terrain import Hexside, Mobility, Terrain
 
@@ -214,6 +215,18 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
     target = coords.to_axial(coords.parse("C4807"))               # Tobruk
     units, supplies = oob.build(sections="ABC")   # corridor only (drops rear Map-D units)
 
+    # The rear Axis HARBOUR (Tripoli): a dedicated built-in port dump (56.28) seeded with the
+    # 61.44 Tripoli-box stock (fuel 3000 / ammo 1500 / stores 500) and placed one hex behind
+    # the rearmost 61.44 FIELD dump. Keeping it SEPARATE from the field dumps is the whole
+    # point of Step 5: the harbour is a fixed installation (the port anchors it, and the
+    # naval convoy lands its tonnage here), while the field-dump reservoir stays mobile and
+    # leapfrogs forward with the army (rule 32.58A). So supply reaches the front two ways --
+    # the start reservoir rides the field dumps forward, and the ongoing convoy tonnage must
+    # be HAULED off Tripoli by the truck pool (the faithful Tripoli->front bottleneck).
+    supplies.append(SupplyUnit("AX-Tripoli", Side.AXIS,
+                               _axis_harbour_hex(supplies, target),
+                               **{k.lower(): v for k, v in logistics_data.tripoli_builtin_61_44().items()}))
+
     # A hex where a land unit stands is land: coastal ports (El Agheila, Tobruk,
     # ...) colour-sample as sea, so add every occupied hex as coastal CLEAR + connect.
     terrain = dict(tmap.terrain)
@@ -269,16 +282,25 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
     if spurs:
         tmap = replace(tmap, roads=tmap.roads | spurs)
 
+    # RAIL SEED (54.3) -- FLAGGED, not laid. The Egyptian railhead IS fed (the CW-RAILHEAD
+    # convoy lane refills the easternmost CW dump every turn), but the *physical* rail edge-
+    # set stays empty: (a) the abstracted ABC corridor carries no transcribed rail line, and
+    # the CW dumps are 40+ hexes apart, so any rails would be fabricated geography; and (b)
+    # the 54.3 rail HAUL driver was deferred at Step 4 (no engine phase fires RAIL_HAULED),
+    # so seeded rails would be inert decoration. The rail machinery stays dormant here and
+    # keeps its isolated coverage in tests/test_rail.py; activating it needs the deferred
+    # driver, not a scenario seed. TerrainMap.rails therefore remains frozenset().
     max_turns = 12
     convoys = _rommel_convoys(supplies, target, max_turns, seed)
     ports = _rommel_ports(supplies, target)
+    trucks = _rommel_trucks(supplies, target)     # Step 5: the inland haulage, now live
     initial = _initial_supply(supplies)
     return GameState(
         turn=1, max_turns=max_turns, phase=Phase.WEATHER, active_side=Side.SYSTEM,
         seed=seed, weather="clear", move_modifier=0, vp=VP(),
         terrain=tmap, control={}, units=tuple(units), target_hex=target,
         supplies=tuple(supplies), consumed=_zero_consumed(),
-        initial_supply=initial, convoys=convoys, ports=ports,
+        initial_supply=initial, convoys=convoys, ports=ports, trucks=trucks,
     )
 
 
@@ -308,6 +330,17 @@ def _axis_rear(supplies, target):
     return max(axis, key=lambda s: (distance(s.hex, target), s.id)) if axis else None
 
 
+def _axis_harbour_hex(supplies, target):
+    """A fresh hex one step BEHIND the rearmost Axis field dump for the Tripoli harbour --
+    the rearward neighbour furthest from the objective that no dump already occupies, so the
+    port sits on its own hex (distinct from the mobile field dumps, which the bridge relocates
+    freely). _connect_pieces + the road-spur step wire it into the corridor's supply net."""
+    rear = _axis_rear(supplies, target)
+    occupied = {s.hex for s in supplies}
+    free = [h for h in neighbors(rear.hex) if h not in occupied]
+    return max(free or [rear.hex], key=lambda h: (distance(h, target), h))
+
+
 def _cw_railhead(supplies, target):
     cw = [s for s in supplies if s.side == Side.ALLIED and s.id != "AL-Tobruk"]
     return max(cw, key=lambda s: (distance(s.hex, target), s.id)) if cw else None
@@ -318,18 +351,22 @@ def _rommel_ports(supplies, target) -> tuple[Port, ...]:
     tonnages + the 61.6 scenario Efficiency Levels. Tonnage is the sole 55.14 gate (the
     per-commodity caps are _UNLIMITED). Per 61.6: Tobruk starts at Efficiency 7 of 7 (the
     rulebook seeds 7 verbatim -- above its 55.3 listed max of 5, San Giorgio penalty
-    unaccounted; transcribed as stated, not silently reconciled) and Benghazi is scuttled
-    to Efficiency 0 of 3 (the Axis wrecked it -- it lands nothing until engineers clear it,
-    game.engine.HARBOUR_BLOCKED). The Commonwealth base proxies Alexandria (55.3 15000 t)
-    at full efficiency. Tonnages are the real 55.3 chart; the port geography (rearmost
-    Axis dump / easternmost CW dump) is the scenario proxy for off-corridor Tripoli/Cairo."""
+    unaccounted; transcribed as stated, not silently reconciled).
+
+    The rear Axis supply port is TRIPOLI (55.3 Efficiency 10, 15000 t/OpStage) -- the real
+    main Axis harbour, working at full efficiency. STEP 5 repointed it here from the scuttled
+    Benghazi (eff 0, which landed nothing): the historical bottleneck was never the harbour
+    but the ~1500 km haul from Tripoli to the front, which the 2nd/3rd-line truck pool
+    (_rommel_trucks) must now bridge. The Commonwealth base proxies Alexandria (55.3 15000 t)
+    at full efficiency. Tonnages are the real 55.3 chart; the port geography (rearmost Axis
+    dump / easternmost CW dump) is the scenario proxy for off-corridor Tripoli/Alexandria."""
     ports = [Port("PORT-Tobruk", Side.ALLIED, target, "major", max_eff=7, eff=7,
                   **_caps_tonnage(_PORT_TONS["tobruk"]["tons"]))]        # 61.6 eff 7; 55.3 1700 t
     axis_rear = _axis_rear(supplies, target)
     if axis_rear is not None:
-        ports.append(Port("PORT-Benghazi", Side.AXIS, axis_rear.hex, "major",
-                          max_eff=3, eff=0,                              # 61.6 scuttled to 0; 55.3 2500 t
-                          **_caps_tonnage(_PORT_TONS["benghazi"]["tons"])))
+        ports.append(Port("PORT-Tripoli", Side.AXIS, axis_rear.hex, "major",
+                          max_eff=10, eff=10,                            # 55.3 eff 10, working
+                          **_caps_tonnage(_PORT_TONS["tripoli"]["tons"])))   # 55.3 15000 t
     cw_rail = _cw_railhead(supplies, target)
     if cw_rail is not None:
         ports.append(Port("PORT-Cairo", Side.ALLIED, cw_rail.hex, "major",
@@ -367,13 +404,15 @@ def _rommel_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy
 
       - SEA-TOBRUK (56.3/30): the Tobruk ferry, every game-turn, feeding AL-Tobruk through
         PORT-Tobruk (61.6 eff 7/7 = full) -- the load-bearing garrison lifeline.
-      - CW-RAILHEAD (rule 57): Cairo's rail refills the rear Egyptian dump through the
-        full-efficiency CW base; hauling it forward is the CHUNK-4 truck layer.
-      - Axis lane "1" (56.4/56.11): the real 56.5 tonnage-by-die faucet, landing at the
-        rearmost Axis dump. In this scenario that dump carries scuttled Benghazi (61.6
-        eff 0), so it lands NOTHING until Step 5 repoints the lane to a working port --
-        the Axis lives off its 61.44 start-line reservoir, the intended desert scarcity.
-        No Axis convoy on turn 1 (61.44).
+      - CW-RAILHEAD (rule 57): the abstract Commonwealth rail feed to the Egyptian railhead
+        (easternmost CW dump), refilling it through the full-efficiency CW base every game-
+        turn. The physical 54.3 rail HAUL driver is deferred (see rommels_arrival), so this
+        lane IS the rail feed for now; hauling it forward is the truck layer.
+      - Axis lane "1" (56.4/56.11): the real 56.5 tonnage-by-die faucet, now landing at the
+        rearmost Axis dump through the WORKING PORT-Tripoli (Step 5; 55.3 eff 10, 15000 t).
+        The tonnage piles at the rear port and must be HAULED ~75 hexes forward by the
+        truck pool -- the historical Tripoli-to-front bottleneck. The Axis still opens on
+        its 61.44 start-line reservoir; no Axis convoy on turn 1 (61.44).
 
     Destinations are chosen by geography (rearmost Axis dump; easternmost CW dump) so the
     timetable is robust to the OOB's generated dump ids."""
@@ -393,6 +432,28 @@ def _rommel_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy
         convoys += [Convoy(f"axis-l1-t{t}", Side.AXIS, t, "1", rear.id, _axis_convoy_cargo(t, rng))
                     for t in range(2, max_turns + 1, 2)]
     return tuple(convoys)
+
+
+def _rommel_trucks(supplies, target) -> tuple[TruckFormation, ...]:
+    """The Axis 2nd/3rd-line motor-transport pool (rules 53 / 54.2), staged at the rear
+    supply port (the AX rear dump, where PORT-Tripoli lands its convoys). This is the
+    inland distribution layer that must relay the port's tonnage forward to the dumps the
+    front traces to (53.14 relay = the load/move/unload triple). The scripted
+    policy.truck_orders shuttles it between Tripoli and the front, each hop burning the
+    trucks' OWN cargo fuel (49.18) -- so the further the front, the more of every load the
+    convoy burns just moving it, the classic desert supply death-spiral.
+
+    FLAG -- REPRESENTATIVE strength, pending the real rule-61 truck OOB: one heavy and one
+    medium formation (54.2 rows), deliberately LEAN. The haulage bottleneck over the
+    Tripoli->front distance IS the scarcity; over-provisioning the pool would erase it.
+    Sizes here are a plausible-DAK placeholder, not a transcribed chart value."""
+    rear = _axis_rear(supplies, target)
+    if rear is None:
+        return ()
+    return (
+        TruckFormation("AX-Truck-H", Side.AXIS, rear.hex, "heavy", points=8, line=2),
+        TruckFormation("AX-Truck-M", Side.AXIS, rear.hex, "medium", points=6, line=3),
+    )
 
 
 def siege_of_tobruk(seed: int = 1941) -> GameState:

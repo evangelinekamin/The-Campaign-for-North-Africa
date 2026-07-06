@@ -152,6 +152,10 @@ class ScriptedPolicy(Policy):
         for su in state.active_supplies(side):
             if su.fuel < supply.SUPPLY_MOVE_FUEL:
                 continue                              # no fuel to move (rule 32.24)
+            if state.port_at(su.hex) is not None:
+                continue                              # a harbour dump stays put -- the port
+                                                      # is where convoys land; trucks haul it
+                                                      # forward (rule 55/53.14), not this bridge
             reach = supply.reachable_moves(state, su)
             here = distance(su.hex, target)
             forward = [u.hex for u in combat_units
@@ -161,6 +165,80 @@ class ScriptedPolicy(Policy):
                 dest = min(forward, key=lambda c: (distance(c, target), reach[c], c))
                 orders.append(SupplyMoveOrder(su.id, dest))
         return orders
+
+    def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
+        """Shuttle the 2nd/3rd-line truck pool between the rear supply port and the front
+        (rule 48 V.J / 53.14). Each formation plies a two-beat run:
+
+          - AT the rear port dump: LOAD a run of AMMO and FUEL (splitting its 54.2 capacity
+            between the two -- the front needs both to press an assault, and the anchored
+            harbour is the only place they land) and deliver it in one hop to the nearest
+            friendly dump strictly closer to the objective, depositing everything bar a
+            return-trip reserve of its own cargo fuel (49.18 -- a truck burns cargo fuel to
+            move, so it must carry enough home to come back and reload).
+          - AWAY from the port: drive back to it (on the retained reserve) to reload.
+
+        Because a formation only ever spends fuel it is carrying and always keeps its return
+        reserve, it never strands empty in the desert; it idles AT the port when the front has
+        outrun its one-hop reach. Every hop burns cargo fuel, so the further Tobruk pulls
+        ahead of Tripoli the more of each run the trucks eat in transit and the less arrives --
+        the faithful Tripoli->front haulage bottleneck. The script only routes; it never bends
+        a magnitude (capacity 54.2, burn 49.18, reach 53.22 all come from game.supply)."""
+        base = self._truck_base(state, side)
+        if base is None:
+            return []
+        target = state.target_hex
+        orders: list[TruckOrder] = []
+        for t in state.trucks:
+            if t.side != side:
+                continue
+            reach = supply.reachable_truck_moves(state, t)
+            if t.hex != base.hex:                     # RETURN leg -- head home to reload
+                step = self._truck_step(reach, t.hex, base.hex)
+                if step is not None and t.fuel >= supply.truck_move_fuel(t, reach[step]):
+                    orders.append(TruckOrder(t.id, to=step))
+                continue
+            if base.fuel <= 0 and base.ammo <= 0:
+                continue                              # nothing at the port to lift
+            here = distance(t.hex, target)
+            forward = [s for s in state.supplies
+                       if s.side == side and not s.is_dummy and s.hex != t.hex
+                       and s.hex in reach and distance(s.hex, target) < here]
+            if not forward:
+                continue                              # front outran the pool -- idle at port
+            dest = min(forward, key=lambda s: (distance(s.hex, target), reach[s.hex], s.id))
+            out = supply.truck_move_fuel(t, reach[dest.hex])
+            cap = supply.truck_capacity(t.truck_class)
+            half = t.points / 2                       # split the load: half ammo, half fuel
+            ammo = min(base.ammo, int(half * cap["AMMO"]))
+            fuel = min(base.fuel, int(half * cap["FUEL"]))
+            fuel_deliver = fuel - 3 * out             # keep 2x the one-way burn to get home
+            if fuel_deliver <= 0:                     # not enough fuel to make the round trip
+                continue
+            load = {"FUEL": fuel}
+            unload = {"FUEL": fuel_deliver}
+            if ammo > 0:
+                load["AMMO"] = ammo
+                unload["AMMO"] = ammo
+            orders.append(TruckOrder(t.id, load_from=base.id, load=load,
+                                     to=dest.hex, unload_to=dest.id, unload=unload))
+        return orders
+
+    def _truck_base(self, state: GameState, side: Side):
+        """The rearmost WORKING supply port's built-in dump -- the truck pool's reload point
+        (where the naval convoy lands). None if the side fields no working port."""
+        ports = [p for p in state.ports if p.side == side and p.eff > 0]
+        if not ports:
+            return None
+        base = max(ports, key=lambda p: (distance(p.hex, state.target_hex), p.id))
+        return next((s for s in state.supplies if s.side == side and not s.is_dummy
+                     and s.hex == base.hex), None)
+
+    def _truck_step(self, reach: dict, here: Coord, dest: Coord) -> Coord | None:
+        """The reachable hex nearest `dest` (a single Truck Convoy Phase move toward it), or
+        None if the truck is already as close as it can get."""
+        step = min(reach, key=lambda c: (distance(c, dest), reach[c], c))
+        return step if step != here else None
 
     def retreat_before_assault(self, state: GameState, side: Side,
                                pinned: frozenset[str]) -> list[MoveOrder]:
