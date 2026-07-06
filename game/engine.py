@@ -21,6 +21,7 @@ from .events import Control, Event, EventKind, Phase, Side
 from .hexmap import distance, is_adjacent, neighbors
 from .invariants import check
 from .policy import AttackOrder, MoveOrder, Policy
+from .staff_events import clean_staff_payload
 from .state import Coord, GameState
 from .terrain import Terrain
 
@@ -480,11 +481,25 @@ def _weather(r: _Run) -> None:
            rng_draws=draws)
 
 
+def _drain_staff(r: _Run, policy, side: Side) -> None:
+    """Optional hook (hasattr, symmetric with debrief/declare_ab): a command-staff
+    policy accumulates cleaned STAFF_* artifacts during deliberation and exposes them
+    here; the engine emits each just BEFORE the orders it explains. STAFF_* fold as
+    no-ops, so this is board- and dice-invariant -- the war diary rides the same log."""
+    if not hasattr(policy, "drain_staff"):
+        return
+    for kind, payload in policy.drain_staff():
+        seat = payload.get("seat", "Staff")
+        r.emit(kind, side, f"{side.value}/{seat}", clean_staff_payload(kind, payload))
+
+
 def _movement(r: _Run, policy: Policy, side: Side) -> None:
     actor = f"{side.value}/Front"
     enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(r.state, side)
     roster = r.state.living(side)          # phase-start snapshot (matches the observation)
-    for order in policy.movement(r.state, side):
+    orders = policy.movement(r.state, side)
+    _drain_staff(r, policy, side)          # the deliberation that produced these orders
+    for order in orders:
         u = r.state.unit(order.unit_id)
         if u is None or not u.alive or u.side != side:
             _reject(r, side, actor, order, "no such living unit under this command")
@@ -830,7 +845,9 @@ def _combat(r: _Run, policies: dict, side: Side) -> None:
     actor = f"{side.value}/Front"
     assaulted: set = set()            # 15.23: each hex is close-assaulted at most once/segment
     committed: set = set()            # 15.24: each unit joins at most one assault/segment
-    for order in policies[side].combat(r.state, side):
+    combat_orders = policies[side].combat(r.state, side)
+    _drain_staff(r, policies[side], side)     # the combat-segment deliberation
+    for order in combat_orders:
         target = order.target
         # Dedupe attacker ids (else a repeated id multiplies strength), drop units
         # already committed to another assault this segment, and require is_combat
