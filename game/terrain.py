@@ -98,3 +98,52 @@ def hex_entry_cost(terrain: Terrain, mobility: Mobility) -> float | None:
 
 def hexside_cost(feature: Hexside, mobility: Mobility) -> float | None:
     return _HEXSIDE_ADD[feature][1 if is_motorized(mobility) else 0]
+
+
+# --- Breakdown Point Values (the 8.37 chart's Breakdown-Value columns, rule 21.21)
+# Breakdown Points a MOTORIZED vehicle accrues entering a hex / crossing a hexside;
+# foot/camel never accrue any (21.11). Transcribed from data/breakdown_rates.json
+# (the chart-of-record) and bound to it by test_breakdown; verified on PDF page 70.
+# DESERT = 24 (two full-size digits on the scan, NOT the long-assumed "2 + footnote-4"
+# bleed): the single highest value on the chart, which is exactly what makes the open
+# desert -- not the enemy -- the main tank-killer.
+_HEX_BREAKDOWN: dict[Terrain, float] = {
+    Terrain.CLEAR: 4,
+    Terrain.GRAVEL: 6,
+    Terrain.SALT_MARSH: 6,
+    Terrain.HEAVY_VEG: 3,
+    Terrain.ROUGH: 8,
+    Terrain.MOUNTAIN: 12,
+    Terrain.DELTA: 2,
+    Terrain.DESERT: 24,
+    Terrain.MAJOR_CITY: 0.5,
+}
+
+# Breakdown Points ADDED crossing a hexside feature. None = prohibited to vehicles
+# (Up Escarpment 8.42 / Major River except by road at no BP, note 11). Down Escarpment
+# is NOT halved by a track (the explicit note-8 exception; see breakdown_points).
+_HEXSIDE_BREAKDOWN: dict[Hexside, float | None] = {
+    Hexside.RIDGE: 2,
+    Hexside.UP_SLOPE: 2,
+    Hexside.DOWN_SLOPE: 2,
+    Hexside.UP_ESCARPMENT: PROHIBITED,
+    Hexside.DOWN_ESCARPMENT: 6,
+    Hexside.WADI: 8,
+    Hexside.MAJOR_RIVER: PROHIBITED,
+    Hexside.MINOR_RIVER: 1,
+}
+
+# A Road has its own Breakdown Value of 1/2 and NEGATES hexside Breakdown Points
+# (note 6); a Track HALVES both hex and hexside Breakdown Values (note 8).
+ROAD_BREAKDOWN: float = 0.5
+
+
+def breakdown_value(terrain: Terrain) -> float:
+    """Breakdown Points a vehicle accrues entering a hex of this terrain (8.37)."""
+    return _HEX_BREAKDOWN[terrain]
+
+
+def hexside_breakdown(feature: Hexside) -> float | None:
+    """Breakdown Points a vehicle accrues crossing this hexside feature (8.37), or
+    None if the hexside is prohibited to vehicles (no Breakdown Value)."""
+    return _HEXSIDE_BREAKDOWN[feature]
