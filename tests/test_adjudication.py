@@ -47,6 +47,18 @@ def test_conflict_kind_matches_staff_adjudication_enum():
         assert c.kind == kind
 
 
+# --- validate_batch: phase-start-illegal orders dropped silently -------------
+
+def test_validate_batch_drops_off_map_destination_without_crashing():
+    # A hallucinated destination off the map (no terrain there) is illegal at phase
+    # start; the dry-run must drop it silently (the engine rejects it downstream), not
+    # crash folding a unit onto a non-existent hex. Regression: a live model proposed
+    # exactly this and the terrain lookup in stacking_violations raised KeyError.
+    units = [_unit("A", (1, 0)), _unit("B", (2, 0))]
+    conflicts = adjudication.validate_batch(_state(units), [MoveOrder("A", (41, -4))])
+    assert conflicts == []
+
+
 # --- validate_batch: over-stack ----------------------------------------------
 
 def test_validate_batch_flags_combined_over_stack():

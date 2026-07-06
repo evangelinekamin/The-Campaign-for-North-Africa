@@ -55,6 +55,57 @@ def _formation_rank(formation: str) -> int:
     return FUEL_PRIORITY.index(formation) if formation in FUEL_PRIORITY else len(FUEL_PRIORITY)
 
 
+# --- static persona cards -----------------------------------------------------
+# A frozen doctrine one-liner + bias per seat, injected as a prompt preamble so each
+# seat argues in character. Flavour ONLY: the card text enters that seat's OWN prompt
+# and never another seat's -- the control plane between seats stays the whitelisted
+# structured fields (INTENT_FIELDS / engine-computed Conflicts), never persona prose.
+CHIEF = "Chief"
+INTEL = "Intel"
+
+
+@dataclass(frozen=True, slots=True)
+class PersonaCard:
+    name: str
+    doctrine: str
+    bias: str
+
+
+PERSONAS: dict[str, PersonaCard] = {
+    CHIEF: PersonaCard(
+        "the Axis Chief of Staff",
+        "concentrate force at the decisive point and keep the initiative",
+        "bold and offensive-minded; accepts risk to hold the tempo"),
+    Lane.MOBILE.value: PersonaCard(
+        "GOC Mobile Corps",
+        "armour is decisive -- unleash the panzers before the enemy sets",
+        "aggressive; demands the fuel and the point of main effort"),
+    Lane.INFANTRY.value: PersonaCard(
+        "GOC Infantry Corps",
+        "hold the ground the armour takes and screen the open flank",
+        "methodical; resents being starved to feed the panzers"),
+    Lane.QM.value: PersonaCard(
+        "the Quartermaster",
+        "the desert eats trucks -- husband the fuel or the panzers strand",
+        "cautious; hoards stores against the long coastal supply line"),
+    INTEL: PersonaCard(
+        "Staff Intelligence",
+        "read the enemy from the little that is sighted; assume the unseen",
+        "wary; warns of the stack the reconnaissance has not yet found"),
+}
+
+# The seats that actually drive an LLM in v1 (the Chief frames intent; the two GOCs
+# propose in-lane). The Quartermaster runs scripted logistics reflexes and
+# Intelligence a deterministic read of the fogged sightings, so neither spends a token.
+LLM_SEATS = (CHIEF, Lane.MOBILE.value, Lane.INFANTRY.value)
+
+
+def persona_preamble(seat: str) -> str:
+    """The seat's static persona card as a one-line prompt preamble ('' if none)."""
+    card = PERSONAS.get(seat)
+    return f"You are {card.name}. Doctrine: {card.doctrine}. Bias: {card.bias}.\n" if card else ""
+
+
 @dataclass(frozen=True, slots=True)
 class SideTurnPlan:
     """The resolved movement-turn slices, deliberated once and dispensed by phase."""
@@ -96,16 +147,55 @@ class StaffPolicy(ScriptedPolicy):
     inherited unchanged. `client` is any LLMClient -- a MockClient stub proves the
     machine at zero token cost."""
 
-    def __init__(self, client, side: Side = Side.AXIS):
+    def __init__(self, client, side: Side = Side.AXIS, *,
+                 seat_clients: "dict[str, object] | None" = None, max_workers: int = 1):
         super().__init__(attacker=side)
         self.side = side
-        self.client = client
+        self.client = client                               # shared fallback (mock path)
+        self._seat_clients = dict(seat_clients or {})      # per-seat live clients (live path)
+        self._workers = max_workers                        # >1 parallelises the specialist calls
         self._move_key = None
         self._plan: SideTurnPlan | None = None
         self._combat_key = None
         self._combat_orders: list[AttackOrder] = []
         self._pending: list[tuple[EventKind, dict]] = []   # staff artifacts awaiting drain
         self._lane_rationale: dict[Lane, str] = {}         # captured GOC rationale (for dissent)
+
+    # --- LLM seam ---------------------------------------------------------------
+    def _client_for(self, seat: str):
+        """The seat's own client (live path) or the shared fallback (mock path)."""
+        return self._seat_clients.get(seat, self.client)
+
+    def _ask(self, seat: str, prompt: str) -> str:
+        """One seat's call: its static persona card is prepended to the prompt (so it
+        argues in character) and routed to that seat's client."""
+        return self._client_for(seat).complete(persona_preamble(seat) + prompt)
+
+    def _map_lanes(self, fn, lanes):
+        """Run each lane's specialist call, re-collected keyed by lane so the caller
+        reads them back in FIXED lane order. Parallel across lanes when max_workers > 1:
+        the calls are independent I/O and mutate no shared state (staging happens in the
+        caller, post-join), so concurrency is an I/O win only and never perturbs the
+        deterministic fold."""
+        if self._workers <= 1 or len(lanes) <= 1:
+            return {lane: fn(lane) for lane in lanes}
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=min(self._workers, len(lanes))) as ex:
+            futures = {lane: ex.submit(fn, lane) for lane in lanes}
+        return {lane: fut.result() for lane, fut in futures.items()}
+
+    def usage(self) -> dict:
+        """Summed usage across every seat's client (+ the shared fallback); clients
+        without a usage() (e.g. MockClient) contribute nothing. For cost reporting."""
+        clients = list(self._seat_clients.values())
+        if self.client not in clients:
+            clients.append(self.client)
+        total: dict = {}
+        for c in clients:
+            if hasattr(c, "usage"):
+                for k, v in c.usage().items():
+                    total[k] = total.get(k, 0) + v
+        return total
 
     def reset(self) -> None:
         self._move_key = self._combat_key = None
@@ -154,15 +244,22 @@ class StaffPolicy(ScriptedPolicy):
         obs = observe(state, side)
         idl = unit_lanes(state, side)
         # Narrative order per side-turn: the Chief frames the INTENT, the specialists
-        # PROPOSE in-lane, then the constraints (intel / logistics) report up.
+        # PROPOSE in-lane (in parallel, re-collected in FIXED lane order), then the
+        # constraints (intel / logistics) report up.
         self._chief_intent(obs)                                    # STAFF_INTENT
-        mobile = self._goc_moves(obs, Lane.MOBILE, idl)            # STAFF_PROPOSAL
-        infantry = self._goc_moves(obs, Lane.INFANTRY, idl)        # STAFF_PROPOSAL
+        lanes = (Lane.MOBILE, Lane.INFANTRY)
+        proposals = self._map_lanes(lambda ln: self._goc_propose_moves(obs, ln, idl), lanes)
+        lane_moves: dict[Lane, list[MoveOrder]] = {}
+        for ln in lanes:                                           # STAFF_PROPOSAL (fixed order)
+            moves, payload = proposals[ln]
+            lane_moves[ln] = moves
+            self._lane_rationale[ln] = payload["rationale"]
+            self._stage(EventKind.STAFF_PROPOSAL, payload)
         supply = tuple(ScriptedPolicy.supply_orders(self, state, side))   # QM lane
         truck = tuple(ScriptedPolicy.truck_orders(self, state, side))
         self._quartermaster(supply)                                # STAFF_PROPOSAL (supply)
         self._intelligence(obs)                                    # STAFF_CONSTRAINT (intel)
-        movement = self._resolve(state, mobile, infantry, idl)
+        movement = self._resolve(state, lane_moves[Lane.MOBILE], lane_moves[Lane.INFANTRY], idl)
         return SideTurnPlan(tuple(movement), supply, truck)
 
     def _resolve(self, state, mobile, infantry, idl) -> list[MoveOrder]:
@@ -229,9 +326,9 @@ class StaffPolicy(ScriptedPolicy):
 
     # --- seats -------------------------------------------------------------------
     def _chief_intent(self, obs: dict) -> dict:
-        raw = _extract_json(self.client.complete(build_intent_prompt(obs))).get("intent")
+        raw = _extract_json(self._ask(CHIEF, build_intent_prompt(obs))).get("intent")
         intent = _clean_intent(raw) if isinstance(raw, dict) else {}
-        self._stage(EventKind.STAFF_INTENT, {**intent, "seat": "Chief", "formation": "DAK"})
+        self._stage(EventKind.STAFF_INTENT, {**intent, "seat": CHIEF, "formation": "DAK"})
         return intent
 
     def _intelligence(self, obs: dict) -> None:
@@ -240,20 +337,21 @@ class StaffPolicy(ScriptedPolicy):
         line = (f"{len(sightings)} enemy stack(s) sighted"
                 if sightings else "no enemy stacks in sight")
         self._stage(EventKind.STAFF_CONSTRAINT,
-                    {"kind": "intel", "severity": severity, "seat": "Intel", "line": line})
+                    {"kind": "intel", "severity": severity, "seat": INTEL, "line": line})
 
-    def _goc_moves(self, obs: dict, lane: Lane, idl: dict) -> list[MoveOrder]:
+    def _goc_propose_moves(self, obs: dict, lane: Lane, idl: dict) -> tuple[list[MoveOrder], dict]:
+        """A pure specialist movement call: returns (moves, STAFF_PROPOSAL payload). It
+        stages NOTHING -- the caller stages in fixed lane order after the (possibly
+        parallel) calls join, so concurrency never reorders the log."""
         brief = role_brief(obs, lane, idl)
-        moves = parse_moves(self.client.complete(build_movement_prompt(brief)))
-        rationale = f"{lane.value} corps advances {len(moves)} unit(s)"
-        self._lane_rationale[lane] = rationale        # captured for a later dissent (no extra call)
-        self._stage(EventKind.STAFF_PROPOSAL, {
+        moves = parse_moves(self._ask(lane.value, build_movement_prompt(brief)))
+        payload = {
             "seat": lane.value, "formation": lane.value,
             "proposes": [{"order": "move", "units": [m.unit_id], "to": list(m.to)}
                          for m in moves],
-            "rationale": rationale,
-        })
-        return moves
+            "rationale": f"{lane.value} corps advances {len(moves)} unit(s)",
+        }
+        return moves, payload
 
     def _quartermaster(self, supply: tuple[SupplyMoveOrder, ...]) -> None:
         self._stage(EventKind.STAFF_PROPOSAL, {
@@ -263,22 +361,33 @@ class StaffPolicy(ScriptedPolicy):
             "rationale": f"quartermaster relocates {len(supply)} dump(s) forward",
         })
 
+    def _goc_propose_attacks(self, obs: dict, lane: Lane, idl: dict) -> tuple[list[AttackOrder], dict | None]:
+        """A pure specialist combat call: returns (attacks, STAFF_PROPOSAL payload or
+        None if the lane has no targets). Stages nothing -- the caller stages in fixed
+        lane order after the (possibly parallel) calls join."""
+        brief = role_brief(obs, lane, idl)
+        if not brief["attack_options"]:
+            return [], None
+        lane_attacks = parse_attacks(self._ask(lane.value, build_combat_prompt(brief)))
+        payload = {
+            "seat": lane.value, "formation": lane.value,
+            "proposes": [{"order": "attack", "units": list(a.attacker_ids), "to": list(a.target)}
+                         for a in lane_attacks],
+            "rationale": f"{lane.value} corps assaults {len(lane_attacks)} target(s)",
+        }
+        return lane_attacks, payload
+
     def _deliberate_combat(self, state: GameState, side: Side) -> list[AttackOrder]:
         obs = observe(state, side)
         if not obs.get("attack_options"):
             return []
         idl = unit_lanes(state, side)
+        lanes = (Lane.MOBILE, Lane.INFANTRY)
+        results = self._map_lanes(lambda ln: self._goc_propose_attacks(obs, ln, idl), lanes)
         attacks: list[AttackOrder] = []
-        for lane in (Lane.MOBILE, Lane.INFANTRY):
-            brief = role_brief(obs, lane, idl)
-            if not brief["attack_options"]:
-                continue
-            lane_attacks = parse_attacks(self.client.complete(build_combat_prompt(brief)))
-            self._stage(EventKind.STAFF_PROPOSAL, {
-                "seat": lane.value, "formation": lane.value,
-                "proposes": [{"order": "attack", "units": list(a.attacker_ids), "to": list(a.target)}
-                             for a in lane_attacks],
-                "rationale": f"{lane.value} corps assaults {len(lane_attacks)} target(s)",
-            })
-            attacks += lane_attacks
+        for ln in lanes:                                          # STAFF_PROPOSAL (fixed order)
+            lane_attacks, payload = results[ln]
+            if payload is not None:
+                self._stage(EventKind.STAFF_PROPOSAL, payload)
+                attacks += lane_attacks
         return merge_attacks(attacks)

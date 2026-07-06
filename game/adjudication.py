@@ -71,12 +71,15 @@ def validate_batch(state: GameState, orders: list) -> list[Conflict]:
 
 def _order_events(state: GameState, orders: list) -> list[Event]:
     """Synthesize the minimal position-changing events for a batch, so the copy is
-    produced by the one canonical fold. Unknown ids are skipped (nothing to move)."""
+    produced by the one canonical fold. Unknown ids and off-map destinations are
+    skipped -- an order that is illegal at phase start (unreachable / off the map) is
+    NOT a batch conflict; the live engine rejects it, so the dry-run drops it silently
+    rather than folding a unit onto a non-existent hex."""
     events: list[Event] = []
     for o in orders:
         if isinstance(o, MoveOrder):
             u = state.unit(o.unit_id)
-            if u is not None:
+            if u is not None and o.to in state.terrain.terrain:
                 events.append(_event(state, EventKind.UNIT_MOVED, {
                     "unit_id": o.unit_id, "from": list(u.hex),
                     "to": list(o.to), "cp_spent": 0.0}))

@@ -8,6 +8,7 @@ variable and is NEVER logged, persisted, or written to disk.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import time
@@ -36,6 +37,50 @@ class MockClient:
         """Respond to the latest user turn (stateful mode sends a message list)."""
         last = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
         return self.complete(last)
+
+
+class CachingClient:
+    """Wraps any LLMClient with a sha256(model + prompt) -> text cache so a
+    re-simulation reproduces byte-identical replies -- and therefore byte-identical
+    STAFF_* payloads and orders -- with the model DISCONNECTED for every cached prompt.
+
+    The cache is a plain dict the caller owns and persists as a SIDECAR beside the
+    event log (never inside the immutable core). A cache hit never touches the inner
+    client, so a fully-cached re-run needs no network and no key. The key is
+    sha256(model + prompt); it never contains the API key, and the cached text is the
+    model's reply, never a secret.
+    """
+
+    def __init__(self, inner: LLMClient, cache: "dict[str, str] | None" = None):
+        self._inner = inner
+        self.cache = cache if cache is not None else {}
+        self.hits = 0
+        self.misses = 0
+
+    @property
+    def model(self) -> str:
+        return getattr(self._inner, "model", "")
+
+    def _key(self, prompt: str) -> str:
+        return hashlib.sha256(f"{self.model}\n{prompt}".encode()).hexdigest()
+
+    def complete(self, prompt: str) -> str:
+        key = self._key(prompt)
+        if key in self.cache:
+            self.hits += 1
+            return self.cache[key]
+        self.misses += 1
+        text = self._inner.complete(prompt)
+        self.cache[key] = text
+        return text
+
+    def chat(self, messages: list) -> str:
+        last = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
+        return self.complete(last)
+
+    def usage(self) -> dict:
+        u = self._inner.usage() if hasattr(self._inner, "usage") else {}
+        return {**u, "cache_hits": self.hits, "cache_misses": self.misses}
 
 
 class OpenRouterClient:

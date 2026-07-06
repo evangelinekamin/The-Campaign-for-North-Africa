@@ -18,6 +18,9 @@ venv/
 /scratch/
 *.log
 
+# Live-staff run artifacts (event log + re-simulation cache sidecar; never committed)
+/out/
+
 # Large source scan (kept local, not versioned) + Windows cruft
 /tmp/
 *:Zone.Identifier
