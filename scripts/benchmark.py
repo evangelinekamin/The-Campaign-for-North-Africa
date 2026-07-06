@@ -77,7 +77,9 @@ def _strength(state, side: Side) -> int:
 # scripted charge nets ~29 (allied_lost - 0.5*axis_lost).
 _LAMBDA = 0.5         # own losses discounted vs enemy destroyed (attacker's loss disadvantage)
 _SCALE = 0.25         # net-destroying this fraction of the defense = full combat score
-_TMIN = 6             # fastest realistic investment turn (measured)
+_TMIN = 2             # fastest realistic investment GAME-TURN (re-measured under the faithful
+                      # two-level clock: 3 Operations Stages/game-turn ~triple the operational
+                      # tempo, so the Axis now invests Tobruk by game-turn ~2, not ~6)
 _FIGHT_FLOOR = 0.20   # tempo counts only above this much real combat (defeats farm-one-kill)
 _CLEAN_CAP = 20.0     # Axis reject% at/above which cleanliness scores 0
 
@@ -121,9 +123,13 @@ def game_metrics(result) -> dict:
 
     victory = [e for e in ev if e.kind == EventKind.VICTORY_CHECKED]
     advance = victory[-1].payload.get("axis", 0) if victory else 0
-    # Speed discriminator: first turn the Axis invests Tobruk (reach <= 2). Advance %
-    # is saturated (~99% for every capable model), so *how fast* separates them.
-    invested = next((i + 1 for i, e in enumerate(victory)
+    # Speed discriminator: first GAME-TURN the Axis invests Tobruk (reach <= 2). Advance %
+    # is saturated (~99% for every capable model), so *how fast* separates them. Read the
+    # event's game-turn directly: under the faithful two-level clock VICTORY_CHECKED fires
+    # once per Operations Stage (3x/game-turn), so the old enumerate-index silently became an
+    # op-stage ordinal (1..36) -- e.turn keeps turn_invested on the 1..max_turns game-turn
+    # scale that _TMIN, the tempo denominator and the fallback all live on.
+    invested = next((e.turn for e in victory
                      if e.payload.get("axis_reach", 99) <= 2), None)
     turn_invested = invested if invested is not None else result.final.turn + 1
     axis_lost = _strength(result.initial, Side.AXIS) - _strength(result.final, Side.AXIS)
