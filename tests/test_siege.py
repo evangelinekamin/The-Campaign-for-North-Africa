@@ -69,7 +69,7 @@ def test_fort_reduced_event_folds():
 
 def test_barrage_reduces_fort_and_emits_event():
     r = _Run(_siege_state(siege=True, fort=2))
-    _barrage_step(r, Side.AXIS, Side.ALLIED, set())
+    _barrage_step(r, Side.AXIS, Side.ALLIED, set(), set())
     reduced = [e for e in r.events if e.kind == EventKind.FORT_REDUCED]
     assert reduced, "a successful barrage on a fortified hex must emit FORT_REDUCED"
     assert reduced[0].payload == {"hex": [1, 0], "level": 1}
@@ -79,7 +79,7 @@ def test_barrage_reduces_fort_and_emits_event():
 def test_barrage_never_reduces_when_siege_off():
     # default (benchmark) posture: the wall-reduction mechanic is inert.
     r = _Run(_siege_state(siege=False, fort=2))
-    _barrage_step(r, Side.AXIS, Side.ALLIED, set())
+    _barrage_step(r, Side.AXIS, Side.ALLIED, set(), set())
     assert not any(e.kind == EventKind.FORT_REDUCED for e in r.events)
     assert r.state.fort_level((1, 0)) == 2      # wall intact
 
@@ -88,7 +88,7 @@ def test_barrage_never_evicts_the_garrison():
     # rule 25.14 is sacred: barrage brings the wall down but never moves the garrison
     # nor its base fort in the static map -- only the dynamic overlay drops.
     r = _Run(_siege_state(siege=True, fort=2))
-    _barrage_step(r, Side.AXIS, Side.ALLIED, set())
+    _barrage_step(r, Side.AXIS, Side.ALLIED, set(), set())
     gar = r.state.unit("GAR")
     assert gar.hex == (1, 0)                                   # not evicted
     assert not any(e.kind == EventKind.UNIT_RETREATED for e in r.events)
@@ -98,7 +98,7 @@ def test_barrage_never_evicts_the_garrison():
 def test_barrage_floors_fort_at_zero():
     # a barrage on an already-open (level 0) fortified hex emits nothing.
     r = _Run(_siege_state(siege=True, fort=0))
-    _barrage_step(r, Side.AXIS, Side.ALLIED, set())
+    _barrage_step(r, Side.AXIS, Side.ALLIED, set(), set())
     assert not any(e.kind == EventKind.FORT_REDUCED for e in r.events)
 
 
@@ -107,10 +107,10 @@ def test_hits_per_level_knob(monkeypatch):
     # NOT yet drop the wall; the second one does.
     monkeypatch.setattr("game.engine.BARRAGE_HITS_PER_FORT_LEVEL", 2)
     r = _Run(_siege_state(siege=True, fort=2))
-    _barrage_step(r, Side.AXIS, Side.ALLIED, set())
+    _barrage_step(r, Side.AXIS, Side.ALLIED, set(), set())
     assert not any(e.kind == EventKind.FORT_REDUCED for e in r.events)   # 1 hit: no drop yet
     assert r.state.fort_level((1, 0)) == 2
-    _barrage_step(r, Side.AXIS, Side.ALLIED, set())
+    _barrage_step(r, Side.AXIS, Side.ALLIED, set(), set())
     assert any(e.kind == EventKind.FORT_REDUCED for e in r.events)        # 2nd hit drops it
     assert r.state.fort_level((1, 0)) == 1
 
@@ -138,7 +138,7 @@ def _assault_column(fort_levels: dict) -> int:
     r = _Run(_assault_state(fort_levels))
     atk = [r.state.unit("A")]
     dfd = [r.state.unit("D")]
-    _resolve_combat(r, Side.AXIS, "AXIS/Front", atk, dfd, (1, 0), set())
+    _resolve_combat(r, Side.AXIS, "AXIS/Front", atk, dfd, (1, 0), set(), set())
     resolved = [e for e in r.events if e.kind == EventKind.COMBAT_RESOLVED]
     return resolved[0].payload["column"]
 

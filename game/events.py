@@ -112,6 +112,13 @@ class EventKind(str, Enum):
     ANTI_ARMOR_RESOLVED = "ANTI_ARMOR_RESOLVED"
     COMBAT_RESOLVED = "COMBAT_RESOLVED"
     STEP_LOST = "STEP_LOST"
+    # CP-for-all-actions (rule 6.3). CP_EXPENDED {unit_id, activity, cp} charges a unit
+    # its Capability Points at the combat seams (barrage / anti-armor / close-assault /
+    # defend), folding cp_used += cp into the SAME per-Operations-Stage accumulator that
+    # movement (UNIT_MOVED.cp_spent) feeds and _reset_opstage clears at the stage boundary
+    # (6.16 / 6.14). A pure scalar fold -- no supply surface touched, conservation untouched.
+    # The 6.21 overage -> Disorganization consequence rides the existing COHESION_CHANGED.
+    CP_EXPENDED = "CP_EXPENDED"
     COHESION_CHANGED = "COHESION_CHANGED"
     FORT_REDUCED = "FORT_REDUCED"
     HEX_CONTROL_CHANGED = "HEX_CONTROL_CHANGED"

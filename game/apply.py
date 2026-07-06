@@ -148,6 +148,12 @@ def apply(state: GameState, event: Event) -> GameState:
             u2 = replace(u2, broken_down=u2.strength)
         return state.with_unit(u2)
 
+    if k == EventKind.CP_EXPENDED:
+        # 6.3: charge a unit its combat Capability Points. Folds into cp_used -- the same
+        # per-OpStage accumulator movement feeds (6.14) and _reset_opstage clears (6.16).
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, cp_used=u.cp_used + p["cp"]))
+
     if k == EventKind.COHESION_CHANGED:
         u = state.unit(p["unit_id"])
         return state.with_unit(replace(u, cohesion=u.cohesion + p["delta"]))

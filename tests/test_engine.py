@@ -333,7 +333,7 @@ def test_starved_garrison_surrenders_in_close_assault_15_15():
                     cpa=10, stacking_points=1, oca=2, dca=2, morale=2, cohesion=0)
     dump = SupplyUnit("AXDUMP", Side.AXIS, (1, 0), ammo=40, fuel=0)   # only the attacker is supplied
     r = _Run(_lone_hex_state([attacker, garrison], supplies=[dump]))
-    _resolve_combat(r, Side.AXIS, "AXIS/Front", [attacker], [garrison], (0, 0), set())
+    _resolve_combat(r, Side.AXIS, "AXIS/Front", [attacker], [garrison], (0, 0), set(), set())
     resolved = [e for e in r.events if e.kind == EventKind.COMBAT_RESOLVED]
     assert resolved and resolved[-1].payload["surrender"] == "defender"
     assert r.state.unit("G").strength == 0                           # garrison captured en masse
@@ -359,7 +359,7 @@ def test_barrage_fires_at_adjacent_enemy():
                    target_hex=(3, 0), supplies=(dump,),
                    consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 40, "FUEL": 60})
     r = _Run(st)
-    _barrage_step(r, Side.AXIS, Side.ALLIED, set())
+    _barrage_step(r, Side.AXIS, Side.ALLIED, set(), set())
     resolved = [e for e in r.events if e.kind == EventKind.BARRAGE_RESOLVED]
     assert resolved and resolved[0].payload["target_class"] == "infantry"
     assert resolved[0].payload["actual"] == 12          # 15 x 8 / 10 = 12 Actual Barrage Points
@@ -385,11 +385,63 @@ def test_anti_armor_fire_damages_adjacent_armor():
                    target_hex=(3, 0), supplies=(dump,),
                    consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 40, "FUEL": 60})
     r = _Run(st)
-    _anti_armor_step(r, Side.AXIS, Side.ALLIED, set())
+    _anti_armor_step(r, Side.AXIS, Side.ALLIED, set(), set())
     assert r.state.unit("TK").strength < 8             # tank absorbed anti-armor damage
     # 14.24 / [50.2]: anti-armor fire draws the anti-armor rate (3) x TOE (8) = 24 Ammo,
     # NOT the close-assault rate -- the faithful chart value from data/logistics_rates.json.
     assert r.state.supply("D").ammo == 40 - 24
+
+
+def _two_side_state(units, supplies):
+    from game.events import Phase
+    from game.movement import TerrainMap
+    from game.state import GameState, VP
+    from game.terrain import Terrain
+    terr = {(0, 0): Terrain.CLEAR, (1, 0): Terrain.CLEAR}
+    ammo = sum(s.ammo for s in supplies)
+    return GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS,
+                     seed=7, weather="clear", vp=VP(), terrain=TerrainMap(terrain=terr),
+                     control={}, units=tuple(units), target_hex=(1, 0), supplies=tuple(supplies),
+                     consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": ammo, "FUEL": 0})
+
+
+def test_close_assault_charges_the_63_capability_points():
+    # 6.3: the phasing attacker pays 5 CP for the Assault, the non-phasing defender 3 to
+    # defend -- folded into cp_used, the same per-OpStage accumulator movement feeds (6.14).
+    from game.engine import _Run, _resolve_combat
+    from game.state import SupplyUnit, Unit
+    from game.terrain import Mobility
+    atk = Unit("A", Side.AXIS, (1, 0), (StepRecord("a", 6),), mobility=Mobility.FOOT,
+               cpa=10, stacking_points=1, oca=3, dca=3, morale=1, cohesion=0)
+    dfn = Unit("D", Side.ALLIED, (0, 0), (StepRecord("d", 6),), mobility=Mobility.FOOT,
+               cpa=10, stacking_points=1, oca=2, dca=2, morale=1, cohesion=0)
+    r = _Run(_two_side_state(
+        [atk, dfn],
+        [SupplyUnit("AXD", Side.AXIS, (1, 0), ammo=40, fuel=0),
+         SupplyUnit("ALD", Side.ALLIED, (0, 0), ammo=40, fuel=0)]))
+    _resolve_combat(r, Side.AXIS, "AXIS/Front", [atk], [dfn], (0, 0), set(), set())
+    assert r.state.unit("A").cp_used == 5              # 6.3 phasing Barrage/Assault
+    assert r.state.unit("D").cp_used == 3              # 6.3 non-phasing defence
+
+
+def test_combat_cp_charged_once_per_segment():
+    # 6.3 'and/or': a unit that BOTH barrages and close-assaults in one Combat Segment
+    # pays the 5-CP Assault ONCE (not 5 + 5) -- the shared `charged` ledger dedupes.
+    from game.engine import _Run, _barrage_step, _resolve_combat
+    from game.state import SupplyUnit, Unit
+    from game.terrain import Mobility
+    arty = Unit("AR", Side.AXIS, (1, 0), (StepRecord("ar", 8),), mobility=Mobility.MOTORIZED,
+                cpa=20, stacking_points=1, oca=2, dca=1, barrage=15, vulnerability=5, morale=1)
+    dfn = Unit("D", Side.ALLIED, (0, 0), (StepRecord("d", 6),), mobility=Mobility.FOOT,
+               cpa=10, stacking_points=1, oca=2, dca=2, morale=1, cohesion=0)
+    r = _Run(_two_side_state(
+        [arty, dfn],
+        [SupplyUnit("AXD", Side.AXIS, (1, 0), ammo=80, fuel=0),
+         SupplyUnit("ALD", Side.ALLIED, (0, 0), ammo=40, fuel=0)]))
+    charged: set = set()
+    _barrage_step(r, Side.AXIS, Side.ALLIED, set(), charged)
+    _resolve_combat(r, Side.AXIS, "AXIS/Front", [arty], [dfn], (0, 0), set(), charged)
+    assert r.state.unit("AR").cp_used == 5            # charged once across barrage + assault
 
 
 def test_combined_arms_penalty():

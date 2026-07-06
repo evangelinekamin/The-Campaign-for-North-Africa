@@ -15,7 +15,7 @@ import math
 import random
 from dataclasses import dataclass
 
-from . import combat, combat_tables, logistics_data, stacking, supply, tactics, weather
+from . import combat, combat_tables, cp_costs, logistics_data, stacking, supply, tactics, weather
 from .apply import apply
 from .events import Control, Event, EventKind, Phase, Side
 from .hexmap import distance, is_adjacent, neighbors
@@ -754,6 +754,29 @@ def _other(side: Side) -> Side:
     return Side.ALLIED if side is Side.AXIS else Side.AXIS
 
 
+def _spend_cp(r: _Run, side: Side, actor: str, unit, activity: str, cp: int) -> None:
+    """Charge a unit `cp` Capability Points for `activity` (rule 6.3): emit CP_EXPENDED,
+    which folds cp_used += cp into the same per-Operations-Stage accumulator movement
+    feeds (6.14). The live unit is re-read so a second charge this stage stacks on the
+    first. The 6.21 overage -> Disorganization consequence lands in Step 3."""
+    r.emit(EventKind.CP_EXPENDED, side, actor,
+           {"unit_id": unit.id, "activity": activity, "cp": cp})
+
+
+def _charge_combat_cp(r: _Run, phasing: Side, unit, charged: set[str]) -> None:
+    """6.3: charge a unit its combat CP ONCE per Combat Segment. The chart's 'and/or'
+    folds a unit's barrage + anti-armor + close-assault into a single charge -- a Phasing
+    unit pays the 5-CP Assault, a Non-Phasing unit the 3-CP defence -- so `charged` (the
+    per-segment ledger) suppresses any second charge across the barrage/anti-armor/close-
+    assault seams. cp_used still accrues across BOTH players' portions of the stage (6.14)."""
+    if unit.id in charged:
+        return
+    charged.add(unit.id)
+    is_phasing = unit.side == phasing
+    _spend_cp(r, unit.side, f"{unit.side.value}/Front", unit,
+              "assault" if is_phasing else "defend", cp_costs.assault_cost(is_phasing))
+
+
 def _combat(r: _Run, policies: dict, side: Side) -> None:
     """One Combat Segment (rule 11.0), the Phasing side = `side`. Barrage and Anti-
     Armor are fought by BOTH players (their losses land before Close Assault); then
@@ -762,9 +785,10 @@ def _combat(r: _Run, policies: dict, side: Side) -> None:
     (13.28): the NON-PHASING side may slip UNPINNED units out of contact."""
     enemy = _other(side)
     pinned: set[str] = set()          # units Pinned by barrage this segment (12.44)
-    _barrage_step(r, side, enemy, pinned)
+    charged: set[str] = set()         # 6.3 per-segment CP ledger (one combat charge/unit)
+    _barrage_step(r, side, enemy, pinned, charged)
     _retreat_before_assault(r, policies[enemy], enemy, side, pinned)
-    _anti_armor_step(r, side, enemy, pinned)
+    _anti_armor_step(r, side, enemy, pinned, charged)
     actor = f"{side.value}/Front"
     assaulted: set = set()            # 15.23: each hex is close-assaulted at most once/segment
     committed: set = set()            # 15.24: each unit joins at most one assault/segment
@@ -788,7 +812,7 @@ def _combat(r: _Run, policies: dict, side: Side) -> None:
                    {"order": "attack", "target": list(target),
                     "reason": "no valid attackers or empty target"})
             continue
-        _resolve_combat(r, side, actor, attackers, defenders, target, pinned)
+        _resolve_combat(r, side, actor, attackers, defenders, target, pinned, charged)
         assaulted.add(target)
         committed.update(u.id for u in attackers)
 
@@ -878,7 +902,8 @@ def _barrage_target(enemies) -> "object | None":
     return max(combatants, key=lambda u: u.strength, default=None)
 
 
-def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str]) -> None:
+def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
+                  charged: set[str]) -> None:
     """Barrage (rule 12): both sides' artillery bombard adjacent enemy hexes first,
     simultaneously (strengths read pre-loss). Each barrage resolves against one
     target unit's class on the 12.6 CRT -> Pin and/or step loss; a Pin suppresses
@@ -900,6 +925,8 @@ def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str]) -> None
         for tgt, firers in by_target.items():
             armed = [u for u in firers
                      if _charge_ammo(r, firing, actor, u, phasing=is_phasing, activity="barrage")]
+            for u in armed:                              # 6.3: barrage folds into the combat CP
+                _charge_combat_cp(r, phasing, u, charged)
             raw = sum(u.raw_barrage for u in armed)
             target_unit = _barrage_target(state0.enemies_at(tgt, firing))
             if raw <= 0 or target_unit is None:
@@ -943,7 +970,8 @@ def _batter_fort(r: _Run, firing: Side, actor: str, tgt: Coord, *, effective: bo
                {"hex": list(tgt), "level": r.state.fort_level(tgt) - 1})
 
 
-def _anti_armor_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str]) -> None:
+def _anti_armor_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
+                     charged: set[str]) -> None:
     """Anti-Armor Fire (rule 14): both sides fire at each other's adjacent armor,
     simultaneously (target strengths are read before any loss lands), and all armor
     losses precede Close Assault. Each unit with an Anti-Armor rating fires at one
@@ -967,6 +995,8 @@ def _anti_armor_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str]) -> N
             armed = [u for u in firers                       # 14.24/50.2: anti-armor fire draws
                      if _charge_ammo(r, firing, actor, u, phasing=is_phasing,
                                      activity="anti_armor")]  # the anti-armor rate (3/TOE)
+            for u in armed:                              # 6.3: anti-armor folds into the combat CP
+                _charge_combat_cp(r, phasing, u, charged)
             raw = sum(u.raw_anti_armor for u in armed)
             if raw <= 0:
                 continue
@@ -1003,7 +1033,7 @@ def _apply_armor_losses(r: _Run, firing: Side, actor: str, target: Coord, damage
 
 
 def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
-                    target: Coord, pinned: set[str]) -> None:
+                    target: Coord, pinned: set[str], charged: set[str]) -> None:
     # Ammo gates participation (rule 32.21 / 15.15) and Pin suppresses it (12.44):
     # a unit that cannot draw ammo or is Pinned cannot assault; a Pinned or unarmed
     # defender adds no defensive strength but still suffers losses. Charged before
@@ -1015,6 +1045,8 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
                {"order": "attack", "target": list(target),
                 "reason": "attackers out of ammo or pinned"})
         return
+    for u in armed_atk:                         # 6.3: the phasing Assault CP (5), once/segment
+        _charge_combat_cp(r, side, u, charged)
     # 15.15 / 15.88: an assaulted stack that is entirely out of Close-Assault ammo,
     # or whose (largest) unit's Cohesion has collapsed to -17 or worse, automatically
     # Surrenders the instant it is assaulted -- BEFORE it rolls morale or spends a
@@ -1027,6 +1059,8 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
         return
     armed_def = [u for u in defenders
                  if u.id not in pinned and _charge_ammo(r, side, actor, u, phasing=False)]
+    for u in armed_def:                         # 6.3: the non-phasing defence CP (3), once/segment
+        _charge_combat_cp(r, side, u, charged)
 
     # Close Assault via the real differential engine (rule 15 / §15.79 CRT).
     feature = r.state.terrain.hexsides.get((armed_atk[0].hex, target))  # §15.33
