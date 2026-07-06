@@ -444,6 +444,35 @@ def test_combat_cp_charged_once_per_segment():
     assert r.state.unit("AR").cp_used == 5            # charged once across barrage + assault
 
 
+def test_cp_overage_disorganizes_the_unit_6_21():
+    # 6.21/6.22: a unit already near its CPA that spends combat CP over the allowance
+    # earns one Disorganization Point per CP over, credited immediately as a Cohesion loss.
+    from dataclasses import replace
+
+    from game.engine import _Run, _resolve_combat
+    from game.state import SupplyUnit, Unit
+    from game.terrain import Mobility
+    # cpa 8, already 6 CP spent this stage -> the 5-CP Assault lands at 11 = 3 over CPA.
+    atk = Unit("A", Side.AXIS, (1, 0), (StepRecord("a", 6),), mobility=Mobility.FOOT,
+               cpa=8, stacking_points=1, oca=3, dca=3, morale=1, cohesion=0)
+    atk = replace(atk, cp_used=6.0)
+    dfn = Unit("D", Side.ALLIED, (0, 0), (StepRecord("d", 6),), mobility=Mobility.FOOT,
+               cpa=10, stacking_points=1, oca=2, dca=2, morale=1, cohesion=0)
+    r = _Run(_two_side_state(
+        [atk, dfn],
+        [SupplyUnit("AXD", Side.AXIS, (1, 0), ammo=40, fuel=0),
+         SupplyUnit("ALD", Side.ALLIED, (0, 0), ammo=40, fuel=0)]))
+    _resolve_combat(r, Side.AXIS, "AXIS/Front", [atk], [dfn], (0, 0), set(), set())
+    assert r.state.unit("A").cp_used == 11            # 6 + the 5-CP Assault
+    # 6.22: the 3-DP bleed (11 - 8) is credited immediately, BEFORE the assault resolves,
+    # so the reduced Cohesion feeds the morale roll -- assert its ordering, not just the sum.
+    kinds = [(e.kind, e.payload) for e in r.events]
+    coh = next(i for i, (k, p) in enumerate(kinds)
+               if k == EventKind.COHESION_CHANGED and p["unit_id"] == "A")
+    resolved = next(i for i, (k, _) in enumerate(kinds) if k == EventKind.COMBAT_RESOLVED)
+    assert kinds[coh][1]["delta"] == -3 and coh < resolved
+
+
 def test_combined_arms_penalty():
     from game.engine import _combined_arms_penalty
     from game.terrain import Mobility

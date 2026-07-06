@@ -754,13 +754,33 @@ def _other(side: Side) -> Side:
     return Side.ALLIED if side is Side.AXIS else Side.AXIS
 
 
+def _overage_dp(cp_used: float, cpa: int) -> int:
+    """6.21: Disorganization Points a unit has accrued this OpStage from CP spent OVER its
+    CPA -- one DP per whole Capability Point above the allowance (0 while within CPA)."""
+    return max(0, math.floor(cp_used - cpa))
+
+
+def _disorganize_overage(r: _Run, side: Side, actor: str, unit_id: str,
+                         old_cp: float, new_cp: float, cpa: int) -> None:
+    """6.21/6.22: after a CP charge, immediately bleed Cohesion by the INCREMENTAL overage
+    -- each whole CP that has just crossed the unit's CPA earns one Disorganization Point,
+    credited at once (6.22, before the ensuing morale roll) through the existing COHESION_
+    CHANGED channel. Only the increment is charged, so a unit already over its CPA is never
+    re-penalised for CP it has already paid DP on."""
+    dp = _overage_dp(new_cp, cpa) - _overage_dp(old_cp, cpa)
+    if dp > 0:
+        r.emit(EventKind.COHESION_CHANGED, side, actor, {"unit_id": unit_id, "delta": -dp})
+
+
 def _spend_cp(r: _Run, side: Side, actor: str, unit, activity: str, cp: int) -> None:
     """Charge a unit `cp` Capability Points for `activity` (rule 6.3): emit CP_EXPENDED,
     which folds cp_used += cp into the same per-Operations-Stage accumulator movement
-    feeds (6.14). The live unit is re-read so a second charge this stage stacks on the
-    first. The 6.21 overage -> Disorganization consequence lands in Step 3."""
+    feeds (6.14); then apply the 6.21 overage -> Disorganization consequence at once. The
+    live cp_used is re-read so a second charge this stage stacks on the first."""
+    old = r.state.unit(unit.id).cp_used
     r.emit(EventKind.CP_EXPENDED, side, actor,
            {"unit_id": unit.id, "activity": activity, "cp": cp})
+    _disorganize_overage(r, side, actor, unit.id, old, old + cp, unit.cpa)
 
 
 def _charge_combat_cp(r: _Run, phasing: Side, unit, charged: set[str]) -> None:
