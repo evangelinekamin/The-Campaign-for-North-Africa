@@ -252,15 +252,13 @@ def test_determinism_preserved_with_ports():
 
 def test_siege_still_crackable_through_the_throttle():
     # The Benghazi rear throttle must not starve the Axis barrage below the crack path:
-    # a strong seed still batters the wall through it. The real-Weather slice (rule 29)
-    # rolls a sequential 2d6 (plus a foul-location die) instead of the old single d6, so
-    # the whole seeded dice stream reshuffled AND foul weather now genuinely hampers the
-    # Axis push (29.44 sandstorm doubling, 29.55/56 rain) -- the seeds that crack SHIFTED
-    # again (28/30/36/... now batter the wall; the old breakdown-era 2/15 no longer do).
-    # That is the owner's siege knob (BARRAGE_HITS_PER_FORT_LEVEL / Axis ammo schedule),
+    # a strong seed still batters the wall through it. The faithful two-level clock (rules
+    # 5/48) runs THREE Operations Stages per game-turn, each with its own 29.0 weather roll,
+    # so the whole seeded dice stream reshuffled again and the seeds that crack SHIFTED with
+    # it. That is the owner's siege knob (BARRAGE_HITS_PER_FORT_LEVEL / Axis ammo schedule),
     # NOT a magnitude to bend here. This test guards only that the crack path SURVIVES.
     battered = False
-    for seed in (28, 30):
+    for seed in (5, 10):
         res = run(siege_of_tobruk(seed=seed),
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         if any(e.kind == EventKind.FORT_REDUCED and tuple(e.payload["hex"]) == TOBRUK

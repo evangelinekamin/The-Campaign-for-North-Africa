@@ -244,13 +244,12 @@ def test_siege_of_tobruk_machinery_intact():
     wall is still battered down (FORT_REDUCED fires at the objective across seeds),
     which never happens with siege OFF.
 
-    Seed note: the real-Weather slice (rule 29) rolls a sequential 2d6 (plus a foul-
-    location die) each turn instead of the old single d6, reshuffling the seeded stream
-    and adding faithful foul-weather friction, so the seeds that crack shifted (none of
-    1-12 do now). This guards only that the 25.14 path SURVIVES -- the crack rate is the
-    owner's siege knob, not tuned here."""
+    Seed note: the faithful two-level clock (rules 5/48) runs THREE Operations Stages per
+    game-turn, each with its own 29.0 weather roll, so the seeded stream is reshuffled again
+    and the seeds that crack shifted with it. This guards only that the 25.14 path SURVIVES --
+    the crack rate is the owner's siege knob, not tuned here."""
     battered = False
-    for seed in (28, 30, 36):
+    for seed in (5, 10, 11):
         res = run(siege_of_tobruk(seed=seed),
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         assert res.initial.siege_rules is True

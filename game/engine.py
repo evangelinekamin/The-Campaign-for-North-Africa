@@ -66,7 +66,7 @@ class _Run:
     def emit(self, kind: EventKind, side: Side, actor: str, payload: dict,
              rng_draws: tuple[int, ...] = ()) -> None:
         e = Event(self._seq, self.state.turn, self.state.phase, side, actor,
-                  kind, payload, rng_draws)
+                  kind, payload, rng_draws, self.state.stage)   # stamp the Operations Stage (5.1)
         self._seq += 1
         self.state = apply(self.state, e)
         check(self.state)
@@ -100,34 +100,46 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             pol.debrief(r.events[cursor[side]:])
         cursor[side] = len(r.events)
 
-    while True:
-        _weather(r)
-        _logistics(r)                                   # Stage IV: stores/water expenditure + evaporation
-        _reinforcements(r)
-        _naval_convoys(r)                               # V.C.7 + V.D: convoy arrival (SYSTEM)
-        for side in (Side.AXIS, Side.ALLIED):
-            _debrief(side)                              # enemy turn + own last combat
-            r.go(Phase.MOVEMENT, side)
-            _movement(r, policies[side], side)
-            _breakdown(r, side)                         # 21.24: check vehicles that ceased moving
-            _supply_movement(r, policies[side], side)   # supply follows the army (32.3)
-            _debrief(side)                              # which moves/pincers actually formed
-            r.go(Phase.COMBAT, side)
-            _combat(r, policies, side)
-            _breakdown(r, _other(side))                 # 21.22: the enemy's retreats accrued BP too
-            _repair(r, side)                            # 22.12: the phasing side's Repair Phase
-        for side in (Side.AXIS, Side.ALLIED):
-            _truck_convoys(r, policies[side], side)     # V.J: 2nd/3rd-line truck convoys (48)
-        r.go(Phase.RECORD, Side.SYSTEM)
-        _record_control(r)
-        winner, reason = _victory(r)
-        if winner is not None:
-            break
-        if r.state.turn >= r.state.max_turns:
-            winner, reason = _final_decision(r)
-            break
-        r.emit(EventKind.TURN_ADVANCED, Side.SYSTEM, "SYSTEM", {"turn": r.state.turn + 1})
-        r.go(Phase.WEATHER, Side.SYSTEM)
+    # The real two-level clock (rules 5.1/5.2 + 48): each GAME-TURN opens with the once-
+    # per-turn Stores Expenditure Stage (48 IV), then runs THREE Operations Stages (48 V),
+    # each its own OpStage with its own weather (29.0), water (52) and CPA budget (6.16).
+    done = False
+    while not done:
+        _stores_setup(r)                                # 48 IV: Stores Expenditure + 6% base evaporation
+        for stage in (1, 2, 3):
+            r.go(Phase.WEATHER, Side.SYSTEM)
+            _weather(r)                                 # 29.0: weather is rolled per Operations Stage
+            _water_body(r)                              # 48 V.C.1: water draw + the +5% hot-evap slice
+            if stage == 1:                              # 48 V.D: arrivals land once, in the turn's 1st stage
+                _reinforcements(r)
+                _naval_convoys(r)                       # V.C.7 + V.D: convoy arrival + port regen (SYSTEM)
+            for side in (Side.AXIS, Side.ALLIED):
+                _debrief(side)                          # enemy portion + own last combat
+                r.go(Phase.MOVEMENT, side)
+                _movement(r, policies[side], side)
+                _breakdown(r, side)                     # 21.24: check vehicles that ceased moving
+                _supply_movement(r, policies[side], side)   # supply follows the army (32.3)
+                _debrief(side)                          # which moves/pincers actually formed
+                r.go(Phase.COMBAT, side)
+                _combat(r, policies, side)
+                _breakdown(r, _other(side))             # 21.22: the enemy's retreats accrued BP too
+                _repair(r, side)                        # 22.12: the phasing side's Repair Phase
+            for side in (Side.AXIS, Side.ALLIED):
+                _truck_convoys(r, policies[side], side)  # V.J: 2nd/3rd-line truck convoys (48)
+            r.go(Phase.RECORD, Side.SYSTEM)
+            _record_control(r)
+            winner, reason = _victory(r)
+            if winner is not None:
+                done = True
+                break
+            if stage == 3 and r.state.turn >= r.state.max_turns:
+                winner, reason = _final_decision(r)
+                done = True
+                break
+            if stage < 3:                               # next Operations Stage: refresh the CPA window (6.16)
+                r.emit(EventKind.STAGE_ADVANCED, Side.SYSTEM, "SYSTEM", {"stage": stage + 1})
+            else:                                       # a new game-turn re-opens at Operations Stage 1
+                r.emit(EventKind.TURN_ADVANCED, Side.SYSTEM, "SYSTEM", {"turn": r.state.turn + 1})
 
     return RunResult(r.initial, r.events, r.state, winner, reason)
 
@@ -210,54 +222,80 @@ def _port_regen(r: _Run) -> None:
                    {"port_id": p.id, "level": level})
 
 
-def _logistics(r: _Run) -> None:
-    """Stores Expenditure Stage (rule 48 Stage IV) at the top of the game-turn: both
-    sides expend STORES (51, once/game-turn) and WATER (52, per Operations Stage --
-    coincident with the game-turn under the current one-ops-stage cadence), after fuel
-    and water have evaporated (49.3/52.44). A unit draws each commodity from the dumps
-    it can trace (the 32.16 gate, reused via supply.plan_draw); an Italian battalion
-    that gets its stores also needs a Pasta Point of water (52.6). Shortfall attrition
-    for units that go unsupplied lands in SUB-STEP D.
+def _models_full_logistics(state: GameState) -> bool:
+    """True iff the scenario seeds Stores/Water anywhere -- the gate that keeps every
+    ammo/fuel-only scenario byte-identical (no Stores/Water beat, no LOGISTICS phase)."""
+    return bool(state.initial_supply.get(supply.STORES, 0)
+                or state.initial_supply.get(supply.WATER, 0))
 
-    Fires ONLY for scenarios that model full logistics (some dump seeds Stores/Water);
-    an ammo/fuel-only scenario skips it entirely and stays byte-identical."""
-    s = r.state
-    if not s.initial_supply.get(supply.STORES, 0) and not s.initial_supply.get(supply.WATER, 0):
+
+def _stores_setup(r: _Run) -> None:
+    """Stores Expenditure Stage (rule 48 IV / 51), ONCE per GAME-TURN: the 6% base fuel/water
+    evaporation (49.3, taken at the Stores stage) then both sides expend STORES (51) with the
+    51.21/51.22 shortfall attrition and the 52.6 Pasta Point. Water is NOT here -- it is drawn
+    per Operations Stage (_water_body). Fires only for full-logistics scenarios (an ammo/fuel-
+    only scenario skips it entirely)."""
+    if not _models_full_logistics(r.state):
         return
     r.go(Phase.LOGISTICS, Side.SYSTEM)
-    hot = s.weather == "hot"
-    _evaporate(r, hot)                              # 6% base + hot slice (the 49.3/52.44
-    for side in (Side.AXIS, Side.ALLIED):           # 6%/5% split rides in Step 3, with the cadence)
+    _evaporate(r, _EVAP["base"])                    # 49.3: 6% base evaporation, once per game-turn
+    for side in (Side.AXIS, Side.ALLIED):
+        _stores_stage(r, side, r.state.weather == "hot")
+
+
+def _water_body(r: _Run) -> None:
+    """Water Distribution (rule 48 V.C.1 / 52), per OPERATIONS STAGE: the +5% hot-weather
+    evaporation slice (49.3/29.34, tied to THIS stage's weather) then both sides draw WATER
+    (52) with the 52.53 shortfall attrition. Fires only for full-logistics scenarios."""
+    if not _models_full_logistics(r.state):
+        return
+    r.go(Phase.LOGISTICS, Side.SYSTEM)
+    hot = r.state.weather == "hot"
+    if hot:
+        _evaporate(r, _EVAP["hot_additional"])      # 49.3: +5% as soon as hot weather is determined
+    for side in (Side.AXIS, Side.ALLIED):
+        _water_stage(r, side, hot)
+
+
+def _logistics(r: _Run) -> None:
+    """The combined Stores+Water logistics beat for ONE Operations Stage (rule 48 IV + V.C.1),
+    charging the full 6%+5% evaporation at once. Retained as the single-call entry point the
+    logistics unit tests exercise; run() drives the faithful SPLIT cadence via _stores_setup
+    (Stores + 6% base, per game-turn) and _water_body (Water + 5% hot slice, per Operations
+    Stage). Fires only for full-logistics scenarios (ammo/fuel-only stays byte-identical)."""
+    if not _models_full_logistics(r.state):
+        return
+    r.go(Phase.LOGISTICS, Side.SYSTEM)
+    hot = r.state.weather == "hot"
+    _evaporate(r, _EVAP["base"] + (_EVAP["hot_additional"] if hot else 0))
+    for side in (Side.AXIS, Side.ALLIED):
         _stores_stage(r, side, hot)
         _water_stage(r, side, hot)
 
 
 def _stores_stage(r: _Run, side: Side, hot: bool) -> None:
-    """A side's Stores Expenditure (rule 48 Stage IV / 51, faithfully once per GAME-TURN):
-    draw STORES from the traced dumps, with the 51.21 disorganization + 51.22 attrition on a
-    sustained shortfall, and the 52.6 Pasta Point. Split out from _water_stage so the two can
-    later take their faithful cadences (stores per game-turn, water per Operations Stage). The
-    base evaporation this stage carries (49.3) is emitted once by _evaporate above, kept there
-    so both sides' stores stay interleaved with water exactly as today -> byte-identical."""
+    """A side's Stores Expenditure (rule 48 IV / 51, faithfully once per GAME-TURN): draw
+    STORES from the traced dumps, with the 51.21 disorganization + 51.22 attrition on a
+    sustained shortfall, and the 52.6 Pasta Point."""
     _stores_expenditure(r, side, hot)
 
 
 def _water_stage(r: _Run, side: Side, hot: bool) -> None:
     """A side's Water Distribution (rule 48 V.C.1 / 52, faithfully per OPERATIONS STAGE): draw
-    WATER from the traced dumps, with the 52.53 shortfall attrition. The dual of _stores_stage;
-    kept adjacent to it here (interleaved per side) so the split is byte-identical until the
-    cadence actually diverges in a later step."""
+    WATER from the traced dumps, with the 52.53 shortfall attrition. The dual of _stores_stage."""
     _water_distribution(r, side, hot)
 
 
 _EVAP = logistics_data.evaporation_percent()   # 49.3/52.44, from the rulebook
 
 
-def _evaporate(r: _Run, hot: bool) -> None:
-    """49.3 / 52.44: each game-turn, on-map Fuel and Water lose 6% (rounded down), plus
-    a further 5% in hot weather. A SINK into consumed[] (the 9% Sep40-Aug41 Commonwealth
-    container rate is deferred). Deterministic: sorted dumps, fuel then water."""
-    pct = _EVAP["base"] + (_EVAP["hot_additional"] if hot else 0)
+def _evaporate(r: _Run, pct: int) -> None:
+    """49.3 / 52.44: on-map Fuel and Water lose `pct`% (rounded down) to evaporation & spillage.
+    A SINK into consumed[] (the 9% Sep40-Aug41 Commonwealth container rate is deferred). The
+    6% base (once per game-turn) and the +5% hot slice (per Operations Stage) are charged as
+    SEPARATE calls under the faithful clock. Deterministic: sorted dumps, fuel then water."""
+    if pct <= 0:
+        return
     for sid in sorted(su.id for su in r.state.supplies):
         for commodity in (supply.FUEL, supply.WATER):
             amt = getattr(r.state.supply(sid), commodity.lower())

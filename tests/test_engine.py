@@ -180,6 +180,31 @@ def test_reinforcement_enters_on_its_arrival_turn():
     assert arrivals.get("GE-I-8-Pz") == 6 and arrivals.get("BR-4-RTR") == 4
 
 
+def test_two_level_clock_cadence():
+    # rules 5/48: each game-turn runs THREE Operations Stages. Weather (29.0) and water (52)
+    # are per Operations Stage; reinforcement/convoy arrival (48 V.D) lands ONCE, in the
+    # game-turn's first stage. This pins the split cadence the flat loop could never express.
+    from collections import Counter
+
+    from game.events import EventKind
+    from game.scenario import rommels_arrival
+    res = run(rommels_arrival(seed=1941), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    ev = res.events
+
+    arrivals = [e for e in ev if e.kind == EventKind.REINFORCEMENT_ARRIVED]
+    assert arrivals and all(n == 1 for n in Counter(e.payload["unit_id"] for e in arrivals).values())
+    assert all(e.stage == 1 for e in arrivals)                 # 48 V.D: arrivals in stage 1 only
+
+    # exactly one weather roll per Operations Stage executed; every body ends in a stage
+    # advance, a turn advance, or the terminating victory/decision (the one un-advanced stage).
+    weather = sum(1 for e in ev if e.kind == EventKind.WEATHER_ROLLED)
+    stage_adv = sum(1 for e in ev if e.kind == EventKind.STAGE_ADVANCED)
+    turn_adv = sum(1 for e in ev if e.kind == EventKind.TURN_ADVANCED)
+    assert weather == stage_adv + turn_adv + 1
+    assert all(e.payload["stage"] in (2, 3) for e in ev if e.kind == EventKind.STAGE_ADVANCED)
+    assert res.final.stage in (1, 2, 3)
+
+
 def test_surrender_at_collapsed_cohesion():
     # the 17.4 row for Cohesion <= -17 is all-Surrender; a stack there surrenders
     # (17.25). A Basic Morale of +1 or better normally shrugs the SURR off (17.26),
