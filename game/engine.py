@@ -361,7 +361,7 @@ def _movement(r: _Run, policy: Policy, side: Side) -> None:
             continue
         # Reachability is computed against the phase-start roster so a unit's legal
         # set doesn't depend on the order earlier units moved (matches observe()).
-        reach = tactics.reachable_for(r.state, u, enemy_zoc, enemy_occupied, roster)
+        reach, prev = tactics.reachable_for_prev(r.state, u, enemy_zoc, enemy_occupied, roster)
         if order.to == u.hex or order.to not in reach:
             _reject(r, side, actor, order,
                     "destination unreachable within CPA or blocked by ZOC")
@@ -381,9 +381,12 @@ def _movement(r: _Run, policy: Policy, side: Side) -> None:
             for sid, qty in draws:
                 r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
                        {"supply_id": sid, "commodity": supply.FUEL, "qty": qty, "unit_id": u.id})
-        r.emit(EventKind.UNIT_MOVED, side, actor,
-               {"unit_id": u.id, "from": list(u.hex), "to": list(order.to),
-                "cp_spent": reach[order.to]})
+        payload = {"unit_id": u.id, "from": list(u.hex), "to": list(order.to),
+                   "cp_spent": reach[order.to]}
+        bp = tactics.bp_for_move(r.state, u, prev, order.to)     # 21.21 accrual (0 for non-vehicles)
+        if bp:
+            payload["bp"] = bp
+        r.emit(EventKind.UNIT_MOVED, side, actor, payload)
 
 
 def _reject(r: _Run, side: Side, actor: str, order: MoveOrder, reason: str,
@@ -591,8 +594,8 @@ def _retreat_before_assault(r: _Run, policy: Policy, side: Side, phasing: Side,
                     "cohesion -26 or worse may not retreat before assault (13.1)",
                     order_kind="retreat_before_assault")
             continue
-        reach = _rba_cp_cap(r.state, u, tactics.reachable_for(
-            r.state, u, enemy_zoc, enemy_occupied, roster))
+        reach_all, prev = tactics.reachable_for_prev(r.state, u, enemy_zoc, enemy_occupied, roster)
+        reach = _rba_cp_cap(r.state, u, reach_all)
         if order.to == u.hex or order.to not in reach:
             _reject(r, side, actor, order,
                     "destination unreachable within CPA or blocked by ZOC",
@@ -613,9 +616,12 @@ def _retreat_before_assault(r: _Run, policy: Policy, side: Side, phasing: Side,
             for sid, qty in draws:
                 r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
                        {"supply_id": sid, "commodity": supply.FUEL, "qty": qty, "unit_id": u.id})
-        r.emit(EventKind.UNIT_MOVED, side, actor,        # 13.21: retreat-before-assault IS movement
-               {"unit_id": u.id, "from": list(u.hex), "to": list(order.to),
-                "cp_spent": reach[order.to]})
+        payload = {"unit_id": u.id, "from": list(u.hex), "to": list(order.to),
+                   "cp_spent": reach[order.to]}
+        bp = tactics.bp_for_move(r.state, u, prev, order.to)     # 21.22: reaction/retreat accrues BP
+        if bp:
+            payload["bp"] = bp
+        r.emit(EventKind.UNIT_MOVED, side, actor, payload)   # 13.21: retreat-before-assault IS movement
 
 
 def _rba_cp_cap(state: GameState, unit, reach: dict) -> dict:
@@ -962,6 +968,7 @@ def _retreat(r: _Run, atk_side: Side, actor: str, defender_ids: list[str],
         return stacking.within_hex_limit(here + survivors, r.state.terrain.terrain[nb])
 
     cur = survivors[0].hex
+    path = [cur]                                      # the hexes crossed, for Breakdown Points
     done = 0
     for _ in range(n):
         cands = [nb for nb in neighbors(cur)
@@ -976,12 +983,16 @@ def _retreat(r: _Run, atk_side: Side, actor: str, defender_ids: list[str],
             sup = min((distance(nb, s) for s in supplies), default=0)
             return (nb in occupied, sup, -distance(nb, attacker_hex), nb)
         cur = min(cands, key=_key)
+        path.append(cur)
         done += 1
 
     if done > 0:
         for u in survivors:
-            r.emit(EventKind.UNIT_RETREATED, atk_side, actor,
-                   {"unit_id": u.id, "from": list(u.hex), "to": list(cur), "hexes": done})
+            payload = {"unit_id": u.id, "from": list(u.hex), "to": list(cur), "hexes": done}
+            bp = tactics.breakdown_points_over(r.state, u, path)    # 21.22 retreat accrues BP
+            if bp:
+                payload["bp"] = bp
+            r.emit(EventKind.UNIT_RETREATED, atk_side, actor, payload)
     for _ in range(n - done):                                   # 15.82: 10% per un-retreated hex
         for u in survivors:
             cur_u = r.state.unit(u.id)

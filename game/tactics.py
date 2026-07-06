@@ -6,7 +6,7 @@ engine<->policy import cycle and guarantees decider and validator agree.
 """
 from __future__ import annotations
 
-from . import zoc
+from . import movement, zoc
 from .events import Side
 from .hexmap import Coord
 from .state import GameState, Unit
@@ -40,3 +40,34 @@ def reachable_for(state: GameState, unit: Unit, enemy_zoc: frozenset,
     return zoc.reachable_with_zoc(
         state.terrain, unit.hex, budget, unit.mobility,
         enemy_zoc=enemy_zoc, friendly_negators=negators, enemy_occupied=enemy_occupied)
+
+
+def reachable_for_prev(state: GameState, unit: Unit, enemy_zoc: frozenset,
+                       enemy_occupied: frozenset,
+                       roster: tuple | None = None) -> tuple[dict[Coord, float], dict]:
+    """`reachable_for`, additionally returning the Dijkstra predecessor map so a mover's
+    actual ZOC-legal path can be reconstructed for Breakdown-Point accrual (21.21)."""
+    budget = max(0.0, unit.cpa + state.move_modifier - unit.cp_used)
+    src = roster if roster is not None else state.living(unit.side)
+    negators = frozenset(u.hex for u in src if u.is_combat and u.id != unit.id)  # §10.26
+    return zoc.reachable_with_zoc_prev(
+        state.terrain, unit.hex, budget, unit.mobility,
+        enemy_zoc=enemy_zoc, friendly_negators=negators, enemy_occupied=enemy_occupied)
+
+
+def breakdown_points_over(state: GameState, unit: Unit, path: list[Coord]) -> float:
+    """Total Breakdown Points a vehicle accrues traversing `path` (rule 21.21/21.23),
+    under the current weather. Zero for a non-vehicle (21.11), so a bp of 0 is omitted
+    from the move event and non-vehicle scenarios stay byte-identical."""
+    if not unit.breaks_down or len(path) < 2:
+        return 0.0
+    return sum(movement.breakdown_points(state.terrain, a, b, unit.mobility, state.weather)
+               for a, b in zip(path, path[1:]))
+
+
+def bp_for_move(state: GameState, unit: Unit, prev: dict, dst: Coord) -> float:
+    """Breakdown Points for a move to `dst`, reconstructing the min-CP path from a
+    predecessor map (reachable_for_prev). The engine passes this straight into the
+    UNIT_MOVED faucet."""
+    path = movement.reconstruct_path(prev, unit.hex, dst)
+    return breakdown_points_over(state, unit, path)

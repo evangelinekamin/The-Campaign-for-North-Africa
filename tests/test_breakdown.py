@@ -131,10 +131,11 @@ from game.state import StepRecord, Unit
 
 
 def _tank(broken: int = 0, strength: int = 10, **kw) -> Unit:
-    return Unit("T1", Side.AXIS, (0, 0), (StepRecord("tank", strength),),
-                mobility=Mobility.VEHICLE, cpa=20, stacking_points=1,
-                oca=4, dca=3, barrage=0, anti_armor=5, armor_protection=6,
-                is_tank=True, broken_down=broken, **kw)
+    fields = dict(mobility=Mobility.VEHICLE, cpa=20, stacking_points=1,
+                  oca=4, dca=3, barrage=0, anti_armor=5, armor_protection=6,
+                  is_tank=True, broken_down=broken)
+    fields.update(kw)
+    return Unit("T1", Side.AXIS, (0, 0), (StepRecord("tank", strength),), **fields)
 
 
 def test_effective_strength_deducts_broken():
@@ -181,3 +182,73 @@ def test_bar_sourced_from_unit_stats_in_oob():
     assert by_bar                                                # tanks exist and carry a BAR
     # Italian CV33 = +2R, German panzers = 0 (post-gate); every gun carries none.
     assert all(u.bar == 0 for u in units if u.is_gun)
+
+
+# --- Step 3: BP accrual into the move faucet --------------------------------
+
+from game.apply import apply, fold
+from game.events import Event, EventKind, Phase
+
+
+def _state_with(units, *, weather="clear", tmap=None, turn=1):
+    from game.movement import TerrainMap
+    from game.state import GameState, VP
+    tmap = tmap or TerrainMap(terrain={(q, 0): Terrain.DESERT for q in range(6)})
+    return GameState(turn=turn, max_turns=9, phase=Phase.MOVEMENT, active_side=Side.AXIS,
+                     seed=1, weather=weather, move_modifier=0, vp=VP(), terrain=tmap,
+                     control={}, units=tuple(units), target_hex=(5, 0), supplies=(),
+                     consumed={}, initial_supply={})
+
+
+def _ev(kind, payload):
+    return Event(0, 1, Phase.MOVEMENT, Side.AXIS, "AXIS/Front", kind, payload)
+
+
+def test_unit_moved_accrues_bp():
+    st = _state_with([_tank()])
+    st2 = apply(st, _ev(EventKind.UNIT_MOVED,
+                        {"unit_id": "T1", "from": [0, 0], "to": [1, 0], "cp_spent": 2, "bp": 24.0}))
+    assert st2.unit("T1").bp_accumulated == 24.0
+    assert st2.unit("T1").hex == (1, 0)
+
+
+def test_retreat_accrues_into_same_accumulator():
+    st = _state_with([_tank(bp_accumulated=24.0)])
+    st2 = apply(st, _ev(EventKind.UNIT_RETREATED,
+                        {"unit_id": "T1", "from": [1, 0], "to": [0, 0], "hexes": 1, "bp": 10.0}))
+    assert st2.unit("T1").bp_accumulated == 34.0        # 21.25 cumulative across portions
+
+
+def test_move_without_bp_is_byte_identical():
+    st = _state_with([_tank()])
+    st2 = apply(st, _ev(EventKind.UNIT_MOVED,
+                        {"unit_id": "T1", "from": [0, 0], "to": [1, 0], "cp_spent": 2}))
+    assert st2.unit("T1").bp_accumulated == 0.0         # omitted bp -> unchanged
+
+
+def test_turn_advanced_resets_bp_but_not_broken():
+    st = _state_with([_tank(broken=3, bp_accumulated=40.0, bp_checked_column=5)])
+    st2 = apply(st, Event(0, 1, Phase.RECORD, Side.SYSTEM, "SYSTEM",
+                          EventKind.TURN_ADVANCED, {"turn": 2}))
+    u = st2.unit("T1")
+    assert u.bp_accumulated == 0.0 and u.bp_checked_column == -1   # OpStage boundary (21.25)
+    assert u.broken_down == 3                                      # persists (21.44)
+
+
+def test_engine_bp_matches_hand_computed_desert_dash():
+    # A tank dashing four hexes of open desert accrues 4 x 24 BP in its UNIT_MOVED.
+    from game import tactics
+    st = _state_with([_tank(cpa=99)])
+    u = st.unit("T1")
+    reach, prev = tactics.reachable_for_prev(st, u, frozenset(), frozenset(), st.living(Side.AXIS))
+    bp = tactics.bp_for_move(st, u, prev, (4, 0))
+    assert bp == 4 * 24
+
+
+def test_infantry_move_emits_no_bp():
+    from game import tactics
+    inf = Unit("I1", Side.AXIS, (0, 0), (StepRecord("inf", 6),), mobility=Mobility.FOOT,
+               cpa=10, stacking_points=1, oca=3, dca=3)
+    st = _state_with([inf])
+    reach, prev = tactics.reachable_for_prev(st, inf, frozenset(), frozenset(), st.living(Side.AXIS))
+    assert tactics.bp_for_move(st, inf, prev, (3, 0)) == 0.0

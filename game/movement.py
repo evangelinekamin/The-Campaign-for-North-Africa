@@ -151,7 +151,25 @@ def reachable(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
       - passable(here, nb): if False, that specific step is forbidden
         (rule 10.24 "no move from one enemy-controlled hex into another").
     start_cost seeds the start hex (e.g. a break-off cost paid to leave a ZOC)."""
+    return _search(tmap, start, budget, mobility, blocked=blocked, terminal=terminal,
+                   passable=passable, start_cost=start_cost)[0]
+
+
+def reachable_prev(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
+                   *, blocked: frozenset = frozenset(), terminal=None, passable=None,
+                   start_cost: float = 0.0) -> tuple[dict[Coord, float], dict[Coord, Coord]]:
+    """`reachable`, additionally returning the predecessor map of the min-CP Dijkstra
+    tree so the actual step-by-step path to a reached hex can be reconstructed (the
+    Breakdown-Point accrual needs the hexes and hexsides the mover crossed, not just
+    the destination and total cost)."""
+    return _search(tmap, start, budget, mobility, blocked=blocked, terminal=terminal,
+                   passable=passable, start_cost=start_cost)
+
+
+def _search(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
+            *, blocked, terminal, passable, start_cost) -> tuple[dict, dict]:
     best: dict[Coord, float] = {start: start_cost}
+    prev: dict[Coord, Coord] = {}
     pq: list[tuple[float, Coord]] = [(start_cost, start)]
     while pq:
         cost, here = heapq.heappop(pq)
@@ -170,8 +188,24 @@ def reachable(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
             nc = cost + step
             if nc <= budget and nc < best.get(nb, float("inf")):
                 best[nb] = nc
+                prev[nb] = here
                 heapq.heappush(pq, (nc, nb))
-    return best
+    return best, prev
+
+
+def reconstruct_path(prev: dict[Coord, Coord], start: Coord, dst: Coord) -> list[Coord]:
+    """The min-CP path start..dst from a predecessor map (movement.reachable_prev /
+    zoc.reachable_with_zoc_prev), or [] if dst was not reached."""
+    if dst == start:
+        return [start]
+    path = [dst]
+    while path[-1] != start:
+        step = prev.get(path[-1])
+        if step is None:
+            return []
+        path.append(step)
+    path.reverse()
+    return path
 
 
 def _mot(mobility: Mobility) -> bool:

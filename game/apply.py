@@ -56,13 +56,15 @@ def apply(state: GameState, event: Event) -> GameState:
         return replace(state, weather=p["weather"], move_modifier=p["move_modifier"])
 
     if k == EventKind.UNIT_MOVED:
-        u = state.unit(p["unit_id"])
-        return state.with_unit(
-            replace(u, hex=tuple(p["to"]), cp_used=u.cp_used + p["cp_spent"]))
+        u = state.unit(p["unit_id"])                   # 21.25: BP accrue into the move faucet
+        return state.with_unit(replace(u, hex=tuple(p["to"]),
+                                       cp_used=u.cp_used + p["cp_spent"],
+                                       bp_accumulated=u.bp_accumulated + p.get("bp", 0.0)))
 
     if k == EventKind.UNIT_RETREATED:
-        u = state.unit(p["unit_id"])
-        return state.with_unit(replace(u, hex=tuple(p["to"])))
+        u = state.unit(p["unit_id"])                   # 21.22: retreat also accrues BP
+        return state.with_unit(replace(u, hex=tuple(p["to"]),
+                                       bp_accumulated=u.bp_accumulated + p.get("bp", 0.0)))
 
     if k == EventKind.SUPPLY_MOVED:
         su = state.supply(p["supply_id"])
@@ -160,8 +162,11 @@ def apply(state: GameState, event: Event) -> GameState:
         return replace(state, phase=Phase(p["phase"]), active_side=Side(p["active_side"]))
 
     if k == EventKind.TURN_ADVANCED:
-        # New OpStage: every unit's CPA refreshes (rule 6.16 — CP do not carry over).
-        units = tuple(replace(u, cp_used=0.0) for u in state.units)
+        # New OpStage: every unit's CPA refreshes (rule 6.16 — CP do not carry over) and
+        # the Breakdown-Point accumulator + 21.26 re-check gate reset (21.25: BP are
+        # cumulative WITHIN an Operations Stage only). broken_down persists (21.44).
+        units = tuple(replace(u, cp_used=0.0, bp_accumulated=0.0, bp_checked_column=-1)
+                      for u in state.units)
         return replace(state, turn=p["turn"], units=units)
 
     raise ValueError(f"unhandled event kind {k}")
