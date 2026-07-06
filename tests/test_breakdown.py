@@ -252,3 +252,86 @@ def test_infantry_move_emits_no_bp():
     st = _state_with([inf])
     reach, prev = tactics.reachable_for_prev(st, inf, frozenset(), frozenset(), st.living(Side.AXIS))
     assert tactics.bp_for_move(st, inf, prev, (3, 0)) == 0.0
+
+
+# --- Step 4: the breakdown check + the 21.38 table --------------------------
+
+_ROLLS = [d1 * 10 + d2 for d1 in range(1, 7) for d2 in range(1, 7)]   # 36 legal 2d6
+
+
+def test_21_38_table_partitions_every_column():
+    for col in range(ct._N_BP_COLS):
+        hits = {roll: [pct for pct, cells in ct._BREAKDOWN if roll in ct.expand(cells[col])]
+                for roll in _ROLLS}
+        for roll, pcts in hits.items():
+            assert len(pcts) == 1, (col, roll, pcts)     # exactly one result per roll
+
+
+def test_21_38_table_matches_chart_of_record():
+    chart = _BRK["breakdown_table_21_38"]["cells_by_pct"]
+    for pct, cells in ct._BREAKDOWN:
+        want = [("" if c == "-" else c) for c in chart[str(pct)]]
+        assert cells == want, pct
+
+
+def test_21_34_worked_example_trucks_and_crusaders():
+    # The rulebook's own 21.34 example, at 35 BP in Hot weather:
+    #   Trucks (BAR 2L): 31-40 col shifted -2+1 = -1 -> 21-30 col; roll 33 -> 10%.
+    assert ct.breakdown_result(35, -2, 1, 33) == 10
+    #   Crusader I (BAR 1R): 31-40 col shifted +1+1 = +2 -> 51-60 col; roll 61 -> 33%.
+    assert ct.breakdown_result(35, 1, 1, 61) == 33
+
+
+def test_21_33_clamps():
+    # Adjusted below the 4-10 column -> no breakdown (a reliable truck on light wear).
+    assert ct.breakdown_result(5, -2, 0, 66) == 0
+    # 71+ is the ceiling; a huge BAR cannot push past it.
+    assert ct.breakdown_result(200, 2, 1, 11) == ct.breakdown_result(200, 0, 0, 11)
+
+
+def test_bp_bands_round_up():
+    assert ct.breakdown_band(20.5) == 3          # 21.31: 20.5 -> 21 -> 21-30 band
+    assert ct.breakdown_band(3) == 0 and ct.breakdown_band(4) == 1
+    assert ct.breakdown_band(71) == 8 and ct.breakdown_band(999) == 8
+
+
+def test_hot_weather_shifts_one_column_right():
+    assert ct.weather_breakdown_shift("hot") == 1
+    assert ct.weather_breakdown_shift("sandstorm") == 1
+    assert ct.weather_breakdown_shift("clear") == 0
+
+
+def _run_breakdown(tank, weather="clear", seed=1):
+    from game.engine import _Run, _breakdown
+    st = _state_with([tank], weather=weather)
+    r = _Run(st)
+    r.state = st
+    _breakdown(r, Side.AXIS)
+    return r
+
+
+def test_engine_strands_tanks_in_the_desert():
+    r = _run_breakdown(_tank(strength=20, bp_accumulated=71.0))   # 71+ column: always > 0%
+    checked = [e for e in r.events if e.kind == EventKind.BREAKDOWN_CHECKED]
+    assert len(checked) == 1
+    u = r.state.unit("T1")
+    assert u.broken_down > 0                                      # armor thins without a shot
+    assert u.bp_checked_column == checked[0].payload["column"]    # 21.26 gate advanced
+
+
+def test_engine_21_27_floor_skips_low_bp():
+    r = _run_breakdown(_tank(bp_accumulated=3.0))                 # not > 3
+    assert not r.events
+
+
+def test_engine_21_26_gate_no_recheck_in_same_column():
+    already = _tank(strength=20, bp_accumulated=71.0, bp_checked_column=8)
+    r = _run_breakdown(already)
+    assert not r.events                                          # same 71+ column -> no re-check
+
+
+def test_engine_no_breakdown_for_non_vehicles():
+    inf = Unit("I1", Side.AXIS, (0, 0), (StepRecord("inf", 6),), mobility=Mobility.MOTORIZED,
+               cpa=10, stacking_points=1, oca=3, dca=3, bp_accumulated=99.0)
+    r = _run_breakdown(inf)
+    assert not r.events                                          # inherent transport (21.11)

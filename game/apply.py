@@ -124,9 +124,29 @@ def apply(state: GameState, event: Event) -> GameState:
         dst = replace(dst, **{attr: getattr(dst, attr) + qty})
         return state.with_supply(src).with_supply(dst)
 
+    if k == EventKind.BREAKDOWN_CHECKED:
+        # 21.26: record the column just checked so the unit re-checks only when it later
+        # stops in a HIGHER column (even a 0% check moves the gate). Folds nothing else.
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, bp_checked_column=p["column"]))
+
+    if k == EventKind.VEHICLE_BROKE_DOWN:
+        # 21.44: move TOE from operational to broken-down. Total strength is unchanged
+        # (not a loss), so supply conservation and the step counts are untouched.
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, broken_down=u.broken_down + p["amount"]))
+
+    if k == EventKind.VEHICLE_REPAIRED:
+        # 22.5: return repaired TOE to the operational pool (the dual of the breakdown).
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, broken_down=u.broken_down - p["amount"]))
+
     if k == EventKind.STEP_LOST:
         u = state.unit(p["unit_id"])
-        return state.with_unit(replace(u, steps=_apply_step_loss(u.steps, p["amount"])))
+        u2 = replace(u, steps=_apply_step_loss(u.steps, p["amount"]))
+        if u2.broken_down > u2.strength:               # a shrinking unit loses broken hulks too
+            u2 = replace(u2, broken_down=u2.strength)
+        return state.with_unit(u2)
 
     if k == EventKind.COHESION_CHANGED:
         u = state.unit(p["unit_id"])

@@ -15,6 +15,8 @@ moves the differential left (toward the defender) or right (toward the attacker)
 """
 from __future__ import annotations
 
+import math
+
 from .terrain import Hexside, Terrain
 
 # Column order (index 0..17) = the differential headers of the CRT.
@@ -395,6 +397,63 @@ HEX_BARRAGE_SHIFT: dict[Terrain, int] = {
 # Barrage fortification column-band shifts (8.37): Level 1 = L1, Levels 2/3 = L2
 # (matching the 12.33 worked example: Level Two Fortification = two bands left).
 FORT_BARRAGE_SHIFT: dict[int, int] = {1: -1, 2: -2, 3: -2}
+
+
+# [21.38] BREAKDOWN TABLE. Columns 0..8 = the Accumulated-Breakdown-Point bands
+# (0-3, 4-10, 11-20, 21-30, 31-40, 41-50, 51-60, 61-70, 71+); each cell is a
+# sequential-2d6 range (11..66). Transcribed from data/breakdown_rates.json (the
+# chart-of-record, RE-READ off PDF page 102 to recover the col 41-50 / 75%-row 66 the
+# OCR dropped) and bound to it by test_breakdown; every column partitions all 36 rolls.
+_BREAKDOWN: list[tuple[int, list[str]]] = [
+    (0,  ["11-66", "11-42", "11-32", "11-26", "11-23", "11-16", "11-14", "",      ""]),
+    (10, ["",      "43-64", "33-62", "31-55", "24-53", "21-46", "15-42", "11-33", "11-25"]),
+    (25, ["",      "65",    "63-64", "56-62", "54-61", "51-56", "43-54", "34-52", "26-43"]),
+    (33, ["",      "66",    "65",    "63-65", "62-64", "61-63", "55-63", "53-62", "44-55"]),
+    (50, ["",      "",      "66",    "66",    "65-66", "64-65", "64-65", "63-64", "56-63"]),
+    (75, ["",      "",      "",      "",      "",      "66",    "66",    "65-66", "64-66"]),
+]
+_N_BP_COLS = 9
+
+# Upper bound of each Accumulated-Breakdown-Point band (21.31: fractions round up).
+_BP_BAND_HI = (3, 10, 20, 30, 40, 50, 60, 70)
+
+
+def breakdown_band(bp: float) -> int:
+    """The 21.38 column index (0..8) for `bp` accumulated Breakdown Points, before any
+    BAR / weather adjustment. Fractions round up (21.31: 20.5 -> 21 -> the 21-30 band)."""
+    n = math.ceil(bp)
+    for idx, hi in enumerate(_BP_BAND_HI):
+        if n <= hi:
+            return idx
+    return _N_BP_COLS - 1                     # 71+
+
+
+def breakdown_column(bp: float, bar: int, weather_shift: int) -> int:
+    """The adjusted 21.38 column (21.32: BAR + Weather are cumulative), UNCLAMPED so the
+    21.26 re-check gate can tell when a stopping unit has climbed into a higher column."""
+    return breakdown_band(bp) + bar + weather_shift
+
+
+def breakdown_result(bp: float, bar: int, weather_shift: int, roll: int) -> int:
+    """Rule 21.38: the percentage of a vehicle type's TOE that breaks down, from its
+    accumulated Breakdown Points adjusted by BAR + Weather (21.32) on a sequential 2d6.
+    Per 21.33 a column adjusted below the 4-10 column suffers no Breakdown, and 71+ is
+    the ceiling."""
+    col = breakdown_column(bp, bar, weather_shift)
+    if col < 1:                               # 21.33: below the 4-10 column -> no breakdown
+        return 0
+    col = min(_N_BP_COLS - 1, col)            # 21.33: cannot adjust above 71+
+    for pct, cells in _BREAKDOWN:
+        if roll in expand(cells[col]):
+            return pct
+    return 0
+
+
+def weather_breakdown_shift(weather: str) -> int:
+    """Rule 21.37: Hot Weather and Sandstorms each shift the Breakdown column one higher
+    (1R). Keyed off the weather label; Rainstorm acts on Breakdown Points via road-as-
+    track (movement.breakdown_points), not as a column shift."""
+    return 1 if weather in ("hot", "sandstorm") else 0
 
 
 def barrage_terrain_shift(terrain: Terrain, fort_level: int, target_class: str) -> int:

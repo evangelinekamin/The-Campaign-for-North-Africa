@@ -93,6 +93,20 @@ class EventKind(str, Enum):
     # rail network (both dumps rail-connected; qty <= 1500 tons/OpStage of ONE commodity,
     # 54.33) -- conservation holds trivially (a single transfer, grand total unchanged).
     RAIL_HAULED = "RAIL_HAULED"
+    # Vehicle breakdown (rule 21, the desert grinding armor down). BREAKDOWN_CHECKED
+    # {unit_id, column, bar, weather_shift, pct} with rng_draws=(d1,d2) is the legible
+    # audit beat of a stopping vehicle's 21.38 roll; its fold sets bp_checked_column so
+    # the 21.26 re-check gate persists across both players' portions of the OpStage (a
+    # check with 0% still moves the gate, 21.26). VEHICLE_BROKE_DOWN {unit_id, amount}
+    # moves `amount` TOE from the operational pool into Unit.broken_down (NOT a loss --
+    # broken vehicles still exist, immobile, until repaired), so total strength and
+    # supply conservation are untouched.
+    BREAKDOWN_CHECKED = "BREAKDOWN_CHECKED"
+    VEHICLE_BROKE_DOWN = "VEHICLE_BROKE_DOWN"
+    # Vehicle repair (rule 22, the counter-beat). VEHICLE_REPAIRED {unit_id, amount}
+    # returns `amount` broken-down TOE to the operational pool (the dual of
+    # VEHICLE_BROKE_DOWN); the Fuel it costs (22.15) rides the existing SUPPLY_CONSUMED.
+    VEHICLE_REPAIRED = "VEHICLE_REPAIRED"
     BARRAGE_RESOLVED = "BARRAGE_RESOLVED"
     ANTI_ARMOR_RESOLVED = "ANTI_ARMOR_RESOLVED"
     COMBAT_RESOLVED = "COMBAT_RESOLVED"

@@ -109,10 +109,12 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             _debrief(side)                              # enemy turn + own last combat
             r.go(Phase.MOVEMENT, side)
             _movement(r, policies[side], side)
+            _breakdown(r, side)                         # 21.24: check vehicles that ceased moving
             _supply_movement(r, policies[side], side)   # supply follows the army (32.3)
             _debrief(side)                              # which moves/pincers actually formed
             r.go(Phase.COMBAT, side)
             _combat(r, policies, side)
+            _breakdown(r, _other(side))                 # 21.22: the enemy's retreats accrued BP too
         for side in (Side.AXIS, Side.ALLIED):
             _truck_convoys(r, policies[side], side)     # V.J: 2nd/3rd-line truck convoys (48)
         r.go(Phase.RECORD, Side.SYSTEM)
@@ -387,6 +389,43 @@ def _movement(r: _Run, policy: Policy, side: Side) -> None:
         if bp:
             payload["bp"] = bp
         r.emit(EventKind.UNIT_MOVED, side, actor, payload)
+
+
+def _broken_count(pct: int, effective: int) -> int:
+    """TOE Strength Points that break down: `pct` of the operational vehicles, fractions
+    rounded UP (21.35), capped at the operational count. Exception (21.35): a unit of a
+    single TOE point ignores a 10% result."""
+    if pct <= 0 or effective <= 0:
+        return 0
+    if effective == 1 and pct == 10:
+        return 0
+    return min(effective, math.ceil(pct / 100 * effective))
+
+
+def _breakdown(r: _Run, side: Side) -> None:
+    """Breakdown check (rule 21.24): every vehicle unit of `side` that has ceased moving
+    with more than three accumulated Breakdown Points (21.27) rolls on the 21.38 table,
+    but only if it has climbed into a HIGHER column than its last check this OpStage
+    (21.26 -- the geometric moving/stopping penalty). The rolled percentage of its
+    operational TOE breaks down (21.35 rounding), moving into Unit.broken_down. Inert on
+    non-vehicle scenarios (no vehicle accrues BP -> no roll -> byte-identical)."""
+    actor = f"{side.value}/Front"
+    wshift = combat_tables.weather_breakdown_shift(r.state.weather)          # 21.37
+    for u in sorted(r.state.living(side), key=lambda u: u.id):
+        if not u.breaks_down or u.bp_accumulated <= 3:                       # 21.11 / 21.27
+            continue
+        col = combat_tables.breakdown_column(u.bp_accumulated, u.bar, wshift)
+        if col <= u.bp_checked_column:                                       # 21.26 gate
+            continue
+        d1, d2 = r.d6(), r.d6()
+        pct = combat_tables.breakdown_result(u.bp_accumulated, u.bar, wshift, d1 * 10 + d2)
+        broken = _broken_count(pct, u.effective_strength)
+        r.emit(EventKind.BREAKDOWN_CHECKED, side, actor,
+               {"unit_id": u.id, "column": col, "bar": u.bar,
+                "weather_shift": wshift, "pct": pct}, rng_draws=(d1, d2))
+        if broken > 0:
+            r.emit(EventKind.VEHICLE_BROKE_DOWN, side, actor,
+                   {"unit_id": u.id, "amount": broken})
 
 
 def _reject(r: _Run, side: Side, actor: str, order: MoveOrder, reason: str,
