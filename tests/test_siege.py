@@ -39,7 +39,7 @@ def _siege_state(*, siege: bool, fort: int = 2, atk_barrage: int = 25,
     dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=200, fuel=60)
     return GameState(
         turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS, seed=3,
-        weather="clear", move_modifier=0, vp=VP(),
+        weather="clear", vp=VP(),
         terrain=TerrainMap(terrain=terr, fortifications={(1, 0): fort}),
         control={}, units=(arty, gar), target_hex=(1, 0), supplies=(dump,),
         consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 200, "FUEL": 60},
@@ -127,7 +127,7 @@ def _assault_state(fort_levels: dict) -> GameState:
            SupplyUnit("DL", Side.ALLIED, (1, 0), ammo=40, fuel=60))
     return GameState(
         turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS, seed=11,
-        weather="clear", move_modifier=0, vp=VP(),
+        weather="clear", vp=VP(),
         terrain=TerrainMap(terrain=terr, fortifications={(1, 0): 2}),
         control={}, units=(atk, dfd), target_hex=(1, 0), supplies=sup,
         consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 80, "FUEL": 120},

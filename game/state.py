@@ -223,8 +223,7 @@ class GameState:
     phase: Phase
     active_side: Side
     seed: int
-    weather: str
-    move_modifier: int             # this turn's weather effect on effective CPA (placeholder)
+    weather: str                   # rule-29 label: normal | hot | sandstorm | rainstorm
     vp: VP
     terrain: TerrainMap            # static map (terrain + hexsides + roads/tracks)
     control: dict                  # Coord -> Control (dynamic)
@@ -252,6 +251,11 @@ class GameState:
     # from rear dumps. Default () keeps every truck-less scenario byte-identical -- the V.J
     # Truck Convoy Phase fires only when a side fields formations (game.engine._truck_convoys).
     trucks: tuple[TruckFormation, ...] = ()
+    # Map sections (A-E) this scenario is played on (rule 29.1 / 29.7). Foul weather
+    # from the 29.7 Foul Weather Location Table only reaches the theater when it lands
+    # on one of these sections; an empty set means "unlocalized" (a synthetic map), so
+    # foul weather is not filtered out. Purely informs weather determination.
+    map_sections: frozenset = frozenset()
 
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:

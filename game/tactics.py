@@ -34,12 +34,13 @@ def reachable_for(state: GameState, unit: Unit, enemy_zoc: frozenset,
     is computed against the phase-start board -- otherwise ZOC-negation shifts as
     earlier units move and the observation ends up offering hexes the engine then
     rejects (the observation/validation must agree on ONE snapshot)."""
-    budget = max(0.0, unit.cpa + state.move_modifier - unit.cp_used)
+    budget = max(0.0, unit.cpa - unit.cp_used)
     src = roster if roster is not None else state.living(unit.side)
     negators = frozenset(u.hex for u in src if u.is_combat and u.id != unit.id)  # §10.26
     return zoc.reachable_with_zoc(
         state.terrain, unit.hex, budget, unit.mobility,
-        enemy_zoc=enemy_zoc, friendly_negators=negators, enemy_occupied=enemy_occupied)
+        enemy_zoc=enemy_zoc, friendly_negators=negators, enemy_occupied=enemy_occupied,
+        weather=state.weather)
 
 
 def reachable_for_prev(state: GameState, unit: Unit, enemy_zoc: frozenset,
@@ -47,12 +48,13 @@ def reachable_for_prev(state: GameState, unit: Unit, enemy_zoc: frozenset,
                        roster: tuple | None = None) -> tuple[dict[Coord, float], dict]:
     """`reachable_for`, additionally returning the Dijkstra predecessor map so a mover's
     actual ZOC-legal path can be reconstructed for Breakdown-Point accrual (21.21)."""
-    budget = max(0.0, unit.cpa + state.move_modifier - unit.cp_used)
+    budget = max(0.0, unit.cpa - unit.cp_used)
     src = roster if roster is not None else state.living(unit.side)
     negators = frozenset(u.hex for u in src if u.is_combat and u.id != unit.id)  # §10.26
     return zoc.reachable_with_zoc_prev(
         state.terrain, unit.hex, budget, unit.mobility,
-        enemy_zoc=enemy_zoc, friendly_negators=negators, enemy_occupied=enemy_occupied)
+        enemy_zoc=enemy_zoc, friendly_negators=negators, enemy_occupied=enemy_occupied,
+        weather=state.weather)
 
 
 def breakdown_points_over(state: GameState, unit: Unit, path: list[Coord]) -> float:

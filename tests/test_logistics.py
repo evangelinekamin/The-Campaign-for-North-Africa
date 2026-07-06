@@ -31,7 +31,7 @@ def _state(units=(), supplies=(), *, weather="clear") -> GameState:
     initial = {c: sum(getattr(s, c.lower()) for s in supplies) for c in FOUR}
     return GameState(
         turn=1, max_turns=4, phase=Phase.WEATHER, active_side=Side.SYSTEM, seed=1,
-        weather=weather, move_modifier=0, vp=VP(),
+        weather=weather, vp=VP(),
         terrain=TerrainMap(terrain=terr, fortifications={}),
         control={}, units=tuple(units), target_hex=(0, 0), supplies=tuple(supplies),
         consumed={c: 0 for c in FOUR}, initial_supply=initial)

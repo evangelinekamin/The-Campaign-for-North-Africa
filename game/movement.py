@@ -41,9 +41,26 @@ class TerrainMap:
         return coord in self.terrain
 
 
-def step_cost(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobility) -> float | None:
-    """CP to move from src into the adjacent hex dst, or None if impossible
-    (off-map, non-adjacent, or a prohibited terrain/hexside for this mobility)."""
+def rainstorm(weather: str) -> bool:
+    """29.55/29.56: during a Rainstorm a Road is treated as a Track (for both CP and
+    Breakdown Points) and wadi hexsides become uncrossable except by Road. Keyed off
+    the canonical rule-29 weather label."""
+    return weather == "rainstorm"
+
+
+def sandstorm(weather: str) -> bool:
+    """29.44: in a Sandstorm all Movement Costs are doubled. Keyed off the canonical
+    rule-29 weather label."""
+    return weather == "sandstorm"
+
+
+def step_cost(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobility,
+              weather: str = "normal") -> float | None:
+    """CP to move from src into the adjacent hex dst, or None if impossible (off-map,
+    non-adjacent, or a prohibited terrain/hexside for this mobility). Weather (rule 29)
+    couples in: a Rainstorm makes a Road behave as a Track (29.56) and closes wadi
+    hexsides to everything but a Road (29.55); a Sandstorm doubles the whole cost
+    (29.44). Under Normal/Hot weather this is byte-identical to the dry chart."""
     if not tmap.exists(dst) or not is_adjacent(src, dst):
         return None
 
@@ -51,10 +68,13 @@ def step_cost(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobility) -> f
     on_road = e in tmap.roads
     on_track = e in tmap.tracks
     mot = mobility
+    rain = rainstorm(weather)
+    road_as_road = on_road and not rain                 # 29.56: a rained Road acts as a Track
+    on_track_eff = on_track or (on_road and rain)
 
-    if on_road:
+    if road_as_road:
         entry = ROAD_ENTRY[_mot(mot)]
-    elif on_track:
+    elif on_track_eff:
         entry = TRACK_ENTRY[_mot(mot)]
     else:
         entry = hex_entry_cost(tmap.terrain[dst], mot)
@@ -62,13 +82,15 @@ def step_cost(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobility) -> f
             return None
 
     feature = tmap.hexsides.get((src, dst))
-    if feature is None or on_road:                      # road negates hexside costs (note 6)
+    if feature is None or road_as_road:                 # dry road negates hexside costs (note 6)
         add = 0.0
     else:
+        if rain and feature == Hexside.WADI and not on_road:   # 29.55: wadi shut except by road
+            return None
         base = hexside_cost(feature, mot)
         if base is None:
             return None                                 # e.g. motorized up an escarpment
-        if on_track:
+        if on_track_eff:
             # Track halves hexside costs, EXCEPT a *vehicle's* CP down an
             # escarpment (note 8); foot units still get the discount.
             no_halve = feature == Hexside.DOWN_ESCARPMENT and _mot(mot)
@@ -76,14 +98,8 @@ def step_cost(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobility) -> f
         else:
             add = base
 
-    return entry + add
-
-
-def rainstorm(weather: str) -> bool:
-    """29.56: during a Rainstorm a Road is treated as a Track for Breakdown Points.
-    Keyed off the weather label; the current toy vocabulary's wet labels both count
-    (Step-6 real weather swaps in the 29.61 'rainstorm' label without touching this)."""
-    return weather in ("rain", "rainstorm", "storm")
+    cost = entry + add
+    return cost * 2 if sandstorm(weather) else cost      # 29.44: sandstorm doubles movement
 
 
 def breakdown_points(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobility,
@@ -126,11 +142,12 @@ def breakdown_points(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobilit
     return entry + add
 
 
-def path_cost(tmap: TerrainMap, path: list[Coord], mobility: Mobility) -> float | None:
+def path_cost(tmap: TerrainMap, path: list[Coord], mobility: Mobility,
+              weather: str = "normal") -> float | None:
     """Total CP to traverse a contiguous path (path[0] is the start, not entered)."""
     total = 0.0
     for src, dst in zip(path, path[1:]):
-        c = step_cost(tmap, src, dst, mobility)
+        c = step_cost(tmap, src, dst, mobility, weather)
         if c is None:
             return None
         total += c
@@ -139,7 +156,8 @@ def path_cost(tmap: TerrainMap, path: list[Coord], mobility: Mobility) -> float 
 
 def reachable(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
               *, blocked: frozenset = frozenset(),
-              terminal=None, passable=None, start_cost: float = 0.0) -> dict[Coord, float]:
+              terminal=None, passable=None, start_cost: float = 0.0,
+              weather: str = "normal") -> dict[Coord, float]:
     """All hexes reachable from start within `budget` CP (Dijkstra). `blocked`
     hexes (e.g. enemy-occupied) cannot be entered. Continual Movement allows
     exceeding CPA, so the caller passes whatever budget it is willing to spend.
@@ -152,22 +170,23 @@ def reachable(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
         (rule 10.24 "no move from one enemy-controlled hex into another").
     start_cost seeds the start hex (e.g. a break-off cost paid to leave a ZOC)."""
     return _search(tmap, start, budget, mobility, blocked=blocked, terminal=terminal,
-                   passable=passable, start_cost=start_cost)[0]
+                   passable=passable, start_cost=start_cost, weather=weather)[0]
 
 
 def reachable_prev(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
                    *, blocked: frozenset = frozenset(), terminal=None, passable=None,
-                   start_cost: float = 0.0) -> tuple[dict[Coord, float], dict[Coord, Coord]]:
+                   start_cost: float = 0.0,
+                   weather: str = "normal") -> tuple[dict[Coord, float], dict[Coord, Coord]]:
     """`reachable`, additionally returning the predecessor map of the min-CP Dijkstra
     tree so the actual step-by-step path to a reached hex can be reconstructed (the
     Breakdown-Point accrual needs the hexes and hexsides the mover crossed, not just
     the destination and total cost)."""
     return _search(tmap, start, budget, mobility, blocked=blocked, terminal=terminal,
-                   passable=passable, start_cost=start_cost)
+                   passable=passable, start_cost=start_cost, weather=weather)
 
 
 def _search(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
-            *, blocked, terminal, passable, start_cost) -> tuple[dict, dict]:
+            *, blocked, terminal, passable, start_cost, weather="normal") -> tuple[dict, dict]:
     best: dict[Coord, float] = {start: start_cost}
     prev: dict[Coord, Coord] = {}
     pq: list[tuple[float, Coord]] = [(start_cost, start)]
@@ -182,7 +201,7 @@ def _search(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
                 continue
             if passable is not None and not passable(here, nb):
                 continue
-            step = step_cost(tmap, here, nb, mobility)
+            step = step_cost(tmap, here, nb, mobility, weather)
             if step is None:
                 continue
             nc = cost + step

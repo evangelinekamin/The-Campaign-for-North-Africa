@@ -39,7 +39,7 @@ def _state(supplies, trucks, terrain, *, turn: int = 1) -> GameState:
                 + sum(getattr(t, attr) for t in trucks))
     return GameState(
         turn=turn, max_turns=4, phase=Phase.LOGISTICS, active_side=Side.SYSTEM,
-        seed=1, weather="clear", move_modifier=0, vp=VP(),
+        seed=1, weather="clear", vp=VP(),
         terrain=TerrainMap(terrain=terrain, fortifications={}),
         control={}, units=(), target_hex=(0, 0), supplies=tuple(supplies),
         consumed={c: 0 for c in supply.COMMODITIES},

@@ -35,7 +35,7 @@ def _port_state(port: Port, dump: SupplyUnit, convoys=(), *, turn: int = 1) -> G
     """A one-hex state with a port and its built-in dump, to exercise the throttle."""
     return GameState(
         turn=turn, max_turns=4, phase=Phase.WEATHER, active_side=Side.SYSTEM,
-        seed=1, weather="clear", move_modifier=0, vp=VP(),
+        seed=1, weather="clear", vp=VP(),
         terrain=TerrainMap(terrain={dump.hex: Terrain.CLEAR}, fortifications={}),
         control={}, units=(), target_hex=dump.hex, supplies=(dump,),
         consumed={c: 0 for c in supply.COMMODITIES},
@@ -131,7 +131,7 @@ def test_throttle_ignored_without_a_port():
                   {"AMMO": 300, "FUEL": 100, "STORES": 500, "WATER": 150})
     s = GameState(
         turn=1, max_turns=4, phase=Phase.WEATHER, active_side=Side.SYSTEM, seed=1,
-        weather="clear", move_modifier=0, vp=VP(),
+        weather="clear", vp=VP(),
         terrain=TerrainMap(terrain={(0, 0): Terrain.CLEAR}, fortifications={}),
         control={}, units=(), target_hex=(0, 0), supplies=(dump,),
         consumed={c: 0 for c in supply.COMMODITIES},
@@ -252,15 +252,15 @@ def test_determinism_preserved_with_ports():
 
 def test_siege_still_crackable_through_the_throttle():
     # The Benghazi rear throttle must not starve the Axis barrage below the crack path:
-    # a strong seed still batters the wall through it. The vehicle-Breakdown slice (rules
-    # 21/22) injects fresh dice into the seeded stream, so the seeds that crack SHIFTED
-    # again (2/15/16/17/24 now batter the wall over seeds 1-24 -- ~21%, within the 15-35%
-    # design band); the old 5/7 no longer do. That reshuffle is the added breakdown rolls,
-    # not a bug -- re-tuning the crack rate is the owner's siege knob
-    # (BARRAGE_HITS_PER_FORT_LEVEL / Axis ammo schedule), NOT a magnitude to bend here.
-    # This test guards only that the crack path SURVIVES.
+    # a strong seed still batters the wall through it. The real-Weather slice (rule 29)
+    # rolls a sequential 2d6 (plus a foul-location die) instead of the old single d6, so
+    # the whole seeded dice stream reshuffled AND foul weather now genuinely hampers the
+    # Axis push (29.44 sandstorm doubling, 29.55/56 rain) -- the seeds that crack SHIFTED
+    # again (28/30/36/... now batter the wall; the old breakdown-era 2/15 no longer do).
+    # That is the owner's siege knob (BARRAGE_HITS_PER_FORT_LEVEL / Axis ammo schedule),
+    # NOT a magnitude to bend here. This test guards only that the crack path SURVIVES.
     battered = False
-    for seed in (2, 15):
+    for seed in (28, 30):
         res = run(siege_of_tobruk(seed=seed),
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         if any(e.kind == EventKind.FORT_REDUCED and tuple(e.payload["hex"]) == TOBRUK

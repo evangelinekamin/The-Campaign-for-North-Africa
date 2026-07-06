@@ -117,8 +117,8 @@ def test_rainstorm_treats_road_as_track():
     tmap = _line((0, 0), (1, 0), terrain=Terrain.ROUGH,
                  hexsides={((0, 0), (1, 0)): Hexside.WADI},
                  roads=[edge((0, 0), (1, 0))])
-    assert breakdown_points(tmap, (0, 0), (1, 0), Mobility.VEHICLE, "clear") == 0.5
-    assert breakdown_points(tmap, (0, 0), (1, 0), Mobility.VEHICLE, "rain") == 4 + 4
+    assert breakdown_points(tmap, (0, 0), (1, 0), Mobility.VEHICLE, "normal") == 0.5
+    assert breakdown_points(tmap, (0, 0), (1, 0), Mobility.VEHICLE, "rainstorm") == 4 + 4
 
 
 # --- Step 2: Unit breakdown state + effective_strength + BAR -----------------
@@ -168,7 +168,7 @@ def test_invariant_rejects_broken_over_strength():
     tmap = TerrainMap(terrain={(0, 0): Terrain.CLEAR})
     bad = _tank(broken=12, strength=10)
     st = GameState(turn=1, max_turns=2, phase=Phase.MOVEMENT, active_side=Side.AXIS,
-                   seed=1, weather="clear", move_modifier=0, vp=VP(), terrain=tmap,
+                   seed=1, weather="clear", vp=VP(), terrain=tmap,
                    control={}, units=(bad,), target_hex=(0, 0), supplies=(),
                    consumed={}, initial_supply={})
     with pytest.raises(InvariantViolation):
@@ -195,7 +195,7 @@ def _state_with(units, *, weather="clear", tmap=None, turn=1):
     from game.state import GameState, VP
     tmap = tmap or TerrainMap(terrain={(q, 0): Terrain.DESERT for q in range(6)})
     return GameState(turn=turn, max_turns=9, phase=Phase.MOVEMENT, active_side=Side.AXIS,
-                     seed=1, weather=weather, move_modifier=0, vp=VP(), terrain=tmap,
+                     seed=1, weather=weather, vp=VP(), terrain=tmap,
                      control={}, units=tuple(units), target_hex=(5, 0), supplies=(),
                      consumed={}, initial_supply={})
 
@@ -372,7 +372,7 @@ def _repair_run(tank, *, weather="clear", die=3, fuel=50):
     tmap = TerrainMap(terrain={(0, 0): Terrain.DESERT})
     dump = SupplyUnit("AX-Dump", Side.AXIS, (0, 0), ammo=0, fuel=fuel)
     st = GameState(turn=1, max_turns=9, phase=Phase.COMBAT, active_side=Side.AXIS,
-                   seed=1, weather=weather, move_modifier=0, vp=VP(), terrain=tmap,
+                   seed=1, weather=weather, vp=VP(), terrain=tmap,
                    control={}, units=(tank,), target_hex=(0, 0), supplies=(dump,),
                    consumed={}, initial_supply={"FUEL": fuel})
     r = _Run(st)
@@ -397,7 +397,7 @@ def test_field_repair_charges_fuel_and_conserves():
 
 
 def test_no_field_repair_in_rain_or_sandstorm():
-    for w in ("rain", "sandstorm", "storm"):
+    for w in ("rainstorm", "sandstorm"):
         r = _repair_run(_tank(broken=6), weather=w, die=3)
         assert not r.events                                      # 22.13d
         assert r.state.unit("T1").broken_down == 6
@@ -423,7 +423,7 @@ def test_repair_skipped_in_enemy_controlled_hex():
     tank = _tank(broken=6, strength=10)
     dump = SupplyUnit("AX-Dump", Side.AXIS, (0, 0), ammo=0, fuel=50)
     st = GameState(turn=1, max_turns=9, phase=Phase.COMBAT, active_side=Side.AXIS,
-                   seed=1, weather="clear", move_modifier=0, vp=VP(), terrain=tmap,
+                   seed=1, weather="clear", vp=VP(), terrain=tmap,
                    control={(0, 0): Control.ALLIED}, units=(tank,), target_hex=(0, 0),
                    supplies=(dump,), consumed={}, initial_supply={"FUEL": 50})
     r = _Run(st)

@@ -202,7 +202,7 @@ def _rba_defender_state():
              inf("D1", Side.ALLIED, (1, 0)),
              inf("D2", Side.ALLIED, (3, 0)))
     return GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS,
-                     seed=1, weather="clear", move_modifier=0, vp=VP(),
+                     seed=1, weather="clear", vp=VP(),
                      terrain=TerrainMap(terrain=terr), control={}, units=units,
                      target_hex=(20, 0), supplies=(),
                      consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 0, "FUEL": 0})

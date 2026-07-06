@@ -26,7 +26,7 @@ def _state(units, supplies=(), *, initial_supply=None, consumed=None) -> GameSta
     terr = {(q, 0): Terrain.CLEAR for q in range(8)}
     return GameState(
         turn=1, max_turns=4, phase=Phase.MOVEMENT, active_side=Side.AXIS, seed=1,
-        weather="clear", move_modifier=0, vp=VP(), terrain=TerrainMap(terrain=terr),
+        weather="clear", vp=VP(), terrain=TerrainMap(terrain=terr),
         control={}, units=tuple(units), target_hex=(7, 0), supplies=tuple(supplies),
         consumed=consumed if consumed is not None else {},
         initial_supply=initial_supply if initial_supply is not None else {})

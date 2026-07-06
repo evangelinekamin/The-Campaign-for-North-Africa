@@ -99,7 +99,7 @@ def coastal_corridor(seed: int = 1941) -> GameState:
 
     return GameState(
         turn=1, max_turns=MAX_TURNS, phase=Phase.WEATHER, active_side=Side.SYSTEM,
-        seed=seed, weather="clear", move_modifier=0, vp=VP(),
+        seed=seed, weather="normal", vp=VP(),
         terrain=tmap, control={}, units=units, target_hex=target,
         supplies=supplies, consumed=_zero_consumed(), initial_supply=initial,
     )
@@ -142,9 +142,10 @@ def battle_for_tobruk(seed: int = 1941) -> GameState:
     initial = _initial_supply(supplies)
     return GameState(
         turn=1, max_turns=12, phase=Phase.WEATHER, active_side=Side.SYSTEM,
-        seed=seed, weather="clear", move_modifier=0, vp=VP(),
+        seed=seed, weather="normal", vp=VP(),
         terrain=tmap, control={}, units=units, target_hex=target,
         supplies=supplies, consumed=_zero_consumed(), initial_supply=initial,
+        map_sections=frozenset("C"),                     # real Map C (29.1 / 29.7)
     )
 
 
@@ -252,7 +253,7 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
 
         def _unsupplied(side: Side) -> list[Unit]:
             ps = GameState(turn=1, max_turns=12, phase=Phase.MOVEMENT, active_side=Side.SYSTEM,
-                           seed=seed, weather="clear", move_modifier=0, vp=VP(), terrain=tmap,
+                           seed=seed, weather="normal", vp=VP(), terrain=tmap,
                            control={}, units=tuple(units), target_hex=target, supplies=tuple(supplies),
                            consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 0, "FUEL": 0})
             return [u for u in units if u.side == side and u.is_combat and not (
@@ -297,10 +298,11 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
     initial = _initial_supply(supplies)
     return GameState(
         turn=1, max_turns=max_turns, phase=Phase.WEATHER, active_side=Side.SYSTEM,
-        seed=seed, weather="clear", move_modifier=0, vp=VP(),
+        seed=seed, weather="normal", vp=VP(),
         terrain=tmap, control={}, units=tuple(units), target_hex=target,
         supplies=tuple(supplies), consumed=_zero_consumed(),
         initial_supply=initial, convoys=convoys, ports=ports, trucks=trucks,
+        map_sections=frozenset("ABC"),                   # real Maps A/B/C (29.1 / 29.7)
     )
 
 

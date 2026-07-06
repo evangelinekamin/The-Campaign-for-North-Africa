@@ -68,7 +68,7 @@ def test_fuelled_but_far_unit_strands():
     dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=40, fuel=12)
     st = GameState(
         turn=1, max_turns=4, phase=Phase.WEATHER, active_side=Side.SYSTEM, seed=1,
-        weather="clear", move_modifier=0, vp=VP(), terrain=TerrainMap(terrain=terr),
+        weather="clear", vp=VP(), terrain=TerrainMap(terrain=terr),
         control={}, units=(unit,), target_hex=(8, 0), supplies=(dump,),
         consumed=_z(), initial_supply=_init((dump,)))
     assert supply.fuel_cost(unit, 16) == 24 and supply.fuel_cost(unit, 8) == 12
@@ -165,7 +165,7 @@ def _mobile_state() -> GameState:
     dumps = (SupplyUnit("AX-D", Side.AXIS, (0, 0), ammo=10, fuel=10),)
     return GameState(
         turn=1, max_turns=4, phase=Phase.MOVEMENT, active_side=Side.AXIS, seed=1,
-        weather="clear", move_modifier=0, vp=VP(), terrain=TerrainMap(terrain=terr),
+        weather="clear", vp=VP(), terrain=TerrainMap(terrain=terr),
         control={}, units=units, target_hex=(5, 0), supplies=dumps,
         consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 10, "FUEL": 10})
 

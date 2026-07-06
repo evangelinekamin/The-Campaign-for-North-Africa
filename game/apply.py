@@ -53,7 +53,7 @@ def apply(state: GameState, event: Event) -> GameState:
         return replace(state.with_supply(su), initial_supply=init)
 
     if k == EventKind.WEATHER_ROLLED:
-        return replace(state, weather=p["weather"], move_modifier=p["move_modifier"])
+        return replace(state, weather=p["weather"])
 
     if k == EventKind.UNIT_MOVED:
         u = state.unit(p["unit_id"])                   # 21.25: BP accrue into the move faucet

@@ -85,32 +85,35 @@ def reachable_with_zoc(tmap: TerrainMap, start: Coord, budget: float,
                        mobility: Mobility, *, enemy_zoc: frozenset,
                        friendly_negators: frozenset = frozenset(),
                        enemy_occupied: frozenset = frozenset(),
-                       break_off: float = 2.0) -> dict[Coord, float]:
+                       break_off: float = 2.0,
+                       weather: str = "normal") -> dict[Coord, float]:
     """Movement reachability under enemy ZOC (§10.22-10.26, §8.64-8.66):
     enter a controlled hex but stop there; never step controlled->controlled; a
     friendly combat unit negates ZOC in its hex; leaving a ZOC you start in costs
-    `break_off` CP (2 Contact / 4 Engaged); enemy-occupied hexes are impassable."""
+    `break_off` CP (2 Contact / 4 Engaged); enemy-occupied hexes are impassable.
+    `weather` couples rule-29 movement costs (sandstorm/rainstorm) into the search."""
     return _zoc_search(reachable, tmap, start, budget, mobility, enemy_zoc=enemy_zoc,
                        friendly_negators=friendly_negators, enemy_occupied=enemy_occupied,
-                       break_off=break_off)
+                       break_off=break_off, weather=weather)
 
 
 def reachable_with_zoc_prev(tmap: TerrainMap, start: Coord, budget: float,
                             mobility: Mobility, *, enemy_zoc: frozenset,
                             friendly_negators: frozenset = frozenset(),
                             enemy_occupied: frozenset = frozenset(),
-                            break_off: float = 2.0) -> tuple[dict, dict]:
+                            break_off: float = 2.0,
+                            weather: str = "normal") -> tuple[dict, dict]:
     """`reachable_with_zoc`, additionally returning the Dijkstra predecessor map (for
     movement.reconstruct_path) so the ZOC-legal path a unit took can be walked for its
     Breakdown Points."""
     from .movement import reachable_prev
     return _zoc_search(reachable_prev, tmap, start, budget, mobility, enemy_zoc=enemy_zoc,
                        friendly_negators=friendly_negators, enemy_occupied=enemy_occupied,
-                       break_off=break_off)
+                       break_off=break_off, weather=weather)
 
 
 def _zoc_search(search, tmap, start, budget, mobility, *, enemy_zoc, friendly_negators,
-                enemy_occupied, break_off):
+                enemy_occupied, break_off, weather="normal"):
     def controlled(h: Coord) -> bool:
         return h in enemy_zoc and h not in friendly_negators      # §10.26 negation
 
@@ -120,4 +123,5 @@ def _zoc_search(search, tmap, start, budget, mobility, *, enemy_zoc, friendly_ne
         terminal=controlled,                                      # §10.23
         passable=lambda here, nb: not (controlled(here) and controlled(nb)),  # §10.24
         start_cost=break_off if controlled(start) else 0.0,       # §8.64-8.66
+        weather=weather,
     )

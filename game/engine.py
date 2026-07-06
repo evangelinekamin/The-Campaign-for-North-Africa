@@ -15,7 +15,7 @@ import math
 import random
 from dataclasses import dataclass
 
-from . import combat, combat_tables, logistics_data, stacking, supply, tactics
+from . import combat, combat_tables, logistics_data, stacking, supply, tactics, weather
 from .apply import apply
 from .events import Control, Event, EventKind, Phase, Side
 from .hexmap import distance, is_adjacent, neighbors
@@ -341,13 +341,28 @@ def _water_shortfall(r: _Run, side: Side, actor: str, u) -> None:
 
 
 def _weather(r: _Run) -> None:
-    die = r.d6()
-    label, modifier = {
-        1: ("storm", -2), 2: ("rain", -1), 3: ("clear", 0),
-        4: ("clear", 0), 5: ("clear", 0), 6: ("hot", 0),
-    }[die]
+    """Weather Determination (rule 29.1): the season (from the Game-Turn) selects the
+    29.61 Weather Table row; a sequential 2d6 gives the weather type. A foul result
+    (sandstorm/rainstorm) rolls one more die on the 29.7 Foul Weather Location Table for
+    the affected map sections -- if none of the scenario's own sections are hit, the
+    theater stays Normal (29.1: unaffected sections have normal weather). Hot occurs on
+    every section (29.31), so it needs no location roll. The single emitted label is
+    what every downstream coupling (breakdown shift, evaporation, movement cost) reads."""
+    season = weather.season_for_turn(r.state.turn)
+    d1, d2 = r.d6(), r.d6()
+    label = weather.weather_for_roll(season, d1 * 10 + d2)
+    draws = (d1, d2)
+    sections: frozenset = frozenset()
+    if weather.is_foul(label):
+        d3 = r.d6()
+        draws = (d1, d2, d3)
+        sections = weather.foul_sections(d3)
+        theater = r.state.map_sections
+        if theater and theater.isdisjoint(sections):        # 29.1: foul missed this theater
+            label = weather.NORMAL
     r.emit(EventKind.WEATHER_ROLLED, Side.SYSTEM, "SYSTEM",
-           {"weather": label, "move_modifier": modifier}, rng_draws=(die,))
+           {"weather": label, "season": season, "sections": sorted(sections)},
+           rng_draws=draws)
 
 
 def _movement(r: _Run, policy: Policy, side: Side) -> None:
@@ -435,10 +450,10 @@ def _breakdown(r: _Run, side: Side) -> None:
 _REPAIR_FUEL: int = 1
 
 
-def _field_repair_blocked(weather: str) -> bool:
-    """22.13d: no Field Repair while the Weather is Rainstorm or Sandstorm (a global
-    proxy for the per-hex test until Step-6 per-section weather lands)."""
-    return weather in ("rain", "rainstorm", "storm", "sandstorm")
+def _field_repair_blocked(weather_label: str) -> bool:
+    """22.13d: no Field Repair while the Weather is Rainstorm or Sandstorm (keyed off the
+    single global 29.1 label -- the per-section coupling stays a documented Fork-B proxy)."""
+    return weather_label in ("rainstorm", "sandstorm")
 
 
 def _repaired_count(vclass: str, result: int, broken: int) -> int:

@@ -99,7 +99,7 @@ def test_retreat_relocates_defender_away_from_attacker():
     attacker = Unit("A", Side.AXIS, (2, 0), (StepRecord("inf", 4),),
                     mobility=Mobility.FOOT, cpa=10, stacking_points=1, oca=3, dca=3)
     st = GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS,
-                   seed=1, weather="clear", move_modifier=0, vp=VP(),
+                   seed=1, weather="clear", vp=VP(),
                    terrain=TerrainMap(terrain=terr), control={}, units=(defender, attacker),
                    target_hex=(5, 0), supplies=(), consumed={"AMMO": 0, "FUEL": 0},
                    initial_supply={"AMMO": 0, "FUEL": 0})
@@ -126,7 +126,7 @@ def test_major_city_defender_is_not_evicted():
     attacker = Unit("A", Side.AXIS, (2, 0), (StepRecord("inf", 4),),
                     mobility=Mobility.FOOT, cpa=10, stacking_points=1, oca=3, dca=3)
     st = GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS,
-                   seed=1, weather="clear", move_modifier=0, vp=VP(),
+                   seed=1, weather="clear", vp=VP(),
                    terrain=TerrainMap(terrain=terr), control={}, units=(defender, attacker),
                    target_hex=(5, 0), supplies=(), consumed={"AMMO": 0, "FUEL": 0},
                    initial_supply={"AMMO": 0, "FUEL": 0})
@@ -195,7 +195,7 @@ def test_surrender_at_collapsed_cohesion():
         return Unit("U", Side.AXIS, (0, 0), (StepRecord("s", 6),), mobility=Mobility.FOOT,
                     cpa=10, stacking_points=1, oca=2, dca=2, morale=mor, cohesion=-17)
     st = GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS, seed=1,
-                   weather="clear", move_modifier=0, vp=VP(),
+                   weather="clear", vp=VP(),
                    terrain=TerrainMap(terrain={(0, 0): Terrain.CLEAR}), control={},
                    units=(mk(0),), target_hex=(0, 0), supplies=(),
                    consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 0, "FUEL": 0})
@@ -226,7 +226,7 @@ def _lone_hex_state(units, supplies=(), *, seed=1):
     ammo = sum(s.ammo for s in supplies)
     fuel = sum(s.fuel for s in supplies)
     return GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS, seed=seed,
-                     weather="clear", move_modifier=0, vp=VP(),
+                     weather="clear", vp=VP(),
                      terrain=TerrainMap(terrain={(0, 0): Terrain.CLEAR, (1, 0): Terrain.CLEAR}),
                      control={}, units=tuple(units), target_hex=(0, 0), supplies=tuple(supplies),
                      consumed={"AMMO": 0, "FUEL": 0},
@@ -306,7 +306,7 @@ def test_barrage_fires_at_adjacent_enemy():
                cpa=10, stacking_points=1, oca=2, dca=2)
     dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=40, fuel=60)
     st = GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS,
-                   seed=3, weather="clear", move_modifier=0, vp=VP(),
+                   seed=3, weather="clear", vp=VP(),
                    terrain=TerrainMap(terrain=terr), control={}, units=(arty, inf),
                    target_hex=(3, 0), supplies=(dump,),
                    consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 40, "FUEL": 60})
@@ -332,7 +332,7 @@ def test_anti_armor_fire_damages_adjacent_armor():
                 cpa=25, stacking_points=1, oca=3, dca=3, is_tank=True, armor_protection=3)
     dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=40, fuel=60)
     st = GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS,
-                   seed=5, weather="clear", move_modifier=0, vp=VP(),
+                   seed=5, weather="clear", vp=VP(),
                    terrain=TerrainMap(terrain=terr), control={}, units=(at, tank),
                    target_hex=(3, 0), supplies=(dump,),
                    consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 40, "FUEL": 60})
@@ -370,7 +370,7 @@ def _combat_state(units, supplies):
     from game.terrain import Terrain
     terr = {(q, 0): Terrain.CLEAR for q in range(4)}
     return GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS, seed=1,
-                     weather="clear", move_modifier=0, vp=VP(),
+                     weather="clear", vp=VP(),
                      terrain=TerrainMap(terrain=terr), control={}, units=tuple(units),
                      target_hex=(3, 0), supplies=tuple(supplies),
                      consumed={"AMMO": 0, "FUEL": 0},
@@ -463,7 +463,7 @@ def _rba_state(units):
     # count as the garrison anchor -- they are all free reserves for rule 13.
     terr = {(q, 0): Terrain.CLEAR for q in range(8)}
     return GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS,
-                     seed=1, weather="clear", move_modifier=0, vp=VP(),
+                     seed=1, weather="clear", vp=VP(),
                      terrain=TerrainMap(terrain=terr), control={}, units=tuple(units),
                      target_hex=(20, 0), supplies=(),
                      consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 0, "FUEL": 0})
