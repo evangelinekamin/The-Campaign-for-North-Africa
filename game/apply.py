@@ -181,15 +181,38 @@ def apply(state: GameState, event: Event) -> GameState:
     if k == EventKind.PHASE_ADVANCED:
         return replace(state, phase=Phase(p["phase"]), active_side=Side(p["active_side"]))
 
+    if k == EventKind.INITIATIVE_DETERMINED:
+        # 7.14: who holds Initiative this game-turn, fixed for all three Operations Stages
+        # (7.12). A pure scalar fold -- no supply surface touched, conservation untouched.
+        return replace(state, initiative_side=Side(p["side"]))
+
+    if k == EventKind.INITIATIVE_DECLARED:
+        # 7.11: the initiative side's per-stage choice of who moves first, from which the
+        # 7.12 double-move emerges. Pure scalar fold.
+        return replace(state, phasing_first=Side(p["phasing_first"]))
+
+    if k == EventKind.STAGE_ADVANCED:
+        # New Operations Stage within the game-turn (rule 5.1): bump the stage and refresh
+        # the per-OpStage CP/BP counters -- the same reset semantics as TURN_ADVANCED, now
+        # firing at every stage boundary (3x/game-turn), spanning both players' portions (6.14).
+        return replace(state, stage=p["stage"], units=_reset_opstage(state.units))
+
     if k == EventKind.TURN_ADVANCED:
-        # New OpStage: every unit's CPA refreshes (rule 6.16 — CP do not carry over) and
-        # the Breakdown-Point accumulator + 21.26 re-check gate reset (21.25: BP are
-        # cumulative WITHIN an Operations Stage only). broken_down persists (21.44).
-        units = tuple(replace(u, cp_used=0.0, bp_accumulated=0.0, bp_checked_column=-1)
-                      for u in state.units)
-        return replace(state, turn=p["turn"], units=units)
+        # A new game-turn opens a new Operations Stage: share the OpStage reset (6.16 — CP do
+        # not carry over; 21.25 — BP + the 21.26 re-check gate are cumulative within a stage
+        # only), bump the game-turn, and re-open at stage 1. broken_down persists (21.44).
+        return replace(state, turn=p["turn"], stage=1, units=_reset_opstage(state.units))
 
     raise ValueError(f"unhandled event kind {k}")
+
+
+def _reset_opstage(units: tuple) -> tuple:
+    """The Operations-Stage boundary reset (rules 6.16 / 21.25): every unit's CPA refreshes
+    and the Breakdown-Point accumulator + 21.26 re-check gate clear. broken_down (immobile
+    TOE) persists across the boundary until repaired (21.44). Shared by STAGE_ADVANCED and
+    TURN_ADVANCED so the two clock boundaries carry one reset semantic."""
+    return tuple(replace(u, cp_used=0.0, bp_accumulated=0.0, bp_checked_column=-1)
+                 for u in units)
 
 
 def _apply_step_loss(steps: tuple[StepRecord, ...], amount: int) -> tuple[StepRecord, ...]:

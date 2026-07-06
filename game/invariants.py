@@ -16,6 +16,10 @@ class InvariantViolation(Exception):
 
 
 def check(state: GameState) -> None:
+    # The Operations Stage is always one of the three within a game-turn (rule 5.1).
+    if state.stage not in (1, 2, 3):
+        raise InvariantViolation(f"stage {state.stage} out of the 1..3 Operations-Stage range")
+
     for u in state.units:
         for s in u.steps:
             if s.strength < 0:

@@ -256,6 +256,17 @@ class GameState:
     # on one of these sections; an empty set means "unlocalized" (a synthetic map), so
     # foul weather is not filtered out. Purely informs weather determination.
     map_sections: frozenset = frozenset()
+    # --- The two-level turn clock (rules 5.1/5.2 + 7.0). `turn` above stays the
+    # GAME-TURN (~1 week; every game-turn-keyed read -- on_map/arrival_turn,
+    # season_for_turn, convoy arrival_turn, turns_without_stores -- keeps reading it).
+    # `stage` is the Operations Stage within the game-turn (1..3, rule 5.1: the basic
+    # unit of time); the CPA/BP reset boundary (6.16/21.25) is an OP-STAGE boundary.
+    # initiative_side is who holds Initiative this game-turn (7.12, fixed for all three
+    # stages); phasing_first is the side that declared to move first THIS stage (7.11),
+    # from which the 7.12 double-move emerges. Defaults keep the flat loop byte-identical.
+    stage: int = 1
+    initiative_side: Side | None = None
+    phasing_first: Side | None = None
 
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:

@@ -118,6 +118,17 @@ class EventKind(str, Enum):
     PHASE_ADVANCED = "PHASE_ADVANCED"
     TURN_ADVANCED = "TURN_ADVANCED"
     VICTORY_CHECKED = "VICTORY_CHECKED"
+    # The two-level turn clock (rules 5.1/5.2 + 7.0). STAGE_ADVANCED {stage} advances the
+    # Operations Stage within a game-turn (1->2->3) and performs the per-OpStage CP/BP reset
+    # (6.16/21.25) via the shared _reset_opstage helper; TURN_ADVANCED now shares that same
+    # reset, bumps the game-turn, and re-opens at stage=1. INITIATIVE_DETERMINED {side,
+    # axis_total, allied_total} (rng_draws=(ax_d, al_d, ...rerolls)) folds to set
+    # GameState.initiative_side once per game-turn (7.14); INITIATIVE_DECLARED {stage,
+    # phasing_first} folds to set GameState.phasing_first, the per-stage A/B choice (7.11)
+    # that drives the double-move. Nothing emits the initiative events yet (Step 4 wires them).
+    STAGE_ADVANCED = "STAGE_ADVANCED"
+    INITIATIVE_DETERMINED = "INITIATIVE_DETERMINED"
+    INITIATIVE_DECLARED = "INITIATIVE_DECLARED"
     # STAFF_* are narrative / no-op audit events: staff chatter the board is
     # invariant to (they fold to state unchanged; see game.apply, game.staff_events).
     STAFF_INTENT = "STAFF_INTENT"
@@ -137,6 +148,10 @@ class Event:
     kind: EventKind
     payload: dict                  # json-safe values only (no enums/sets)
     rng_draws: tuple[int, ...] = ()
+    stage: int = 1                 # Operations Stage active when emitted (1..3, rule 5.1).
+                                   # Legibility only: apply() ignores it and event_to_dict
+                                   # omits it, so the determinism log stays byte-identical
+                                   # until _Run.emit stamps it in a later step.
 
 
 def event_to_dict(e: Event) -> dict:
