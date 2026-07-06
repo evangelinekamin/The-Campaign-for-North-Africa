@@ -46,7 +46,9 @@ def narrate(result: RunResult) -> None:
 def _line(e: Event) -> str:
     p, k = e.payload, e.kind
     if k == EventKind.WEATHER_ROLLED:
-        return f"  weather: {p['weather']} (CPA {p['move_modifier']:+d})  [d6={e.rng_draws[0]}]"
+        where = f" over {'/'.join(p['sections'])}" if p["sections"] else ""
+        return (f"  weather: {p['season']} -> {p['weather']}{where}"
+                f"  [dice {'-'.join(str(d) for d in e.rng_draws)}]")
     if k == EventKind.REINFORCEMENT_ARRIVED:
         return f"  +++ reinforcement {p['unit_id']} enters at {tuple(p['hex'])}"
     if k == EventKind.UNIT_MOVED:
