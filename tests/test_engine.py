@@ -319,6 +319,25 @@ def test_collapsed_cohesion_defender_capitulates_15_88():
     assert _defenders_capitulate(r2, [steady]) is False              # -16 does not auto-surrender
 
 
+def test_idle_stage_recovers_cohesion_6_24_1():
+    # 6.24.1: an on-map unit that spends NO CP in an Operations Stage earns 5 RP, capped so
+    # it never climbs above Cohesion 0. A busy unit (cp_used > 0) recovers nothing this way.
+    from dataclasses import replace
+
+    from game.engine import _Run, _idle_recovery
+    from game.state import Unit
+    from game.terrain import Mobility
+    idle_deep = Unit("I", Side.AXIS, (0, 0), (StepRecord("i", 6),), mobility=Mobility.FOOT,
+                     cpa=10, stacking_points=1, oca=2, dca=2, cohesion=-8)
+    idle_shallow = replace(idle_deep, id="S", cohesion=-3)     # within 5 of zero -> caps at 0
+    busy = replace(idle_deep, id="B", cohesion=-8, cp_used=4.0)
+    r = _Run(_lone_hex_state([idle_deep, idle_shallow, busy]))
+    _idle_recovery(r)
+    assert r.state.unit("I").cohesion == -3                    # -8 + 5 RP
+    assert r.state.unit("S").cohesion == 0                     # -3 + min(5, 3) -> capped at 0
+    assert r.state.unit("B").cohesion == -8                    # used CP: no recovery
+
+
 def test_starved_garrison_surrenders_in_close_assault_15_15():
     # End-to-end: a cut-off, dry defender that is assaulted is eliminated by en-masse
     # Surrender (15.15), not merely reduced. The COMBAT_RESOLVED event marks it as a

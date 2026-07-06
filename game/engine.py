@@ -138,6 +138,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                 winner, reason = _final_decision(r)
                 done = True
                 break
+            _idle_recovery(r)                           # 6.24.1: reward a CP-idle stage (before the reset)
             if stage < 3:                               # next Operations Stage: refresh the CPA window (6.16)
                 r.emit(EventKind.STAGE_ADVANCED, Side.SYSTEM, "SYSTEM", {"stage": stage + 1})
             else:                                       # a new game-turn re-opens at Operations Stage 1
@@ -752,6 +753,20 @@ def _reject_truck(r: _Run, side: Side, actor: str, order, reason: str) -> None:
 
 def _other(side: Side) -> Side:
     return Side.ALLIED if side is Side.AXIS else Side.AXIS
+
+
+def _idle_recovery(r: _Run) -> None:
+    """Reorganization for a CP-idle Operations Stage (rule 6.24.1): every on-map unit that
+    used absolutely no Capability Points this stage earns five Reorganization Points (a
+    Cohesion gain), but this method may NEVER carry a unit above Cohesion 0. Fired at the
+    OpStage boundary BEFORE _reset_opstage zeroes cp_used -- the counter-weight to the 6.21
+    overage bleed, so the CP economy is not a monotonic collapse. Units still in Disorganization
+    (negative Cohesion) that sat out the whole stage climb back toward 0, five RP at a time."""
+    for u in r.state.units:
+        if r.state.on_map(u) and u.cp_used == 0 and u.cohesion < 0:
+            delta = min(5, -u.cohesion)                 # 6.24.1: capped so it never exceeds 0
+            r.emit(EventKind.COHESION_CHANGED, u.side, "SYSTEM",
+                   {"unit_id": u.id, "delta": delta})
 
 
 def _overage_dp(cp_used: float, cpa: int) -> int:
