@@ -105,15 +105,17 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
     # each its own OpStage with its own weather (29.0), water (52) and CPA budget (6.16).
     done = False
     while not done:
+        _initiative(r)                                  # 5.2 I / 7.14: who holds Initiative this game-turn
         _stores_setup(r)                                # 48 IV: Stores Expenditure + 6% base evaporation
         for stage in (1, 2, 3):
+            first, second = _declare_ab(r, policies, stage)   # 5.2.III.A / 7.11: the A/B activation order
             r.go(Phase.WEATHER, Side.SYSTEM)
             _weather(r)                                 # 29.0: weather is rolled per Operations Stage
             _water_body(r)                              # 48 V.C.1: water draw + the +5% hot-evap slice
             if stage == 1:                              # 48 V.D: arrivals land once, in the turn's 1st stage
                 _reinforcements(r)
                 _naval_convoys(r)                       # V.C.7 + V.D: convoy arrival + port regen (SYSTEM)
-            for side in (Side.AXIS, Side.ALLIED):
+            for side in (first, second):                # 7.16: Player A (first) then Player B (last)
                 _debrief(side)                          # enemy portion + own last combat
                 r.go(Phase.MOVEMENT, side)
                 _movement(r, policies[side], side)
@@ -124,7 +126,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                 _combat(r, policies, side)
                 _breakdown(r, _other(side))             # 21.22: the enemy's retreats accrued BP too
                 _repair(r, side)                        # 22.12: the phasing side's Repair Phase
-            for side in (Side.AXIS, Side.ALLIED):
+            for side in (first, second):
                 _truck_convoys(r, policies[side], side)  # V.J: 2nd/3rd-line truck convoys (48)
             r.go(Phase.RECORD, Side.SYSTEM)
             _record_control(r)
@@ -142,6 +144,62 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                 r.emit(EventKind.TURN_ADVANCED, Side.SYSTEM, "SYSTEM", {"turn": r.state.turn + 1})
 
     return RunResult(r.initial, r.events, r.state, winner, reason)
+
+
+# --- initiative (rule 7) -----------------------------------------------------
+
+def _initiative(r: _Run) -> None:
+    """Initiative Determination (rule 5.2 I / 7.14), once per GAME-TURN. While the scenario
+    fixes the holder (7.15 / 61.5: e.g. Axis through GT27) no die is rolled; otherwise each
+    side rolls 1 die + its Initiative Rating and the higher total wins, ties rerolled in the
+    seeded stream (7.14). Folds into GameState.initiative_side, held for all three Operations
+    Stages (7.12). The 7.2 Initiative Ratings are an untranscribed chart -- initiative_ratings
+    is a representative PROXY (flagged in scenario.py)."""
+    s = r.state
+    if s.initiative_fixed is not None and s.turn <= s.initiative_fixed_until:
+        r.emit(EventKind.INITIATIVE_DETERMINED, Side.SYSTEM, "SYSTEM",
+               {"side": s.initiative_fixed.value, "fixed": True})     # 7.15: predetermined, no die
+        return
+    ax_rating = s.initiative_ratings.get("AXIS", 0)
+    al_rating = s.initiative_ratings.get("ALLIED", 0)
+    draws: list[int] = []
+    while True:                                          # 7.14: ties reroll
+        ad, ld = r.d6(), r.d6()
+        draws += [ad, ld]
+        axis_total, allied_total = ad + ax_rating, ld + al_rating
+        if axis_total != allied_total:
+            break
+    winner = Side.AXIS if axis_total > allied_total else Side.ALLIED
+    r.emit(EventKind.INITIATIVE_DETERMINED, Side.SYSTEM, "SYSTEM",
+           {"side": winner.value, "axis_total": axis_total, "allied_total": allied_total},
+           rng_draws=tuple(draws))
+
+
+def _double_move_first(initiative_side: Side, stage: int) -> Side:
+    """The default A/B declaration heuristic (rule 7.11/7.12): the Initiative side moves LAST
+    in Operations Stage 2 and FIRST otherwise, so across the stage 2->3 boundary it acts last-
+    in-2 then first-in-3 -- the consecutive-stage DOUBLE-MOVE (7.12). Returns who moves FIRST."""
+    return _other(initiative_side) if stage == 2 else initiative_side
+
+
+def _declare_ab(r: _Run, policies: dict, stage: int) -> tuple[Side, Side]:
+    """Initiative Declaration (rule 5.2.III.A / 7.11), per Operations Stage: the Initiative
+    holder declares whether it moves first (Player A) or last (Player B). An optional
+    Policy.declare_ab(state, stage)->Side hook lets an agent choose (hasattr, like debrief);
+    otherwise the scripted default exercises the 7.12 double-move. Emits INITIATIVE_DECLARED
+    (folds to phasing_first) and returns the ordered (first, second) that replaces the old
+    hardcoded (AXIS, ALLIED)."""
+    init = r.state.initiative_side
+    holder = policies[init]
+    if hasattr(holder, "declare_ab"):
+        first = holder.declare_ab(r.state, stage)       # 7.11: the holder's own choice
+        if first not in (Side.AXIS, Side.ALLIED):        # boundary-validate the hook's answer
+            first = _double_move_first(init, stage)
+    else:
+        first = _double_move_first(init, stage)
+    r.emit(EventKind.INITIATIVE_DECLARED, init, "SYSTEM",
+           {"stage": stage, "phasing_first": first.value})
+    return first, _other(first)
 
 
 # --- phases ------------------------------------------------------------------

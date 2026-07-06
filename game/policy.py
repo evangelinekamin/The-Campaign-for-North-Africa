@@ -83,6 +83,14 @@ class ScriptedPolicy(Policy):
     def __init__(self, attacker: Side = Side.AXIS):
         self.attacker = attacker
 
+    def declare_ab(self, state: GameState, stage: int) -> Side:
+        """Initiative Declaration (rule 7.11/7.12): the scripted default takes the DOUBLE-MOVE
+        -- the Initiative side moves LAST in Operations Stage 2 and FIRST otherwise, so across
+        the stage 2->3 boundary it lands two consecutive operational pulses (7.12). Returns who
+        moves FIRST this stage. The engine re-validates and emits INITIATIVE_DECLARED."""
+        init = state.initiative_side
+        return tactics.other(init) if stage == 2 else init
+
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
         if side != self.attacker:
             return self._defender_moves(state, side)

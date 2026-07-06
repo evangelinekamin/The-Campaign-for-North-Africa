@@ -267,6 +267,15 @@ class GameState:
     stage: int = 1
     initiative_side: Side | None = None
     phasing_first: Side | None = None
+    # Initiative determination (rule 7.14 / 7.15 / 61.5). While `initiative_fixed` is set and
+    # `turn <= initiative_fixed_until`, that side holds Initiative with NO die (the scenario-
+    # predetermined holder, 7.15; e.g. 61.5 Axis through GT27). Afterwards each game-turn rolls
+    # 1 die + the side's Initiative Rating (7.14). `initiative_ratings` are a representative
+    # {"AXIS": int, "ALLIED": int} PROXY for the untranscribed 7.2 chart. Defaults (None / 0 /
+    # empty) mean "roll every game-turn at rating 0" -- a fair coin the toy scenarios inherit.
+    initiative_fixed: Side | None = None
+    initiative_fixed_until: int = 0
+    initiative_ratings: dict = field(default_factory=dict)
 
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:

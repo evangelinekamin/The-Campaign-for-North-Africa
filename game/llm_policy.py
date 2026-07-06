@@ -199,7 +199,8 @@ def build_movement_prompt(obs: dict) -> str:
     obj = obs["objective"]
     return (
         f"You command the {obs['your_side']} forces. {_RULES}\n"
-        f"MOVEMENT phase, game-turn {obs['turn']}/{obs['max_turns']}, weather "
+        f"MOVEMENT phase, game-turn {obs['turn']}/{obs['max_turns']}, "
+        f"Operations Stage {obs['stage']}/3, weather "
         f"{obs['weather']}. Objective: hex {obj['hex']} (controlled by "
         f"{obj['controlled_by']}); aim to control it by the final turn.\n"
         f"Situation (JSON):\n{json.dumps(obs)}\n"
@@ -223,7 +224,8 @@ def build_movement_prompt(obs: dict) -> str:
 def build_combat_prompt(obs: dict) -> str:
     return (
         f"You command the {obs['your_side']} forces. {_RULES}\n"
-        f"COMBAT phase, game-turn {obs['turn']}/{obs['max_turns']}. Close-assault "
+        f"COMBAT phase, game-turn {obs['turn']}/{obs['max_turns']}, "
+        f"Operations Stage {obs['stage']}/3. Close-assault "
         f"using attack_options: each entry gives a target hex, the your_attackers "
         f"adjacent to it, and the enemy_stacking_points there. Attack where your "
         f"attackers outweigh the defender. A unit with defensible:false is out of ammo "

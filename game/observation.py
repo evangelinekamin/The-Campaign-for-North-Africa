@@ -171,6 +171,7 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
     return {
         "turn": state.turn,
         "max_turns": state.max_turns,
+        "stage": state.stage,          # Operations Stage within the game-turn (1..3, rule 5.1)
         "phase": state.phase.value,
         "weather": state.weather,
         "your_side": side.value,

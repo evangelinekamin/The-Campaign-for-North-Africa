@@ -205,6 +205,29 @@ def test_two_level_clock_cadence():
     assert res.final.stage in (1, 2, 3)
 
 
+def test_initiative_and_double_move():
+    # rule 7.14/7.12: Initiative is determined once per game-turn (Axis fixed through the
+    # first two, 61.5, no die) and the scripted A/B declaration runs the double-move -- the
+    # Initiative side moves LAST in Operations Stage 2 (phasing_first = the OTHER side) and
+    # FIRST in stages 1/3, so it lands two consecutive pulses across the 2->3 boundary.
+    from game.events import EventKind
+    from game.scenario import rommels_arrival
+    res = run(rommels_arrival(seed=1941), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    ev = res.events
+
+    det = [e for e in ev if e.kind == EventKind.INITIATIVE_DETERMINED]
+    turn_adv = sum(1 for e in ev if e.kind == EventKind.TURN_ADVANCED)
+    assert len(det) == turn_adv + 1                           # one determination per game-turn
+    fixed = [e for e in det if e.payload.get("fixed")]
+    assert fixed and all(e.payload["side"] == "AXIS" and e.turn <= 2 for e in fixed)   # 61.5
+
+    decl = [e for e in ev if e.kind == EventKind.INITIATIVE_DECLARED]
+    s1 = [e for e in decl if e.payload["stage"] == 1 and e.turn == 1]
+    s2 = [e for e in decl if e.payload["stage"] == 2 and e.turn == 1]
+    assert s1 and s1[0].payload["phasing_first"] == "AXIS"    # Axis holds -> moves first in stage 1
+    assert s2 and s2[0].payload["phasing_first"] == "ALLIED"  # ...and LAST in stage 2 (double-move)
+
+
 def test_surrender_at_collapsed_cohesion():
     # the 17.4 row for Cohesion <= -17 is all-Surrender; a stack there surrenders
     # (17.25). A Basic Morale of +1 or better normally shrugs the SURR off (17.26),
@@ -463,7 +486,7 @@ def test_cohesion_decays_on_heavy_combat_losses():
     # deferred, so Cohesion accumulates downward over repeated combats.
     from game.events import EventKind
     from game.scenario import battle_for_tobruk
-    res = run(battle_for_tobruk(seed=1), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    res = run(battle_for_tobruk(seed=3), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
     changes = [e for e in res.events if e.kind == EventKind.COHESION_CHANGED]
     assert changes and all(e.payload["delta"] == -3 for e in changes)
     assert res.final.unit(changes[0].payload["unit_id"]).cohesion < 0

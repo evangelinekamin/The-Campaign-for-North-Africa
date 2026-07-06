@@ -29,6 +29,14 @@ from .terrain import Hexside, Mobility, Terrain
 LENGTH = 8
 MAX_TURNS = 8
 
+# Initiative (rule 7.14 / 7.15 / 61.5) for the Race for Tobruk. 61.5 fixes Initiative to the
+# Axis through GT27 (the first two game-turns of the GT26-start scenario, until=2 on the
+# synthetic 1..12 clock), rolling from GT28. The 7.2 Initiative Ratings chart is untranscribed;
+# these are a REPRESENTATIVE PROXY (Rommel/DAK a slight edge over the Commonwealth), flagged --
+# not transcribed values. Only the ordering they bias is affected, never a rulebook magnitude.
+_AXIS_INITIATIVE_UNTIL = 2
+_INITIATIVE_RATINGS_PROXY = {"AXIS": 3, "ALLIED": 2}
+
 
 def _zero_consumed() -> dict:
     return {c: 0 for c in COMMODITIES}
@@ -146,6 +154,8 @@ def battle_for_tobruk(seed: int = 1941) -> GameState:
         terrain=tmap, control={}, units=units, target_hex=target,
         supplies=supplies, consumed=_zero_consumed(), initial_supply=initial,
         map_sections=frozenset("C"),                     # real Map C (29.1 / 29.7)
+        initiative_fixed=Side.AXIS, initiative_fixed_until=_AXIS_INITIATIVE_UNTIL,
+        initiative_ratings=dict(_INITIATIVE_RATINGS_PROXY),   # 7.14/61.5 (proxy ratings)
     )
 
 
@@ -303,6 +313,8 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
         supplies=tuple(supplies), consumed=_zero_consumed(),
         initial_supply=initial, convoys=convoys, ports=ports, trucks=trucks,
         map_sections=frozenset("ABC"),                   # real Maps A/B/C (29.1 / 29.7)
+        initiative_fixed=Side.AXIS, initiative_fixed_until=_AXIS_INITIATIVE_UNTIL,
+        initiative_ratings=dict(_INITIATIVE_RATINGS_PROXY),   # 7.14/61.5 (proxy ratings)
     )
 
 
