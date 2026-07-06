@@ -226,10 +226,28 @@ def _logistics(r: _Run) -> None:
         return
     r.go(Phase.LOGISTICS, Side.SYSTEM)
     hot = s.weather == "hot"
-    _evaporate(r, hot)
-    for side in (Side.AXIS, Side.ALLIED):
-        _stores_expenditure(r, side, hot)
-        _water_distribution(r, side, hot)
+    _evaporate(r, hot)                              # 6% base + hot slice (the 49.3/52.44
+    for side in (Side.AXIS, Side.ALLIED):           # 6%/5% split rides in Step 3, with the cadence)
+        _stores_stage(r, side, hot)
+        _water_stage(r, side, hot)
+
+
+def _stores_stage(r: _Run, side: Side, hot: bool) -> None:
+    """A side's Stores Expenditure (rule 48 Stage IV / 51, faithfully once per GAME-TURN):
+    draw STORES from the traced dumps, with the 51.21 disorganization + 51.22 attrition on a
+    sustained shortfall, and the 52.6 Pasta Point. Split out from _water_stage so the two can
+    later take their faithful cadences (stores per game-turn, water per Operations Stage). The
+    base evaporation this stage carries (49.3) is emitted once by _evaporate above, kept there
+    so both sides' stores stay interleaved with water exactly as today -> byte-identical."""
+    _stores_expenditure(r, side, hot)
+
+
+def _water_stage(r: _Run, side: Side, hot: bool) -> None:
+    """A side's Water Distribution (rule 48 V.C.1 / 52, faithfully per OPERATIONS STAGE): draw
+    WATER from the traced dumps, with the 52.53 shortfall attrition. The dual of _stores_stage;
+    kept adjacent to it here (interleaved per side) so the split is byte-identical until the
+    cadence actually diverges in a later step."""
+    _water_distribution(r, side, hot)
 
 
 _EVAP = logistics_data.evaporation_percent()   # 49.3/52.44, from the rulebook
