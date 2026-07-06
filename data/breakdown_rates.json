@@ -1,0 +1,159 @@
+{
+  "_comment": "FAITHFUL vehicle-breakdown / repair / weather magnitudes for The Campaign for North Africa (Phase 3, rules 21/22/29). Transcribed from the rulebook charts in docs/rules/90-charts-tables-and-play-aids.md and, where the OCR was garbled or dropped a column, RECOVERED directly from the scanned PDF (The Campaign for North Africa.pdf, chart booklet pages 6-8 = PDF pages 70/101/102/103/138). Mirrors data/logistics_rates.json: raw rulebook values, each block citing its exact chart/rule. DATA FILE ONLY -- no engine code reads it yet (Phase-3 Step 1). Scope = Fork B (faithful proxy): every real magnitude is here; capture/towing/destroyed-tank-recovery (22.4/22.44) and the TDS/Mobile-Repair specials (22.6/22.7) are DEFERRED and deliberately NOT transcribed. Two OCR corrections were made against the scan and are called out inline: (a) 8.37 Desert Breakdown Value = 24, NOT 2 (the long-assumed 'footnote-4 bleed' reading is wrong -- the scan shows two full-size baseline digits); (b) 21.38 column 41-50 has a 75%-row cell of 66 that the OCR dropped (so roll 66 there = 75%, and 64-65 correctly stays 50%). See faithfulness notes below.",
+
+  "terrain_breakdown_values_8_37": {
+    "_comment": "[8.37] TERRAIN EFFECTS CHART, the 'Breakdown Value' column (docs/rules/90 lines 9-36; verified on PDF page 70). Breakdown Points (BP) a MOTORIZED vehicle accrues entering a hex / crossing a hexside. Foot/camel/motorcycle and inherent-transport guns never break down (21.11). Values are per hex entered or per hexside crossed. The engine will consume these beside movement.step_cost (they reuse the same road/track/escarpment branching).",
+    "hex_terrain": {
+      "clear": 4,
+      "gravel": 6,
+      "salt_marsh": 6,
+      "heavy_vegetation": 3,
+      "rough": 8,
+      "mountain": 12,
+      "delta": 2,
+      "desert": 24,
+      "major_city": 0.5,
+      "_desert_note": "VERIFIED on PDF page 70: the Desert cell reads '24' (two full-size, baseline-aligned digits), NOT '2' with a footnote-4 superscript. Contrast the same row's Mot CP cost '4-superscript-3' where the 3 is clearly a small raised footnote -- the breakdown '24' has no such formatting. Desert=24 is also the thematically correct reading: it is the single highest terrain value on the chart (double Mountain's 12), which is precisely what makes the open desert -- not the enemy -- the main tank-killer. The prior project assumption Desert=2 (from terrain.py's comment) is OVERTURNED by the scan.",
+      "_major_city_note": "PDF page 70 shows Major City Breakdown Value = 1/2 (0.5); its non-Mot CP cost is 1. (An earlier note that had 'Major City 1' conflated the CP-cost column with the breakdown column.)",
+      "_absent_note": "Swamp = may be entered only on road/railroad (no independent BV). Village/Bir/Oasis and Railroad = 'same as terrain in hex for all purposes' (BV inherited from the underlying hex). Fortification levels add no BV."
+    },
+    "hexside": {
+      "ridge": 2,
+      "up_slope": 2,
+      "down_slope": 2,
+      "up_escarpment": "P",
+      "down_escarpment": 6,
+      "wadi": 8,
+      "major_river": "P",
+      "minor_river": 1,
+      "friendly_minefield": 0,
+      "enemy_minefield": 2,
+      "_prohibited_note": "'P' = Prohibited to motorized units. Up Escarpment: a vehicle may not climb one (8.42), so it has no BV. Major River: crossable by a motorized unit ONLY where a road or railroad crosses the hexside, and then at NO Breakdown Points (note 11) -- hence no positive BV.",
+      "_escarpment_note": "Down Escarpment BV = 6 and is NOT halved by a track (the explicit exception in note 8)."
+    },
+    "road": {
+      "breakdown_value": 0.5,
+      "note_6": "A Road NEGATES all hexside terrain-feature entry costs AND Breakdown Point Values (note 6). During a Rainstorm a Road is treated as a Track for movement (29.56)."
+    },
+    "track": {
+      "breakdown_value": 0,
+      "note_8": "A Track HALVES all hex and hexside Breakdown Point Values (and terrain entry costs), EXCEPT the CP expended and the Breakdown acquired by moving a vehicle DOWN AN ESCARPMENT (note 8). A track carries no BV of its own ('-' on the chart)."
+    },
+    "light_truck_offroad_54_2": {
+      "_comment": "[54.2] chart note (double-dagger): a Light Truck NOT moving along a Road garners ONE ADDITIONAL Breakdown Point per hex entered AND per hexside crossed, on top of the terrain/hexside BV.",
+      "additional_bp_per_hex": 1,
+      "additional_bp_per_hexside": 1,
+      "worked_example_54_2": "The chart's own worked example: a light truck moving one hex along a track, across a wadi hexside, into a rough hex accumulates '1/2 x 8 (wadi) + 1/2 x 8 (rough) + 1 (wadi hexside off-road) + 1 (rough hex off-road)' = 4 + 4 + 1 + 1 = 10 BP. (The headline '18' in the OCR is an OCR corruption of '10'; the parenthetical arithmetic, which is unambiguous on the page, sums to 10 and confirms the track DOES halve both the hex and hexside BV.)"
+    }
+  },
+
+  "breakdown_table_21_38": {
+    "_comment": "[21.38] BREAKDOWN TABLE (docs/rules/90 lines 1165-1178; RE-READ off PDF page 102 to recover a cell the OCR dropped). Roll two dice read as a two-digit sequential number 11..16,21..26,...,61..66 (36 outcomes). Pick the column by the vehicle's Accumulated Breakdown Points AFTER applying the BAR + weather column shifts (see 'notes'); the cell that contains the roll gives the % of that vehicle type that breaks down. Each column's cells partition all 36 rolls exactly (hand-verified). ROWS are the % results; each cell is an inclusive sequential range ('a-b' means a..b in the 11..66 sequence) or '-' (no outcome).",
+    "columns_accumulated_bp": ["0-3", "4-10", "11-20", "21-30", "31-40", "41-50", "51-60", "61-70", "71+"],
+    "cells_by_pct": {
+      "0":  ["11-66", "11-42", "11-32", "11-26", "11-23", "11-16", "11-14", "-",     "-"],
+      "10": ["-",     "43-64", "33-62", "31-55", "24-53", "21-46", "15-42", "11-33", "11-25"],
+      "25": ["-",     "65",    "63-64", "56-62", "54-61", "51-56", "43-54", "34-52", "26-43"],
+      "33": ["-",     "66",    "65",    "63-65", "62-64", "61-63", "55-63", "53-62", "44-55"],
+      "50": ["-",     "-",     "66",    "66",    "65-66", "64-65", "64-65", "63-64", "56-63"],
+      "75": ["-",     "-",     "-",     "-",     "-",     "66",    "66",    "65-66", "64-66"]
+    },
+    "_ocr_correction_note": "In column '41-50' the OCR (docs/rules/90 line 1176) omitted the 75%-row cell, leaving roll 66 uncovered (only 35 of 36 rolls). PDF page 102 clearly shows the 75% row as '- - - - - 66 66 65-66 64-66', i.e. column 41-50 DOES have a 75% result of 66. Therefore roll 66 in column 41-50 = 75% breakdown, and the 50%-row cell '64-65' correctly stays two values (64,65). This is the FAITHFUL fix; do NOT use the earlier proposed 'extend 64-65 to 64-66' patch (that would map roll 66 to 50% and is contradicted by the scan). All nine columns now partition all 36 rolls exactly.",
+    "notes": "% Breakdown = the percentage of that vehicle type that breaks down (round fractions per 21.35; a single TOE point ignores a 10% result). Column shifts applied BEFORE rolling and CUMULATIVE (21.3): the vehicle's BAR (right for +, left for -), Hot Weather = +1 column right, Sandstorm = +1 column right IF at least 50% of the accumulated BP were acquired in map sections containing Sandstorms. Motorcycles and inherent-transport artillery never break down."
+  },
+
+  "broken_down_vehicle_repair_22_8": {
+    "_comment": "[22.8] BROKEN DOWN VEHICLE REPAIR TABLE (docs/rules/90 lines 1208-1224; confirmed clean on PDF page 103). Roll one die (0-8; the die can exceed 6 via the Major-City modifiers below). Result by vehicle class and repair location. Truck cells: '2' = one Heavy Truck Point (or any Light/Medium combination equal to two) repaired; '1' = one Light or Medium Truck Point. AC/R cells = TOE Strength Points of armored car / recce repaired. Tank/SPA/TD and Facility cells = percentage of that vehicle type repaired (round fractions UP). 'na' = not allowed. '10%*' = if only a single TOE point is being repaired, treat as 0%.",
+    "die_column_labels": ["field_truck", "field_ac_recce", "field_tank_spa_td", "facility_temporary", "facility_major"],
+    "by_die": {
+      "0": ["2", "1", "25%", "50%", "75%"],
+      "1": ["2", "1", "25%", "50%", "75%"],
+      "2": ["1", "0", "100%", "33%", "50%"],
+      "3": ["0", "0", "100%", "25%", "50%"],
+      "4": ["0", "0", "100%", "25%", "50%"],
+      "5": ["0", "0", "0%", "10%*", "33%"],
+      "6": ["0", "0", "0%", "10%*", "33%"],
+      "7": ["na", "na", "na", "10%*", "25%"],
+      "8": ["na", "na", "na", "10%*", "10%"]
+    },
+    "die_modifiers": {
+      "tds_or_mobile_repair_in_hex": -1,
+      "major_city_fort_level_2": 1,
+      "major_city_fort_level_1_or_0": 2,
+      "_note": "Subtract 1 for a Tank Delivery Squadron / Mobile Tank Repair Squad in the same hex (a deferred special). Add 1 (fort level 2) or 2 (fort level <=1) for a repair facility in a Major City hex."
+    },
+    "_scope_note": "Fork B uses only the two FIELD tank/truck/AC-recce columns each Repair Phase. The Temporary/Major Facility columns are transcribed for completeness/future use."
+  },
+
+  "vehicle_repair_supply_costs_22_15": {
+    "_comment": "[22.15] VEHICLE REPAIR SUPPLY COSTS CHART (docs/rules/90 lines 1180-1190; confirmed clean on PDF page 102). Supply Points expended BEFORE each repair attempt. Bd = Broken-down vehicle; De = Destroyed tank (DEFERRED under Fork B). AC = Armored Car; SPA = Self-propelled Artillery; TD = Tank Destroyer; Facility = Major or Minor Repair Facility. If a case is not listed, the repair may not be performed.",
+    "field_bd_truck_ac_recce": {"fuel": 0, "stores": 0},
+    "field_bd_tank_spa_td": {"fuel": 1, "stores": 0},
+    "facility_bd_all": {"fuel": 1, "stores": 1},
+    "field_de_tank": {"fuel": 2, "stores": 2, "_deferred": "destroyed-tank recovery is out of Fork-B scope"},
+    "facility_de_tank": {"fuel": 2, "stores": 2, "_deferred": "destroyed-tank recovery is out of Fork-B scope"}
+  },
+
+  "weather_table_29_61": {
+    "_comment": "[29.61] WEATHER TABLE -- RECOVERED from PDF page 101 (the docs/rules/90 OCR at lines 1045-1055 was incoherent: it scrambled the three multi-year Game-Turn sub-columns into the Normal and Hot dice columns, producing impossible cells like 49-60/97-108 and contradicting the 29.1 worked example). Each season row partitions the 2d6-sequential roll (11..66, 36 outcomes) among {normal, hot, sandstorm, rainstorm}. All four seasons partition all 36 rolls exactly (hand-verified), and the 29.1 example 'summer 53 -> Hot' now checks out (summer Hot = 24-55, and 53 is in range). A '-' = that weather never occurs that season. Sandstorm and Rainstorm are 'foul' -- proceed to the 29.7 Foul Weather Location Table for the affected map sections.",
+    "by_season": {
+      "spring": {"normal": "11-42", "hot": "43-55", "sandstorm": "56-64", "rainstorm": "65-66"},
+      "summer": {"normal": "11-23", "hot": "24-55", "sandstorm": "56-66", "rainstorm": "-"},
+      "fall":   {"normal": "11-35", "hot": "36-54", "sandstorm": "55-61", "rainstorm": "62-66"},
+      "winter": {"normal": "11-52", "hot": "-",     "sandstorm": "-",     "rainstorm": "53-66"}
+    },
+    "season_game_turns": {
+      "_comment": "The Game-Turn column, read from the scan: each 48-turn year recurs the season. Year 3 is only partial (the campaign ends at Game-Turn 110).",
+      "spring": ["1-12", "49-60", "97-108"],
+      "summer": ["13-24", "61-72", "109-110"],
+      "fall":   ["25-36", "73-84"],
+      "winter": ["37-48", "85-96"]
+    }
+  },
+
+  "foul_weather_location_29_7": {
+    "_comment": "[29.7] FOUL WEATHER LOCATION TABLE (docs/rules/90 lines 1226-1232; confirmed clean on PDF page 103). After a Sandstorm/Rainstorm result on 29.61, roll one die for WHICH map sections the foul weather covers. Unaffected sections have Normal Weather. * = a Sandstorm on a (Nile) Delta hex is treated as Normal Weather. Sandstorms do not extend north of the coastal hexes.",
+    "by_die": {
+      "1": ["A", "B"],
+      "2": ["C", "D"],
+      "3": ["D", "E"],
+      "4": ["B", "C"],
+      "5": ["B", "D"],
+      "6": ["B", "C", "D"]
+    },
+    "die_3_delta_note": "Die 3 -> sections D,E: a Sandstorm on a Delta hex in these sections is treated as Normal Weather (the '*')."
+  },
+
+  "bar_by_model": {
+    "_comment": "Breakdown Adjustment Rating per tank/truck model, the recovered chart-of-record (mirror of logistics_rates.json fuel_consumption_rate_by_model). Signed convention: +N = N columns RIGHT on the [21.38] table (more breakdown), -N = N LEFT, 0 = none. The live seeded models also carry 'bar' in data/unit_stats.json; this block is the FULL transcription including models not yet in the OOB and the trucks. Sources cited per sub-block. Guns/AT/towed artillery are omitted: with inherent transport they never break down (21.11).",
+    "commonwealth_tank_4_47": {
+      "_comment": "[4.47] COMMONWEALTH TANK & GUN CHARACTERISTICS CHART -- the BAR column did NOT survive OCR into docs/rules/90 (its rightmost surviving column is the Fuel Rate; the header collapsed 'Fuel Rate' / 'BAR' together). RECOVERED off PDF page 138 and row-aligned by cross-checking every Fuel Rate against logistics_rates.json (all 13 match). Note the texture: the unreliable British cruiser/infantry tanks (A-series, Crusaders, Matilda) are all +1R, while the American Lend-Lease tanks (Grant, Sherman, Stuart) and the Churchill are 0.",
+      "a9": 1, "a10": 1, "a13": 1,
+      "churchill2": 0,
+      "crusader1": 1, "crusader2": 1, "crusader3": 1,
+      "grant": 0,
+      "mk6": 0,
+      "matilda2": 1,
+      "sherman": 0,
+      "stuart": 0,
+      "valentine2": 0,
+      "scorpion": -1,
+      "_sp_note": "From the same chart's artillery/AT rows: SP 25-pounder ('Bishop') = +2R, 105mm SP Howitzer ('Priest') = 0, SP 6-pounder ('Deacon') = -1L."
+    },
+    "italian_tank_4_48": {
+      "_comment": "[4.48] ITALIAN TANK & GUN CHARACTERISTICS CHART (OCR'd cleanly, docs/rules/90 lines 3311-3341; spot-checked on scan).",
+      "cv33": 2, "l6": 0, "m11": 1, "m13": 1, "m14": 0,
+      "sp_75_18": 1
+    },
+    "german_tank_4_49": {
+      "_comment": "[4.49] GERMAN TANK & GUN CHARACTERISTICS CHART (OCR'd cleanly, docs/rules/90 lines 3345-3380). All German tanks and SP guns = 0, BUT chart note *: every German tank has a BAR of +1R until the beginning of the 1/31 Game-Turn -- a TURN-GATE the reader must honor (not a flat value). Represented here as the post-1/31 steady value 0 with the gate recorded.",
+      "pz1": 0, "pz2": 0, "pz3e": 0, "pz3h": 0, "pz3j": 0, "pz4d": 0, "pz4e": 0, "pz4f2": 0,
+      "sp_10_5cm_k18": 0, "sp_15cm": 0, "pzjg1": 0, "marder3": 0,
+      "early_war_gate": {"bar_until_game_turn": "1/31", "bar_before_gate": 1, "bar_from_gate": 0}
+    },
+    "trucks_54_2": {
+      "_comment": "[54.2] TRUCK CHARACTERISTICS CHART -- all truck points have BAR '2L' = -2 (two columns left). The Light Truck additionally accrues +1 BP per hex/hexside when moving off-road (handled in terrain_breakdown_values_8_37.light_truck_offroad_54_2, not as a BAR shift).",
+      "light": -2, "medium": -2, "heavy": -2
+    }
+  }
+}
