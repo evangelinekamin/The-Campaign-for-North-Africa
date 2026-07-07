@@ -225,6 +225,7 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
     tmap, _ = cna_map.load_sections("ABC")
     target = coords.to_axial(coords.parse("C4807"))               # Tobruk
     units, supplies = oob.build(sections="ABC")   # corridor only (drops rear Map-D units)
+    rommel = oob.rommel_entity(sections="ABC")    # rule 31: the leader as an entity, off units[]
 
     # The rear Axis HARBOUR (Tripoli): a dedicated built-in port dump (56.28) seeded with the
     # 61.44 Tripoli-box stock (fuel 3000 / ammo 1500 / stores 500) and placed one hex behind
@@ -315,6 +316,7 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
         map_sections=frozenset("ABC"),                   # real Maps A/B/C (29.1 / 29.7)
         initiative_fixed=Side.AXIS, initiative_fixed_until=_AXIS_INITIATIVE_UNTIL,
         initiative_ratings=dict(_INITIATIVE_RATINGS_PROXY),   # 7.14/61.5 (proxy ratings)
+        rommel=rommel,                                        # rule 31: the Axis leader entity
     )
 
 

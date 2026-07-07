@@ -1221,12 +1221,13 @@ def _honors_surrender(morale: int, cohesion: int, enemy_overwhelms: bool) -> boo
 
 def _adjusted_morale(r: _Run, units, *,
                      enemy_overwhelms: bool = False) -> tuple[int, tuple[int, int], bool]:
-    """Adjusted Morale of a close-assault stack (rule 15.6): the LARGEST unit's
-    Basic Morale (17.32), plus the 17.4 modifier rolled at its Cohesion level, +1
-    if Rommel is present (17.28), clamped to -3..+3 (17.23). Returns (morale, the
-    two dice, surrendered). A SURR result eliminates the stack (17.25); the 17.26
-    reprieve and its (a) cohesion / (b) enemy-3x exceptions are decided by
-    _honors_surrender. When SURR is shrugged off it counts as the -4 penalty."""
+    """Adjusted Morale of a close-assault stack (rule 15.6): the LARGEST unit's Basic Morale
+    (17.32) plus the 17.4 modifier rolled at its Cohesion level, clamped to -3..+3 (17.23),
+    THEN General Rommel's +1 (17.28) added OUTSIDE that clamp -- the one explicit 17.23
+    exception, so a +3 unit stacked with Rommel reaches +4. Returns (morale, the two dice,
+    surrendered). A SURR result eliminates the stack (17.25); the 17.26 reprieve and its
+    (a) cohesion / (b) enemy-3x exceptions are decided by _honors_surrender. When SURR is
+    shrugged off it counts as the -4 penalty."""
     live = [u for u in units if u.strength > 0]
     if not live:
         return 0, (0, 0), False
@@ -1237,8 +1238,13 @@ def _adjusted_morale(r: _Run, units, *,
         largest.morale, largest.cohesion, enemy_overwhelms)
     if mod == "SURR":
         mod = -4
-    m = largest.morale + mod + (1 if any("Rommel" in u.id for u in live) else 0)
-    return max(-3, min(3, m)), (d1, d2), surrendered
+    m = max(-3, min(3, largest.morale + mod))          # 17.23: clamp the Adjusted Morale FIRST
+    rom = r.state.rommel                               # 17.28: then add Rommel's +1 OUTSIDE the
+    if (rom is not None and not rom.in_germany         # clamp, keyed on his ENTITY position (not
+            and largest.side == Side.AXIS              # an is_combat-filtered Unit id-scan), so it
+            and rom.hex == largest.hex):               # lands on attacking stacks too and can break
+        m += 1                                         # the +3 ceiling (17.23 exception)
+    return m, (d1, d2), surrendered
 
 
 def _resolve_surrender(r: _Run, side: Side, actor: str, target: Coord, attackers,

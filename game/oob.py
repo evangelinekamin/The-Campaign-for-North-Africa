@@ -16,7 +16,7 @@ import os
 
 from . import coords, logistics_data
 from .events import Side
-from .state import StepRecord, SupplyUnit, Unit
+from .state import Rommel, StepRecord, SupplyUnit, Unit
 from .terrain import Mobility, NON_MOT_CLASSES
 
 _DATA = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -134,6 +134,27 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
             units.append(_make_unit(rec, side, tuple(rec["hex"]), role, stats, seen,
                                     rec["arrival_turn"]))
     return units, supplies
+
+
+def rommel_entity(oob_file: str = "oob_desert_fox.json",
+                  sections: str | None = None) -> Rommel | None:
+    """Divert the General Rommel leader counter (rule 31) OUT of units[] into a
+    conservation-invisible entity (game.state.Rommel). The extracted OOB merges the leader
+    and his headquarters into one 'GE Rommel - DAK' counter; build() still materialises that
+    counter as the is_combat=False DAK-HQ Unit (morale 1, unchanged), and this lifts a SECOND,
+    parallel reading of it -- Rommel himself -- onto the board as the entity. Returns the
+    entity at the counter's start hex, or None if this OOB fields no Rommel (so every non-
+    Rommel scenario stays byte-identical). `sections` filters to a loaded map area, exactly
+    like build()."""
+    for rec in _load(oob_file):
+        if rec.get("kind") != "unit":
+            continue
+        hexlbl = rec["hex"]
+        if sections is not None and hexlbl[0] not in sections:
+            continue
+        if "Rommel" in rec["counter"]:
+            return Rommel(hex=coords.to_axial(coords.parse(hexlbl)))
+    return None
 
 
 def _dump_pool(side: Side) -> dict:

@@ -220,6 +220,23 @@ class TruckFormation:
 
 
 @dataclass(frozen=True, slots=True)
+class Rommel:
+    """General Rommel (rule 31): the Axis-only named leader, modelled as a conservation-
+    invisible ENTITY rather than a Unit. He carries no TOE and no supply ledger, so he never
+    touches invariants.check (strength/stacking/supply), and being off units[] he needs zero
+    ZOC / stacking / combat / targeting special-casing (31.1 no combat ratings, 31.2 EZOC
+    impunity + cannot be close-assaulted). `hex` is his current axial position; `in_germany`
+    is True while the Berlin recall (31) holds him off-map -- the only modelled absence, since
+    the 27.6 Raid-on-Rommel capture is deferred. `anchor_hex` + `companions` snapshot the 31.4
+    'started-the-Operations-Stage-with-him-AND-stayed' set, taken at each OpStage boundary and
+    voided the instant he moves (hex != anchor_hex)."""
+    hex: Coord
+    in_germany: bool = False
+    anchor_hex: Coord | None = None
+    companions: frozenset = frozenset()
+
+
+@dataclass(frozen=True, slots=True)
 class GameState:
     turn: int
     max_turns: int
@@ -279,6 +296,11 @@ class GameState:
     initiative_fixed: Side | None = None
     initiative_fixed_until: int = 0
     initiative_ratings: dict = field(default_factory=dict)
+    # General Rommel (rule 31): the Axis leader carried as a conservation-invisible ENTITY
+    # (NOT a Unit), the exact idiom of siege_rules/convoys/ports/trucks. Default None keeps
+    # every non-Rommel scenario byte-identical -- no morale +1 (17.28), no +5 CPA (31.4), no
+    # Berlin-recall roll, and zero Rommel events.
+    rommel: "Rommel | None" = None
 
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:
