@@ -1732,6 +1732,9 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     res = combat.resolve(
         attacker_raw=sum(u.raw_offense for u in armed_atk),
         defender_raw=sum(u.raw_defense for u in armed_def),     # unarmed defenders -> 0
+        # 15.12/15.15: pinned + out-of-ammo defenders add no Ratings to defender_raw
+        # (the differential/15.51 shift) but their TOE strengths ARE in the casualty pool.
+        defender_loss_raw=sum(u.raw_defense for u in defenders),
         def_terrain=r.state.terrain.terrain[target], attack_feature=feature,
         atk_roll=ab * 10 + asm, def_roll=db * 10 + dsm,
         morale_shift=atk_m - def_m,

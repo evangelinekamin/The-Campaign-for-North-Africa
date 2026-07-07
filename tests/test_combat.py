@@ -285,6 +285,35 @@ def test_15_83c_loss_pct_applies_to_raw_points_rounding_directions():
     assert res.defender_points_lost == 6      # floor(6.45)
 
 
+def test_15_12_pinned_defenders_widen_the_casualty_pool():
+    # 15.12/15.83c: PINNED (and withheld) defenders add NO Ratings to the defense
+    # -- the differential, column, and 15.51 shift are read off the armed defender_raw
+    # -- yet their TOE strengths ARE in the casualty pool. Here 38 armed raw plus a
+    # pinned battalion's 32 raw make a 70-point loss pool (the rulebook's own worked
+    # example: 15% of 70 = 10.5 -> floor 10).
+    kw = dict(attacker_raw=63, def_terrain=Terrain.CLEAR, attack_feature=None,
+              atk_roll=21, def_roll=21, defender_ca_penalty=1)
+    armed = combat.resolve(defender_raw=38, **kw)
+    pooled = combat.resolve(defender_raw=38, defender_loss_raw=70, **kw)
+    # the pinned TOE never touches the differential / column
+    assert pooled.differential == armed.differential
+    assert pooled.column == armed.column
+    assert pooled.defender_loss_pct == armed.defender_loss_pct == 15
+    assert armed.defender_points_lost == 5          # floor(0.15 * 38)
+    assert pooled.defender_points_lost == 10        # floor(0.15 * 70)
+
+
+def test_15_12_all_pinned_garrison_still_bleeds():
+    # The regression: a lone PINNED garrison has defender_raw == 0 (adds no Ratings) so
+    # WITHOUT a separate pool it would take ZERO losses at any column/roll. With its TOE
+    # in the pool it must still bleed when the CRT calls for a loss.
+    res = combat.resolve(attacker_raw=60, defender_raw=0, defender_loss_raw=40,
+                         def_terrain=Terrain.CLEAR, attack_feature=None,
+                         atk_roll=21, def_roll=21)
+    assert res.defender_loss_pct > 0
+    assert res.defender_points_lost > 0
+
+
 def test_15_83d_elite_absorbs_fewer_steps_than_weak_at_same_loss():
     # 15.83d: steps are removed to ABSORB the raw points lost, each step soaking up
     # its unit's close-assault rating. For the SAME raw points lost, an elite unit

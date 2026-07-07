@@ -64,7 +64,8 @@ def resolve(*, attacker_raw: int, defender_raw: int,
             extra_shift: int = 0, morale_shift: int = 0,
             attacker_ca_penalty: int = 0, defender_ca_penalty: int = 0,
             attacker_size: int = 0, defender_size: int = 0,
-            fortification_level: int = 0, in_enemy_minefield: bool = False) -> CombatResult:
+            fortification_level: int = 0, in_enemy_minefield: bool = False,
+            defender_loss_raw: int | None = None) -> CombatResult:
     both_small = attacker_raw < 10 and defender_raw < 10
     # Combined-arms reduces each side's ACTUAL close-assault points (rule 15.4).
     a_actual = max(0, actual_points(attacker_raw, both_small) - attacker_ca_penalty)
@@ -97,11 +98,18 @@ def resolve(*, attacker_raw: int, defender_raw: int,
     # of TOE steps. Attacker rounds up, defender rounds down (overrun rounds the
     # defender up under 15.77 -- deferred). Steps to absorb these are chosen per
     # unit in the engine via each unit's close-assault rating (15.83d).
+    #
+    # 15.12/15.15/15.83c: the DEFENDER'S casualty pool is wider than defender_raw --
+    # it adds the TOE (raw) of PINNED and withheld (out-of-ammo, retreated-in) units,
+    # which contribute NO Ratings to the differential above yet still bleed. The engine
+    # passes that full pool as defender_loss_raw; it defaults to the armed defender_raw
+    # when there are no withheld defenders (all resolve() unit tests, which pass none).
+    defender_loss_pool = defender_raw if defender_loss_raw is None else defender_loss_raw
     return CombatResult(
         differential=diff, column=col,
         attacker_loss_pct=a_pct, defender_loss_pct=d_pct,
         attacker_points_lost=math.ceil(a_pct / 100 * attacker_raw),
-        defender_points_lost=math.floor(d_pct / 100 * defender_raw),
+        defender_points_lost=math.floor(d_pct / 100 * defender_loss_pool),
         attacker_captured=a_capt, defender_captured=d_capt,
         attacker_engaged=a_eng, retreat_hexes=retreat,
     )

@@ -581,6 +581,37 @@ def test_cp_overage_disorganizes_the_unit_6_21():
     assert kinds[coh][1]["delta"] == -3 and coh < resolved
 
 
+def test_pinned_lone_garrison_still_takes_casualties_15_12():
+    # 15.12: a PINNED lone garrison adds NO Ratings to the defence (defender_raw == 0),
+    # so before the pool fix it took ZERO close-assault losses at any column/roll -- a dry
+    # Tobruk that could never be worn down. Its TOE strength IS in the casualty pool, so it
+    # must bleed. Open ground behind it lets the retreat succeed (no 15.82 additional loss),
+    # isolating the single step lost to the assault pool itself.
+    from game.engine import _Run, _resolve_combat
+    from game.events import Phase
+    from game.movement import TerrainMap
+    from game.state import GameState, SupplyUnit, Unit, VP
+    from game.terrain import Mobility, Terrain
+    terr = {(q, 0): Terrain.CLEAR for q in range(-4, 3)}
+    atk = Unit("A", Side.AXIS, (1, 0), (StepRecord("a", 12),), mobility=Mobility.FOOT,
+               cpa=10, stacking_points=4, oca=8, dca=8, morale=2, cohesion=0)
+    gar = Unit("D", Side.ALLIED, (0, 0), (StepRecord("d", 6),), mobility=Mobility.FOOT,
+               cpa=10, stacking_points=1, oca=4, dca=4, morale=0, cohesion=0)
+    sup = [SupplyUnit("AXD", Side.AXIS, (1, 0), ammo=80, fuel=0),
+           SupplyUnit("ALD", Side.ALLIED, (0, 0), ammo=80, fuel=0)]
+    ammo = sum(s.ammo for s in sup)
+    st = GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS, seed=7,
+                   weather="clear", vp=VP(), terrain=TerrainMap(terrain=terr), control={},
+                   units=(atk, gar), target_hex=(1, 0), supplies=tuple(sup),
+                   consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": ammo, "FUEL": 0})
+    r = _Run(st)
+    _resolve_combat(r, Side.AXIS, "AXIS/Front", [atk], [gar], (0, 0), {"D"}, set())
+    lost = [e for e in r.events if e.kind == EventKind.STEP_LOST
+            and e.payload["unit_id"] == "D" and e.payload["role"] == "defender"]
+    assert lost and sum(e.payload["amount"] for e in lost) == 1   # the pool loss, not zero
+    assert r.state.unit("D").strength == 5                        # 6 -> 5, absorbed by dca
+
+
 def test_combined_arms_penalty():
     from game.engine import _combined_arms_penalty
     from game.terrain import Mobility
