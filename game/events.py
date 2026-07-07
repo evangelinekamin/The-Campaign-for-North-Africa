@@ -29,6 +29,7 @@ class Control(str, Enum):
 class Phase(str, Enum):
     WEATHER = "WEATHER"
     LOGISTICS = "LOGISTICS"        # naval-convoy arrival (rule 48 V.C.7/V.D); SYSTEM-owned
+    RESERVE = "RESERVE"            # Reserve Designation Phase (rule 48 V.G / 18.12); phasing side
     MOVEMENT = "MOVEMENT"
     COMBAT = "COMBAT"
     REPAIR = "REPAIR"              # vehicle repair (rule 22.12); the active side's own beat
@@ -142,6 +143,15 @@ class EventKind(str, Enum):
     # identity. It emits ONLY when a Policy opts into continual_movement, so every current scenario
     # stays byte-identical.
     SEGMENT_ADVANCED = "SEGMENT_ADVANCED"
+    # Reserve Status (rule 18), all folding PURELY (no steps, no supply) so invariants.check is
+    # untouched, and all emitted ONLY when a Policy designates via the base-[] hooks -- so every
+    # current scenario stays byte-identical. RESERVE_DESIGNATED {unit_id} sets reserve=1 (18.12
+    # always places Reserve I); RESERVE_FLIPPED {unit_id} advances an unreleased Reserve I to II
+    # (18.13); RESERVE_RELEASED {unit_id, from_tier} clears reserve to 0 and records the tier in
+    # reserve_released (0/1/2), which drives the 18.24 half-CPA cap. None costs CP (18.26).
+    RESERVE_DESIGNATED = "RESERVE_DESIGNATED"
+    RESERVE_FLIPPED = "RESERVE_FLIPPED"
+    RESERVE_RELEASED = "RESERVE_RELEASED"
     # General Rommel (rule 31), all folding PURELY onto GameState.rommel -- no steps, no
     # supply, so invariants.check (conservation + stacking) is untouched. ROMMEL_ANCHORED
     # {hex, companions} snapshots the 31.4 'started-the-Operations-Stage-with-him' set at each

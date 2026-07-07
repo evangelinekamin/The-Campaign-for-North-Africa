@@ -120,6 +120,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                 _naval_convoys(r)                       # V.C.7 + V.D: convoy arrival + port regen (SYSTEM)
             for side in (first, second):                # 7.16: Player A (first) then Player B (last)
                 _debrief(side)                          # enemy portion + own last combat
+                _reserve_designation(r, policies[side], side)   # 48 V.G / 18.11: hold units back (phasing)
                 r.go(Phase.MOVEMENT, side)
                 _movement(r, policies, side)            # segment 0 (ungated); Reaction (8.5) rides inside
                 _rommel_move(r, policies[side], side)   # 31.1: the leader repositions (Axis only, self-guarded)
@@ -598,8 +599,14 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
             _reject(r, side, actor, order,
                     "not eligible for continual movement (8.23 two-hex gate)")
             continue
+        if u.reserve == 2:                              # 18.22: Reserve II never moves
+            _reject(r, side, actor, order, "Reserve II units may not move (18.22)")
+            continue
         if u.effective_strength == 0:                   # 21.44: all vehicles broken down
             _reject(r, side, actor, order, "all vehicles broken down, may not move (21.44)")
+            continue
+        if u.reserve == 1:                              # 18.22: Reserve I -- one hex, CP-free
+            _reserve_shuffle(r, side, actor, order, u, enemy_zoc, enemy_occupied)
             continue
         # Reachability is computed against the phase-start roster so a unit's legal
         # set doesn't depend on the order earlier units moved (matches observe()).
@@ -636,6 +643,28 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
                              old_cp + reach[order.to], tactics.effective_cpa(r.state, u))
 
 
+def _reserve_shuffle(r: _Run, side: Side, actor: str, order: MoveOrder, u,
+                     enemy_zoc: frozenset, enemy_occupied: frozenset) -> None:
+    """18.22: a Reserve I unit may move ONE hex 'regardless of Capability Point expenditure' -- the
+    CP-FREE administrative shuffle (adopted). The destination must be an adjacent, in-bounds,
+    stacking-legal hex that is neither enemy-occupied nor in an enemy Zone of Control. Emits a
+    UNIT_MOVED with cp_spent 0 (no fuel, no 6.21 overage). Because the destination is out of enemy
+    ZOC it can never sit adjacent to an enemy combat unit, so no Reaction (8.5) can follow."""
+    dest = tuple(order.to)
+    if not is_adjacent(u.hex, dest) or not r.state.terrain.exists(dest):
+        _reject(r, side, actor, order, "Reserve I may move at most one hex (18.22)")
+        return
+    if dest in enemy_occupied or dest in enemy_zoc:
+        _reject(r, side, actor, order, "Reserve I may not shuffle into enemy control (18.22)")
+        return
+    present = [x for x in r.state.units_at(dest) if x.side == side]
+    if not stacking.within_hex_limit(present + [u], r.state.terrain.terrain[dest]):
+        _reject(r, side, actor, order, "destination over stacking limit")
+        return
+    r.emit(EventKind.UNIT_MOVED, side, actor,
+           {"unit_id": u.id, "from": list(u.hex), "to": list(dest), "cp_spent": 0})
+
+
 def _exploitation_eligible(state: GameState, side: Side,
                            also: frozenset = frozenset()) -> frozenset:
     """8.23: which units may move in a Continual-Movement pulse -- the phasing COMBAT units within
@@ -651,25 +680,66 @@ def _exploitation_eligible(state: GameState, side: Side,
     return frozenset(out)
 
 
+def _reserve_designation(r: _Run, policy: Policy, side: Side) -> None:
+    """Reserve Designation Phase (rule 48 V.G / 18.11-18.12), the phasing side only: before it
+    moves, a side may hold living combat units back in Reserve I. Emits Phase.RESERVE once and a
+    RESERVE_DESIGNATED per validated unit (18.26: no CP). Fires nothing -- no phase, no event --
+    when the policy designates nothing, so every current scenario stays byte-identical."""
+    ids = policy.reserve_designation(r.state, side)
+    valid = [uid for uid in dict.fromkeys(ids)
+             if (u := r.state.unit(uid)) is not None and u.alive and u.side == side
+             and u.is_combat and u.reserve == 0]
+    if not valid:
+        return
+    r.go(Phase.RESERVE, side)
+    actor = f"{side.value}/Front"
+    for uid in valid:
+        r.emit(EventKind.RESERVE_DESIGNATED, side, actor, {"unit_id": uid})
+
+
+def _reserve_release(r: _Run, policy: Policy, side: Side) -> frozenset:
+    """Reserve Release Segment (rule 48 V.H.4 / 18.13), at each inter-pulse boundary: the phasing
+    side releases chosen reserves (RESERVE_RELEASED at their current tier, 18.26 no CP), then every
+    UNRELEASED Reserve I advances to Reserve II (RESERVE_FLIPPED, 18.13). Returns the released ids
+    so the caller feeds them into the NEXT pulse's exploitation-eligible set (18.25, the exception
+    to 8.23). Emits nothing when the side holds no reserves, so byte-identity holds."""
+    actor = f"{side.value}/Front"
+    chosen = set(policy.reserve_release(r.state, side))
+    released = []
+    for u in sorted(r.state.living(side), key=lambda u: u.id):
+        if u.reserve in (1, 2) and u.id in chosen:
+            r.emit(EventKind.RESERVE_RELEASED, side, actor,
+                   {"unit_id": u.id, "from_tier": u.reserve})
+            released.append(u.id)
+    for u in sorted(r.state.living(side), key=lambda u: u.id):
+        if u.reserve == 1:                              # 18.13: an unreleased Reserve I -> Reserve II
+            r.emit(EventKind.RESERVE_FLIPPED, side, actor, {"unit_id": u.id})
+    return frozenset(released)
+
+
 def _continual_movement(r: _Run, policies: dict, side: Side) -> None:
     """The Continual-Movement pulse loop (rule 8.2/8.23 + the 48 V.H repeat), appended after a
-    side's segment-0 Movement/Combat. Each pulse: ask the policy whether to press on
-    (continual_movement -- base [] declines, so a scripted scenario runs ZERO pulses and stays
-    byte-identical); if so, open a SEGMENT_ADVANCED marker and re-run gated Movement (only the
-    8.23-eligible units), Breakdown, and a FRESH Combat Segment (8.25 re-attack). CP/BP persist
-    across pulses (only the OpStage boundary resets them), so the CP ceiling, the 6.21 cohesion
-    bleed, the monotone proposer and the 8.23 freeze terminate the loop long before
-    MAX_CONTINUAL_SEGMENTS."""
+    side's segment-0 Movement/Combat. First the segment-0 Reserve Release (48 V.H.4). Then each
+    pulse: ask the policy whether to press on (continual_movement -- base [] declines, so a scripted
+    scenario runs ZERO pulses and stays byte-identical); if so, open a SEGMENT_ADVANCED marker and
+    re-run gated Movement (only the 8.23-eligible + just-released units), Breakdown, and a FRESH
+    Combat Segment (8.25 re-attack); then release reserves again, feeding the NEXT pulse's 18.25
+    eligible set. CP/BP persist across pulses (only the OpStage boundary resets them), so the CP
+    ceiling, the 6.21 cohesion bleed, the monotone proposer and the 8.23 freeze terminate the loop
+    long before MAX_CONTINUAL_SEGMENTS."""
+    released = _reserve_release(r, policies[side], side)     # 48 V.H.4 after segment 0
     for seg in range(1, MAX_CONTINUAL_SEGMENTS + 1):
         if not policies[side].continual_movement(r.state, side):    # 8.2 go/no-go gate
             break
         r.emit(EventKind.SEGMENT_ADVANCED, side, "SYSTEM",
                {"segment": seg, "side": side.value})
         r.go(Phase.MOVEMENT, side)
-        _movement(r, policies, side, eligible=_exploitation_eligible(r.state, side))
+        _movement(r, policies, side,
+                  eligible=_exploitation_eligible(r.state, side, also=released))
         _breakdown(r, side)
         r.go(Phase.COMBAT, side)
         _combat(r, policies, side)
+        released = _reserve_release(r, policies[side], side)   # 48 V.H.4 feeds the NEXT pulse
 
 
 def _broken_count(pct: int, effective: int) -> int:

@@ -52,6 +52,14 @@ class Unit:
     engaged: bool = False          # 15.81 Engaged marker (was in a Close Assault); leaving
                                    # costs 4 CP (Disengage) not 2 (Break Contact). Cleared at
                                    # the OpStage boundary. Default False keeps scenarios intact.
+    # Reserve Status (rule 18), two per-OpStage scalars mirroring `engaged` (reset at the
+    # OpStage boundary in apply._reset_opstage, 18.14). `reserve` is the current tier -- 0 none,
+    # 1 Reserve I (may move one hex regardless of CP, 18.22), 2 Reserve II (frozen, 18.22).
+    # `reserve_released` records the tier a unit was RELEASED from this stage (0 not released,
+    # 1 from-I, 2 from-II), driving the 18.24 half-CPA voluntary cap. Defaults 0 keep every
+    # non-reserve scenario byte-identical.
+    reserve: int = 0
+    reserve_released: int = 0
     is_combat: bool = True         # False for truck convoys / bare HQs / air
     is_tank: bool = False          # a Tank (combined arms 15.4 -- NOT recce/SP)
     arrival_turn: int = 0          # game-turn it enters play (<=start = on-map; rule 20)

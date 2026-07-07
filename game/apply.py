@@ -65,6 +65,22 @@ def apply(state: GameState, event: Event) -> GameState:
                                        cp_used=u.cp_used + p["cp_spent"],
                                        bp_accumulated=u.bp_accumulated + p.get("bp", 0.0)))
 
+    if k == EventKind.RESERVE_DESIGNATED:
+        # 18.12: designation always places the unit in Reserve I. No CP (18.26).
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, reserve=1))
+
+    if k == EventKind.RESERVE_FLIPPED:
+        # 18.13: an unreleased Reserve I advances to Reserve II at the first Release Segment.
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, reserve=2))
+
+    if k == EventKind.RESERVE_RELEASED:
+        # 18.13/18.26: release clears the reserve tier (no CP) and records which tier the unit
+        # was released FROM, so the 18.24 half-CPA cap (reserve_released==2) can bind downstream.
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, reserve=0, reserve_released=p["from_tier"]))
+
     if k == EventKind.UNIT_RETREATED:
         u = state.unit(p["unit_id"])                   # 21.22: retreat also accrues BP
         return state.with_unit(replace(u, hex=tuple(p["to"]),
@@ -250,9 +266,11 @@ def _reset_opstage(units: tuple) -> tuple:
     """The Operations-Stage boundary reset (rules 6.16 / 21.25): every unit's CPA refreshes
     and the Breakdown-Point accumulator + 21.26 re-check gate clear. broken_down (immobile
     TOE) persists across the boundary until repaired (21.44). The 15.81 Engaged marker is
-    also removed here (it lasts one Operations Stage). Shared by STAGE_ADVANCED and
+    also removed here (it lasts one Operations Stage). Reserve status + the release tier (rule
+    18.14: Reserve ends when the OpStage ends) reset here too. Shared by STAGE_ADVANCED and
     TURN_ADVANCED so the two clock boundaries carry one reset semantic."""
-    return tuple(replace(u, cp_used=0.0, bp_accumulated=0.0, bp_checked_column=-1, engaged=False)
+    return tuple(replace(u, cp_used=0.0, bp_accumulated=0.0, bp_checked_column=-1, engaged=False,
+                         reserve=0, reserve_released=0)
                  for u in units)
 
 

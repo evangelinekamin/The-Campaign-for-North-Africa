@@ -76,6 +76,12 @@ class Policy:
         current scenario runs zero pulses and stays byte-identical."""
         return []
 
+    def reserve_designation(self, state: GameState, side: Side) -> list[str]:
+        return []  # optional: hold units back in Reserve before Movement (rule 18.12 / 48 V.G)
+
+    def reserve_release(self, state: GameState, side: Side) -> list[str]:
+        return []  # optional: release reserves at the inter-pulse Release Segment (rule 18.13 / 48 V.H.4)
+
 
 class ScriptedPolicy(Policy):
     """Simple desert doctrine: the attacker presses toward the objective along the
