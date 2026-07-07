@@ -10,6 +10,7 @@ from . import cp_costs, movement, zoc
 from .events import Side
 from .hexmap import Coord
 from .state import GameState, Unit
+from .terrain import Mobility
 
 
 def other(side: Side) -> Side:
@@ -28,6 +29,19 @@ def effective_cpa(state: GameState, unit: Unit) -> int:
             and unit.hex == r.anchor_hex == r.hex):
         return unit.cpa + 5
     return unit.cpa
+
+
+def rommel_reach(state: GameState) -> dict[Coord, float]:
+    """31.1: General Rommel's leader-movement reach -- a 60-MP 'four-wheel-drive medium truck'
+    (31.1 / 27.14) that IGNORES enemy Zones of Control (31.2 impunity) and stacking (he is off
+    units[], carries no ZOC and can be blocked by no one). A deliberately simplified BFS: the
+    standard motorized terrain search with every enemy/friendly interaction switched off and no
+    break-off cost, so the only limits are terrain and the 60-CP budget under the day's weather."""
+    r = state.rommel
+    return zoc.reachable_with_zoc(
+        state.terrain, r.hex, 60.0, Mobility.MOTORIZED,
+        enemy_zoc=frozenset(), friendly_negators=frozenset(),
+        enemy_occupied=frozenset(), break_off=0.0, weather=state.weather)
 
 
 def _cp_ceiling(cpa: int) -> float:

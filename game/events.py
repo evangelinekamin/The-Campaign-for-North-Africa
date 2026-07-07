@@ -143,6 +143,15 @@ class EventKind(str, Enum):
     # leaves it (hex == anchor_hex). All emit ONLY when a Rommel is on the board, so every non-
     # Rommel scenario stays byte-identical.
     ROMMEL_ANCHORED = "ROMMEL_ANCHORED"
+    # ROMMEL_MOVED {from, to} is his 31.1 leader move (a 60-MP medium truck ignoring enemy ZOC
+    # + stacking); it folds rommel.hex and thereby VOIDS the stage's 31.4 anchor (hex != anchor_
+    # hex). ROMMEL_RECALLED {in_germany} is the 31 Berlin recall (2d6, a 12 -> Germany, the ONLY
+    # new RNG); True carries the recall dice, False is the auto-return next turn. Both fold onto
+    # rommel alone. ROMMEL_CAPTURED is RESERVED for the deferred 27.6 Raid-on-Rommel outcome
+    # (never emitted yet). All emit ONLY when a Rommel is on the board.
+    ROMMEL_MOVED = "ROMMEL_MOVED"
+    ROMMEL_RECALLED = "ROMMEL_RECALLED"
+    ROMMEL_CAPTURED = "ROMMEL_CAPTURED"
     # STAFF_* are narrative / no-op audit events: staff chatter the board is
     # invariant to (they fold to state unchanged; see game.apply, game.staff_events).
     STAFF_INTENT = "STAFF_INTENT"

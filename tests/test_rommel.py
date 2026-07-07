@@ -14,7 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from game import oob, tactics
 from game.apply import fold
-from game.engine import (_adjusted_morale, _Run, determinism_signature, run)
+from game.engine import (_adjusted_morale, _initiative, _rommel_move, _rommel_recall,
+                         _Run, determinism_signature, run)
 from game.events import EventKind, Phase, Side
 from game.hexmap import Coord
 from game.movement import TerrainMap
@@ -148,3 +149,107 @@ def test_rommels_arrival_runs_deterministically_with_the_entity():
     assert fold(res.initial, res.events) == res.final
     res2 = run(rommels_arrival(), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
     assert determinism_signature(res.events) == determinism_signature(res2.events)
+
+
+# --- Step 3: 31.1 leader movement --------------------------------------------
+
+class _RommelMover(Policy):
+    """A scripted policy that names a fixed destination for General Rommel's 31.1 move."""
+
+    def __init__(self, dest):
+        self.dest = dest
+
+    def movement(self, state, side):
+        return []
+
+    def combat(self, state, side):
+        return []
+
+    def rommel_move(self, state):
+        return self.dest
+
+
+class _FixedDice:
+    """A drop-in for _Run.rng returning a pinned d6 sequence (raises if over-drawn)."""
+
+    def __init__(self, seq):
+        self.seq = list(seq)
+
+    def randint(self, a, b):
+        return self.seq.pop(0)
+
+
+def test_rommel_move_repositions_and_voids_the_31_4_anchor():
+    hx, dest = (0, 0), (2, 0)
+    u = _unit("GE-Pz", Side.AXIS, hx, cpa=6)
+    rom = Rommel(hex=hx, anchor_hex=hx, companions=frozenset({"GE-Pz"}))
+    r = _Run(_state([u], rom))
+    assert tactics.effective_cpa(r.state, u) == 11        # +5 while he stands on the anchor
+    _rommel_move(r, _RommelMover(dest), Side.AXIS)
+    moved = [e for e in r.events if e.kind == EventKind.ROMMEL_MOVED]
+    assert len(moved) == 1 and tuple(moved[0].payload["to"]) == dest
+    assert r.state.rommel.hex == dest
+    assert tactics.effective_cpa(r.state, u) == 6         # 31.4 voided: hex != anchor_hex
+
+
+def test_rommel_move_rejects_an_unreachable_destination():
+    r = _Run(_state([_unit("GE-Pz", Side.AXIS, (0, 0))], Rommel(hex=(0, 0))))
+    _rommel_move(r, _RommelMover((99, 99)), Side.AXIS)    # off the map, past the 60-MP reach
+    assert not any(e.kind == EventKind.ROMMEL_MOVED for e in r.events)
+    assert r.state.rommel.hex == (0, 0)
+
+
+def test_rommel_does_not_move_for_the_allied_side_or_when_in_germany():
+    r = _Run(_state([_unit("GE-Pz", Side.AXIS, (0, 0))], Rommel(hex=(0, 0))))
+    _rommel_move(r, _RommelMover((1, 0)), Side.ALLIED)    # 31 is Axis-only
+    assert not any(e.kind == EventKind.ROMMEL_MOVED for e in r.events)
+    berlin = _Run(_state([_unit("GE-Pz", Side.AXIS, (0, 0))], Rommel(hex=(0, 0), in_germany=True)))
+    _rommel_move(berlin, _RommelMover((1, 0)), Side.AXIS)
+    assert not any(e.kind == EventKind.ROMMEL_MOVED for e in berlin.events)
+
+
+# --- Step 3: the Berlin recall (the only new RNG) ----------------------------
+
+def test_berlin_recall_sends_rommel_to_germany_and_signals_the_clamp():
+    r = _Run(_state([_unit("GE-Pz", Side.AXIS, (0, 0))], Rommel(hex=(0, 0))))
+    r.rng = _FixedDice([6, 6])                             # a 12
+    assert _rommel_recall(r) is True                      # -> _initiative clamps the Axis rating
+    ev = [e for e in r.events if e.kind == EventKind.ROMMEL_RECALLED]
+    assert len(ev) == 1 and ev[0].payload["in_germany"] is True and ev[0].rng_draws == (6, 6)
+    assert r.state.rommel.in_germany is True
+
+
+def test_berlin_recall_stays_put_on_a_non_twelve():
+    r = _Run(_state([_unit("GE-Pz", Side.AXIS, (0, 0))], Rommel(hex=(0, 0))))
+    r.rng = _FixedDice([3, 4])
+    assert _rommel_recall(r) is False
+    assert not any(e.kind == EventKind.ROMMEL_RECALLED for e in r.events)
+    assert r.state.rommel.in_germany is False
+
+
+def test_berlin_recall_auto_returns_then_rolls_normally():
+    r = _Run(_state([_unit("GE-Pz", Side.AXIS, (0, 0))], Rommel(hex=(0, 0), in_germany=True)))
+    r.rng = _FixedDice([2, 5])                             # returns, then a non-12 roll
+    assert _rommel_recall(r) is False
+    ev = [e for e in r.events if e.kind == EventKind.ROMMEL_RECALLED]
+    assert len(ev) == 1 and ev[0].payload["in_germany"] is False and ev[0].rng_draws == ()
+    assert r.state.rommel.in_germany is False
+
+
+def test_recall_draws_no_dice_and_is_silent_when_no_rommel():
+    r = _Run(_state([_unit("GE-Pz", Side.AXIS, (0, 0))]))  # rommel None
+    r.rng = _FixedDice([])                                 # would IndexError if any die were drawn
+    assert _rommel_recall(r) is False
+    assert not any(e.kind.name.startswith("ROMMEL") for e in r.events)
+
+
+def test_recall_clamps_axis_initiative_to_three_and_forces_a_roll():
+    st = replace(_state([_unit("GE-Pz", Side.AXIS, (0, 0))]),
+                 initiative_fixed=Side.AXIS, initiative_fixed_until=99,
+                 initiative_ratings={"AXIS": 5, "ALLIED": 0})
+    r = _Run(st)
+    r.rng = _FixedDice([6, 1])                             # axis 6 + min(5,3)=9 ; allied 1 + 0 = 1
+    _initiative(r, axis_recalled=True)
+    ev = next(e for e in r.events if e.kind == EventKind.INITIATIVE_DETERMINED)
+    assert "fixed" not in ev.payload                      # 7.15 hold suspended -> a real roll
+    assert ev.payload["axis_total"] == 9 and ev.payload["side"] == Side.AXIS.value

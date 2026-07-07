@@ -216,6 +216,17 @@ def apply(state: GameState, event: Event) -> GameState:
         return replace(state, rommel=replace(state.rommel, anchor_hex=tuple(p["hex"]),
                                              companions=frozenset(p["companions"])))
 
+    if k == EventKind.ROMMEL_MOVED:
+        # 31.1: General Rommel's leader move. Fold his hex only -- and because effective_cpa
+        # keys the 31.4 +5 on hex == anchor_hex == rommel.hex, stepping off the anchor voids
+        # that stage's companion bonus automatically (no separate anchor clear needed).
+        return replace(state, rommel=replace(state.rommel, hex=tuple(p["to"])))
+
+    if k == EventKind.ROMMEL_RECALLED:
+        # 31 Berlin recall: True sends him to Germany (the +1/+5 hooks read in_germany and go
+        # silent), False is the auto-return next turn. A pure scalar fold onto the entity.
+        return replace(state, rommel=replace(state.rommel, in_germany=p["in_germany"]))
+
     if k == EventKind.STAGE_ADVANCED:
         # New Operations Stage within the game-turn (rule 5.1): bump the stage and refresh
         # the per-OpStage CP/BP counters -- the same reset semantics as TURN_ADVANCED, now

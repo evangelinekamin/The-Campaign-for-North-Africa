@@ -106,7 +106,8 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
     # each its own OpStage with its own weather (29.0), water (52) and CPA budget (6.16).
     done = False
     while not done:
-        _initiative(r)                                  # 5.2 I / 7.14: who holds Initiative this game-turn
+        recalled = _rommel_recall(r)                    # 31 Berlin recall (the ONLY new RNG) -- BEFORE initiative
+        _initiative(r, axis_recalled=recalled)          # 5.2 I / 7.14: who holds Initiative this game-turn
         _stores_setup(r)                                # 48 IV: Stores Expenditure + 6% base evaporation
         for stage in (1, 2, 3):
             _rommel_anchor(r)                            # 31.4: snapshot who he starts THIS stage with
@@ -121,6 +122,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                 _debrief(side)                          # enemy portion + own last combat
                 r.go(Phase.MOVEMENT, side)
                 _movement(r, policies[side], side)
+                _rommel_move(r, policies[side], side)   # 31.1: the leader repositions (Axis only, self-guarded)
                 _breakdown(r, side)                     # 21.24: check vehicles that ceased moving
                 _supply_movement(r, policies[side], side)   # supply follows the army (32.3)
                 _debrief(side)                          # which moves/pincers actually formed
@@ -151,19 +153,26 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
 
 # --- initiative (rule 7) -----------------------------------------------------
 
-def _initiative(r: _Run) -> None:
+def _initiative(r: _Run, axis_recalled: bool = False) -> None:
     """Initiative Determination (rule 5.2 I / 7.14), once per GAME-TURN. While the scenario
     fixes the holder (7.15 / 61.5: e.g. Axis through GT27) no die is rolled; otherwise each
     side rolls 1 die + its Initiative Rating and the higher total wins, ties rerolled in the
     seeded stream (7.14). Folds into GameState.initiative_side, held for all three Operations
     Stages (7.12). The 7.2 Initiative Ratings are an untranscribed chart -- initiative_ratings
-    is a representative PROXY (flagged in scenario.py)."""
+    is a representative PROXY (flagged in scenario.py).
+
+    `axis_recalled` fires on the game-turn General Rommel's Berlin recall sent him to Germany
+    (31): the Axis Initiative Rating is clamped to min(rating, 3) AND the 7.15 predetermined
+    hold is suspended so the determination is actually ROLLED -- so 'Axis Initiative falls to
+    3' genuinely bites even in the fixed window, and can only ever HURT the Axis."""
     s = r.state
-    if s.initiative_fixed is not None and s.turn <= s.initiative_fixed_until:
+    if not axis_recalled and s.initiative_fixed is not None and s.turn <= s.initiative_fixed_until:
         r.emit(EventKind.INITIATIVE_DETERMINED, Side.SYSTEM, "SYSTEM",
                {"side": s.initiative_fixed.value, "fixed": True})     # 7.15: predetermined, no die
         return
     ax_rating = s.initiative_ratings.get("AXIS", 0)
+    if axis_recalled:
+        ax_rating = min(ax_rating, 3)                    # 31 Berlin recall: Axis Initiative falls to 3
     al_rating = s.initiative_ratings.get("ALLIED", 0)
     draws: list[int] = []
     while True:                                          # 7.14: ties reroll
@@ -220,6 +229,50 @@ def _rommel_anchor(r: _Run) -> None:
                         if u.side == Side.AXIS and u.is_combat)
     r.emit(EventKind.ROMMEL_ANCHORED, Side.AXIS, "SYSTEM",
            {"hex": list(rom.hex), "companions": companions})
+
+
+def _rommel_recall(r: _Run) -> bool:
+    """31 Berlin recall, once per GAME-TURN General Rommel is on the board -- the ONLY new RNG in
+    rule 31, drawn HERE, before Initiative, so its stream position is pinned. If he is already in
+    Germany from last turn, auto-return him first (ROMMEL_RECALLED in_germany=False, no dice),
+    then roll normally. Roll 2d6: a 12 sends him to Germany (ROMMEL_RECALLED in_germany=True,
+    carrying the dice) and returns True so _initiative clamps the Axis rating to min(rating, 3)
+    this game-turn; anything else leaves him in place. Draws NO dice and returns False when no
+    Rommel is present, so every non-Rommel scenario is byte-identical."""
+    rom = r.state.rommel
+    if rom is None:
+        return False
+    if rom.in_germany:
+        r.emit(EventKind.ROMMEL_RECALLED, Side.AXIS, "SYSTEM", {"in_germany": False})
+    d1, d2 = r.d6(), r.d6()
+    if d1 + d2 == 12:
+        r.emit(EventKind.ROMMEL_RECALLED, Side.AXIS, "SYSTEM",
+               {"in_germany": True}, rng_draws=(d1, d2))
+        return True
+    return False
+
+
+def _rommel_move(r: _Run, policy: Policy, side: Side) -> None:
+    """31.1: General Rommel's leader move in the Axis Movement Phase. An optional
+    Policy.rommel_move(state)->Coord|None hook (hasattr, symmetric with declare_ab) names his
+    destination; the engine validates it lies within his 60-MP medium-truck reach (tactics.
+    rommel_reach, ignoring enemy ZOC + stacking per 31.2/27.14) and emits ROMMEL_MOVED {from,
+    to}. He consumes NO fuel -- the 27.38 raider analog (FLAGGED). Silent for a non-Axis side,
+    no Rommel, a Rommel in Germany, or no hook, so every non-Rommel scenario stays byte-
+    identical."""
+    if side != Side.AXIS:
+        return
+    rom = r.state.rommel
+    if rom is None or rom.in_germany or not hasattr(policy, "rommel_move"):
+        return
+    dest = policy.rommel_move(r.state)
+    if dest is None or tuple(dest) == rom.hex:
+        return
+    dest = tuple(dest)
+    if dest not in tactics.rommel_reach(r.state):        # boundary-reject an unreachable destination
+        return
+    r.emit(EventKind.ROMMEL_MOVED, Side.AXIS, f"{side.value}/Front",
+           {"from": list(rom.hex), "to": list(dest)})
 
 
 # --- phases ------------------------------------------------------------------
