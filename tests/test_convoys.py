@@ -247,11 +247,12 @@ def test_siege_of_tobruk_machinery_intact():
     Seed note: the faithful two-level clock (rules 5/48) runs THREE Operations Stages per
     game-turn, each with its own 29.0 weather roll, so the seeded stream is reshuffled again
     and the seeds that crack shifted with it -- and again when General Rommel's 31.4 +5 CPA
-    (his 300th-Oasis companion) widened one Axis move at El Agheila, perturbing the shared
+    (his 300th-Oasis companion) widened one Axis move at El Agheila, and AGAIN when the
+    SEA-TOBRUK air-interdiction schedule (41.6) drew its per-ferry CRT dice into the shared
     stream. This guards only that the 25.14 path SURVIVES -- the crack rate is the owner's
     siege knob, not tuned here."""
     battered = False
-    for seed in (67, 75, 83):
+    for seed in (4, 10, 14):
         res = run(siege_of_tobruk(seed=seed),
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         assert res.initial.siege_rules is True

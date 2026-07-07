@@ -256,10 +256,12 @@ def test_siege_still_crackable_through_the_throttle():
     # 5/48) runs THREE Operations Stages per game-turn, each with its own 29.0 weather roll,
     # so the whole seeded dice stream reshuffled again and the seeds that crack SHIFTED with
     # it -- and shifted once more when General Rommel's 31.4 +5 CPA perturbed the shared
-    # stream. That is the owner's siege knob (BARRAGE_HITS_PER_FORT_LEVEL / Axis ammo
-    # schedule), NOT a magnitude to bend here. This test guards only that the path SURVIVES.
+    # stream, and AGAIN when the SEA-TOBRUK air-interdiction schedule (41.6) drew its per-
+    # ferry CRT dice into that same stream. That is the owner's siege knob
+    # (BARRAGE_HITS_PER_FORT_LEVEL / Axis ammo schedule), NOT a magnitude to bend here. This
+    # test guards only that the path SURVIVES.
     battered = False
-    for seed in (75, 92):
+    for seed in (4, 10, 14):
         res = run(siege_of_tobruk(seed=seed),
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         if any(e.kind == EventKind.FORT_REDUCED and tuple(e.payload["hex"]) == TOBRUK

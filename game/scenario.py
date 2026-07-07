@@ -21,8 +21,8 @@ from . import cna_map, coords, logistics_data, oob
 from .events import Phase, Side
 from .hexmap import distance, neighbors
 from .movement import TerrainMap, edge
-from .state import (Convoy, GameState, Port, StepRecord, SupplyUnit,
-                    TruckFormation, Unit, VP)
+from .state import (Convoy, GameState, InterdictionOrder, Port, StepRecord,
+                    SupplyUnit, TruckFormation, Unit, VP)
 from .supply import COMMODITIES, _UNLIMITED, tons_to_points
 from .terrain import Hexside, Mobility, Terrain
 
@@ -472,18 +472,41 @@ def _rommel_trucks(supplies, target) -> tuple[TruckFormation, ...]:
     )
 
 
+def _tobruk_ferry_interdiction(max_turns: int) -> tuple[InterdictionOrder, ...]:
+    """The static Axis air-interdiction schedule against the Tobruk sea ferry (rules 41.6 /
+    32.7 -- Axis bombing of the Commonwealth Mediterranean run; the historical Luftwaffe
+    pressure on the Tobruk Ferry Service). One order per game-turn on lane SEA-TOBRUK, so
+    every ferry sails into a CRT strike (41.66). bomb_points is a FLAGGED representative
+    weight (the untranscribed per-strike Bomb-Point order-of-battle, like the truck-pool
+    sizes) -- 200 lands on the [41.5] 161..200 column (a 5-20% per-turn skim). Static and
+    seeded so the crack is CONTINGENT, not inevitable (the live naval seat is Step 6)."""
+    return tuple(InterdictionOrder("SEA-TOBRUK", t, 200) for t in range(1, max_turns + 1))
+
+
 def siege_of_tobruk(seed: int = 1941) -> GameState:
     """The Siege of Tobruk (rule 25.14 / 25.16): Rommel's Arrival with the siege-
-    artillery rule LIVE. It is the SAME battle -- identical OOB, placement, supply,
-    the 12-turn clock, the garrison morale and the base fort level are all reused
-    from rommels_arrival untouched -- but siege_rules is on, so a sustained Axis
-    barrage can batter Tobruk's fortifications down one level at a time (the wall the
-    intact works present to a close assault comes off turn by turn). This is what
-    makes the fortress crackable SOMETIMES rather than never: a strong attacker who
-    brings up artillery and ammunition can open the works, then storm them.
+    artillery rule LIVE and a sustained Axis air-interdiction of the Tobruk ferry. It is
+    the SAME battle -- identical OOB, placement, base supply, the 12-turn clock, the
+    garrison morale and the base fort level are all reused from rommels_arrival untouched --
+    but siege_rules is on (so a sustained Axis barrage batters Tobruk's works down one level
+    at a time, 25.14) and the SEA-TOBRUK ferry now runs a gauntlet of CRT convoy bombing
+    (41.6), throttling the fuel/stores/water the garrison lands each turn.
 
-    The no-eviction rule (15.82), the clock, the garrison and the base level stay
-    faithful and load-bearing. The crack rate is tuned -- deliberately NOT here --
-    with engine.BARRAGE_HITS_PER_FORT_LEVEL and the Axis ammo/dump schedule via the
-    benchmark harness (design target ~15-35% under strong play)."""
-    return replace(rommels_arrival(seed=seed), siege_rules=True)
+    MEASURED (see the task report): the interdiction faithfully chokes the lifeline (a
+    strong cut removes thousands of supply points over the campaign), but Tobruk capture
+    does NOT move off the ~0-3% floor under the scripted policies. Two pre-existing facts
+    dominate, neither an interdiction defect: (a) the fortress is essentially never STORMED
+    -- the deferred siege-assault path (memory: cna-tobruk-crackability; the no-eviction
+    15.82 rule), so the 15.15 dry-stack surrender the ferry-cut aims at is never triggered;
+    and (b) the PORT-Tobruk landing throttle (425 Ammo Points/OpStage) already caps the
+    ammo refill far below the 1500-Ammo ferry, absorbing any <=50% CRT cut to the AMMO
+    lifeline. The ferry-cut is thus real and load-bearing but LATENT here; realizing the
+    crack needs the deferred storming AI, out of this step's faithful scope.
+
+    The no-eviction rule (15.82), the clock, the garrison and the base level stay faithful
+    and load-bearing. The crack rate is tuned -- deliberately NOT here -- with
+    engine.BARRAGE_HITS_PER_FORT_LEVEL and the Axis ammo/dump schedule via the benchmark
+    harness (design target ~15-35% under strong play)."""
+    base = rommels_arrival(seed=seed)
+    return replace(base, siege_rules=True,
+                   interdictions=_tobruk_ferry_interdiction(base.max_turns))

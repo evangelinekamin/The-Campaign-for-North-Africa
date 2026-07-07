@@ -10,20 +10,23 @@ from __future__ import annotations
 
 import random
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from game import logistics_data
+from game import coords, logistics_data
 from game.engine import (_apply_convoy_loss, _convoy_loss_pct, _interdict,
                          _naval_convoys, _Run, determinism_signature, interdict, run)
-from game.events import EventKind, Phase, Side
+from game.events import Control, EventKind, Phase, Side
 from game.invariants import check
 from game.movement import TerrainMap
 from game.policy import ScriptedPolicy
-from game.scenario import coastal_corridor, rommels_arrival
+from game.scenario import coastal_corridor, rommels_arrival, siege_of_tobruk
 from game.state import Convoy, GameState, InterdictionOrder, SupplyUnit, VP
 from game.terrain import Terrain
+
+TOBRUK = coords.to_axial(coords.parse("C4807"))
 
 
 def _mini(dump: SupplyUnit, convoys=(), interdictions=(), *, turn: int = 1) -> GameState:
@@ -145,3 +148,52 @@ def test_rommels_arrival_byte_identical():
     # no interdiction machinery ever fires in the interdiction-free scenario
     assert not any(e.kind == EventKind.CONVOY_INTERDICTED for e in a.events)
 
+
+# --- ACCEPTANCE: the seeded ferry-cut throttles the Tobruk lifeline ----------
+
+def _ferry_delivered(res) -> int:
+    """Total supply Points landed into the garrison over the campaign via SEA-TOBRUK."""
+    return sum(sum(e.payload["cargo"].values()) for e in res.events
+               if e.kind == EventKind.SUPPLY_ARRIVED and e.payload.get("lane") == "SEA-TOBRUK")
+
+
+def test_siege_ferry_cut_throttles_the_lifeline():
+    """The load-bearing behaviour Step 1-2 can prove faithfully: the seeded siege_of_tobruk
+    SEA-TOBRUK schedule fires a CRT strike on every ferry (41.6/41.66) and STRICTLY reduces
+    the supply the garrison lands versus an interdiction-free run of the same battle. This is
+    the ferry-cut biting -- the crack's supply half. (Its terminal 15.15 dry-stack surrender
+    does NOT fire in the full scenario: Tobruk is essentially never STORMED under the scripted
+    policies -- the deferred siege-assault path, memory cna-tobruk-crackability -- and the
+    PORT-Tobruk 425-Ammo/OpStage throttle independently caps the ammo refill below the ferry,
+    so capture stays on its ~0-3% floor. See the task report; realising the crack is a later
+    step, not an interdiction defect.)"""
+    seed = 3
+    cut = run(siege_of_tobruk(seed=seed), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    uncut = run(replace(siege_of_tobruk(seed=seed), interdictions=()),
+                ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    strikes = [e for e in cut.events if e.kind == EventKind.CONVOY_INTERDICTED
+               and e.payload["lane"] == "SEA-TOBRUK"]
+    assert strikes, "the seeded schedule must strike the ferry"
+    assert all(e.payload["interdictor"] == Side.AXIS.value for e in strikes)
+    assert _ferry_delivered(cut) < _ferry_delivered(uncut), "the cut must land strictly less"
+    # interdiction-free = byte-identical to the same siege with the schedule stripped
+    uncut2 = run(replace(siege_of_tobruk(seed=seed), interdictions=()),
+                 ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    assert determinism_signature(uncut.events) == determinism_signature(uncut2.events)
+    # and the whole cut run is itself deterministic
+    cut2 = run(siege_of_tobruk(seed=seed), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    assert determinism_signature(cut.events) == determinism_signature(cut2.events)
+
+
+def test_tobruk_capture_stays_on_the_floor():
+    """The honest measurement, pinned small: the seeded ferry interdiction does NOT move
+    Tobruk off its capture floor (the deferred storming path + the ammo throttle, above).
+    Guards against a silent future regression that would let the fortress fall for the
+    WRONG reason (a broken invariant), while documenting the true state of the crack."""
+    for seed in (1, 2, 3):
+        res = run(siege_of_tobruk(seed=seed), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+        assert res.final.control_of(TOBRUK) != Control.AXIS
+        assert not any(e.kind == EventKind.COMBAT_RESOLVED
+                       and e.payload.get("surrender") == "defender"
+                       and tuple(e.payload.get("target", ())) == TOBRUK
+                       for e in res.events)
