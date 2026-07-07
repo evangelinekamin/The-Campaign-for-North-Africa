@@ -405,6 +405,7 @@ def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
             if hasattr(pol, "naval_command"):
                 pol.naval_command(r.state, side)        # stages the officer's interdiction beats
                 _drain_staff(r, pol, side)              # emitted before the CONVOY_INTERDICTED below
+    port_landed: dict[tuple[str, str], int] = {}        # 55.14: cap is per-port-per-OpStage, not per-convoy
     for c in sorted(due, key=lambda c: c.id):           # deterministic arrival order
         dump = r.state.supply(c.dest)
         enemy_ctrl = CONTROL_OF[_other(c.side)]
@@ -421,9 +422,15 @@ def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
             onhand = getattr(dump, k.lower())
             room = min(cap[k], onhand + v) - onhand     # 54.12 dump headroom
             if port is not None:
-                room = min(room, supply.port_landing_cap(port, k))   # 55.14 harbour throttle
+                # 55.14 harbour throttle: several convoys sharing one port this OpStage draw
+                # from ONE cap, so subtract what earlier convoys already landed there.
+                already = port_landed.get((port.id, k), 0)
+                room = min(room, supply.port_landing_cap(port, k) - already)
             if room > 0:
                 landed[k] = room
+        if port is not None:
+            for k, q in landed.items():
+                port_landed[(port.id, k)] = port_landed.get((port.id, k), 0) + q
         if port is not None:                            # legible per-commodity landing beat
             for k in sorted(landed):
                 r.emit(EventKind.PORT_UNLOADED, c.side, "SYSTEM",

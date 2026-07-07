@@ -107,6 +107,23 @@ def test_convoy_lands_only_the_throttled_amount():
     check(r.state)
 
 
+def test_two_convoys_share_one_port_cap_per_opstage():
+    # 55.14: the harbour throttle is per-PORT-per-OpStage, not per-convoy. Two convoys to the
+    # same port this stage land ONE cap between them (120 AMMO), not 120 each.
+    p = Port("P", Side.ALLIED, (0, 0), "major", max_eff=5, eff=2,
+             cap_ammo=300, cap_fuel=100, cap_stores=500, cap_water=150, cap_tons=1200)
+    dump = SupplyUnit("D", Side.ALLIED, (0, 0), ammo=0, fuel=0, stores=0, water=0)
+    convoys = [Convoy("c1", Side.ALLIED, 1, "SEA-TOBRUK", "D", {"AMMO": 300}),
+               Convoy("c2", Side.ALLIED, 1, "SEA-TOBRUK", "D", {"AMMO": 300})]
+    r = _Run(_port_state(p, dump, convoys))
+    _naval_convoys(r)
+    landed = sum(e.payload["cargo"].get("AMMO", 0)
+                 for e in r.events if e.kind == EventKind.SUPPLY_ARRIVED)
+    assert landed == math.ceil(300 * 2 / 5)               # 120 total across BOTH convoys, not 240
+    assert r.state.supply("D").ammo == 120
+    check(r.state)
+
+
 def test_port_unloaded_beat_is_emitted_with_tons_and_eff():
     p = Port("P", Side.ALLIED, (0, 0), "major", max_eff=5, eff=2,
              cap_ammo=300, cap_fuel=100, cap_stores=500, cap_water=150, cap_tons=1200)
