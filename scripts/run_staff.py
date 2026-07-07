@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts.benchmark import FAST_PROVIDER, _mock_staff, game_metrics   # noqa: E402
 
+from game import narrator                                               # noqa: E402
 from game.apply import fold                                              # noqa: E402
 from game.engine import run                                             # noqa: E402
 from game.events import Side, log_to_json                               # noqa: E402
@@ -99,6 +100,14 @@ def _report(result, tag: str) -> None:
           f"({sum(1 for e in diary if e.kind.name == 'STAFF_DISSENT')} dissent)")
     assert fold(result.initial, result.events) == result.final, "replay-equivalence FAILED"
     print("  replay-equivalence: OK (fold(initial, events) == final, no client)")
+    # The story layer (design Steps 8-9): a deterministic diary projected over the
+    # recorded log + the god-view fog diff -- no LLM, every line tracing to an event seq.
+    story = narrator.diary(result)
+    hidden = narrator.hidden_from_staff(result.initial, Side.AXIS)
+    print(f"  narrator: {len(story)} diary line(s); god-view sees {len(hidden)} "
+          f"stack(s) the opening staff cannot")
+    for ln in story:
+        print(f"    [{ln.beat}] {ln.text}")
 
 
 def _mock() -> int:
