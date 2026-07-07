@@ -1,6 +1,6 @@
 """Launcher for the live command-staff (design Steps 6-7). This script is NOT part of
 the immutable core: it loads the OpenRouter key into the environment ONCE, wires a real
-OpenRouterClient per staff seat (deepseek/deepseek-v4-flash, throughput-routed) behind
+OpenRouterClient per staff seat (inception/mercury-2, throughput-routed) behind
 the SAME StaffPolicy the MockClient proves, and writes the event log plus a
 sha256(model+prompt)->text sidecar cache BESIDE it, so a re-simulation reproduces
 byte-identical STAFF_* + orders with the model disconnected.
@@ -40,7 +40,7 @@ from game.staff_events import staff_log                                 # noqa: 
 from game.staff_policy import LLM_SEATS, StaffPolicy                    # noqa: E402
 
 KEY_FILE = "/mnt/c/Users/evang/OneDrive/Desktop/as.txt"
-MODEL = "deepseek/deepseek-v4-flash"
+MODEL = "inception/mercury-2"   # dev seat: shootout winner -- 337 tok/s, 0% model-reject, ~3min/game
 SEED = 4200
 OUT = Path(__file__).resolve().parent.parent / "out"
 LOG_PATH = OUT / "staff_smoke.log.json"
