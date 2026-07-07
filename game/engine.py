@@ -874,6 +874,25 @@ MAX_CONTINUAL_SEGMENTS: int = 20
 REACTION_CPA_GAP: int = 6
 
 
+def _draw_move_fuel(r: _Run, side: Side, actor: str, u, cp_spent: float,
+                    order: MoveOrder, *, order_kind: str = "move",
+                    reason: str = "out of supply: no fuel for this move") -> bool:
+    """49.13/49.16: a unit draws fuel for EVERY move -- rate x ceil(CP/5) of that move's path
+    cost -- in the hex it begins from. Per-move, NOT once-per-OpStage: a unit that moves again in
+    the stage draws again (49.16), a unit already charged COMBAT CP still pays to move (6.3 CP
+    folds into cp_used but is not movement, 49.13), and a one-hex hop no longer buys a free long
+    dash later. Emits the SUPPLY_CONSUMED draws and returns True; emits an ORDER_REJECTED and
+    returns False when no fuel source in the hex can cover the move."""
+    draws = supply.plan_draw(r.state, u, supply.FUEL, supply.fuel_cost(u, cp_spent))
+    if draws is None:
+        _reject(r, side, actor, order, reason, order_kind=order_kind)
+        return False
+    for sid, qty in draws:
+        r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+               {"supply_id": sid, "commodity": supply.FUEL, "qty": qty, "unit_id": u.id})
+    return True
+
+
 def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = None) -> None:
     """Voluntary Movement (rule 8) for the phasing `side`. Segment 0 (eligible is None) moves the
     whole roster; a Continual-Movement pulse (eligible = the 8.23-eligible unit ids) moves only
@@ -881,17 +900,16 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
     NON-phasing policy -- the phasing orders still come from policies[side].movement, filtered by
     `eligible`, so segment 0 is a pure refactor of the pre-exploitation loop.
 
-    Fuel: segment 0 charges each unit's FIRST move this OpStage (49.16); a pulse charges each
-    mover's first move THIS pulse regardless of accumulated cp_used (49.13), so Continual Movement
-    is NOT fuel-free after pulse 0 -- the adopted per-pulse-fuel fidelity fix that keeps the desert
-    supply scarcity biting through an exploitation."""
+    Fuel: EVERY move draws fuel for its own path cost (49.13/49.16, via _draw_move_fuel) -- there
+    is no free first-or-subsequent move, so Continual Movement is not fuel-free after pulse 0 and a
+    unit already charged COMBAT CP at the front still pays to move. Keeps the desert supply scarcity
+    biting through an exploitation."""
     policy = policies[side]
     actor = f"{side.value}/Front"
     enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(r.state, side)
     roster = r.state.living(side)          # phase-start snapshot (matches the observation)
     orders = policy.movement(r.state, side)
     _drain_staff(r, policy, side)          # the deliberation that produced these orders
-    fueled: set[str] = set()               # movers already charged fuel THIS pulse (49.13)
     for order in orders:
         u = r.state.unit(order.unit_id)
         if u is None or not u.alive or u.side != side:
@@ -921,19 +939,8 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
         if not stacking.within_hex_limit(present + [u], r.state.terrain.terrain[order.to]):
             _reject(r, side, actor, order, "destination over stacking limit")
             continue
-        first_move = (u.cp_used == 0) if eligible is None else (u.id not in fueled)
-        if first_move:                              # first move this OpStage (seg 0) / this pulse
-            # Distance-based fuel (49.13): rate x ceil(CP/5) for THIS move's path cost,
-            # drawn in the hex the move begins -- so a long dash outruns its fuel.
-            draws = supply.plan_draw(r.state, u, supply.FUEL,
-                                     supply.fuel_cost(u, reach[order.to]))
-            if draws is None:
-                _reject(r, side, actor, order, "out of supply: no fuel for this move")
-                continue
-            for sid, qty in draws:
-                r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
-                       {"supply_id": sid, "commodity": supply.FUEL, "qty": qty, "unit_id": u.id})
-            fueled.add(u.id)
+        if not _draw_move_fuel(r, side, actor, u, reach[order.to], order):
+            continue                                # 49.13/49.16: this move draws its own fuel
         payload = {"unit_id": u.id, "from": list(u.hex), "to": list(order.to),
                    "cp_spent": reach[order.to]}
         bp = tactics.bp_for_move(r.state, u, prev, order.to)     # 21.21 accrual (0 for non-vehicles)
@@ -954,7 +961,7 @@ def _react(r: _Run, policies: dict, phasing: Side, mover_id: str) -> None:
     (b) not pinned by a far heavier mover (effective CPA gap >= 6, the adopted conservative read of
     8.53b); plus the 8.54 size-pin (a reactor at least half the mover's stacking size). Validated
     against tactics.reachable_for PLAIN (8.55: no distance cap beyond CP -- NOT the 13.24 RBA cap);
-    the reactor pays its first-move fuel and REACTION_MOVED folds like UNIT_MOVED. (8.52 exempts the
+    the reactor pays its per-move fuel (49.13) and REACTION_MOVED folds like UNIT_MOVED. (8.52 exempts the
     2-CP break-off surcharge; here the reactor is in the trigger mover's fresh ZOC so reachable_for
     charges it -- a small CONSERVATIVE overcharge consistent with the RBA sibling, flagged.)
 
@@ -1004,16 +1011,9 @@ def _react(r: _Run, policies: dict, phasing: Side, mover_id: str) -> None:
             _reject(r, reacting, actor, order, "reaction destination over stacking limit",
                     order_kind="reaction")
             continue
-        if u.cp_used == 0:                              # first move this OpStage pays fuel (49.16)
-            draws = supply.plan_draw(r.state, u, supply.FUEL,
-                                     supply.fuel_cost(u, reach[order.to]))
-            if draws is None:
-                _reject(r, reacting, actor, order, "out of supply: no fuel to react",
-                        order_kind="reaction")
-                continue
-            for sid, qty in draws:
-                r.emit(EventKind.SUPPLY_CONSUMED, reacting, actor,
-                       {"supply_id": sid, "commodity": supply.FUEL, "qty": qty, "unit_id": u.id})
+        if not _draw_move_fuel(r, reacting, actor, u, reach[order.to], order,     # 49.13/49.16
+                               order_kind="reaction", reason="out of supply: no fuel to react"):
+            continue
         payload = {"unit_id": u.id, "from": list(u.hex), "to": list(order.to),
                    "cp_spent": reach[order.to]}
         bp = tactics.bp_for_move(r.state, u, prev, order.to)     # 21.22: reaction accrues BP too
@@ -1500,16 +1500,9 @@ def _retreat_before_assault(r: _Run, policy: Policy, side: Side, phasing: Side,
             _reject(r, side, actor, order, "destination over stacking limit",
                     order_kind="retreat_before_assault")
             continue
-        if u.cp_used == 0:                          # first move this OpStage pays fuel (49.16)
-            draws = supply.plan_draw(r.state, u, supply.FUEL,
-                                     supply.fuel_cost(u, reach[order.to]))
-            if draws is None:
-                _reject(r, side, actor, order, "out of supply: no fuel for this move",
-                        order_kind="retreat_before_assault")
-                continue
-            for sid, qty in draws:
-                r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
-                       {"supply_id": sid, "commodity": supply.FUEL, "qty": qty, "unit_id": u.id})
+        if not _draw_move_fuel(r, side, actor, u, reach[order.to], order,       # 49.13/49.16
+                               order_kind="retreat_before_assault"):
+            continue
         payload = {"unit_id": u.id, "from": list(u.hex), "to": list(order.to),
                    "cp_spent": reach[order.to]}
         bp = tactics.bp_for_move(r.state, u, prev, order.to)     # 21.22: reaction/retreat accrues BP

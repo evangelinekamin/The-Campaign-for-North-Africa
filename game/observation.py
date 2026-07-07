@@ -67,12 +67,14 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
         demand: dict = {}
         dump_of: dict = {}
         for u in state.living(side):
-            if not u.is_combat or u.cp_used > 0:
+            if not u.is_combat:
                 continue
-            # A move costs at least one 5-CP group of fuel per TOE Strength Point (49.13);
-            # gate and estimate dump demand on that strength-scaled minimum (fuel_cost with
-            # cp_spent=1) -- a longer path may cost (and be rejected for) more, which the
-            # engine decides once the destination is chosen. This floor MUST match the
+            # Every move draws fuel for its own path cost (49.13/49.16), so a unit that already
+            # spent CP this OpStage still pays to move again -- gate ALL combat units, not just
+            # the yet-to-move ones. A move costs at least one 5-CP group of fuel per TOE Strength
+            # Point (49.13); gate and estimate dump demand on that strength-scaled minimum
+            # (fuel_cost with cp_spent=1) -- a longer path may cost (and be rejected for) more,
+            # which the engine decides once the destination is chosen. This floor MUST match the
             # engine's charge, else the agent sees "supplied" where the engine now rejects.
             need = supply.fuel_cost(u, 1)
             draws = supply.plan_draw(state, u, supply.FUEL, need)
@@ -111,10 +113,10 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
             v["defensible"] = supply.plan_draw(
                 state, u, supply.AMMO, supply.ammo_cost(u, phasing=False)) is not None
         if moving and u.is_combat:
-            # A unit whose first move can't draw fuel is out of supply -- it cannot
-            # move this OpStage, so offer no destinations (32.23). Reflecting this
-            # keeps the agent from wasting orders on stranded units.
-            supplied = u.cp_used > 0 or u.id in fuel_ok
+            # A unit that cannot draw this move's fuel is out of supply -- it cannot move
+            # (49.13/49.16 charge every move, not just the first), so offer no destinations
+            # (32.23). Reflecting this keeps the agent from wasting orders on stranded units.
+            supplied = u.id in fuel_ok
             v["supplied"] = supplied
             if u.id in contended:
                 v["supply_contended"] = True     # dump oversubscribed; may not get fuel

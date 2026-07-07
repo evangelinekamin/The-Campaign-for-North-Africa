@@ -97,17 +97,17 @@ def _event(state: GameState, kind: EventKind, payload: dict) -> Event:
 
 
 def _oversubscribed_dumps(state: GameState, orders: list) -> list[Conflict]:
-    """Dumps whose combined fuel draws across the batch exceed their pool. Each
-    first-move order draws fuel from the nearest reachable dumps (rule 32.23); read
-    on the base state (undepleted), so two orders both landing on one dump surface
-    the oversubscription the sequential engine would only hit on the second."""
+    """Dumps whose combined fuel draws across the batch exceed their pool. Each move
+    order draws fuel from the nearest reachable dumps (rule 32.23 / 49.13); read on the
+    base state (undepleted), so two orders both landing on one dump surface the
+    oversubscription the sequential engine would only hit on the second."""
     drawn: dict[str, int] = {}
     drawers: dict[str, list[str]] = {}
     for o in orders:
         if not isinstance(o, MoveOrder):
             continue
         u = state.unit(o.unit_id)
-        if u is None or u.cp_used != 0:            # only the first move pays fuel (32.23)
+        if u is None:                             # every move pays fuel (49.13/49.16)
             continue
         plan = supply.plan_draw(state, u, supply.FUEL, supply.fuel_rate(u))
         if not plan:

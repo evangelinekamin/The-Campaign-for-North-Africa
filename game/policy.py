@@ -118,9 +118,9 @@ class ScriptedPolicy(Policy):
         for u in state.living(side):
             if not u.is_combat:
                 continue
-            if u.cp_used == 0 and supply.plan_draw(
+            if supply.plan_draw(
                     state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None:
-                continue          # out of fuel -- don't propose a move the engine will reject
+                continue          # out of fuel -- every move pays (49.13); don't propose a reject
             reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
             here_dist = distance(u.hex, target)
             # Barrage/anti-armor units seek a firing position -- adjacent to an
@@ -285,9 +285,9 @@ class ScriptedPolicy(Policy):
                 continue
             if not self._in_contact(state, side, u.hex):
                 continue                       # only units about to be assaulted bother to slip
-            if u.cp_used == 0 and supply.plan_draw(
+            if supply.plan_draw(
                     state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None:
-                continue                       # no fuel to move -- don't propose it
+                continue                       # no fuel -- every move pays (49.13); don't propose it
             reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
             escapes = [c for c in reach
                        if c != u.hex and self._stacking_ok(state, u, c)
@@ -358,9 +358,9 @@ class ScriptedPolicy(Policy):
         for u in state.living(side):
             if not u.is_combat or u.id in anchors:
                 continue
-            if u.cp_used == 0 and supply.plan_draw(
+            if supply.plan_draw(
                     state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None:
-                continue          # out of fuel -- don't propose a move the engine rejects
+                continue          # out of fuel -- every move pays (49.13); don't propose a reject
             reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
             best: tuple[tuple[int, float, Coord], Coord] | None = None
             for h in exposed:

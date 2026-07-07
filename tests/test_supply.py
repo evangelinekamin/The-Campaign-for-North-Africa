@@ -157,6 +157,37 @@ def test_movement_blocked_when_out_of_fuel():
     assert result.final.unit("DAK-5le").hex == dak.hex   # never moved without fuel
 
 
+def test_combat_charged_unit_still_pays_fuel_to_move_49_13():
+    # Regression (49.13/49.16): fuel is drawn PER MOVE, not once per OpStage. A unit already
+    # charged COMBAT CP (6.3 folds into cp_used, but combat is not movement, 49.13) must still
+    # draw fuel the first time it MOVES. The old cp_used==0 gate mistook the combat charge for a
+    # completed move and let front-line units move fuel-free -- the fuel law leaked at the seam.
+    from game.engine import _Run, _movement
+    from game.policy import MoveOrder, Policy
+    terr = {(q, 0): Terrain.CLEAR for q in range(6)}
+    charged = Unit("AX-1", Side.AXIS, (2, 0), (StepRecord("inf", 3),),
+                   mobility=Mobility.MOTORIZED, cpa=10, stacking_points=1,
+                   oca=3, dca=3, cp_used=5.0)               # already spent 6.3 combat CP this stage
+    dumps = (SupplyUnit("AX-D", Side.AXIS, (2, 0), ammo=10, fuel=50),)
+    st = GameState(turn=1, max_turns=4, phase=Phase.MOVEMENT, active_side=Side.AXIS, seed=1,
+                   weather="clear", vp=VP(), terrain=TerrainMap(terrain=terr), control={},
+                   units=(charged,), target_hex=(5, 0), supplies=dumps,
+                   consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 10, "FUEL": 50})
+
+    class ForceMove(Policy):
+        def movement(self, s, side):
+            return [MoveOrder("AX-1", (3, 0))] if side == Side.AXIS else []
+
+        def combat(self, s, side):
+            return []
+    r = _Run(st)
+    _movement(r, {Side.AXIS: ForceMove(), Side.ALLIED: ForceMove()}, Side.AXIS)
+    assert r.state.unit("AX-1").hex == (3, 0)                    # the move happened
+    assert any(e.kind == EventKind.SUPPLY_CONSUMED and e.payload["commodity"] == supply.FUEL
+               for e in r.events)                                # ... and it drew fuel to do so
+    assert r.state.supply("AX-D").fuel < 50                      # the dump actually paid
+
+
 def _mobile_state() -> GameState:
     """A fuelled dump behind a combat unit that has advanced toward the objective."""
     terr = {(q, 0): Terrain.CLEAR for q in range(6)}
