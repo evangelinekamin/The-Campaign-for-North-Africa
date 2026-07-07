@@ -329,6 +329,18 @@ def test_cp_ceiling_lifts_movement_to_8_17():
     assert _cp_ceiling(20) == 40.0                      # motorized (CPA > 10): 2x compute bound
 
 
+def test_cp_ceiling_reserve_release_caps_18_23_18_24():
+    # 18.23-1: a unit released from Reserve I may NOT voluntarily exceed its CPA (1.0x --
+    # it loses both the 8.17 non-motorized 1.5x surplus and the motorized 2x compute bound).
+    # 18.24-1: a unit released from Reserve II is capped at ONE-HALF its CPA, ROUNDED DOWN.
+    from game.tactics import _cp_ceiling
+    assert _cp_ceiling(9, reserve_released=0) == 13.5    # ordinary 8.17 non-motorized 1.5x
+    assert _cp_ceiling(9, reserve_released=1) == 9.0     # 18.23: no surplus over CPA
+    assert _cp_ceiling(20, reserve_released=1) == 20.0   # 18.23 strips the motorized 2x too
+    assert _cp_ceiling(9, reserve_released=2) == 4.0     # 18.24: floor(9/2) == 4, NOT 4.5
+    assert _cp_ceiling(10, reserve_released=2) == 5.0    # the rulebook's CPA-10 -> 5 example
+
+
 def test_voluntary_overrun_disorganizes_8_16():
     # 8.16/6.21: a foot unit (CPA 8) may now dash to a hex costing 12 CP (150% ceiling), and
     # the 4 CP over its CPA earn 4 Disorganization Points -- a Cohesion bleed on the overrun.

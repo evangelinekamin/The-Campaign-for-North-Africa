@@ -53,10 +53,19 @@ def _cp_ceiling(cpa: int, reserve_released: int = 0) -> float:
     Before Assault (not voluntary) are re-bounded by their own 13.23/13.24 caps downstream.
     Takes the (Rommel-)effective CPA so the 31.4 +5 widens the reach uniformly.
 
-    A unit released FROM Reserve II this stage (reserve_released == 2) is capped at HALF its CPA
-    for its ensuing voluntary movement (rule 18.24), overriding the ordinary ceiling."""
+    A unit RELEASED from Reserve this stage carries a tighter voluntary ceiling that overrides
+    the ordinary 8.16/8.17 one:
+      * released from Reserve I (reserve_released == 1, rule 18.23-1) may NOT voluntarily exceed
+        its CPA -- ceiling 1.0x CPA (no motorized 2x, no non-motorized 1.5x surplus);
+      * released from Reserve II (reserve_released == 2, rule 18.24-1) is capped at ONE-HALF its
+        CPA, rounded down (a CPA-9 unit gets 4, not 4.5; a CPA-10 unit gets 5).
+    FLAGGED (not yet wired): the companion 18.23-2 / 18.24-2 "one offensive Close Assault (or
+    Probe) only" limit and the 18.24-3 "+1 Disorganization Point if it fights" surcharge are
+    per-STAGE restrictions that need a released-this-stage assault ledger; deferred."""
+    if reserve_released == 1:
+        return float(cpa)
     if reserve_released == 2:
-        return cpa * 0.5
+        return float(cpa // 2)
     return cpa * (1.5 if cpa <= 10 else 2.0)
 
 
