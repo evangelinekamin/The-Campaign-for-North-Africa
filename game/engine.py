@@ -49,6 +49,10 @@ AIR_SUPERIORITY_LOSER_SCALE: float = 0.5
 # existing STEP_LOST(role='air_strike').
 AIR_STRIKE_STEP_SEVERITY: int = 0
 
+# 30.21 off-shore bombardment reach: a capital ship (Battleship / heavy Cruiser) may bombard one
+# hex beyond its own, firing there at HALF its Gun Rating; lighter ships bombard their own hex only.
+CAPITAL_SHIP_KINDS: frozenset = frozenset({"BB", "CA"})
+
 # 55.2 harbour BLOCKING (a scuttled ship) permanently cripples a port until Friendly
 # engineers clear the wreck (55.26) -- it is NOT bomb damage, so the 55.18 +1/OpStage
 # regeneration does NOT restore it. The San Giorgio scuttled in Tobruk (30.17 / 55.25,
@@ -777,6 +781,63 @@ def _air_recon(r: _Run, side: Side, tgt: Coord) -> None:
            {"arena": "LAND", "hex": list(tgt), "revealed": revealed}, rng_draws=tuple(draws))
 
 
+def _naval_target(state: GameState, side: Side, ship) -> "tuple | None":
+    """The single hex `ship` bombards this OpStage (rule 30.24, once per ship): its OWN hex at
+    full Gun Rating if an enemy combat unit stands there, else -- for a capital ship only (30.21)
+    -- the nearest adjacent enemy hex at HALF Gun Rating. Returns (target_hex, victim, actual_pts)
+    or None. Deterministic: adjacent hexes are scanned in sorted-coord order (blind assignment,
+    39.11), so the fire plan is replay-stable."""
+    own = _barrage_target(state.enemies_at(ship.hex, side))
+    if own is not None:
+        return ship.hex, own, ship.gun_rating
+    if ship.kind in CAPITAL_SHIP_KINDS:                  # 30.21: reach one hex further, at half
+        for nb in sorted(neighbors(ship.hex)):
+            victim = _barrage_target(state.enemies_at(nb, side))
+            if victim is not None:
+                return nb, victim, ship.gun_rating // 2
+    return None
+
+
+def _naval_bombardment(r: _Run, side: Side, pinned: set[str]) -> None:
+    """Commonwealth off-shore naval bombardment (rule 30.2), a fire-support beat at the TOP of the
+    phasing side's Combat Segment -- beside air support, before barrage. Each of `side`'s READY
+    ships (port_cooldown 0) fires ONCE this OpStage (30.24): its Gun Rating goes in as Actual
+    Barrage Points -- NO ammo draw (30.22) -- on the 12.6 CRT, a Pin joining the same 12.44
+    `pinned` set the barrage feeds and any step-loss riding STEP_LOST(role='naval'). A capital ship
+    reaches one hex further at half Gun Rating (30.21). A ship that fires then owes two Operations
+    Stages refitting in Alexandria (30.25, the port_cooldown counter). Fires ONLY when `side`
+    fields naval (GameState.naval=() -> byte-identical); ship damage/repair (30.3) and the Chariot
+    raid (30.4) are deferred. As the mirror-completeness camera it is off the crackability path --
+    it never batters a fort, so no siege lever rides here."""
+    if not r.state.naval:
+        return
+    state0 = r.state
+    for ship in state0.naval:
+        if ship.side != side or ship.port_cooldown > 0:  # 30.25: still refitting in Alexandria
+            continue
+        aim = _naval_target(state0, side, ship)
+        if aim is None:
+            continue
+        tgt, victim, actual = aim
+        cls = _barrage_class(victim)
+        d1, d2 = r.d6(), r.d6()
+        shift = combat_tables.barrage_terrain_shift(     # 12.33 terrain / fortification
+            state0.terrain.terrain[tgt], state0.fort_level(tgt), cls)
+        pin, loss = combat_tables.barrage_result(cls, actual, d1 * 10 + d2, column_shift=shift)
+        actor = f"{side.value}/Fleet"
+        r.emit(EventKind.NAVAL_BOMBARDMENT, side, actor,
+               {"ship_id": ship.id, "target": list(tgt), "actual": actual,
+                "target_class": cls, "target_unit": victim.id, "pinned": pin, "loss": loss,
+                "half": tgt != ship.hex}, rng_draws=(d1, d2))
+        if loss > 0:
+            tu = r.state.unit(victim.id)
+            if tu and tu.alive:
+                r.emit(EventKind.STEP_LOST, side, actor,
+                       {"unit_id": victim.id, "amount": min(loss, tu.strength), "role": "naval"})
+        if pin:
+            pinned.add(victim.id)
+
+
 def _drain_staff(r: _Run, policy, side: Side) -> None:
     """Optional hook (hasattr, symmetric with debrief/declare_ab): a command-staff
     policy accumulates cleaned STAFF_* artifacts during deliberation and exposes them
@@ -1351,6 +1412,7 @@ def _combat(r: _Run, policies: dict, side: Side) -> None:
     pinned: set[str] = set()          # units Pinned by barrage this segment (12.44)
     charged: set[str] = set()         # 6.3 per-segment CP ledger (one combat charge/unit)
     _air_support(r, side, pinned)     # 41.31: air strikes pin BEFORE barrage, joining the 12.44 set
+    _naval_bombardment(r, side, pinned)   # 30.2: off-shore gunfire, another pre-barrage 12.44 pin
     _barrage_step(r, side, enemy, pinned, charged)
     _retreat_before_assault(r, policies[enemy], enemy, side, pinned)
     _anti_armor_step(r, side, enemy, pinned, charged)

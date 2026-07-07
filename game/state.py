@@ -230,6 +230,30 @@ class AirMission:
 
 
 @dataclass(frozen=True, slots=True)
+class NavalUnit:
+    """A Commonwealth Mediterranean-Fleet ship (rule 30), carried as a conservation-invisible
+    ENTITY (like Rommel) rather than a Unit: it holds no TOE and no supply ledger, sits off
+    units[], and so needs no ZOC / stacking / step bookkeeping. `hex` is the coastal hex it is
+    stationed in -- placed within Range 100 of Alexandria (30.15), a SEED-time constraint the
+    scenario honours (the engine does not re-derive Alexandria's position). `gun_rating` is fed
+    straight in as Actual Barrage Points when it bombards (30.22, NO ammo), `aa_rating` its 30.16
+    anti-aircraft value (carried for the deferred air game). `kind` is the ship class ("BB"/"CA"/
+    "CL"/"DD"); a capital ship (BB / heavy cruiser) may reach one hex further at half Gun Rating
+    (30.21). `port_cooldown` is the 30.25 counter -- a ship that fires owes two Operations Stages
+    refitting in Alexandria, so it may bombard only while this is 0; `at_sea_stages` tracks the
+    30.11 at-sea cadence (carried for the deferred 30.3 damage/repair). Default GameState.naval=()
+    fields no fleet, so every naval-less scenario stays byte-identical."""
+    id: str
+    side: Side
+    hex: Coord
+    gun_rating: int
+    aa_rating: int
+    kind: str                      # "BB" | "CA" | "CL" | "DD" (capital = BB/CA, 30.21)
+    at_sea_stages: int = 0
+    port_cooldown: int = 0
+
+
+@dataclass(frozen=True, slots=True)
 class Port:
     """A port and its built-in supply dump (rule 56.28 -- every port of arrival has a
     dump 'built in, as it were'). The port THROTTLES what a convoy lands: its effective
@@ -351,6 +375,10 @@ class GameState:
     # air_sighted=frozenset()) fly nothing and lift no fog, so every scenario stays byte-identical.
     air_missions: tuple[AirMission, ...] = ()
     air_sighted: frozenset = frozenset()
+    # Commonwealth Mediterranean Fleet (rule 30): the off-shore naval-bombardment fire support.
+    # Default () fields no ship, so every naval-less scenario stays byte-identical -- the CW
+    # Fleet-Assignment beat fires only when a side carries naval (game.engine._naval_bombardment).
+    naval: tuple[NavalUnit, ...] = ()
     # Map sections (A-E) this scenario is played on (rule 29.1 / 29.7). Foul weather
     # from the 29.7 Foul Weather Location Table only reaches the theater when it lands
     # on one of these sections; an empty set means "unlocalized" (a synthetic map), so
@@ -438,6 +466,12 @@ class GameState:
                 return t
         return None
 
+    def naval_of(self, nid: str) -> "NavalUnit | None":
+        for n in self.naval:
+            if n.id == nid:
+                return n
+        return None
+
     def trucks_at(self, coord: Coord) -> tuple["TruckFormation", ...]:
         return tuple(t for t in self.trucks if t.hex == coord)
 
@@ -467,6 +501,10 @@ class GameState:
     def with_truck(self, tf: "TruckFormation") -> "GameState":
         trucks = tuple(tf if t.id == tf.id else t for t in self.trucks)
         return replace(self, trucks=trucks)
+
+    def with_naval(self, nu: "NavalUnit") -> "GameState":
+        naval = tuple(nu if n.id == nu.id else n for n in self.naval)
+        return replace(self, naval=naval)
 
     def with_air_superiority(self, arena: str, victor: "str | None") -> "GameState":
         """Record the OpStage's air-superiority victor for an arena (mirrors with_control):

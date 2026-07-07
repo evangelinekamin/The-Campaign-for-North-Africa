@@ -229,6 +229,13 @@ def apply(state: GameState, event: Event) -> GameState:
         # the typed detail rides in the payload for the camera. Cleared at the OpStage boundary.
         return state.with_air_sighted(event.side.value, tuple(p["hex"]))
 
+    if k == EventKind.NAVAL_BOMBARDMENT:
+        # 30.2 off-shore bombardment: the Pin/step-loss ride the transient combat pinned set +
+        # STEP_LOST(role='naval') exactly like a land barrage, so the ONLY GameState fold here is
+        # the 30.25 refit -- the ship that fired now owes two Operations Stages in Alexandria.
+        ship = state.naval_of(p["ship_id"])
+        return state.with_naval(replace(ship, port_cooldown=2))
+
     if k == EventKind.FORT_REDUCED:
         return state.with_fort_level(tuple(p["hex"]), p["level"])
 
@@ -274,7 +281,8 @@ def apply(state: GameState, event: Event) -> GameState:
         # the per-OpStage CP/BP counters -- the same reset semantics as TURN_ADVANCED, now
         # firing at every stage boundary (3x/game-turn), spanning both players' portions (6.14).
         return replace(state, stage=p["stage"], units=_reset_opstage(state.units),
-                       air_superiority={}, air_sighted=frozenset())
+                       air_superiority={}, air_sighted=frozenset(),
+                       naval=_refit_naval(state.naval))
 
     if k == EventKind.TURN_ADVANCED:
         # A new game-turn opens a new Operations Stage: share the OpStage reset (6.16 — CP do
@@ -282,9 +290,18 @@ def apply(state: GameState, event: Event) -> GameState:
         # only), bump the game-turn, and re-open at stage 1. broken_down persists (21.44). The
         # per-OpStage air-superiority gate clears too (a fresh sky is contested each stage).
         return replace(state, turn=p["turn"], stage=1, units=_reset_opstage(state.units),
-                       air_superiority={}, air_sighted=frozenset())
+                       air_superiority={}, air_sighted=frozenset(),
+                       naval=_refit_naval(state.naval))
 
     raise ValueError(f"unhandled event kind {k}")
+
+
+def _refit_naval(naval: tuple) -> tuple:
+    """30.25 Alexandria refit countdown, ticked at each Operations-Stage boundary: a ship that
+    fired owes two Operations Stages in port, so its port_cooldown steps down toward readiness
+    (floored at 0). Ships that never fired (port_cooldown 0) are untouched, so naval=() and an
+    idle fleet stay byte-identical."""
+    return tuple(replace(n, port_cooldown=max(0, n.port_cooldown - 1)) for n in naval)
 
 
 def _reset_opstage(units: tuple) -> tuple:

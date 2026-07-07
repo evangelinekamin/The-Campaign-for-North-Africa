@@ -200,6 +200,15 @@ class EventKind(str, Enum):
     # (rng_draws = the per-unit noise) for the camera. Both emit ONLY when a side fields air.
     AIR_STRIKE_RESOLVED = "AIR_STRIKE_RESOLVED"
     AIR_RECON_RESOLVED = "AIR_RECON_RESOLVED"
+    # Commonwealth off-shore naval bombardment (rule 30.2). NAVAL_BOMBARDMENT {ship_id, target,
+    # actual, target_class, target_unit, pinned, loss, half} (rng_draws=(d1,d2)) feeds a ship's
+    # Gun Rating as Actual Barrage Points into the 12.6 CRT with NO ammo draw (30.22): the Pin
+    # joins the transient _combat pinned set (12.44, NOT GameState) and any step-loss rides the
+    # existing STEP_LOST(role='naval'), exactly like a land barrage. Its ONE load-bearing fold is
+    # the 30.25 refit -- the ship that fired now owes two Operations Stages in Alexandria, so the
+    # fold sets its port_cooldown=2 (ticked back down at each OpStage boundary). Emits ONLY when a
+    # side fields naval (GameState.naval), so every naval-less scenario stays byte-identical.
+    NAVAL_BOMBARDMENT = "NAVAL_BOMBARDMENT"
     # STAFF_* are narrative / no-op audit events: staff chatter the board is
     # invariant to (they fold to state unchanged; see game.apply, game.staff_events).
     STAFF_INTENT = "STAFF_INTENT"
