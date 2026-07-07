@@ -1,0 +1,4 @@
+# Test / development dependencies.
+#   pip install -r requirements-dev.txt   (add --break-system-packages on a PEP-668 system Python)
+pytest
+pytest-xdist    # parallel test execution; pytest.ini sets `addopts = -n auto`
