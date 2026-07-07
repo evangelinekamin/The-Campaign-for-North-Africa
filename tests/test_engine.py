@@ -350,7 +350,9 @@ def test_voluntary_overrun_disorganizes_8_16():
         def movement(self, state, side):
             return [MoveOrder("U", (6, 0))]            # cost 12 CP (2/clear hex)
     r = _Run(st)
-    _movement(r, _P(), Side.AXIS)
+    # No ALLIED units exist, so _react early-returns and never calls policies[ALLIED].react_to;
+    # the bare _P still satisfies the (r, policies, side) signature.
+    _movement(r, {Side.AXIS: _P(), Side.ALLIED: _P()}, Side.AXIS)
     assert r.state.unit("U").hex == (6, 0)
     assert r.state.unit("U").cp_used == 12.0           # 150% of CPA 8
     assert r.state.unit("U").cohesion == -4            # 12 - 8 = 4 DP (6.21)

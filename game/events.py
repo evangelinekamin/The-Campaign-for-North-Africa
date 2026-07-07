@@ -136,6 +136,12 @@ class EventKind(str, Enum):
     STAGE_ADVANCED = "STAGE_ADVANCED"
     INITIATIVE_DETERMINED = "INITIATIVE_DETERMINED"
     INITIATIVE_DECLARED = "INITIATIVE_DECLARED"
+    # Continual Movement (rule 8.2/8.23), the exploitation pulse loop. SEGMENT_ADVANCED
+    # {segment, side} is the legibility marker opening a pulse: the CP/BP accumulators
+    # deliberately PERSIST across it (only STAGE/TURN_ADVANCED reset them, 6.16), so it folds to
+    # identity. It emits ONLY when a Policy opts into continual_movement, so every current scenario
+    # stays byte-identical.
+    SEGMENT_ADVANCED = "SEGMENT_ADVANCED"
     # General Rommel (rule 31), all folding PURELY onto GameState.rommel -- no steps, no
     # supply, so invariants.check (conservation + stacking) is untouched. ROMMEL_ANCHORED
     # {hex, companions} snapshots the 31.4 'started-the-Operations-Stage-with-him' set at each

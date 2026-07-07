@@ -19,9 +19,13 @@ def apply(state: GameState, event: Event) -> GameState:
              EventKind.BARRAGE_RESOLVED,
              EventKind.ANTI_ARMOR_RESOLVED, EventKind.REINFORCEMENT_ARRIVED,
              EventKind.CONVOY_CANCELLED, EventKind.PASTA_DENIED, EventKind.PORT_UNLOADED,
+             EventKind.SEGMENT_ADVANCED,
              EventKind.STAFF_INTENT, EventKind.STAFF_PROPOSAL, EventKind.STAFF_CONSTRAINT,
              EventKind.STAFF_ADJUDICATION, EventKind.STAFF_DISSENT):
-        return state  # markers / audit records — PORT_UNLOADED's top-up rides SUPPLY_ARRIVED
+        # markers / audit records. SEGMENT_ADVANCED (8.2) opens a Continual-Movement pulse but
+        # the CP/BP accumulators PERSIST across it (only STAGE/TURN_ADVANCED reset them), so it
+        # folds to identity -- PORT_UNLOADED's top-up likewise rides SUPPLY_ARRIVED.
+        return state
 
     if k == EventKind.PORT_EFFICIENCY_CHANGED:
         # 55.14/55.18: set a port's Efficiency Level (regen, or later bomb/mine damage).

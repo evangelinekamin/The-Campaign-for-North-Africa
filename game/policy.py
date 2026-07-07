@@ -68,6 +68,14 @@ class Policy:
     def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
         return []  # optional: haul supply forward with 2nd/3rd-line truck convoys (rule 48 V.J)
 
+    def continual_movement(self, state: GameState, side: Side) -> list[MoveOrder]:
+        """Continual Movement go/no-go (rule 8.2): return the intended continuation moves for the
+        NEXT exploitation pulse (a non-empty list = press on; [] = the OpStage portion ends). Only
+        its emptiness gates the pulse; the pulse's actual moves are re-proposed through movement(),
+        gated by the engine's 8.23 two-hex exploitation eligibility. Base [] declines, so every
+        current scenario runs zero pulses and stays byte-identical."""
+        return []
+
 
 class ScriptedPolicy(Policy):
     """Simple desert doctrine: the attacker presses toward the objective along the

@@ -121,7 +121,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             for side in (first, second):                # 7.16: Player A (first) then Player B (last)
                 _debrief(side)                          # enemy portion + own last combat
                 r.go(Phase.MOVEMENT, side)
-                _movement(r, policies[side], side)
+                _movement(r, policies, side)            # segment 0 (ungated); Reaction (8.5) rides inside
                 _rommel_move(r, policies[side], side)   # 31.1: the leader repositions (Axis only, self-guarded)
                 _breakdown(r, side)                     # 21.24: check vehicles that ceased moving
                 _supply_movement(r, policies[side], side)   # supply follows the army (32.3)
@@ -130,6 +130,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                 _combat(r, policies, side)
                 _breakdown(r, _other(side))             # 21.22: the enemy's retreats accrued BP too
                 _repair(r, side)                        # 22.12: the phasing side's Repair Phase
+                _continual_movement(r, policies, side)  # 8.2/8.23 + 18.13: the exploitation pulse loop
             for side in (first, second):
                 _truck_convoys(r, policies[side], side)  # V.J: 2nd/3rd-line truck convoys (48)
             r.go(Phase.RECORD, Side.SYSTEM)
@@ -564,16 +565,38 @@ def _drain_staff(r: _Run, policy, side: Side) -> None:
         r.emit(kind, side, f"{side.value}/{seat}", clean_staff_payload(kind, payload))
 
 
-def _movement(r: _Run, policy: Policy, side: Side) -> None:
+# The never-bind Continual-Movement guardrail (rule 8.2). The real terminators are the CP
+# ceiling (tactics._cp_ceiling), the 6.21 cohesion bleed, the monotone-toward-objective proposer
+# and the 8.23 two-hex freeze; this cap only stops a pathological non-terminating policy.
+MAX_CONTINUAL_SEGMENTS: int = 20
+
+
+def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = None) -> None:
+    """Voluntary Movement (rule 8) for the phasing `side`. Segment 0 (eligible is None) moves the
+    whole roster; a Continual-Movement pulse (eligible = the 8.23-eligible unit ids) moves only
+    those. Takes the FULL policies dict (parallel to _combat) so later interrupts can reach the
+    NON-phasing policy -- the phasing orders still come from policies[side].movement, filtered by
+    `eligible`, so segment 0 is a pure refactor of the pre-exploitation loop.
+
+    Fuel: segment 0 charges each unit's FIRST move this OpStage (49.16); a pulse charges each
+    mover's first move THIS pulse regardless of accumulated cp_used (49.13), so Continual Movement
+    is NOT fuel-free after pulse 0 -- the adopted per-pulse-fuel fidelity fix that keeps the desert
+    supply scarcity biting through an exploitation."""
+    policy = policies[side]
     actor = f"{side.value}/Front"
     enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(r.state, side)
     roster = r.state.living(side)          # phase-start snapshot (matches the observation)
     orders = policy.movement(r.state, side)
     _drain_staff(r, policy, side)          # the deliberation that produced these orders
+    fueled: set[str] = set()               # movers already charged fuel THIS pulse (49.13)
     for order in orders:
         u = r.state.unit(order.unit_id)
         if u is None or not u.alive or u.side != side:
             _reject(r, side, actor, order, "no such living unit under this command")
+            continue
+        if eligible is not None and u.id not in eligible:
+            _reject(r, side, actor, order,
+                    "not eligible for continual movement (8.23 two-hex gate)")
             continue
         if u.effective_strength == 0:                   # 21.44: all vehicles broken down
             _reject(r, side, actor, order, "all vehicles broken down, may not move (21.44)")
@@ -589,7 +612,8 @@ def _movement(r: _Run, policy: Policy, side: Side) -> None:
         if not stacking.within_hex_limit(present + [u], r.state.terrain.terrain[order.to]):
             _reject(r, side, actor, order, "destination over stacking limit")
             continue
-        if u.cp_used == 0:                          # first move this OpStage pays fuel (49.16)
+        first_move = (u.cp_used == 0) if eligible is None else (u.id not in fueled)
+        if first_move:                              # first move this OpStage (seg 0) / this pulse
             # Distance-based fuel (49.13): rate x ceil(CP/5) for THIS move's path cost,
             # drawn in the hex the move begins -- so a long dash outruns its fuel.
             draws = supply.plan_draw(r.state, u, supply.FUEL,
@@ -600,6 +624,7 @@ def _movement(r: _Run, policy: Policy, side: Side) -> None:
             for sid, qty in draws:
                 r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
                        {"supply_id": sid, "commodity": supply.FUEL, "qty": qty, "unit_id": u.id})
+            fueled.add(u.id)
         payload = {"unit_id": u.id, "from": list(u.hex), "to": list(order.to),
                    "cp_spent": reach[order.to]}
         bp = tactics.bp_for_move(r.state, u, prev, order.to)     # 21.21 accrual (0 for non-vehicles)
@@ -609,6 +634,42 @@ def _movement(r: _Run, policy: Policy, side: Side) -> None:
         r.emit(EventKind.UNIT_MOVED, side, actor, payload)
         _disorganize_overage(r, side, actor, u.id, old_cp,        # 6.21: overrun past CPA (8.16/8.17)
                              old_cp + reach[order.to], tactics.effective_cpa(r.state, u))
+
+
+def _exploitation_eligible(state: GameState, side: Side,
+                           also: frozenset = frozenset()) -> frozenset:
+    """8.23: which units may move in a Continual-Movement pulse -- the phasing COMBAT units within
+    two hexes of an enemy combat unit (the exploitation zone), UNIONED with `also` (the Reserve
+    seam: units just released from Reserve are the 18.25 exception to 8.23). Segment 0 is ungated
+    (eligible=None)."""
+    enemy = _other(side)
+    enemy_hexes = [u.hex for u in state.living(enemy) if u.is_combat]
+    out = set(also)
+    for u in state.living(side):
+        if u.is_combat and any(distance(u.hex, eh) <= 2 for eh in enemy_hexes):
+            out.add(u.id)
+    return frozenset(out)
+
+
+def _continual_movement(r: _Run, policies: dict, side: Side) -> None:
+    """The Continual-Movement pulse loop (rule 8.2/8.23 + the 48 V.H repeat), appended after a
+    side's segment-0 Movement/Combat. Each pulse: ask the policy whether to press on
+    (continual_movement -- base [] declines, so a scripted scenario runs ZERO pulses and stays
+    byte-identical); if so, open a SEGMENT_ADVANCED marker and re-run gated Movement (only the
+    8.23-eligible units), Breakdown, and a FRESH Combat Segment (8.25 re-attack). CP/BP persist
+    across pulses (only the OpStage boundary resets them), so the CP ceiling, the 6.21 cohesion
+    bleed, the monotone proposer and the 8.23 freeze terminate the loop long before
+    MAX_CONTINUAL_SEGMENTS."""
+    for seg in range(1, MAX_CONTINUAL_SEGMENTS + 1):
+        if not policies[side].continual_movement(r.state, side):    # 8.2 go/no-go gate
+            break
+        r.emit(EventKind.SEGMENT_ADVANCED, side, "SYSTEM",
+               {"segment": seg, "side": side.value})
+        r.go(Phase.MOVEMENT, side)
+        _movement(r, policies, side, eligible=_exploitation_eligible(r.state, side))
+        _breakdown(r, side)
+        r.go(Phase.COMBAT, side)
+        _combat(r, policies, side)
 
 
 def _broken_count(pct: int, effective: int) -> int:
