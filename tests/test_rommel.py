@@ -96,6 +96,52 @@ def test_non_rommel_scenario_has_no_leader():
     assert coastal_corridor().rommel is None         # default None keeps toy scenarios byte-identical
 
 
+# --- Step 2: the +5 CPA (31.4) -----------------------------------------------
+
+def test_effective_cpa_plus_five_for_a_companion_on_the_anchor():
+    hx = (2, 0)
+    u = _unit("GE-Pz", Side.AXIS, hx, cpa=20)
+    rom = Rommel(hex=hx, anchor_hex=hx, companions=frozenset({"GE-Pz"}))
+    assert tactics.effective_cpa(_state([u], rom), u) == 25
+
+
+def test_effective_cpa_unchanged_off_anchor_or_not_a_companion():
+    hx = (2, 0)
+    u = _unit("GE-Pz", Side.AXIS, hx, cpa=20)
+    # walked in mid-stage -> not in the boundary snapshot -> no bonus (31.4 'started with')
+    assert tactics.effective_cpa(_state([u], Rommel(hex=hx, anchor_hex=hx)), u) == 20
+    # a companion, but Rommel has moved off the anchor -> voided (hex != anchor_hex)
+    moved = Rommel(hex=(3, 0), anchor_hex=hx, companions=frozenset({"GE-Pz"}))
+    assert tactics.effective_cpa(_state([u], moved), u) == 20
+    # a companion that itself left the anchor hex -> voided
+    away = replace(u, hex=(4, 0))
+    stayed = Rommel(hex=hx, anchor_hex=hx, companions=frozenset({"GE-Pz"}))
+    assert tactics.effective_cpa(_state([away], stayed), away) == 20
+    # in Germany (Berlin recall) -> voided
+    berlin = Rommel(hex=hx, in_germany=True, anchor_hex=hx, companions=frozenset({"GE-Pz"}))
+    assert tactics.effective_cpa(_state([u], berlin), u) == 20
+
+
+def test_rommel_widens_the_reachable_set():
+    hx = (0, 0)
+    u = _unit("GE-Pz", Side.AXIS, hx, cpa=6)
+    plain = tactics.reachable_for(_state([u]), u, frozenset(), frozenset())
+    rom = Rommel(hex=hx, anchor_hex=hx, companions=frozenset({"GE-Pz"}))
+    boosted = tactics.reachable_for(_state([u], rom), u, frozenset(), frozenset())
+    assert len(boosted) > len(plain)                 # +5 CPA reaches strictly farther
+
+
+def test_rommels_arrival_snapshots_the_anchor_each_stage():
+    res = run(rommels_arrival(), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    anchors = [e for e in res.events if e.kind == EventKind.ROMMEL_ANCHORED]
+    assert anchors and all(e.side == Side.AXIS for e in anchors)
+
+
+def test_non_rommel_run_emits_no_rommel_events():
+    res = run(coastal_corridor(), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    assert not any(e.kind.name.startswith("ROMMEL") for e in res.events)
+
+
 def test_rommels_arrival_runs_deterministically_with_the_entity():
     res = run(rommels_arrival(), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
     assert res.winner in (Side.AXIS, Side.ALLIED)

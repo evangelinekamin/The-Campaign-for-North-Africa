@@ -109,6 +109,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
         _initiative(r)                                  # 5.2 I / 7.14: who holds Initiative this game-turn
         _stores_setup(r)                                # 48 IV: Stores Expenditure + 6% base evaporation
         for stage in (1, 2, 3):
+            _rommel_anchor(r)                            # 31.4: snapshot who he starts THIS stage with
             first, second = _declare_ab(r, policies, stage)   # 5.2.III.A / 7.11: the A/B activation order
             r.go(Phase.WEATHER, Side.SYSTEM)
             _weather(r)                                 # 29.0: weather is rolled per Operations Stage
@@ -202,6 +203,23 @@ def _declare_ab(r: _Run, policies: dict, stage: int) -> tuple[Side, Side]:
     r.emit(EventKind.INITIATIVE_DECLARED, init, "SYSTEM",
            {"stage": stage, "phasing_first": first.value})
     return first, _other(first)
+
+
+# --- Rommel (rule 31) --------------------------------------------------------
+
+def _rommel_anchor(r: _Run) -> None:
+    """31.4: at each Operations-Stage boundary, snapshot the Axis COMBAT units stacked with
+    General Rommel -- the set that, if it never leaves his hex and he never leaves it, draws his
+    +5 CPA this stage (tactics.effective_cpa). Emits ROMMEL_ANCHORED (folds anchor_hex +
+    companions). Silent -- no event -- when no Rommel is on the board or he is in Germany, so
+    every non-Rommel scenario stays byte-identical."""
+    rom = r.state.rommel
+    if rom is None or rom.in_germany:
+        return
+    companions = sorted(u.id for u in r.state.units_at(rom.hex)
+                        if u.side == Side.AXIS and u.is_combat)
+    r.emit(EventKind.ROMMEL_ANCHORED, Side.AXIS, "SYSTEM",
+           {"hex": list(rom.hex), "companions": companions})
 
 
 # --- phases ------------------------------------------------------------------
@@ -537,7 +555,7 @@ def _movement(r: _Run, policy: Policy, side: Side) -> None:
         old_cp = r.state.unit(u.id).cp_used
         r.emit(EventKind.UNIT_MOVED, side, actor, payload)
         _disorganize_overage(r, side, actor, u.id, old_cp,        # 6.21: overrun past CPA (8.16/8.17)
-                             old_cp + reach[order.to], u.cpa)
+                             old_cp + reach[order.to], tactics.effective_cpa(r.state, u))
 
 
 def _broken_count(pct: int, effective: int) -> int:
@@ -813,7 +831,8 @@ def _spend_cp(r: _Run, side: Side, actor: str, unit, activity: str, cp: int) -> 
     old = r.state.unit(unit.id).cp_used
     r.emit(EventKind.CP_EXPENDED, side, actor,
            {"unit_id": unit.id, "activity": activity, "cp": cp})
-    _disorganize_overage(r, side, actor, unit.id, old, old + cp, unit.cpa)
+    _disorganize_overage(r, side, actor, unit.id, old, old + cp,
+                         tactics.effective_cpa(r.state, unit))
 
 
 def _charge_combat_cp(r: _Run, phasing: Side, unit, charged: set[str]) -> None:
@@ -931,7 +950,7 @@ def _retreat_before_assault(r: _Run, policy: Policy, side: Side, phasing: Side,
         old_cp = r.state.unit(u.id).cp_used
         r.emit(EventKind.UNIT_MOVED, side, actor, payload)   # 13.21: retreat-before-assault IS movement
         _disorganize_overage(r, side, actor, u.id, old_cp,       # 6.21: retreat past CPA earns DP too
-                             old_cp + reach[order.to], u.cpa)
+                             old_cp + reach[order.to], tactics.effective_cpa(r.state, u))
 
 
 def _rba_cp_cap(state: GameState, unit, reach: dict) -> dict:

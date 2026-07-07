@@ -136,6 +136,13 @@ class EventKind(str, Enum):
     STAGE_ADVANCED = "STAGE_ADVANCED"
     INITIATIVE_DETERMINED = "INITIATIVE_DETERMINED"
     INITIATIVE_DECLARED = "INITIATIVE_DECLARED"
+    # General Rommel (rule 31), all folding PURELY onto GameState.rommel -- no steps, no
+    # supply, so invariants.check (conservation + stacking) is untouched. ROMMEL_ANCHORED
+    # {hex, companions} snapshots the 31.4 'started-the-Operations-Stage-with-him' set at each
+    # OpStage boundary (folds anchor_hex + companions); the +5 CPA holds only while he never
+    # leaves it (hex == anchor_hex). All emit ONLY when a Rommel is on the board, so every non-
+    # Rommel scenario stays byte-identical.
+    ROMMEL_ANCHORED = "ROMMEL_ANCHORED"
     # STAFF_* are narrative / no-op audit events: staff chatter the board is
     # invariant to (they fold to state unchanged; see game.apply, game.staff_events).
     STAFF_INTENT = "STAFF_INTENT"

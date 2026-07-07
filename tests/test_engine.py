@@ -322,16 +322,11 @@ def test_collapsed_cohesion_defender_capitulates_15_88():
 def test_cp_ceiling_lifts_movement_to_8_17():
     # 8.17: non-motorized (CPA <= 10) may spend up to 150% of base CPA; motorized (CPA > 10)
     # has no rule ceiling, bounded only by the 2x-CPA compute soft-bound.
-    from game.state import Unit
-    from game.tactics import _cp_ceiling
-    from game.terrain import Mobility
+    from game.tactics import _cp_ceiling                # takes the (Rommel-)effective CPA (31.4)
 
-    def _u(cpa, mob=Mobility.FOOT):
-        return Unit("U", Side.AXIS, (0, 0), (StepRecord("s", 6),), mobility=mob,
-                    cpa=cpa, stacking_points=1, oca=2, dca=2)
-    assert _cp_ceiling(_u(8)) == 12.0                  # 8 -> 12 (8.17)
-    assert _cp_ceiling(_u(10)) == 15.0                 # 10 -> 15 (8.17)
-    assert _cp_ceiling(_u(20, Mobility.MOTORIZED)) == 40.0    # motorized: 2x compute bound
+    assert _cp_ceiling(8) == 12.0                       # 8 -> 12 (8.17)
+    assert _cp_ceiling(10) == 15.0                      # 10 -> 15 (8.17)
+    assert _cp_ceiling(20) == 40.0                      # motorized (CPA > 10): 2x compute bound
 
 
 def test_voluntary_overrun_disorganizes_8_16():

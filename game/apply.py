@@ -209,6 +209,13 @@ def apply(state: GameState, event: Event) -> GameState:
         # 7.12 double-move emerges. Pure scalar fold.
         return replace(state, phasing_first=Side(p["phasing_first"]))
 
+    if k == EventKind.ROMMEL_ANCHORED:
+        # 31.4: snapshot the companions Rommel starts this Operations Stage with, anchored to
+        # his current hex. The +5 CPA (tactics.effective_cpa) holds only while a unit is in this
+        # set AND still stacked on the anchor AND Rommel has not moved off it (hex==anchor_hex).
+        return replace(state, rommel=replace(state.rommel, anchor_hex=tuple(p["hex"]),
+                                             companions=frozenset(p["companions"])))
+
     if k == EventKind.STAGE_ADVANCED:
         # New Operations Stage within the game-turn (rule 5.1): bump the stage and refresh
         # the per-OpStage CP/BP counters -- the same reset semantics as TURN_ADVANCED, now
