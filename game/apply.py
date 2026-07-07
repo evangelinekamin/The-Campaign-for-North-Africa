@@ -65,6 +65,15 @@ def apply(state: GameState, event: Event) -> GameState:
                                        cp_used=u.cp_used + p["cp_spent"],
                                        bp_accumulated=u.bp_accumulated + p.get("bp", 0.0)))
 
+    if k == EventKind.REACTION_MOVED:
+        # 8.51/8.52: Reaction Movement follows all the standard rules of movement and expends CP,
+        # so it folds IDENTICALLY to UNIT_MOVED -- relocate the reactor and feed its cp_spent + bp
+        # into the same 6.14 per-OpStage accumulators. A distinct kind only for camera legibility.
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, hex=tuple(p["to"]),
+                                       cp_used=u.cp_used + p["cp_spent"],
+                                       bp_accumulated=u.bp_accumulated + p.get("bp", 0.0)))
+
     if k == EventKind.RESERVE_DESIGNATED:
         # 18.12: designation always places the unit in Reserve I. No CP (18.26).
         u = state.unit(p["unit_id"])

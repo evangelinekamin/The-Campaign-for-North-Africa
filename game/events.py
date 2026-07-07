@@ -152,6 +152,12 @@ class EventKind(str, Enum):
     RESERVE_DESIGNATED = "RESERVE_DESIGNATED"
     RESERVE_FLIPPED = "RESERVE_FLIPPED"
     RESERVE_RELEASED = "RESERVE_RELEASED"
+    # Reaction Movement (rule 8.5), the non-phasing tempo interrupt. REACTION_MOVED folds
+    # IDENTICALLY to UNIT_MOVED (hex + cp_used + bp): 8.51 'Reaction follows all the standard rules
+    # of movement' and 8.52 'expends CP', so it feeds the same 6.14 accumulator -- a distinct kind
+    # only for camera legibility (the same rationale that keeps UNIT_RETREATED separate). Emits ONLY
+    # when the non-phasing policy opts into react_to, so every current scenario is byte-identical.
+    REACTION_MOVED = "REACTION_MOVED"
     # General Rommel (rule 31), all folding PURELY onto GameState.rommel -- no steps, no
     # supply, so invariants.check (conservation + stacking) is untouched. ROMMEL_ANCHORED
     # {hex, companions} snapshots the 31.4 'started-the-Operations-Stage-with-him' set at each

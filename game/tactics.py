@@ -78,6 +78,19 @@ def enemy_zoc_and_occupied(state: GameState, mover_side: Side) -> tuple[frozense
     return enemy_zoc, enemy_occupied
 
 
+def enemy_zoc_excluding(state: GameState, mover_side: Side, exclude_id: str) -> frozenset:
+    """The enemy Zone of Control as seen by `mover_side`, projected by every enemy combat unit
+    EXCEPT `exclude_id`. The 8.53c Reaction eligibility test uses this so a unit that the trigger
+    mover has JUST moved adjacent to is not read as 'already in an enemy ZOC' by that same mover --
+    only a pre-existing pin from some OTHER enemy unit disqualifies the reaction."""
+    enemy = other(mover_side)
+    by_hex: dict[Coord, list[Unit]] = {}
+    for u in state.living(enemy):
+        if u.is_combat and u.id != exclude_id:
+            by_hex.setdefault(u.hex, []).append(u)
+    return zoc.control_map(by_hex, state.terrain)
+
+
 def reachable_for(state: GameState, unit: Unit, enemy_zoc: frozenset,
                   enemy_occupied: frozenset, roster: tuple | None = None) -> dict[Coord, float]:
     """Hexes `unit` can legally reach this segment within its remaining CPA. Pass a

@@ -23,7 +23,7 @@ from .invariants import check
 from .policy import AttackOrder, MoveOrder, Policy
 from .staff_events import clean_staff_payload
 from .state import Coord, GameState
-from .terrain import Terrain
+from .terrain import Mobility, Terrain
 
 CONTROL_OF: dict[Side, Control] = {Side.AXIS: Control.AXIS, Side.ALLIED: Control.ALLIED}
 
@@ -571,6 +571,11 @@ def _drain_staff(r: _Run, policy, side: Side) -> None:
 # and the 8.23 two-hex freeze; this cap only stops a pathological non-terminating policy.
 MAX_CONTINUAL_SEGMENTS: int = 20
 
+# 8.53b Reaction pin (adopted conservative read): a phasing mover whose effective CPA outstrips
+# the reactor's by this margin may not be reacted to -- a stand-in for the unknowable "announces a
+# Close Assault" clause, which the engine cannot see because movement precedes combat orders.
+REACTION_CPA_GAP: int = 6
+
 
 def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = None) -> None:
     """Voluntary Movement (rule 8) for the phasing `side`. Segment 0 (eligible is None) moves the
@@ -640,6 +645,86 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
         old_cp = r.state.unit(u.id).cp_used
         r.emit(EventKind.UNIT_MOVED, side, actor, payload)
         _disorganize_overage(r, side, actor, u.id, old_cp,        # 6.21: overrun past CPA (8.16/8.17)
+                             old_cp + reach[order.to], tactics.effective_cpa(r.state, u))
+        _react(r, policies, side, u.id)         # 8.5: the non-phasing side may slide aside
+
+
+def _react(r: _Run, policies: dict, phasing: Side, mover_id: str) -> None:
+    """Reaction Movement (rule 8.5) -- the non-phasing tempo interrupt, the RBA template (13.0)
+    relocated into the Movement Segment. When phasing unit `mover_id` has just moved, the NON-
+    phasing side may slide eligible motorized units aside. 8.53 eligibility, read off the CURRENT
+    board: (a) motorized only; (c) not already in the phasing side's ZOC; (d) not Engaged (15.81);
+    (b) not pinned by a far heavier mover (effective CPA gap >= 6, the adopted conservative read of
+    8.53b); plus the 8.54 size-pin (a reactor at least half the mover's stacking size). Validated
+    against tactics.reachable_for PLAIN (8.55: no distance cap beyond CP -- NOT the 13.24 RBA cap);
+    the reactor pays its first-move fuel and REACTION_MOVED folds like UNIT_MOVED. (8.52 exempts the
+    2-CP break-off surcharge; here the reactor is in the trigger mover's fresh ZOC so reachable_for
+    charges it -- a small CONSERVATIVE overcharge consistent with the RBA sibling, flagged.)
+
+    RE-ENTRANCY: the reactor's board change lands only on the NEXT pulse's fresh recompute -- the
+    phasing movers still in this segment keep the frozen phase-start enemy_zoc snapshot in
+    _movement, and REACTION_MOVED itself never triggers a further reaction, so there is no interrupt
+    recursion. Inert (no event, no RNG) when no eligible reactor is adjacent or the policy declines,
+    so every current scenario stays byte-identical."""
+    reacting = _other(phasing)
+    mover = r.state.unit(mover_id)
+    if mover is None or not mover.alive:
+        return
+    adj = [u for u in r.state.living(reacting)          # cheap adjacency pre-filter (8.51 + 8.53a/d)
+           if u.is_combat and u.mobility == Mobility.MOTORIZED and not u.engaged
+           and is_adjacent(u.hex, mover.hex)]
+    if not adj:
+        return                                          # the common case -- no reaction possible
+    enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(r.state, reacting)  # full board (8.55 reach)
+    other_zoc = tactics.enemy_zoc_excluding(r.state, reacting, mover_id)   # 8.53c excludes the trigger mover
+    mover_cpa = tactics.effective_cpa(r.state, mover)
+    eligible = [u.id for u in sorted(adj, key=lambda u: u.id)
+                if u.hex not in other_zoc                                    # 8.53c (no pre-existing pin)
+                and mover_cpa - tactics.effective_cpa(r.state, u) < REACTION_CPA_GAP  # 8.53b
+                and u.stacking_points * 2 >= mover.stacking_points]         # 8.54 size-pin
+    if not eligible:
+        return
+    eligible_fs = frozenset(eligible)
+    orders = policies[reacting].react_to(r.state, reacting, mover_id, eligible_fs)
+    if not orders:
+        return                                          # base [] declines -> byte-identical
+    actor = f"{reacting.value}/Front"
+    roster = r.state.living(reacting)
+    for order in orders:
+        u = r.state.unit(order.unit_id)
+        if u is None or not u.alive or u.side != reacting or u.id not in eligible_fs:
+            _reject(r, reacting, actor, order, "not an eligible reactor (8.53)",
+                    order_kind="reaction")
+            continue
+        reach, prev = tactics.reachable_for_prev(r.state, u, enemy_zoc, enemy_occupied, roster)
+        if order.to == u.hex or order.to not in reach:  # 8.55: plain reach, NO 13.24 cap
+            _reject(r, reacting, actor, order,
+                    "reaction destination unreachable within CPA or blocked by ZOC",
+                    order_kind="reaction")
+            continue
+        present = [x for x in r.state.units_at(order.to) if x.side == reacting]
+        if not stacking.within_hex_limit(present + [u], r.state.terrain.terrain[order.to]):
+            _reject(r, reacting, actor, order, "reaction destination over stacking limit",
+                    order_kind="reaction")
+            continue
+        if u.cp_used == 0:                              # first move this OpStage pays fuel (49.16)
+            draws = supply.plan_draw(r.state, u, supply.FUEL,
+                                     supply.fuel_cost(u, reach[order.to]))
+            if draws is None:
+                _reject(r, reacting, actor, order, "out of supply: no fuel to react",
+                        order_kind="reaction")
+                continue
+            for sid, qty in draws:
+                r.emit(EventKind.SUPPLY_CONSUMED, reacting, actor,
+                       {"supply_id": sid, "commodity": supply.FUEL, "qty": qty, "unit_id": u.id})
+        payload = {"unit_id": u.id, "from": list(u.hex), "to": list(order.to),
+                   "cp_spent": reach[order.to]}
+        bp = tactics.bp_for_move(r.state, u, prev, order.to)     # 21.22: reaction accrues BP too
+        if bp:
+            payload["bp"] = bp
+        old_cp = r.state.unit(u.id).cp_used
+        r.emit(EventKind.REACTION_MOVED, reacting, actor, payload)   # 8.51: reaction IS movement
+        _disorganize_overage(r, reacting, actor, u.id, old_cp,      # 6.21: reacting past CPA earns DP
                              old_cp + reach[order.to], tactics.effective_cpa(r.state, u))
 
 

@@ -82,6 +82,10 @@ class Policy:
     def reserve_release(self, state: GameState, side: Side) -> list[str]:
         return []  # optional: release reserves at the inter-pulse Release Segment (rule 18.13 / 48 V.H.4)
 
+    def react_to(self, state: GameState, side: Side, trigger: str,
+                 eligible: frozenset[str]) -> list[MoveOrder]:
+        return []  # optional: a non-phasing motorized unit slides aside as an enemy moves adjacent (rule 8.5)
+
 
 class ScriptedPolicy(Policy):
     """Simple desert doctrine: the attacker presses toward the objective along the
