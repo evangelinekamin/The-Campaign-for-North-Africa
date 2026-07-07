@@ -229,9 +229,10 @@ class Event:
     payload: dict                  # json-safe values only (no enums/sets)
     rng_draws: tuple[int, ...] = ()
     stage: int = 1                 # Operations Stage active when emitted (1..3, rule 5.1).
-                                   # Legibility only: apply() ignores it and event_to_dict
-                                   # omits it, so the determinism log stays byte-identical
-                                   # until _Run.emit stamps it in a later step.
+                                   # _Run.emit stamps it from state.stage; apply() ignores it
+                                   # (it is derived, not load-bearing) but event_to_dict now
+                                   # projects it, so the determinism log certifies the OpStage
+                                   # each event was emitted in.
 
 
 def event_to_dict(e: Event) -> dict:
@@ -245,6 +246,7 @@ def event_to_dict(e: Event) -> dict:
         "kind": e.kind.value,
         "payload": e.payload,
         "rng_draws": list(e.rng_draws),
+        "stage": e.stage,
     }
 
 

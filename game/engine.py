@@ -258,21 +258,24 @@ def _rommel_recall(r: _Run) -> bool:
     """31 Berlin recall, once per GAME-TURN General Rommel is on the board -- the ONLY new RNG in
     rule 31, drawn HERE, before Initiative, so its stream position is pinned. If he is already in
     Germany from last turn, auto-return him first (ROMMEL_RECALLED in_germany=False, no dice),
-    then roll normally. Roll 2d6: a 12 sends him to Germany (ROMMEL_RECALLED in_germany=True,
-    carrying the dice) and returns True so _initiative clamps the Axis rating to min(rating, 3)
-    this game-turn; anything else leaves him in place. Draws NO dice and returns False when no
-    Rommel is present, so every non-Rommel scenario is byte-identical."""
+    then roll normally. Roll 2d6 and emit ROMMEL_RECALLED UNCONDITIONALLY, carrying the dice so
+    every game-turn's roll is certified in the log: a 12 folds in_germany=True and returns True
+    so _initiative clamps the Axis rating to min(rating, 3) this game-turn; anything else folds
+    in_germany=False (a no-op on the on-map Rommel) and returns False. Draws NO dice and returns
+    False when no Rommel is present, so every non-Rommel scenario is byte-identical."""
     rom = r.state.rommel
     if rom is None:
         return False
     if rom.in_germany:
         r.emit(EventKind.ROMMEL_RECALLED, Side.AXIS, "SYSTEM", {"in_germany": False})
     d1, d2 = r.d6(), r.d6()
-    if d1 + d2 == 12:
-        r.emit(EventKind.ROMMEL_RECALLED, Side.AXIS, "SYSTEM",
-               {"in_germany": True}, rng_draws=(d1, d2))
-        return True
-    return False
+    recalled = d1 + d2 == 12
+    # Emit UNCONDITIONALLY, carrying the 2d6, so the recall roll's dice are certified in the
+    # log every game-turn (not only on a 12). A non-12 folds in_germany=False -- a no-op on the
+    # already-on-map Rommel -- so state is untouched; only the RNG stream is now auditable.
+    r.emit(EventKind.ROMMEL_RECALLED, Side.AXIS, "SYSTEM",
+           {"in_germany": recalled}, rng_draws=(d1, d2))
+    return recalled
 
 
 def _rommel_move(r: _Run, policy: Policy, side: Side) -> None:
@@ -352,16 +355,17 @@ def _apply_convoy_loss(cargo: dict, pct: int) -> tuple[dict, int]:
 
 def _interdict(convoy, state: GameState, rng):
     """The interdiction worker shared by interdict() and _naval_convoys: returns
-    (reduced_cargo, order|None, pct_lost, tons_lost). Draws the two [41.66] CRT dice on `rng`
-    ONLY when an InterdictionOrder covers this lane+turn, so an interdiction-free lane draws
-    no rng and returns the cargo verbatim (byte-identical)."""
+    (reduced_cargo, order|None, pct_lost, tons_lost, dice). Draws the two [41.66] CRT dice on
+    `rng` ONLY when an InterdictionOrder covers this lane+turn, so an interdiction-free lane
+    draws no rng and returns the cargo verbatim with dice=() (byte-identical). The dice ride out
+    so the CONVOY_INTERDICTED marker can certify them in the log."""
     order = _interdiction_for(state, convoy)
     if order is None:
-        return dict(convoy.cargo), None, 0, 0
+        return dict(convoy.cargo), None, 0, 0, ()
     d1, d2 = rng.randint(1, 6), rng.randint(1, 6)      # 41.66: two dice, read sequentially
     pct = _convoy_loss_pct(order.bomb_points, d1, d2)
     reduced, tons_lost = _apply_convoy_loss(convoy.cargo, pct)
-    return reduced, order, pct, tons_lost
+    return reduced, order, pct, tons_lost, (d1, d2)
 
 
 def interdict(convoy, state: GameState, rng) -> dict:
@@ -372,7 +376,7 @@ def interdict(convoy, state: GameState, rng) -> dict:
     Bombardment CRT (41.66) and skims that tens-of-percent off the cargo (41.67, split evenly,
     each LOST amount rounded up) before it lands. Returns the (possibly reduced) cargo; the
     paired CONVOY_INTERDICTED marker rides in _naval_convoys beside the smaller SUPPLY_ARRIVED."""
-    return _interdict(convoy, state, rng)[0]
+    return _interdict(convoy, state, rng)[0]         # cargo only; the marker's dice ride separately
 
 
 def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
@@ -409,7 +413,7 @@ def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
                    {"convoy_id": c.id, "lane": c.lane, "dest": c.dest, "reason": "port captured"})
             continue
         # 41.6/32.66: skim the CRT loss at sea BEFORE landing (identity + no rng if unbombed)
-        cargo, itd_order, pct_lost, tons_lost = _interdict(c, r.state, r.rng)
+        cargo, itd_order, pct_lost, tons_lost, itd_dice = _interdict(c, r.state, r.rng)
         cap = supply.dump_capacity(r.state.terrain.terrain[dump.hex])   # 54.12, keyed by dump terrain
         port = r.state.port_at(dump.hex)                # 56.28: a port's built-in dump
         landed: dict = {}
@@ -433,7 +437,7 @@ def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
             r.emit(EventKind.CONVOY_INTERDICTED, interdictor, "SYSTEM",
                    {"lane": c.lane, "convoy_id": c.id, "interdictor": interdictor.value,
                     "bomb_points": itd_order.bomb_points, "pct_lost": pct_lost,
-                    "tons_lost": tons_lost})
+                    "tons_lost": tons_lost}, rng_draws=itd_dice)   # 41.66: certify the CRT dice
             # Route the cut ALSO through a SEA-arena air strike so a convoy interdiction is legibly
             # air-sourced (41.6) -- but ONLY when the interdictor fields SEA air, so an air-less
             # interdiction scenario (siege_of_tobruk) stays byte-identical.
@@ -1223,7 +1227,7 @@ def _repair(r: _Run, side: Side) -> None:
         repaired = _repaired_count(vclass, combat_tables.field_repair(vclass, die), cur.broken_down)
         if repaired > 0:
             r.emit(EventKind.VEHICLE_REPAIRED, side, actor,
-                   {"unit_id": cur.id, "amount": repaired})
+                   {"unit_id": cur.id, "amount": repaired}, rng_draws=(die,))   # 22.8: certify the roll
 
 
 def _reject(r: _Run, side: Side, actor: str, order: MoveOrder, reason: str,

@@ -223,7 +223,10 @@ def test_berlin_recall_stays_put_on_a_non_twelve():
     r = _Run(_state([_unit("GE-Pz", Side.AXIS, (0, 0))], Rommel(hex=(0, 0))))
     r.rng = _FixedDice([3, 4])
     assert _rommel_recall(r) is False
-    assert not any(e.kind == EventKind.ROMMEL_RECALLED for e in r.events)
+    # The roll is now emitted UNCONDITIONALLY so its dice are certified even on a non-12; the
+    # in_germany=False fold is a no-op on the on-map Rommel.
+    ev = [e for e in r.events if e.kind == EventKind.ROMMEL_RECALLED]
+    assert len(ev) == 1 and ev[0].payload["in_germany"] is False and ev[0].rng_draws == (3, 4)
     assert r.state.rommel.in_germany is False
 
 
@@ -231,8 +234,11 @@ def test_berlin_recall_auto_returns_then_rolls_normally():
     r = _Run(_state([_unit("GE-Pz", Side.AXIS, (0, 0))], Rommel(hex=(0, 0), in_germany=True)))
     r.rng = _FixedDice([2, 5])                             # returns, then a non-12 roll
     assert _rommel_recall(r) is False
+    # Two beats now: the dice-free auto-return, then the certified (non-12) roll.
     ev = [e for e in r.events if e.kind == EventKind.ROMMEL_RECALLED]
-    assert len(ev) == 1 and ev[0].payload["in_germany"] is False and ev[0].rng_draws == ()
+    assert len(ev) == 2
+    assert ev[0].payload["in_germany"] is False and ev[0].rng_draws == ()
+    assert ev[1].payload["in_germany"] is False and ev[1].rng_draws == (2, 5)
     assert r.state.rommel.in_germany is False
 
 

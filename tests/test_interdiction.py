@@ -105,8 +105,9 @@ def test_interdict_reduces_when_ordered():
     conv = Convoy("c1", Side.ALLIED, 1, "SEA-TOBRUK", "D", {"AMMO": 1000})
     order = InterdictionOrder("SEA-TOBRUK", 1, 500)         # top column, 20..50%
     s = _mini(SupplyUnit("D", Side.ALLIED, (0, 0), ammo=0, fuel=0), [conv], [order])
-    cargo, o, pct, tons = _interdict(conv, s, random.Random(3))
+    cargo, o, pct, tons, dice = _interdict(conv, s, random.Random(3))
     assert o is order and pct >= 20 and cargo["AMMO"] < 1000 and tons > 0
+    assert len(dice) == 2 and all(1 <= d <= 6 for d in dice)   # the 41.66 CRT dice ride out
 
 
 # --- _naval_convoys emits CONVOY_INTERDICTED, conserves ----------------------
@@ -123,6 +124,7 @@ def test_naval_convoys_emits_marker_beside_reduced_arrival():
     assert p["lane"] == "SEA-TOBRUK" and p["convoy_id"] == "c1"
     assert p["interdictor"] == Side.AXIS.value              # the side opposing the CW ferry
     assert p["bomb_points"] == 500 and p["pct_lost"] >= 20 and p["tons_lost"] > 0
+    assert len(itd[0].rng_draws) == 2                        # 41.66 CRT dice certified on the marker
     # the load-bearing reduction rode SUPPLY_ARRIVED: less landed than the 1000/1000 shipped
     landed = arr[0].payload["cargo"]
     assert landed["AMMO"] < 1000 and landed["FUEL"] < 1000
