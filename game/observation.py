@@ -137,7 +137,9 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
     # Fog of presence: unless reveal_all (the viewer/god-view), an enemy stack is
     # listed only when it stands on a hex this side can currently see (within
     # SIGHTING of a living friendly). Unsighted stacks are simply omitted.
-    sighted = None if reveal_all else _sighted_hexes(state, side)
+    # Recon (rule 42.2): air reconnaissance lifts the fog over hexes this OpStage, so a recon'd
+    # enemy stack is legible even beyond the flat SIGHTING radius. Unioned with the fog-of-presence.
+    sighted = None if reveal_all else (_sighted_hexes(state, side) | set(state.air_sighted_for(side)))
     sightings: dict = {}
     for e in state.living(_other(side)):
         if sighted is not None and e.hex not in sighted:

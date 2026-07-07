@@ -213,6 +213,23 @@ class AirWing:
 
 
 @dataclass(frozen=True, slots=True)
+class AirMission:
+    """A scheduled LAND-arena air TASKING (rules 41.31/41.37/41.39B/42.2): the convoys/
+    interdictions idiom carried to air support. `kind` is "strike" (41.31 pin a stack),
+    "fort" (41.37 batter a fortification one level/OpStage), "port" (41.39B knock a harbour's
+    Efficiency Level down) or "recon" (42.2 fog-lift). `target` is the hex (q, r) for
+    strike/fort/recon, or the port id for "port". On game-turn `turn`, side `side`'s LAND air
+    flies it in that side's Combat Segment (game.engine._air_support) -- the committed strike/
+    recon Air Points come from its AirWings, scaled by the superiority gate. A static schedule
+    now, replaced by the Air Marshal seat's live orders later (P5 Step 6); default
+    GameState.air_missions=() flies nothing, so every air-mission-less scenario stays byte-identical."""
+    side: Side
+    kind: str                      # "strike" | "fort" | "port" | "recon"
+    target: object                 # (q, r) hex, or a port id str (kind == "port")
+    turn: int
+
+
+@dataclass(frozen=True, slots=True)
 class Port:
     """A port and its built-in supply dump (rule 56.28 -- every port of arrival has a
     dump 'built in, as it were'). The port THROTTLES what a convoy lands: its effective
@@ -327,6 +344,13 @@ class GameState:
     # (air=(), air_superiority={}) fire no air beat, so every air-less scenario stays byte-identical.
     air: tuple[AirWing, ...] = ()
     air_superiority: dict = field(default_factory=dict)
+    # Air missions (rules 41/42) + the recon fog-lift. `air_missions` is the per-side LAND
+    # tasking schedule (game.engine._air_support). `air_sighted` is the per-OpStage recon lift:
+    # a set of (recon_side_value, hex) pairs observation.py reads ALONGSIDE _sighted_hexes (42.2),
+    # CLEARED at the OpStage boundary like air_superiority. Defaults (air_missions=(),
+    # air_sighted=frozenset()) fly nothing and lift no fog, so every scenario stays byte-identical.
+    air_missions: tuple[AirMission, ...] = ()
+    air_sighted: frozenset = frozenset()
     # Map sections (A-E) this scenario is played on (rule 29.1 / 29.7). Foul weather
     # from the 29.7 Foul Weather Location Table only reaches the theater when it lands
     # on one of these sections; an empty set means "unlocalized" (a synthetic map), so
@@ -456,3 +480,13 @@ class GameState:
         """The Side value that holds the sky in `arena` this OpStage, or None (contested /
         not yet contested). The precondition every air mission reads (game.engine)."""
         return self.air_superiority.get(arena)
+
+    def with_air_sighted(self, recon_side: str, coord: Coord) -> "GameState":
+        """Record a hex a side's air reconnaissance has lifted this OpStage (rule 42.2). Cleared
+        at the Operations-Stage boundary (game.apply STAGE/TURN_ADVANCED)."""
+        return replace(self, air_sighted=self.air_sighted | {(recon_side, coord)})
+
+    def air_sighted_for(self, side: Side) -> frozenset:
+        """The hexes `side`'s air recon has revealed this OpStage -- the fog-lift observation.py
+        unions with the fog-of-presence radius (42.2)."""
+        return frozenset(c for s, c in self.air_sighted if s == side.value)

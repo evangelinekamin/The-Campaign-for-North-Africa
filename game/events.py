@@ -188,6 +188,18 @@ class EventKind(str, Enum):
     # when a side fields air (GameState.air) and the weather is not foul (29.43/29.52), so every
     # air-less scenario stays byte-identical.
     AIR_SUPERIORITY_RESOLVED = "AIR_SUPERIORITY_RESOLVED"
+    # AIR_STRIKE_RESOLVED {arena, target, strength, pinned, loss} is the 41.31 dive-bomber-as-
+    # artillery beat: its PIN joins the transient _combat pinned set (12.44, NOT GameState) and any
+    # step-loss rides the existing STEP_LOST(role='air_strike'), so the event itself folds to
+    # IDENTITY -- a marker like BARRAGE_RESOLVED. Strike is UN-STRIKABLE behind an intact Major-City
+    # wall (fort_level>1, 41.31); fort/port bombing REUSE FORT_REDUCED / PORT_EFFICIENCY_CHANGED (no
+    # new kind). The naval interdiction seam ALSO emits it (arena='SEA', target=lane) so a convoy cut
+    # is legibly air-sourced. AIR_RECON_RESOLVED {arena, hex, revealed} is the 42.2 fog-lift: it folds
+    # the (recon-side, hex) pair into the per-OpStage air_sighted set observation.py reads alongside
+    # _sighted_hexes; the typed detail (unit class + TOE +-2, bounded by 3.6/42.24) rides in `revealed`
+    # (rng_draws = the per-unit noise) for the camera. Both emit ONLY when a side fields air.
+    AIR_STRIKE_RESOLVED = "AIR_STRIKE_RESOLVED"
+    AIR_RECON_RESOLVED = "AIR_RECON_RESOLVED"
     # STAFF_* are narrative / no-op audit events: staff chatter the board is
     # invariant to (they fold to state unchanged; see game.apply, game.staff_events).
     STAFF_INTENT = "STAFF_INTENT"

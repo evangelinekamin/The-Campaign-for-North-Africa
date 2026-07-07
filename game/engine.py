@@ -42,6 +42,13 @@ BARRAGE_HITS_PER_FORT_LEVEL: int = 1
 # contested (victor None) and neither side is scaled.
 AIR_SUPERIORITY_LOSER_SCALE: float = 0.5
 
+# Air-strike lethality (rule 41.31). Faithful 41.31 is PIN-ONLY -- the dive bomber suppresses a
+# stack (12.44) so it cannot barrage / anti-armor / close-assault the segment, leaving step-losses
+# to the artillery. This knob is the owner-tuned severity dial (the BARRAGE_HITS_PER_FORT_LEVEL
+# analog): 0 = pin-only (default); >0 = that many TOE Strength Points also lost, riding the
+# existing STEP_LOST(role='air_strike').
+AIR_STRIKE_STEP_SEVERITY: int = 0
+
 # 55.2 harbour BLOCKING (a scuttled ship) permanently cripples a port until Friendly
 # engineers clear the wreck (55.26) -- it is NOT bomb damage, so the 55.18 +1/OpStage
 # regeneration does NOT restore it. The San Giorgio scuttled in Tobruk (30.17 / 55.25,
@@ -410,6 +417,13 @@ def _naval_convoys(r: _Run) -> None:
                    {"lane": c.lane, "convoy_id": c.id, "interdictor": interdictor.value,
                     "bomb_points": itd_order.bomb_points, "pct_lost": pct_lost,
                     "tons_lost": tons_lost})
+            # Route the cut ALSO through a SEA-arena air strike so a convoy interdiction is legibly
+            # air-sourced (41.6) -- but ONLY when the interdictor fields SEA air, so an air-less
+            # interdiction scenario (siege_of_tobruk) stays byte-identical.
+            if any(w.side == interdictor and w.arena == "SEA" for w in r.state.air):
+                r.emit(EventKind.AIR_STRIKE_RESOLVED, interdictor, "SYSTEM",
+                       {"arena": "SEA", "target": c.lane, "strength": itd_order.bomb_points,
+                        "pinned": [], "loss": 0})
     _port_regen(r)      # 55.18: the port worked this OpStage at its current eff, then recovers
 
 
@@ -664,6 +678,103 @@ def _air_superiority(r: _Run) -> None:
         r.emit(EventKind.AIR_SUPERIORITY_RESOLVED, Side.SYSTEM, "SYSTEM",
                {"arena": arena, "axis_fighters": axis_f, "allied_fighters": allied_f,
                 "victor": victor, "margin": margin}, rng_draws=(ad, ld))
+
+
+def _air_points(state: GameState, side: Side, arena: str, role: str) -> int:
+    """Committed Air Points of `role` ("strike"|"recon") `side` can put over `arena` this OpStage,
+    after the superiority gate scales the LOSER down (AIR_SUPERIORITY_LOSER_SCALE) -- the winner
+    (or a contested sky) flies at full strength. The mission-time read of the Step-3 gate."""
+    victor = state.air_superiority.get(arena)
+    scale = 1.0 if victor is None or victor == side.value else AIR_SUPERIORITY_LOSER_SCALE
+    total = sum(getattr(w, role) for w in state.air if w.side == side and w.arena == arena)
+    return int(total * scale)
+
+
+def _air_support(r: _Run, side: Side, pinned: set[str]) -> None:
+    """The LAND air-support sub-segment (rules 41.31/41.37/41.39B/42.2) at the TOP of the phasing
+    side's Combat Segment, before _barrage_step. Flies `side`'s due LAND air missions in a fixed,
+    deterministic order. STRIKE pins the strongest enemy in the target hex (12.44, joining the same
+    `pinned` set the barrage feeds) -- UN-STRIKABLE behind an intact Major-City wall (fort_level>1,
+    41.31); FORT bombing batters a wall one level/OpStage (reusing FORT_REDUCED); PORT bombing knocks
+    a harbour's Efficiency Level down one (reusing PORT_EFFICIENCY_CHANGED, 41.39B); RECON lifts the
+    fog over a hex (42.2). Fires ONLY when `side` fields air and the sky is flyable (29.43/29.52), so
+    every air-less or grounded segment stays byte-identical."""
+    if not r.state.air or _air_grounded(r.state.weather):
+        return
+    due = [m for m in r.state.air_missions if m.side == side and m.turn == r.state.turn]
+    for m in sorted(due, key=lambda m: (m.kind, str(m.target))):
+        if m.kind == "strike":
+            _air_strike(r, side, tuple(m.target), pinned)
+        elif m.kind == "fort":
+            _air_fort(r, side, tuple(m.target))
+        elif m.kind == "port":
+            _air_port(r, side, m.target)
+        elif m.kind == "recon":
+            _air_recon(r, side, tuple(m.target))
+
+
+def _air_strike(r: _Run, side: Side, tgt: Coord, pinned: set[str]) -> None:
+    """41.31 B-CU: the committed strike Air Points pin the strongest enemy combat unit in the hex
+    (blind assignment, 39.11) -- but a Major-City garrison is UN-STRIKABLE behind an intact wall
+    (fort_level>1), the exact siege mirror, so air alone cannot crack Tobruk. Any step-loss rides
+    STEP_LOST(role='air_strike') behind the AIR_STRIKE_STEP_SEVERITY dial (default 0 -> pin-only)."""
+    strength = _air_points(r.state, side, "LAND", "strike")
+    walled = r.state.fort_level(tgt) > 1                 # 41.31: intact Major-City wall shields it
+    victim = None if walled else _barrage_target(r.state.enemies_at(tgt, side))
+    actor = f"{side.value}/Air"
+    pin_ids: list[str] = []
+    loss = 0
+    if victim is not None and strength > 0:
+        pin_ids = [victim.id]
+        loss = min(AIR_STRIKE_STEP_SEVERITY, victim.strength)
+    r.emit(EventKind.AIR_STRIKE_RESOLVED, side, actor,
+           {"arena": "LAND", "target": list(tgt), "strength": strength,
+            "pinned": pin_ids, "loss": loss, "walled": walled})
+    if loss > 0:
+        r.emit(EventKind.STEP_LOST, side, actor,
+               {"unit_id": victim.id, "amount": loss, "role": "air_strike"})
+    for uid in pin_ids:                                  # 12.44: joins the barrage pin set
+        pinned.add(uid)
+
+
+def _air_fort(r: _Run, side: Side, tgt: Coord) -> None:
+    """41.37 B-F/C: air batters a fortification one level per Operations Stage -- the air twin of
+    engine._batter_fort, gated behind siege_rules (inert in the canonical benchmark). Reuses
+    FORT_REDUCED, so no new fold; air + barrage together open the works faster."""
+    if not r.state.siege_rules or r.state.fort_level(tgt) <= 0:
+        return
+    r.emit(EventKind.FORT_REDUCED, side, f"{side.value}/Air",
+           {"hex": list(tgt), "level": r.state.fort_level(tgt) - 1})
+
+
+def _air_port(r: _Run, side: Side, port_id: str) -> None:
+    """41.39B B-P: harbour bombing knocks a port's Efficiency Level down one (reusing
+    PORT_EFFICIENCY_CHANGED, which apply.py already anticipates as 'bomb/mine damage'). The 55.18
+    +1/OpStage regen contests it -- except a HARBOUR_BLOCKED port (PORT-Tobruk), which does not
+    regen, so a bombed harbour there stays down: THE lever that chokes the ~425-Ammo/OpStage cap."""
+    port = r.state.port(port_id)
+    if port is None or port.eff <= 0:
+        return
+    r.emit(EventKind.PORT_EFFICIENCY_CHANGED, side, f"{side.value}/Air",
+           {"port_id": port.id, "level": port.eff - 1})
+
+
+def _air_recon(r: _Run, side: Side, tgt: Coord) -> None:
+    """42.2 recon: reveal the target hex's unit TYPES + TOE (+-2 noise, 42.24), FORBIDDEN over a
+    Major City (42.22, fort_level>1). The hex folds into the per-OpStage air_sighted set (the
+    fog-lift observation reads); the typed detail rides in `revealed`, bounded to 'even less detail
+    than Patrol' (3.6) -- unit CLASS, never id. The +-2 noise is baked here (rng), so apply stays pure."""
+    if r.state.fort_level(tgt) > 1:                      # 42.22: no recon over a Major City
+        return
+    enemies = sorted(r.state.enemies_at(tgt, side), key=lambda u: u.id)
+    revealed: list[dict] = []
+    draws: list[int] = []
+    for e in enemies:
+        offset = r.rng.randint(-2, 2)                    # 42.24: TOE +-2
+        draws.append(offset)
+        revealed.append({"class": _barrage_class(e), "toe": max(0, e.strength + offset)})
+    r.emit(EventKind.AIR_RECON_RESOLVED, side, f"{side.value}/Air",
+           {"arena": "LAND", "hex": list(tgt), "revealed": revealed}, rng_draws=tuple(draws))
 
 
 def _drain_staff(r: _Run, policy, side: Side) -> None:
@@ -1239,6 +1350,7 @@ def _combat(r: _Run, policies: dict, side: Side) -> None:
     enemy = _other(side)
     pinned: set[str] = set()          # units Pinned by barrage this segment (12.44)
     charged: set[str] = set()         # 6.3 per-segment CP ledger (one combat charge/unit)
+    _air_support(r, side, pinned)     # 41.31: air strikes pin BEFORE barrage, joining the 12.44 set
     _barrage_step(r, side, enemy, pinned, charged)
     _retreat_before_assault(r, policies[enemy], enemy, side, pinned)
     _anti_armor_step(r, side, enemy, pinned, charged)

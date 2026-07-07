@@ -20,7 +20,7 @@ def apply(state: GameState, event: Event) -> GameState:
              EventKind.ANTI_ARMOR_RESOLVED, EventKind.REINFORCEMENT_ARRIVED,
              EventKind.CONVOY_CANCELLED, EventKind.CONVOY_INTERDICTED,
              EventKind.PASTA_DENIED, EventKind.PORT_UNLOADED,
-             EventKind.SEGMENT_ADVANCED,
+             EventKind.SEGMENT_ADVANCED, EventKind.AIR_STRIKE_RESOLVED,
              EventKind.STAFF_INTENT, EventKind.STAFF_PROPOSAL, EventKind.STAFF_CONSTRAINT,
              EventKind.STAFF_ADJUDICATION, EventKind.STAFF_DISSENT):
         # markers / audit records. SEGMENT_ADVANCED (8.2) opens a Continual-Movement pulse but
@@ -223,6 +223,12 @@ def apply(state: GameState, event: Event) -> GameState:
         # unit -- cleared at the OpStage boundary by _reset_opstage's callers below.
         return state.with_air_superiority(p["arena"], p["victor"])
 
+    if k == EventKind.AIR_RECON_RESOLVED:
+        # 42.2: a recon flight lifts the fog over a hex for the flying side this OpStage. Fold the
+        # (recon-side, hex) pair into air_sighted (observation reads it alongside _sighted_hexes);
+        # the typed detail rides in the payload for the camera. Cleared at the OpStage boundary.
+        return state.with_air_sighted(event.side.value, tuple(p["hex"]))
+
     if k == EventKind.FORT_REDUCED:
         return state.with_fort_level(tuple(p["hex"]), p["level"])
 
@@ -268,7 +274,7 @@ def apply(state: GameState, event: Event) -> GameState:
         # the per-OpStage CP/BP counters -- the same reset semantics as TURN_ADVANCED, now
         # firing at every stage boundary (3x/game-turn), spanning both players' portions (6.14).
         return replace(state, stage=p["stage"], units=_reset_opstage(state.units),
-                       air_superiority={})
+                       air_superiority={}, air_sighted=frozenset())
 
     if k == EventKind.TURN_ADVANCED:
         # A new game-turn opens a new Operations Stage: share the OpStage reset (6.16 — CP do
@@ -276,7 +282,7 @@ def apply(state: GameState, event: Event) -> GameState:
         # only), bump the game-turn, and re-open at stage 1. broken_down persists (21.44). The
         # per-OpStage air-superiority gate clears too (a fresh sky is contested each stage).
         return replace(state, turn=p["turn"], stage=1, units=_reset_opstage(state.units),
-                       air_superiority={})
+                       air_superiority={}, air_sighted=frozenset())
 
     raise ValueError(f"unhandled event kind {k}")
 

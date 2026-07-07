@@ -11,16 +11,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import game.engine as engine
 from game.apply import apply, fold
-from game.engine import (_air_arena_fighters, _air_grounded, _air_superiority, _Run,
-                         determinism_signature, run)
+from game.engine import (_air_arena_fighters, _air_grounded, _air_points, _air_support,
+                         _air_superiority, _Run, determinism_signature, run)
 from game.events import Event, EventKind, Phase, Side
 from game.invariants import check
 from game.movement import TerrainMap
+from game.observation import SIGHTING, observe
 from game.policy import ScriptedPolicy
 from game.scenario import coastal_corridor, rommels_arrival, siege_of_tobruk
-from game.state import AirWing, GameState, VP
-from game.terrain import Terrain
+from game.state import AirMission, AirWing, GameState, StepRecord, SupplyUnit, Unit, VP
+from game.terrain import Mobility, Terrain
 
 
 def _mini(air=(), *, weather="clear", turn=1, stage=1) -> GameState:
@@ -139,3 +141,233 @@ def test_seeded_air_run_is_deterministic_and_fires():
     assert sup and all(e.payload["arena"] == "LAND" for e in sup)
     # live state equals the fold of its own log (the replay identity)
     assert fold(a.initial, a.events).air_superiority == a.final.air_superiority
+
+
+# =============================================================================
+# Step 4 -- MISSIONS: strike / fort / port bombing, air-sourced interdiction, recon
+# =============================================================================
+
+def _air_missions_default_empty():
+    return None
+
+
+def test_air_mission_state_defaults_empty():
+    assert GameState.__dataclass_fields__["air_missions"].default == ()
+    assert GameState.__dataclass_fields__["air_sighted"].default == frozenset()
+    for s in (coastal_corridor(), rommels_arrival(), siege_of_tobruk()):
+        assert s.air_missions == () and s.air_sighted == frozenset()
+
+
+def _strike_state(*, fort: int = 0, air_strike: int = 6, siege: bool = False,
+                  weather: str = "clear", superiority=None, missions=(), ports=()) -> GameState:
+    """An Axis LAND air wing over an Allied stack at (1,0); (1,0) may be a fortified Major City."""
+    terr = {(0, 0): Terrain.CLEAR, (1, 0): Terrain.MAJOR_CITY if fort else Terrain.CLEAR}
+    foe = Unit("GAR", Side.ALLIED, (1, 0), (StepRecord("in", 6),), mobility=Mobility.FOOT,
+               cpa=10, stacking_points=2, oca=5, dca=8)
+    wing = AirWing("LW", Side.AXIS, "LAND", fighters=9, strike=air_strike, recon=3)
+    s = GameState(
+        turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS, seed=3,
+        weather=weather, vp=VP(),
+        terrain=TerrainMap(terrain=terr, fortifications={(1, 0): fort} if fort else {}),
+        control={}, units=(foe,), target_hex=(1, 0), supplies=(), consumed={}, initial_supply={},
+        siege_rules=siege, air=(wing,), air_missions=tuple(missions), ports=tuple(ports))
+    if superiority is not None:
+        s = s.with_air_superiority("LAND", superiority)
+    return s
+
+
+def _strike(target=(1, 0)):
+    return (AirMission(Side.AXIS, "strike", target, 1),)
+
+
+# --- STRIKE (41.31): pin joins the barrage set, identity fold ----------------
+
+def test_strike_flies_nothing_without_a_mission():
+    r = _Run(_strike_state())
+    _air_support(r, Side.AXIS, set())
+    assert not any(e.kind == EventKind.AIR_STRIKE_RESOLVED for e in r.events)
+
+
+def test_strike_pins_the_target_and_folds_identity():
+    r = _Run(_strike_state(missions=_strike()))
+    pinned: set = set()
+    _air_support(r, Side.AXIS, pinned)
+    strike = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED]
+    assert len(strike) == 1
+    p = strike[0].payload
+    assert p["arena"] == "LAND" and p["pinned"] == ["GAR"] and p["walled"] is False
+    assert "GAR" in pinned                               # 12.44: joined the pin set
+    # AIR_STRIKE_RESOLVED folds to identity (a marker); only the transient pin carries state
+    e = Event(0, 1, Phase.COMBAT, Side.AXIS, "AXIS/Air", EventKind.AIR_STRIKE_RESOLVED, dict(p))
+    assert apply(r.state, e) is r.state
+
+
+def test_strike_blocked_behind_intact_major_city_wall():
+    # 41.31: a garrison behind fort_level>1 is UN-STRIKABLE -- air alone cannot crack Tobruk.
+    r = _Run(_strike_state(fort=2, missions=_strike()))
+    pinned: set = set()
+    _air_support(r, Side.AXIS, pinned)
+    p = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED][0].payload
+    assert p["walled"] is True and p["pinned"] == [] and not pinned
+
+
+def test_strike_severity_default_is_pin_only():
+    assert engine.AIR_STRIKE_STEP_SEVERITY == 0
+    r = _Run(_strike_state(missions=_strike()))
+    _air_support(r, Side.AXIS, set())
+    assert not any(e.kind == EventKind.STEP_LOST for e in r.events)   # pin-only
+
+
+def test_strike_severity_dial_sheds_a_step():
+    r = _Run(_strike_state(missions=_strike()))
+    old = engine.AIR_STRIKE_STEP_SEVERITY
+    try:
+        engine.AIR_STRIKE_STEP_SEVERITY = 2
+        _air_support(r, Side.AXIS, set())
+    finally:
+        engine.AIR_STRIKE_STEP_SEVERITY = old
+    loss = [e for e in r.events if e.kind == EventKind.STEP_LOST]
+    assert len(loss) == 1 and loss[0].payload["role"] == "air_strike"
+    assert loss[0].payload["amount"] == 2 and r.state.unit("GAR").strength == 4
+
+
+# --- FORT bombing (41.37): reuse FORT_REDUCED, capped, gated by siege --------
+
+def test_fort_bombing_reduces_one_level_only_under_siege():
+    fort_mission = (AirMission(Side.AXIS, "fort", (1, 0), 1),)
+    r = _Run(_strike_state(fort=3, siege=True, missions=fort_mission))
+    _air_support(r, Side.AXIS, set())
+    fr = [e for e in r.events if e.kind == EventKind.FORT_REDUCED]
+    assert len(fr) == 1 and fr[0].payload["level"] == 2          # one level/OpStage (41.37)
+    assert r.state.fort_level((1, 0)) == 2
+    # siege OFF -> no fort bombing (inert like _batter_fort)
+    r2 = _Run(_strike_state(fort=3, siege=False, missions=fort_mission))
+    _air_support(r2, Side.AXIS, set())
+    assert not any(e.kind == EventKind.FORT_REDUCED for e in r2.events)
+
+
+# --- PORT bombing (41.39B): reuse PORT_EFFICIENCY_CHANGED --------------------
+
+def test_port_bombing_knocks_efficiency_down():
+    from game.state import Port
+    port = Port("PORT-X", Side.ALLIED, (2, 0), kind="major", max_eff=5, eff=4,
+                cap_ammo=400, cap_fuel=400, cap_stores=400, cap_water=400, cap_tons=1000)
+    r = _Run(_strike_state(ports=(port,),
+                           missions=(AirMission(Side.AXIS, "port", "PORT-X", 1),)))
+    _air_support(r, Side.AXIS, set())
+    pe = [e for e in r.events if e.kind == EventKind.PORT_EFFICIENCY_CHANGED]
+    assert len(pe) == 1 and pe[0].payload["level"] == 3         # 41.39B: -1 absolute eff
+    assert r.state.port("PORT-X").eff == 3
+
+
+# --- superiority scaling (the Step-3 gate read at mission time) --------------
+
+def test_air_points_scale_the_loser():
+    s = _strike_state(air_strike=8, superiority=Side.ALLIED.value)   # Axis LOST the LAND sky
+    assert _air_points(s, Side.AXIS, "LAND", "strike") == 4          # halved
+    assert _air_points(s, Side.ALLIED, "LAND", "strike") == 0        # no Allied wing here
+    s2 = _strike_state(air_strike=8, superiority=Side.AXIS.value)    # Axis WON
+    assert _air_points(s2, Side.AXIS, "LAND", "strike") == 8         # full strength
+    s3 = _strike_state(air_strike=8, superiority=None)               # contested
+    assert _air_points(s3, Side.AXIS, "LAND", "strike") == 8
+
+
+# --- RECON (42.2): folds air_sighted, forbidden over a Major City ------------
+
+def test_recon_lifts_fog_and_folds_air_sighted():
+    r = _Run(_strike_state(missions=(AirMission(Side.AXIS, "recon", (1, 0), 1),)))
+    _air_support(r, Side.AXIS, set())
+    rec = [e for e in r.events if e.kind == EventKind.AIR_RECON_RESOLVED]
+    assert len(rec) == 1
+    p = rec[0].payload
+    assert p["hex"] == [1, 0] and p["revealed"][0]["class"] == "infantry"
+    assert abs(p["revealed"][0]["toe"] - 6) <= 2                # 42.24 TOE +-2
+    assert (Side.AXIS.value, (1, 0)) in r.state.air_sighted
+    assert r.state.air_sighted_for(Side.AXIS) == frozenset({(1, 0)})
+    assert r.state.air_sighted_for(Side.ALLIED) == frozenset()  # scoped to the flying side
+
+
+def test_recon_forbidden_over_major_city():
+    # a fortified Major City (fort_level>1) may not be recon'd (42.22)
+    r = _Run(_strike_state(fort=2, missions=(AirMission(Side.AXIS, "recon", (1, 0), 1),)))
+    _air_support(r, Side.AXIS, set())
+    assert not any(e.kind == EventKind.AIR_RECON_RESOLVED for e in r.events)  # 42.22
+    assert r.state.air_sighted == frozenset()
+
+
+def test_observation_reads_the_recon_fog_lift():
+    # a far enemy hex beyond SIGHTING is invisible -- until recon lifts it.
+    far = (SIGHTING + 5, 0)
+    terr = {(0, 0): Terrain.CLEAR, far: Terrain.CLEAR}
+    me = Unit("ME", Side.AXIS, (0, 0), (StepRecord("a", 4),), mobility=Mobility.FOOT,
+              cpa=10, stacking_points=1, oca=3, dca=3)
+    foe = Unit("FOE", Side.ALLIED, far, (StepRecord("b", 5),), mobility=Mobility.FOOT,
+               cpa=10, stacking_points=1, oca=3, dca=3)
+    s = GameState(turn=1, max_turns=4, phase=Phase.MOVEMENT, active_side=Side.AXIS, seed=3,
+                  weather="clear", vp=VP(),
+                  terrain=TerrainMap(terrain=terr, fortifications={}),
+                  control={}, units=(me, foe), target_hex=far, supplies=(), consumed={},
+                  initial_supply={})
+    assert not observe(s, Side.AXIS)["enemy_sightings"]         # beyond SIGHTING, fogged
+    s2 = s.with_air_sighted(Side.AXIS.value, far)               # recon lifts it
+    sightings = observe(s2, Side.AXIS)["enemy_sightings"]
+    assert len(sightings) == 1 and sightings[0]["hex"] == list(far)
+
+
+# --- air-sourced convoy interdiction (SEA) ----------------------------------
+
+def test_interdiction_routes_through_a_sea_air_strike_only_with_sea_air():
+    from game.state import Convoy, InterdictionOrder
+    dump = SupplyUnit("D", Side.ALLIED, (0, 0), ammo=0, fuel=0)
+    conv = Convoy("c1", Side.ALLIED, 1, "SEA-TOBRUK", "D", {"AMMO": 1000, "FUEL": 1000})
+    order = InterdictionOrder("SEA-TOBRUK", 1, 500)
+    base = dict(turn=1, max_turns=4, phase=Phase.WEATHER, active_side=Side.SYSTEM, seed=1,
+                weather="clear", vp=VP(),
+                terrain=TerrainMap(terrain={(0, 0): Terrain.CLEAR}, fortifications={}),
+                control={}, units=(), target_hex=(0, 0), supplies=(dump,),
+                consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 0, "FUEL": 0},
+                convoys=(conv,), interdictions=(order,))
+    # no SEA air -> the interdiction fires but NO air-strike marker (byte-identical to Step 1-2)
+    from game.engine import _naval_convoys
+    r = _Run(GameState(**base))
+    _naval_convoys(r)
+    assert any(e.kind == EventKind.CONVOY_INTERDICTED for e in r.events)
+    assert not any(e.kind == EventKind.AIR_STRIKE_RESOLVED for e in r.events)
+    # with an Axis SEA wing (the interdictor of a CW ferry), the cut is air-sourced
+    r2 = _Run(GameState(**{**base, "air": (AirWing("RA", Side.AXIS, "SEA", 3, 5, 1),)}))
+    _naval_convoys(r2)
+    sea = [e for e in r2.events if e.kind == EventKind.AIR_STRIKE_RESOLVED]
+    assert len(sea) == 1 and sea[0].payload["arena"] == "SEA"
+    assert sea[0].payload["target"] == "SEA-TOBRUK" and sea[0].payload["strength"] == 500
+
+
+# --- grounding + byte-identity ----------------------------------------------
+
+def test_air_support_grounded_flies_nothing():
+    for foul in ("sandstorm", "rainstorm"):
+        r = _Run(_strike_state(weather=foul, missions=_strike()))
+        _air_support(r, Side.AXIS, set())
+        assert not r.events                             # 29.43/29.52 grounded
+
+
+def test_seeded_air_missions_run_deterministic_and_scenarios_byte_identical():
+    from game import coords
+    tob = coords.to_axial(coords.parse("C4807"))
+    base = siege_of_tobruk(seed=5)
+    wings = (AirWing("LW", Side.AXIS, "LAND", 8, 6, 3), AirWing("RA", Side.AXIS, "SEA", 4, 5, 1))
+    missions = tuple(AirMission(Side.AXIS, k, (tob if k != "port" else "PORT-Tobruk"), t)
+                     for t in range(1, base.max_turns + 1)
+                     for k in ("fort", "port", "recon", "strike"))
+    scen = replace(base, air=wings, air_missions=missions)
+    a = run(scen, ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    b = run(scen, ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    assert determinism_signature(a.events) == determinism_signature(b.events)
+    assert fold(a.initial, a.events).air_sighted == a.final.air_sighted
+    kinds = {e.kind for e in a.events}
+    assert EventKind.AIR_STRIKE_RESOLVED in kinds and EventKind.AIR_RECON_RESOLVED in kinds
+    check(a.final)
+    # the air-less scenarios stay byte-identical (siege carries interdictions but air=())
+    for scen0 in (rommels_arrival(seed=1941), siege_of_tobruk(seed=3)):
+        x = run(scen0, ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+        assert not any(e.kind in (EventKind.AIR_STRIKE_RESOLVED, EventKind.AIR_RECON_RESOLVED)
+                       for e in x.events)
