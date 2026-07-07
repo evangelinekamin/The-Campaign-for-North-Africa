@@ -194,6 +194,25 @@ class InterdictionOrder:
 
 
 @dataclass(frozen=True, slots=True)
+class AirWing:
+    """A side's abstract air force in one ARENA (rules 33-46 played at the 32.0/58.0
+    abstract grain -- "fidelity where the camera is", NO per-plane/pilot/sortie ledger).
+    `arena` is "LAND" (tactical land support, per Operations Stage) or "SEA" (strategic
+    convoy work); the split is FORCED by 41.63 (N-Africa Axis fighters may not CAP convoys),
+    so the two contests are separate. `fighters`/`strike`/`recon` are Air Points by role --
+    fighters contest air superiority (40/45/46 abstracted into one roll), strike flies the
+    41.31 bombing missions, recon the 42.2 fog-lift. The magnitudes are FLAGGED PROXY (the
+    34.6/59.3 Initial Air Strengths chart is untranscribed, like initiative_ratings and the
+    55.3 port caps). Default GameState.air=() means no air beat fires (byte-identical)."""
+    id: str
+    side: Side
+    arena: str                     # "LAND" | "SEA" (41.63 keeps them separate)
+    fighters: int
+    strike: int
+    recon: int
+
+
+@dataclass(frozen=True, slots=True)
 class Port:
     """A port and its built-in supply dump (rule 56.28 -- every port of arrival has a
     dump 'built in, as it were'). The port THROTTLES what a convoy lands: its effective
@@ -301,6 +320,13 @@ class GameState:
     # without a seeded schedule stays byte-identical (the engine skims a lane's cargo only
     # when an InterdictionOrder matches an arriving convoy's lane+turn; game.engine.interdict).
     interdictions: tuple[InterdictionOrder, ...] = ()
+    # Abstract air (rules 33-46 at the 32.0/58.0 grain). `air` is the per-side force pool by
+    # arena; `air_superiority` is the per-OpStage gate result (arena -> victor Side value | None),
+    # rolled by the SYSTEM air beat (game.engine._air_superiority) and CLEARED at every OpStage
+    # boundary (apply._reset_opstage's callers), exactly like the 15.81 Engaged marker. Defaults
+    # (air=(), air_superiority={}) fire no air beat, so every air-less scenario stays byte-identical.
+    air: tuple[AirWing, ...] = ()
+    air_superiority: dict = field(default_factory=dict)
     # Map sections (A-E) this scenario is played on (rule 29.1 / 29.7). Foul weather
     # from the 29.7 Foul Weather Location Table only reaches the theater when it lands
     # on one of these sections; an empty set means "unlocalized" (a synthetic map), so
@@ -417,3 +443,16 @@ class GameState:
     def with_truck(self, tf: "TruckFormation") -> "GameState":
         trucks = tuple(tf if t.id == tf.id else t for t in self.trucks)
         return replace(self, trucks=trucks)
+
+    def with_air_superiority(self, arena: str, victor: "str | None") -> "GameState":
+        """Record the OpStage's air-superiority victor for an arena (mirrors with_control):
+        arena -> the winning Side's value, or None for a contested sky. Cleared at the
+        Operations-Stage boundary (game.apply STAGE/TURN_ADVANCED)."""
+        sup = dict(self.air_superiority)
+        sup[arena] = victor
+        return replace(self, air_superiority=sup)
+
+    def air_superiority_of(self, arena: str) -> "str | None":
+        """The Side value that holds the sky in `arena` this OpStage, or None (contested /
+        not yet contested). The precondition every air mission reads (game.engine)."""
+        return self.air_superiority.get(arena)

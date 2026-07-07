@@ -180,6 +180,14 @@ class EventKind(str, Enum):
     ROMMEL_MOVED = "ROMMEL_MOVED"
     ROMMEL_RECALLED = "ROMMEL_RECALLED"
     ROMMEL_CAPTURED = "ROMMEL_CAPTURED"
+    # Abstract air (rules 40/45/46 played at the 32.0/58.0 grain). AIR_SUPERIORITY_RESOLVED
+    # {arena, axis_fighters, allied_fighters, victor, margin} (rng_draws=(axis_die, allied_die)) is
+    # the per-OpStage establishing shot -- who holds the sky over an arena (40/45 air-to-air + 40.27
+    # interception + 46 flak abstracted into ONE roll) -- folding air_superiority[arena]=victor (a
+    # Side value or None); cleared at the OpStage boundary like the 15.81 Engaged marker. Emits ONLY
+    # when a side fields air (GameState.air) and the weather is not foul (29.43/29.52), so every
+    # air-less scenario stays byte-identical.
+    AIR_SUPERIORITY_RESOLVED = "AIR_SUPERIORITY_RESOLVED"
     # STAFF_* are narrative / no-op audit events: staff chatter the board is
     # invariant to (they fold to state unchanged; see game.apply, game.staff_events).
     STAFF_INTENT = "STAFF_INTENT"

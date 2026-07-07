@@ -33,6 +33,15 @@ CONTROL_OF: dict[Side, Control] = {Side.AXIS: Control.AXIS, Side.ALLIED: Control
 # this (and the Axis ammo/dump schedule) with the benchmark harness.
 BARRAGE_HITS_PER_FORT_LEVEL: int = 1
 
+# Abstract air-superiority contest (rules 40/45 air-to-air + 40.27 interception + 46 flak,
+# collapsed into ONE roll per arena). Each side commits its fighter Air Points in an arena
+# and adds one die (7.14 idiom); the higher total holds the sky, the difference is the margin.
+# AIR_SUPERIORITY_LOSER_SCALE is the fraction of its strike/recon Air Points the loser can
+# still put over that arena this OpStage (the winner suppresses the rest); a FLAGGED PROXY dial
+# like BARRAGE_HITS_PER_FORT_LEVEL, tuned with the benchmark harness. A tie leaves the sky
+# contested (victor None) and neither side is scaled.
+AIR_SUPERIORITY_LOSER_SCALE: float = 0.5
+
 # 55.2 harbour BLOCKING (a scuttled ship) permanently cripples a port until Friendly
 # engineers clear the wreck (55.26) -- it is NOT bomb damage, so the 55.18 +1/OpStage
 # regeneration does NOT restore it. The San Giorgio scuttled in Tobruk (30.17 / 55.25,
@@ -118,6 +127,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             if stage == 1:                              # 48 V.D: arrivals land once, in the turn's 1st stage
                 _reinforcements(r)
                 _naval_convoys(r)                       # V.C.7 + V.D: convoy arrival + port regen (SYSTEM)
+            _air_superiority(r)                          # 40/45/46: contest the sky this OpStage (per arena)
             for side in (first, second):                # 7.16: Player A (first) then Player B (last)
                 _debrief(side)                          # enemy portion + own last combat
                 _reserve_designation(r, policies[side], side)   # 48 V.G / 18.11: hold units back (phasing)
@@ -615,6 +625,45 @@ def _weather(r: _Run) -> None:
     r.emit(EventKind.WEATHER_ROLLED, Side.SYSTEM, "SYSTEM",
            {"weather": label, "season": season, "sections": sorted(sections)},
            rng_draws=draws)
+
+
+def _air_grounded(weather_label: str) -> bool:
+    """29.43 / 29.52: no aircraft fly into or out of a sandstorm or rainstorm hex. Read off the
+    same whole-map weather label _field_repair_blocked uses -- when the sky is foul, no air beat
+    fires (no superiority contest, no missions), so a grounded OpStage stays byte-identical."""
+    return weather_label in ("sandstorm", "rainstorm")
+
+
+def _air_arena_fighters(state: GameState, arena: str) -> tuple[int, int]:
+    """(axis_fighters, allied_fighters) committed to `arena` this OpStage."""
+    axis = sum(w.fighters for w in state.air if w.arena == arena and w.side == Side.AXIS)
+    allied = sum(w.fighters for w in state.air if w.arena == arena and w.side == Side.ALLIED)
+    return axis, allied
+
+
+def _air_superiority(r: _Run) -> None:
+    """The air-superiority establishing shot (rules 40/45/46), once per OPERATIONS STAGE: for
+    each arena a side fields air in, both sides add a die to their committed fighter Air Points
+    and the higher total holds the sky for the stage (40.27/46 interception + flak collapsed into
+    the one roll). The victor folds into air_superiority[arena]; the loser's strike/recon is scaled
+    down at mission time (AIR_SUPERIORITY_LOSER_SCALE). Fires ONLY when a side fields air and the
+    weather is flyable (29.43/29.52), so every air-less or grounded OpStage stays byte-identical."""
+    if not r.state.air or _air_grounded(r.state.weather):
+        return
+    r.go(Phase.LOGISTICS, Side.SYSTEM)                   # a SYSTEM housekeeping beat, like convoys
+    for arena in sorted({w.arena for w in r.state.air}):
+        axis_f, allied_f = _air_arena_fighters(r.state, arena)
+        ad, ld = r.d6(), r.d6()
+        axis_total, allied_total = axis_f + ad, allied_f + ld
+        if axis_total > allied_total:
+            victor, margin = Side.AXIS.value, axis_total - allied_total
+        elif allied_total > axis_total:
+            victor, margin = Side.ALLIED.value, allied_total - axis_total
+        else:
+            victor, margin = None, 0                     # a contested sky, nobody scaled
+        r.emit(EventKind.AIR_SUPERIORITY_RESOLVED, Side.SYSTEM, "SYSTEM",
+               {"arena": arena, "axis_fighters": axis_f, "allied_fighters": allied_f,
+                "victor": victor, "margin": margin}, rng_draws=(ad, ld))
 
 
 def _drain_staff(r: _Run, policy, side: Side) -> None:

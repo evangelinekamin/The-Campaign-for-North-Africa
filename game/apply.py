@@ -217,6 +217,12 @@ def apply(state: GameState, event: Event) -> GameState:
         u = state.unit(p["unit_id"])
         return state.with_unit(replace(u, stages_without_water=0))
 
+    if k == EventKind.AIR_SUPERIORITY_RESOLVED:
+        # 40/45/46: bake the OpStage's air-superiority victor for an arena (a Side value or None
+        # for a contested sky). A pure scalar fold onto air_superiority -- no supply surface, no
+        # unit -- cleared at the OpStage boundary by _reset_opstage's callers below.
+        return state.with_air_superiority(p["arena"], p["victor"])
+
     if k == EventKind.FORT_REDUCED:
         return state.with_fort_level(tuple(p["hex"]), p["level"])
 
@@ -261,13 +267,16 @@ def apply(state: GameState, event: Event) -> GameState:
         # New Operations Stage within the game-turn (rule 5.1): bump the stage and refresh
         # the per-OpStage CP/BP counters -- the same reset semantics as TURN_ADVANCED, now
         # firing at every stage boundary (3x/game-turn), spanning both players' portions (6.14).
-        return replace(state, stage=p["stage"], units=_reset_opstage(state.units))
+        return replace(state, stage=p["stage"], units=_reset_opstage(state.units),
+                       air_superiority={})
 
     if k == EventKind.TURN_ADVANCED:
         # A new game-turn opens a new Operations Stage: share the OpStage reset (6.16 — CP do
         # not carry over; 21.25 — BP + the 21.26 re-check gate are cumulative within a stage
-        # only), bump the game-turn, and re-open at stage 1. broken_down persists (21.44).
-        return replace(state, turn=p["turn"], stage=1, units=_reset_opstage(state.units))
+        # only), bump the game-turn, and re-open at stage 1. broken_down persists (21.44). The
+        # per-OpStage air-superiority gate clears too (a fresh sky is contested each stage).
+        return replace(state, turn=p["turn"], stage=1, units=_reset_opstage(state.units),
+                       air_superiority={})
 
     raise ValueError(f"unhandled event kind {k}")
 
