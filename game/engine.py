@@ -939,6 +939,10 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
         if not stacking.within_hex_limit(present + [u], r.state.terrain.terrain[order.to]):
             _reject(r, side, actor, order, "destination over stacking limit")
             continue
+        if r.state.enemies_at(order.to, side):          # 8.5 re-entrancy: a reactor may have slid
+            _reject(r, side, actor, order,              # into this hex AFTER the phase-start snapshot
+                    "destination now occupied by an enemy unit (reaction 8.5)")
+            continue
         if not _draw_move_fuel(r, side, actor, u, reach[order.to], order):
             continue                                # 49.13/49.16: this move draws its own fuel
         payload = {"unit_id": u.id, "from": list(u.hex), "to": list(order.to),
@@ -1036,7 +1040,9 @@ def _reserve_shuffle(r: _Run, side: Side, actor: str, order: MoveOrder, u,
     if not is_adjacent(u.hex, dest) or not r.state.terrain.exists(dest):
         _reject(r, side, actor, order, "Reserve I may move at most one hex (18.22)")
         return
-    if dest in enemy_occupied or dest in enemy_zoc:
+    if dest in enemy_occupied or dest in enemy_zoc or r.state.enemies_at(dest, side):
+        # enemy_occupied/enemy_zoc are the phase-start snapshot; enemies_at is the LIVE board,
+        # catching a non-phasing unit that reacted (8.5) into `dest` earlier this segment.
         _reject(r, side, actor, order, "Reserve I may not shuffle into enemy control (18.22)")
         return
     present = [x for x in r.state.units_at(dest) if x.side == side]

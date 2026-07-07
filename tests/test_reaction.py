@@ -165,6 +165,40 @@ def test_reaction_fires_from_within_movement():
     assert r.state.unit("B1").hex == (2, 3)
 
 
+# --- 8.5 re-entrancy: a reactor may slide into a later phasing mover's path ---
+
+def test_phasing_mover_cannot_land_on_a_hex_a_reactor_slid_into():
+    # The crash-guard: _movement freezes the enemy_occupied snapshot once per segment, but a
+    # reaction relocates a NON-phasing unit mid-loop. A LATER phasing order into the reactor's
+    # NEW hex passed the frozen reachability + the FRIENDLY-only stacking check, co-locating two
+    # HOSTILE stacks (6 pts > the limit 5) -> invariants raised mid-run from a legal-looking order.
+    # The live enemies_at check at emit rejects that order instead.
+    a1 = _unit("A1", Side.AXIS, (4, 0))            # trigger mover -> pushes B1 to react
+    a2 = _unit("A2", Side.AXIS, (2, 4))            # later mover, ordered onto B1's reaction hex
+    b1 = _unit("B1", Side.ALLIED, (2, 1))          # reactor, slides to (2,3)
+    sup = (SupplyUnit("AD1", Side.AXIS, (4, 0), ammo=0, fuel=10_000),
+           SupplyUnit("AD2", Side.AXIS, (2, 4), ammo=0, fuel=10_000),
+           SupplyUnit("BD", Side.ALLIED, (2, 1), ammo=0, fuel=10_000))
+    st = GameState(turn=1, max_turns=4, phase=Phase.MOVEMENT, active_side=Side.AXIS,
+                   seed=7, weather="normal", vp=VP(), terrain=_grid(), control={},
+                   units=(a1, a2, b1), target_hex=(0, 0), supplies=sup,
+                   consumed={"FUEL": 0}, initial_supply={"FUEL": 30_000})
+
+    class _Attacker(ScriptedPolicy):
+        def movement(self, state, side):
+            return [MoveOrder("A1", (3, 1)),        # ends adjacent to B1 -> B1 reacts
+                    MoveOrder("A2", (2, 3))]        # onto the hex B1 reacts INTO
+
+    r = _Run(st)
+    _movement(r, {Side.AXIS: _Attacker(Side.AXIS),
+                  Side.ALLIED: _Reactor("B1", (2, 3))}, Side.AXIS)   # no InvariantViolation raised
+    assert r.state.unit("B1").hex == (2, 3)                          # the reactor slid here
+    assert r.state.unit("A2").hex == (2, 4)                          # the phasing order was refused
+    rej = [e for e in r.events if e.kind == EventKind.ORDER_REJECTED
+           and e.payload.get("unit_id") == "A2"]
+    assert rej and "enemy unit" in rej[0].payload["reason"]
+
+
 # --- byte-identity of the shipped scenarios ----------------------------------
 
 def test_scripted_scenarios_are_byte_identical_under_reaction():
