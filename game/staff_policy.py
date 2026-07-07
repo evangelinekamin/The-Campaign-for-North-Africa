@@ -10,20 +10,29 @@ because the board has moved after movement + breakdown + supply; it reuses the s
 seats (the two GOCs re-propose assaults) and merges same-target AttackOrders into
 one combined-arms assault.
 
-Five formation-scoped seats compose the plan (game.staff.lane_of partitions the
-force): the CHIEF frames a STAFF_INTENT and the fuel priority; INTELLIGENCE reads
-the fogged sightings into a STAFF_CONSTRAINT; the two GOCs propose in-lane through
-the UNCHANGED build_movement_prompt / build_combat_prompt + parse_moves /
-parse_attacks (only the client is a stub); the QUARTERMASTER runs the scripted
-logistics reflexes. Deliberation accumulates cleaned staff artifacts that the
+Seven seats compose the plan. Five are formation-scoped over the Unit partition
+(game.staff.lane_of): the CHIEF frames a STAFF_INTENT and the fuel/air/sea priority;
+INTELLIGENCE reads the fogged sightings into a STAFF_CONSTRAINT; the two GOCs propose
+in-lane through the UNCHANGED build_movement_prompt / build_combat_prompt +
+parse_moves / parse_attacks (only the client is a stub); the QUARTERMASTER runs the
+scripted logistics reflexes. Two more are ORDER-TYPE resource seats commanding NON-Unit
+assets (P5 Step 6): the CONVOY officer (NAVAL) routes convoys, commits the ferry
+interdiction and lays the 30.2 fleet bombardment; the AIR MARSHAL tasks the air missions.
+They own no Unit, so the Lane partition / cross_lane_conflicts stay untouched (a resource
+seat can never over-stack or clash on a dump). Deliberation runs in the fixed order Chief
+-> GOCs -> QM -> NAVAL -> AIR -> INTEL, accumulating cleaned staff artifacts that the
 engine drains through the optional drain_staff() hook -- policies return Orders, not
-Events, so only the engine's conservation-checked emit writes the log.
+Events, so only the engine's conservation-checked emit writes the log. The naval seat's
+per-turn interdiction is a CONTINGENT command decision: naval_command() restates the
+seeded schedule at the _naval_convoys seam, drained just before the CONVOY_INTERDICTED it
+explains, so the ferry cut is legibly the officer's order (a live model may withhold it).
 """
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass
 
+from . import supply
 from .adjudication import validate_batch
 from .events import EventKind, Side
 from .llm_policy import (
@@ -36,8 +45,12 @@ from .llm_policy import (
 )
 from .observation import observe
 from .policy import AttackOrder, MoveOrder, ScriptedPolicy, SupplyMoveOrder, TruckOrder
-from .staff import Lane, cross_lane_conflicts, role_brief, unit_lanes
+from .staff import Lane, air_brief, cross_lane_conflicts, naval_brief, role_brief, unit_lanes
 from .state import GameState
+
+
+def _other(side: Side) -> Side:
+    return Side.ALLIED if side == Side.AXIS else Side.AXIS
 
 # The Chief's fuel/reinforcement priority: the mobile formations drain the shared
 # dumps first (armour is decisive), trailing infantry last. Draw-priority == batch
@@ -62,6 +75,13 @@ def _formation_rank(formation: str) -> int:
 # structured fields (INTENT_FIELDS / engine-computed Conflicts), never persona prose.
 CHIEF = "Chief"
 INTEL = "Intel"
+NAVAL = "Naval"
+AIR = "Air"
+
+# The Chief's air-sortie / convoy-tonnage priority (the FUEL_PRIORITY analog): the standing
+# steer the Chief hands the two resource seats, arbitrated when sorties or tonnage oversubscribe.
+AIR_PRIORITY = "LAND close-support before SEA convoy-cap (41.63 keeps the arenas split)"
+SEA_PRIORITY = "the Tobruk ferry interdiction before the rear-lane escort"
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,6 +112,14 @@ PERSONAS: dict[str, PersonaCard] = {
         "Staff Intelligence",
         "read the enemy from the little that is sighted; assume the unseen",
         "wary; warns of the stack the reconnaissance has not yet found"),
+    NAVAL: PersonaCard(
+        "the Convoy officer",
+        "the ferry is the enemy's throat -- cut the sea lane and route my own tonnage",
+        "predatory at sea, thrifty with hulls; hunts the lifeline, husbands the escort"),
+    AIR: PersonaCard(
+        "the Air Marshal",
+        "win the sky first, then the dive-bombers are flying artillery over the point of effort",
+        "opportunist; grounded by the storm, decisive when the sky clears"),
 }
 
 # The seats that actually drive an LLM in v1 (the Chief frames intent; the two GOCs
@@ -142,10 +170,11 @@ def merge_attacks(attacks: list[AttackOrder]) -> list[AttackOrder]:
 
 
 class StaffPolicy(ScriptedPolicy):
-    """A five-seat command staff over the existing Policy seam. Plays one side (the
+    """A seven-seat command staff over the existing Policy seam. Plays one side (the
     Axis by default); the scripted reflexes (declare_ab, retreat_before_assault) are
     inherited unchanged. `client` is any LLMClient -- a MockClient stub proves the
-    machine at zero token cost."""
+    machine at zero token cost. The two resource seats (NAVAL, AIR) are scripted
+    reflexes over the seeded schedules, like the QM -- they spend no token."""
 
     def __init__(self, client, side: Side = Side.AXIS, *,
                  seat_clients: "dict[str, object] | None" = None, max_workers: int = 1):
@@ -255,12 +284,14 @@ class StaffPolicy(ScriptedPolicy):
             lane_moves[ln] = moves
             self._lane_rationale[ln] = payload["rationale"]
             self._stage(EventKind.STAFF_PROPOSAL, payload)
-        supply = tuple(ScriptedPolicy.supply_orders(self, state, side))   # QM lane
+        supply_moves = tuple(ScriptedPolicy.supply_orders(self, state, side))   # QM lane
         truck = tuple(ScriptedPolicy.truck_orders(self, state, side))
-        self._quartermaster(supply)                                # STAFF_PROPOSAL (supply)
+        self._quartermaster(supply_moves)                          # STAFF_PROPOSAL (supply)
+        self._naval_plan(state, obs)                               # STAFF_PROPOSAL (convoy routing)
+        self._air_plan(state, obs)                                 # STAFF_PROPOSAL (air tasking)
         self._intelligence(obs)                                    # STAFF_CONSTRAINT (intel)
         movement = self._resolve(state, lane_moves[Lane.MOBILE], lane_moves[Lane.INFANTRY], idl)
-        return SideTurnPlan(tuple(movement), supply, truck)
+        return SideTurnPlan(tuple(movement), supply_moves, truck)
 
     def _resolve(self, state, mobile, infantry, idl) -> list[MoveOrder]:
         """Dry-run the combined batch (the Step-2 filtered validate_batch), let the
@@ -328,7 +359,11 @@ class StaffPolicy(ScriptedPolicy):
     def _chief_intent(self, obs: dict) -> dict:
         raw = _extract_json(self._ask(CHIEF, build_intent_prompt(obs))).get("intent")
         intent = _clean_intent(raw) if isinstance(raw, dict) else {}
-        self._stage(EventKind.STAFF_INTENT, {**intent, "seat": CHIEF, "formation": "DAK"})
+        # The Chief hands the two resource seats their standing scarcity steer (the
+        # FUEL_PRIORITY analog): which arena gets the sorties, which lane the tonnage.
+        self._stage(EventKind.STAFF_INTENT, {
+            **intent, "seat": CHIEF, "formation": "DAK",
+            "air_priority": AIR_PRIORITY, "sea_priority": SEA_PRIORITY})
         return intent
 
     def _intelligence(self, obs: dict) -> None:
@@ -360,6 +395,123 @@ class StaffPolicy(ScriptedPolicy):
                          for s in supply],
             "rationale": f"quartermaster relocates {len(supply)} dump(s) forward",
         })
+
+    # --- the two order-type resource seats (P5 Step 6) ---------------------------
+    def _naval_plan(self, state: GameState, obs: dict) -> None:
+        """The Convoy officer's standing tasking in the side-turn plan: route the side's own
+        pending convoys and lay any 30.2 fleet bombardment. The CONTINGENT ferry interdiction
+        is a separate beat at the convoy seam (naval_command). A pure projection over
+        naval_brief -- the seat holds no ground unit, so it never touches the Lane partition."""
+        brief = naval_brief(obs)
+        convoys = brief.get("pending_convoys", [])
+        ships = [n for n in state.naval if n.side == self.side]
+        proposes = [{"order": "convoy_route", "units": [c["lane"], c["dest"]]} for c in convoys]
+        proposes += [{"order": "bombard", "units": [n.id], "to": list(n.hex)} for n in ships]
+        self._stage(EventKind.STAFF_PROPOSAL, {
+            "seat": NAVAL, "formation": NAVAL, "proposes": proposes,
+            "rationale": f"convoy officer routes {len(convoys)} convoy(s), lays {len(ships)} ship(s) on",
+        })
+        throttled = [p for p in brief.get("your_ports", []) if p["landing_pct"] < 100]
+        if throttled:                      # a throttled harbour is tonnage the fleet is NOT landing
+            self._stage(EventKind.STAFF_CONSTRAINT, {
+                "kind": "naval", "severity": "warn", "seat": NAVAL,
+                "line": f"{len(throttled)} harbour(s) throttled below full landing"})
+
+    def _air_plan(self, state: GameState, obs: dict) -> None:
+        """The Air Marshal's standing tasking in the side-turn plan: the LAND air missions due
+        this turn (strike/fort/port/recon), flagged grounded when the sky is foul (29.43/29.52).
+        A pure projection over air_brief -- the seat holds no ground unit."""
+        brief = air_brief(obs)
+        due = [m for m in state.air_missions if m.side == self.side and m.turn == state.turn]
+        proposes = []
+        for m in due:
+            one = {"order": "air_mission", "units": [m.kind]}
+            if isinstance(m.target, (list, tuple)) and len(m.target) == 2:
+                one["to"] = list(m.target)
+            proposes.append(one)
+        self._stage(EventKind.STAFF_PROPOSAL, {
+            "seat": AIR, "formation": AIR, "proposes": proposes,
+            "rationale": f"air marshal tasks {len(due)} mission(s) this turn"})
+        grounded = brief["weather"] in ("sandstorm", "rainstorm")
+        self._stage(EventKind.STAFF_CONSTRAINT, {
+            "kind": "air", "severity": "block" if grounded else "info", "seat": AIR,
+            "line": (f"sky grounded by {brief['weather']}" if grounded
+                     else f"{brief['weather']} sky: air flies")})
+
+    def naval_command(self, state: GameState, side: Side) -> None:
+        """The engine's THIRD drain seam (P5 Step 6), called at _naval_convoys: the Convoy
+        officer's CONTINGENT per-turn interdiction. It commits the seeded interdiction schedule
+        against the enemy convoy lanes arriving this turn -- the beat the engine drains just
+        BEFORE the CONVOY_INTERDICTED it explains, so the ferry cut is legibly this seat's
+        order (a live model may withhold it; the seeded cut is the deterministic default). The
+        Chief also arbitrates any air/sea scarcity here. Stages nothing when the seat is not
+        this policy's side, or when no enemy lane is under a scheduled order."""
+        if side != self.side:
+            return
+        enemy = _other(side)
+        enemy_lanes = {c.lane for c in state.convoys
+                       if c.side == enemy and c.arrival_turn == state.turn}
+        committed = [o for o in state.interdictions
+                     if o.turn == state.turn and o.lane in enemy_lanes]
+        self._naval_arbitrate(state, side, committed)
+        if not committed:
+            return
+        self._stage(EventKind.STAFF_PROPOSAL, {
+            "seat": NAVAL, "formation": NAVAL,
+            "proposes": [{"order": "interdict", "units": [o.lane]} for o in committed],
+            "rationale": f"convoy officer presses {len(committed)} sea-lane interdiction(s)"})
+        lanes = ", ".join(sorted(o.lane for o in committed))
+        self._stage(EventKind.STAFF_CONSTRAINT, {
+            "kind": "naval", "severity": "warn", "seat": NAVAL,
+            "line": f"enemy ferry(s) under bombing: {lanes}"[:240]})
+
+    def _naval_arbitrate(self, state: GameState, side: Side, committed: list) -> None:
+        """The Chief's air/sea scarcity rulings at the convoy seam. oversubscribed-sorties:
+        the strike Air Points the seat commits across >=2 lanes exceed the side's SEA sortie
+        budget (only meaningful when SEA air is fielded) -- the heavier lane is favored, the
+        lighter waits. oversubscribed-tonnage: the side's own convoy cargo overruns a
+        destination dump's headroom (the historic Tripoli overflow) -- what lands is favored,
+        the overflow is lost. Each stages a Chief STAFF_ADJUDICATION + the officer's DISSENT."""
+        sea_strike = sum(w.strike for w in state.air if w.side == side and w.arena == "SEA")
+        demand = sum(o.bomb_points for o in committed)
+        if sea_strike > 0 and len(committed) >= 2 and demand > sea_strike:
+            order = sorted(committed, key=lambda o: (-o.bomb_points, o.lane))
+            self._naval_ruling("oversubscribed-sorties", order[0].lane, order[-1].lane,
+                               f"{order[0].lane} flies first; {order[-1].lane} waits on the SEA sortie budget")
+        for dump_id, commodity, over in self._tonnage_overflows(state, side):
+            self._naval_ruling("oversubscribed-tonnage", dump_id, f"{commodity} overflow",
+                               f"{dump_id} lands to capacity; {over} {commodity} tonnage spills")
+
+    def _tonnage_overflows(self, state: GameState, side: Side) -> list[tuple[str, str, int]]:
+        """The side's own convoy cargo arriving this turn that overruns a destination dump's
+        54.12 headroom (dump id, commodity, overflow points), deterministic by (dump, commodity)."""
+        incoming: dict[str, dict[str, int]] = {}
+        for c in state.convoys:
+            if c.side == side and c.arrival_turn == state.turn:
+                per = incoming.setdefault(c.dest, {})
+                for k, v in c.cargo.items():
+                    per[k] = per.get(k, 0) + v
+        out: list[tuple[str, str, int]] = []
+        for dump_id in sorted(incoming):
+            dump = state.supply(dump_id)
+            if dump is None:
+                continue
+            cap = supply.dump_capacity(state.terrain.terrain[dump.hex])
+            for commodity in sorted(incoming[dump_id]):
+                headroom = cap.get(commodity, 0) - getattr(dump, commodity.lower())
+                over = incoming[dump_id][commodity] - headroom
+                if over > 0:
+                    out.append((dump_id, commodity, over))
+        return out
+
+    def _naval_ruling(self, conflict: str, favored: str, denied: str, ruling: str) -> None:
+        self._stage(EventKind.STAFF_ADJUDICATION, {
+            "seat": CHIEF, "conflict": conflict,
+            "favored": favored[:48], "denied": denied[:48], "ruling": ruling})
+        self._stage(EventKind.STAFF_DISSENT, {
+            "seat": NAVAL, "formation": NAVAL,
+            "against": f"Chief throttles {denied}"[:120],
+            "stance": "the convoy officer protests the lost sea effort"})
 
     def _goc_propose_attacks(self, obs: dict, lane: Lane, idl: dict) -> tuple[list[AttackOrder], dict | None]:
         """A pure specialist combat call: returns (attacks, STAFF_PROPOSAL payload or

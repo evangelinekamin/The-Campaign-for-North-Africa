@@ -33,11 +33,12 @@ def _staff_game(axis: StaffPolicy):
 # --- Step 6: persona cards ----------------------------------------------------
 
 def test_persona_cards_cover_every_seat_and_are_frozen():
-    """The three LLM seats (Chief + the two GOCs) and the two silent seats (QM, Intel)
-    all carry a static persona; the card is immutable (a frozen dataclass)."""
+    """The three LLM seats (Chief + the two GOCs) and the four silent seats (QM, Intel,
+    and the two resource seats Naval + Air) all carry a static persona; the card is
+    immutable (a frozen dataclass)."""
     for seat in LLM_SEATS:
         assert seat in PERSONAS
-    assert len(PERSONAS) == 5                       # Chief, MOBILE, INFANTRY, QM, Intel
+    assert len(PERSONAS) == 7        # Chief, MOBILE, INFANTRY, QM, Intel, Naval, Air
     card = PERSONAS[LLM_SEATS[1]]
     assert isinstance(card, PersonaCard)
     with pytest.raises(dataclasses.FrozenInstanceError):

@@ -73,6 +73,32 @@ def role_brief(obs: dict, lane: Lane, id_lanes: dict[str, Lane]) -> dict:
     return {**obs, "your_units": units, "attack_options": attacks}
 
 
+# The two order-type resource seats (P5 Step 6) command NON-Unit resources -- the air
+# force and the fleet/convoys -- so they carry no lane in the Unit partition (the Lane
+# enum, unit_lanes and cross_lane_conflicts are all untouched, and a resource seat can
+# never over-stack or clash on a dump with a GOC by construction). Their briefs are the
+# same pure projection over the single observe() view, with your_units / attack_options
+# emptied (they hold no ground units) and every shared field -- weather, objective,
+# enemy_sightings, pending_convoys, your_ports -- kept for their non-Unit reasoning.
+def _resource_brief(obs: dict) -> dict:
+    return {**obs, "your_units": [], "attack_options": []}
+
+
+def naval_brief(obs: dict) -> dict:
+    """The Convoy officer's brief: the shared observation with the ground roster emptied.
+    pending_convoys is its routing timetable, your_ports its harbour gauge, weather its
+    sea state, enemy_sightings the lanes it may interdict -- a pure projection, never
+    mutating obs."""
+    return _resource_brief(obs)
+
+
+def air_brief(obs: dict) -> dict:
+    """The Air Marshal's brief: the shared observation with the ground roster emptied.
+    weather gates flying (29.43/29.52), enemy_sightings are strike/recon targets, the
+    objective frames the point of main effort -- a pure projection, never mutating obs."""
+    return _resource_brief(obs)
+
+
 def cross_lane_conflicts(conflicts: list, id_lanes: dict[str, Lane]) -> list:
     """Keep only the Conflicts whose contenders span >= 2 lanes -- the collisions the
     Chief must adjudicate. An intra-lane collision (all contenders one lane) is a

@@ -52,15 +52,19 @@ def test_staff_log_is_nonempty_and_ordered_intent_proposal_constraint():
     assert staff
     head = staff[0]
     assert head.kind == EventKind.STAFF_INTENT
-    # the first movement side-turn's block (one INTENT, the lane PROPOSALs, then the
-    # intel CONSTRAINT) -- scoped by its (turn, stage, phase, side) stamp.
+    # the first movement side-turn's block -- scoped by its (turn, stage, phase, side)
+    # stamp. It opens on the single Chief INTENT and closes on the Intel CONSTRAINT; the
+    # interior is the seats' PROPOSALs interleaved with the two resource seats' status
+    # CONSTRAINTs (air grounding, naval throttle). A conflict-free movement plan carries
+    # no ADJUDICATION/DISSENT (those ride the convoy seam / cross-lane clashes).
     key = (head.turn, head.stage, head.phase, head.side)
     block = [e.kind for e in staff
              if (e.turn, e.stage, e.phase, e.side) == key and e.phase == Phase.MOVEMENT]
     assert block[0] == EventKind.STAFF_INTENT
-    assert block[-1] == EventKind.STAFF_CONSTRAINT
-    assert all(k == EventKind.STAFF_PROPOSAL for k in block[1:-1])
+    assert block.count(EventKind.STAFF_INTENT) == 1
+    assert block[-1] == EventKind.STAFF_CONSTRAINT           # the Intel seat closes the block
     assert EventKind.STAFF_PROPOSAL in block
+    assert all(k in (EventKind.STAFF_PROPOSAL, EventKind.STAFF_CONSTRAINT) for k in block[1:])
 
 
 def test_staff_emission_perturbs_no_dice():

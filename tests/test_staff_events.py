@@ -52,6 +52,30 @@ def test_clean_staff_payload_drops_invalid_enum_value():
     assert out["subject"] == "5th Light"
 
 
+def test_resource_seat_whitelist_extensions_are_accepted():
+    # P5 Step 6: the two order-type seats extend the STAFF_* vocabulary in place (no new
+    # EventKind). The new proposal orders, constraint kinds, adjudication conflicts and
+    # the Chief's air/sea priority fields all survive the boundary; junk still drops.
+    prop = clean_staff_payload(EventKind.STAFF_PROPOSAL, {
+        "proposes": [{"order": "interdict", "units": ["SEA-TOBRUK"]},
+                     {"order": "air_mission", "units": ["strike"], "to": [4, 5]},
+                     {"order": "bombard", "units": ["HMS-X"], "to": [6, 7]},
+                     {"order": "convoy_route", "units": ["1", "AX-Tripoli"]},
+                     {"order": "teleport", "units": ["ghost"]}]})   # bogus order enum dropped
+    orders = [p["order"] for p in prop["proposes"] if "order" in p]
+    assert orders == ["interdict", "air_mission", "bombard", "convoy_route"]
+
+    intent = clean_staff_payload(EventKind.STAFF_INTENT,
+                                 {"air_priority": "LAND first", "sea_priority": "ferry first"})
+    assert intent == {"air_priority": "LAND first", "sea_priority": "ferry first"}
+
+    for kind in ("air", "naval"):
+        assert clean_staff_payload(EventKind.STAFF_CONSTRAINT, {"kind": kind})["kind"] == kind
+    for conflict in ("oversubscribed-sorties", "oversubscribed-tonnage"):
+        out = clean_staff_payload(EventKind.STAFF_ADJUDICATION, {"conflict": conflict})
+        assert out["conflict"] == conflict
+
+
 def test_staff_log_filters_to_staff_events_in_seq_order():
     events = [
         _ev(0, EventKind.GAME_INITIALIZED, {}),

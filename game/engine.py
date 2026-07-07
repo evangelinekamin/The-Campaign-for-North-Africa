@@ -137,7 +137,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             _water_body(r)                              # 48 V.C.1: water draw + the +5% hot-evap slice
             if stage == 1:                              # 48 V.D: arrivals land once, in the turn's 1st stage
                 _reinforcements(r)
-                _naval_convoys(r)                       # V.C.7 + V.D: convoy arrival + port regen (SYSTEM)
+                _naval_convoys(r, policies)             # V.C.7 + V.D: convoy arrival + port regen (SYSTEM)
             _air_superiority(r)                          # 40/45/46: contest the sky this OpStage (per arena)
             for side in (first, second):                # 7.16: Player A (first) then Player B (last)
                 _debrief(side)                          # enemy portion + own last combat
@@ -375,19 +375,32 @@ def interdict(convoy, state: GameState, rng) -> dict:
     return _interdict(convoy, state, rng)[0]
 
 
-def _naval_convoys(r: _Run) -> None:
+def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
     """Naval Convoy Arrival (rule 48 V.C.7 Tactical Shipping + V.D Convoy Arrival): the
     supply SOURCE lands each due convoy's cargo into its destination dump, capped at the
     dump capacity (32.15 -- overflow is simply never credited, a miniature port throttle,
     CHUNK 3 makes it the real 55.14 efficiency gauge). A convoy to an enemy-captured port
     never sails (56.15). Fires ONLY when convoys are due this game-turn, so every convoy-
-    less scenario stays byte-identical (no Phase.LOGISTICS is emitted)."""
+    less scenario stays byte-identical (no Phase.LOGISTICS is emitted).
+
+    `policies` (optional, backward-compatibly None for the scripted callers) hands the naval
+    seat its per-turn interdiction allocation (P5 Step 6): before the convoys run the gauntlet,
+    each side's Convoy officer commits the seeded schedule as a CONTINGENT command decision,
+    whose STAFF_* beats the engine drains just before the CONVOY_INTERDICTED markers they
+    explain. A policy without a naval seat (every scripted policy) stages nothing, so the
+    interdiction stays exactly as ambient as before -- byte-identical."""
     due = [c for c in r.state.convoys if c.arrival_turn == r.state.turn]
     regenable = [p for p in r.state.ports
                  if p.id not in HARBOUR_BLOCKED and p.eff < p.max_eff]
     if not due and not regenable:
         return                                          # convoy-/port-less stays byte-identical
     r.go(Phase.LOGISTICS, Side.SYSTEM)
+    if policies is not None:                            # the naval command loop (early-return-guarded)
+        for side in (Side.AXIS, Side.ALLIED):
+            pol = policies[side]
+            if hasattr(pol, "naval_command"):
+                pol.naval_command(r.state, side)        # stages the officer's interdiction beats
+                _drain_staff(r, pol, side)              # emitted before the CONVOY_INTERDICTED below
     for c in sorted(due, key=lambda c: c.id):           # deterministic arrival order
         dump = r.state.supply(c.dest)
         enemy_ctrl = CONTROL_OF[_other(c.side)]

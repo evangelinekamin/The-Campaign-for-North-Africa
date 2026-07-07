@@ -58,7 +58,13 @@ def _strlist(max_items: int, cap: int):
     return clean
 
 
-_PROPOSAL_ORDERS = frozenset({"move", "attack", "supply_move"})
+_PROPOSAL_ORDERS = frozenset({"move", "attack", "supply_move",
+                              # the two order-type resource seats (P5 Step 6): the Air
+                              # Marshal tasks air_mission (strike/fort/port/recon), the
+                              # Convoy officer routes convoys, commits the ferry interdiction
+                              # and lays the 30.2 fleet bombardment. They own NO Unit, so they
+                              # never collide with a GOC -- the Lane partition is untouched.
+                              "air_mission", "interdict", "bombard", "convoy_route"})
 _MAX_PROPOSALS = 20
 
 
@@ -100,18 +106,28 @@ _KIND_FIELDS = {
         "milestone": _str(INTENT_FIELDS["milestone"]),
         "risks": _str(INTENT_FIELDS["risks"]),
         "lessons": _strlist(3, 100),
+        # The FUEL_PRIORITY analog for the two resource seats: the Chief's optional
+        # standing steer for air-sortie / convoy-tonnage scarcity, arbitrated the way
+        # the fuel priority arbitrates dump draws (P5 Step 6). Prose one-liners.
+        "air_priority": _str(140),
+        "sea_priority": _str(140),
     },
     EventKind.STAFF_PROPOSAL: {
         "proposes": _proposes,
         "rationale": _str(200),
     },
     EventKind.STAFF_CONSTRAINT: {
-        "kind": _enum(frozenset({"fuel", "ammo", "stacking", "road", "intel"})),
+        "kind": _enum(frozenset({"fuel", "ammo", "stacking", "road", "intel",
+                                 "air", "naval"})),   # the two resource seats' scarcity flags
         "severity": _enum(frozenset({"info", "warn", "block"})),
         "subject": _str(48),
     },
     EventKind.STAFF_ADJUDICATION: {
-        "conflict": _enum(frozenset({"over-stack", "oversubscribed-dump", "road-cap"})),
+        "conflict": _enum(frozenset({"over-stack", "oversubscribed-dump", "road-cap",
+                                     # the air/sea scarcity clashes the Chief arbitrates:
+                                     # committed strike Air Points beyond the SEA sortie
+                                     # budget, convoy tonnage beyond the dump headroom.
+                                     "oversubscribed-sorties", "oversubscribed-tonnage"})),
         "favored": _str(48),
         "denied": _str(48),
         "ruling": _str(200),
