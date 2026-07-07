@@ -170,3 +170,13 @@ def convoy_level_56_4() -> dict:
 def convoy_capacity_56_5() -> dict:
     """[56.5] Axis Naval Convoy capacity by Level: fixed_tons + variable_tons_per_die x die."""
     return _data()["axis_naval_convoys_56"]["convoy_capacity_table_56_5"]
+
+
+def convoy_bombing_crt_41_66() -> list:
+    """[41.66]/[32.66] the Axis-Naval-Convoy row of the [41.5] Air Bombardment &
+    Secondary Barrage Targets Table: the ordered Bomb-Point columns of the convoy-
+    bombing CRT. Each column carries its bomb_points bracket [lo, hi] (hi=None on the
+    open 471+ bracket) and a `results` list of {die: [lo, hi], pct_lost}: the engine
+    picks the column by total Bomb Points, then reads 2d6 SEQUENTIALLY as a two-digit
+    code (tens=first die, units=second) and looks up the tens-of-percent cargo lost."""
+    return _data()["axis_naval_convoys_56"]["air_convoy_bombing_crt_41_66"]["columns"]

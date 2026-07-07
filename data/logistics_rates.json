@@ -245,6 +245,61 @@
       "G": {"fixed_tons": 32000, "variable_tons_per_die": 3000},
       "rounding": "up to nearest 1000 tons"
     },
+    "air_convoy_bombing_crt_41_66": {
+      "_comment": "[41.66]/[32.66] the AXIS NAVAL CONVOY row of the [41.5] AIR BOMBARDMENT AND SECONDARY BARRAGE TARGETS TABLE, transcribed cell-by-cell from the scanned foldout chart page 12 (PDF page-107; this dense grid did NOT OCR into docs/rules/90 -- see the page-108 sibling that only carried the Key). Procedure (41.66): the Commonwealth Player totals his attacking Bomb Points, selects the matching bomb_points column, rolls two dice reading them SEQUENTIALLY as a two-digit code (tens=first die, units=second die: 11,12..16,21..66), and reads the cross-indexed result -- expressed in TENS OF PERCENT of the cargo in that convoy lost. 41.67 then divides that percentage evenly among the cargo types, rounding each LOST amount up. Each column's die entries partition all 36 sequential codes exactly (verified). Columns with bomb_points below their floor never damage a convoy (the 1..20 column is a flat 0%). hi=null on the final column is the open 471+ bracket. The three torpedo/barrage-weapon header rows of the same chart are NOT transcribed (torpedoes 41.7 and the barrage-vs-facility path 12.53 are deferred); only the Bomb-Points columns feed convoy bombing.",
+      "columns": [
+        {"bomb_points": [1, 20], "results": [
+          {"die": [11, 66], "pct_lost": 0}]},
+        {"bomb_points": [21, 40], "results": [
+          {"die": [11, 54], "pct_lost": 0},
+          {"die": [55, 64], "pct_lost": 5},
+          {"die": [65, 66], "pct_lost": 10}]},
+        {"bomb_points": [41, 80], "results": [
+          {"die": [11, 33], "pct_lost": 0},
+          {"die": [34, 64], "pct_lost": 5},
+          {"die": [65, 66], "pct_lost": 10}]},
+        {"bomb_points": [81, 120], "results": [
+          {"die": [11, 22], "pct_lost": 0},
+          {"die": [23, 54], "pct_lost": 5},
+          {"die": [55, 64], "pct_lost": 10},
+          {"die": [65, 66], "pct_lost": 20}]},
+        {"bomb_points": [121, 160], "results": [
+          {"die": [11, 45], "pct_lost": 5},
+          {"die": [46, 63], "pct_lost": 10},
+          {"die": [64, 66], "pct_lost": 20}]},
+        {"bomb_points": [161, 200], "results": [
+          {"die": [11, 32], "pct_lost": 5},
+          {"die": [33, 56], "pct_lost": 10},
+          {"die": [61, 66], "pct_lost": 20}]},
+        {"bomb_points": [201, 260], "results": [
+          {"die": [11, 21], "pct_lost": 5},
+          {"die": [22, 51], "pct_lost": 10},
+          {"die": [52, 63], "pct_lost": 20},
+          {"die": [64, 66], "pct_lost": 25}]},
+        {"bomb_points": [261, 320], "results": [
+          {"die": [11, 14], "pct_lost": 5},
+          {"die": [15, 42], "pct_lost": 10},
+          {"die": [43, 56], "pct_lost": 20},
+          {"die": [61, 66], "pct_lost": 25}]},
+        {"bomb_points": [321, 390], "results": [
+          {"die": [11, 23], "pct_lost": 10},
+          {"die": [24, 51], "pct_lost": 20},
+          {"die": [52, 63], "pct_lost": 25},
+          {"die": [64, 66], "pct_lost": 30}]},
+        {"bomb_points": [391, 470], "results": [
+          {"die": [11, 15], "pct_lost": 10},
+          {"die": [16, 34], "pct_lost": 20},
+          {"die": [35, 52], "pct_lost": 25},
+          {"die": [53, 63], "pct_lost": 30},
+          {"die": [64, 66], "pct_lost": 40}]},
+        {"bomb_points": [471, null], "results": [
+          {"die": [11, 24], "pct_lost": 20},
+          {"die": [25, 36], "pct_lost": 25},
+          {"die": [41, 54], "pct_lost": 30},
+          {"die": [55, 63], "pct_lost": 40},
+          {"die": [64, 66], "pct_lost": 50}]}
+      ]
+    },
     "air_distance_chart_56_18": {
       "_comment": "[56.18] AXIS NAVAL CONVOY AIR DISTANCE CHART -- distance in hexes from an air-base box (Sicily/Italy/Crete/Malta/Benghazi/Derna/Tobruk) to each shipping lane's Rally Point, for interdiction range checks. Not a logistics MAGNITUDE (it gates air missions against convoys); recorded as a reference only. Lanes: 1 Sicily->Bizerta, 2 Sicily->Tripoli, 3 Italy->Benghazi, 4 Greece->Benghazi, 5 Greece->Tobruk, 6 Italy->Tobruk. Full grid in docs/rules/90 lines ~173-188."
     }

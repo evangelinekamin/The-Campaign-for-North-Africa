@@ -177,6 +177,23 @@ class Convoy:
 
 
 @dataclass(frozen=True, slots=True)
+class InterdictionOrder:
+    """A scheduled air-interdiction of a convoy lane (rules 41.6 / 32.63-32.66): the
+    convoys/ports/trucks idiom applied to the AIR arena. On a game-turn `turn`, `lane`
+    is under `bomb_points` of Commonwealth-CRT bombing pressure -- the Bomb-Point column
+    of the [41.5] Air Bombardment table the convoy attack resolves on. A static schedule
+    entry (the twin of Convoy.arrival_turn): when a convoy on this lane arrives this turn,
+    game.engine.interdict rolls 2d6 on the CRT (41.66) and skims that tens-of-percent off
+    its cargo before it lands (41.67), leaving a smaller SUPPLY_ARRIVED beside a marker
+    CONVOY_INTERDICTED. The interdictor is the side OPPOSING the convoy (derived at the
+    seam, not stored). Default GameState.interdictions=() draws no dice and reduces no
+    cargo, so every scenario without a seeded schedule stays byte-identical."""
+    lane: str
+    turn: int
+    bomb_points: int
+
+
+@dataclass(frozen=True, slots=True)
 class Port:
     """A port and its built-in supply dump (rule 56.28 -- every port of arrival has a
     dump 'built in, as it were'). The port THROTTLES what a convoy lands: its effective
@@ -279,6 +296,11 @@ class GameState:
     # from rear dumps. Default () keeps every truck-less scenario byte-identical -- the V.J
     # Truck Convoy Phase fires only when a side fields formations (game.engine._truck_convoys).
     trucks: tuple[TruckFormation, ...] = ()
+    # Air interdiction schedule (rules 41.6 / 32.63-32.66): the AIR arena's static faucet-
+    # throttle. Default () draws no dice and reduces no convoy cargo, so every scenario
+    # without a seeded schedule stays byte-identical (the engine skims a lane's cargo only
+    # when an InterdictionOrder matches an arriving convoy's lane+turn; game.engine.interdict).
+    interdictions: tuple[InterdictionOrder, ...] = ()
     # Map sections (A-E) this scenario is played on (rule 29.1 / 29.7). Foul weather
     # from the 29.7 Foul Weather Location Table only reaches the theater when it lands
     # on one of these sections; an empty set means "unlocalized" (a synthetic map), so

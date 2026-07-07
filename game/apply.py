@@ -18,7 +18,8 @@ def apply(state: GameState, event: Event) -> GameState:
     if k in (EventKind.GAME_INITIALIZED, EventKind.ORDER_REJECTED,
              EventKind.BARRAGE_RESOLVED,
              EventKind.ANTI_ARMOR_RESOLVED, EventKind.REINFORCEMENT_ARRIVED,
-             EventKind.CONVOY_CANCELLED, EventKind.PASTA_DENIED, EventKind.PORT_UNLOADED,
+             EventKind.CONVOY_CANCELLED, EventKind.CONVOY_INTERDICTED,
+             EventKind.PASTA_DENIED, EventKind.PORT_UNLOADED,
              EventKind.SEGMENT_ADVANCED,
              EventKind.STAFF_INTENT, EventKind.STAFF_PROPOSAL, EventKind.STAFF_CONSTRAINT,
              EventKind.STAFF_ADJUDICATION, EventKind.STAFF_DISSENT):

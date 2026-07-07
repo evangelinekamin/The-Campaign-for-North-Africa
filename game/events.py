@@ -57,6 +57,12 @@ class EventKind(str, Enum):
     # (56.15: a convoy to an enemy-captured port never sails) is a marker / no-op fold.
     SUPPLY_ARRIVED = "SUPPLY_ARRIVED"
     CONVOY_CANCELLED = "CONVOY_CANCELLED"
+    # Air interdiction of a convoy in transit (rules 41.6 / 32.63-32.66). CONVOY_INTERDICTED
+    # {lane, convoy_id, interdictor, bomb_points, pct_lost, tons_lost} is the legible marker
+    # of a bombing attack: the CRT (41.66) tens-of-percent of cargo skimmed at sea. It folds
+    # to IDENTITY -- the load-bearing change rides the paired, already-reduced SUPPLY_ARRIVED
+    # (the skimmed supply simply never enters the system, so conservation holds untouched).
+    CONVOY_INTERDICTED = "CONVOY_INTERDICTED"
     # Full-logistics consumption (rules 49-52). SUPPLY_EVAPORATED (49.3/52.44: 6% of
     # on-map fuel + water per game-turn, +5% hot) folds like a consume -- it drains the
     # dump and adds to consumed[], so it "left the system" and conservation stays exact.

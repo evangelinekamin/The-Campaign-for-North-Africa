@@ -290,12 +290,68 @@ def _reinforcements(r: _Run) -> None:
                    {"unit_id": u.id, "hex": list(u.hex), "turn": r.state.turn})
 
 
+def _interdiction_for(state: GameState, convoy):
+    """The air-interdiction pressure on this convoy's lane this game-turn (rules 41.6 /
+    32.63), or None. rng-free -- a static-schedule lookup keyed by lane + game-turn, the
+    exact twin of a convoy's arrival_turn match."""
+    for o in state.interdictions:
+        if o.lane == convoy.lane and o.turn == state.turn:
+            return o
+    return None
+
+
+def _convoy_loss_pct(bomb_points: int, d1: int, d2: int) -> int:
+    """[41.66] resolve one convoy-bombing attack on the [41.5] Air Bombardment CRT: pick the
+    Bomb-Point column, read the two dice SEQUENTIALLY as a two-digit code (tens=d1, units=d2),
+    and return the tens-of-percent of cargo lost. Bomb Points below the table's floor never
+    damage a convoy (returns 0)."""
+    code = d1 * 10 + d2
+    for col in logistics_data.convoy_bombing_crt_41_66():
+        lo, hi = col["bomb_points"]
+        if bomb_points >= lo and (hi is None or bomb_points <= hi):
+            for entry in col["results"]:
+                dlo, dhi = entry["die"]
+                if dlo <= code <= dhi:
+                    return entry["pct_lost"]
+    return 0
+
+
+def _apply_convoy_loss(cargo: dict, pct: int) -> tuple[dict, int]:
+    """[41.67] divide the CRT loss evenly across the convoy's commodities, rounding each LOST
+    amount UP and flooring delivered at >= 0. Returns (reduced_cargo, tons_lost) -- tons via
+    the 54.5 equivalent weights, for the CONVOY_INTERDICTED marker."""
+    reduced: dict = {}
+    tons_lost = 0
+    for k, v in cargo.items():
+        lost = math.ceil(v * pct / 100)
+        reduced[k] = max(0, v - lost)
+        tons_lost += supply.points_to_tons(lost, k)
+    return reduced, tons_lost
+
+
+def _interdict(convoy, state: GameState, rng):
+    """The interdiction worker shared by interdict() and _naval_convoys: returns
+    (reduced_cargo, order|None, pct_lost, tons_lost). Draws the two [41.66] CRT dice on `rng`
+    ONLY when an InterdictionOrder covers this lane+turn, so an interdiction-free lane draws
+    no rng and returns the cargo verbatim (byte-identical)."""
+    order = _interdiction_for(state, convoy)
+    if order is None:
+        return dict(convoy.cargo), None, 0, 0
+    d1, d2 = rng.randint(1, 6), rng.randint(1, 6)      # 41.66: two dice, read sequentially
+    pct = _convoy_loss_pct(order.bomb_points, d1, d2)
+    reduced, tons_lost = _apply_convoy_loss(convoy.cargo, pct)
+    return reduced, order, pct, tons_lost
+
+
 def interdict(convoy, state: GameState, rng) -> dict:
-    """Commonwealth attrition of a convoy in transit (56.13/41.6). CHUNK 1: the ferry
-    is invulnerable -- the cargo arrives verbatim. This is the seam CHUNK 6 fills with
-    the 32.66 Naval Convoy Bombing chart + Mediterranean-Fleet suppression, emitting
-    CONVOY_INTERDICTED beside a reduced SUPPLY_ARRIVED (56.65B min-1-point rule)."""
-    return dict(convoy.cargo)
+    """Air interdiction of a convoy in transit (rules 41.6 / 32.63-32.66) -- the crack's
+    ferry-cut, the convoys/ports/trucks idiom carried into the AIR arena. If no
+    InterdictionOrder covers this convoy's lane this game-turn, the cargo arrives verbatim
+    and NO die is drawn (byte-identical). Otherwise the seam rolls 2d6 on the [41.5] Air
+    Bombardment CRT (41.66) and skims that tens-of-percent off the cargo (41.67, split evenly,
+    each LOST amount rounded up) before it lands. Returns the (possibly reduced) cargo; the
+    paired CONVOY_INTERDICTED marker rides in _naval_convoys beside the smaller SUPPLY_ARRIVED."""
+    return _interdict(convoy, state, rng)[0]
 
 
 def _naval_convoys(r: _Run) -> None:
@@ -318,7 +374,8 @@ def _naval_convoys(r: _Run) -> None:
             r.emit(EventKind.CONVOY_CANCELLED, c.side, "SYSTEM",
                    {"convoy_id": c.id, "lane": c.lane, "dest": c.dest, "reason": "port captured"})
             continue
-        cargo = interdict(c, r.state, r.rng)            # CHUNK 1: identity -> dict(c.cargo)
+        # 41.6/32.66: skim the CRT loss at sea BEFORE landing (identity + no rng if unbombed)
+        cargo, itd_order, pct_lost, tons_lost = _interdict(c, r.state, r.rng)
         cap = supply.dump_capacity(r.state.terrain.terrain[dump.hex])   # 54.12, keyed by dump terrain
         port = r.state.port_at(dump.hex)                # 56.28: a port's built-in dump
         landed: dict = {}
@@ -337,6 +394,12 @@ def _naval_convoys(r: _Run) -> None:
         if landed:                                      # nothing to land into a full dump
             r.emit(EventKind.SUPPLY_ARRIVED, c.side, "SYSTEM",
                    {"supply_id": c.dest, "cargo": landed, "lane": c.lane, "convoy_id": c.id})
+        if itd_order is not None:                       # 41.6/32.66: the bombing marker beside arrival
+            interdictor = _other(c.side)
+            r.emit(EventKind.CONVOY_INTERDICTED, interdictor, "SYSTEM",
+                   {"lane": c.lane, "convoy_id": c.id, "interdictor": interdictor.value,
+                    "bomb_points": itd_order.bomb_points, "pct_lost": pct_lost,
+                    "tons_lost": tons_lost})
     _port_regen(r)      # 55.18: the port worked this OpStage at its current eff, then recovers
 
 
