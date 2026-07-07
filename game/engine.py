@@ -1722,13 +1722,13 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
                   >= 3 * sum(u.raw_defense for u in armed_def))
     def_m, def_md, def_surr = _adjusted_morale(r, defenders, enemy_overwhelms=overwhelms)
     if atk_surr and def_surr:                                   # 17.25: mutual surrender is IGNORED --
-        r.emit(EventKind.COMBAT_RESOLVED, side, actor,          # no assault occurs, both Engaged
+        r.emit(EventKind.COMBAT_RESOLVED, side, actor,          # no assault occurs, so NO ENG (8.63)
                {"target": list(target), "attackers": [u.id for u in armed_atk],
                 "defenders": [u.id for u in defenders], "surrender": "mutual-ignored",
                 "differential": 0, "column": 0, "morale_shift": atk_m - def_m,
                 "attacker_loss_pct": 0, "defender_loss_pct": 0,
                 "attacker_captured": False, "defender_captured": False,
-                "attacker_engaged": True, "retreat_hexes": 0},
+                "attacker_engaged": False, "retreat_hexes": 0},
                rng_draws=(*atk_md, *def_md))
         return
     if atk_surr or def_surr:                                    # rule 17.25: the stack surrenders

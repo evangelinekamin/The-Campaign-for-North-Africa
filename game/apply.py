@@ -179,10 +179,16 @@ def apply(state: GameState, event: Event) -> GameState:
         return state.with_unit(u2)
 
     if k == EventKind.COMBAT_RESOLVED:
-        # 15.81: every unit that took part in a Close Assault carries the Engaged marker
-        # for the rest of the Operations Stage -- leaving contact then costs 4 CP (Disengage)
-        # instead of 2 (Break Contact). A pure marker fold (no supply surface); cleared by
+        # 8.63/15.81: Engaged is a COMBAT RESULT -- it locks the participants only when the
+        # 15.79 CRT produced an ENG, which combat.resolve reports as payload["attacker_engaged"]
+        # (retreat has already voided it, 15.74). On an ENG, EVERY unit involved in that assault
+        # (both sides, 15.81) carries the Engaged marker for the rest of the Operations Stage --
+        # leaving contact then costs 4 CP (Disengage) instead of 2 (Break Contact). Without it,
+        # the still-adjacent assault veterans are merely in Contact (2 CP), NOT Engaged (the 15.81
+        # parenthetical), so no marker is set. A pure marker fold (no supply surface); cleared by
         # _reset_opstage at the stage boundary. Dead participants are skipped (harmless).
+        if not p.get("attacker_engaged"):
+            return state
         st = state
         for uid in list(p.get("attackers", [])) + list(p.get("defenders", [])):
             u = st.unit(uid)

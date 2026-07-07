@@ -359,8 +359,10 @@ def test_voluntary_overrun_disorganizes_8_16():
 
 
 def test_close_assault_sets_engaged_marker_and_disengage_cost_15_81():
-    # 15.81: units in a Close Assault carry the Engaged marker, raising the CP to leave
-    # contact from 2 (Break Contact) to 4 (Disengage); the marker clears at the stage boundary.
+    # 8.63/15.81: Engaged is a COMBAT RESULT -- only an ENG on the 15.79 CRT (reported as the
+    # payload's attacker_engaged) locks the participants. It then raises the CP to leave contact
+    # from 2 (Break Contact) to 4 (Disengage), and the marker clears at the stage boundary. An
+    # assault with no ENG leaves the still-adjacent veterans merely in Contact -- no marker.
     from dataclasses import replace
 
     from game.apply import _reset_opstage, apply
@@ -374,10 +376,20 @@ def test_close_assault_sets_engaged_marker_and_disengage_cost_15_81():
                cpa=10, stacking_points=1, oca=2, dca=2)
     st = _two_side_state([atk, dfn], [])
     assert _break_off_cost(st.unit("A")) == 2.0                   # 6.3 Break Contact before engaging
-    ev = Event(seq=0, turn=1, phase=Phase.COMBAT, side=Side.AXIS, actor="AXIS/Front",
-               kind=EventKind.COMBAT_RESOLVED,
-               payload={"target": [0, 0], "attackers": ["A"], "defenders": ["D"]})
-    st2 = apply(st, ev)
+
+    def resolved(engaged: bool) -> Event:
+        return Event(seq=0, turn=1, phase=Phase.COMBAT, side=Side.AXIS, actor="AXIS/Front",
+                     kind=EventKind.COMBAT_RESOLVED,
+                     payload={"target": [0, 0], "attackers": ["A"], "defenders": ["D"],
+                              "attacker_engaged": engaged})
+
+    # No ENG result: assault veterans are in Contact only, NOT Engaged (15.81 parenthetical).
+    st_contact = apply(st, resolved(False))
+    assert not st_contact.unit("A").engaged and not st_contact.unit("D").engaged
+    assert _break_off_cost(st_contact.unit("A")) == 2.0          # still just Break Contact
+
+    # An ENG result locks every unit involved in that assault (both sides, 15.81).
+    st2 = apply(st, resolved(True))
     assert st2.unit("A").engaged and st2.unit("D").engaged        # 15.81 marker on both sides
     assert _break_off_cost(st2.unit("A")) == 4.0                  # 6.3 Disengage while Engaged
     st3 = replace(st2, units=_reset_opstage(st2.units))
