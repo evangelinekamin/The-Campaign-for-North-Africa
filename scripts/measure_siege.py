@@ -73,11 +73,10 @@ class _Disconnected:
 
 
 def _load_key(path: str = KEY_FILE) -> None:
-    """Read the OpenRouter key into the environment ONCE. The raw string goes straight into
-    os.environ and is never returned, printed, or logged."""
+    """Force THIS project's OpenRouter key from the key FILE into the environment,
+    OVERWRITING any ambient OPENROUTER_API_KEY exported by the shell profile for another
+    project (else an inherited key silently bills the wrong account). Never returned/printed/logged."""
     import os
-    if os.environ.get("OPENROUTER_API_KEY"):
-        return
     key = Path(path).read_text().strip()
     if not key:
         raise SystemExit(f"key file {path} is empty")

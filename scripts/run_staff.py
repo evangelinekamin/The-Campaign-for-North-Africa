@@ -48,11 +48,11 @@ CACHE_PATH = OUT / "staff_smoke.cache.json"
 
 
 def _load_key(path: str = KEY_FILE) -> None:
-    """Read the OpenRouter key into the environment ONCE (skip if already set). The raw
-    string goes straight into os.environ and is never returned, printed, or logged."""
+    """Force THIS project's OpenRouter key from the key FILE into the environment,
+    OVERWRITING any ambient OPENROUTER_API_KEY (e.g. a different key a shell profile
+    exported for another project) -- otherwise an inherited key silently bills the wrong
+    account. The raw string goes straight into os.environ, never returned/printed/logged."""
     import os
-    if os.environ.get("OPENROUTER_API_KEY"):
-        return
     key = Path(path).read_text().strip()
     if not key:
         raise SystemExit(f"key file {path} is empty")
