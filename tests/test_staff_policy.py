@@ -222,3 +222,57 @@ def test_staff_game_has_no_stale_supply_rejects():
              if e.kind == EventKind.ORDER_REJECTED and e.actor == "AXIS/Logistics"
              and "must end stacked" in e.payload.get("reason", "")]
     assert stale == []
+
+
+# --- D: reject feedback to the seats (StaffPolicy.debrief) ----------------------
+
+from game.events import Event                                     # noqa: E402
+
+
+def _front_reject(uid="P", to=(1, 0), reason="destination unreachable"):
+    return Event(0, 1, Phase.MOVEMENT, Side.AXIS, "AXIS/Front",
+                 EventKind.ORDER_REJECTED, {"unit_id": uid, "to": list(to), "reason": reason})
+
+
+def test_debrief_stashes_only_own_front_rejects():
+    staff = _staff()
+    staff.debrief([
+        _front_reject("P"),                                                        # kept
+        Event(1, 1, Phase.LOGISTICS, Side.AXIS, "AXIS/Logistics",                  # dropped (scripted)
+              EventKind.ORDER_REJECTED, {"supply_id": "D", "reason": "must end stacked"}),
+        Event(2, 1, Phase.MOVEMENT, Side.ALLIED, "ALLIED/Front",                   # dropped (enemy)
+              EventKind.ORDER_REJECTED, {"unit_id": "E", "reason": "nope"}),
+        Event(3, 1, Phase.MOVEMENT, Side.AXIS, "AXIS/Front",                       # dropped (not a reject)
+              EventKind.UNIT_MOVED, {"unit_id": "Q"}),
+    ])
+    assert [e.payload["unit_id"] for e in staff._rejects] == ["P"]
+
+
+def test_reject_feedback_line_names_unit_hex_and_reason():
+    staff = _staff()
+    staff.debrief([_front_reject("P", (3, 1), "destination over stacking limit")])
+    line = staff._reject_feedback()
+    assert line.startswith("REJECTED last stage (do NOT reissue): ")
+    assert "P->[3, 1]: destination over stacking limit" in line
+    # a clean stage prepends nothing (byte-identical prompt)
+    staff.debrief([])
+    assert staff._reject_feedback() == ""
+
+
+class _Capturing:
+    def __init__(self, fn):
+        self._fn = fn
+        self.prompts: list = []
+
+    def complete(self, prompt: str) -> str:
+        self.prompts.append(prompt)
+        return self._fn(prompt)
+
+
+def test_goc_movement_prompt_carries_the_reject_feedback():
+    cap = _Capturing(_mock_staff)
+    staff = StaffPolicy(cap, side=Side.AXIS)
+    staff.debrief([_front_reject("GE 15th Panzer Division-1", (9, 9), "destination unreachable")])
+    staff.movement(_lever_state([_mobile("P", (2, 0))]), Side.AXIS)
+    assert any("REJECTED last stage (do NOT reissue)" in p for p in cap.prompts), \
+        "the GOC movement prompt must carry the do-not-reissue feedback"

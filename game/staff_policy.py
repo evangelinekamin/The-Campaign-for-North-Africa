@@ -221,6 +221,7 @@ class StaffPolicy(ScriptedPolicy):
         self._lane_rationale: dict[Lane, str] = {}         # captured GOC rationale (for dissent)
         self._intent: dict = {}                            # the Chief's live intent (subordinate preamble)
         self._pulse_orders: list[MoveOrder] | None = None  # stashed continual-movement pulse moves
+        self._rejects: list = []                           # this side's Front rejects since last debrief
 
     # --- LLM seam ---------------------------------------------------------------
     def _client_for(self, seat: str):
@@ -270,6 +271,31 @@ class StaffPolicy(ScriptedPolicy):
         self._lane_rationale = {}
         self._intent = {}
         self._pulse_orders = None
+        self._rejects = []
+
+    # --- reject feedback (symmetric with LLMPolicy.debrief) ----------------------
+    def debrief(self, events: list) -> None:
+        """Engine hook (game.engine calls it before each side-turn): stash this side's
+        Front-seat ORDER_REJECTED dispatches since it last acted, so the GOC movement
+        deliberation can be told NOT to reissue them -- the seats now learn from a
+        bounced order instead of proposing it again every stage."""
+        actor = f"{self.side.value}/Front"
+        self._rejects = [e for e in events
+                         if e.kind == EventKind.ORDER_REJECTED and e.actor == actor]
+
+    def _reject_feedback(self) -> str:
+        """A compact 'do NOT reissue' line built from the stashed Front rejects (reusing
+        the LLMPolicy._section_a shape), prepended to the GOC movement prompt. '' when the
+        last stage was clean, so a reject-free game keeps its prompt byte-identical."""
+        if not self._rejects:
+            return ""
+        lines = []
+        for e in self._rejects:
+            p = e.payload
+            who = p.get("unit_id") or ",".join(p.get("attacker_ids", []) or []) or "?"
+            where = p.get("to") or p.get("target") or "?"
+            lines.append(f"{who}->{where}: {p.get('reason', '?')}")
+        return "REJECTED last stage (do NOT reissue): " + "; ".join(lines[:8]) + "\n"
 
     # --- the drain hook (symmetric with debrief / declare_ab) --------------------
     def drain_staff(self) -> list[tuple[EventKind, dict]]:
@@ -534,7 +560,7 @@ class StaffPolicy(ScriptedPolicy):
         stages NOTHING -- the caller stages in fixed lane order after the (possibly
         parallel) calls join, so concurrency never reorders the log."""
         brief = role_brief(obs, lane, idl)
-        moves = parse_moves(self._ask(lane.value, build_movement_prompt(brief)))
+        moves = parse_moves(self._ask(lane.value, self._reject_feedback() + build_movement_prompt(brief)))
         payload = {
             "seat": lane.value, "formation": lane.value,
             "proposes": [{"order": "move", "units": [m.unit_id], "to": list(m.to)}
