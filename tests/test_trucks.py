@@ -293,3 +293,27 @@ def test_rommels_arrival_runs_the_truck_relay():
     for e in delivered:
         dump = res.final.supply(e.payload["supply_id"])
         assert distance(dump.hex, res.final.target_hex) < distance(rear.hex, res.final.target_hex)
+
+
+# --- ScriptedPolicy.truck_orders sizes the load under residual cargo ------------
+
+def test_truck_orders_size_load_under_residual_cargo():
+    """A truck that returns to base with RESERVE fuel still in its tank must not be
+    reloaded past its 53.12 capacity: the fresh load is sized against the residual so
+    ScriptedPolicy.truck_orders never emits an over-capacity load (the 68 'load exceeds
+    truck capacity' rejects). Heavy truck (points 8), 200 residual fuel: the naive half-
+    capacity load (1000 FUEL) plus the residual overruns the 8-Point ceiling."""
+    from game.state import Port
+    target = (5, 0)
+    terr = _terr(*[(q, 0) for q in range(6)])
+    port = Port("PORT", Side.AXIS, (0, 0), kind="major", max_eff=10, eff=10,
+                cap_ammo=9999, cap_fuel=9999, cap_stores=9999, cap_water=9999, cap_tons=9999)
+    base = SupplyUnit("BASE", Side.AXIS, (0, 0), ammo=200, fuel=2000)
+    fwd = SupplyUnit("FWD", Side.AXIS, (1, 0), ammo=0, fuel=0)
+    truck = TruckFormation("T", Side.AXIS, (0, 0), "heavy", points=8, fuel=200)
+    s = replace(_state([base, fwd], [truck], terr), ports=(port,), target_hex=target)
+
+    orders = ScriptedPolicy(attacker=Side.AXIS).truck_orders(s, Side.AXIS)
+    assert orders and orders[0].load is not None, "the truck should propose a forward run"
+    assert supply.truck_load_admissible(s.truck("T"), orders[0].load), \
+        f"load {orders[0].load} exceeds capacity given residual fuel {truck.fuel}"

@@ -236,8 +236,11 @@ class ScriptedPolicy(Policy):
             out = supply.truck_move_fuel(t, reach[dest.hex])
             cap = supply.truck_capacity(t.truck_class)
             half = t.points / 2                       # split the load: half ammo, half fuel
-            ammo = min(base.ammo, int(half * cap["AMMO"]))
-            fuel = min(base.fuel, int(half * cap["FUEL"]))
+            # Size the FRESH load against the truck's RESIDUAL cargo (49.18 keeps a return
+            # reserve, so a truck home-from-a-run is not empty): loading a full half-capacity
+            # on top of the residual overruns the 53.12 Point ceiling and the engine rejects it.
+            ammo = min(base.ammo, max(0, int(half * cap["AMMO"]) - t.ammo))
+            fuel = min(base.fuel, max(0, int(half * cap["FUEL"]) - t.fuel))
             fuel_deliver = fuel - 3 * out             # keep 2x the one-way burn to get home
             if fuel_deliver <= 0:                     # not enough fuel to make the round trip
                 continue
