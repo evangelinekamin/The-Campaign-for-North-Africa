@@ -22,7 +22,9 @@ from game.llm import CachingClient, MockClient                      # noqa: E402
 from game.policy import ScriptedPolicy                              # noqa: E402
 from game.scenario import rommels_arrival                          # noqa: E402
 from game.staff_policy import (                                     # noqa: E402
-    LLM_SEATS, PERSONAS, PersonaCard, StaffPolicy, persona_preamble)
+    CHIEF, LLM_SEATS, PERSONAS, PersonaCard, StaffPolicy, intent_preamble,
+    persona_preamble)
+from game.staff import Lane                                          # noqa: E402
 
 
 def _staff_game(axis: StaffPolicy):
@@ -71,6 +73,44 @@ def test_persona_is_injected_into_each_seat_prompt():
         assert all(doctrine in p for p in seen[seat])          # its own card, every call
         others = [PERSONAS[s].doctrine for s in LLM_SEATS if s != seat]
         assert all(all(o not in p for o in others) for p in seen[seat])   # no cross-contamination
+
+
+# --- Step 3: the top-down intent preamble (fix the cosmetic hierarchy) ---------
+
+def test_intent_preamble_renders_only_the_whitelisted_fields():
+    """The block carries ONLY the whitelisted intent fields + the standing priorities and
+    the storm directive -- never free prose -- and is empty when no intent is framed."""
+    assert intent_preamble({}) == ""
+    intent = {"objective": "Seize Tobruk", "scheme": "armour leads the coastal push",
+              "supply": "fuel the panzers first"}
+    block = intent_preamble(intent)
+    assert block.startswith("ORDERS FROM THE CHIEF OF STAFF")
+    assert "Seize Tobruk" in block and "armour leads the coastal push" in block
+    assert "STORM DIRECTIVE" in block                       # the schwerpunkt order rides down
+    assert "lessons" not in block                           # non-whitelisted keys never leak
+
+
+def test_chief_intent_reaches_the_gocs_but_not_the_chiefs_own_prompt():
+    """The Chief's scheme is prepended to every SUBORDINATE seat's prompt (the GOCs now plan
+    TO the intent) but NEVER to the Chief's own authoring prompt -- a real chain of command."""
+    seen: dict[str, list[str]] = {}
+
+    def recorder(seat):
+        def responder(prompt):
+            seen.setdefault(seat, []).append(prompt)
+            return _mock_staff(prompt)
+        return MockClient(responder)
+
+    seat_clients = {seat: recorder(seat) for seat in LLM_SEATS}
+    _staff_game(StaffPolicy(MockClient(_mock_staff), side=Side.AXIS, seat_clients=seat_clients))
+    scheme = "combined-arms coastal push, armour leading"           # the canned mock intent scheme
+    for goc in (Lane.MOBILE.value, Lane.INFANTRY.value):
+        assert seen.get(goc), f"seat {goc} never called"
+        assert all("ORDERS FROM THE CHIEF OF STAFF" in p for p in seen[goc])
+        assert any(scheme in p for p in seen[goc])                  # the Chief's scheme reached the GOC
+    assert seen.get(CHIEF)
+    assert all("ORDERS FROM THE CHIEF OF STAFF" not in p for p in seen[CHIEF])  # the Chief authors it
+    assert all(scheme not in p for p in seen[CHIEF])                # its own intent is never fed back
 
 
 # --- Step 6: the swap is client-only (mock path stays byte-deterministic) ------

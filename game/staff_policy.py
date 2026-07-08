@@ -36,6 +36,7 @@ from . import supply
 from .adjudication import validate_batch
 from .events import EventKind, Side
 from .llm_policy import (
+    _INTENT_FIELDS,
     _clean_intent,
     _extract_json,
     build_combat_prompt,
@@ -134,6 +135,31 @@ def persona_preamble(seat: str) -> str:
     return f"You are {card.name}. Doctrine: {card.doctrine}. Bias: {card.bias}.\n" if card else ""
 
 
+# The Chief's schwerpunkt order carried down to the two GOCs so they PRESS the objective
+# instead of parking on its perimeter -- the load-bearing storm directive. Static prose,
+# never a rulebook magnitude; it names no seat's persona so it can never cross-contaminate.
+STORM_DIRECTIVE = (
+    "STORM DIRECTIVE: every operations stage, every unit adjacent to the objective presses "
+    "a combined-arms close-assault ON it -- commit EVERY attacker listed for the objective "
+    "as one merged assault and never omit it. The garrison capitulates only when a dry-ammo "
+    "or cohesion-broken stack is assaulted (15.15/15.88), so keep the assaults sustained.")
+
+
+def intent_preamble(intent: dict) -> str:
+    """The Chief's whitelisted intent as an 'ORDERS FROM THE CHIEF OF STAFF' block, prepended
+    to every SUBORDINATE seat's prompt so the two GOCs plan TO the scheme instead of
+    independently off the shared board (the top-down fix to the cosmetic hierarchy). Only the
+    whitelisted _INTENT_FIELDS + the standing air/sea priorities cross the seat boundary --
+    never free prose -- exactly the control-plane rule the persona cards already obey. Rendered
+    in fixed _INTENT_FIELDS order for byte-determinism; '' when no intent is framed yet."""
+    if not intent:
+        return ""
+    body = "; ".join(f"{k}: {intent[k]}" for k in _INTENT_FIELDS if intent.get(k))
+    return ("ORDERS FROM THE CHIEF OF STAFF -- plan to this intent: " + body
+            + f". Air priority: {AIR_PRIORITY}. Sea priority: {SEA_PRIORITY}.\n"
+            + STORM_DIRECTIVE + "\n")
+
+
 @dataclass(frozen=True, slots=True)
 class SideTurnPlan:
     """The resolved movement-turn slices, deliberated once and dispensed by phase."""
@@ -189,6 +215,7 @@ class StaffPolicy(ScriptedPolicy):
         self._combat_orders: list[AttackOrder] = []
         self._pending: list[tuple[EventKind, dict]] = []   # staff artifacts awaiting drain
         self._lane_rationale: dict[Lane, str] = {}         # captured GOC rationale (for dissent)
+        self._intent: dict = {}                            # the Chief's live intent (subordinate preamble)
 
     # --- LLM seam ---------------------------------------------------------------
     def _client_for(self, seat: str):
@@ -196,9 +223,13 @@ class StaffPolicy(ScriptedPolicy):
         return self._seat_clients.get(seat, self.client)
 
     def _ask(self, seat: str, prompt: str) -> str:
-        """One seat's call: its static persona card is prepended to the prompt (so it
-        argues in character) and routed to that seat's client."""
-        return self._client_for(seat).complete(persona_preamble(seat) + prompt)
+        """One seat's call: its static persona card is prepended (so it argues in character),
+        and for a SUBORDINATE seat the Chief's intent block rides after it (so the GOCs plan
+        to the scheme). The Chief authors the intent, so its own call carries no intent block."""
+        pre = persona_preamble(seat)
+        if seat != CHIEF:
+            pre += intent_preamble(self._intent)
+        return self._client_for(seat).complete(pre + prompt)
 
     def _map_lanes(self, fn, lanes):
         """Run each lane's specialist call, re-collected keyed by lane so the caller
@@ -232,6 +263,7 @@ class StaffPolicy(ScriptedPolicy):
         self._combat_orders = []
         self._pending = []
         self._lane_rationale = {}
+        self._intent = {}
 
     # --- the drain hook (symmetric with debrief / declare_ab) --------------------
     def drain_staff(self) -> list[tuple[EventKind, dict]]:
@@ -364,6 +396,7 @@ class StaffPolicy(ScriptedPolicy):
     def _chief_intent(self, obs: dict) -> dict:
         raw = _extract_json(self._ask(CHIEF, build_intent_prompt(obs))).get("intent")
         intent = _clean_intent(raw) if isinstance(raw, dict) else {}
+        self._intent = intent          # carried down to the two GOCs as the intent preamble
         # The Chief hands the two resource seats their standing scarcity steer (the
         # FUEL_PRIORITY analog): which arena gets the sorties, which lane the tonnage.
         self._stage(EventKind.STAFF_INTENT, {
