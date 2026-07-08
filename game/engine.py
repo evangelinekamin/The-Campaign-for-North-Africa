@@ -1317,6 +1317,9 @@ def _truck_load(r: _Run, side: Side, actor: str, order, truck) -> bool:
         _reject_truck(r, side, actor, order, "no co-located friendly dump to load from")
         return False
     cargo = {c: q for c, q in order.load.items() if q > 0}
+    if not set(cargo).issubset(supply.COMMODITIES):     # a live seat may name a bogus commodity
+        _reject_truck(r, side, actor, order, "load names an unknown commodity")
+        return False
     if any(getattr(dump, c.lower()) < q for c, q in cargo.items()):
         _reject_truck(r, side, actor, order, "dump lacks the ordered load")
         return False

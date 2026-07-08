@@ -243,6 +243,13 @@ def test_reject_load_dump_short():
     assert "lacks" in r
 
 
+def test_reject_load_unknown_commodity():
+    # A live QM/Convoy seat naming a bogus commodity must be rejected, not crash the run
+    # on getattr(dump, <bad>.lower()) (findings #9a).
+    r = _first_rejection([TruckOrder("T", load_from="REAR", load={"PETROL": 5})])
+    assert "unknown commodity" in r
+
+
 def test_reject_unknown_truck():
     assert "no such truck" in _first_rejection([TruckOrder("GHOST", to=(1, 0))])
 
