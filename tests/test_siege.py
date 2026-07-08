@@ -191,3 +191,48 @@ def test_siege_of_tobruk_deterministic_across_seeds():
         a = run(siege_of_tobruk(seed=seed), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         assert a.winner in (Side.AXIS, Side.ALLIED)
         assert fold(a.initial, a.events) == a.final
+
+
+# --- the parameterized air choke (Step 2 checkpoint) -------------------------
+
+def test_siege_defaults_are_air_less_and_byte_identical():
+    # the DEFAULT siege carries the ferry interdiction but NO air -- byte-identical to pre-choke.
+    s = siege_of_tobruk(seed=1941)
+    assert s.air == () and s.air_missions == ()
+    assert all(o.lane == "SEA-TOBRUK" and o.bomb_points == 200 for o in s.interdictions)
+
+
+def test_port_bomb_fields_the_luftwaffe_and_a_full_harbour_schedule():
+    s = siege_of_tobruk(seed=1941, port_bomb=True)
+    lw = [w for w in s.air if w.side == Side.AXIS and w.arena == "LAND"]
+    assert len(lw) == 1 and lw[0].strike > 0                      # a strike wing to batter it
+    assert not any(w.side == Side.ALLIED for w in s.air)          # no RAF unless asked
+    assert {m.kind for m in s.air_missions} == {"port"}
+    assert all(m.target == "PORT-Tobruk" for m in s.air_missions)
+    assert len(s.air_missions) == s.max_turns                     # one per game-turn
+    # raf adds a genuine contesting fighter wing for the LAND-sky superiority roll.
+    sr = siege_of_tobruk(seed=1941, port_bomb=True, raf=True)
+    daf = [w for w in sr.air if w.side == Side.ALLIED and w.arena == "LAND"]
+    assert len(daf) == 1 and daf[0].fighters > 0
+
+
+def test_port_bomb_ratchets_tobruk_to_zero_and_never_regenerates():
+    # THE checkpoint: the harbour choke fires under the scripted policies -- PORT-Tobruk's
+    # Efficiency ratchets 7->0 monotonically (HARBOUR_BLOCKED, so no 55.18 regen ever lifts it),
+    # collapsing the per-OpStage landing cap that is the garrison's lifeline. Capture stays latent
+    # (no storm yet, Step 5) -- this proves only that the lifeline itself collapses.
+    from game.supply import port_landing_cap
+    s = siege_of_tobruk(seed=1941, port_bomb=True, raf=True)
+    assert s.port("PORT-Tobruk").eff == 7
+    a = run(s, ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    levels = [e.payload["level"] for e in a.events
+              if e.kind == EventKind.PORT_EFFICIENCY_CHANGED and e.payload["port_id"] == "PORT-Tobruk"]
+    assert levels and levels == sorted(levels, reverse=True)      # monotone non-increasing: no regen
+    assert levels[-1] == 0 and a.final.port("PORT-Tobruk").eff == 0
+    # a closed harbour lands nothing: the ~425-Ammo/OpStage cap collapses to 0.
+    assert port_landing_cap(a.final.port("PORT-Tobruk"), "AMMO") == 0
+    # deterministic + replay-exact
+    b = run(siege_of_tobruk(seed=1941, port_bomb=True, raf=True),
+            ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    assert determinism_signature(a.events) == determinism_signature(b.events)
+    assert fold(a.initial, a.events) == a.final

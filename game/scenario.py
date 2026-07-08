@@ -21,8 +21,8 @@ from . import cna_map, coords, logistics_data, oob
 from .events import Phase, Side
 from .hexmap import distance, neighbors
 from .movement import TerrainMap, edge
-from .state import (Convoy, GameState, InterdictionOrder, Port, StepRecord,
-                    SupplyUnit, TruckFormation, Unit, VP)
+from .state import (AirMission, AirWing, Convoy, GameState, InterdictionOrder,
+                    Port, StepRecord, SupplyUnit, TruckFormation, Unit, VP)
 from .supply import COMMODITIES, _UNLIMITED, tons_to_points
 from .terrain import Hexside, Mobility, Terrain
 
@@ -472,7 +472,21 @@ def _rommel_trucks(supplies, target) -> tuple[TruckFormation, ...]:
     )
 
 
-def _tobruk_ferry_interdiction(max_turns: int) -> tuple[InterdictionOrder, ...]:
+# FLAGGED representative Air-Point weights + bombing cadence for the Tobruk air choke -- NOT
+# rulebook magnitudes (the 34.6/59.3 Initial Air Strengths chart is untranscribed, like the
+# truck-pool sizes and initiative_ratings). Tuned against measured crack rates in later steps,
+# never here: the port cutoff is otherwise near-inevitable, so the tuning direction is to SLOW
+# the siege (later start-turn, sparser cadence, a stronger contesting RAF) into a race against
+# the 12-turn clock.
+_TOBRUK_LW_FIGHTERS = 8              # F: the Axis LAND fighter pool contesting the sky
+_TOBRUK_LW_STRIKE = 6               # S: the Axis LAND strike points that batter the harbour
+_TOBRUK_DAF_FIGHTERS = 3           # G: the Commonwealth LAND fighter pool (only when raf=True)
+_TOBRUK_PORTBOMB_START = 1         # first game-turn the harbour is bombed
+_TOBRUK_PORTBOMB_CADENCE = 1       # bomb every N-th turn from the start
+
+
+def _tobruk_ferry_interdiction(max_turns: int, bomb_points: int = 200
+                               ) -> tuple[InterdictionOrder, ...]:
     """The static Axis air-interdiction schedule against the Tobruk sea ferry (rules 41.6 /
     32.7 -- Axis bombing of the Commonwealth Mediterranean run; the historical Luftwaffe
     pressure on the Tobruk Ferry Service). One order per game-turn on lane SEA-TOBRUK, so
@@ -480,10 +494,38 @@ def _tobruk_ferry_interdiction(max_turns: int) -> tuple[InterdictionOrder, ...]:
     weight (the untranscribed per-strike Bomb-Point order-of-battle, like the truck-pool
     sizes) -- 200 lands on the [41.5] 161..200 column (a 5-20% per-turn skim). Static and
     seeded so the crack is CONTINGENT, not inevitable (the live naval seat is Step 6)."""
-    return tuple(InterdictionOrder("SEA-TOBRUK", t, 200) for t in range(1, max_turns + 1))
+    return tuple(InterdictionOrder("SEA-TOBRUK", t, bomb_points) for t in range(1, max_turns + 1))
 
 
-def siege_of_tobruk(seed: int = 1941) -> GameState:
+def _axis_land_air(raf: bool) -> tuple[AirWing, ...]:
+    """The LAND-arena air force for the siege: the Axis Luftwaffe wing that flies the harbour
+    bombing (fighters contest the sky, strike batters PORT-Tobruk), plus -- only when `raf` --
+    a Commonwealth Desert Air Force fighter wing so _air_superiority rolls a GENUINE per-OpStage
+    contest for the LAND sky (a contested/lost sky scales the strike below the gate, delaying the
+    port-bomb, never preventing it -- the harbour is monotone-blocked). Air-Point weights are
+    FLAGGED proxies. recon=0: this air exists to choke the lifeline, not to lift fog."""
+    wings = [AirWing("LW-land", Side.AXIS, "LAND",
+                     fighters=_TOBRUK_LW_FIGHTERS, strike=_TOBRUK_LW_STRIKE, recon=0)]
+    if raf:
+        wings.append(AirWing("DAF-land", Side.ALLIED, "LAND",
+                             fighters=_TOBRUK_DAF_FIGHTERS, strike=0, recon=0))
+    return tuple(wings)
+
+
+def _tobruk_port_bomb(max_turns: int, start: int = _TOBRUK_PORTBOMB_START,
+                      cadence: int = _TOBRUK_PORTBOMB_CADENCE) -> tuple[AirMission, ...]:
+    """The static Axis harbour-bombing schedule against PORT-Tobruk (rule 41.39B): one 'port'
+    LAND air mission per scheduled game-turn, each knocking the harbour's Efficiency Level down
+    one (engine._air_port) -- and because PORT-Tobruk is HARBOUR_BLOCKED (San Giorgio), it never
+    regenerates, so the schedule ratchets eff 7->0 and collapses the ~425-Ammo/OpStage landing
+    cap that is the garrison's lifeline. `start`/`cadence` are FLAGGED tuning proxies for the
+    siege TEMPO (how fast the throat closes against the 12-turn clock)."""
+    return tuple(AirMission(Side.AXIS, "port", "PORT-Tobruk", t)
+                 for t in range(start, max_turns + 1, cadence))
+
+
+def siege_of_tobruk(seed: int = 1941, *, port_bomb: bool = False, raf: bool = False,
+                    ferry_bomb: int = 200) -> GameState:
     """The Siege of Tobruk (rule 25.14 / 25.16): Rommel's Arrival with the siege-
     artillery rule LIVE and a sustained Axis air-interdiction of the Tobruk ferry. It is
     the SAME battle -- identical OOB, placement, base supply, the 12-turn clock, the
@@ -506,7 +548,18 @@ def siege_of_tobruk(seed: int = 1941) -> GameState:
     The no-eviction rule (15.82), the clock, the garrison and the base level stay faithful
     and load-bearing. The crack rate is tuned -- deliberately NOT here -- with
     engine.BARRAGE_HITS_PER_FORT_LEVEL and the Axis ammo/dump schedule via the benchmark
-    harness (design target ~15-35% under strong play)."""
+    harness (design target ~15-35% under strong play).
+
+    The keyword knobs seed the SECOND throat of the lifeline -- the harbour, not just the
+    ferry -- so the crack the ferry-cut only made latent can actually fire. `port_bomb` fields
+    the Axis Luftwaffe LAND wing and a per-turn PORT-Tobruk bombing schedule (eff 7->0, no regen
+    under HARBOUR_BLOCKED); `raf` adds a contesting Commonwealth fighter wing so winning the LAND
+    sky is a genuine contest (the air-superiority gate on _air_port); `ferry_bomb` sets the SEA
+    ferry CRT weight. DEFAULTS are air-less (air=()/air_missions=(), ferry at 200), so the
+    default siege stays byte-identical to the pre-choke scenario -- the knobs are FLAGGED tuning
+    proxies, not rulebook magnitudes."""
     base = rommels_arrival(seed=seed)
-    return replace(base, siege_rules=True,
-                   interdictions=_tobruk_ferry_interdiction(base.max_turns))
+    air = _axis_land_air(raf) if port_bomb else ()
+    air_missions = _tobruk_port_bomb(base.max_turns) if port_bomb else ()
+    return replace(base, siege_rules=True, air=air, air_missions=air_missions,
+                   interdictions=_tobruk_ferry_interdiction(base.max_turns, ferry_bomb))
