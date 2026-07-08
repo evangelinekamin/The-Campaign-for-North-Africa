@@ -92,24 +92,37 @@ def test_stakes_are_named_before_the_outcomes():
 
 
 def test_starvation_line_links_a_panzer_draw_to_a_stalled_formation():
-    """The fuel-starvation chain: each starvation line is anchored to a no-fuel move
-    reject and references a FUEL SUPPLY_CONSUMED by a mobile formation earlier in the
-    same Operations Stage -- the panzer draw that emptied the shared dump."""
-    result = _mock_game()
-    by_seq = {e.seq: e for e in result.events}
-    by_id = {u.id: u for u in result.initial.units}
+    """The fuel-starvation chain: a mobile-formation FUEL draw empties the shared dump,
+    then a trailing formation's move is ORDER_REJECTED for want of fuel in the SAME
+    Operations Stage -- the starvation line anchors to the reject and references the
+    panzer draw. Driven off a synthetic log (like its dissent siblings) so it pins the
+    narrator's LINKING LOGIC rather than the mock game's shifting fuel choreography."""
+    from game.staff import MOBILE_FORMATIONS
+    initial = rommels_arrival(seed=4200)
+    by_id = {u.id: u for u in initial.units}
+    panzer_id, trailing_id = "GE-5-Le", "GE-2---300-OAS"
+    assert by_id[panzer_id].formation in MOBILE_FORMATIONS
+    events = [
+        _ev(0, 1, Side.SYSTEM, EventKind.GAME_INITIALIZED, {"seed": 4200}),
+        _ev(1, 2, Side.AXIS, EventKind.SUPPLY_CONSUMED,
+            {"supply_id": "d1", "commodity": FUEL, "qty": 5, "unit_id": panzer_id}, stage=3),
+        _ev(2, 2, Side.AXIS, EventKind.ORDER_REJECTED,
+            {"order": "move", "unit_id": trailing_id, "to": [1, 1],
+             "reason": "out of supply: no fuel for this move"}, stage=3),
+        _ev(3, 2, Side.SYSTEM, EventKind.VICTORY_CHECKED, {"axis": 30, "allied": 70, "axis_reach": 20}),
+    ]
+    result = SimpleNamespace(initial=initial, events=events, final=initial, winner=Side.ALLIED)
+    by_seq = {e.seq: e for e in events}
     starv = [ln for ln in narrator.diary(result) if ln.beat == "starvation"]
-    assert starv, "the mock campaign starves trailing formations of fuel"
-    for ln in starv:
-        anchor = by_seq[ln.seq]
-        assert anchor.kind == EventKind.ORDER_REJECTED
-        assert "fuel" in anchor.payload["reason"].lower()
-        (draw_seq,) = ln.refs
-        draw = by_seq[draw_seq]
-        assert draw.kind == EventKind.SUPPLY_CONSUMED and draw.payload["commodity"] == FUEL
-        assert draw.seq < anchor.seq
-        from game.staff import MOBILE_FORMATIONS
-        assert by_id[draw.payload["unit_id"]].formation in MOBILE_FORMATIONS
+    assert starv, "a same-stage panzer draw + trailing no-fuel reject must yield a starvation line"
+    ln = starv[0]
+    anchor = by_seq[ln.seq]
+    assert anchor.kind == EventKind.ORDER_REJECTED and "fuel" in anchor.payload["reason"].lower()
+    (draw_seq,) = ln.refs
+    draw = by_seq[draw_seq]
+    assert draw.kind == EventKind.SUPPLY_CONSUMED and draw.payload["commodity"] == FUEL
+    assert draw.seq < anchor.seq
+    assert by_id[draw.payload["unit_id"]].formation in MOBILE_FORMATIONS
 
 
 def _ev(seq, turn, side, kind, payload, stage=1):

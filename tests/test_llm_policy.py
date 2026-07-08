@@ -181,3 +181,74 @@ def test_reserve_zero_unit_is_unchanged():
     dak = next(u for u in obs["your_units"] if u["id"] == "DAK-5le")
     assert "reserve" not in dak
     assert "supplied" in dak
+
+
+# --- explicit cannot_move (Part C) -------------------------------------------
+
+def _movement_state(units, *, supplies=(), terrain=None, target=(3, 0)):
+    from game.events import Phase
+    from game.movement import TerrainMap
+    from game.state import GameState, VP
+    from game.terrain import Terrain
+    terr = terrain or {(q, 0): Terrain.CLEAR for q in range(4)}
+    return GameState(turn=1, max_turns=4, phase=Phase.MOVEMENT, active_side=Side.AXIS,
+                     seed=1, weather="clear", vp=VP(), terrain=TerrainMap(terrain=terr),
+                     control={}, units=tuple(units), target_hex=target, supplies=tuple(supplies),
+                     consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 0, "FUEL": 0})
+
+
+def _inf(uid, side, hex_):
+    from game.state import StepRecord, Unit
+    from game.terrain import Mobility
+    return Unit(uid, side, hex_, (StepRecord("in", 4),), Mobility.FOOT,
+                cpa=10, stacking_points=1, oca=3, dca=3)
+
+
+def _mot(uid, side, hex_):
+    from game.state import StepRecord, Unit
+    from game.terrain import Mobility
+    return Unit(uid, side, hex_, (StepRecord("mot", 4),), Mobility.MOTORIZED,
+                cpa=10, stacking_points=1, oca=3, dca=3)
+
+
+def test_unsupplied_combat_unit_declares_out_of_fuel():
+    # a fuel-burning (motorized) unit with no dump anywhere cannot draw this move's fuel
+    # (49.13), so it is handed an explicit empty can_move_to plus cannot_move.
+    s = _movement_state([_mot("A1", Side.AXIS, (0, 0))])
+    obs = observe(s, Side.AXIS)
+    u = next(x for x in obs["your_units"] if x["id"] == "A1")
+    assert u["supplied"] is False
+    assert u["can_move_to"] == []
+    assert u["cannot_move"] == "out of fuel"
+
+
+def test_foot_infantry_burns_no_fuel_and_is_supplied():
+    # regression guard: infantry (fuel_cost 0) must NOT be mislabelled out of fuel just
+    # because plan_draw returns an empty (zero-cost) draw -- it is trivially supplied.
+    s = _movement_state([_inf("A1", Side.AXIS, (0, 0))])
+    u = next(x for x in observe(s, Side.AXIS)["your_units"] if x["id"] == "A1")
+    assert u["supplied"] is True
+    assert "cannot_move" not in u and u["can_move_to"]      # it can advance on foot
+
+
+def test_supplied_but_boxed_in_unit_declares_no_legal_destination():
+    from game.state import SupplyUnit
+    from game.terrain import Terrain
+    # A1 at (0,0) is co-located with a dump (supplied) but both its in-bounds neighbours
+    # are enemy-occupied, so its reach is empty -- an explicit cannot_move, not a silent gap.
+    terr = {(0, 0): Terrain.CLEAR, (1, 0): Terrain.CLEAR, (0, 1): Terrain.CLEAR}
+    units = [_mot("A1", Side.AXIS, (0, 0)),
+             _inf("E1", Side.ALLIED, (1, 0)), _inf("E2", Side.ALLIED, (0, 1))]
+    dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=50, fuel=50)
+    s = _movement_state(units, supplies=[dump], terrain=terr, target=(0, 3))
+    obs = observe(s, Side.AXIS)
+    u = next(x for x in obs["your_units"] if x["id"] == "A1")
+    assert u["supplied"] is True
+    assert u["can_move_to"] == []
+    assert u["cannot_move"] == "no legal destination"
+
+
+def test_movement_prompt_forbids_inventing_hexes_and_skips_cannot_move():
+    p = build_movement_prompt(observe(coastal_corridor(), Side.AXIS))
+    assert "NEVER invent a hex" in p
+    assert "cannot_move" in p and "SKIP" in p

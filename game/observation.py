@@ -96,8 +96,10 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
             # engine's charge, else the agent sees "supplied" where the engine now rejects.
             need = supply.fuel_cost(u, 1)
             draws = supply.plan_draw(state, u, supply.FUEL, need)
-            if draws:
-                fuel_ok.add(u.id)
+            if draws is None:
+                continue                     # genuinely cannot draw the fuel -> not supplied
+            fuel_ok.add(u.id)                 # need==0 (foot infantry: no fuel burned) is supplied too
+            if draws:                         # actually drew from a dump -> track its contention
                 did = draws[0][0]
                 demand[did] = demand.get(did, 0) + need
                 dump_of[u.id] = did
@@ -152,17 +154,24 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
                 v["can_move_to"] = [_entry(h, False) for h in dests]
             else:
                 # A unit that cannot draw this move's fuel is out of supply -- it cannot move
-                # (49.13/49.16 charge every move, not just the first), so offer no destinations
-                # (32.23). Reflecting this keeps the agent from wasting orders on stranded units.
+                # (49.13/49.16 charge every move, not just the first). An unsupplied unit, or a
+                # supplied one boxed in with nowhere legal to go, gets an EXPLICIT empty
+                # can_move_to + a cannot_move reason (rather than silently omitting the key), so
+                # the agent skips it instead of inventing a destination for a stranded unit.
                 supplied = u.id in fuel_ok
                 v["supplied"] = supplied
                 if u.id in contended:
                     v["supply_contended"] = True     # dump oversubscribed; may not get fuel
-                if supplied:
+                if not supplied:
+                    v["can_move_to"] = []
+                    v["cannot_move"] = "out of fuel"
+                else:
                     reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occ, roster)
                     dests = sorted((h for h in reach if h != u.hex), key=lambda h: distance(h, target))
                     support = u.barrage > 0 or u.anti_armor > 0
                     v["can_move_to"] = [_entry(h, support) for h in dests[:REACH_LIMIT]]
+                    if not dests:
+                        v["cannot_move"] = "no legal destination"
         return v
 
     # Limited intelligence: aggregate the enemy to per-hex stack sightings only.
