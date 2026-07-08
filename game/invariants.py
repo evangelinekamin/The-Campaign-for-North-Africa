@@ -7,7 +7,7 @@ now we guard step counts, legal positions, and stacking limits.
 """
 from __future__ import annotations
 
-from . import adjudication, stacking
+from . import adjudication, stacking, supply
 from .state import GameState
 
 
@@ -36,6 +36,23 @@ def check(state: GameState) -> None:
     for su in state.supplies:                      # dumps relocate now (rule 32.3)
         if not state.terrain.exists(su.hex):
             raise InvariantViolation(f"supply {su.id} on non-existent hex {su.hex}")
+
+    # Supply pools are physical quantities (rule 32): no dump or truck may hold a
+    # NEGATIVE amount of any commodity. Conservation alone is blind to an over-drain --
+    # `consumed` rises by exactly what a pool sinks below zero, so the on-hand + consumed
+    # identity still balances -- so guard the pools directly and fail loud.
+    for su in state.supplies:
+        for commodity in supply.COMMODITIES:
+            qty = getattr(su, commodity.lower())
+            if qty < 0:
+                raise InvariantViolation(
+                    f"supply {su.id} has negative {commodity} pool {qty}")
+    for t in state.trucks:
+        for commodity in supply.COMMODITIES:
+            qty = getattr(t, commodity.lower())
+            if qty < 0:
+                raise InvariantViolation(
+                    f"truck {t.id} has negative {commodity} cargo {qty}")
 
     # Stacking limits, checked at rest (rule 9.31): no hex over its point limit.
     # The detection lives in adjudication.stacking_violations (single source of
