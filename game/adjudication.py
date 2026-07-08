@@ -109,7 +109,10 @@ def _oversubscribed_dumps(state: GameState, orders: list) -> list[Conflict]:
         u = state.unit(o.unit_id)
         if u is None:                             # every move pays fuel (49.13/49.16)
             continue
-        plan = supply.plan_draw(state, u, supply.FUEL, supply.fuel_rate(u))
+        # Match the engine's charge (rate x ceil(cp/5) x strength, 49.13), not the bare
+        # per-strength-point rate -- observation.py:77 estimates the same strength-scaled
+        # floor, else this detector under-warns oversubscription by ~strength-fold.
+        plan = supply.plan_draw(state, u, supply.FUEL, supply.fuel_cost(u, 1))
         if not plan:
             continue
         for sid, qty in plan:

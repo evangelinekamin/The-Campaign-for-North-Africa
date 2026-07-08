@@ -82,12 +82,13 @@ def test_validate_batch_flags_combined_over_stack():
 # --- validate_batch: oversubscribed dump -------------------------------------
 
 def test_validate_batch_flags_oversubscribed_dump():
-    # Two motorized units (fuel_cost 1 each) both draw from a dump holding 1 fuel:
-    # combined draw 2 > pool 1.
-    dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=10, fuel=1)
+    # Two motorized units (strength 3 -> fuel_cost 3 each, the 49.13 x-strength charge)
+    # both draw from a dump holding 5 fuel: each 3 is individually satisfiable but the
+    # combined draw 6 > pool 5, which the strength-scaled detector must surface.
+    dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=10, fuel=5)
     units = [_unit("A", (0, 0)), _unit("B", (1, 0))]
     state = _state(units, [dump],
-                   initial_supply={"AMMO": 10, "FUEL": 1}, consumed={"AMMO": 0, "FUEL": 0})
+                   initial_supply={"AMMO": 10, "FUEL": 5}, consumed={"AMMO": 0, "FUEL": 0})
     orders = [MoveOrder("A", (2, 0)), MoveOrder("B", (3, 0))]
 
     conflicts = adjudication.validate_batch(state, orders)
@@ -97,7 +98,7 @@ def test_validate_batch_flags_oversubscribed_dump():
     c = sub[0]
     assert c.dump_id == "D"
     assert set(c.unit_ids) == {"A", "B"}
-    assert state.supply("D").fuel == 1            # real state never mutated
+    assert state.supply("D").fuel == 5            # real state never mutated
 
 
 # --- validate_batch: road-cap (approximate) ----------------------------------
