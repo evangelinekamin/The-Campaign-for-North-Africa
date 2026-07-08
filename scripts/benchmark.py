@@ -115,9 +115,19 @@ def game_metrics(result) -> dict:
     def count_axis(kind: EventKind) -> int:                     # LLM-side only (decision quality)
         return sum(1 for e in ev if e.kind == kind and e.side == Side.AXIS)
 
+    def count_actor(kind: EventKind, actor: str) -> int:
+        return sum(1 for e in ev if e.kind == kind and e.actor == actor)
+
+    # Reject discipline is scored against the LLM's OWN orders (the AXIS/Front seat)
+    # only -- the AXIS/Logistics rejects come from the SCRIPTED supply/truck reflexes
+    # the model never authored, so charging them to the model triples its apparent
+    # indiscipline. Split the two and drive _score off the Front number alone.
+    llm_rejects = count_actor(EventKind.ORDER_REJECTED, "AXIS/Front")
+    logistics_rejects = count_actor(EventKind.ORDER_REJECTED, "AXIS/Logistics")
+
     reject_reasons: dict = {}                                   # why the LLM's orders bounced
     for e in ev:
-        if e.kind == EventKind.ORDER_REJECTED and e.side == Side.AXIS:
+        if e.kind == EventKind.ORDER_REJECTED and e.actor == "AXIS/Front":
             key = e.payload.get("reason", "?")[:44]
             reject_reasons[key] = reject_reasons.get(key, 0) + 1
 
@@ -144,7 +154,9 @@ def game_metrics(result) -> dict:
         "anti_armor": count(EventKind.ANTI_ARMOR_RESOLVED),
         "close_assaults": count(EventKind.COMBAT_RESOLVED),
         "axis_assaults": count_axis(EventKind.COMBAT_RESOLVED),   # Axis-initiated only
-        "rejections": count_axis(EventKind.ORDER_REJECTED),
+        "rejections": llm_rejects,                                # scoring number = LLM (Front) only
+        "llm_rejects": llm_rejects,                               # the model's own bounced orders
+        "logistics_rejects": logistics_rejects,                  # scripted supply/truck reflexes (not the model)
         "reject_reasons": reject_reasons,
         "supply_rejects": supply_rejects,
         "turn_invested": turn_invested,
