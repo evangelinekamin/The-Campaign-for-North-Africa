@@ -263,6 +263,11 @@ class StaffPolicy(ScriptedPolicy):
 
     # --- deliberation ------------------------------------------------------------
     def _ensure_plan(self, state: GameState, side: Side) -> SideTurnPlan:
+        # ASSUMPTION: one movement deliberation per (turn, stage, side). The canonical
+        # sequence moves each side exactly once per Operations Stage, so this key is
+        # sufficient. If continual-movement pulses (rule 18) are ever enabled -- a side
+        # re-activating within a stage -- this would replay the FIRST pulse's stale slice;
+        # extend the key with a pulse/segment counter before turning those on.
         key = (state.turn, state.stage, side)
         if key != self._move_key or self._plan is None:
             self._move_key = key
