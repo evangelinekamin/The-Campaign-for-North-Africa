@@ -236,3 +236,57 @@ def test_port_bomb_ratchets_tobruk_to_zero_and_never_regenerates():
             ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
     assert determinism_signature(a.events) == determinism_signature(b.events)
     assert fold(a.initial, a.events) == a.final
+
+
+# --- the storming payoff: the floor cracks a choked garrison (Step 5) ---------
+
+def _dry_tobruk_storm(seed: int = 1941):
+    """battle_for_tobruk with the Tobruk garrison's ammo dried out (the port-bomb/ferry-cut
+    endgame the choke drives toward): the panzers stand on the perimeter, a surviving CW
+    mobile unit keeps the game alive, and the garrison is out of Close-Assault ammunition."""
+    from game.scenario import battle_for_tobruk, _initial_supply
+    base = battle_for_tobruk(seed=seed)
+    sup = tuple(replace(s, ammo=0) if s.id == "UK-Dump" else s for s in base.supplies)
+    return replace(base, supplies=sup, initial_supply=_initial_supply(sup),
+                   max_turns=4, siege_rules=True)
+
+
+def _timid_storm_client(prompt: str) -> str:
+    """A staff 'model' that manoeuvres (advances toward the objective) but NEVER proposes an
+    assault -- the measured mercury-2 failure mode the storming floor exists to backstop."""
+    import json
+    from scripts.benchmark import _mock_axis, _mock_staff
+    if "COMMANDER" in prompt and "INTENT" in prompt:
+        return _mock_staff(prompt)
+    if "MOVEMENT" in prompt:
+        return _mock_axis(prompt)                       # advance, incl. onto the vacated objective
+    return json.dumps({"reasoning": "hold", "attacks": []})   # never storms on its own
+
+
+def test_storm_floor_cracks_the_dry_garrison_but_a_timid_staff_never_does():
+    from game.llm import MockClient
+    from game.staff_policy import StaffPolicy
+    from game.state import Control
+    st = _dry_tobruk_storm()
+    target = st.target_hex
+
+    # A timid staff that never assaults manoeuvres to the wall and stalls: Tobruk holds.
+    timid = StaffPolicy(MockClient(_timid_storm_client), side=Side.AXIS, storm_floor=False)
+    held = run(st, axis=timid, allied=ScriptedPolicy(attacker=Side.AXIS))
+    assert held.winner == Side.ALLIED
+    assert held.final.control_of(target) != Control.AXIS
+
+    # WITH the storming floor the same timid staff drives sustained assaults: the dry garrison
+    # hits the 15.15 capitulation, a panzer occupies Tobruk, control flips -> Axis victory.
+    floored = StaffPolicy(MockClient(_timid_storm_client), side=Side.AXIS, storm_floor=True)
+    cracked = run(st, axis=floored, allied=ScriptedPolicy(attacker=Side.AXIS))
+    assert cracked.winner == Side.AXIS
+    assert cracked.final.control_of(target) == Control.AXIS
+    surrender = [e for e in cracked.events
+                 if e.kind == EventKind.COMBAT_RESOLVED and e.payload.get("surrender") == "defender"]
+    assert surrender, "the garrison must fall by the 15.15/15.88 assault surrender, not attrition"
+    # deterministic + replay-exact
+    again = run(st, axis=StaffPolicy(MockClient(_timid_storm_client), side=Side.AXIS, storm_floor=True),
+                allied=ScriptedPolicy(attacker=Side.AXIS))
+    assert determinism_signature(cracked.events) == determinism_signature(again.events)
+    assert fold(cracked.initial, cracked.events) == cracked.final

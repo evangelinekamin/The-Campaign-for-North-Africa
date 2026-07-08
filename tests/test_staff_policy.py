@@ -168,3 +168,28 @@ def test_react_to_slides_an_eligible_motorized_unit_aside():
     reacted = [e for e in r.events if e.kind == EventKind.REACTION_MOVED]
     assert reacted and reacted[0].payload["unit_id"] == "Pz-react"
     assert r.state.unit("Pz-react").hex != (3, 0)        # it slid aside
+
+
+# --- Step 5: the flagged storming floor batches the objective ------------------
+
+def test_storm_floor_batches_the_objective_when_a_timid_model_omits_it():
+    # a panzer adjacent to a garrison it can assault, but a mock that returns NO attacks.
+    panzer = _mobile("Pz-storm", (1, 0))
+    garrison = Unit("UK", Side.ALLIED, (0, 0), (StepRecord("in", 4),), Mobility.FOOT,
+                    cpa=10, stacking_points=2, oca=5, dca=8)
+    dumps = [SupplyUnit("AX", Side.AXIS, (1, 0), ammo=40, fuel=60),
+             SupplyUnit("UK-D", Side.ALLIED, (0, 0), ammo=40, fuel=60)]
+    st = _lever_state([panzer, garrison], supplies=dumps, phase=Phase.COMBAT)
+
+    def timid(prompt: str) -> str:
+        if "COMMANDER" in prompt and "INTENT" in prompt:
+            return _mock_staff(prompt)
+        return '{"attacks":[]}'                          # never proposes an assault
+
+    # WITHOUT the floor: the timid model storms nothing.
+    bare = StaffPolicy(MockClient(timid), side=Side.AXIS, storm_floor=False)
+    assert bare.combat(st, Side.AXIS) == []
+    # WITH the floor: the objective is batched as an AttackOrder anyway.
+    floored = StaffPolicy(MockClient(timid), side=Side.AXIS, storm_floor=True)
+    orders = floored.combat(st, Side.AXIS)
+    assert any(a.target == (0, 0) and "Pz-storm" in a.attacker_ids for a in orders)

@@ -204,12 +204,14 @@ class StaffPolicy(ScriptedPolicy):
     reflexes over the seeded schedules, like the QM -- they spend no token."""
 
     def __init__(self, client, side: Side = Side.AXIS, *,
-                 seat_clients: "dict[str, object] | None" = None, max_workers: int = 1):
+                 seat_clients: "dict[str, object] | None" = None, max_workers: int = 1,
+                 storm_floor: bool = False):
         super().__init__(attacker=side)
         self.side = side
         self.client = client                               # shared fallback (mock path)
         self._seat_clients = dict(seat_clients or {})      # per-seat live clients (live path)
         self._workers = max_workers                        # >1 parallelises the specialist calls
+        self._storm_floor = storm_floor                    # flagged ScriptedPolicy storm backfill (Step 5)
         self._move_key = None
         self._plan: SideTurnPlan | None = None
         self._combat_key = None
@@ -688,4 +690,28 @@ class StaffPolicy(ScriptedPolicy):
             if payload is not None:
                 self._stage(EventKind.STAFF_PROPOSAL, payload)
                 attacks += lane_attacks
-        return merge_attacks(attacks)
+        return self._storm_backfill(state, side, obs, merge_attacks(attacks))
+
+    def _storm_backfill(self, state: GameState, side: Side, obs: dict,
+                        merged: list[AttackOrder]) -> list[AttackOrder]:
+        """The flagged STORMING FLOOR (Step 5): when the objective is assaultable this stage
+        (a friendly unit adjacent, drawing ammo) but the model omitted it, batch every adjacent
+        ammo-capable unit onto the objective as one merged assault -- the Chief's storm directive
+        made structural, so a timid model never lets the choked garrison off the hook. Still an
+        AttackOrder on the whitelisted plane (ScriptedPolicy's attacker batching). Inert unless
+        storm_floor is set, so every other staff game stays byte-identical."""
+        if not self._storm_floor:
+            return merged
+        target = state.target_hex
+        options = {tuple(o["target"]) for o in obs.get("attack_options", [])}
+        if target not in options or any(a.target == target for a in merged):
+            return merged                                    # not assaultable, or model already storms
+        floor = [a for a in ScriptedPolicy.combat(self, state, side) if a.target == target]
+        if not floor:
+            return merged
+        self._stage(EventKind.STAFF_PROPOSAL, {
+            "seat": CHIEF, "formation": "DAK",
+            "proposes": [{"order": "attack", "units": list(floor[0].attacker_ids),
+                          "to": list(target)}],
+            "rationale": "Chief's storm directive batches the objective (15.15 dry-stack assault)"})
+        return merge_attacks(merged + floor)
