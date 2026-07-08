@@ -1,0 +1,131 @@
+"""The model-leaderboard harness (scripts.leaderboard): composes benchmark's degree-of-
+success metric with measure_siege's crack-generalship telemetry into a per-model scorecard.
+
+Every test here is ZERO-token: the scorecard is computed on the MockClient(_mock_staff)
+path (the same deterministic stub the staff machine is proven on), so no API is ever
+touched. The scorecard's shape, its crack-generalship signal, price lookup, and byte-for-
+byte determinism are all exercised offline.
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from scripts import leaderboard as lb                                # noqa: E402
+from scripts.benchmark import PRICES                                 # noqa: E402
+
+
+def _card(seeds: int = 2, model: str = "mock/test", floor: bool = True) -> dict:
+    """A scorecard computed on the free MockClient path (zero tokens)."""
+    return lb.run_model(model, seeds, mock=True, live=False, floor=floor, cache={})
+
+
+# --- the scorecard computes on a mock game (zero tokens) ----------------------
+
+def test_scorecard_has_the_three_blocks_and_computes_on_a_mock_game():
+    card = _card()
+    assert set(card) >= {"model", "seeds", "floor", "campaign", "siege", "cost"}
+    assert card["model"] == "mock/test" and card["seeds"] == 2
+
+    # DEGREE-OF-SUCCESS on rommels_arrival (reused from benchmark._aggregate).
+    cam = card["campaign"]
+    for k in ("mean_score", "mean_advance_pct", "mean_turn_invested", "mean_kill_ratio",
+              "reject_rate_pct", "mean_combat", "score_spread"):
+        assert k in cam, f"campaign block missing {k}"
+    assert 0 <= cam["mean_advance_pct"] <= 100
+    # cost is reported ONCE, at the top level -- never duplicated inside the campaign block.
+    assert "est_cost_usd" not in cam and "prompt_tokens" not in cam
+
+
+def test_siege_block_carries_the_crack_generalship_signal():
+    siege = _card()["siege"]
+    for k in ("crack_rate_pct", "cracks", "starved_seeds", "starved_fraction",
+              "ammo_min_reached", "mean_ammo_min", "surrender_paths", "seed_detail"):
+        assert k in siege, f"siege block missing {k}"
+    assert siege["seeds"] == 2 and len(siege["seed_detail"]) == 2
+    # every per-seed row exposes the good-vs-timid telemetry: the ammo the storm drove the
+    # garrison to, and whether that counts as genuine starvation.
+    for row in siege["seed_detail"]:
+        assert {"crack", "al_tobruk_ammo_peak", "al_tobruk_ammo_min", "starved",
+                "surrender_path"} <= set(row)
+    assert 0.0 <= siege["starved_fraction"] <= 1.0
+    assert 0.0 <= siege["crack_rate_pct"] <= 100.0
+
+
+def test_cost_is_tokens_and_dollars_and_zero_on_the_mock_path():
+    cost = _card()["cost"]
+    for k in ("calls", "prompt_tokens", "completion_tokens", "est_cost_usd",
+              "cost_per_game_usd", "cache_hits", "cache_misses", "price_source"):
+        assert k in cost
+    # the free mock path spends nothing; an unpriced slug stays offline (no /models fetch).
+    assert cost["prompt_tokens"] == 0 and cost["completion_tokens"] == 0
+    assert cost["est_cost_usd"] == 0.0 and cost["cost_per_game_usd"] == 0.0
+    assert cost["price_source"] == "unpriced"
+
+
+# --- determinism: the mock scorecard is byte-identical run to run -------------
+
+def test_mock_scorecard_is_deterministic():
+    import json
+    a = json.dumps(_card(), sort_keys=True)
+    b = json.dumps(_card(), sort_keys=True)
+    assert a == b
+
+
+# --- the STARVED classifier (good general vs timid) ---------------------------
+
+def test_starved_classifier_keys_on_the_floor():
+    # a garrison driven below STARVE_FLOOR is genuinely starved (the good general); one left
+    # on a high plateau (the mercury-2 timid failure, ~2200 RISING) is NOT.
+    assert lb._starved({"al_tobruk_ammo_min": 0})
+    assert lb._starved({"al_tobruk_ammo_min": lb.STARVE_FLOOR})
+    assert not lb._starved({"al_tobruk_ammo_min": lb.STARVE_FLOOR + 1})
+    assert not lb._starved({"al_tobruk_ammo_min": 2200})     # timid plateau
+    assert not lb._starved({"al_tobruk_ammo_min": None})     # garrison gone / no reading
+
+
+def test_siege_summary_counts_cracks_and_starvation():
+    tels = [
+        {"crack": True, "winner": "AXIS", "port_eff_zero_turn": 6, "axis_assaults": 9,
+         "al_tobruk_ammo": 0, "al_tobruk_ammo_peak": 2300, "al_tobruk_ammo_min": 0,
+         "surrender_path": "15.15"},
+        {"crack": False, "winner": "ALLIED", "port_eff_zero_turn": 7, "axis_assaults": 3,
+         "al_tobruk_ammo": 2200, "al_tobruk_ammo_peak": 2200, "al_tobruk_ammo_min": 1600,
+         "surrender_path": None},
+    ]
+    s = lb._siege_summary(tels)
+    assert s["cracks"] == 1 and s["crack_rate_pct"] == 50.0
+    assert s["starved_seeds"] == 1 and s["starved_fraction"] == 0.5
+    assert s["ammo_min_reached"] == 0                    # the deepest drive toward 0
+    assert s["surrender_paths"] == {"15.15": 1}
+
+
+# --- price lookup: PRICES first, then the OpenRouter catalogue -----------------
+
+def test_price_for_known_slug_uses_prices_offline():
+    slug = next(iter(PRICES))
+    called = {"n": 0}
+
+    def fake_fetch(_model):
+        called["n"] += 1
+        return (9.9, 9.9)
+
+    price, source = lb._price_for(slug, fetch=fake_fetch)
+    assert price == PRICES[slug] and source == "PRICES"
+    assert called["n"] == 0                              # a curated slug never hits the network
+
+
+def test_price_for_unknown_slug_falls_back_to_the_catalogue():
+    price, source = lb._price_for("no-such/model-xyz", fetch=lambda m: (1.5, 6.0))
+    assert price == (1.5, 6.0) and source == "openrouter"
+
+
+def test_cost_block_prices_tokens_from_the_curated_table():
+    slug = "anthropic/claude-haiku-4.5"                  # (1.00, 5.00) per 1M in PRICES
+    usage = {"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000, "calls": 4}
+    cost = lb._cost_block(slug, usage, games=8)
+    assert cost["price_source"] == "PRICES"
+    assert cost["est_cost_usd"] == 6.0                   # 1.00 + 5.00
+    assert cost["cost_per_game_usd"] == 0.75             # 6.0 / 8
