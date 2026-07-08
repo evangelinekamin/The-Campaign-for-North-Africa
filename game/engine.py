@@ -768,27 +768,39 @@ def _air_strike(r: _Run, side: Side, tgt: Coord, pinned: set[str]) -> None:
 def _air_fort(r: _Run, side: Side, tgt: Coord) -> None:
     """41.37 B-F/C: air batters a fortification one level per Operations Stage -- the air twin of
     engine._batter_fort, gated behind siege_rules (inert in the canonical benchmark). Reuses
-    FORT_REDUCED, so no new fold; air + barrage together open the works faster."""
+    FORT_REDUCED, so no new fold; air + barrage together open the works faster. Like _air_strike,
+    it needs committed LAND strike Air Points (scaled by the superiority gate): a side that fields
+    no strike or has lost the sky to a scale of 0 cannot batter the works -- winning the LAND sky
+    is the precondition. The committed strength rides the payload for legibility."""
+    strength = _air_points(r.state, side, "LAND", "strike")
+    if strength <= 0:                                    # no committed strike / lost the sky
+        return
     if not r.state.siege_rules or r.state.fort_level(tgt) <= 0:
         return
     if r.state.control_of(tgt) == CONTROL_OF[side]:      # never batter your OWN works
         return
     r.emit(EventKind.FORT_REDUCED, side, f"{side.value}/Air",
-           {"hex": list(tgt), "level": r.state.fort_level(tgt) - 1})
+           {"hex": list(tgt), "level": r.state.fort_level(tgt) - 1, "strength": strength})
 
 
 def _air_port(r: _Run, side: Side, port_id: str) -> None:
     """41.39B B-P: harbour bombing knocks a port's Efficiency Level down one (reusing
     PORT_EFFICIENCY_CHANGED, which apply.py already anticipates as 'bomb/mine damage'). The 55.18
     +1/OpStage regen contests it -- except a HARBOUR_BLOCKED port (PORT-Tobruk), which does not
-    regen, so a bombed harbour there stays down: THE lever that chokes the ~425-Ammo/OpStage cap."""
+    regen, so a bombed harbour there stays down: THE lever that chokes the ~425-Ammo/OpStage cap.
+    Like _air_strike, it needs committed LAND strike Air Points (scaled by the superiority gate):
+    a side that fields no strike or has lost the sky to a scale of 0 cannot batter the harbour --
+    winning the LAND sky is the precondition. The committed strength rides the payload for legibility."""
+    strength = _air_points(r.state, side, "LAND", "strike")
+    if strength <= 0:                                    # no committed strike / lost the sky
+        return
     port = r.state.port(port_id)
     if port is None or port.eff <= 0:
         return
     if port.side == side:                                # never bomb your OWN harbour
         return
     r.emit(EventKind.PORT_EFFICIENCY_CHANGED, side, f"{side.value}/Air",
-           {"port_id": port.id, "level": port.eff - 1})
+           {"port_id": port.id, "level": port.eff - 1, "strength": strength})
 
 
 def _air_recon(r: _Run, side: Side, tgt: Coord) -> None:

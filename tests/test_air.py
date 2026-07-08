@@ -284,6 +284,58 @@ def test_port_bombing_never_bombs_your_own_harbour():
     assert r.state.port("PORT-A").eff == 4
 
 
+# --- the air-superiority GATE on fort/port bombing (mirror _air_strike) ------
+
+def test_fort_and_port_bombing_need_committed_strike_points():
+    from game.state import Port
+    port = Port("PORT-X", Side.ALLIED, (2, 0), kind="major", max_eff=5, eff=4,
+                cap_ammo=400, cap_fuel=400, cap_stores=400, cap_water=400, cap_tons=1000)
+    # A strike=0 wing fields no strike Air Points -> neither the works nor the harbour is battered.
+    fort_mission = (AirMission(Side.AXIS, "fort", (1, 0), 1),)
+    r = _Run(_strike_state(fort=3, siege=True, air_strike=0, missions=fort_mission))
+    _air_support(r, Side.AXIS, set())
+    assert not any(e.kind == EventKind.FORT_REDUCED for e in r.events)
+    assert r.state.fort_level((1, 0)) == 3
+    r2 = _Run(_strike_state(air_strike=0, ports=(port,),
+                            missions=(AirMission(Side.AXIS, "port", "PORT-X", 1),)))
+    _air_support(r2, Side.AXIS, set())
+    assert not any(e.kind == EventKind.PORT_EFFICIENCY_CHANGED for e in r2.events)
+    assert r2.state.port("PORT-X").eff == 4
+
+
+def test_losing_the_land_sky_below_a_point_grounds_fort_and_port_bombing():
+    # strike=1 scaled by the LOSER factor (0.5) floors to int(0) -> the sky-lost side cannot batter.
+    from game.state import Port
+    port = Port("PORT-X", Side.ALLIED, (2, 0), kind="major", max_eff=5, eff=4,
+                cap_ammo=400, cap_fuel=400, cap_stores=400, cap_water=400, cap_tons=1000)
+    fort_mission = (AirMission(Side.AXIS, "fort", (1, 0), 1),)
+    r = _Run(_strike_state(fort=3, siege=True, air_strike=1,
+                           superiority=Side.ALLIED.value, missions=fort_mission))
+    _air_support(r, Side.AXIS, set())
+    assert not any(e.kind == EventKind.FORT_REDUCED for e in r.events)
+    r2 = _Run(_strike_state(air_strike=1, superiority=Side.ALLIED.value, ports=(port,),
+                            missions=(AirMission(Side.AXIS, "port", "PORT-X", 1),)))
+    _air_support(r2, Side.AXIS, set())
+    assert not any(e.kind == EventKind.PORT_EFFICIENCY_CHANGED for e in r2.events)
+
+
+def test_fort_and_port_bombing_carry_committed_strength():
+    # winning/contested sky -> the committed strike points ride the payload for legibility.
+    from game.state import Port
+    port = Port("PORT-X", Side.ALLIED, (2, 0), kind="major", max_eff=5, eff=4,
+                cap_ammo=400, cap_fuel=400, cap_stores=400, cap_water=400, cap_tons=1000)
+    r = _Run(_strike_state(fort=3, siege=True, air_strike=6,
+                           missions=(AirMission(Side.AXIS, "fort", (1, 0), 1),)))
+    _air_support(r, Side.AXIS, set())
+    fr = [e for e in r.events if e.kind == EventKind.FORT_REDUCED]
+    assert len(fr) == 1 and fr[0].payload["strength"] == 6
+    r2 = _Run(_strike_state(air_strike=6, ports=(port,),
+                            missions=(AirMission(Side.AXIS, "port", "PORT-X", 1),)))
+    _air_support(r2, Side.AXIS, set())
+    pe = [e for e in r2.events if e.kind == EventKind.PORT_EFFICIENCY_CHANGED]
+    assert len(pe) == 1 and pe[0].payload["strength"] == 6
+
+
 # --- superiority scaling (the Step-3 gate read at mission time) --------------
 
 def test_air_points_scale_the_loser():
