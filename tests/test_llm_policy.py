@@ -136,3 +136,48 @@ def test_garbage_llm_output_never_crashes_and_is_deterministic():
 def test_prompt_contains_observation_and_format():
     p = build_movement_prompt(observe(coastal_corridor(), Side.AXIS))
     assert "MOVEMENT phase" in p and "your_units" in p and '"moves"' in p
+
+
+# --- reserve-aware can_move_to (rule 18.22) ----------------------------------
+
+def _reserve_obs(reserve: int):
+    """Corridor in MOVEMENT with DAK-5le put into the given reserve tier."""
+    from dataclasses import replace
+
+    from game.events import Phase
+    s = replace(coastal_corridor(), phase=Phase.MOVEMENT)
+    units = tuple(replace(u, reserve=reserve) if u.id == "DAK-5le" else u for u in s.units)
+    s = replace(s, units=units)
+    return observe(s, Side.AXIS), s
+
+
+def test_reserve_two_unit_is_offered_no_destinations():
+    obs, _ = _reserve_obs(2)
+    dak = next(u for u in obs["your_units"] if u["id"] == "DAK-5le")
+    assert dak["reserve"] == "II"
+    assert dak["can_move_to"] == []          # 18.22: a Reserve II unit is frozen
+
+
+def test_reserve_one_unit_is_offered_only_the_one_hex_shuffle():
+    from game.hexmap import distance
+    from game.tactics import enemy_zoc_and_occupied
+    obs, s = _reserve_obs(1)
+    dak = next(u for u in obs["your_units"] if u["id"] == "DAK-5le")
+    assert dak["reserve"] == "I"
+    assert dak["can_move_to"], "a Reserve I unit has legal one-hex shuffles here"
+
+    ez, eo = enemy_zoc_and_occupied(s, Side.AXIS)
+    u = s.unit("DAK-5le")
+    for e in dak["can_move_to"]:                          # every offer is engine-legal (18.22)
+        h = tuple(e["hex"])
+        assert distance(h, u.hex) == 1
+        assert h not in ez and h not in eo and not s.enemies_at(h, Side.AXIS)
+        assert s.terrain.exists(h)
+
+
+def test_reserve_zero_unit_is_unchanged():
+    # a non-reserve combat unit keeps the ordinary CPA reach + the supplied flag.
+    obs, _ = _reserve_obs(0)
+    dak = next(u for u in obs["your_units"] if u["id"] == "DAK-5le")
+    assert "reserve" not in dak
+    assert "supplied" in dak

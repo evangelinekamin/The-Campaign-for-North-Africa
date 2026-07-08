@@ -47,6 +47,24 @@ def _sighted_hexes(state: GameState, side: Side) -> set:
     return sighted
 
 
+def _reserve_one_dests(state: GameState, u, side: Side, enemy_zoc, enemy_occupied) -> list:
+    """The 1-hex Reserve I shuffle-legal destinations for `u` (rule 18.22), mirroring the
+    engine's _reserve_shuffle: an adjacent, in-bounds, stacking-legal hex that is neither
+    enemy-occupied nor in an enemy Zone of Control nor enemy-held. A read-only projection --
+    the same legality the engine re-validates, so the agent is never offered a shuffle the
+    engine then rejects."""
+    out = []
+    for h in neighbors(u.hex):
+        if not state.terrain.exists(h):
+            continue
+        if h in enemy_occupied or h in enemy_zoc or state.enemies_at(h, side):
+            continue
+        present = [x for x in state.units_at(h) if x.side == side]
+        if stacking.within_hex_limit(present + [u], state.terrain.terrain[h]):
+            out.append(h)
+    return out
+
+
 def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
     target = state.target_hex
     moving = state.phase == Phase.MOVEMENT
@@ -85,6 +103,14 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
                 dump_of[u.id] = did
         contended = {uid for uid, did in dump_of.items() if demand[did] > dump_fuel.get(did, 0)}
 
+    def _entry(h, support) -> dict:
+        e = {"hex": list(h), "dist": distance(h, target)}
+        if friendly_sp.get(h):
+            e["points_used"] = friendly_sp[h]           # already-stacked SP here (B3)
+        if support and any(state.enemies_at(nb, side) for nb in neighbors(h)):
+            e["firing_position"] = True                 # barrage / anti-armor fires from here
+        return e
+
     def unit_view(u) -> dict:
         # Lean view: cpa/cp_left/mobility are redundant with can_move_to (which
         # already encodes what this unit can reach this OpStage), so they're omitted
@@ -113,26 +139,30 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
             v["defensible"] = supply.plan_draw(
                 state, u, supply.AMMO, supply.ammo_cost(u, phasing=False)) is not None
         if moving and u.is_combat:
-            # A unit that cannot draw this move's fuel is out of supply -- it cannot move
-            # (49.13/49.16 charge every move, not just the first), so offer no destinations
-            # (32.23). Reflecting this keeps the agent from wasting orders on stranded units.
-            supplied = u.id in fuel_ok
-            v["supplied"] = supplied
-            if u.id in contended:
-                v["supply_contended"] = True     # dump oversubscribed; may not get fuel
-            if supplied:
-                reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occ, roster)
-                dests = sorted((h for h in reach if h != u.hex), key=lambda h: distance(h, target))
-                support = u.barrage > 0 or u.anti_armor > 0
-                entries = []
-                for h in dests[:REACH_LIMIT]:
-                    e = {"hex": list(h), "dist": distance(h, target)}
-                    if friendly_sp.get(h):
-                        e["points_used"] = friendly_sp[h]   # already-stacked SP here (B3)
-                    if support and any(state.enemies_at(nb, side) for nb in neighbors(h)):
-                        e["firing_position"] = True   # barrage / anti-armor fires from here
-                    entries.append(e)
-                v["can_move_to"] = entries
+            # Reserve status (rule 18.22) overrides the ordinary CPA reach: a Reserve II unit
+            # is frozen; a Reserve I unit may only shuffle ONE hex, CP-free -- so its legal set
+            # is the 1-hex shuffle mirror of the engine, NOT reachable_for.
+            if u.reserve == 2:
+                v["reserve"] = "II"
+                v["can_move_to"] = []
+            elif u.reserve == 1:
+                v["reserve"] = "I"
+                dests = sorted(_reserve_one_dests(state, u, side, enemy_zoc, enemy_occ),
+                               key=lambda h: distance(h, target))
+                v["can_move_to"] = [_entry(h, False) for h in dests]
+            else:
+                # A unit that cannot draw this move's fuel is out of supply -- it cannot move
+                # (49.13/49.16 charge every move, not just the first), so offer no destinations
+                # (32.23). Reflecting this keeps the agent from wasting orders on stranded units.
+                supplied = u.id in fuel_ok
+                v["supplied"] = supplied
+                if u.id in contended:
+                    v["supply_contended"] = True     # dump oversubscribed; may not get fuel
+                if supplied:
+                    reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occ, roster)
+                    dests = sorted((h for h in reach if h != u.hex), key=lambda h: distance(h, target))
+                    support = u.barrage > 0 or u.anti_armor > 0
+                    v["can_move_to"] = [_entry(h, support) for h in dests[:REACH_LIMIT]]
         return v
 
     # Limited intelligence: aggregate the enemy to per-hex stack sightings only.
