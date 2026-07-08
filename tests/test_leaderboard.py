@@ -129,3 +129,44 @@ def test_cost_block_prices_tokens_from_the_curated_table():
     assert cost["price_source"] == "PRICES"
     assert cost["est_cost_usd"] == 6.0                   # 1.00 + 5.00
     assert cost["cost_per_game_usd"] == 0.75             # 6.0 / 8
+
+
+# --- multi-axis grading: the leaderboard DISCRIMINATES when the single score collapses ---
+
+def _profile(model, *, score, crack, kill, reject, ammo, advance, invT):
+    """A synthetic scorecard shell carrying only the axes _rank_key / leaderboard read."""
+    return {
+        "model": model,
+        "campaign": {"mean_score": score, "mean_kill_ratio": kill, "reject_rate_pct": reject,
+                     "mean_advance_pct": advance, "mean_turn_invested": invT},
+        "siege": {"crack_rate_pct": crack, "mean_ammo_min": ammo, "starved_fraction": 0.0},
+        "cost": {"cost_per_game_usd": 0.0},
+    }
+
+
+def test_multi_axis_rank_separates_a_good_general_from_a_mauled_advancer():
+    # Both collapse to a headline score of 0 (the wall-of-zeros the owner fears). A GOOD general
+    # cracked the siege, killed more than it lost, kept discipline, and drove the garrison to 0.
+    # A MAULED ADVANCER marched furthest of all but into a massacre: net-negative combat, high
+    # reject, garrison left on a high plateau. The multi-axis rank must still separate them.
+    good = _profile("good/general", score=0.0, crack=100.0, kill=1.4, reject=2.0,
+                    ammo=0, advance=60.0, invT=5.0)
+    mauled = _profile("mauled/advancer", score=0.0, crack=0.0, kill=0.4, reject=55.0,
+                      ammo=2200, advance=99.0, invT=2.0)
+
+    assert lb._rank_key(good) > lb._rank_key(mauled)     # good outranks despite identical score 0
+    order = sorted([mauled, good], key=lb._rank_key, reverse=True)
+    assert [c["model"] for c in order] == ["good/general", "mauled/advancer"]
+    # advancing furthest must NOT buy the top rank -- we do not pay for marching into a massacre.
+    assert mauled["campaign"]["mean_advance_pct"] > good["campaign"]["mean_advance_pct"]
+
+
+def test_leaderboard_prints_and_ranks_without_error(capsys):
+    good = _profile("good/general", score=0.0, crack=100.0, kill=1.4, reject=2.0,
+                    ammo=0, advance=60.0, invT=5.0)
+    mauled = _profile("mauled/advancer", score=0.0, crack=0.0, kill=0.4, reject=55.0,
+                      ammo=2200, advance=99.0, invT=2.0)
+    lb.leaderboard([mauled, good])
+    out = capsys.readouterr().out
+    assert "multi-axis" in out
+    assert out.index("good/general") < out.index("mauled/advancer")   # good printed first

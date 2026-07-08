@@ -277,21 +277,45 @@ def run_model(model: str, seeds: int, *, mock: bool, live: bool, floor: bool,
     }
 
 
+def _rank_key(card: dict) -> tuple:
+    """The discriminating multi-axis rank. The validated degree-of-success score leads; when it
+    CLUSTERS (a wall of zeros -- every net-negative / high-reject general scores exactly 0) the
+    continuous play-quality signals break the tie in priority order: crack rate, then combat
+    efficiency (kill ratio), order discipline (lower reject is better), garrison drawdown (a lower
+    mean ammo-min means the storm was driven harder toward the 15.15 dry stack), and only THEN
+    ground gained. advance% ranks LAST -- so a mauled advancer never outranks a real fighter: we
+    do not pay for marching into a massacre. This is the re-weight the single score can't give."""
+    cam, s = card["campaign"], card["siege"]
+    ammo = s.get("mean_ammo_min")
+    return (
+        cam["mean_score"],
+        s["crack_rate_pct"],
+        cam["mean_kill_ratio"],
+        -cam["reject_rate_pct"],                          # fewer bounced orders = better
+        -(ammo if ammo is not None else float("inf")),    # lower ammo-min = drove harder = better
+        cam["mean_advance_pct"],                          # ground LAST: never rewards a massacre
+        -cam["mean_turn_invested"],                       # faster investment breaks a final tie
+    )
+
+
 def leaderboard(cards: list[dict]) -> None:
-    """Combined ranked table: crack rate first (did the general take Tobruk), the campaign
-    generalship score as the tie-break, with the starve signal + cost alongside."""
-    rows = sorted(cards, key=lambda c: (c["siege"]["crack_rate_pct"],
-                                        c["campaign"]["mean_score"]), reverse=True)
-    print("\n=== LEADERBOARD (crack rate, then campaign generalship score) ===")
-    hdr = (f"{'model':<26}{'crack%':>7}{'starv%':>7}{'ammoMin':>8}{'SCORE':>7}{'adv':>5}"
-           f"{'invT':>6}{'kill':>6}{'$/gm':>8}")
+    """MULTI-AXIS ranked scorecard (the owner's #1 concern -- don't ship a wall of zeros). Ranked
+    by _rank_key so models SEPARATE even when the single degree-of-success score collapses to 0;
+    every continuous signal it already computes is printed so the spread is legible (a wall of
+    zeros still orders by kill ratio / reject rate / ammo-drive / crack rate)."""
+    rows = sorted(cards, key=_rank_key, reverse=True)
+    print("\n=== LEADERBOARD (multi-axis: score, then crack / kill / reject / ammo-drive) ===")
+    hdr = (f"{'model':<26}{'SCORE':>7}{'crack%':>7}{'kill':>6}{'rej%':>6}{'mAmmo':>7}"
+           f"{'starv%':>7}{'adv':>5}{'invT':>6}{'$/gm':>8}")
     print(hdr + "\n" + "-" * len(hdr))
     for c in rows:
         s, cam, co = c["siege"], c["campaign"], c["cost"]
-        am = s["ammo_min_reached"]
-        print(f"{c['model'][:25]:<26}{s['crack_rate_pct']:>7}{100 * s['starved_fraction']:>7.0f}"
-              f"{('-' if am is None else am):>8}{cam['mean_score']:>7}{cam['mean_advance_pct']:>5.0f}"
-              f"{cam['mean_turn_invested']:>6}{cam['mean_kill_ratio']:>6}{co['cost_per_game_usd']:>8}")
+        am = s.get("mean_ammo_min")
+        print(f"{c['model'][:25]:<26}{cam['mean_score']:>7}{s['crack_rate_pct']:>7}"
+              f"{cam['mean_kill_ratio']:>6}{cam['reject_rate_pct']:>6}"
+              f"{('-' if am is None else am):>7}{100 * s['starved_fraction']:>7.0f}"
+              f"{cam['mean_advance_pct']:>5.0f}{cam['mean_turn_invested']:>6}"
+              f"{co['cost_per_game_usd']:>8}")
 
 
 def _write(path: str, cards: list[dict]) -> None:
