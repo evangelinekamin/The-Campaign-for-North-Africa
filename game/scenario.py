@@ -497,18 +497,20 @@ def _tobruk_ferry_interdiction(max_turns: int, bomb_points: int = 200
     return tuple(InterdictionOrder("SEA-TOBRUK", t, bomb_points) for t in range(1, max_turns + 1))
 
 
-def _axis_land_air(raf: bool) -> tuple[AirWing, ...]:
+def _axis_land_air(raf: bool, raf_fighters: int = _TOBRUK_DAF_FIGHTERS) -> tuple[AirWing, ...]:
     """The LAND-arena air force for the siege: the Axis Luftwaffe wing that flies the harbour
     bombing (fighters contest the sky, strike batters PORT-Tobruk), plus -- only when `raf` --
     a Commonwealth Desert Air Force fighter wing so _air_superiority rolls a GENUINE per-OpStage
     contest for the LAND sky (a contested/lost sky scales the strike below the gate, delaying the
     port-bomb, never preventing it -- the harbour is monotone-blocked). Air-Point weights are
-    FLAGGED proxies. recon=0: this air exists to choke the lifeline, not to lift fog."""
+    FLAGGED proxies; `raf_fighters` is the contesting Commonwealth pool (a stronger RAF wins the
+    sky more OpStages, delaying the port cut further). recon=0: this air chokes the lifeline, not
+    lifts fog."""
     wings = [AirWing("LW-land", Side.AXIS, "LAND",
                      fighters=_TOBRUK_LW_FIGHTERS, strike=_TOBRUK_LW_STRIKE, recon=0)]
     if raf:
         wings.append(AirWing("DAF-land", Side.ALLIED, "LAND",
-                             fighters=_TOBRUK_DAF_FIGHTERS, strike=0, recon=0))
+                             fighters=raf_fighters, strike=0, recon=0))
     return tuple(wings)
 
 
@@ -525,7 +527,10 @@ def _tobruk_port_bomb(max_turns: int, start: int = _TOBRUK_PORTBOMB_START,
 
 
 def siege_of_tobruk(seed: int = 1941, *, port_bomb: bool = False, raf: bool = False,
-                    ferry_bomb: int = 200) -> GameState:
+                    ferry_bomb: int = 200,
+                    portbomb_start: int = _TOBRUK_PORTBOMB_START,
+                    portbomb_cadence: int = _TOBRUK_PORTBOMB_CADENCE,
+                    raf_fighters: int = _TOBRUK_DAF_FIGHTERS) -> GameState:
     """The Siege of Tobruk (rule 25.14 / 25.16): Rommel's Arrival with the siege-
     artillery rule LIVE and a sustained Axis air-interdiction of the Tobruk ferry. It is
     the SAME battle -- identical OOB, placement, base supply, the 12-turn clock, the
@@ -555,11 +560,14 @@ def siege_of_tobruk(seed: int = 1941, *, port_bomb: bool = False, raf: bool = Fa
     the Axis Luftwaffe LAND wing and a per-turn PORT-Tobruk bombing schedule (eff 7->0, no regen
     under HARBOUR_BLOCKED); `raf` adds a contesting Commonwealth fighter wing so winning the LAND
     sky is a genuine contest (the air-superiority gate on _air_port); `ferry_bomb` sets the SEA
-    ferry CRT weight. DEFAULTS are air-less (air=()/air_missions=(), ferry at 200), so the
-    default siege stays byte-identical to the pre-choke scenario -- the knobs are FLAGGED tuning
-    proxies, not rulebook magnitudes."""
+    ferry CRT weight. `portbomb_start`/`portbomb_cadence`/`raf_fighters` are the siege-TEMPO
+    knobs (push the first bomb later, bomb every N-th turn, field a stronger contesting RAF) that
+    slow the harbour cut into a race against the 12-turn clock. DEFAULTS are air-less
+    (air=()/air_missions=(), ferry at 200), so the default siege stays byte-identical to the
+    pre-choke scenario -- the knobs are FLAGGED tuning proxies, not rulebook magnitudes."""
     base = rommels_arrival(seed=seed)
-    air = _axis_land_air(raf) if port_bomb else ()
-    air_missions = _tobruk_port_bomb(base.max_turns) if port_bomb else ()
+    air = _axis_land_air(raf, raf_fighters) if port_bomb else ()
+    air_missions = (_tobruk_port_bomb(base.max_turns, portbomb_start, portbomb_cadence)
+                    if port_bomb else ())
     return replace(base, siege_rules=True, air=air, air_missions=air_missions,
                    interdictions=_tobruk_ferry_interdiction(base.max_turns, ferry_bomb))
