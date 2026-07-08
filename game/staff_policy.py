@@ -32,9 +32,10 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from . import supply
+from . import supply, tactics
 from .adjudication import validate_batch
 from .events import EventKind, Side
+from .hexmap import distance
 from .llm_policy import (
     _INTENT_FIELDS,
     _clean_intent,
@@ -216,6 +217,7 @@ class StaffPolicy(ScriptedPolicy):
         self._pending: list[tuple[EventKind, dict]] = []   # staff artifacts awaiting drain
         self._lane_rationale: dict[Lane, str] = {}         # captured GOC rationale (for dissent)
         self._intent: dict = {}                            # the Chief's live intent (subordinate preamble)
+        self._pulse_orders: list[MoveOrder] | None = None  # stashed continual-movement pulse moves
 
     # --- LLM seam ---------------------------------------------------------------
     def _client_for(self, seat: str):
@@ -264,6 +266,7 @@ class StaffPolicy(ScriptedPolicy):
         self._pending = []
         self._lane_rationale = {}
         self._intent = {}
+        self._pulse_orders = None
 
     # --- the drain hook (symmetric with debrief / declare_ab) --------------------
     def drain_staff(self) -> list[tuple[EventKind, dict]]:
@@ -278,6 +281,12 @@ class StaffPolicy(ScriptedPolicy):
 
     # --- phase slices ------------------------------------------------------------
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
+        # A Continual-Movement pulse re-enters movement() within the same (turn, stage, side):
+        # dispense the fresh breakthrough moves stashed by continual_movement (the exploitation
+        # pulse), NOT the stale segment-0 plan. Segment 0 (no stash) returns the deliberated plan.
+        if self._pulse_orders is not None:
+            out, self._pulse_orders = self._pulse_orders, None
+            return list(out)
         return list(self._ensure_plan(state, side).movement)
 
     def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
@@ -292,6 +301,105 @@ class StaffPolicy(ScriptedPolicy):
             self._combat_key = key
             self._combat_orders = self._deliberate_combat(state, side)
         return list(self._combat_orders)
+
+    # --- the command levers (StaffPolicy overrides the dormant Policy hooks) ------
+    # Each maps a rule-18/31/8 lever to a seat and returns Orders through the engine hook
+    # already invoked in run(); all compute purely from STATE (robust to intent sequencing)
+    # and stay deterministic. NO new EventKind, NO new drain seam.
+    def _mobile_units(self, state: GameState, side: Side) -> list:
+        """This side's living Mobile-lane combat units (the panzer schwerpunkt)."""
+        lanes = unit_lanes(state, side)
+        return [u for u in state.living(side)
+                if u.is_combat and lanes.get(u.id) == Lane.MOBILE]
+
+    def _breach(self, state: GameState, side: Side) -> bool:
+        """A breach: a Mobile-lane unit has broken through to the objective's perimeter
+        (adjacent or on it) -- the trigger to release the reserve and press the exploitation."""
+        target = state.target_hex
+        return any(distance(u.hex, target) <= 1 for u in self._mobile_units(state, side))
+
+    def rommel_move(self, state: GameState) -> "tuple | None":
+        """CHIEF: commit General Rommel (31.1) to the schwerpunkt -- the reachable hex nearest
+        the objective that carries the densest Mobile-lane stack, so his 31.4 +5 CPA and the
+        close-assault leader die land where the panzers press. None when no panzer hex is
+        reachable (the engine re-validates the reach and emits ROMMEL_MOVED)."""
+        reach = tactics.rommel_reach(state)
+        target = state.target_hex
+        density: dict = {}
+        for u in self._mobile_units(state, self.side):
+            density[u.hex] = density.get(u.hex, 0) + u.stacking_points
+        near = [h for h in density if h in reach and distance(h, target) == 1]
+        cands = near or [h for h in density if h in reach]
+        if not cands:
+            return None
+        return max(cands, key=lambda h: (density[h], -distance(h, target), h))
+
+    def reserve_designation(self, state: GameState, side: Side) -> list[str]:
+        """CHIEF: hold a Mobile ECHELON back in Reserve I (18.12) -- the rearmost panzer unit,
+        released later to exploit a breach. Conservative: only when at least two Mobile-lane
+        units stand (so a mobile advance guard always remains) and no breach is yet open, so it
+        never strands the sole panzer nor holds force back once the wall is reached."""
+        if side != self.side or self._breach(state, side):
+            return []
+        mobile = self._mobile_units(state, side)
+        if len(mobile) < 2:
+            return []
+        rear = max(mobile, key=lambda u: (distance(u.hex, state.target_hex), u.id))
+        return [rear.id]
+
+    def reserve_release(self, state: GameState, side: Side) -> list[str]:
+        """Mobile GOC: release the held reserves at the inter-pulse Release Segment (18.13)
+        the moment a breach opens (a panzer on the objective's perimeter), to pour into it."""
+        if side != self.side or not self._breach(state, side):
+            return []
+        return [u.id for u in state.living(side) if u.reserve in (1, 2)]
+
+    def continual_movement(self, state: GameState, side: Side) -> list[MoveOrder]:
+        """GOCs: press the exploitation pulse (8.2 go/no-go) when a Mobile-lane unit broke
+        through this pulse and can still advance ON the objective. Returns the fresh
+        strictly-advancing continuation moves (stashed for the imminent pulse movement());
+        [] declines and ends the OpStage portion. Reuses the proven-legal ScriptedPolicy
+        advance, filtered to Mobile-lane units inside the 8.23 two-hex exploitation zone."""
+        orders = self._breakthrough_moves(state, side)
+        self._pulse_orders = list(orders) if orders else None
+        return orders
+
+    def _breakthrough_moves(self, state: GameState, side: Side) -> list[MoveOrder]:
+        if side != self.side:
+            return []
+        target = state.target_hex
+        lanes = unit_lanes(state, side)
+        out: list[MoveOrder] = []
+        for m in ScriptedPolicy.movement(self, state, side):    # proven engine-legal advances
+            u = state.unit(m.unit_id)
+            if u is None or lanes.get(u.id) != Lane.MOBILE:
+                continue
+            if distance(u.hex, target) <= 2 and distance(m.to, target) < distance(u.hex, target):
+                out.append(m)                                   # strictly advancing -> terminates
+        return out
+
+    def react_to(self, state: GameState, side: Side, trigger: str,
+                 eligible: frozenset[str]) -> list[MoveOrder]:
+        """GOCs: as the enemy moves adjacent, slide an eligible motorized unit aside (8.5) to
+        the cheapest reachable hex out of contact -- the elastic tempo interrupt. Reuses the
+        retreat_before_assault reachability; the engine already vetted 8.53 eligibility and
+        re-validates every destination, so only reachable, fuelled slides are proposed."""
+        if side != self.side or not eligible:
+            return []
+        enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, side)
+        orders: list[MoveOrder] = []
+        for uid in sorted(eligible):
+            u = state.unit(uid)
+            if u is None:
+                continue
+            if supply.plan_draw(state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None:
+                continue                                        # no fuel to react (49.13)
+            reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
+            escapes = [c for c in reach if c != u.hex and self._stacking_ok(state, u, c)
+                       and not self._in_contact(state, side, c)]
+            if escapes:
+                orders.append(MoveOrder(u.id, min(escapes, key=lambda c: (reach[c], c))))
+        return orders
 
     # --- deliberation ------------------------------------------------------------
     def _ensure_plan(self, state: GameState, side: Side) -> SideTurnPlan:
