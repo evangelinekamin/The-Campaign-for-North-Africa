@@ -163,9 +163,10 @@ def intent_preamble(intent: dict) -> str:
 
 @dataclass(frozen=True, slots=True)
 class SideTurnPlan:
-    """The resolved movement-turn slices, deliberated once and dispensed by phase."""
+    """The resolved movement-turn slices, deliberated once and dispensed by phase.
+    Supply relocation is NOT cached here: units advance after this deliberation, so the
+    dump destinations are recomputed live at the supply phase (see supply_orders)."""
     movement: tuple[MoveOrder, ...]
-    supply: tuple[SupplyMoveOrder, ...]
     truck: tuple[TruckOrder, ...]
 
 
@@ -292,7 +293,13 @@ class StaffPolicy(ScriptedPolicy):
         return list(self._ensure_plan(state, side).movement)
 
     def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
-        return list(self._ensure_plan(state, side).supply)
+        # Dispatch against the LIVE post-movement board, not the movement-time plan: the
+        # combat units have since advanced, so a cached dump destination would chase a hex
+        # the unit has vacated (the 'must end stacked' reject, rule 32.33). _ensure_plan
+        # still runs the single deliberation (staging the QM proposal); only the DISPATCH
+        # is recomputed live.
+        self._ensure_plan(state, side)
+        return ScriptedPolicy.supply_orders(self, state, side)
 
     def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
         return list(self._ensure_plan(state, side).truck)
@@ -438,7 +445,7 @@ class StaffPolicy(ScriptedPolicy):
         self._air_plan(state, obs)                                 # STAFF_PROPOSAL (air tasking)
         self._intelligence(obs)                                    # STAFF_CONSTRAINT (intel)
         movement = self._resolve(state, lane_moves[Lane.MOBILE], lane_moves[Lane.INFANTRY], idl)
-        return SideTurnPlan(tuple(movement), supply_moves, truck)
+        return SideTurnPlan(tuple(movement), truck)
 
     def _resolve(self, state, mobile, infantry, idl) -> list[MoveOrder]:
         """Dry-run the combined batch (the Step-2 filtered validate_batch), let the

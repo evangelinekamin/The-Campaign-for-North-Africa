@@ -193,3 +193,32 @@ def test_storm_floor_batches_the_objective_when_a_timid_model_omits_it():
     floored = StaffPolicy(MockClient(timid), side=Side.AXIS, storm_floor=True)
     orders = floored.combat(st, Side.AXIS)
     assert any(a.target == (0, 0) and "Pz-storm" in a.attacker_ids for a in orders)
+
+
+# --- A(c): supply orders dispatch against LIVE post-movement positions ----------
+
+def test_supply_orders_recompute_against_live_positions():
+    """The QM's dump-relocation is deliberated at movement time, but the units advance
+    before the supply phase. Dispatching the STALE pre-move plan sends the dump to a hex
+    the combat unit has since vacated -- the 'must end stacked' reject. supply_orders must
+    recompute against the LIVE board it is handed at supply-phase."""
+    from game.policy import SupplyMoveOrder
+
+    dump = SupplyUnit("D", Side.AXIS, (3, 0), ammo=50, fuel=50)
+    staff = _staff()
+    # deliberate the side-turn against a board where the panzer sits at (2,0)
+    s0 = _lever_state([_mobile("P", (2, 0))], supplies=[dump])
+    staff.movement(s0, Side.AXIS)                        # caches the (turn,stage,side) plan
+    # the panzer has since advanced to (1,0); the dump must FOLLOW it live, not chase (2,0)
+    s1 = _lever_state([_mobile("P", (1, 0))], supplies=[dump])
+    assert staff.supply_orders(s1, Side.AXIS) == [SupplyMoveOrder("D", (1, 0))]
+
+
+def test_staff_game_has_no_stale_supply_rejects():
+    """The whole mock staff game must never bounce a supply relocation as 'must end
+    stacked' -- proof the cached-plan staleness is gone end to end."""
+    result = _play()
+    stale = [e for e in result.events
+             if e.kind == EventKind.ORDER_REJECTED and e.actor == "AXIS/Logistics"
+             and "must end stacked" in e.payload.get("reason", "")]
+    assert stale == []
