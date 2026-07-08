@@ -246,6 +246,18 @@ def test_fort_bombing_reduces_one_level_only_under_siege():
     assert not any(e.kind == EventKind.FORT_REDUCED for e in r2.events)
 
 
+def test_fort_bombing_never_batters_your_own_works():
+    # A mis-seeded mission over a FRIENDLY-controlled fort must not batter it (ownership guard).
+    from game.events import Control
+    fort_mission = (AirMission(Side.AXIS, "fort", (1, 0), 1),)
+    s = replace(_strike_state(fort=3, siege=True, missions=fort_mission),
+                control={(1, 0): Control.AXIS})
+    r = _Run(s)
+    _air_support(r, Side.AXIS, set())
+    assert not any(e.kind == EventKind.FORT_REDUCED for e in r.events)
+    assert r.state.fort_level((1, 0)) == 3
+
+
 # --- PORT bombing (41.39B): reuse PORT_EFFICIENCY_CHANGED --------------------
 
 def test_port_bombing_knocks_efficiency_down():
@@ -258,6 +270,18 @@ def test_port_bombing_knocks_efficiency_down():
     pe = [e for e in r.events if e.kind == EventKind.PORT_EFFICIENCY_CHANGED]
     assert len(pe) == 1 and pe[0].payload["level"] == 3         # 41.39B: -1 absolute eff
     assert r.state.port("PORT-X").eff == 3
+
+
+def test_port_bombing_never_bombs_your_own_harbour():
+    # A mis-seeded mission over a FRIENDLY (Axis) port must not knock it down (ownership guard).
+    from game.state import Port
+    port = Port("PORT-A", Side.AXIS, (2, 0), kind="major", max_eff=5, eff=4,
+                cap_ammo=400, cap_fuel=400, cap_stores=400, cap_water=400, cap_tons=1000)
+    r = _Run(_strike_state(ports=(port,),
+                           missions=(AirMission(Side.AXIS, "port", "PORT-A", 1),)))
+    _air_support(r, Side.AXIS, set())
+    assert not any(e.kind == EventKind.PORT_EFFICIENCY_CHANGED for e in r.events)
+    assert r.state.port("PORT-A").eff == 4
 
 
 # --- superiority scaling (the Step-3 gate read at mission time) --------------

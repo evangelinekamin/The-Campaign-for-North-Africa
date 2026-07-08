@@ -771,6 +771,8 @@ def _air_fort(r: _Run, side: Side, tgt: Coord) -> None:
     FORT_REDUCED, so no new fold; air + barrage together open the works faster."""
     if not r.state.siege_rules or r.state.fort_level(tgt) <= 0:
         return
+    if r.state.control_of(tgt) == CONTROL_OF[side]:      # never batter your OWN works
+        return
     r.emit(EventKind.FORT_REDUCED, side, f"{side.value}/Air",
            {"hex": list(tgt), "level": r.state.fort_level(tgt) - 1})
 
@@ -782,6 +784,8 @@ def _air_port(r: _Run, side: Side, port_id: str) -> None:
     regen, so a bombed harbour there stays down: THE lever that chokes the ~425-Ammo/OpStage cap."""
     port = r.state.port(port_id)
     if port is None or port.eff <= 0:
+        return
+    if port.side == side:                                # never bomb your OWN harbour
         return
     r.emit(EventKind.PORT_EFFICIENCY_CHANGED, side, f"{side.value}/Air",
            {"port_id": port.id, "level": port.eff - 1})
