@@ -66,13 +66,62 @@ def test_cost_is_tokens_and_dollars_and_zero_on_the_mock_path():
     assert cost["price_source"] == "unpriced"
 
 
+# --- wall-clock timing: the dev-model pick is unreadable without speed --------
+
+def test_scorecard_carries_a_timing_block():
+    tm = _card()["timing"]
+    for k in ("wall_seconds", "mean_minutes_per_game", "completion_tok_per_s"):
+        assert k in tm, f"timing block missing {k}"
+    assert tm["wall_seconds"] >= 0.0 and tm["mean_minutes_per_game"] >= 0.0
+    # the free mock path emits zero completion tokens -> zero throughput, never /0.
+    assert tm["completion_tok_per_s"] == 0.0
+
+
+def test_timing_block_computes_minutes_per_game_and_tok_per_s():
+    assert lb._timing_block(120.0, 4, 6000) == {
+        "wall_seconds": 120.0,
+        "mean_minutes_per_game": 0.5,    # 120s / 4 games / 60
+        "completion_tok_per_s": 50.0,    # 6000 completion tokens / 120s
+    }
+    # zero elapsed / zero games never divides by zero.
+    assert lb._timing_block(0.0, 0, 0)["completion_tok_per_s"] == 0.0
+
+
+# --- engine SHA: cross-version comparability ----------------------------------
+
+def test_scorecard_stamps_the_engine_sha():
+    assert isinstance(lb.ENGINE_SHA, str) and lb.ENGINE_SHA
+    assert _card()["engine_sha"] == lb.ENGINE_SHA
+
+
+# --- earned-crack: the floor-OFF, no-scripted-help siege telemetry ------------
+
+def test_earned_crack_is_none_unless_requested():
+    assert _card()["earned_crack"] is None
+
+
+def test_earned_crack_block_runs_the_floor_off_siege():
+    card = lb.run_model("mock/test", 2, mock=True, live=False, floor=True,
+                        earned_crack=True, cache={})
+    ec = card["earned_crack"]
+    assert ec is not None
+    # same crack-generalship shape as the floored siege summary.
+    for k in ("crack_rate_pct", "cracks", "starved_fraction", "seed_detail"):
+        assert k in ec, f"earned_crack block missing {k}"
+    assert len(ec["seed_detail"]) == 2
+
+
 # --- determinism: the mock scorecard is byte-identical run to run -------------
 
+def _stable(card: dict) -> str:
+    """Serialise the gameplay-bearing scorecard, dropping the inherently non-deterministic
+    wall-clock timing block."""
+    trimmed = {k: v for k, v in card.items() if k != "timing"}
+    return json.dumps(trimmed, sort_keys=True)
+
+
 def test_mock_scorecard_is_deterministic():
-    import json
-    a = json.dumps(_card(), sort_keys=True)
-    b = json.dumps(_card(), sort_keys=True)
-    assert a == b
+    assert _stable(_card()) == _stable(_card())
 
 
 # --- the STARVED classifier (good general vs timid) ---------------------------

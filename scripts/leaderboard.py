@@ -37,7 +37,9 @@ import argparse
 import hashlib
 import json
 import os
+import subprocess
 import sys
+import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -59,8 +61,23 @@ from game.policy import ScriptedPolicy                                      # no
 from game.scenario import rommels_arrival, siege_of_tobruk                  # noqa: E402
 from game.staff_policy import LLM_SEATS, StaffPolicy                        # noqa: E402
 
-OUT = Path(__file__).resolve().parent.parent / "out"
+REPO = Path(__file__).resolve().parent.parent
+OUT = REPO / "out"
 CACHE_PATH = OUT / "leaderboard.cache.json"
+
+
+def _engine_sha() -> str:
+    """The current engine git SHA (git rev-parse --short HEAD), read ONCE at import and stamped
+    into every scorecard so runs are comparable across engine versions. 'unknown' off a repo."""
+    try:
+        out = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO,
+                             capture_output=True, text=True, timeout=5)
+        return out.stdout.strip() or "unknown"
+    except Exception:                                     # not a repo / git absent
+        return "unknown"
+
+
+ENGINE_SHA = _engine_sha()
 
 # The garrison opens the siege on ~1500-2351 Ammo Points (the built-in 61.36 dump + the
 # adjacent AL-Dump#3). A TIMID general lets the ferry outpace the storm and the dump plateaus
@@ -244,36 +261,70 @@ def _campaign_block(model: str, per_game: list[dict]) -> dict:
     return block
 
 
+def _timed(call):
+    """Run `call` on a MONOTONIC clock; return (result, elapsed_seconds)."""
+    t0 = time.monotonic()
+    out = call()
+    return out, time.monotonic() - t0
+
+
+def _timing_block(secs: float, games: int, completion_tokens: int) -> dict:
+    """Wall-clock throughput over the games played -- the speed signal the dev-model pick is
+    unreadable without: mean minutes/game and mean completion tok/s (completion tokens over the
+    total generation seconds). Zero elapsed / zero games never divides by zero."""
+    return {
+        "wall_seconds": round(secs, 1),
+        "mean_minutes_per_game": round(secs / max(1, games) / 60, 2),
+        "completion_tok_per_s": round(completion_tokens / secs, 1) if secs > 0 else 0.0,
+    }
+
+
 def run_model(model: str, seeds: int, *, mock: bool, live: bool, floor: bool,
-              cache: dict, base_seed: int = BASE_SEED, workers: int = 5) -> dict:
+              cache: dict, base_seed: int = BASE_SEED, workers: int = 5,
+              earned_crack: bool = False) -> dict:
     """N seeds of the live 7-seat Axis StaffPolicy on BOTH scenarios -> one SCORECARD dict.
     The two scenarios run CONCURRENTLY over their own seats sharing the sidecar cache; the
-    engine is pure per-game, so concurrency is an I/O win only and never perturbs the fold."""
+    engine is pure per-game, so concurrency is an I/O win only and never perturbs the fold.
+    `earned_crack` ALSO plays each seed's siege with the storm floor OFF -- the real-generalship
+    signal (did the staff crack Tobruk with NO scripted assault help). Each game is wall-clocked."""
     par = 1 if mock else workers
 
-    def one(i: int) -> tuple[dict, dict, dict, dict]:
+    def one(i: int) -> tuple:
         seed = base_seed + i
-        rg, ru = _play_rommel(model, seed, cache, mock=mock, live=live)
-        st, su = _play_siege(model, seed, cache, mock=mock, live=live, floor=floor)
+        (rg, ru), rt = _timed(lambda: _play_rommel(model, seed, cache, mock=mock, live=live))
+        (st, su), st_t = _timed(
+            lambda: _play_siege(model, seed, cache, mock=mock, live=live, floor=floor))
+        secs = rt + st_t
+        ec_tel, ec_u = None, {}
+        if earned_crack:
+            (ec_tel, ec_u), et = _timed(
+                lambda: _play_siege(model, seed, cache, mock=mock, live=live, floor=False))
+            secs += et
         mark = "CRACK" if st["crack"] else "held"
         print(f"    {model}  seed {seed}: rommel score {rg['score']} adv {rg['advance_pct']}% | "
               f"siege {mark} AL-ammo peak {st['al_tobruk_ammo_peak']}->min {st['al_tobruk_ammo_min']} "
               f"surr={st['surrender_path']}", flush=True)
-        return rg, ru, st, su
+        return rg, ru, st, su, ec_tel, ec_u, secs
 
     with ThreadPoolExecutor(max_workers=par) as ex:
         outs = list(ex.map(one, range(seeds)))
 
-    per_game = [rg for rg, _, _, _ in outs]
-    tels = [st for _, _, st, _ in outs]
-    usage = _sum_usage([ru for _, ru, _, _ in outs] + [su for _, _, _, su in outs])
+    per_game = [o[0] for o in outs]
+    tels = [o[2] for o in outs]
+    ec_tels = [o[4] for o in outs if o[4] is not None]
+    usage = _sum_usage([o[1] for o in outs] + [o[3] for o in outs] + [o[5] for o in outs])
+    total_secs = sum(o[6] for o in outs)
+    games = 2 * seeds + (seeds if earned_crack else 0)
     return {
         "model": model,
         "seeds": seeds,
         "floor": floor,
+        "engine_sha": ENGINE_SHA,                            # cross-version comparability
         "campaign": _campaign_block(model, per_game),        # rommels_arrival degree-of-success
-        "siege": _siege_summary(tels),                       # crack-generalship
-        "cost": _cost_block(model, usage, games=2 * seeds),  # both scenarios
+        "siege": _siege_summary(tels),                       # crack-generalship (floor as configured)
+        "earned_crack": _siege_summary(ec_tels) if earned_crack else None,  # floor-OFF, no help
+        "cost": _cost_block(model, usage, games=games),      # both scenarios (+ earned-crack pass)
+        "timing": _timing_block(total_secs, games, usage["completion_tokens"]),
     }
 
 
@@ -306,15 +357,17 @@ def leaderboard(cards: list[dict]) -> None:
     rows = sorted(cards, key=_rank_key, reverse=True)
     print("\n=== LEADERBOARD (multi-axis: score, then crack / kill / reject / ammo-drive) ===")
     hdr = (f"{'model':<26}{'SCORE':>7}{'crack%':>7}{'kill':>6}{'rej%':>6}{'mAmmo':>7}"
-           f"{'starv%':>7}{'adv':>5}{'invT':>6}{'$/gm':>8}")
+           f"{'starv%':>7}{'adv':>5}{'invT':>6}{'tok/s':>7}{'min/gm':>7}{'$/gm':>8}")
     print(hdr + "\n" + "-" * len(hdr))
     for c in rows:
         s, cam, co = c["siege"], c["campaign"], c["cost"]
+        tm = c.get("timing", {})
         am = s.get("mean_ammo_min")
         print(f"{c['model'][:25]:<26}{cam['mean_score']:>7}{s['crack_rate_pct']:>7}"
               f"{cam['mean_kill_ratio']:>6}{cam['reject_rate_pct']:>6}"
               f"{('-' if am is None else am):>7}{100 * s['starved_fraction']:>7.0f}"
               f"{cam['mean_advance_pct']:>5.0f}{cam['mean_turn_invested']:>6}"
+              f"{tm.get('completion_tok_per_s', 0):>7}{tm.get('mean_minutes_per_game', 0):>7}"
               f"{co['cost_per_game_usd']:>8}")
 
 
@@ -356,6 +409,10 @@ def main() -> int:
     ap.add_argument("--recache", action="store_true", help="replay against the cache, model OFF")
     ap.add_argument("--no-floor", dest="floor", action="store_false",
                     help="storm floor OFF -- the model-only 'did the staff earn the crack' signal")
+    ap.add_argument("--earned-crack", action="store_true",
+                    help="ALSO play each seed's siege with the storm floor OFF into a separate "
+                         "'earned_crack' scorecard block -- did the staff crack Tobruk with NO "
+                         "scripted assault help (the real-generalship signal)")
     ap.add_argument("--workers", type=int, default=5, help="concurrent seeds in flight")
     ap.add_argument("--cache", default=str(CACHE_PATH),
                     help="per-process sidecar cache file -- give each parallel model its OWN so "
@@ -394,7 +451,7 @@ def main() -> int:
         print(f"\n>>> {model} ({args.seeds} seeds x 2 scenarios)"
               f"{'  [MOCK]' if args.mock else ''}")
         card = run_model(model, args.seeds, mock=args.mock, live=live, floor=args.floor,
-                         cache=cache, workers=args.workers)
+                         cache=cache, workers=args.workers, earned_crack=args.earned_crack)
         cards.append(card)
         if not args.mock:
             cache_path.write_text(json.dumps(cache))
