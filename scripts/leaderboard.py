@@ -318,6 +318,21 @@ def leaderboard(cards: list[dict]) -> None:
               f"{co['cost_per_game_usd']:>8}")
 
 
+def merge_caches(sources: list[str], dest: str) -> dict:
+    """Union per-process cache files into one shared cache. Each model process runs with its OWN
+    --cache file, so N models can run as N PARALLEL processes without racing/clobbering the shared
+    sidecar; this folds them back together afterwards. The sha256(model+prompt) keys never collide
+    across distinct models, so the union is loss-free (a later source still wins any exact-key
+    repeat). Missing source files are skipped. Returns + writes the merged cache."""
+    merged: dict = {}
+    for src in sources:
+        p = Path(src)
+        if p.exists():
+            merged.update(json.loads(p.read_text()))
+    Path(dest).write_text(json.dumps(merged))
+    return merged
+
+
 def _write(path: str, cards: list[dict]) -> None:
     p = Path(path)
     existing = []
@@ -342,8 +357,26 @@ def main() -> int:
     ap.add_argument("--no-floor", dest="floor", action="store_false",
                     help="storm floor OFF -- the model-only 'did the staff earn the crack' signal")
     ap.add_argument("--workers", type=int, default=5, help="concurrent seeds in flight")
+    ap.add_argument("--cache", default=str(CACHE_PATH),
+                    help="per-process sidecar cache file -- give each parallel model its OWN so "
+                         "N models run as N processes without racing the shared cache")
+    ap.add_argument("--merge-caches", default=None,
+                    help="comma-list of cache files to union into --cache, then exit "
+                         "(fold the per-process caches back after a parallel run)")
     ap.add_argument("--out", default=str(OUT / "leaderboard.json"))
     args = ap.parse_args()
+
+    try:
+        sys.stdout.reconfigure(line_buffering=True)       # a slow model stays observable, not hung
+    except (AttributeError, ValueError):
+        pass
+
+    OUT.mkdir(exist_ok=True)
+    if args.merge_caches:
+        srcs = [s.strip() for s in args.merge_caches.split(",") if s.strip()]
+        merged = merge_caches(srcs, args.cache)
+        print(f"merged {len(srcs)} cache file(s) -> {args.cache} ({len(merged)} entries)")
+        return 0
 
     if not (args.mock or args.live or args.recache):
         ap.error("pass --mock, --live, or --recache")
@@ -352,9 +385,9 @@ def main() -> int:
         _load_key()
         _assert_key_billed()                              # bill the CFNA key, not the ambient one
 
-    OUT.mkdir(exist_ok=True)
-    cache = (json.loads(CACHE_PATH.read_text())
-             if (not args.mock and CACHE_PATH.exists()) else {})
+    cache_path = Path(args.cache)
+    cache = (json.loads(cache_path.read_text())
+             if (not args.mock and cache_path.exists()) else {})
     models = [m.strip() for m in args.models.split(",") if m.strip()]
     cards = []
     for model in models:
@@ -364,7 +397,7 @@ def main() -> int:
                          cache=cache, workers=args.workers)
         cards.append(card)
         if not args.mock:
-            CACHE_PATH.write_text(json.dumps(cache))
+            cache_path.write_text(json.dumps(cache))
         _write(args.out, [card])                          # crash-safe: persist after each model
 
     leaderboard(cards)

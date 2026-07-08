@@ -8,6 +8,7 @@ byte determinism are all exercised offline.
 """
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -170,3 +171,38 @@ def test_leaderboard_prints_and_ranks_without_error(capsys):
     out = capsys.readouterr().out
     assert "multi-axis" in out
     assert out.index("good/general") < out.index("mauled/advancer")   # good printed first
+
+
+# --- throughput: per-process cache files fold back losslessly ---------------------
+
+def test_merge_caches_unions_per_process_files(tmp_path):
+    a = tmp_path / "a.json"
+    b = tmp_path / "b.json"
+    dest = tmp_path / "shared.json"
+    a.write_text(json.dumps({"k1": "v1"}))
+    b.write_text(json.dumps({"k2": "v2"}))
+    merged = lb.merge_caches([str(a), str(b), str(tmp_path / "missing.json")], str(dest))
+    assert merged == {"k1": "v1", "k2": "v2"}            # union; missing file skipped
+    assert json.loads(dest.read_text()) == {"k1": "v1", "k2": "v2"}
+
+
+def test_cache_cli_arg_is_honored(tmp_path, monkeypatch):
+    # --mock never writes a cache, but the arg must parse and thread through without touching the
+    # default out/leaderboard.cache.json. Prove wiring by driving main() with a custom --cache.
+    out = tmp_path / "lb.json"
+    cache = tmp_path / "own.cache.json"
+    monkeypatch.setattr(sys, "argv", ["leaderboard", "--mock", "--seeds", "1",
+                                      "--models", "mock/test",
+                                      "--cache", str(cache), "--out", str(out)])
+    assert lb.main() == 0
+    assert out.exists() and json.loads(out.read_text())["cards"][0]["model"] == "mock/test"
+
+
+def test_merge_caches_cli_exits_after_folding(tmp_path, monkeypatch):
+    a = tmp_path / "a.json"
+    dest = tmp_path / "dest.json"
+    a.write_text(json.dumps({"kx": "vx"}))
+    monkeypatch.setattr(sys, "argv", ["leaderboard", "--merge-caches", str(a),
+                                      "--cache", str(dest)])
+    assert lb.main() == 0                                # returns without needing --mock/--live
+    assert json.loads(dest.read_text()) == {"kx": "vx"}
