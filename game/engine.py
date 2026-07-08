@@ -1471,9 +1471,12 @@ def _combat(r: _Run, policies: dict, side: Side) -> None:
                    {"order": "attack", "target": list(target),
                     "reason": "no valid attackers or empty target"})
             continue
-        _resolve_combat(r, side, actor, attackers, defenders, target, pinned, charged)
-        assaulted.add(target)
-        committed.update(u.id for u in attackers)
+        # 15.23/15.24: only a resolved assault locks the hex and commits its attackers.
+        # A REJECTED assault (every attacker out of ammo or Pinned) spent no round, so
+        # it must not burn the hex or tie down units that could still assault elsewhere.
+        if _resolve_combat(r, side, actor, attackers, defenders, target, pinned, charged):
+            assaulted.add(target)
+            committed.update(u.id for u in attackers)
 
 
 def _retreat_before_assault(r: _Run, policy: Policy, side: Side, phasing: Side,
@@ -1688,18 +1691,19 @@ def _apply_armor_losses(r: _Run, firing: Side, actor: str, target: Coord, damage
 
 
 def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
-                    target: Coord, pinned: set[str], charged: set[str]) -> None:
+                    target: Coord, pinned: set[str], charged: set[str]) -> bool:
     # Ammo gates participation (rule 32.21 / 15.15) and Pin suppresses it (12.44):
     # a unit that cannot draw ammo or is Pinned cannot assault; a Pinned or unarmed
     # defender adds no defensive strength but still suffers losses. Charged before
-    # resolution (conservation holds per event).
+    # resolution (conservation holds per event). Returns True if the assault RESOLVED
+    # (so the caller locks the hex and commits the attackers), False if it was rejected.
     armed_atk = [u for u in attackers
                  if u.id not in pinned and _charge_ammo(r, side, actor, u, phasing=True)]
     if not armed_atk:
         r.emit(EventKind.ORDER_REJECTED, side, actor,
                {"order": "attack", "target": list(target),
                 "reason": "attackers out of ammo or pinned"})
-        return
+        return False
     for u in armed_atk:                         # 6.3: the phasing Assault CP (5), once/segment
         _charge_combat_cp(r, side, u, charged)
     # 15.15 / 15.88: an assaulted stack that is entirely out of Close-Assault ammo,
@@ -1711,7 +1715,7 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     if _defenders_capitulate(r, defenders):
         _resolve_surrender(r, side, actor, target, armed_atk, defenders,
                            atk_surr=False, def_surr=True, morale_shift=0, dice=())
-        return
+        return True
     armed_def = [u for u in defenders
                  if u.id not in pinned and _charge_ammo(r, side, actor, u, phasing=False)]
     for u in armed_def:                         # 6.3: the non-phasing defence CP (3), once/segment
@@ -1740,11 +1744,11 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
                 "attacker_captured": False, "defender_captured": False,
                 "attacker_engaged": False, "retreat_hexes": 0},
                rng_draws=(*atk_md, *def_md))
-        return
+        return True
     if atk_surr or def_surr:                                    # rule 17.25: the stack surrenders
         _resolve_surrender(r, side, actor, target, armed_atk, defenders,
                            atk_surr, def_surr, atk_m - def_m, (*atk_md, *def_md))
-        return
+        return True
     ab, asm, db, dsm = r.d6(), r.d6(), r.d6(), r.d6()
     res = combat.resolve(
         attacker_raw=sum(u.raw_offense for u in armed_atk),
@@ -1790,6 +1794,7 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
             r.emit(EventKind.COHESION_CHANGED, side, actor, {"unit_id": u.id, "delta": -3})
     if res.retreat_hexes > 0:                                   # rule 15.8 / 15.82
         _retreat(r, side, actor, [d.id for d in defenders], armed_atk[0].hex, res.retreat_hexes)
+    return True
 
 
 def _combined_arms_penalty(units) -> int:

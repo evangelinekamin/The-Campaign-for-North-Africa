@@ -532,6 +532,31 @@ def test_close_assault_charges_the_63_capability_points():
     assert r.state.unit("D").cp_used == 3              # 6.3 non-phasing defence
 
 
+def test_resolve_combat_signals_resolved_vs_rejected():
+    # findings #8: a rejected assault (every attacker out of ammo) must return False so
+    # the caller does NOT lock the hex or commit the attackers for the segment; a resolved
+    # assault returns True. An ammo-less attacker over an empty dump cannot draw.
+    from game.engine import _Run, _resolve_combat
+    from game.events import EventKind
+    from game.state import SupplyUnit, Unit
+    from game.terrain import Mobility
+    atk = Unit("A", Side.AXIS, (1, 0), (StepRecord("a", 6),), mobility=Mobility.FOOT,
+               cpa=10, stacking_points=1, oca=3, dca=3, morale=1, cohesion=0)
+    dfn = Unit("D", Side.ALLIED, (0, 0), (StepRecord("d", 6),), mobility=Mobility.FOOT,
+               cpa=10, stacking_points=1, oca=2, dca=2, morale=1, cohesion=0)
+    dry = _Run(_two_side_state(
+        [atk, dfn], [SupplyUnit("AXD", Side.AXIS, (1, 0), ammo=0, fuel=0),
+                     SupplyUnit("ALD", Side.ALLIED, (0, 0), ammo=40, fuel=0)]))
+    assert _resolve_combat(dry, Side.AXIS, "AXIS/Front", [atk], [dfn], (0, 0),
+                           set(), set()) is False
+    assert any(e.kind == EventKind.ORDER_REJECTED for e in dry.events)
+    wet = _Run(_two_side_state(
+        [atk, dfn], [SupplyUnit("AXD", Side.AXIS, (1, 0), ammo=40, fuel=0),
+                     SupplyUnit("ALD", Side.ALLIED, (0, 0), ammo=40, fuel=0)]))
+    assert _resolve_combat(wet, Side.AXIS, "AXIS/Front", [atk], [dfn], (0, 0),
+                           set(), set()) is True
+
+
 def test_combat_cp_charged_once_per_segment():
     # 6.3 'and/or': a unit that BOTH barrages and close-assaults in one Combat Segment
     # pays the 5-CP Assault ONCE (not 5 + 5) -- the shared `charged` ledger dedupes.
