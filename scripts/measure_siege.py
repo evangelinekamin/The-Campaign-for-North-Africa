@@ -35,7 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from scripts.benchmark import FAST_PROVIDER, _mock_staff, game_metrics   # noqa: E402
 
 from game import engine, narrator                                        # noqa: E402
-from game.apply import fold                                              # noqa: E402
+from game.apply import apply, fold                                       # noqa: E402
 from game.engine import run                                             # noqa: E402
 from game.events import Control, EventKind, Side, log_to_json           # noqa: E402
 from game.llm import CachingClient, MockClient, OpenRouterClient        # noqa: E402
@@ -105,6 +105,25 @@ def _port_trajectory(events) -> tuple[list[int], int | None]:
     return traj, turn0
 
 
+def _ammo_trajectory(result) -> list[dict]:
+    """The AL-Tobruk garrison dump (ammo/stores/water) at every Operations-Stage and game-turn
+    boundary -- the curve the storm has to drain to zero for the 15.15 dry-stack surrender to
+    fire. A single incremental fold (O(n)). This is the load-bearing telemetry: with the harbour
+    open the ammo RISES (the ferry outpaces the storm); with the choke shut it monotonically
+    drains, and the stage it hits 0 is the stage before the 15.15 capitulation."""
+    boundaries = {EventKind.STAGE_ADVANCED, EventKind.TURN_ADVANCED}
+    traj: list[dict] = []
+    state = result.initial
+    for e in result.events:
+        state = apply(state, e)
+        if e.kind in boundaries:
+            al = state.supply("AL-Tobruk")
+            if al is not None:
+                traj.append({"turn": e.turn, "ammo": al.ammo,
+                             "stores": al.stores, "water": al.water})
+    return traj
+
+
 def _surrender_path(result) -> str | None:
     """Classify the objective's fall: the auto-capitulation (15.15 dry ammo vs 15.88 cohesion
     collapse) or the 17.25 morale-roll SURR, by folding to the pre-surrender state and reading
@@ -136,6 +155,8 @@ def _telemetry(result) -> dict:
     g = game_metrics(result)
     crack = result.winner == Side.AXIS
     assert crack == (result.final.control_of(result.initial.target_hex) == Control.AXIS)
+    ammo_traj = _ammo_trajectory(result)
+    ammo_curve = [p["ammo"] for p in ammo_traj]
     return {
         "crack": crack,
         "winner": result.winner.value,
@@ -148,6 +169,9 @@ def _telemetry(result) -> dict:
         "al_tobruk_ammo": al.ammo if al else None,
         "al_tobruk_stores": al.stores if al else None,
         "al_tobruk_water": al.water if al else None,
+        "al_tobruk_ammo_traj": ammo_traj,          # per-stage garrison dump curve (the drain)
+        "al_tobruk_ammo_peak": max(ammo_curve, default=None),
+        "al_tobruk_ammo_min": min(ammo_curve, default=None),
         "surrender_path": _surrender_path(result),
     }
 
@@ -177,7 +201,8 @@ def _measure(*, live: bool, seeds: int, floor: bool, workers: int, tag: str) -> 
         mark = "CRACK" if tel["crack"] else "held"
         print(f"    [{tag}] seed {BASE_SEED + i}: {mark} winner={tel['winner']} "
               f"eff0@t{tel['port_eff_zero_turn']} assaults={tel['axis_assaults']} "
-              f"AL-ammo={tel['al_tobruk_ammo']} surr={tel['surrender_path']}", flush=True)
+              f"AL-ammo={tel['al_tobruk_ammo']} (peak {tel['al_tobruk_ammo_peak']}"
+              f"->min {tel['al_tobruk_ammo_min']}) surr={tel['surrender_path']}", flush=True)
         return tel, axis.usage(), result
 
     with ThreadPoolExecutor(max_workers=workers) as ex:
@@ -200,7 +225,18 @@ def _measure(*, live: bool, seeds: int, floor: bool, workers: int, tag: str) -> 
     print(f"\n[{tag}] crack_rate = {cracks}/{seeds} = {rate}%  (floor={'ON' if floor else 'OFF'})")
     turn0s = [t["port_eff_zero_turn"] for t in tels if t["port_eff_zero_turn"] is not None]
     print(f"  port eff->0 turns: {sorted(turn0s)}")
+    print(f"  AL-Tobruk ammo peak->final: "
+          f"{sorted((t['al_tobruk_ammo_peak'], t['al_tobruk_ammo']) for t in tels)}")
     print(f"  AL-Tobruk final ammo: {sorted(t['al_tobruk_ammo'] for t in tels)}")
+    # The garrison-dump DRAIN curve of the deepest-drained game -- the load-bearing signal: does
+    # the sustained storm carry AL-Tobruk to 0 (the stage before the 15.15 fire) or plateau above?
+    deep = min(tels, key=lambda t: t["al_tobruk_ammo_min"])
+    per_turn = {}
+    for p in deep["al_tobruk_ammo_traj"]:
+        per_turn[p["turn"]] = p["ammo"]                 # last stage-reading of each game-turn
+    print(f"  deepest-drain AL-Tobruk ammo curve (peak {deep['al_tobruk_ammo_peak']} -> "
+          f"min {deep['al_tobruk_ammo_min']}), per game-turn:")
+    print("    " + " ".join(f"T{k}:{v}" for k, v in sorted(per_turn.items())))
     print(f"  surrender paths: {[t['surrender_path'] for t in tels if t['surrender_path']]}")
     print(f"  convoy tons_lost (summed/game): {sorted(t['convoy_tons_lost'] for t in tels)}")
     print(f"  usage: model={MODEL} calls={usage['calls']} prompt_tok={usage['prompt_tokens']} "

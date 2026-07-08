@@ -377,3 +377,105 @@ class ScriptedPolicy(Policy):
     def _stacking_ok(self, state: GameState, unit: Unit, dest: Coord) -> bool:
         present = [u for u in state.units_at(dest) if u.side == unit.side]
         return stacking.within_hex_limit(present + [unit], state.terrain.terrain[dest])
+
+
+class StormPolicy(ScriptedPolicy):
+    """A strong-general storming proxy (zero tokens) that isolates the garrison-STARVATION
+    mechanism (rule 15.15) from the LLM staff's assault timidity AND from the Axis desert-supply
+    death-spiral. It is the SCRIPTED instrument for proving that the Tobruk harbour choke is
+    load-bearing: with the sea lifeline cut (port bombed to Efficiency 0), a sustained storm
+    drains the garrison's finite dump to zero and forces the 15.15 dry-stack capitulation --
+    the historical siege, where the sea lane decides the fortress -- rather than the brute-force
+    casualty-destruction path. Three doctrines layer over ScriptedPolicy's attacker branch:
+
+      - MOVEMENT drives every fuelled combat unit onto the objective's perimeter and HOLDS it
+        there (never drifting back), and OCCUPIES the objective the instant its garrison vacates
+        it -- the 15.15 surrender eliminates the garrison and leaves the hex empty, so a stormer
+        must step on to flip control (rule 12.6).
+      - a SUPPLY BRIDGE relocates each field dump to the rearmost combat unit that has outrun its
+        fuel, keeping the advancing column connected instead of leapfrogging every dump to the
+        front and stranding the army in a supply desert (the ScriptedPolicy attacker's failure
+        mode: the spearhead reaches the wall, the dumps follow it, the spearhead dies, and the
+        rear strands out of fuel with the dumps beyond half-CPA).
+      - COMBAT assaults the objective EVERY stage. While the garrison can still draw Close-Assault
+        ammunition it commits a MINIMAL spearhead (drawing the garrison's ammo down one assault at
+        a time while a resupplied reserve is kept armed); the instant every defender on the
+        objective is dry (the exact 15.15 condition the engine checks) it throws the whole
+        perimeter in as one assault -- the capitulation trigger.
+
+    Reads full state, exactly like ScriptedPolicy; every proposal is re-validated by the engine.
+    `attacker` is the storming side (Side.AXIS for the siege)."""
+
+    def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
+        if side != self.attacker:
+            return self._defender_moves(state, side)
+        target = state.target_hex
+        perim = frozenset(neighbors(target))
+        enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, side)
+        takeable = not any(e.is_combat for e in state.enemies_at(target, side))
+        orders: list[MoveOrder] = []
+        claimed = False
+        for u in state.living(side):
+            if not u.is_combat:
+                continue
+            if supply.plan_draw(state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None:
+                continue          # out of fuel -- every move pays (49.13); don't propose a reject
+            reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
+            if (takeable and not claimed and target in reach
+                    and self._stacking_ok(state, u, target)):
+                orders.append(MoveOrder(u.id, target))     # claim the vacated objective (control flip)
+                claimed = True
+                continue
+            if u.hex == target or u.hex in perim:
+                continue                                   # already storming -- HOLD the perimeter
+            cands = [c for c in reach if c != u.hex and self._stacking_ok(state, u, c)
+                     and distance(c, target) < distance(u.hex, target)]
+            if cands:
+                # prefer stepping onto the perimeter (esp. an enemy dump hex, to trace-block it)
+                dest = min(cands, key=lambda c: (c not in perim, distance(c, target), reach[c], c))
+                orders.append(MoveOrder(u.id, dest))
+        return orders
+
+    def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
+        if side != self.attacker:
+            return ScriptedPolicy.supply_orders(self, state, side)
+        target = state.target_hex
+        stranded = sorted(
+            (u for u in state.living(side) if u.is_combat
+             and supply.plan_draw(state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None),
+            key=lambda u: distance(u.hex, target))         # bridge the nearest-to-front gap first
+        orders: list[SupplyMoveOrder] = []
+        claimed: set[Coord] = set()
+        for su in state.active_supplies(side):
+            if su.fuel < supply.SUPPLY_MOVE_FUEL or state.port_at(su.hex) is not None:
+                continue                                   # no fuel to move, or a harbour dump stays put
+            reach = supply.reachable_moves(state, su)
+            pick = next((u for u in stranded if u.hex in reach
+                         and u.hex != su.hex and u.hex not in claimed), None)
+            if pick is not None:
+                claimed.add(pick.hex)
+                orders.append(SupplyMoveOrder(su.id, pick.hex))
+        # nobody stranded -> fall back to the leapfrog-forward bridge (rule 32.3)
+        return orders or ScriptedPolicy.supply_orders(self, state, side)
+
+    def combat(self, state: GameState, side: Side) -> list[AttackOrder]:
+        if side != self.attacker:
+            return ScriptedPolicy.combat(self, state, side)
+        target = state.target_hex
+        armed = [u for u in state.living(side)
+                 if u.is_combat and target in set(neighbors(u.hex))
+                 and supply.plan_draw(state, u, supply.AMMO,
+                                      supply.ammo_cost(u, phasing=True)) is not None]
+        elsewhere = [a for a in ScriptedPolicy.combat(self, state, side) if a.target != target]
+        if not armed:
+            return elsewhere                               # no adjacent ammo-capable unit this stage
+        defenders = [u for u in state.enemies_at(target, side) if u.strength > 0]
+        dry = bool(defenders) and all(                     # the exact 15.15 condition (mirrors _has_ammo)
+            supply.plan_draw(state, u, supply.AMMO,
+                             supply.ammo_cost(u, phasing=False, activity="assault")) is None
+            for u in defenders)
+        if dry:                                            # TRIGGER: throw the whole perimeter in (15.15)
+            return [AttackOrder(tuple(u.id for u in armed), target)] + elsewhere
+        # DRAIN: a minimal spearhead draws the garrison's Close-Assault ammo; the reserve stays armed.
+        spear = min(armed, key=lambda u: (u.strength, u.id))
+        return [AttackOrder((spear.id,), target)] + elsewhere

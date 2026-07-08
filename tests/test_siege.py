@@ -19,7 +19,7 @@ from game.engine import (BARRAGE_HITS_PER_FORT_LEVEL, _barrage_step, _resolve_co
                          _Run, determinism_signature, run)
 from game.events import Event, EventKind, Phase, Side
 from game.movement import TerrainMap
-from game.policy import ScriptedPolicy
+from game.policy import ScriptedPolicy, StormPolicy
 from game.scenario import rommels_arrival, siege_of_tobruk
 from game.state import GameState, StepRecord, SupplyUnit, Unit, VP
 from game.terrain import Mobility, Terrain
@@ -290,3 +290,75 @@ def test_storm_floor_cracks_the_dry_garrison_but_a_timid_staff_never_does():
                 allied=ScriptedPolicy(attacker=Side.AXIS))
     assert determinism_signature(cracked.events) == determinism_signature(again.events)
     assert fold(cracked.initial, cracked.events) == cracked.final
+
+
+# --- the SUPPLY-DRIVEN crack: a sustained scripted storm STARVES the garrison (rule 15.15) ----
+#
+# The full siege on real Maps A/B/C, no artificial dry-out (unlike _dry_tobruk_storm above): the
+# garrison opens on its faithful 61.36 built-in dump (1500 Ammo) plus the adjacent AL-Dump#3, and
+# the ONLY thing standing between it and starvation is the sea lifeline. StormPolicy -- a scripted
+# strong-general proxy, zero tokens -- drives the perimeter and assaults every stage; the harbour
+# choke (port_bomb) shuts the ferry; and the garrison dump drains to 0 over the campaign, firing the
+# 15.15 dry-stack surrender. seed 4210 is the locked deterministic witness (peak 2351 -> 0 by T9).
+
+def _storm(seed: int = 4210, *, port_bomb: bool = True, raf: bool = True):
+    st = siege_of_tobruk(seed, port_bomb=port_bomb, raf=raf)
+    return st, run(st, axis=StormPolicy(attacker=Side.AXIS),
+                   allied=ScriptedPolicy(attacker=Side.AXIS))
+
+
+def test_scripted_storm_starves_tobruk_via_15_15_dry_ammo_surrender():
+    from game import supply as _supply
+    from game.state import Control
+    st, r = _storm()
+    target = st.target_hex
+
+    # (1) BOTH garrison-reachable dumps drain to ZERO -- the choked ferry can no longer refill the
+    # built-in reservoir, so the sustained storm empties it (supply starvation, not casualties).
+    assert r.final.supply("AL-Tobruk").ammo == 0
+    assert r.final.supply("AL-Dump#3").ammo == 0
+
+    # (2) the fall is the 15.15 dry-stack AUTO-capitulation: a COMBAT_RESOLVED defender surrender
+    # carrying NO morale dice (the _defenders_capitulate branch, not the 17.25 roll), with every
+    # defender genuinely out of Close-Assault ammunition and the largest defender's Cohesion intact
+    # (> -17), so it is 15.15 (dry ammo) and NOT the 15.88 cohesion collapse.
+    idx = next((i for i, e in enumerate(r.events)
+                if e.kind == EventKind.COMBAT_RESOLVED
+                and e.payload.get("target") == list(target)
+                and e.payload.get("surrender") == "defender"), None)
+    assert idx is not None, "the garrison must fall by the 15.15 assault surrender, not attrition"
+    fall = r.events[idx]
+    assert fall.rng_draws == ()                            # auto-capitulation, not a 17.25 morale roll
+    pre = fold(r.initial, r.events[:idx])
+    defenders = [u for u in (pre.unit(d) for d in fall.payload["defenders"])
+                 if u is not None and u.strength > 0]
+    largest = max(defenders, key=lambda u: (u.stacking_points, u.strength))
+    assert largest.cohesion > -17                          # 15.15 (dry ammo), NOT 15.88 (cohesion)
+    assert all(_supply.plan_draw(pre, u, _supply.AMMO,
+                                 _supply.ammo_cost(u, phasing=False, activity="assault")) is None
+               for u in defenders)                         # every defender genuinely dry
+
+    # (3) control flips: a stormer occupies the vacated fortress -> Axis victory.
+    assert r.final.control_of(target) == Control.AXIS
+    assert r.winner == Side.AXIS
+
+    # deterministic + replay-exact
+    _, again = _storm()
+    assert determinism_signature(r.events) == determinism_signature(again.events)
+    assert fold(r.initial, r.events) == r.final
+
+
+def test_the_harbour_choke_is_load_bearing_not_atmospheric():
+    # THE load-bearing proof: the SAME storm on the SAME seed with the port-bomb OFF does NOT crack.
+    # With the harbour open the ferry lands thousands of Ammo Points and the garrison dump RISES far
+    # out of the storm's reach, so no 15.15 ever fires -- the eff->0 choke is what starves the
+    # fortress (the historical mechanism: the sea lane decides the siege), not the storm alone.
+    from game.state import Control
+    st, held = _storm(port_bomb=False)
+    target = st.target_hex
+    assert held.winner == Side.ALLIED
+    assert held.final.control_of(target) != Control.AXIS
+    assert held.final.supply("AL-Tobruk").ammo > 1500      # the open ferry outpaced the storm: dump grew
+    assert not any(e.kind == EventKind.COMBAT_RESOLVED
+                   and e.payload.get("target") == list(target)
+                   and e.payload.get("surrender") == "defender" for e in held.events)
