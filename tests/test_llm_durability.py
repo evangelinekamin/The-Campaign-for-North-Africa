@@ -11,14 +11,40 @@ tests/crash_durability.py and is invoked as a subprocess here.
 """
 from __future__ import annotations
 
+import http.client
 import json
 import subprocess
 import sys
+import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from game.llm import CachingClient, Journal, _atomic_write, compact, load_cache  # noqa: E402
+import game.llm as llm                                                          # noqa: E402
+from game.llm import (CachingClient, Journal, OpenRouterClient,                 # noqa: E402
+                      _atomic_write, compact, load_cache)
+
+
+# --- retry robustness: a truncated chunked response must not escape ------------
+
+def test_incomplete_read_retries_then_returns_empty(monkeypatch):
+    """IncompleteRead (a truncated chunked body -- an http.client.HTTPException) once ESCAPED the
+    retry handler and killed a run process. It must now be caught: retry, then return '' on
+    exhaustion rather than propagating."""
+    calls = {"n": 0}
+
+    def boom(*_a, **_k):
+        calls["n"] += 1
+        raise http.client.IncompleteRead(b"partial")
+
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.setattr(urllib.request, "urlopen", boom)
+    monkeypatch.setattr(llm.time, "sleep", lambda *_a, **_k: None)   # no real backoff in the test
+
+    client = OpenRouterClient("mock/model", retries=1, timeout=0.01)
+    assert client.chat([{"role": "user", "content": "hi"}]) == ""   # exhausted -> "", not raised
+    assert calls["n"] == 2                                           # initial attempt + one retry
+    assert client.failures == 1
 
 
 class _Counting:

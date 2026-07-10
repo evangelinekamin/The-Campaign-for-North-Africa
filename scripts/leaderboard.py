@@ -218,19 +218,31 @@ def _fetch_openrouter_price(model: str) -> tuple[float, float]:
     return (0.0, 0.0)
 
 
+def _base_slug(model: str) -> str:
+    """The pricing slug WITHOUT an OpenRouter routing variant (':nitro', ':floor', ...). The
+    variant selects an endpoint, not a different-priced model, but it is NOT in PRICES or the
+    /models catalogue -- so 'openai/gpt-oss-120b:nitro' priced $0.000 until we stripped it."""
+    return model.split(":", 1)[0]
+
+
 def _price_for(model: str, fetch=_fetch_openrouter_price) -> tuple[tuple[float, float], str]:
-    """(prompt, completion) per-1M-token price + its source. PRICES first (curated, offline);
-    otherwise the OpenRouter catalogue."""
-    if model in PRICES:
-        return PRICES[model], "PRICES"
-    return fetch(model), "openrouter"
+    """(prompt, completion) per-1M-token price + its source. PRICES first (curated, offline),
+    trying the full slug then the variant-stripped base; otherwise the OpenRouter catalogue keyed
+    by the base slug (so a ':nitro' variant still resolves)."""
+    base = _base_slug(model)
+    for slug in (model, base):
+        if slug in PRICES:
+            return PRICES[slug], "PRICES"
+    return fetch(base), "openrouter"
 
 
 def _cost_block(model: str, usage: dict, games: int) -> dict:
     ptok, ctok = usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
     if ptok == 0 and ctok == 0:                           # nothing to price -> stay offline
-        (p_in, p_out) = PRICES.get(model, (0.0, 0.0))
-        source = "PRICES" if model in PRICES else "unpriced"
+        base = _base_slug(model)
+        priced = model in PRICES or base in PRICES
+        (p_in, p_out) = PRICES.get(model, PRICES.get(base, (0.0, 0.0)))
+        source = "PRICES" if priced else "unpriced"
     else:
         (p_in, p_out), source = _price_for(model)
     cost = (ptok * p_in + ctok * p_out) / 1e6
@@ -261,6 +273,9 @@ def _campaign_block(model: str, per_game: list[dict]) -> dict:
     for k in ("est_cost_usd", "cost_per_game_usd", "llm_calls", "llm_failures",
               "prompt_tokens", "completion_tokens"):
         block.pop(k, None)
+    # Each seed's own campaign score, so a real confidence interval is computable from the card
+    # (not just the min/max the aggregate exposes).
+    block["per_seed_scores"] = [g["score"] for g in per_game]
     return block
 
 

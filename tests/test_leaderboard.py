@@ -181,6 +181,45 @@ def test_cost_block_prices_tokens_from_the_curated_table():
     assert cost["cost_per_game_usd"] == 0.75             # 6.0 / 8
 
 
+# --- the :variant price bug: a ':nitro' slug must never price at $0.000 --------
+
+def test_price_for_strips_the_variant_before_lookup_and_fetch():
+    # a ':nitro' routing variant is not a differently-priced model. Its base slug must be tried in
+    # PRICES, and the base (not the ':nitro' id, which the catalogue lacks) must be what is fetched.
+    base_slug = "z-ai/glm-5.2"                            # in PRICES; the :nitro variant is not
+    price, source = lb._price_for(base_slug + ":nitro", fetch=lambda m: (0.0, 0.0))
+    assert price == PRICES[base_slug] and source == "PRICES"
+
+    fetched = {}
+
+    def _capture(m):
+        fetched["slug"] = m
+        return (2.0, 4.0)
+
+    price, source = lb._price_for("openai/gpt-oss-120b:nitro", fetch=_capture)
+    assert fetched["slug"] == "openai/gpt-oss-120b"       # variant stripped before the catalogue call
+    assert price == (2.0, 4.0) and source == "openrouter"
+
+
+def test_no_priced_model_yields_zero_cost_with_nonzero_tokens():
+    # the gpt-oss $0.000 bug: a resolvable price + nonzero tokens must produce nonzero cost. A base
+    # slug in PRICES resolves even through a ':nitro' variant.
+    usage = {"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000, "calls": 1}
+    cost = lb._cost_block("z-ai/glm-5.2:nitro", usage, games=2)
+    assert cost["price_source"] == "PRICES"
+    assert cost["est_cost_usd"] > 0.0                     # never $0.000 with real tokens
+    assert cost["price_per_1m"] == list(PRICES["z-ai/glm-5.2"])
+
+
+# --- per-seed scores: real confidence intervals, not just min/max --------------
+
+def test_campaign_block_records_each_seeds_score():
+    card = _card(seeds=3)
+    scores = card["campaign"]["per_seed_scores"]
+    assert isinstance(scores, list) and len(scores) == 3   # one score per seed
+    assert all(isinstance(s, (int, float)) for s in scores)
+
+
 # --- multi-axis grading: the leaderboard DISCRIMINATES when the single score collapses ---
 
 def _profile(model, *, score, crack, kill, reject, ammo, advance, invT):

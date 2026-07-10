@@ -29,11 +29,13 @@ def test_tiered_seed_counts():
     assert rl.seeds_for("z-ai/glm-5.2") == 5                   # cheap/mid N=5
 
 
-def test_workers_are_min_2n_8_and_openai_is_constrained():
-    assert rl.workers_for("z-ai/glm-5.2") == 8                 # min(2*5, 8)
-    assert rl.workers_for("anthropic/claude-opus-4.8") == 6    # min(2*3, 8)
+def test_workers_are_min_2n_3_and_openai_is_constrained():
+    # cap dropped 8 -> 3: eight games queued against one provider blew the timeout (~$95 lost).
+    assert rl.workers_for("z-ai/glm-5.2") == 3                 # min(2*5, 3)
+    assert rl.workers_for("anthropic/claude-opus-4.8") == 3    # min(2*3, 3)
     assert rl.workers_for("openai/gpt-5.5") == 2               # constrained lane
     assert rl.workers_for("openai/gpt-oss-120b:nitro") == 2    # gpt-oss is still OpenAI
+    assert rl.workers_for("z-ai/glm-5.2", seeds=1) == 2        # per-model N override (hybrid)
     assert rl.is_openai("openai/gpt-5.4-mini") and not rl.is_openai("z-ai/glm-5.2")
 
 
@@ -48,7 +50,7 @@ def test_safe_slug_and_command_shape():
     cmd = rl.build_command("anthropic/claude-opus-4.8", Path("/o"), mock=False)
     assert "--live" in cmd and "--earned-crack" in cmd
     assert cmd[cmd.index("--seeds") + 1] == "3"
-    assert cmd[cmd.index("--workers") + 1] == "6"
+    assert cmd[cmd.index("--workers") + 1] == "3"
     assert cmd[cmd.index("--out") + 1].endswith("card_anthropic_claude-opus-4.8.json")
     # a non-top-4 model never asks for the floor-off pass, and --mock swaps the mode flag.
     cheap = rl.build_command("z-ai/glm-5.2", Path("/o"), mock=True)
@@ -135,13 +137,13 @@ def test_generic_ranking_file_covers_the_whole_roster():
 
 # --- pool: crash-safety + resume (fault-injected, no network) ------------------
 
-def _failing_cmd(_model, _out_dir, *, mock):
+def _failing_cmd(_model, _out_dir, *, mock, spec=None):
     return [sys.executable, "-c", "import sys; sys.exit(9)"]
 
 
 def test_pool_survives_a_failing_model_and_runs_the_rest(tmp_path):
     # 'b/two' is force-failed via injection; the others run a trivial succeeding command.
-    def build(model, out_dir, *, mock):
+    def build(model, out_dir, *, mock, spec=None):
         return [sys.executable, "-c",
                 f"import json,pathlib; pathlib.Path(r'{rl.card_path(out_dir, model)}')"
                 f".write_text(json.dumps({{'cards': [{{'model': '{model}'}}]}}))"]
@@ -164,3 +166,100 @@ def test_pool_resume_skips_models_with_existing_cards(tmp_path):
     assert [r["model"] for r in ran] == ["b/two"]
     log = (tmp_path / "run.log").read_text()
     assert "SKIP" in log and "a/one" in log
+
+
+# --- hybrid run config (per-model N, earned-crack off) -------------------------
+
+def test_hybrid_roster_is_the_13_named_models_without_gpt55():
+    assert len(rl.HYBRID_ROSTER) == 13
+    assert len(set(rl.HYBRID_ROSTER)) == 13
+    assert "openai/gpt-5.5" not in rl.HYBRID_ROSTER
+    assert "google/gemini-3.1-pro-preview" in rl.HYBRID_ROSTER
+    assert "z-ai/glm-5.2" in rl.HYBRID_ROSTER                   # the cleaned model re-runs
+
+
+def test_hybrid_plan_tiers_seeds_and_disables_earned_crack():
+    plan = rl.build_plan(rl.HYBRID_ROSTER, seeds_by_model=rl.HYBRID_SEEDS,
+                         default_seeds=rl.HYBRID_DEFAULT_SEEDS, earned_crack_enabled=False)
+    assert plan["google/gemini-3.1-pro-preview"]["seeds"] == 3  # the one N=3 model
+    assert all(plan[m]["seeds"] == 1 for m in rl.HYBRID_ROSTER
+               if m != "google/gemini-3.1-pro-preview")         # everything else N=1
+    assert all(not plan[m]["earned_crack"] for m in rl.HYBRID_ROSTER)  # earned-crack OFF everywhere
+    # workers follow the per-model N: gemini-pro min(2*3,3)=3, an N=1 non-openai min(2*1,3)=2.
+    assert plan["google/gemini-3.1-pro-preview"]["workers"] == 3
+    assert plan["z-ai/glm-5.1"]["workers"] == 2
+    assert plan["openai/gpt-oss-safeguard-20b:nitro"]["workers"] == 2   # openai constrained lane
+
+
+def test_build_command_honours_the_hybrid_spec():
+    spec = {"seeds": 1, "workers": 2, "earned_crack": False}
+    cmd = rl.build_command("z-ai/glm-5.2", Path("/o"), mock=False, spec=spec)
+    assert cmd[cmd.index("--seeds") + 1] == "1"
+    assert cmd[cmd.index("--workers") + 1] == "2"
+    assert "--earned-crack" not in cmd
+
+
+# --- spend kill switch ---------------------------------------------------------
+
+def _priced_card(model, usd):
+    return {"cards": [{"model": model, "cost": {"est_cost_usd": usd}}]}
+
+
+def test_spent_usd_sums_est_cost_across_cards(tmp_path):
+    rl.card_path(tmp_path, "a/one").write_text(json.dumps(_priced_card("a/one", 12.5)))
+    rl.card_path(tmp_path, "b/two").write_text(json.dumps(_priced_card("b/two", 7.25)))
+    assert rl.spent_usd(tmp_path) == 19.75
+
+
+def test_spend_cap_stops_launching_when_the_ceiling_is_reached(tmp_path):
+    # a single already-written card already blows a tiny cap: NO further model is launched.
+    rl.card_path(tmp_path, "done/model").write_text(json.dumps(_priced_card("done/model", 50.0)))
+
+    def _writer(model, out_dir, *, mock, spec=None):
+        return [sys.executable, "-c",
+                f"import json,pathlib; pathlib.Path(r'{rl.card_path(out_dir, model)}')"
+                f".write_text(json.dumps({{'cards': [{{'model': '{model}'}}]}}))"]
+
+    ran = rl.run_pool(["a/one", "b/two"], tmp_path, parallel=2, openai_parallel=1, mock=True,
+                      timeout=30, log_path=tmp_path / "run.log", build_cmd=_writer, max_spend=40.0)
+    assert {r["status"] for r in ran} == {"spend_cap"}          # neither model launched
+    assert not rl.card_path(tmp_path, "a/one").exists()         # the writer never ran
+    assert "SPEND CAP HIT" in (tmp_path / "run.log").read_text()
+
+
+def test_no_spend_cap_launches_normally(tmp_path):
+    def _writer(model, out_dir, *, mock, spec=None):
+        return [sys.executable, "-c",
+                f"import json,pathlib; pathlib.Path(r'{rl.card_path(out_dir, model)}')"
+                f".write_text(json.dumps({{'cards': [{{'model': '{model}', 'cost': {{'est_cost_usd': 1.0}}}}]}}))"]
+
+    ran = rl.run_pool(["a/one"], tmp_path, parallel=1, openai_parallel=1, mock=True,
+                      timeout=30, log_path=tmp_path / "run.log", build_cmd=_writer, max_spend=40.0)
+    assert ran[0]["status"] == "ok"
+
+
+# --- child log capture on failure/timeout -------------------------------------
+
+def test_child_log_is_written_on_nonzero_exit(tmp_path):
+    def _noisy_fail(model, out_dir, *, mock, spec=None):
+        return [sys.executable, "-c",
+                "import sys; print('partial stdout'); print('boom', file=sys.stderr); sys.exit(3)"]
+
+    rl.run_one("a/one", tmp_path, mock=True, timeout=30, log_path=tmp_path / "run.log",
+               build_cmd=_noisy_fail)
+    child = tmp_path / "child_a_one.log"
+    assert child.exists()
+    body = child.read_text()
+    assert "partial stdout" in body and "boom" in body         # stdout is NOT discarded
+
+
+def test_child_log_is_written_on_timeout(tmp_path):
+    def _hang(model, out_dir, *, mock, spec=None):
+        return [sys.executable, "-c",
+                "import sys,time; print('work so far', flush=True); time.sleep(30)"]
+
+    res = rl.run_one("a/one", tmp_path, mock=True, timeout=0.5, log_path=tmp_path / "run.log",
+                     build_cmd=_hang)
+    assert res["status"] == "timeout"
+    child = tmp_path / "child_a_one.log"
+    assert child.exists() and "work so far" in child.read_text()  # captured output survived the kill

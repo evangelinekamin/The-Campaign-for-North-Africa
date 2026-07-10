@@ -9,8 +9,10 @@ variable and is NEVER logged, persisted, or written to disk.
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
 import os
+import socket
 import threading
 import time
 import urllib.error
@@ -221,7 +223,10 @@ class OpenRouterClient:
                 self.prompt_tokens += usage.get("prompt_tokens", 0)
                 self.completion_tokens += usage.get("completion_tokens", 0)
                 return data["choices"][0]["message"]["content"]
-            except (urllib.error.URLError, TimeoutError, KeyError, ValueError):
+            except (urllib.error.URLError, TimeoutError, KeyError, ValueError,
+                    http.client.HTTPException, ConnectionError, socket.timeout):
+                # http.client.HTTPException covers IncompleteRead -- a truncated chunked
+                # response that once ESCAPED this handler and killed the whole run process.
                 if attempt < self.retries:
                     time.sleep(1.0 + attempt)          # brief backoff, then retry
                     continue

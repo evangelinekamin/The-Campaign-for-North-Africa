@@ -4,12 +4,17 @@ Runs each model as its OWN `python -m scripts.leaderboard` subprocess (composes,
 rebuild the harness) with the per-tier seed count, a per-process cache/out file, and the
 earned-crack floor-off pass for the top 4. Two lanes of parallelism run at once:
 
-  * a POOL of model-processes (--parallel, default 5), and
-  * concurrent seeds INSIDE each process (--workers, set to min(2*N, 8) by tier) -- so a slow
-    reasoning model at N=5 finishes in ~ONE game of wall-clock, not the serial sum of ten.
+  * a POOL of model-processes (--parallel, default 3), and
+  * concurrent seeds INSIDE each process (--workers, set to min(2*N, 3) by tier) -- so a slow
+    reasoning model finishes in ~ONE game of wall-clock, not the serial sum, WITHOUT eight games
+    queueing against one provider and blowing the timeout (the ~$95 timeout-death lesson).
 
 OpenAI slugs (openai/*) run in a CONSTRAINED lane (--openai-parallel, default 2; W=2) to respect
-OpenAI RPM/TPM. Total in-flight LLM calls stay ~30-40 so the whole run lands in ~1-1.5h.
+OpenAI RPM/TPM. Total in-flight LLM calls stay ~9 (not ~44) so no provider is stampeded.
+
+A cumulative --max-spend (default $40) is a hard kill switch: once total est_cost across all cards
+reaches it, no further model launches -- a bug can never lose another $90. --hybrid runs a curated
+13-model roster at per-model N (see HYBRID_ROSTER).
 
 RESUMABLE + CRASH-SAFE: a model whose out/card_<slug>.json already exists is SKIPPED (resume);
 a model that errors or times out is logged and SKIPPED -- one bad model NEVER aborts the pool.
@@ -73,7 +78,23 @@ EARNED_CRACK = frozenset({
 FRONTIER_SEEDS = 3
 CHEAP_MID_SEEDS = 5
 OPENAI_WORKERS = 2          # constrained lane: keep per-model in-flight low for OpenAI RPM/TPM
-MAX_WORKERS = 8             # non-OpenAI worker cap (a fast model still won't flood the endpoint)
+MAX_WORKERS = 3             # non-OpenAI worker cap. Was 8: eight concurrent games queued against
+                            # ONE provider blew the 2700s timeout and burned ~$95 in timeout-deaths.
+                            # 3 keeps total in-flight ~9, not ~44.
+
+# HYBRID run: exactly these 13 models at a per-model seed count (gemini-3.1-pro at N=3, the rest at
+# N=1), earned-crack OFF (it produced no discriminating signal -- see the run report). gpt-5.5 is
+# EXCLUDED. The 9 already-completed models keep their cards and are folded back in at the final merge.
+HYBRID_ROSTER = (
+    "google/gemini-3.1-pro-preview",
+    "qwen/qwen3.7-max", "moonshotai/kimi-k2.6", "z-ai/glm-5.2", "z-ai/glm-5.1",
+    "qwen/qwen3.6-27b", "qwen/qwen3.5-35b-a3b:nitro", "minimax/minimax-m3",
+    "deepseek/deepseek-v4-pro", "deepseek/deepseek-v4-flash", "xiaomi/mimo-v2.5-pro",
+    "inception/mercury-2:nitro", "openai/gpt-oss-safeguard-20b:nitro",
+)
+HYBRID_SEEDS = {"google/gemini-3.1-pro-preview": 3}    # everything else -> HYBRID_DEFAULT_SEEDS
+HYBRID_DEFAULT_SEEDS = 1
+MAX_SPEND_USD = 40.0        # cumulative kill switch: a hard $ ceiling no bug can overrun
 
 
 # --- pure helpers (unit-tested) ------------------------------------------------
@@ -93,17 +114,59 @@ def seeds_for(model: str) -> int:
     return FRONTIER_SEEDS if model in FRONTIER else CHEAP_MID_SEEDS
 
 
-def workers_for(model: str) -> int:
+def workers_for(model: str, seeds: "int | None" = None) -> int:
     """Concurrent seeds inside the model's process. OpenAI is throttled to OPENAI_WORKERS; every
     other model runs min(2*N, MAX_WORKERS) so its N-seeds x 2-scenarios collapse to ~one game of
-    wall-clock instead of a serial long-pole."""
+    wall-clock instead of a serial long-pole. `seeds` overrides the tiered count (the hybrid run
+    sets per-model N)."""
+    if seeds is None:
+        seeds = seeds_for(model)
     if is_openai(model):
         return OPENAI_WORKERS
-    return min(2 * seeds_for(model), MAX_WORKERS)
+    return min(2 * seeds, MAX_WORKERS)
 
 
 def wants_earned_crack(model: str) -> bool:
     return model in EARNED_CRACK
+
+
+def _default_spec(model: str) -> dict:
+    """The tiered overnight spec for one model (seeds by tier, top-4 earned-crack)."""
+    seeds = seeds_for(model)
+    return {"seeds": seeds, "workers": workers_for(model, seeds),
+            "earned_crack": wants_earned_crack(model)}
+
+
+def build_plan(models, *, seeds_by_model=None, default_seeds=None,
+               earned_crack_enabled: bool = True) -> dict:
+    """Resolve each model to its run spec {seeds, workers, earned_crack}. With no overrides this is
+    the tiered overnight plan; the hybrid run passes seeds_by_model + default_seeds=1 and disables
+    earned-crack for the whole roster."""
+    seeds_by_model = seeds_by_model or {}
+    plan = {}
+    for m in models:
+        if m in seeds_by_model:
+            seeds = seeds_by_model[m]
+        elif default_seeds is not None:
+            seeds = default_seeds
+        else:
+            seeds = seeds_for(m)
+        ec = wants_earned_crack(m) if earned_crack_enabled else False
+        plan[m] = {"seeds": seeds, "workers": workers_for(m, seeds), "earned_crack": ec}
+    return plan
+
+
+def spent_usd(out_dir: Path) -> float:
+    """Cumulative est_cost_usd across every written card in out_dir -- the kill-switch's running
+    total. Corrupt/half-written cards are skipped (they contribute $0, never crash the tally)."""
+    total = 0.0
+    for p in Path(out_dir).glob("card_*.json"):
+        try:
+            for c in json.loads(p.read_text()).get("cards", []):
+                total += float(c.get("cost", {}).get("est_cost_usd", 0.0) or 0.0)
+        except (ValueError, OSError, TypeError):
+            continue
+    return round(total, 4)
 
 
 def card_path(out_dir: Path, model: str) -> Path:
@@ -119,17 +182,20 @@ def pending_models(models, out_dir: Path) -> list:
     return [m for m in models if not card_path(out_dir, m).exists()]
 
 
-def build_command(model: str, out_dir: Path, *, mock: bool) -> list:
-    """The per-model subprocess: one leaderboard run with the tiered seeds/workers, its OWN cache
-    and card file, and --earned-crack for the top 4."""
+def build_command(model: str, out_dir: Path, *, mock: bool, spec: "dict | None" = None) -> list:
+    """The per-model subprocess: one leaderboard run with the (tiered or hybrid) seeds/workers, its
+    OWN cache and card file, and --earned-crack when the spec asks for it. `spec` overrides the
+    tiered default so the hybrid run can set per-model N."""
+    if spec is None:
+        spec = _default_spec(model)
     cmd = [sys.executable, "-m", "scripts.leaderboard",
            "--mock" if mock else "--live",
            "--models", model,
-           "--seeds", str(seeds_for(model)),
-           "--workers", str(workers_for(model)),
+           "--seeds", str(spec["seeds"]),
+           "--workers", str(spec["workers"]),
            "--cache", str(cache_path(out_dir, model)),
            "--out", str(card_path(out_dir, model))]
-    if wants_earned_crack(model):
+    if spec["earned_crack"]:
         cmd.append("--earned-crack")
     return cmd
 
@@ -214,22 +280,44 @@ def _log(log_path: Path, msg: str) -> None:
     print(line, end="", flush=True)
 
 
+def _child_log_path(out_dir: Path, model: str) -> Path:
+    return Path(out_dir) / f"child_{safe_slug(model)}.log"
+
+
+def _dump_child_log(out_dir: Path, model: str, stdout: str, stderr: str) -> None:
+    """Persist the child's captured stdout+stderr so a timed-out / non-zero model's output is NEVER
+    discarded. TimeoutExpired used to drop stdout entirely -- that is how partial results were lost;
+    with the durability journal a resume then replays those already-paid calls for free."""
+    body = (f"===== stdout =====\n{stdout or ''}\n"
+            f"===== stderr =====\n{stderr or ''}\n")
+    lb._atomic_write(_child_log_path(out_dir, model), body)
+
+
 def run_one(model: str, out_dir: Path, *, mock: bool, timeout: float, log_path: Path,
-            build_cmd=build_command, fault=()) -> dict:
+            spec: "dict | None" = None, build_cmd=build_command, fault=()) -> dict:
     """Run ONE model's leaderboard subprocess. Never raises: an error/timeout/non-zero exit is
-    caught, logged with the child's stderr tail, and returned as a failed status so the pool lives."""
-    cmd = list(fault[model]) if model in fault else build_cmd(model, out_dir, mock=mock)
-    _log(log_path, f"START  {model}  seeds={seeds_for(model)} workers={workers_for(model)} "
-                   f"earned_crack={wants_earned_crack(model)}")
+    caught, logged with the child's stderr tail, and returned as a failed status so the pool lives.
+    On BOTH timeout and non-zero exit the child's full stdout+stderr is written to child_<slug>.log."""
+    if spec is None:
+        spec = _default_spec(model)
+    cmd = list(fault[model]) if model in fault else build_cmd(model, out_dir, mock=mock, spec=spec)
+    _log(log_path, f"START  {model}  seeds={spec['seeds']} workers={spec['workers']} "
+                   f"earned_crack={spec['earned_crack']}")
     try:
         proc = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True, timeout=timeout)
         status = "ok" if proc.returncode == 0 else f"exit_{proc.returncode}"
         if proc.returncode != 0:
+            _dump_child_log(out_dir, model, proc.stdout, proc.stderr)   # keep the child's output
             tail = "\n".join((proc.stderr or "").strip().splitlines()[-15:])
-            _log(log_path, f"FAIL   {model} {status}\n{tail}")
-    except subprocess.TimeoutExpired:
+            _log(log_path, f"FAIL   {model} {status} (child log {_child_log_path(out_dir, model).name})\n{tail}")
+    except subprocess.TimeoutExpired as exc:
         status = "timeout"
-        _log(log_path, f"FAIL   {model} timeout after {timeout}s")
+        # TimeoutExpired carries the output captured so far -- persist it instead of discarding it.
+        so = exc.stdout.decode() if isinstance(exc.stdout, bytes) else (exc.stdout or "")
+        se = exc.stderr.decode() if isinstance(exc.stderr, bytes) else (exc.stderr or "")
+        _dump_child_log(out_dir, model, so, se)
+        _log(log_path, f"FAIL   {model} timeout after {timeout}s "
+                       f"(child log {_child_log_path(out_dir, model).name})")
     except Exception as exc:                                       # never abort the pool
         status = "error"
         _log(log_path, f"FAIL   {model} error {exc!r}")
@@ -239,10 +327,16 @@ def run_one(model: str, out_dir: Path, *, mock: bool, timeout: float, log_path: 
 
 
 def run_pool(models, out_dir: Path, *, parallel: int, openai_parallel: int, mock: bool,
-             timeout: float, log_path: Path, build_cmd=build_command, fault=()) -> list:
+             timeout: float, log_path: Path, plan=None, max_spend: "float | None" = None,
+             build_cmd=build_command, fault=()) -> list:
     """Two-lane subprocess pool: general models fill `parallel` slots, OpenAI models a separate
-    `openai_parallel` lane. Resume-skips finished models. One failure never stops the others."""
+    `openai_parallel` lane. Resume-skips finished models. One failure never stops the others.
+
+    KILL SWITCH: before launching each model the pool sums est_cost_usd across every written card;
+    once it reaches `max_spend` no further model is launched (the remainder are marked spend_cap and
+    the caller finalizes whatever exists) -- a hard $ ceiling no bug can overrun."""
     out_dir = Path(out_dir)
+    plan = plan or build_plan(models)
     todo = pending_models(models, out_dir)
     for m in models:
         if m not in todo:
@@ -250,12 +344,21 @@ def run_pool(models, out_dir: Path, *, parallel: int, openai_parallel: int, mock
     sem_general = BoundedSemaphore(max(1, parallel))
     sem_openai = BoundedSemaphore(max(1, openai_parallel))
     results, lock = [], Lock()
+    cap_hit = [False]
 
     def work(model: str) -> None:
+        if max_spend is not None and spent_usd(out_dir) >= max_spend:
+            with lock:
+                if not cap_hit[0]:
+                    cap_hit[0] = True
+                    _log(log_path, f"SPEND CAP HIT spent=${spent_usd(out_dir)} cap=${max_spend} "
+                                   f"-- not launching any more models")
+                results.append({"model": model, "status": "spend_cap"})
+            return
         sem = sem_openai if is_openai(model) else sem_general
         with sem:
             res = run_one(model, out_dir, mock=mock, timeout=timeout, log_path=log_path,
-                          build_cmd=build_cmd, fault=fault)
+                          spec=plan.get(model), build_cmd=build_cmd, fault=fault)
         with lock:
             results.append(res)
 
@@ -308,9 +411,15 @@ def main() -> int:
     ap.add_argument("--mock", action="store_true", help="zero-token end-to-end smoke (MockClient)")
     ap.add_argument("--live", action="store_true", help="the real billed run (asserts the key)")
     ap.add_argument("--report-only", action="store_true", help="skip running; just merge+rank+correlate")
-    ap.add_argument("--parallel", type=int, default=5, help="general model-process lane width")
+    ap.add_argument("--parallel", type=int, default=3, help="general model-process lane width")
     ap.add_argument("--openai-parallel", type=int, default=2, help="OpenAI (openai/*) lane width")
     ap.add_argument("--timeout", type=float, default=2700.0, help="per-model wall-clock timeout (s)")
+    ap.add_argument("--max-spend", type=float, default=MAX_SPEND_USD,
+                    help="cumulative USD kill switch: stop launching models once total est_cost "
+                         "across all cards reaches this ceiling")
+    ap.add_argument("--hybrid", action="store_true",
+                    help="run the 13-model HYBRID roster with per-model N (gemini-3.1-pro N=3, rest "
+                         "N=1), earned-crack OFF; the 9 completed models are skipped and merged in")
     ap.add_argument("--top", type=int, default=5, help="over/under-performers to print")
     ap.add_argument("--out-dir", default=str(OUT))
     ap.add_argument("--generic", default=str(GENERIC))
@@ -335,13 +444,24 @@ def main() -> int:
     if not args.report_only:
         fault = {s.strip(): [sys.executable, "-c", "import sys; sys.exit(7)"]
                  for s in args.fault_inject.split(",") if s.strip()}
-        _log(LOG_PATH, f"RUN START mock={args.mock} models={len(ROSTER)} parallel={args.parallel} "
-                       f"openai_parallel={args.openai_parallel} engine_sha={lb.ENGINE_SHA}")
-        results = run_pool(ROSTER, out_dir, parallel=args.parallel,
+        if args.hybrid:
+            roster = HYBRID_ROSTER
+            plan = build_plan(roster, seeds_by_model=HYBRID_SEEDS,
+                              default_seeds=HYBRID_DEFAULT_SEEDS, earned_crack_enabled=False)
+        else:
+            roster = ROSTER
+            plan = build_plan(roster)
+        _log(LOG_PATH, f"RUN START mock={args.mock} hybrid={args.hybrid} models={len(roster)} "
+                       f"parallel={args.parallel} openai_parallel={args.openai_parallel} "
+                       f"max_spend=${args.max_spend} engine_sha={lb.ENGINE_SHA}")
+        results = run_pool(roster, out_dir, parallel=args.parallel,
                            openai_parallel=args.openai_parallel, mock=args.mock,
-                           timeout=args.timeout, log_path=LOG_PATH, fault=fault)
+                           timeout=args.timeout, log_path=LOG_PATH, plan=plan,
+                           max_spend=args.max_spend, fault=fault)
         ok = sum(1 for r in results if r["status"] == "ok")
-        _log(LOG_PATH, f"RUN END ran={len(results)} ok={ok} failed={len(results) - ok}")
+        capped = sum(1 for r in results if r["status"] == "spend_cap")
+        _log(LOG_PATH, f"RUN END ran={len(results)} ok={ok} spend_capped={capped} "
+                       f"failed={len(results) - ok - capped}")
 
     final_report(out_dir, args.generic, top=args.top)
     return 0
