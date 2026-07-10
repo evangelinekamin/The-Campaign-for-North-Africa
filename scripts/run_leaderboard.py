@@ -156,13 +156,18 @@ def build_plan(models, *, seeds_by_model=None, default_seeds=None,
     return plan
 
 
-def spent_usd(out_dir: Path) -> float:
-    """Cumulative est_cost_usd across every written card in out_dir -- the kill-switch's running
-    total. Corrupt/half-written cards are skipped (they contribute $0, never crash the tally)."""
+def spent_usd(out_dir: Path, models: "set | None" = None) -> float:
+    """Cumulative est_cost_usd across written cards in out_dir -- the kill-switch's running total.
+    When `models` is given, ONLY those models' cards are summed, so the kill switch caps THIS run's
+    NEW spend and ignores the sunk cost of already-completed prior models (a model this run finished
+    before a crash is in `models`, so it still counts on resume). Corrupt/half-written cards are
+    skipped (they contribute $0, never crash the tally)."""
     total = 0.0
     for p in Path(out_dir).glob("card_*.json"):
         try:
             for c in json.loads(p.read_text()).get("cards", []):
+                if models is not None and c.get("model") not in models:
+                    continue
                 total += float(c.get("cost", {}).get("est_cost_usd", 0.0) or 0.0)
         except (ValueError, OSError, TypeError):
             continue
@@ -337,6 +342,7 @@ def run_pool(models, out_dir: Path, *, parallel: int, openai_parallel: int, mock
     the caller finalizes whatever exists) -- a hard $ ceiling no bug can overrun."""
     out_dir = Path(out_dir)
     plan = plan or build_plan(models)
+    run_models = set(models)                        # cap THIS run's spend only, not the priors'
     todo = pending_models(models, out_dir)
     for m in models:
         if m not in todo:
@@ -347,12 +353,12 @@ def run_pool(models, out_dir: Path, *, parallel: int, openai_parallel: int, mock
     cap_hit = [False]
 
     def work(model: str) -> None:
-        if max_spend is not None and spent_usd(out_dir) >= max_spend:
+        if max_spend is not None and spent_usd(out_dir, run_models) >= max_spend:
             with lock:
                 if not cap_hit[0]:
                     cap_hit[0] = True
-                    _log(log_path, f"SPEND CAP HIT spent=${spent_usd(out_dir)} cap=${max_spend} "
-                                   f"-- not launching any more models")
+                    _log(log_path, f"SPEND CAP HIT new-spend=${spent_usd(out_dir, run_models)} "
+                                   f"cap=${max_spend} -- not launching any more models")
                 results.append({"model": model, "status": "spend_cap"})
             return
         sem = sem_openai if is_openai(model) else sem_general

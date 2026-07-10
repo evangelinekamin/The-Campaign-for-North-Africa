@@ -211,19 +211,37 @@ def test_spent_usd_sums_est_cost_across_cards(tmp_path):
     assert rl.spent_usd(tmp_path) == 19.75
 
 
-def test_spend_cap_stops_launching_when_the_ceiling_is_reached(tmp_path):
-    # a single already-written card already blows a tiny cap: NO further model is launched.
-    rl.card_path(tmp_path, "done/model").write_text(json.dumps(_priced_card("done/model", 50.0)))
+def test_spend_cap_ignores_prior_models_only_counts_this_run(tmp_path):
+    # a huge PRIOR card (a model NOT in this run) must NOT trip the cap -- the sunk-cost bug that
+    # blocked the whole hybrid because 9 finished priors already totalled $90 against a $40 cap.
+    rl.card_path(tmp_path, "prior/done").write_text(json.dumps(_priced_card("prior/done", 500.0)))
+
+    def _writer(model, out_dir, *, mock, spec=None):
+        return [sys.executable, "-c",
+                f"import json,pathlib; pathlib.Path(r'{rl.card_path(out_dir, model)}')"
+                f".write_text(json.dumps({{'cards': [{{'model': '{model}', 'cost': {{'est_cost_usd': 1.0}}}}]}}))"]
+
+    ran = rl.run_pool(["a/one"], tmp_path, parallel=1, openai_parallel=1, mock=True,
+                      timeout=30, log_path=tmp_path / "run.log", build_cmd=_writer, max_spend=40.0)
+    assert ran[0]["status"] == "ok"                            # the $500 prior did NOT block it
+    assert rl.card_path(tmp_path, "a/one").exists()
+
+
+def test_spend_cap_fires_on_this_runs_own_spend(tmp_path):
+    # a run-model card already at $50 (finished before a crash, then resumed) DOES count: the next
+    # model in the SAME run is capped.
+    rl.card_path(tmp_path, "a/one").write_text(json.dumps(_priced_card("a/one", 50.0)))
 
     def _writer(model, out_dir, *, mock, spec=None):
         return [sys.executable, "-c",
                 f"import json,pathlib; pathlib.Path(r'{rl.card_path(out_dir, model)}')"
                 f".write_text(json.dumps({{'cards': [{{'model': '{model}'}}]}}))"]
 
-    ran = rl.run_pool(["a/one", "b/two"], tmp_path, parallel=2, openai_parallel=1, mock=True,
+    ran = rl.run_pool(["a/one", "b/two"], tmp_path, parallel=1, openai_parallel=1, mock=True,
                       timeout=30, log_path=tmp_path / "run.log", build_cmd=_writer, max_spend=40.0)
-    assert {r["status"] for r in ran} == {"spend_cap"}          # neither model launched
-    assert not rl.card_path(tmp_path, "a/one").exists()         # the writer never ran
+    status = {r["model"]: r["status"] for r in ran}
+    assert status.get("b/two") == "spend_cap"                  # a/one's $50 (a run model) tripped it
+    assert not rl.card_path(tmp_path, "b/two").exists()
     assert "SPEND CAP HIT" in (tmp_path / "run.log").read_text()
 
 
