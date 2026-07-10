@@ -11,10 +11,86 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import threading
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 from typing import Callable, Protocol
+
+
+def _atomic_write(path: "str | Path", text: str) -> None:
+    """Write `text` to `path` so a reader NEVER sees a partial file: write a sibling `.tmp`,
+    then os.replace it into place (atomic rename on POSIX). A SIGKILL between the two steps
+    leaves the previous whole file intact -- the crash that corrupted card_z-ai_glm-5.2.json
+    by writing straight into it cannot recur."""
+    path = Path(path)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, path)
+
+
+class Journal:
+    """Append-only durability sidecar for one cache file, SHARED by every CachingClient that
+    fills it (all seats, all concurrent seeds). One JSON line per paid completion, appended
+    under a shared lock and fsync'd before it is acknowledged, so a SIGKILL at any instant
+    loses at most the single in-flight line. The worker threads share this object; the lock
+    serializes their appends onto the one file handle."""
+
+    def __init__(self, path: "str | Path"):
+        self.path = str(path)
+        self._lock = threading.Lock()
+        self._fh = None
+
+    def append(self, key: str, value: str) -> None:
+        line = json.dumps({"k": key, "v": value}) + "\n"
+        with self._lock:
+            if self._fh is None:
+                self._fh = open(self.path, "a", encoding="utf-8")
+            self._fh.write(line)
+            self._fh.flush()
+            os.fsync(self._fh.fileno())            # the paid call is now durably on disk
+
+    def close(self) -> None:
+        with self._lock:
+            if self._fh is not None:
+                self._fh.close()
+                self._fh = None
+
+
+def load_cache(path: "str | Path") -> dict:
+    """Recover a journaled cache: the compacted JSON dict at `path` (if any), then every durable
+    line of `path`+'.jsonl' folded on top. A kill mid-append can leave a final truncated line;
+    it is tolerated (skipped), never raised. A plain-JSON cache with no journal (the already-
+    completed models) loads intact."""
+    path = Path(path)
+    cache: dict = {}
+    if path.exists():
+        try:
+            cache.update(json.loads(path.read_text()))
+        except ValueError:                         # a corrupt compacted file -- start from empty
+            cache = {}
+    journal = Path(str(path) + ".jsonl")
+    if journal.exists():
+        for line in journal.read_text().splitlines():
+            if not line.strip():
+                continue
+            try:
+                rec = json.loads(line)
+            except ValueError:
+                continue                           # a torn final append -- tolerate and drop it
+            cache[rec["k"]] = rec["v"]
+    return cache
+
+
+def compact(path: "str | Path", cache: dict) -> None:
+    """Fold the journal into the compacted dict on CLEAN completion: atomically rewrite `path`
+    from the full cache, then drop the now-redundant journal. After this the journal is empty
+    and every paid call lives in the single compact file."""
+    _atomic_write(path, json.dumps(cache))
+    journal = Path(str(path) + ".jsonl")
+    if journal.exists():
+        journal.unlink()
 
 
 class LLMClient(Protocol):
@@ -49,11 +125,17 @@ class CachingClient:
     client, so a fully-cached re-run needs no network and no key. The key is
     sha256(model + prompt); it never contains the API key, and the cached text is the
     model's reply, never a secret.
-    """
 
-    def __init__(self, inner: LLMClient, cache: "dict[str, str] | None" = None):
+    Durability: given a shared `journal`, every MISS (a real, paid completion) is appended
+    as one fsync'd line BEFORE it is returned. A SIGKILL then loses at most the one call in
+    flight -- every earlier paid reply replays FREE from the journal via load_cache(). Without
+    a journal the client is purely in-memory (the mock / test path)."""
+
+    def __init__(self, inner: LLMClient, cache: "dict[str, str] | None" = None,
+                 journal: "Journal | None" = None):
         self._inner = inner
         self.cache = cache if cache is not None else {}
+        self._journal = journal
         self.hits = 0
         self.misses = 0
 
@@ -71,6 +153,8 @@ class CachingClient:
             return self.cache[key]
         self.misses += 1
         text = self._inner.complete(prompt)
+        if self._journal is not None:
+            self._journal.append(key, text)        # durable on disk BEFORE we return the paid reply
         self.cache[key] = text
         return text
 

@@ -56,7 +56,8 @@ from scripts.measure_siege import (BASE_SEED, FERRY_BOMB, KEY_FILE,         # no
 from game.apply import fold                                                 # noqa: E402
 from game.engine import run                                                 # noqa: E402
 from game.events import Side                                                # noqa: E402
-from game.llm import CachingClient, MockClient, OpenRouterClient            # noqa: E402
+from game.llm import (CachingClient, Journal, MockClient,                   # noqa: E402
+                      OpenRouterClient, _atomic_write, compact, load_cache)
 from game.policy import ScriptedPolicy                                      # noqa: E402
 from game.scenario import rommels_arrival, siege_of_tobruk                  # noqa: E402
 from game.staff_policy import LLM_SEATS, StaffPolicy                        # noqa: E402
@@ -117,27 +118,29 @@ def _assert_key_billed() -> None:
     print("key assertion: loaded OPENROUTER_API_KEY matches as.txt (billing the CFNA key) -- PASSED")
 
 
-def _seat_clients(model: str, cache: dict, *, live: bool) -> dict:
-    """One client per LLM seat, each wrapped in the SHARED sidecar cache. Distinct inner
-    clients so parallel seats never race on usage; live=False plugs a disconnected inner so a
-    fully-cached re-run needs no network and no key."""
+def _seat_clients(model: str, cache: dict, *, live: bool, journal: "Journal | None") -> dict:
+    """One client per LLM seat, each wrapped in the SHARED sidecar cache + the SHARED durability
+    journal. Distinct inner clients so parallel seats never race on usage; live=False plugs a
+    disconnected inner so a fully-cached re-run needs no network and no key."""
     def inner():
         return (OpenRouterClient(model, temperature=0.0, timeout=45, retries=1,
                                  provider=FAST_PROVIDER) if live else _Disconnected(model))
-    return {seat: CachingClient(inner(), cache) for seat in LLM_SEATS}
+    return {seat: CachingClient(inner(), cache, journal=journal) for seat in LLM_SEATS}
 
 
-def _staff(model: str, cache: dict, *, mock: bool, live: bool, floor: bool) -> StaffPolicy:
+def _staff(model: str, cache: dict, *, mock: bool, live: bool, floor: bool,
+           journal: "Journal | None" = None) -> StaffPolicy:
     """The Axis command staff for one game. In mock mode every seat falls back to the shared
     zero-token MockClient(_mock_staff); otherwise each LLM seat gets its own cached live/
-    disconnected client. `floor` arms the storming floor (siege only)."""
-    seats = None if mock else _seat_clients(model, cache, live=live)
+    disconnected client sharing the durability journal. `floor` arms the storming floor (siege)."""
+    seats = None if mock else _seat_clients(model, cache, live=live, journal=journal)
     return StaffPolicy(MockClient(_mock_staff), side=Side.AXIS, seat_clients=seats,
                        max_workers=1 if mock else len(LLM_SEATS), storm_floor=floor)
 
 
-def _play_rommel(model: str, seed: int, cache: dict, *, mock: bool, live: bool) -> tuple[dict, dict]:
-    axis = _staff(model, cache, mock=mock, live=live, floor=False)
+def _play_rommel(model: str, seed: int, cache: dict, *, mock: bool, live: bool,
+                 journal: "Journal | None" = None) -> tuple[dict, dict]:
+    axis = _staff(model, cache, mock=mock, live=live, floor=False, journal=journal)
     result = run(rommels_arrival(seed=seed), axis=axis,
                  allied=ScriptedPolicy(attacker=Side.AXIS))
     assert fold(result.initial, result.events) == result.final, f"rommel replay FAILED seed={seed}"
@@ -145,8 +148,8 @@ def _play_rommel(model: str, seed: int, cache: dict, *, mock: bool, live: bool) 
 
 
 def _play_siege(model: str, seed: int, cache: dict, *, mock: bool, live: bool,
-                floor: bool) -> tuple[dict, dict]:
-    axis = _staff(model, cache, mock=mock, live=live, floor=floor)
+                floor: bool, journal: "Journal | None" = None) -> tuple[dict, dict]:
+    axis = _staff(model, cache, mock=mock, live=live, floor=floor, journal=journal)
     result = run(siege_of_tobruk(seed, port_bomb=True, raf=True, ferry_bomb=FERRY_BOMB,
                                  portbomb_start=PORTBOMB_START, portbomb_cadence=PORTBOMB_CADENCE,
                                  raf_fighters=RAF_FIGHTERS),
@@ -281,7 +284,7 @@ def _timing_block(secs: float, games: int, completion_tokens: int) -> dict:
 
 def run_model(model: str, seeds: int, *, mock: bool, live: bool, floor: bool,
               cache: dict, base_seed: int = BASE_SEED, workers: int = 5,
-              earned_crack: bool = False) -> dict:
+              earned_crack: bool = False, journal: "Journal | None" = None) -> dict:
     """N seeds of the live 7-seat Axis StaffPolicy on BOTH scenarios -> one SCORECARD dict.
     The two scenarios run CONCURRENTLY over their own seats sharing the sidecar cache; the
     engine is pure per-game, so concurrency is an I/O win only and never perturbs the fold.
@@ -291,14 +294,17 @@ def run_model(model: str, seeds: int, *, mock: bool, live: bool, floor: bool,
 
     def one(i: int) -> tuple:
         seed = base_seed + i
-        (rg, ru), rt = _timed(lambda: _play_rommel(model, seed, cache, mock=mock, live=live))
+        (rg, ru), rt = _timed(
+            lambda: _play_rommel(model, seed, cache, mock=mock, live=live, journal=journal))
         (st, su), st_t = _timed(
-            lambda: _play_siege(model, seed, cache, mock=mock, live=live, floor=floor))
+            lambda: _play_siege(model, seed, cache, mock=mock, live=live, floor=floor,
+                                journal=journal))
         secs = rt + st_t
         ec_tel, ec_u = None, {}
         if earned_crack:
             (ec_tel, ec_u), et = _timed(
-                lambda: _play_siege(model, seed, cache, mock=mock, live=live, floor=False))
+                lambda: _play_siege(model, seed, cache, mock=mock, live=live, floor=False,
+                                    journal=journal))
             secs += et
         mark = "CRACK" if st["crack"] else "held"
         print(f"    {model}  seed {seed}: rommel score {rg['score']} adv {rg['advance_pct']}% | "
@@ -396,7 +402,7 @@ def _write(path: str, cards: list[dict]) -> None:
             existing = []
     keys = {c["model"] for c in cards}
     merged = [c for c in existing if c["model"] not in keys] + cards
-    p.write_text(json.dumps({"cards": merged}, indent=2))
+    _atomic_write(p, json.dumps({"cards": merged}, indent=2))     # never leave a half-written card
 
 
 def main() -> int:
@@ -443,19 +449,25 @@ def main() -> int:
         _assert_key_billed()                              # bill the CFNA key, not the ambient one
 
     cache_path = Path(args.cache)
-    cache = (json.loads(cache_path.read_text())
-             if (not args.mock and cache_path.exists()) else {})
+    # Recover the compacted cache PLUS any journal a prior kill left mid-run (load_cache tolerates
+    # a torn final line). Mock runs never touch disk.
+    cache = {} if args.mock else load_cache(cache_path)
     models = [m.strip() for m in args.models.split(",") if m.strip()]
     cards = []
     for model in models:
         print(f"\n>>> {model} ({args.seeds} seeds x 2 scenarios)"
               f"{'  [MOCK]' if args.mock else ''}")
+        # A shared journal fsyncs every paid completion to disk before it returns, so a SIGKILL
+        # mid-model loses ~$0 -- the finished calls replay FREE via load_cache on resume.
+        journal = None if args.mock else Journal(str(cache_path) + ".jsonl")
         card = run_model(model, args.seeds, mock=args.mock, live=live, floor=args.floor,
-                         cache=cache, workers=args.workers, earned_crack=args.earned_crack)
+                         cache=cache, workers=args.workers, earned_crack=args.earned_crack,
+                         journal=journal)
         cards.append(card)
-        if not args.mock:
-            cache_path.write_text(json.dumps(cache))
-        _write(args.out, [card])                          # crash-safe: persist after each model
+        if journal is not None:
+            journal.close()
+            compact(cache_path, cache)                     # clean finish: fold journal into P, drop it
+        _write(args.out, [card])                           # crash-safe: persist after each model
 
     leaderboard(cards)
     print(f"\nwrote {args.out}")
