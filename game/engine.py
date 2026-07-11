@@ -654,7 +654,7 @@ def _weather(r: _Run) -> None:
     theater stays Normal (29.1: unaffected sections have normal weather). Hot occurs on
     every section (29.31), so it needs no location roll. The single emitted label is
     what every downstream coupling (breakdown shift, evaporation, movement cost) reads."""
-    season = weather.season_for_turn(r.state.turn)
+    season = weather.season_for_turn(r.state.turn + r.state.season_offset)
     d1, d2 = r.d6(), r.d6()
     label = weather.weather_for_roll(season, d1 * 10 + d2)
     draws = (d1, d2)

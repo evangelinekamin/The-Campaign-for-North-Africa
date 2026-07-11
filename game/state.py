@@ -415,6 +415,11 @@ class GameState:
     # Tobruk logic (engine._DEFAULT_VICTORY), so every scenario that does not name a
     # spec stays byte-identical; the campaign supplies its own (game.campaign_victory).
     victory: "object | None" = None
+    # Weather-clock shift (rule 64.2 / 29.1). The weather season model anchors its own
+    # turn 1 to spring; a scenario whose Game-Turn 1 is not spring (the campaign opens in
+    # September = fall) stamps the offset so weather.season_for_turn reads turn +
+    # season_offset. Default 0 leaves every local-clock scenario byte-identical.
+    season_offset: int = 0
 
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:
