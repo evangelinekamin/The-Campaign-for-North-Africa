@@ -17,11 +17,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from game import cna_map, coords
 from game.terrain import Terrain
 
-# The eastern objective belt (Alexandria/Cairo approaches, Map D/E). These are the
-# deep-east hexes the campaign victory conditions (rule 64.71) turn on: they must
-# decode as reachable land. Exact victory-city VP table is C1-2; here we only prove
-# the geography is present and passable.
-EAST_OBJECTIVES = ("D3714", "E3613", "E3614", "E3815", "E4019")
+# The deep-east objective hexes the campaign victory conditions (rule 64.7) turn on:
+# Mersa Matruh (D3714), both Alexandria hexes (E3613/E3714, rule 64.71), and a Cairo
+# hex (E1730). All must decode as reachable land. Hexes verified against docs/rules/90;
+# the full VP table lives in data/victory_cities.json (see tests/test_victory_cities.py).
+EAST_OBJECTIVES = ("D3714", "E3613", "E3714", "E1730")
 
 
 def _land_labels(index: dict, section: str) -> list[str]:

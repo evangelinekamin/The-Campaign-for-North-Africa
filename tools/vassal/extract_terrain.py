@@ -41,6 +41,8 @@ KNOWN_TERRAIN = {
     "C4807": "clear",   # Tobruk (port, scenario objective)
     "C4321": "clear",   # Bardia (port)
     "C4021": "clear",   # Sollum (small port)
+    "A4827": "clear",   # Benghazi (port, victory city 64.73)
+    "E3714": "clear",   # Alexandria second hex (port, 64.71 auto-win objective)
 }
 
 

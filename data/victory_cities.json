@@ -1,0 +1,24 @@
+{
+  "_comment": "CNA campaign victory geography (rule 64.7). Hex labels transcribed from docs/rules/90 'SUMMARY OF IMPORTANT LOCATIONS', cross-validated against scenario-setup rules 60/61/62 and the engine/OOB constants. VP values are the rule-64.73 Geographic Occupation Point table. Consumed by game.campaign_victory.",
+  "cities": [
+    {"name": "Mersa Matruh", "hex": "D3714", "axis_vp": 100, "cwlth_vp": 10, "source": "rules/90:214; 61:210; 62:417"},
+    {"name": "Sidi Barrani", "hex": "C4131", "axis_vp": 50, "cwlth_vp": 10, "source": "rules/90:218; 61:74; 62:416"},
+    {"name": "Siwa", "hex": "C0127", "axis_vp": 20, "cwlth_vp": 10, "source": "rules/90:220; 60:342,402"},
+    {"name": "Jalo", "hex": "B0513", "axis_vp": 10, "cwlth_vp": 20, "source": "rules/90:210; 61:24"},
+    {"name": "Giarabub", "hex": "C1014", "axis_vp": 15, "cwlth_vp": 10, "source": "rules/90:207; 62:143,418"},
+    {"name": "Bardia", "hex": "C4321", "axis_vp": 100, "cwlth_vp": 50, "source": "rules/90:197; extract_terrain.py; engine.py:2026"},
+    {"name": "Sollum", "hex": "C4021", "axis_vp": 25, "cwlth_vp": 10, "source": "rules/90:221; extract_terrain.py"},
+    {"name": "Tobruk", "hex": "C4807", "axis_vp": 200, "cwlth_vp": 100, "source": "rules/90:223; extract_terrain.py"},
+    {"name": "Derna", "hex": "B5925", "axis_vp": 25, "cwlth_vp": 50, "source": "rules/90:203; 61:70; 60:54"},
+    {"name": "Benghazi", "hex": "A4827", "axis_vp": 75, "cwlth_vp": 100, "source": "rules/90:198; 61:232; 62:404"}
+  ],
+  "auto_win": {
+    "alexandria": ["E3613", "E3714"],
+    "cairo": ["E1730", "E1829", "E1830", "E1930", "E1931"]
+  },
+  "supply_sources": {
+    "tobruk": "C4807",
+    "tripoli": null
+  },
+  "_tripoli_note": "Tripoli is off-map (rule 22.31 'the Tripoli Box'; rule 8.88 treats it as an off-map unlimited supply dump). No hex exists in sections A-E, so it is null; the rule-64.71/64.72 supply trace must treat Tripoli as an off-map source, not a map hex."
+}
