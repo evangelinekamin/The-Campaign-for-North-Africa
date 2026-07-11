@@ -2082,7 +2082,7 @@ class VictorySpec(Protocol):
 
     def check(self, r: "_Run") -> tuple["Side | None", str]: ...
 
-    def decide(self, r: "_Run") -> tuple["Side", str]: ...
+    def decide(self, r: "_Run") -> tuple["Side | None", str]: ...   # None = draw (rule 64.76)
 
 
 class _ScenarioVictory:
