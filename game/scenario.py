@@ -584,9 +584,9 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     theatre and the whole clock. Its job is to prove the campaign MACHINERY runs end to
     end: the 111-turn x 3-OpStage clock, the eastern geography (Maps D/E), the calendar
     (season_offset so a September start reads fall), and the pluggable victory seam. The
-    real 1940-43 armies (C2), the convoy economy (C3), and balance (C4) land later; here
-    a placeholder Desert-Fox force exercises the loop over the full span. The objective is
-    Alexandria (E3613), far to the east -- the historical Axis goal.
+    real September-1940 armies are here (C2); the reinforcement flow (C2-3), the convoy
+    economy (C3) and balance (C4) land later. The objective is Alexandria (E3613), far to
+    the east -- the historical Axis goal.
 
     Victory is the faithful campaign spec (rule 64.7): the Axis wins by taking Alexandria
     and Cairo or by out-pointing the Commonwealth on the 64.73 geographic Victory-Point
@@ -594,7 +594,11 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     full GT111) -- a shorter slice for fast tests or a single-season study."""
     tmap, _ = cna_map.load_sections("ABCDE")
     target = coords.to_axial(coords.parse(_ALEXANDRIA))
-    units, supplies = oob.build(sections="ABCDE")     # placeholder force (Desert-Fox OOB)
+    # C2: the real September-1940 order of battle -- the Italian 10th Army (extraction +
+    # rule-60.31 gap-fill) vs the Western Desert Force. Reinforcements (Rommel/DAK etc.,
+    # rule [4.43b]) land in C2-3; until then the campaign opens with the historical start force.
+    units, supplies = oob.build(oob_file="oob_italian.json", extra_file="oob_campaign_extra.json",
+                                sections="ABCDE", reinforcements_file=None)
 
     # A hex a piece stands on is land (coastal ports colour-sample as sea); add + connect,
     # exactly as the corridor scenarios do.

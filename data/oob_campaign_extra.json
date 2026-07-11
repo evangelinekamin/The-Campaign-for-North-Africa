@@ -1,0 +1,331 @@
+[
+  {
+    "kind": "_comment",
+    "note": "C2-2 campaign gap-fill, authored by tools/vassal/build_campaign_gapfill.py from rule 60.31 + rule-90 [4.44b]. Layered onto oob_italian.json via oob.build(extra_file=...). Cirene/Marmarica reconstructed (no [4.44b] sheet), morale -1 inferred; armour transcribed from the Libyan Tank Command sheet."
+  },
+  {
+    "counter": "IT 157 - 63 Cir",
+    "group": "IT 63rd Cirene Division",
+    "hex": "C4120",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT I/157 - 63 Cir",
+    "group": "IT 63rd Cirene Division",
+    "hex": "C4120",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT II/157 - 63 Cir",
+    "group": "IT 63rd Cirene Division",
+    "hex": "C4120",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT III/157 - 63 Cir",
+    "group": "IT 63rd Cirene Division",
+    "hex": "C4120",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT 158 - 63 Cir",
+    "group": "IT 63rd Cirene Division",
+    "hex": "C4019",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT I/158 - 63 Cir",
+    "group": "IT 63rd Cirene Division",
+    "hex": "C4019",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT II/158 - 63 Cir",
+    "group": "IT 63rd Cirene Division",
+    "hex": "C4019",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT III/158 - 63 Cir",
+    "group": "IT 63rd Cirene Division",
+    "hex": "C4019",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT 45 - 63 Cir (ART)",
+    "group": "IT 63rd Cirene Division",
+    "hex": "C4020",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "artillery"
+  },
+  {
+    "counter": "IT 63 Cir (MG)",
+    "group": "IT 63rd Cirene Division",
+    "hex": "C4020",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "mg"
+  },
+  {
+    "counter": "IT 63 Cir (ENG)",
+    "group": "IT 63rd Cirene Division",
+    "hex": "C4020",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT 115 - 62 Marm",
+    "group": "IT 62nd Marmarica Division",
+    "hex": "C3918",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT I/115 - 62 Marm",
+    "group": "IT 62nd Marmarica Division",
+    "hex": "C3918",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT II/115 - 62 Marm",
+    "group": "IT 62nd Marmarica Division",
+    "hex": "C3918",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT III/115 - 62 Marm",
+    "group": "IT 62nd Marmarica Division",
+    "hex": "C3918",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT 116 - 62 Marm",
+    "group": "IT 62nd Marmarica Division",
+    "hex": "C3817",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT I/116 - 62 Marm",
+    "group": "IT 62nd Marmarica Division",
+    "hex": "C3817",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT II/116 - 62 Marm",
+    "group": "IT 62nd Marmarica Division",
+    "hex": "C3817",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT III/116 - 62 Marm",
+    "group": "IT 62nd Marmarica Division",
+    "hex": "C3817",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT 44 - 62 Marm (ART)",
+    "group": "IT 62nd Marmarica Division",
+    "hex": "C3818",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "artillery"
+  },
+  {
+    "counter": "IT 62 Marm (MG)",
+    "group": "IT 62nd Marmarica Division",
+    "hex": "C3818",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "mg"
+  },
+  {
+    "counter": "IT 62 Marm (ENG)",
+    "group": "IT 62nd Marmarica Division",
+    "hex": "C3818",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT Aresca - LTC",
+    "group": "IT The Libyan Tank Command",
+    "hex": "C3919",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "tank",
+    "model": "cv33"
+  },
+  {
+    "counter": "IT XXI(L) - LTC",
+    "group": "IT The Libyan Tank Command",
+    "hex": "C3919",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "tank",
+    "model": "cv33"
+  },
+  {
+    "counter": "IT XX(L) - LTC",
+    "group": "IT The Libyan Tank Command",
+    "hex": "C4321",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "tank",
+    "model": "cv33"
+  },
+  {
+    "counter": "IT LX(L) - LTC",
+    "group": "IT The Libyan Tank Command",
+    "hex": "C4321",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "tank",
+    "model": "cv33"
+  },
+  {
+    "counter": "IT LXI(L) - LTC",
+    "group": "IT The Libyan Tank Command",
+    "hex": "C4321",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "tank",
+    "model": "cv33"
+  },
+  {
+    "counter": "IT IX(L) - LTC",
+    "group": "IT The Libyan Tank Command",
+    "hex": "C4014",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "tank",
+    "model": "cv33"
+  },
+  {
+    "counter": "IT LXII(L) - LTC",
+    "group": "IT The Libyan Tank Command",
+    "hex": "C3818",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "tank",
+    "model": "cv33"
+  },
+  {
+    "counter": "IT LXIII(L) - LTC",
+    "group": "IT The Libyan Tank Command",
+    "hex": "C4119",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "tank",
+    "model": "cv33"
+  },
+  {
+    "counter": "IT I(M) - LTC",
+    "group": "IT The Libyan Tank Command",
+    "hex": "C4218",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "tank",
+    "model": "m11_39"
+  },
+  {
+    "counter": "IT II(M) - LTC",
+    "group": "IT The Libyan Tank Command",
+    "hex": "C3822",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "tank",
+    "model": "m11_39"
+  },
+  {
+    "counter": "IT Derna - Derna",
+    "group": "IT Derna Garrison",
+    "hex": "B5925",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT Scheferzen - BirSch",
+    "group": "IT Bir Scheferzen Garrison",
+    "hex": "C3419",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  },
+  {
+    "counter": "IT Barka - Bardia",
+    "group": "IT Barka Garrison",
+    "hex": "C4220",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "infantry"
+  }
+]

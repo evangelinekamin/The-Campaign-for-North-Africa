@@ -30,6 +30,19 @@ def test_builds_full_theatre():
         assert coords.to_axial(coords.parse(lbl)) in st.terrain.terrain
 
 
+def test_campaign_fields_the_september_1940_army():
+    # C2: the campaign opens with the real Italian 10th Army (the oob_italian extraction
+    # plus the rule-60.31 gap-fill) -- not the Desert-Fox placeholder. The partial setup
+    # save omitted two infantry divisions and nearly all the armour; the gap-fill restores
+    # them, so the reconstructed divisions and the Libyan Tank Command are on the board.
+    ax = [u for u in campaign(seed=1941).units if u.side == Side.AXIS]
+    assert len(ax) >= 90                                   # ~95: 61 extracted + ~34 gap-fill
+    formations = {u.formation for u in ax}
+    assert any("Cirene" in f for f in formations)          # reconstructed 63rd Cirene
+    assert any("Marmarica" in f for f in formations)       # reconstructed 62nd Marmarica
+    assert len([u for u in ax if u.is_tank]) >= 10         # the Libyan Tank Command armour
+
+
 def test_max_turns_truncates():
     assert campaign(max_turns=8).max_turns == 8
 
@@ -46,6 +59,6 @@ def test_runs_full_span_to_campaign_victory():
     # rule 64.7 (a graded 64.76 result or an auto-win/annihilation), not the built-in
     # Race-for-Tobruk logic.
     res = run(campaign(seed=1941), axis=ScriptedPolicy(), allied=ScriptedPolicy())
-    assert res.final.turn == FINAL_GT                      # reached December 1942
+    assert res.final.turn <= FINAL_GT                      # by December 1942 (earlier if 64.7 auto-win)
     assert res.winner in (Side.AXIS, Side.ALLIED, None)    # None = a 64.76 draw
     assert "64.7" in res.reason

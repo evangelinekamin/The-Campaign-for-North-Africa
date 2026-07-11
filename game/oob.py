@@ -150,17 +150,23 @@ def classify(counter: str, group: str) -> str | None:
 
 def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
           reinforcements_file: str | None = "reinforcements_desert_fox.json",
+          extra_file: str | None = None,
           ) -> tuple[list[Unit], list[SupplyUnit]]:
     """Build engine units/supplies from an OOB file. If `sections` is given (e.g.
     "ABC"), only pieces whose hex is in those map sections are kept (rear units on
     unloaded sections are dropped). `reinforcements_file` (rule 20) adds off-map
-    units that enter on their arrival_turn at an axial entry hex."""
+    units that enter on their arrival_turn at an axial entry hex. `extra_file` adds
+    further on-map pieces from a second OOB file (same schema), so a hand-authored
+    campaign gap-fill can layer onto a raw VASSAL extraction without editing it; an
+    on-map record may carry an explicit `role` to override classify()."""
     stats = _load("unit_stats.json")
     units: list[Unit] = []
     dumps_meta: list[tuple[str, Side, tuple]] = []   # (uid, side, hex) placed after the loop
     seen: dict[str, int] = {}
 
-    for rec in _load(oob_file):
+    for rec in (_load(oob_file) + (_load(extra_file) if extra_file else [])):
+        if rec.get("kind") not in ("unit", "dump"):
+            continue                                 # provenance/comment records carry no hex
         hexlbl = rec["hex"]
         if sections is not None and hexlbl[0] not in sections:
             continue
@@ -173,7 +179,7 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
             continue
         if rec["kind"] != "unit":
             continue                                 # features are not engine units
-        role = classify(rec["counter"], rec["group"])
+        role = rec.get("role") or classify(rec["counter"], rec["group"])
         if role is not None:
             units.append(_make_unit(rec, side, ax, role, stats, seen, 0))
 
@@ -291,6 +297,11 @@ def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
         is_combat=s.get("is_combat", True),
         arrival_turn=arrival_turn,
         formation=rec["group"],
+        # Rule 9.16a: a garrison in its assigned home hex is free of the stacking limit
+        # (the Giarabub "Oasis Complex" and the city garrisons deploy concentrated on one
+        # hex). They are static defenders; home-hex tracking is deferred, so the exemption
+        # travels with the unit -- faithful at setup, where the stacking check bites.
+        is_garrison_home="Garrison" in rec["group"],
         fuel_rate=fuel_rate,
         # [21.12]/[4.47-4.49] Breakdown Adjustment Rating, per-model (mirror of fuel_rate):
         # 0 for a unit whose model carries none (guns never break down, 21.11). The German
