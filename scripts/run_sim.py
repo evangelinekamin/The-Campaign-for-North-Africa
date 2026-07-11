@@ -26,10 +26,10 @@ from game.engine import RunResult, determinism_signature, run  # noqa: E402
 from game.events import Event, EventKind, Side                  # noqa: E402
 from game.policy import ScriptedPolicy                          # noqa: E402
 from game.scenario import (                                     # noqa: E402
-    battle_for_tobruk, coastal_corridor, rommels_arrival)
+    battle_for_tobruk, campaign, coastal_corridor, rommels_arrival)
 
 SCENARIOS = {"corridor": coastal_corridor, "tobruk": battle_for_tobruk,
-             "rommel": rommels_arrival}
+             "rommel": rommels_arrival, "campaign": campaign}
 
 
 def narrate(result: RunResult) -> None:

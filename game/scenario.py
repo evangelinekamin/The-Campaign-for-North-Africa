@@ -17,7 +17,7 @@ import random
 from collections import deque
 from dataclasses import replace
 
-from . import cna_map, coords, logistics_data, oob
+from . import calendar, campaign_victory, cna_map, coords, logistics_data, oob
 from .events import Phase, Side
 from .hexmap import distance, neighbors
 from .movement import TerrainMap, edge
@@ -571,3 +571,47 @@ def siege_of_tobruk(seed: int = 1941, *, port_bomb: bool = False, raf: bool = Fa
                     if port_bomb else ())
     return replace(base, siege_rules=True, air=air, air_missions=air_missions,
                    interdictions=_tobruk_ferry_interdiction(base.max_turns, ferry_bomb))
+
+
+# --- the full campaign (rule 64) -----------------------------------------------
+
+_ALEXANDRIA = "E3613"       # the Axis objective (rule 64.7); land-verified on Map E.
+
+
+def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
+    """The full Campaign for North Africa, walking skeleton (rule 64). One board-global
+    A-E map, Game-Turn 1 (September 1940, rule 64.2) through Game-Turn 111 -- the whole
+    theatre and the whole clock. Its job is to prove the campaign MACHINERY runs end to
+    end: the 111-turn x 3-OpStage clock, the eastern geography (Maps D/E), the calendar
+    (season_offset so a September start reads fall), and the pluggable victory seam. The
+    real 1940-43 armies (C2), the convoy economy (C3), and balance (C4) land later; here
+    a placeholder Desert-Fox force exercises the loop over the full span. The objective is
+    Alexandria (E3613), far to the east -- the historical Axis goal.
+
+    Victory is the faithful campaign spec (rule 64.7): the Axis wins by taking Alexandria
+    and Cairo or by out-pointing the Commonwealth on the 64.73 geographic Victory-Point
+    table graded by 64.76, else annihilation. `max_turns` truncates the run (default the
+    full GT111) -- a shorter slice for fast tests or a single-season study."""
+    tmap, _ = cna_map.load_sections("ABCDE")
+    target = coords.to_axial(coords.parse(_ALEXANDRIA))
+    units, supplies = oob.build(sections="ABCDE")     # placeholder force (Desert-Fox OOB)
+
+    # A hex a piece stands on is land (coastal ports colour-sample as sea); add + connect,
+    # exactly as the corridor scenarios do.
+    terrain = dict(tmap.terrain)
+    for piece in (*units, *supplies):
+        terrain.setdefault(piece.hex, Terrain.CLEAR)
+    _connect_pieces(terrain, [p.hex for p in (*units, *supplies)])
+    forts = _apply_major_cities(terrain)
+    tmap = replace(tmap, terrain=terrain, fortifications=forts)
+
+    return GameState(
+        turn=1, max_turns=max_turns or calendar.FINAL_GT, phase=Phase.WEATHER, active_side=Side.SYSTEM,
+        seed=seed, weather="normal", vp=VP(),
+        terrain=tmap, control={}, units=tuple(units), target_hex=target,
+        supplies=tuple(supplies), consumed=_zero_consumed(),
+        initial_supply=_initial_supply(supplies),
+        map_sections=frozenset("ABCDE"),
+        season_offset=calendar.CAMPAIGN_SEASON_OFFSET,   # GT1 = September 1940 (fall)
+        victory=campaign_victory.CampaignVictory(),      # rule 64.7 (see game.campaign_victory)
+    )
