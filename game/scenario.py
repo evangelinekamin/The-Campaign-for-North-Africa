@@ -578,15 +578,99 @@ def siege_of_tobruk(seed: int = 1941, *, port_bomb: bool = False, raf: bool = Fa
 _ALEXANDRIA = "E3613"       # the Axis objective (rule 64.7); land-verified on Map E.
 
 
+# --- C3: the convoy / supply economy (rule 57 / 56.4 / 60.34). Campaign-only: the engine
+# faucet (game.engine._naval_convoys) is gated on state.convoys/ports, both defaulting empty
+# (state.py), so seeding them here leaves the benchmark scenarios byte-identical -- the same
+# opt-in seam rommels_arrival uses. This restores the strategic ASYMMETRY that is the
+# campaign's drama: the Commonwealth's inexhaustible Suez base vs the Axis Mediterranean
+# convoy that lands in the west and must be hauled to a front hundreds of hexes east. ---
+_MON = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
+_CW_BASE_HEXES = {"Cairo": "E1730", "Alexandria": "E3613"}   # rule 57 / 60.44 unlimited base
+_AXIS_PORT_HEX = "A4827"                                     # Benghazi -- forward Axis harbour (60.34)
+_CW_BASE_SEED = _UNLIMITED // 8    # a reservoir no 111-turn draw can exhaust (MAJOR_CITY = unlimited cap)
+
+
+def _campaign_cw_base() -> list[SupplyUnit]:
+    """Rule 57 / 60.44: the Commonwealth's inexhaustible Suez base -- a dump on Cairo and
+    Alexandria, each seeded beyond any 111-turn draw and standing on a MAJOR_CITY hex (so
+    supply.dump_capacity is _UNLIMITED and it neither overflows nor empties). 'If he wants
+    something, it is in Cairo' (57.0): the Commonwealth can always fall back and refit."""
+    return [SupplyUnit(f"AL-{name}", Side.ALLIED, coords.to_axial(coords.parse(lbl)),
+                       ammo=_CW_BASE_SEED, fuel=_CW_BASE_SEED,
+                       stores=_CW_BASE_SEED, water=_CW_BASE_SEED, base=True)
+            for name, lbl in _CW_BASE_HEXES.items()]
+
+
+def _campaign_axis_base() -> SupplyUnit:
+    """The Axis port-of-arrival dump at Benghazi (A4827), where the Mediterranean convoys land
+    (rule 60.34). Seeded empty -- the convoys fill it and, until the truck haul (C3-2), its
+    tonnage cannot reach the front, so the Axis fights on its start-line reservoir and
+    culminates as it advances (the historical Tripoli/Benghazi-to-front bottleneck)."""
+    return SupplyUnit("AX-Benghazi", Side.AXIS, coords.to_axial(coords.parse(_AXIS_PORT_HEX)),
+                      ammo=0, fuel=0, stores=0, water=0)
+
+
+def _campaign_axis_cargo(gt: int, rng: random.Random) -> dict | None:
+    """[56.4]x[56.5]x[54.5] Axis naval-convoy cargo for Game-Turn `gt`, calendar-driven across
+    the whole GT1..111 span (calendar.gt_to_month) -- the generalization of _axis_convoy_cargo,
+    which hardcodes the six Race-for-Tobruk months. The month's 56.4 Convoy Level sets the 56.5
+    tonnage (fixed + variable x die), the 56.22 split apportions it across fuel/ammo/stores, and
+    54.5 crosses each to supply Points. Returns None for a month the 56.4 chart lists no convoy
+    (a '-' -- e.g. before September 1940, when the desert lanes had not yet opened)."""
+    year, month = calendar.gt_to_month(gt)
+    level = _CONVOY_LEVEL_56_4[str(year)][_MON[month - 1]]
+    if level == "-":
+        return None
+    cap = _CONVOY_CAP_56_5[level]
+    die = rng.randint(1, 6)
+    tonnage = math.ceil((cap["fixed_tons"] + cap["variable_tons_per_die"] * die) / 1000) * 1000
+    return {c: tons_to_points(tonnage * frac, c) for c, frac in _CONVOY_SPLIT_56_22.items()}
+
+
+def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy, ...]:
+    """The Axis Mediterranean convoy as a calendar-driven timetable (56.2/56.4): one delivery
+    per month, on the month's first Game-Turn, landing at the rearmost Axis dump (Benghazi)
+    through PORT-Benghazi's 55.14 throttle. The tonnage piles at the rear; until the truck haul
+    (C3-2) it cannot reach the front, so the Axis lives off its start-line reservoir and
+    culminates driving on Alexandria. The Commonwealth base needs no lane -- it is seeded
+    inexhaustible (_campaign_cw_base)."""
+    rear = _axis_rear(supplies, target)
+    if rear is None:
+        return ()
+    rng = random.Random(seed)
+    convoys = []
+    for gt in range(1, max_turns + 1):
+        if (gt - 1) % calendar.GT_PER_MONTH != 0:      # one convoy per month (its first Game-Turn)
+            continue
+        cargo = _campaign_axis_cargo(gt, rng)
+        if cargo is not None:
+            convoys.append(Convoy(f"axis-conv-t{gt}", Side.AXIS, gt, "2", rear.id, cargo))   # 60.37 lane 2
+    return tuple(convoys)
+
+
+def _campaign_ports(supplies, target) -> tuple[Port, ...]:
+    """The Axis port of arrival (55.3): Benghazi, the forward Mediterranean harbour where the
+    convoys land, working at full efficiency (55.14 throttles by efficiency; the campaign's
+    bottleneck is the port-to-front haul, not the harbour). The Commonwealth base is a
+    bottomless MAJOR_CITY dump, not a throttled port, so it needs no Port entry."""
+    rear = _axis_rear(supplies, target)
+    if rear is None:
+        return ()
+    tons = _PORT_TONS.get("benghazi", _PORT_TONS["tripoli"])["tons"]
+    return (Port("PORT-Benghazi", Side.AXIS, rear.hex, "major", max_eff=10, eff=10,
+                 **_caps_tonnage(tons)),)
+
+
 def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     """The full Campaign for North Africa, walking skeleton (rule 64). One board-global
     A-E map, Game-Turn 1 (September 1940, rule 64.2) through Game-Turn 111 -- the whole
     theatre and the whole clock. Its job is to prove the campaign MACHINERY runs end to
     end: the 111-turn x 3-OpStage clock, the eastern geography (Maps D/E), the calendar
     (season_offset so a September start reads fall), and the pluggable victory seam. The
-    real September-1940 armies are here (C2); the reinforcement flow (C2-3), the convoy
-    economy (C3) and balance (C4) land later. The objective is Alexandria (E3613), far to
-    the east -- the historical Axis goal.
+    real September-1940 armies are here (C2) and the convoy/supply economy (C3-1): the
+    Commonwealth's inexhaustible Suez base vs the Axis Mediterranean convoy. The forward
+    truck haul (C3-2) and balance (C4) land later. The objective is Alexandria (E3613),
+    far to the east -- the historical Axis goal.
 
     Victory is the faithful campaign spec (rule 64.7): the Axis wins by taking Alexandria
     and Cairo or by out-pointing the Commonwealth on the 64.73 geographic Victory-Point
@@ -594,12 +678,16 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     full GT111) -- a shorter slice for fast tests or a single-season study."""
     tmap, _ = cna_map.load_sections("ABCDE")
     target = coords.to_axial(coords.parse(_ALEXANDRIA))
+    max_turns = max_turns or calendar.FINAL_GT
     # C2: the real September-1940 order of battle -- the Italian 10th Army (extraction +
     # rule-60.31 gap-fill) vs the Western Desert Force -- with the historical reinforcement
     # flow (rule 20 / [4.43b]/[4.43a]): Rommel and the DAK arrive from Tripoli from GT20, the
     # 8th Army builds up from Cairo, across the whole GT1..111 span.
-    units, supplies = oob.build(oob_file="oob_italian.json", extra_file="oob_campaign_extra.json",
-                                sections="ABCDE", reinforcements_file="reinforcements_campaign.json")
+    units, oob_supplies = oob.build(oob_file="oob_italian.json", extra_file="oob_campaign_extra.json",
+                                    sections="ABCDE", reinforcements_file="reinforcements_campaign.json")
+    # C3: the supply economy -- the Commonwealth's inexhaustible Suez base (Cairo/Alexandria)
+    # and the Axis port-of-arrival dump (Benghazi) the Mediterranean convoys land at.
+    supplies = tuple(oob_supplies) + tuple(_campaign_cw_base()) + (_campaign_axis_base(),)
 
     # A hex a piece stands on is land (coastal ports colour-sample as sea); add + connect,
     # exactly as the corridor scenarios do.
@@ -608,15 +696,19 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         terrain.setdefault(piece.hex, Terrain.CLEAR)
     _connect_pieces(terrain, [p.hex for p in (*units, *supplies)])
     forts = _apply_major_cities(terrain)
+    for lbl in _CW_BASE_HEXES.values():              # rule 57: the CW base stands on MAJOR_CITY hexes
+        terrain[coords.to_axial(coords.parse(lbl))] = Terrain.MAJOR_CITY
     tmap = replace(tmap, terrain=terrain, fortifications=forts)
 
     return GameState(
-        turn=1, max_turns=max_turns or calendar.FINAL_GT, phase=Phase.WEATHER, active_side=Side.SYSTEM,
+        turn=1, max_turns=max_turns, phase=Phase.WEATHER, active_side=Side.SYSTEM,
         seed=seed, weather="normal", vp=VP(),
         terrain=tmap, control={}, units=tuple(units), target_hex=target,
-        supplies=tuple(supplies), consumed=_zero_consumed(),
+        supplies=supplies, consumed=_zero_consumed(),
         initial_supply=_initial_supply(supplies),
         map_sections=frozenset("ABCDE"),
         season_offset=calendar.CAMPAIGN_SEASON_OFFSET,   # GT1 = September 1940 (fall)
         victory=campaign_victory.CampaignVictory(),      # rule 64.7 (see game.campaign_victory)
+        convoys=_campaign_convoys(supplies, target, max_turns, seed),   # C3: Axis Med convoys (56.4)
+        ports=_campaign_ports(supplies, target),                        # C3: PORT-Benghazi (55.14)
     )

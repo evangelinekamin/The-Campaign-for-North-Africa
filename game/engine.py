@@ -547,6 +547,8 @@ def _evaporate(r: _Run, pct: int) -> None:
     if pct <= 0:
         return
     for sid in sorted(su.id for su in r.state.supplies):
+        if r.state.supply(sid).base:                    # 49.3: a strategic city depot (57) doesn't evaporate
+            continue
         for commodity in (supply.FUEL, supply.WATER):
             amt = getattr(r.state.supply(sid), commodity.lower())
             loss = amt * pct // 100

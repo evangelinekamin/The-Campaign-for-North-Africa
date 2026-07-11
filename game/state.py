@@ -151,6 +151,10 @@ class SupplyUnit:
     stores: int = 0
     water: int = 0
     is_dummy: bool = False
+    # A strategic rear base (a city depot, rule 57) rather than a desert field dump: exempt
+    # from the 49.3 evaporation loss. Defaults False so every field dump -- and every
+    # pre-C3 scenario -- evaporates exactly as before (byte-identical).
+    base: bool = False
 
     @property
     def empty(self) -> bool:

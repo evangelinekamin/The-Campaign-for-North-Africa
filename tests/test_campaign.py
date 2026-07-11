@@ -61,6 +61,19 @@ def test_campaign_runs_the_reinforcement_flow():
     assert ggff and all(u.morale == -3 for u in ggff)
 
 
+def test_campaign_supply_economy():
+    # C3-1: the convoy/supply economy is wired -- the Commonwealth's inexhaustible Suez base
+    # (Cairo + Alexandria on MAJOR_CITY hexes, exempt from evaporation) and the Axis
+    # Mediterranean convoy faucet (56.4, landing at Benghazi in the west, to be hauled east).
+    st = campaign(seed=1941)
+    assert st.convoys and st.ports                          # the engine faucet is seeded
+    cw_base = [s for s in st.supplies if s.base]
+    assert len(cw_base) == 2 and all(s.side == Side.ALLIED for s in cw_base)
+    assert all(s.fuel > 1_000_000 for s in cw_base)         # a reservoir no 111-turn draw exhausts
+    axis_convoys = [c for c in st.convoys if c.side == Side.AXIS]
+    assert axis_convoys and all(c.dest == "AX-Benghazi" for c in axis_convoys)
+
+
 def test_max_turns_truncates():
     assert campaign(max_turns=8).max_turns == 8
 
