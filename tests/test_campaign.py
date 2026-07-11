@@ -43,6 +43,24 @@ def test_campaign_fields_the_september_1940_army():
     assert len([u for u in ax if u.is_tank]) >= 10         # the Libyan Tank Command armour
 
 
+def test_campaign_runs_the_reinforcement_flow():
+    # C2-3: the rule-20 reinforcement schedule ([4.43b]/[4.43a]) is wired in -- Rommel and
+    # the DAK arrive from Tripoli from GT20, the 8th Army builds up from Cairo. Checked at
+    # build time; the full-span arrival is exercised by test_runs_full_span_to_campaign_victory.
+    st = campaign(seed=1941)
+    reinf = [u for u in st.units if u.arrival_turn > 0]
+    assert len(reinf) >= 150                              # the major formations of both schedules
+    rommel = next(u for u in st.units if "Rommel" in u.id)
+    assert rommel.arrival_turn == 20                      # [4.43b]: Rommel [DAK] arrives GT20
+    # the DAK panzer battalions arrive from February 1941 (GT >= 20) at +2 morale.
+    dak_tanks = [u for u in reinf if u.is_tank and ("Light" in u.formation or "Panzer" in u.formation)]
+    assert dak_tanks
+    assert all(u.morale == 2 and u.arrival_turn >= 20 for u in dak_tanks)
+    # the 136 Giovani Fascisti division arrives late (GT97) at its -3 morale.
+    ggff = [u for u in reinf if "GGFF" in u.formation]
+    assert ggff and all(u.morale == -3 for u in ggff)
+
+
 def test_max_turns_truncates():
     assert campaign(max_turns=8).max_turns == 8
 

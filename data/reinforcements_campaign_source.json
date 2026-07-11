@@ -1,0 +1,1458 @@
+[
+  {
+    "counter": "Rommel",
+    "formation": "DAK",
+    "nationality": "GE",
+    "role": "hq",
+    "arrival_gt": 20,
+    "entry": "west"
+  },
+  {
+    "counter": "HQ 5 Le Div",
+    "formation": "5th Light Division",
+    "nationality": "GE",
+    "role": "hq",
+    "arrival_gt": 21,
+    "entry": "west"
+  },
+  {
+    "counter": "3 Aufkl Bn",
+    "formation": "5th Light Division",
+    "nationality": "GE",
+    "role": "recon",
+    "arrival_gt": 21,
+    "entry": "west"
+  },
+  {
+    "counter": "39 Pzjg Bn",
+    "formation": "5th Light Division",
+    "nationality": "GE",
+    "role": "antitank",
+    "model": "pak38",
+    "arrival_gt": 21,
+    "entry": "west"
+  },
+  {
+    "counter": "605 Pzjg Bn",
+    "formation": "5th Light Division",
+    "nationality": "GE",
+    "role": "antitank",
+    "model": "pak38",
+    "arrival_gt": 22,
+    "entry": "west"
+  },
+  {
+    "counter": "HQ 5 Pz Regt",
+    "formation": "5th Light Division",
+    "nationality": "GE",
+    "role": "hq",
+    "arrival_gt": 22,
+    "entry": "west"
+  },
+  {
+    "counter": "I/5 Pz Bn",
+    "formation": "5th Light Division",
+    "nationality": "GE",
+    "role": "tank",
+    "model": "pz3h",
+    "arrival_gt": 22,
+    "entry": "west"
+  },
+  {
+    "counter": "II/5 Pz Bn",
+    "formation": "5th Light Division",
+    "nationality": "GE",
+    "role": "tank",
+    "model": "pz3h",
+    "arrival_gt": 24,
+    "entry": "west"
+  },
+  {
+    "counter": "606 Flak Bn",
+    "formation": "5th Light Division",
+    "nationality": "GE",
+    "role": "antitank",
+    "model": "flak88",
+    "arrival_gt": 22,
+    "entry": "west"
+  },
+  {
+    "counter": "I/75 Arty Bn",
+    "formation": "5th Light Division",
+    "nationality": "GE",
+    "role": "artillery",
+    "model": "lefh18",
+    "arrival_gt": 23,
+    "entry": "west"
+  },
+  {
+    "counter": "2 MG Bn",
+    "formation": "5th Light Division",
+    "nationality": "GE",
+    "role": "mg",
+    "arrival_gt": 25,
+    "entry": "west"
+  },
+  {
+    "counter": "8 MG Bn",
+    "formation": "5th Light Division",
+    "nationality": "GE",
+    "role": "mg",
+    "arrival_gt": 26,
+    "entry": "west"
+  },
+  {
+    "counter": "HQ 15 Panzer Div",
+    "formation": "15 Panzer Division",
+    "nationality": "GE",
+    "role": "hq",
+    "arrival_gt": 29,
+    "entry": "west"
+  },
+  {
+    "counter": "33 Pzjg Bn",
+    "formation": "15 Panzer Division",
+    "nationality": "GE",
+    "role": "antitank",
+    "model": "pak38",
+    "arrival_gt": 24,
+    "entry": "west"
+  },
+  {
+    "counter": "15 Krad Bn",
+    "formation": "15 Panzer Division",
+    "nationality": "GE",
+    "role": "motor_infantry",
+    "arrival_gt": 27,
+    "entry": "west"
+  },
+  {
+    "counter": "I/104 Schutzen Bn",
+    "formation": "15 Panzer Division",
+    "nationality": "GE",
+    "role": "motor_infantry",
+    "arrival_gt": 28,
+    "entry": "west"
+  },
+  {
+    "counter": "33 Aufkl Bn",
+    "formation": "15 Panzer Division",
+    "nationality": "GE",
+    "role": "recon",
+    "arrival_gt": 28,
+    "entry": "west"
+  },
+  {
+    "counter": "II/104 Schutzen Bn",
+    "formation": "15 Panzer Division",
+    "nationality": "GE",
+    "role": "motor_infantry",
+    "arrival_gt": 29,
+    "entry": "west"
+  },
+  {
+    "counter": "115 Schutzen Regt",
+    "formation": "15 Panzer Division",
+    "nationality": "GE",
+    "role": "motor_infantry",
+    "arrival_gt": 30,
+    "entry": "west"
+  },
+  {
+    "counter": "HQ 8 Pz Regt",
+    "formation": "15 Panzer Division",
+    "nationality": "GE",
+    "role": "hq",
+    "arrival_gt": 31,
+    "entry": "west"
+  },
+  {
+    "counter": "I/8 Pz Bn",
+    "formation": "15 Panzer Division",
+    "nationality": "GE",
+    "role": "tank",
+    "model": "pz3j",
+    "arrival_gt": 31,
+    "entry": "west"
+  },
+  {
+    "counter": "II/8 Pz Bn",
+    "formation": "15 Panzer Division",
+    "nationality": "GE",
+    "role": "tank",
+    "model": "pz3j",
+    "arrival_gt": 32,
+    "entry": "west"
+  },
+  {
+    "counter": "33 Arty Regt",
+    "formation": "15 Panzer Division",
+    "nationality": "GE",
+    "role": "artillery",
+    "model": "lefh18",
+    "arrival_gt": 33,
+    "entry": "west"
+  },
+  {
+    "counter": "HQ 90 Light Div",
+    "formation": "90th Light Division",
+    "nationality": "GE",
+    "role": "hq",
+    "arrival_gt": 44,
+    "entry": "west"
+  },
+  {
+    "counter": "155 Schutzen Regt",
+    "formation": "90th Light Division",
+    "nationality": "GE",
+    "role": "motor_infantry",
+    "arrival_gt": 32,
+    "entry": "west"
+  },
+  {
+    "counter": "361 Afrika Regt",
+    "formation": "90th Light Division",
+    "nationality": "GE",
+    "role": "motor_infantry",
+    "arrival_gt": 37,
+    "entry": "west"
+  },
+  {
+    "counter": "613 Flak Bn",
+    "formation": "90th Light Division",
+    "nationality": "GE",
+    "role": "antitank",
+    "model": "flak88",
+    "arrival_gt": 37,
+    "entry": "west"
+  },
+  {
+    "counter": "580 Aufkl Bn",
+    "formation": "90th Light Division",
+    "nationality": "GE",
+    "role": "recon",
+    "arrival_gt": 43,
+    "entry": "west"
+  },
+  {
+    "counter": "III/255 Schutzen Bn",
+    "formation": "90th Light Division",
+    "nationality": "GE",
+    "role": "motor_infantry",
+    "arrival_gt": 49,
+    "entry": "west"
+  },
+  {
+    "counter": "III/347 Schutzen Bn",
+    "formation": "90th Light Division",
+    "nationality": "GE",
+    "role": "motor_infantry",
+    "arrival_gt": 49,
+    "entry": "west"
+  },
+  {
+    "counter": "190 Arty Bn",
+    "formation": "90th Light Division",
+    "nationality": "GE",
+    "role": "artillery",
+    "model": "lefh18",
+    "arrival_gt": 82,
+    "entry": "west"
+  },
+  {
+    "counter": "190 Pzjg Bn",
+    "formation": "90th Light Division",
+    "nationality": "GE",
+    "role": "antitank",
+    "model": "pak38",
+    "arrival_gt": 91,
+    "entry": "west"
+  },
+  {
+    "counter": "HQ 164 Light Div",
+    "formation": "164th Light Division",
+    "nationality": "GE",
+    "role": "hq",
+    "arrival_gt": 93,
+    "entry": "west"
+  },
+  {
+    "counter": "609 Flak Bn",
+    "formation": "164th Light Division",
+    "nationality": "GE",
+    "role": "antitank",
+    "model": "flak88",
+    "arrival_gt": 93,
+    "entry": "west"
+  },
+  {
+    "counter": "125 PzGren Regt",
+    "formation": "164th Light Division",
+    "nationality": "GE",
+    "role": "motor_infantry",
+    "arrival_gt": 93,
+    "entry": "west"
+  },
+  {
+    "counter": "382 PzGren Regt",
+    "formation": "164th Light Division",
+    "nationality": "GE",
+    "role": "motor_infantry",
+    "arrival_gt": 94,
+    "entry": "west"
+  },
+  {
+    "counter": "164 Aufkl Bn",
+    "formation": "164th Light Division",
+    "nationality": "GE",
+    "role": "recon",
+    "arrival_gt": 94,
+    "entry": "west"
+  },
+  {
+    "counter": "220 Arty Regt",
+    "formation": "164th Light Division",
+    "nationality": "GE",
+    "role": "artillery",
+    "model": "lefh18",
+    "arrival_gt": 95,
+    "entry": "west"
+  },
+  {
+    "counter": "433 PzGren Regt",
+    "formation": "164th Light Division",
+    "nationality": "GE",
+    "role": "motor_infantry",
+    "arrival_gt": 95,
+    "entry": "west"
+  },
+  {
+    "counter": "Sirte Inf 1",
+    "formation": "61 Sirte Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 10,
+    "entry": "west"
+  },
+  {
+    "counter": "Sirte Inf 2",
+    "formation": "61 Sirte Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 10,
+    "entry": "west"
+  },
+  {
+    "counter": "Sirte Arty",
+    "formation": "61 Sirte Division",
+    "nationality": "IT",
+    "role": "artillery",
+    "arrival_gt": 10,
+    "entry": "west"
+  },
+  {
+    "counter": "Sabratha Inf 1",
+    "formation": "60 Sabratha Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 12,
+    "entry": "west"
+  },
+  {
+    "counter": "Sabratha Inf 2",
+    "formation": "60 Sabratha Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 12,
+    "entry": "west"
+  },
+  {
+    "counter": "Sabratha Arty",
+    "formation": "60 Sabratha Division",
+    "nationality": "IT",
+    "role": "artillery",
+    "arrival_gt": 12,
+    "entry": "west"
+  },
+  {
+    "counter": "VIII Carri Bn",
+    "formation": "132 Ariete Division",
+    "nationality": "IT",
+    "role": "tank",
+    "model": "m13",
+    "arrival_gt": 18,
+    "entry": "west"
+  },
+  {
+    "counter": "IX Carri Bn",
+    "formation": "132 Ariete Division",
+    "nationality": "IT",
+    "role": "tank",
+    "model": "m13",
+    "arrival_gt": 18,
+    "entry": "west"
+  },
+  {
+    "counter": "I(L) Carri Bn",
+    "formation": "132 Ariete Division",
+    "nationality": "IT",
+    "role": "tank",
+    "model": "cv33",
+    "arrival_gt": 18,
+    "entry": "west"
+  },
+  {
+    "counter": "8 Bersaglieri Regt",
+    "formation": "132 Ariete Division",
+    "nationality": "IT",
+    "role": "motor_infantry",
+    "arrival_gt": 18,
+    "entry": "west"
+  },
+  {
+    "counter": "Ariete Arty",
+    "formation": "132 Ariete Division",
+    "nationality": "IT",
+    "role": "artillery",
+    "arrival_gt": 18,
+    "entry": "west"
+  },
+  {
+    "counter": "Trento Inf 1",
+    "formation": "102 Trento Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 21,
+    "entry": "west"
+  },
+  {
+    "counter": "Trento Inf 2",
+    "formation": "102 Trento Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 21,
+    "entry": "west"
+  },
+  {
+    "counter": "Trento Arty",
+    "formation": "102 Trento Division",
+    "nationality": "IT",
+    "role": "artillery",
+    "arrival_gt": 21,
+    "entry": "west"
+  },
+  {
+    "counter": "Brescia Inf 1",
+    "formation": "27 Brescia Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 21,
+    "entry": "west"
+  },
+  {
+    "counter": "Brescia Inf 2",
+    "formation": "27 Brescia Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 21,
+    "entry": "west"
+  },
+  {
+    "counter": "Brescia Arty",
+    "formation": "27 Brescia Division",
+    "nationality": "IT",
+    "role": "artillery",
+    "arrival_gt": 21,
+    "entry": "west"
+  },
+  {
+    "counter": "33 CCNN Bn",
+    "formation": "27 Brescia Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 21,
+    "entry": "west"
+  },
+  {
+    "counter": "56 CCNN Bn",
+    "formation": "27 Brescia Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 21,
+    "entry": "west"
+  },
+  {
+    "counter": "Pavia Inf 1",
+    "formation": "17 Pavia Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 22,
+    "entry": "west"
+  },
+  {
+    "counter": "Pavia Inf 2",
+    "formation": "17 Pavia Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 22,
+    "entry": "west"
+  },
+  {
+    "counter": "Pavia Arty",
+    "formation": "17 Pavia Division",
+    "nationality": "IT",
+    "role": "artillery",
+    "arrival_gt": 22,
+    "entry": "west"
+  },
+  {
+    "counter": "9 CCNN Regt",
+    "formation": "17 Pavia Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 22,
+    "entry": "west"
+  },
+  {
+    "counter": "Bologna Inf 1",
+    "formation": "25 Bologna Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 24,
+    "entry": "west"
+  },
+  {
+    "counter": "Bologna Inf 2",
+    "formation": "25 Bologna Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 24,
+    "entry": "west"
+  },
+  {
+    "counter": "Bologna Arty",
+    "formation": "25 Bologna Division",
+    "nationality": "IT",
+    "role": "artillery",
+    "arrival_gt": 24,
+    "entry": "west"
+  },
+  {
+    "counter": "32 CCNN Bn",
+    "formation": "25 Bologna Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 24,
+    "entry": "west"
+  },
+  {
+    "counter": "Savona Inf 1",
+    "formation": "55 Savona Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 25,
+    "entry": "west"
+  },
+  {
+    "counter": "Savona Inf 2",
+    "formation": "55 Savona Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 25,
+    "entry": "west"
+  },
+  {
+    "counter": "Savona Arty",
+    "formation": "55 Savona Division",
+    "nationality": "IT",
+    "role": "artillery",
+    "arrival_gt": 25,
+    "entry": "west"
+  },
+  {
+    "counter": "7 CCNN Regt",
+    "formation": "55 Savona Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 25,
+    "entry": "west"
+  },
+  {
+    "counter": "Trieste Inf 1",
+    "formation": "101 Trieste Division",
+    "nationality": "IT",
+    "role": "motor_infantry",
+    "arrival_gt": 50,
+    "entry": "west"
+  },
+  {
+    "counter": "Trieste Inf 2",
+    "formation": "101 Trieste Division",
+    "nationality": "IT",
+    "role": "motor_infantry",
+    "arrival_gt": 50,
+    "entry": "west"
+  },
+  {
+    "counter": "Trieste Arty",
+    "formation": "101 Trieste Division",
+    "nationality": "IT",
+    "role": "artillery",
+    "arrival_gt": 50,
+    "entry": "west"
+  },
+  {
+    "counter": "8 Armored Bers Bn",
+    "formation": "101 Trieste Division",
+    "nationality": "IT",
+    "role": "recon",
+    "arrival_gt": 70,
+    "entry": "west"
+  },
+  {
+    "counter": "I Carri Bn",
+    "formation": "133 Littorio Division",
+    "nationality": "IT",
+    "role": "tank",
+    "model": "m13",
+    "arrival_gt": 62,
+    "entry": "west"
+  },
+  {
+    "counter": "II Carri Bn",
+    "formation": "133 Littorio Division",
+    "nationality": "IT",
+    "role": "tank",
+    "model": "m13",
+    "arrival_gt": 62,
+    "entry": "west"
+  },
+  {
+    "counter": "12 Bersaglieri Regt",
+    "formation": "133 Littorio Division",
+    "nationality": "IT",
+    "role": "motor_infantry",
+    "arrival_gt": 62,
+    "entry": "west"
+  },
+  {
+    "counter": "Littorio Arty",
+    "formation": "133 Littorio Division",
+    "nationality": "IT",
+    "role": "artillery",
+    "arrival_gt": 62,
+    "entry": "west"
+  },
+  {
+    "counter": "Pistoia Inf 1",
+    "formation": "16 Pistoia Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 92,
+    "entry": "west"
+  },
+  {
+    "counter": "Pistoia Inf 2",
+    "formation": "16 Pistoia Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 92,
+    "entry": "west"
+  },
+  {
+    "counter": "Pistoia Arty",
+    "formation": "16 Pistoia Division",
+    "nationality": "IT",
+    "role": "artillery",
+    "arrival_gt": 92,
+    "entry": "west"
+  },
+  {
+    "counter": "Folgore Para 1",
+    "formation": "185 Folgore Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 94,
+    "entry": "west"
+  },
+  {
+    "counter": "Folgore Para 2",
+    "formation": "185 Folgore Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 94,
+    "entry": "west"
+  },
+  {
+    "counter": "Folgore Arty",
+    "formation": "185 Folgore Division",
+    "nationality": "IT",
+    "role": "artillery",
+    "arrival_gt": 94,
+    "entry": "west"
+  },
+  {
+    "counter": "2 RTR",
+    "formation": "2nd Armoured Division",
+    "nationality": "CW",
+    "role": "tank",
+    "model": "a13",
+    "arrival_gt": 2,
+    "entry": "east"
+  },
+  {
+    "counter": "7 RTR",
+    "formation": "2nd Armoured Division",
+    "nationality": "CW",
+    "role": "tank",
+    "model": "matilda2",
+    "arrival_gt": 2,
+    "entry": "east"
+  },
+  {
+    "counter": "1 RHA",
+    "formation": "2nd Armoured Division",
+    "nationality": "CW",
+    "role": "artillery",
+    "model": "25pdr",
+    "arrival_gt": 15,
+    "entry": "east"
+  },
+  {
+    "counter": "Tiger Convoy: Mk VI Light",
+    "formation": "Tiger Convoy (tank replacements)",
+    "nationality": "CW",
+    "role": "tank",
+    "model": "mk6",
+    "arrival_gt": 32,
+    "entry": "east"
+  },
+  {
+    "counter": "Tiger Convoy: Crusader I",
+    "formation": "Tiger Convoy (tank replacements)",
+    "nationality": "CW",
+    "role": "tank",
+    "model": "crusader2",
+    "arrival_gt": 32,
+    "entry": "east"
+  },
+  {
+    "counter": "Tiger Convoy: Matilda",
+    "formation": "Tiger Convoy (tank replacements)",
+    "nationality": "CW",
+    "role": "tank",
+    "model": "matilda2",
+    "arrival_gt": 32,
+    "entry": "east"
+  },
+  {
+    "counter": "Tiger Convoy: A13",
+    "formation": "Tiger Convoy (tank replacements)",
+    "nationality": "CW",
+    "role": "tank",
+    "model": "a13",
+    "arrival_gt": 32,
+    "entry": "east"
+  },
+  {
+    "counter": "4 RTR",
+    "formation": "1st Army Tank Brigade",
+    "nationality": "CW",
+    "role": "tank",
+    "model": "matilda2",
+    "arrival_gt": 29,
+    "entry": "east"
+  },
+  {
+    "counter": "1 Army Tank Bde",
+    "formation": "1st Army Tank Brigade",
+    "nationality": "CW",
+    "role": "tank",
+    "model": "matilda2",
+    "arrival_gt": 36,
+    "entry": "east"
+  },
+  {
+    "counter": "32 Army Tank Bde",
+    "formation": "32nd Army Tank Brigade",
+    "nationality": "CW",
+    "role": "tank",
+    "model": "matilda2",
+    "arrival_gt": 76,
+    "entry": "east"
+  },
+  {
+    "counter": "8 Armd Bde",
+    "formation": "10th Armoured Division",
+    "nationality": "CW",
+    "role": "tank",
+    "model": "grant",
+    "arrival_gt": 69,
+    "entry": "east"
+  },
+  {
+    "counter": "9 Armd Bde",
+    "formation": "10th Armoured Division",
+    "nationality": "CW",
+    "role": "tank",
+    "model": "crusader2",
+    "arrival_gt": 80,
+    "entry": "east"
+  },
+  {
+    "counter": "HQ 10 Armd Div",
+    "formation": "10th Armoured Division",
+    "nationality": "CW",
+    "role": "hq",
+    "arrival_gt": 79,
+    "entry": "east"
+  },
+  {
+    "counter": "23 Armd Bde",
+    "formation": "8th Armoured Division",
+    "nationality": "CW",
+    "role": "tank",
+    "model": "matilda2",
+    "arrival_gt": 87,
+    "entry": "east"
+  },
+  {
+    "counter": "24 Armd Bde",
+    "formation": "8th Armoured Division",
+    "nationality": "CW",
+    "role": "tank",
+    "model": "grant",
+    "arrival_gt": 88,
+    "entry": "east"
+  },
+  {
+    "counter": "HQ 8 Armd Div",
+    "formation": "8th Armoured Division",
+    "nationality": "CW",
+    "role": "hq",
+    "arrival_gt": 87,
+    "entry": "east"
+  },
+  {
+    "counter": "19 Aus Bde",
+    "formation": "6th Australian Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 9,
+    "entry": "east"
+  },
+  {
+    "counter": "2/2 Aus Fld Arty",
+    "formation": "6th Australian Division",
+    "nationality": "CW",
+    "role": "artillery",
+    "model": "25pdr",
+    "arrival_gt": 7,
+    "entry": "east"
+  },
+  {
+    "counter": "18 Aus Bde",
+    "formation": "7th Australian Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 14,
+    "entry": "east"
+  },
+  {
+    "counter": "HQ 9 Aus Div",
+    "formation": "9th Australian Division",
+    "nationality": "CW",
+    "role": "hq",
+    "arrival_gt": 20,
+    "entry": "east"
+  },
+  {
+    "counter": "20 Aus Bde",
+    "formation": "9th Australian Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 13,
+    "entry": "east"
+  },
+  {
+    "counter": "24 Aus Bde",
+    "formation": "9th Australian Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 21,
+    "entry": "east"
+  },
+  {
+    "counter": "26 Aus Bde",
+    "formation": "9th Australian Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 20,
+    "entry": "east"
+  },
+  {
+    "counter": "2/3 Aus AT Bn",
+    "formation": "9th Australian Division",
+    "nationality": "CW",
+    "role": "antitank",
+    "model": "2pdr",
+    "arrival_gt": 20,
+    "entry": "east"
+  },
+  {
+    "counter": "9 Aus Cav Regt",
+    "formation": "9th Australian Division",
+    "nationality": "CW",
+    "role": "recon",
+    "arrival_gt": 30,
+    "entry": "east"
+  },
+  {
+    "counter": "2/2 Aus MG Bn",
+    "formation": "9th Australian Division",
+    "nationality": "CW",
+    "role": "mg",
+    "arrival_gt": 30,
+    "entry": "east"
+  },
+  {
+    "counter": "6 NZ Bde",
+    "formation": "2nd New Zealand Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 6,
+    "entry": "east"
+  },
+  {
+    "counter": "5 NZ Bde",
+    "formation": "2nd New Zealand Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 35,
+    "entry": "east"
+  },
+  {
+    "counter": "6 NZ Fld Arty",
+    "formation": "2nd New Zealand Division",
+    "nationality": "CW",
+    "role": "artillery",
+    "model": "25pdr",
+    "arrival_gt": 2,
+    "entry": "east"
+  },
+  {
+    "counter": "7 NZ AT Regt",
+    "formation": "2nd New Zealand Division",
+    "nationality": "CW",
+    "role": "antitank",
+    "model": "2pdr",
+    "arrival_gt": 35,
+    "entry": "east"
+  },
+  {
+    "counter": "7 In Bde",
+    "formation": "4th Indian Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 5,
+    "entry": "east"
+  },
+  {
+    "counter": "1 Fld Arty Regt [4 In]",
+    "formation": "4th Indian Division",
+    "nationality": "CW",
+    "role": "artillery",
+    "model": "25pdr",
+    "arrival_gt": 3,
+    "entry": "east"
+  },
+  {
+    "counter": "4 In Div core (Rtn)",
+    "formation": "4th Indian Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 28,
+    "entry": "east"
+  },
+  {
+    "counter": "11 In Bde (Rtn)",
+    "formation": "4th Indian Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 30,
+    "entry": "east"
+  },
+  {
+    "counter": "HQ 5 In Div",
+    "formation": "5th Indian Division",
+    "nationality": "CW",
+    "role": "hq",
+    "arrival_gt": 38,
+    "entry": "east"
+  },
+  {
+    "counter": "9 In Bde",
+    "formation": "5th Indian Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 38,
+    "entry": "east"
+  },
+  {
+    "counter": "10 In Bde",
+    "formation": "5th Indian Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 39,
+    "entry": "east"
+  },
+  {
+    "counter": "29 In Bde",
+    "formation": "5th Indian Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 39,
+    "entry": "east"
+  },
+  {
+    "counter": "144 Fld Arty Regt [5 In]",
+    "formation": "5th Indian Division",
+    "nationality": "CW",
+    "role": "artillery",
+    "model": "25pdr",
+    "arrival_gt": 38,
+    "entry": "east"
+  },
+  {
+    "counter": "3/2 Punjab Regt",
+    "formation": "5th Indian Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 41,
+    "entry": "east"
+  },
+  {
+    "counter": "HQ 10 In Div",
+    "formation": "10th Indian Division",
+    "nationality": "CW",
+    "role": "hq",
+    "arrival_gt": 81,
+    "entry": "east"
+  },
+  {
+    "counter": "25 In Bde Grp",
+    "formation": "10th Indian Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 82,
+    "entry": "east"
+  },
+  {
+    "counter": "20 In Bde Grp",
+    "formation": "10th Indian Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 82,
+    "entry": "east"
+  },
+  {
+    "counter": "21 In Bde Grp",
+    "formation": "10th Indian Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 82,
+    "entry": "east"
+  },
+  {
+    "counter": "2/7 Gurkha Rifles",
+    "formation": "Indian Army (unassigned)",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 76,
+    "entry": "east"
+  },
+  {
+    "counter": "6 Rajputana Rifles MG Bn",
+    "formation": "Indian Army (unassigned)",
+    "nationality": "CW",
+    "role": "mg",
+    "arrival_gt": 84,
+    "entry": "east"
+  },
+  {
+    "counter": "3 In Motor Bde",
+    "formation": "3rd Indian Motor Brigade",
+    "nationality": "CW",
+    "role": "motor_infantry",
+    "arrival_gt": 23,
+    "entry": "east"
+  },
+  {
+    "counter": "161 In Motor Bde",
+    "formation": "161st Indian Motor Brigade",
+    "nationality": "CW",
+    "role": "motor_infantry",
+    "arrival_gt": 73,
+    "entry": "east"
+  },
+  {
+    "counter": "HQ 1 SA Div",
+    "formation": "1st South African Division",
+    "nationality": "CW",
+    "role": "hq",
+    "arrival_gt": 32,
+    "entry": "east"
+  },
+  {
+    "counter": "5 SA Bde",
+    "formation": "1st South African Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 32,
+    "entry": "east"
+  },
+  {
+    "counter": "2 SA Bde",
+    "formation": "1st South African Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 36,
+    "entry": "east"
+  },
+  {
+    "counter": "1 SA Bde",
+    "formation": "1st South African Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 37,
+    "entry": "east"
+  },
+  {
+    "counter": "1 SA AT Regt",
+    "formation": "1st South African Division",
+    "nationality": "CW",
+    "role": "antitank",
+    "model": "2pdr",
+    "arrival_gt": 36,
+    "entry": "east"
+  },
+  {
+    "counter": "4 SA Fld Arty Regt",
+    "formation": "1st South African Division",
+    "nationality": "CW",
+    "role": "artillery",
+    "model": "25pdr",
+    "arrival_gt": 45,
+    "entry": "east"
+  },
+  {
+    "counter": "HQ 2 SA Div",
+    "formation": "2nd South African Division",
+    "nationality": "CW",
+    "role": "hq",
+    "arrival_gt": 36,
+    "entry": "east"
+  },
+  {
+    "counter": "3 SA Bde",
+    "formation": "2nd South African Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 38,
+    "entry": "east"
+  },
+  {
+    "counter": "6 SA Bde",
+    "formation": "2nd South African Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 38,
+    "entry": "east"
+  },
+  {
+    "counter": "2 SA AT Regt",
+    "formation": "2nd South African Division",
+    "nationality": "CW",
+    "role": "antitank",
+    "model": "2pdr",
+    "arrival_gt": 45,
+    "entry": "east"
+  },
+  {
+    "counter": "2 SA Fld Arty Regt",
+    "formation": "2nd South African Division",
+    "nationality": "CW",
+    "role": "artillery",
+    "model": "25pdr",
+    "arrival_gt": 45,
+    "entry": "east"
+  },
+  {
+    "counter": "7 SA Recce Bn",
+    "formation": "2nd South African Division",
+    "nationality": "CW",
+    "role": "recon",
+    "arrival_gt": 43,
+    "entry": "east"
+  },
+  {
+    "counter": "HQ 70 Inf Div",
+    "formation": "70th Infantry Division",
+    "nationality": "CW",
+    "role": "hq",
+    "arrival_gt": 21,
+    "entry": "east"
+  },
+  {
+    "counter": "14 Inf Bde",
+    "formation": "70th Infantry Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 35,
+    "entry": "east"
+  },
+  {
+    "counter": "16 Inf Bde (Rtn)",
+    "formation": "70th Infantry Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 51,
+    "entry": "east"
+  },
+  {
+    "counter": "HQ 50 Inf Div",
+    "formation": "50th Infantry Division",
+    "nationality": "CW",
+    "role": "hq",
+    "arrival_gt": 68,
+    "entry": "east"
+  },
+  {
+    "counter": "69 Inf Bde",
+    "formation": "50th Infantry Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 69,
+    "entry": "east"
+  },
+  {
+    "counter": "151 Inf Bde",
+    "formation": "50th Infantry Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 69,
+    "entry": "east"
+  },
+  {
+    "counter": "150 Inf Bde",
+    "formation": "50th Infantry Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 36,
+    "entry": "east"
+  },
+  {
+    "counter": "74 Fld Arty Regt [50]",
+    "formation": "50th Infantry Division",
+    "nationality": "CW",
+    "role": "artillery",
+    "model": "25pdr",
+    "arrival_gt": 68,
+    "entry": "east"
+  },
+  {
+    "counter": "131 Inf Bde",
+    "formation": "44th Infantry Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 90,
+    "entry": "east"
+  },
+  {
+    "counter": "44 Inf Div body",
+    "formation": "44th Infantry Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 90,
+    "entry": "east"
+  },
+  {
+    "counter": "57 AT Regt [44]",
+    "formation": "44th Infantry Division",
+    "nationality": "CW",
+    "role": "antitank",
+    "model": "6pdr",
+    "arrival_gt": 95,
+    "entry": "east"
+  },
+  {
+    "counter": "57/58/65 Fld Arty [44]",
+    "formation": "44th Infantry Division",
+    "nationality": "CW",
+    "role": "artillery",
+    "model": "25pdr",
+    "arrival_gt": 95,
+    "entry": "east"
+  },
+  {
+    "counter": "HQ 51 Inf Div",
+    "formation": "51st Infantry Division",
+    "nationality": "CW",
+    "role": "hq",
+    "arrival_gt": 92,
+    "entry": "east"
+  },
+  {
+    "counter": "152 Inf Bde",
+    "formation": "51st Infantry Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 92,
+    "entry": "east"
+  },
+  {
+    "counter": "153 Inf Bde",
+    "formation": "51st Infantry Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 92,
+    "entry": "east"
+  },
+  {
+    "counter": "154 Inf Bde",
+    "formation": "51st Infantry Division",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 92,
+    "entry": "east"
+  },
+  {
+    "counter": "51 Recce Bn",
+    "formation": "51st Infantry Division",
+    "nationality": "CW",
+    "role": "recon",
+    "arrival_gt": 92,
+    "entry": "east"
+  },
+  {
+    "counter": "1/7 Middlesex MG Bn",
+    "formation": "51st Infantry Division",
+    "nationality": "CW",
+    "role": "mg",
+    "arrival_gt": 92,
+    "entry": "east"
+  },
+  {
+    "counter": "1 Support Group",
+    "formation": "1st Armoured Division",
+    "nationality": "CW",
+    "role": "motor_infantry",
+    "arrival_gt": 59,
+    "entry": "east"
+  },
+  {
+    "counter": "HQ 22 Guards Bde",
+    "formation": "22nd Guards Brigade",
+    "nationality": "CW",
+    "role": "hq",
+    "arrival_gt": 20,
+    "entry": "east"
+  },
+  {
+    "counter": "Polish Bde",
+    "formation": "Polish Brigade",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 1,
+    "entry": "east"
+  },
+  {
+    "counter": "11 Czech Bn",
+    "formation": "Czechoslovak Battalion",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 8,
+    "entry": "east"
+  },
+  {
+    "counter": "HQ 1 Free French Bde",
+    "formation": "1st Free French Brigade",
+    "nationality": "CW",
+    "role": "hq",
+    "arrival_gt": 62,
+    "entry": "east"
+  },
+  {
+    "counter": "2 Bn Legion Etranger",
+    "formation": "1st Free French Brigade",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 62,
+    "entry": "east"
+  },
+  {
+    "counter": "1 Bn du Pacifique",
+    "formation": "1st Free French Brigade",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 62,
+    "entry": "east"
+  },
+  {
+    "counter": "1 Regt d'Artillerie [1 FF]",
+    "formation": "1st Free French Brigade",
+    "nationality": "CW",
+    "role": "artillery",
+    "model": "25pdr",
+    "arrival_gt": 63,
+    "entry": "east"
+  },
+  {
+    "counter": "2 Free French Bde",
+    "formation": "2nd Free French Brigade",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 75,
+    "entry": "east"
+  },
+  {
+    "counter": "1 Greek Bde",
+    "formation": "1st Greek Brigade",
+    "nationality": "CW",
+    "role": "infantry",
+    "arrival_gt": 93,
+    "entry": "east"
+  },
+  {
+    "counter": "I/136 Bn",
+    "formation": "136 GGFF Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 97,
+    "entry": "west"
+  },
+  {
+    "counter": "II/136 Bn",
+    "formation": "136 GGFF Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 97,
+    "entry": "west"
+  },
+  {
+    "counter": "III/136 HW Bn",
+    "formation": "136 GGFF Division",
+    "nationality": "IT",
+    "role": "infantry",
+    "arrival_gt": 97,
+    "entry": "west"
+  },
+  {
+    "counter": "136 Arty Regt",
+    "formation": "136 GGFF Division",
+    "nationality": "IT",
+    "role": "artillery",
+    "arrival_gt": 97,
+    "entry": "west"
+  }
+]

@@ -1,0 +1,2340 @@
+{
+  "reinforcements": [
+    {
+      "counter": "Polish Bde",
+      "group": "CW Polish Brigade",
+      "hex": [
+        43,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 1
+    },
+    {
+      "counter": "2 RTR",
+      "group": "CW 2nd Armoured Division",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 2,
+      "model": "a13"
+    },
+    {
+      "counter": "6 NZ Fld Arty",
+      "group": "CW 2nd New Zealand Division",
+      "hex": [
+        44,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 2,
+      "model": "25pdr"
+    },
+    {
+      "counter": "7 RTR",
+      "group": "CW 2nd Armoured Division",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 2,
+      "model": "matilda2"
+    },
+    {
+      "counter": "1 Fld Arty Regt [4 In]",
+      "group": "CW 4th Indian Division",
+      "hex": [
+        44,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 3,
+      "model": "25pdr"
+    },
+    {
+      "counter": "7 In Bde",
+      "group": "CW 4th Indian Division",
+      "hex": [
+        44,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 5
+    },
+    {
+      "counter": "6 NZ Bde",
+      "group": "CW 2nd New Zealand Division",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 6
+    },
+    {
+      "counter": "2/2 Aus Fld Arty",
+      "group": "CW 6th Australian Division",
+      "hex": [
+        46,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 7,
+      "model": "25pdr"
+    },
+    {
+      "counter": "11 Czech Bn",
+      "group": "CW Czechoslovak Battalion",
+      "hex": [
+        43,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 8
+    },
+    {
+      "counter": "19 Aus Bde",
+      "group": "CW 6th Australian Division",
+      "hex": [
+        46,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 9
+    },
+    {
+      "counter": "Sirte Arty",
+      "group": "IT 61 Sirte Division",
+      "hex": [
+        45,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 10
+    },
+    {
+      "counter": "Sirte Inf 1",
+      "group": "IT 61 Sirte Division",
+      "hex": [
+        44,
+        -3
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 10
+    },
+    {
+      "counter": "Sirte Inf 2",
+      "group": "IT 61 Sirte Division",
+      "hex": [
+        45,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 10
+    },
+    {
+      "counter": "Sabratha Arty",
+      "group": "IT 60 Sabratha Division",
+      "hex": [
+        45,
+        -4
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 12
+    },
+    {
+      "counter": "Sabratha Inf 1",
+      "group": "IT 60 Sabratha Division",
+      "hex": [
+        45,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 12
+    },
+    {
+      "counter": "Sabratha Inf 2",
+      "group": "IT 60 Sabratha Division",
+      "hex": [
+        45,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 12
+    },
+    {
+      "counter": "20 Aus Bde",
+      "group": "CW 9th Australian Division",
+      "hex": [
+        47,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 13
+    },
+    {
+      "counter": "18 Aus Bde",
+      "group": "CW 7th Australian Division",
+      "hex": [
+        46,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 14
+    },
+    {
+      "counter": "1 RHA",
+      "group": "CW 2nd Armoured Division",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 15,
+      "model": "25pdr"
+    },
+    {
+      "counter": "8 Bersaglieri Regt",
+      "group": "IT 132 Ariete Division",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "IT",
+      "morale": 1,
+      "arrival_turn": 18
+    },
+    {
+      "counter": "Ariete Arty",
+      "group": "IT 132 Ariete Division",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": 1,
+      "arrival_turn": 18
+    },
+    {
+      "counter": "I(L) Carri Bn",
+      "group": "IT 132 Ariete Division",
+      "hex": [
+        45,
+        -4
+      ],
+      "side": "AXIS",
+      "role": "tank",
+      "nationality": "IT",
+      "morale": 1,
+      "arrival_turn": 18,
+      "model": "cv33"
+    },
+    {
+      "counter": "IX Carri Bn",
+      "group": "IT 132 Ariete Division",
+      "hex": [
+        45,
+        -4
+      ],
+      "side": "AXIS",
+      "role": "tank",
+      "nationality": "IT",
+      "morale": 1,
+      "arrival_turn": 18,
+      "model": "m13"
+    },
+    {
+      "counter": "VIII Carri Bn",
+      "group": "IT 132 Ariete Division",
+      "hex": [
+        45,
+        -4
+      ],
+      "side": "AXIS",
+      "role": "tank",
+      "nationality": "IT",
+      "morale": 1,
+      "arrival_turn": 18,
+      "model": "m13"
+    },
+    {
+      "counter": "2/3 Aus AT Bn",
+      "group": "CW 9th Australian Division",
+      "hex": [
+        47,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "antitank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 20,
+      "model": "2pdr"
+    },
+    {
+      "counter": "26 Aus Bde",
+      "group": "CW 9th Australian Division",
+      "hex": [
+        47,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 20
+    },
+    {
+      "counter": "HQ 22 Guards Bde",
+      "group": "CW 22nd Guards Brigade",
+      "hex": [
+        43,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 20
+    },
+    {
+      "counter": "HQ 9 Aus Div",
+      "group": "CW 9th Australian Division",
+      "hex": [
+        46,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 20
+    },
+    {
+      "counter": "Rommel",
+      "group": "GE DAK",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "hq",
+      "nationality": "GE",
+      "morale": 1,
+      "arrival_turn": 20
+    },
+    {
+      "counter": "24 Aus Bde",
+      "group": "CW 9th Australian Division",
+      "hex": [
+        47,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 21
+    },
+    {
+      "counter": "HQ 70 Inf Div",
+      "group": "CW 70th Infantry Division",
+      "hex": [
+        47,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 21
+    },
+    {
+      "counter": "3 Aufkl Bn",
+      "group": "GE 5th Light Division",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "recon",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 21
+    },
+    {
+      "counter": "33 CCNN Bn",
+      "group": "IT 27 Brescia Division",
+      "hex": [
+        47,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 21
+    },
+    {
+      "counter": "39 Pzjg Bn",
+      "group": "GE 5th Light Division",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "antitank",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 21,
+      "model": "pak38"
+    },
+    {
+      "counter": "56 CCNN Bn",
+      "group": "IT 27 Brescia Division",
+      "hex": [
+        47,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 21
+    },
+    {
+      "counter": "Brescia Arty",
+      "group": "IT 27 Brescia Division",
+      "hex": [
+        46,
+        -5
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 21
+    },
+    {
+      "counter": "Brescia Inf 1",
+      "group": "IT 27 Brescia Division",
+      "hex": [
+        46,
+        -5
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 21
+    },
+    {
+      "counter": "Brescia Inf 2",
+      "group": "IT 27 Brescia Division",
+      "hex": [
+        46,
+        -5
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 21
+    },
+    {
+      "counter": "HQ 5 Le Div",
+      "group": "GE 5th Light Division",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "hq",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 21
+    },
+    {
+      "counter": "Trento Arty",
+      "group": "IT 102 Trento Division",
+      "hex": [
+        46,
+        -5
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 21
+    },
+    {
+      "counter": "Trento Inf 1",
+      "group": "IT 102 Trento Division",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 21
+    },
+    {
+      "counter": "Trento Inf 2",
+      "group": "IT 102 Trento Division",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 21
+    },
+    {
+      "counter": "605 Pzjg Bn",
+      "group": "GE 5th Light Division",
+      "hex": [
+        45,
+        -6
+      ],
+      "side": "AXIS",
+      "role": "antitank",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 22,
+      "model": "pak38"
+    },
+    {
+      "counter": "606 Flak Bn",
+      "group": "GE 5th Light Division",
+      "hex": [
+        44,
+        -4
+      ],
+      "side": "AXIS",
+      "role": "antitank",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 22,
+      "model": "flak88"
+    },
+    {
+      "counter": "9 CCNN Regt",
+      "group": "IT 17 Pavia Division",
+      "hex": [
+        47,
+        -8
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 22
+    },
+    {
+      "counter": "HQ 5 Pz Regt",
+      "group": "GE 5th Light Division",
+      "hex": [
+        45,
+        -6
+      ],
+      "side": "AXIS",
+      "role": "hq",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 22
+    },
+    {
+      "counter": "I/5 Pz Bn",
+      "group": "GE 5th Light Division",
+      "hex": [
+        45,
+        -6
+      ],
+      "side": "AXIS",
+      "role": "tank",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 22,
+      "model": "pz3h"
+    },
+    {
+      "counter": "Pavia Arty",
+      "group": "IT 17 Pavia Division",
+      "hex": [
+        47,
+        -8
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 22
+    },
+    {
+      "counter": "Pavia Inf 1",
+      "group": "IT 17 Pavia Division",
+      "hex": [
+        47,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 22
+    },
+    {
+      "counter": "Pavia Inf 2",
+      "group": "IT 17 Pavia Division",
+      "hex": [
+        47,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 22
+    },
+    {
+      "counter": "3 In Motor Bde",
+      "group": "CW 3rd Indian Motor Brigade",
+      "hex": [
+        45,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "motor_infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 23
+    },
+    {
+      "counter": "I/75 Arty Bn",
+      "group": "GE 5th Light Division",
+      "hex": [
+        44,
+        -4
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 23,
+      "model": "lefh18"
+    },
+    {
+      "counter": "32 CCNN Bn",
+      "group": "IT 25 Bologna Division",
+      "hex": [
+        47,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 24
+    },
+    {
+      "counter": "33 Pzjg Bn",
+      "group": "GE 15 Panzer Division",
+      "hex": [
+        45,
+        -8
+      ],
+      "side": "AXIS",
+      "role": "antitank",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 24,
+      "model": "pak38"
+    },
+    {
+      "counter": "Bologna Arty",
+      "group": "IT 25 Bologna Division",
+      "hex": [
+        47,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 24
+    },
+    {
+      "counter": "Bologna Inf 1",
+      "group": "IT 25 Bologna Division",
+      "hex": [
+        47,
+        -8
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 24
+    },
+    {
+      "counter": "Bologna Inf 2",
+      "group": "IT 25 Bologna Division",
+      "hex": [
+        47,
+        -8
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 24
+    },
+    {
+      "counter": "II/5 Pz Bn",
+      "group": "GE 5th Light Division",
+      "hex": [
+        45,
+        -6
+      ],
+      "side": "AXIS",
+      "role": "tank",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 24,
+      "model": "pz3h"
+    },
+    {
+      "counter": "2 MG Bn",
+      "group": "GE 5th Light Division",
+      "hex": [
+        44,
+        -4
+      ],
+      "side": "AXIS",
+      "role": "mg",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 25
+    },
+    {
+      "counter": "7 CCNN Regt",
+      "group": "IT 55 Savona Division",
+      "hex": [
+        47,
+        -6
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 25
+    },
+    {
+      "counter": "Savona Arty",
+      "group": "IT 55 Savona Division",
+      "hex": [
+        47,
+        -6
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 25
+    },
+    {
+      "counter": "Savona Inf 1",
+      "group": "IT 55 Savona Division",
+      "hex": [
+        47,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 25
+    },
+    {
+      "counter": "Savona Inf 2",
+      "group": "IT 55 Savona Division",
+      "hex": [
+        47,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 25
+    },
+    {
+      "counter": "8 MG Bn",
+      "group": "GE 5th Light Division",
+      "hex": [
+        44,
+        -4
+      ],
+      "side": "AXIS",
+      "role": "mg",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 26
+    },
+    {
+      "counter": "15 Krad Bn",
+      "group": "GE 15 Panzer Division",
+      "hex": [
+        45,
+        -8
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 27
+    },
+    {
+      "counter": "4 In Div core (Rtn)",
+      "group": "CW 4th Indian Division",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 28
+    },
+    {
+      "counter": "33 Aufkl Bn",
+      "group": "GE 15 Panzer Division",
+      "hex": [
+        45,
+        -5
+      ],
+      "side": "AXIS",
+      "role": "recon",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 28
+    },
+    {
+      "counter": "I/104 Schutzen Bn",
+      "group": "GE 15 Panzer Division",
+      "hex": [
+        45,
+        -8
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 28
+    },
+    {
+      "counter": "4 RTR",
+      "group": "CW 1st Army Tank Brigade",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 29,
+      "model": "matilda2"
+    },
+    {
+      "counter": "HQ 15 Panzer Div",
+      "group": "GE 15 Panzer Division",
+      "hex": [
+        45,
+        -8
+      ],
+      "side": "AXIS",
+      "role": "hq",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 29
+    },
+    {
+      "counter": "II/104 Schutzen Bn",
+      "group": "GE 15 Panzer Division",
+      "hex": [
+        45,
+        -5
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 29
+    },
+    {
+      "counter": "11 In Bde (Rtn)",
+      "group": "CW 4th Indian Division",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 30
+    },
+    {
+      "counter": "2/2 Aus MG Bn",
+      "group": "CW 9th Australian Division",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "mg",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 30
+    },
+    {
+      "counter": "9 Aus Cav Regt",
+      "group": "CW 9th Australian Division",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "recon",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 30
+    },
+    {
+      "counter": "115 Schutzen Regt",
+      "group": "GE 15 Panzer Division",
+      "hex": [
+        45,
+        -5
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 30
+    },
+    {
+      "counter": "HQ 8 Pz Regt",
+      "group": "GE 15 Panzer Division",
+      "hex": [
+        45,
+        -5
+      ],
+      "side": "AXIS",
+      "role": "hq",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 31
+    },
+    {
+      "counter": "I/8 Pz Bn",
+      "group": "GE 15 Panzer Division",
+      "hex": [
+        46,
+        -8
+      ],
+      "side": "AXIS",
+      "role": "tank",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 31,
+      "model": "pz3j"
+    },
+    {
+      "counter": "5 SA Bde",
+      "group": "CW 1st South African Division",
+      "hex": [
+        46,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 32
+    },
+    {
+      "counter": "HQ 1 SA Div",
+      "group": "CW 1st South African Division",
+      "hex": [
+        46,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 32
+    },
+    {
+      "counter": "Tiger Convoy: A13",
+      "group": "CW Tiger Convoy (tank replacements)",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 32,
+      "model": "a13"
+    },
+    {
+      "counter": "Tiger Convoy: Crusader I",
+      "group": "CW Tiger Convoy (tank replacements)",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 32,
+      "model": "crusader2"
+    },
+    {
+      "counter": "Tiger Convoy: Matilda",
+      "group": "CW Tiger Convoy (tank replacements)",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 32,
+      "model": "matilda2"
+    },
+    {
+      "counter": "Tiger Convoy: Mk VI Light",
+      "group": "CW Tiger Convoy (tank replacements)",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 32,
+      "model": "mk6"
+    },
+    {
+      "counter": "155 Schutzen Regt",
+      "group": "GE 90th Light Division",
+      "hex": [
+        46,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 32
+    },
+    {
+      "counter": "II/8 Pz Bn",
+      "group": "GE 15 Panzer Division",
+      "hex": [
+        46,
+        -8
+      ],
+      "side": "AXIS",
+      "role": "tank",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 32,
+      "model": "pz3j"
+    },
+    {
+      "counter": "33 Arty Regt",
+      "group": "GE 15 Panzer Division",
+      "hex": [
+        46,
+        -8
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 33,
+      "model": "lefh18"
+    },
+    {
+      "counter": "14 Inf Bde",
+      "group": "CW 70th Infantry Division",
+      "hex": [
+        47,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 35
+    },
+    {
+      "counter": "5 NZ Bde",
+      "group": "CW 2nd New Zealand Division",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 35
+    },
+    {
+      "counter": "7 NZ AT Regt",
+      "group": "CW 2nd New Zealand Division",
+      "hex": [
+        44,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "antitank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 35,
+      "model": "2pdr"
+    },
+    {
+      "counter": "1 Army Tank Bde",
+      "group": "CW 1st Army Tank Brigade",
+      "hex": [
+        45,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 36,
+      "model": "matilda2"
+    },
+    {
+      "counter": "1 SA AT Regt",
+      "group": "CW 1st South African Division",
+      "hex": [
+        46,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "antitank",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 36,
+      "model": "2pdr"
+    },
+    {
+      "counter": "150 Inf Bde",
+      "group": "CW 50th Infantry Division",
+      "hex": [
+        48,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 36
+    },
+    {
+      "counter": "2 SA Bde",
+      "group": "CW 1st South African Division",
+      "hex": [
+        46,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 36
+    },
+    {
+      "counter": "HQ 2 SA Div",
+      "group": "CW 2nd South African Division",
+      "hex": [
+        46,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 36
+    },
+    {
+      "counter": "1 SA Bde",
+      "group": "CW 1st South African Division",
+      "hex": [
+        46,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 37
+    },
+    {
+      "counter": "361 Afrika Regt",
+      "group": "GE 90th Light Division",
+      "hex": [
+        46,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 37
+    },
+    {
+      "counter": "613 Flak Bn",
+      "group": "GE 90th Light Division",
+      "hex": [
+        46,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "antitank",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 37,
+      "model": "flak88"
+    },
+    {
+      "counter": "144 Fld Arty Regt [5 In]",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 38,
+      "model": "25pdr"
+    },
+    {
+      "counter": "3 SA Bde",
+      "group": "CW 2nd South African Division",
+      "hex": [
+        46,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 38
+    },
+    {
+      "counter": "6 SA Bde",
+      "group": "CW 2nd South African Division",
+      "hex": [
+        47,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 38
+    },
+    {
+      "counter": "9 In Bde",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 38
+    },
+    {
+      "counter": "HQ 5 In Div",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 38
+    },
+    {
+      "counter": "10 In Bde",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 39
+    },
+    {
+      "counter": "29 In Bde",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 39
+    },
+    {
+      "counter": "3/2 Punjab Regt",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 41
+    },
+    {
+      "counter": "7 SA Recce Bn",
+      "group": "CW 2nd South African Division",
+      "hex": [
+        47,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "recon",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 43
+    },
+    {
+      "counter": "580 Aufkl Bn",
+      "group": "GE 90th Light Division",
+      "hex": [
+        46,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "recon",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 43
+    },
+    {
+      "counter": "HQ 90 Light Div",
+      "group": "GE 90th Light Division",
+      "hex": [
+        46,
+        -8
+      ],
+      "side": "AXIS",
+      "role": "hq",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 44
+    },
+    {
+      "counter": "2 SA AT Regt",
+      "group": "CW 2nd South African Division",
+      "hex": [
+        47,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "antitank",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 45,
+      "model": "2pdr"
+    },
+    {
+      "counter": "2 SA Fld Arty Regt",
+      "group": "CW 2nd South African Division",
+      "hex": [
+        47,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 45,
+      "model": "25pdr"
+    },
+    {
+      "counter": "4 SA Fld Arty Regt",
+      "group": "CW 1st South African Division",
+      "hex": [
+        46,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 45,
+      "model": "25pdr"
+    },
+    {
+      "counter": "III/255 Schutzen Bn",
+      "group": "GE 90th Light Division",
+      "hex": [
+        46,
+        -6
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 49
+    },
+    {
+      "counter": "III/347 Schutzen Bn",
+      "group": "GE 90th Light Division",
+      "hex": [
+        46,
+        -6
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 49
+    },
+    {
+      "counter": "Trieste Arty",
+      "group": "IT 101 Trieste Division",
+      "hex": [
+        44,
+        -10
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 50
+    },
+    {
+      "counter": "Trieste Inf 1",
+      "group": "IT 101 Trieste Division",
+      "hex": [
+        47,
+        -6
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 50
+    },
+    {
+      "counter": "Trieste Inf 2",
+      "group": "IT 101 Trieste Division",
+      "hex": [
+        47,
+        -6
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 50
+    },
+    {
+      "counter": "16 Inf Bde (Rtn)",
+      "group": "CW 70th Infantry Division",
+      "hex": [
+        47,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 51
+    },
+    {
+      "counter": "1 Support Group",
+      "group": "CW 1st Armoured Division",
+      "hex": [
+        43,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "motor_infantry",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 59
+    },
+    {
+      "counter": "1 Bn du Pacifique",
+      "group": "CW 1st Free French Brigade",
+      "hex": [
+        43,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 62
+    },
+    {
+      "counter": "2 Bn Legion Etranger",
+      "group": "CW 1st Free French Brigade",
+      "hex": [
+        43,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 62
+    },
+    {
+      "counter": "HQ 1 Free French Bde",
+      "group": "CW 1st Free French Brigade",
+      "hex": [
+        43,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 62
+    },
+    {
+      "counter": "12 Bersaglieri Regt",
+      "group": "IT 133 Littorio Division",
+      "hex": [
+        44,
+        -2
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 62
+    },
+    {
+      "counter": "I Carri Bn",
+      "group": "IT 133 Littorio Division",
+      "hex": [
+        44,
+        -10
+      ],
+      "side": "AXIS",
+      "role": "tank",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 62,
+      "model": "m13"
+    },
+    {
+      "counter": "II Carri Bn",
+      "group": "IT 133 Littorio Division",
+      "hex": [
+        44,
+        -10
+      ],
+      "side": "AXIS",
+      "role": "tank",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 62,
+      "model": "m13"
+    },
+    {
+      "counter": "Littorio Arty",
+      "group": "IT 133 Littorio Division",
+      "hex": [
+        44,
+        -2
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 62
+    },
+    {
+      "counter": "1 Regt d'Artillerie [1 FF]",
+      "group": "CW 1st Free French Brigade",
+      "hex": [
+        43,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 63,
+      "model": "25pdr"
+    },
+    {
+      "counter": "74 Fld Arty Regt [50]",
+      "group": "CW 50th Infantry Division",
+      "hex": [
+        48,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 68,
+      "model": "25pdr"
+    },
+    {
+      "counter": "HQ 50 Inf Div",
+      "group": "CW 50th Infantry Division",
+      "hex": [
+        47,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 68
+    },
+    {
+      "counter": "151 Inf Bde",
+      "group": "CW 50th Infantry Division",
+      "hex": [
+        48,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 69
+    },
+    {
+      "counter": "69 Inf Bde",
+      "group": "CW 50th Infantry Division",
+      "hex": [
+        48,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 69
+    },
+    {
+      "counter": "8 Armd Bde",
+      "group": "CW 10th Armoured Division",
+      "hex": [
+        45,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 69,
+      "model": "grant"
+    },
+    {
+      "counter": "8 Armored Bers Bn",
+      "group": "IT 101 Trieste Division",
+      "hex": [
+        44,
+        -10
+      ],
+      "side": "AXIS",
+      "role": "recon",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 70
+    },
+    {
+      "counter": "161 In Motor Bde",
+      "group": "CW 161st Indian Motor Brigade",
+      "hex": [
+        45,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "motor_infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 73
+    },
+    {
+      "counter": "2 Free French Bde",
+      "group": "CW 2nd Free French Brigade",
+      "hex": [
+        43,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 75
+    },
+    {
+      "counter": "2/7 Gurkha Rifles",
+      "group": "CW Indian Army (unassigned)",
+      "hex": [
+        45,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 76
+    },
+    {
+      "counter": "32 Army Tank Bde",
+      "group": "CW 32nd Army Tank Brigade",
+      "hex": [
+        45,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 76,
+      "model": "matilda2"
+    },
+    {
+      "counter": "HQ 10 Armd Div",
+      "group": "CW 10th Armoured Division",
+      "hex": [
+        46,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 79
+    },
+    {
+      "counter": "9 Armd Bde",
+      "group": "CW 10th Armoured Division",
+      "hex": [
+        45,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 80,
+      "model": "crusader2"
+    },
+    {
+      "counter": "HQ 10 In Div",
+      "group": "CW 10th Indian Division",
+      "hex": [
+        45,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 81
+    },
+    {
+      "counter": "20 In Bde Grp",
+      "group": "CW 10th Indian Division",
+      "hex": [
+        45,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 82
+    },
+    {
+      "counter": "21 In Bde Grp",
+      "group": "CW 10th Indian Division",
+      "hex": [
+        45,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 82
+    },
+    {
+      "counter": "25 In Bde Grp",
+      "group": "CW 10th Indian Division",
+      "hex": [
+        45,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 82
+    },
+    {
+      "counter": "190 Arty Bn",
+      "group": "GE 90th Light Division",
+      "hex": [
+        46,
+        -6
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 82,
+      "model": "lefh18"
+    },
+    {
+      "counter": "6 Rajputana Rifles MG Bn",
+      "group": "CW Indian Army (unassigned)",
+      "hex": [
+        45,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "mg",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 84
+    },
+    {
+      "counter": "23 Armd Bde",
+      "group": "CW 8th Armoured Division",
+      "hex": [
+        46,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 87,
+      "model": "matilda2"
+    },
+    {
+      "counter": "HQ 8 Armd Div",
+      "group": "CW 8th Armoured Division",
+      "hex": [
+        46,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 87
+    },
+    {
+      "counter": "24 Armd Bde",
+      "group": "CW 8th Armoured Division",
+      "hex": [
+        46,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 88,
+      "model": "grant"
+    },
+    {
+      "counter": "131 Inf Bde",
+      "group": "CW 44th Infantry Division",
+      "hex": [
+        48,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 90
+    },
+    {
+      "counter": "44 Inf Div body",
+      "group": "CW 44th Infantry Division",
+      "hex": [
+        48,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 90
+    },
+    {
+      "counter": "190 Pzjg Bn",
+      "group": "GE 90th Light Division",
+      "hex": [
+        46,
+        -6
+      ],
+      "side": "AXIS",
+      "role": "antitank",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 91,
+      "model": "pak38"
+    },
+    {
+      "counter": "1/7 Middlesex MG Bn",
+      "group": "CW 51st Infantry Division",
+      "hex": [
+        43,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "mg",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 92
+    },
+    {
+      "counter": "152 Inf Bde",
+      "group": "CW 51st Infantry Division",
+      "hex": [
+        48,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 92
+    },
+    {
+      "counter": "153 Inf Bde",
+      "group": "CW 51st Infantry Division",
+      "hex": [
+        48,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 92
+    },
+    {
+      "counter": "154 Inf Bde",
+      "group": "CW 51st Infantry Division",
+      "hex": [
+        48,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 92
+    },
+    {
+      "counter": "51 Recce Bn",
+      "group": "CW 51st Infantry Division",
+      "hex": [
+        43,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "recon",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 92
+    },
+    {
+      "counter": "HQ 51 Inf Div",
+      "group": "CW 51st Infantry Division",
+      "hex": [
+        48,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 92
+    },
+    {
+      "counter": "Pistoia Arty",
+      "group": "IT 16 Pistoia Division",
+      "hex": [
+        45,
+        -10
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 92
+    },
+    {
+      "counter": "Pistoia Inf 1",
+      "group": "IT 16 Pistoia Division",
+      "hex": [
+        44,
+        -2
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 92
+    },
+    {
+      "counter": "Pistoia Inf 2",
+      "group": "IT 16 Pistoia Division",
+      "hex": [
+        44,
+        -2
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 92
+    },
+    {
+      "counter": "1 Greek Bde",
+      "group": "CW 1st Greek Brigade",
+      "hex": [
+        43,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 93
+    },
+    {
+      "counter": "125 PzGren Regt",
+      "group": "GE 164th Light Division",
+      "hex": [
+        44,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "GE",
+      "morale": 1,
+      "arrival_turn": 93
+    },
+    {
+      "counter": "609 Flak Bn",
+      "group": "GE 164th Light Division",
+      "hex": [
+        44,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "antitank",
+      "nationality": "GE",
+      "morale": 1,
+      "arrival_turn": 93,
+      "model": "flak88"
+    },
+    {
+      "counter": "HQ 164 Light Div",
+      "group": "GE 164th Light Division",
+      "hex": [
+        44,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "hq",
+      "nationality": "GE",
+      "morale": 1,
+      "arrival_turn": 93
+    },
+    {
+      "counter": "164 Aufkl Bn",
+      "group": "GE 164th Light Division",
+      "hex": [
+        44,
+        -3
+      ],
+      "side": "AXIS",
+      "role": "recon",
+      "nationality": "GE",
+      "morale": 1,
+      "arrival_turn": 94
+    },
+    {
+      "counter": "382 PzGren Regt",
+      "group": "GE 164th Light Division",
+      "hex": [
+        44,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "GE",
+      "morale": 1,
+      "arrival_turn": 94
+    },
+    {
+      "counter": "Folgore Arty",
+      "group": "IT 185 Folgore Division",
+      "hex": [
+        45,
+        -10
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": 1,
+      "arrival_turn": 94
+    },
+    {
+      "counter": "Folgore Para 1",
+      "group": "IT 185 Folgore Division",
+      "hex": [
+        45,
+        -10
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": 1,
+      "arrival_turn": 94
+    },
+    {
+      "counter": "Folgore Para 2",
+      "group": "IT 185 Folgore Division",
+      "hex": [
+        45,
+        -10
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": 1,
+      "arrival_turn": 94
+    },
+    {
+      "counter": "57 AT Regt [44]",
+      "group": "CW 44th Infantry Division",
+      "hex": [
+        48,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "antitank",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 95,
+      "model": "6pdr"
+    },
+    {
+      "counter": "57/58/65 Fld Arty [44]",
+      "group": "CW 44th Infantry Division",
+      "hex": [
+        48,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 95,
+      "model": "25pdr"
+    },
+    {
+      "counter": "220 Arty Regt",
+      "group": "GE 164th Light Division",
+      "hex": [
+        44,
+        -3
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 1,
+      "arrival_turn": 95,
+      "model": "lefh18"
+    },
+    {
+      "counter": "433 PzGren Regt",
+      "group": "GE 164th Light Division",
+      "hex": [
+        44,
+        -3
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "GE",
+      "morale": 1,
+      "arrival_turn": 95
+    },
+    {
+      "counter": "136 Arty Regt",
+      "group": "IT 136 GGFF Division",
+      "hex": [
+        45,
+        -3
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": -3,
+      "arrival_turn": 97
+    },
+    {
+      "counter": "I/136 Bn",
+      "group": "IT 136 GGFF Division",
+      "hex": [
+        45,
+        -3
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -3,
+      "arrival_turn": 97
+    },
+    {
+      "counter": "II/136 Bn",
+      "group": "IT 136 GGFF Division",
+      "hex": [
+        45,
+        -3
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -3,
+      "arrival_turn": 97
+    },
+    {
+      "counter": "III/136 HW Bn",
+      "group": "IT 136 GGFF Division",
+      "hex": [
+        45,
+        -3
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -3,
+      "arrival_turn": 97
+    }
+  ]
+}

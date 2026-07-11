@@ -293,7 +293,9 @@ def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
         barrage=rating("barrage"), anti_armor=rating("anti_armor"),
         armor_protection=rating("armor_protection"), vulnerability=rating("vulnerability"),
         is_tank=model.get("is_tank", s.get("is_tank", False)),
-        morale=_morale_for(rec["group"], rec["counter"]),
+        # An authored record may state its Basic Morale directly (reinforcements set it from
+        # the OA charts, robust to formation-name spelling); else derive it from the group.
+        morale=rec["morale"] if "morale" in rec else _morale_for(rec["group"], rec["counter"]),
         is_combat=s.get("is_combat", True),
         arrival_turn=arrival_turn,
         formation=rec["group"],

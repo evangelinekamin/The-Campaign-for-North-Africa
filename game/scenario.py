@@ -595,10 +595,11 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     tmap, _ = cna_map.load_sections("ABCDE")
     target = coords.to_axial(coords.parse(_ALEXANDRIA))
     # C2: the real September-1940 order of battle -- the Italian 10th Army (extraction +
-    # rule-60.31 gap-fill) vs the Western Desert Force. Reinforcements (Rommel/DAK etc.,
-    # rule [4.43b]) land in C2-3; until then the campaign opens with the historical start force.
+    # rule-60.31 gap-fill) vs the Western Desert Force -- with the historical reinforcement
+    # flow (rule 20 / [4.43b]/[4.43a]): Rommel and the DAK arrive from Tripoli from GT20, the
+    # 8th Army builds up from Cairo, across the whole GT1..111 span.
     units, supplies = oob.build(oob_file="oob_italian.json", extra_file="oob_campaign_extra.json",
-                                sections="ABCDE", reinforcements_file=None)
+                                sections="ABCDE", reinforcements_file="reinforcements_campaign.json")
 
     # A hex a piece stands on is land (coastal ports colour-sample as sea); add + connect,
     # exactly as the corridor scenarios do.
