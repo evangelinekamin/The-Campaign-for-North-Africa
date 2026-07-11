@@ -409,6 +409,12 @@ class GameState:
     # every non-Rommel scenario byte-identical -- no morale +1 (17.28), no +5 CPA (31.4), no
     # Berlin-recall roll, and zero Rommel events.
     rommel: "Rommel | None" = None
+    # Victory conditions (rules 61.8 / 64.7): a pluggable strategy object exposing
+    # check(run) -> the per-turn auto-win/annihilation test, and decide(run) -> the
+    # max-turns point tally. Default None routes to the engine's built-in Race-for-
+    # Tobruk logic (engine._DEFAULT_VICTORY), so every scenario that does not name a
+    # spec stays byte-identical; the campaign supplies its own (game.campaign_victory).
+    victory: "object | None" = None
 
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:

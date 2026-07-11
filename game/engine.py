@@ -14,6 +14,7 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass
+from typing import Protocol
 
 from . import combat, combat_tables, cp_costs, logistics_data, stacking, supply, tactics, weather
 from .apply import apply
@@ -157,12 +158,13 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                 _truck_convoys(r, policies[side], side)  # V.J: 2nd/3rd-line truck convoys (48)
             r.go(Phase.RECORD, Side.SYSTEM)
             _record_control(r)
-            winner, reason = _victory(r)
+            victory = r.state.victory or _DEFAULT_VICTORY
+            winner, reason = victory.check(r)
             if winner is not None:
                 done = True
                 break
             if stage == 3 and r.state.turn >= r.state.max_turns:
-                winner, reason = _final_decision(r)
+                winner, reason = victory.decide(r)
                 done = True
                 break
             _idle_recovery(r)                           # 6.24.1: reward a CP-idle stage (before the reset)
@@ -2068,6 +2070,36 @@ def _final_decision(r: _Run) -> tuple[Side, str]:
     if advance >= 50:
         return Side.ALLIED, f"Commonwealth victory: Tobruk held, Axis reached within {reach} hexes ({advance}% advance)"
     return Side.ALLIED, f"Commonwealth decisive victory: Axis advance stalled {reach} hexes short ({advance}% advance)"
+
+
+class VictorySpec(Protocol):
+    """A scenario's victory conditions as a strategy (rules 61.8 / 64.7). `check` is
+    the per-turn test run every Record Phase (auto-win / annihilation; returns the
+    winning Side or None to play on); `decide` is the terminal tally at max_turns
+    (always names a winner). Both receive the live `_Run` so a spec may read the full
+    board and emit its own events. A scenario selects a spec via GameState.victory;
+    None routes to _DEFAULT_VICTORY below."""
+
+    def check(self, r: "_Run") -> tuple["Side | None", str]: ...
+
+    def decide(self, r: "_Run") -> tuple["Side", str]: ...
+
+
+class _ScenarioVictory:
+    """The engine's built-in Race-for-Tobruk victory (rule 61.8): capture-and-hold
+    Tobruk or annihilate per turn, else a graded advance tally at the final turn.
+    This is the default for every scenario that does not name its own spec, so the
+    two benchmark scenarios stay byte-identical (check/decide delegate verbatim to
+    the module functions _victory / _final_decision)."""
+
+    def check(self, r: "_Run") -> tuple["Side | None", str]:
+        return _victory(r)
+
+    def decide(self, r: "_Run") -> tuple["Side", str]:
+        return _final_decision(r)
+
+
+_DEFAULT_VICTORY = _ScenarioVictory()
 
 
 def determinism_signature(events: list[Event]) -> str:
