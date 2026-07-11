@@ -1,0 +1,1322 @@
+[
+ {
+  "hex": "B4922",
+  "side": "?",
+  "kind": "unit",
+  "counter": "Air Strip axis",
+  "group": "AX Airstrip/",
+  "px": [
+   4695,
+   1005
+  ],
+  "stale_oldloc": "B4922"
+ },
+ {
+  "hex": "B6024",
+  "side": "?",
+  "kind": "unit",
+  "counter": "Airboat Alighting axis",
+  "group": "AX Alighting/",
+  "px": [
+   4908,
+   202
+  ],
+  "stale_oldloc": "B6024"
+ },
+ {
+  "hex": "C1015",
+  "side": "?",
+  "kind": "unit",
+  "counter": "Air Strip axis",
+  "group": "AX Airstrip/",
+  "px": [
+   6957,
+   3850
+  ],
+  "stale_oldloc": "C1015"
+ },
+ {
+  "hex": "C4021",
+  "side": "?",
+  "kind": "unit",
+  "counter": "Air Strip axis",
+  "group": "AX Airstrip/",
+  "px": [
+   7468,
+   1661
+  ],
+  "stale_oldloc": "C4021"
+ },
+ {
+  "hex": "C4317",
+  "side": "?",
+  "kind": "unit",
+  "counter": "Air Strip axis",
+  "group": "AX Airstrip/",
+  "px": [
+   7085,
+   1443
+  ],
+  "stale_oldloc": "C4317"
+ },
+ {
+  "hex": "C4322",
+  "side": "?",
+  "kind": "unit",
+  "counter": "Air Strip axis",
+  "group": "AX Airstrip/",
+  "px": [
+   7512,
+   1443
+  ],
+  "stale_oldloc": "C4322"
+ },
+ {
+  "hex": "C4420",
+  "side": "?",
+  "kind": "unit",
+  "counter": "Air Strip axis",
+  "group": "AX Airstrip/",
+  "px": [
+   7383,
+   1370
+  ],
+  "stale_oldloc": "C4420"
+ },
+ {
+  "hex": "C4908",
+  "side": "?",
+  "kind": "unit",
+  "counter": "Air Strip axis",
+  "group": "AX Airstrip/",
+  "px": [
+   6318,
+   1005
+  ],
+  "stale_oldloc": "C4908"
+ },
+ {
+  "hex": "D3715",
+  "side": "ALLIED",
+  "kind": "dump",
+  "counter": "BR Supply Dump-01",
+  "group": "AL mSupply Dump/Matruh",
+  "px": [
+   9734,
+   1880
+  ],
+  "stale_oldloc": "D3715"
+ },
+ {
+  "hex": "D4102",
+  "side": "ALLIED",
+  "kind": "dump",
+  "counter": "BR Supply Dump-01",
+  "group": "AL mSupply Dump/Sidi Baranni",
+  "px": [
+   8626,
+   1588
+  ],
+  "stale_oldloc": "D4102"
+ },
+ {
+  "hex": "D4102",
+  "side": "ALLIED",
+  "kind": "dump",
+  "counter": "BR Supply Dump-01",
+  "group": "AL mSupply Dump/A",
+  "px": [
+   8626,
+   1588
+  ],
+  "stale_oldloc": "D4102"
+ },
+ {
+  "hex": "D4103",
+  "side": "ALLIED",
+  "kind": "dump",
+  "counter": "BR Supply Dump-01",
+  "group": "AL mSupply Dump/B",
+  "px": [
+   8711,
+   1588
+  ],
+  "stale_oldloc": "D4103"
+ },
+ {
+  "hex": "E3813",
+  "side": "ALLIED",
+  "kind": "dump",
+  "counter": "BR Supply Dump-01",
+  "group": "AL mSupply Dump/Alex... N",
+  "px": [
+   12422,
+   1806
+  ],
+  "stale_oldloc": "E3813"
+ },
+ {
+  "hex": "C3721",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 1 RNF - none",
+  "group": "BR Unassigned Infantry-Type Units",
+  "px": [
+   7426,
+   1880
+  ],
+  "stale_oldloc": "C4229"
+ },
+ {
+  "hex": "C3721",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 3 RHA - 7Spt-7",
+  "group": "BR 7th Armoured Division",
+  "px": [
+   7426,
+   1880
+  ],
+  "stale_oldloc": "C4229"
+ },
+ {
+  "hex": "C3922",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 3CldGds - none",
+  "group": "BR Unassigned Infantry-Type Units",
+  "px": [
+   7512,
+   1734
+  ],
+  "stale_oldloc": "C4230"
+ },
+ {
+  "hex": "C3922",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 7 Med - none",
+  "group": "BR Unassigned Artillery Units",
+  "px": [
+   7512,
+   1734
+  ],
+  "stale_oldloc": "C4230"
+ },
+ {
+  "hex": "C3922",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 1 KRRC - 7Spt-7",
+  "group": "BR 7th Armoured Division",
+  "px": [
+   7512,
+   1734
+  ],
+  "stale_oldloc": "C4230"
+ },
+ {
+  "hex": "C3922",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 4 RHA - 7Spt-7",
+  "group": "BR 7th Armoured Division",
+  "px": [
+   7512,
+   1734
+  ],
+  "stale_oldloc": "C4230"
+ },
+ {
+  "hex": "C4122",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "Air Strip allied",
+  "group": "AL Airstrip/",
+  "px": [
+   7512,
+   1588
+  ],
+  "stale_oldloc": "C4122"
+ },
+ {
+  "hex": "C4131",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 2SctGds - none",
+  "group": "BR Unassigned Infantry-Type Units",
+  "px": [
+   8279,
+   1588
+  ],
+  "stale_oldloc": "C4232"
+ },
+ {
+  "hex": "C4131",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "IN 31 Fld - 4 In",
+  "group": "IN 4th Indian Division",
+  "px": [
+   8279,
+   1588
+  ],
+  "stale_oldloc": "C4232"
+ },
+ {
+  "hex": "C4230",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "Air Strip allied",
+  "group": "AL Airstrip/",
+  "px": [
+   8236,
+   1515
+  ],
+  "stale_oldloc": "C4230"
+ },
+ {
+  "hex": "D2707",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 4 Bord - 23-70",
+  "group": "BR 70th Infantry Division",
+  "px": [
+   9052,
+   2610
+  ],
+  "stale_oldloc": "D2707"
+ },
+ {
+  "hex": "D2807",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 1 DurLt - 23-70",
+  "group": "BR 70th Infantry Division",
+  "px": [
+   9094,
+   2537
+  ],
+  "stale_oldloc": "D2807"
+ },
+ {
+  "hex": "D2908",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 1 Essex - 23-70",
+  "group": "BR 70th Infantry Division",
+  "px": [
+   9137,
+   2464
+  ],
+  "stale_oldloc": "D2908"
+ },
+ {
+  "hex": "D3106",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 1 A&S - 16-70",
+  "group": "BR 70th Infantry Division",
+  "px": [
+   8967,
+   2318
+  ],
+  "stale_oldloc": "D3106"
+ },
+ {
+  "hex": "D3206",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 2Leicst - 16-70",
+  "group": "BR 70th Infantry Division",
+  "px": [
+   9009,
+   2245
+  ],
+  "stale_oldloc": "D3206"
+ },
+ {
+  "hex": "D3307",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 2 Qns - 16-70",
+  "group": "BR 70th Infantry Division",
+  "px": [
+   9052,
+   2172
+  ],
+  "stale_oldloc": "D3307"
+ },
+ {
+  "hex": "D3507",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 2BlkWa - 14-70",
+  "group": "BR 70th Infantry Division",
+  "px": [
+   9052,
+   2026
+  ],
+  "stale_oldloc": "D3507"
+ },
+ {
+  "hex": "D3607",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 1 Y&L - 14-70",
+  "group": "BR 70th Infantry Division",
+  "px": [
+   9094,
+   1953
+  ],
+  "stale_oldloc": "D3607"
+ },
+ {
+  "hex": "D3708",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 1 B&H - 14-70",
+  "group": "BR 70th Infantry Division",
+  "px": [
+   9137,
+   1880
+  ],
+  "stale_oldloc": "D3708"
+ },
+ {
+  "hex": "D3714",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR Selby - Matruh",
+  "group": "BR Selby Force - The Matruh Garrison",
+  "px": [
+   9649,
+   1880
+  ],
+  "stale_oldloc": "D3814"
+ },
+ {
+  "hex": "D3904",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "Air Strip allied",
+  "group": "AL Airstrip/",
+  "px": [
+   8796,
+   1734
+  ],
+  "stale_oldloc": "D3904"
+ },
+ {
+  "hex": "E3602",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 8 Med - none",
+  "group": "BR Unassigned Artillery Units",
+  "px": [
+   11520,
+   1937
+  ],
+  "stale_oldloc": "E3103"
+ },
+ {
+  "hex": "E3603",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 65 - none",
+  "group": "BR Unassigned Anti-Tank Regiments",
+  "px": [
+   11605,
+   1937
+  ],
+  "stale_oldloc": "E3104"
+ },
+ {
+  "hex": "E3603",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 149 - none",
+  "group": "BR Unassigned Anti-Tank Regiments",
+  "px": [
+   11605,
+   1937
+  ],
+  "stale_oldloc": "E3104"
+ },
+ {
+  "hex": "E3604",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 57 LAA - none",
+  "group": "BR Unassigned Air units",
+  "px": [
+   11690,
+   1937
+  ],
+  "stale_oldloc": "E3105"
+ },
+ {
+  "hex": "E3604",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 9 HAA - none",
+  "group": "BR Unassigned Air units",
+  "px": [
+   11690,
+   1937
+  ],
+  "stale_oldloc": "E3105"
+ },
+ {
+  "hex": "E3604",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 15 LAA - none",
+  "group": "BR Unassigned Air units",
+  "px": [
+   11690,
+   1937
+  ],
+  "stale_oldloc": "E3105"
+ },
+ {
+  "hex": "E4115",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "IN 1 Wlch - none",
+  "group": "IN Unassigned Indian Units",
+  "px": [
+   12581,
+   1593
+  ],
+  "stale_oldloc": "E3914"
+ },
+ {
+  "hex": "E4115",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 1 Ches - none",
+  "group": "BR Unassigned Infantry-Type Units",
+  "px": [
+   12581,
+   1593
+  ],
+  "stale_oldloc": "E3914"
+ },
+ {
+  "hex": "E4115",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 2 KOR - none",
+  "group": "BR Unassigned Infantry-Type Units",
+  "px": [
+   12581,
+   1593
+  ],
+  "stale_oldloc": "E3914"
+ },
+ {
+  "hex": "E4116",
+  "side": "ALLIED",
+  "kind": "unit",
+  "counter": "BR 8 Fld - none",
+  "group": "BR Unassigned Artillery Units",
+  "px": [
+   12667,
+   1593
+  ],
+  "stale_oldloc": "E3915"
+ },
+ {
+  "hex": "C3929",
+  "side": "AXIS",
+  "kind": "dump",
+  "counter": "IT Supply Dump",
+  "group": "GE mSupply Dump/A",
+  "px": [
+   8108,
+   1734
+  ],
+  "stale_oldloc": "C3929"
+ },
+ {
+  "hex": "C3930",
+  "side": "AXIS",
+  "kind": "dump",
+  "counter": "IT Supply Dump",
+  "group": "GE mSupply Dump/B",
+  "px": [
+   8194,
+   1734
+  ],
+  "stale_oldloc": "C3930"
+ },
+ {
+  "hex": "C3931",
+  "side": "AXIS",
+  "kind": "dump",
+  "counter": "IT Supply Dump",
+  "group": "GE mSupply Dump/C",
+  "px": [
+   8279,
+   1734
+  ],
+  "stale_oldloc": "C3931"
+ },
+ {
+  "hex": "C3932",
+  "side": "AXIS",
+  "kind": "dump",
+  "counter": "IT Supply Dump",
+  "group": "GE mSupply Dump/D",
+  "px": [
+   8364,
+   1734
+  ],
+  "stale_oldloc": "C3932"
+ },
+ {
+  "hex": "C4808",
+  "side": "AXIS",
+  "kind": "dump",
+  "counter": "IT Supply Dump",
+  "group": "GE mSupply Dump/Tobruk",
+  "px": [
+   6360,
+   1078
+  ],
+  "stale_oldloc": "C4808"
+ },
+ {
+  "hex": "A4130",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT Soluch - Soluch (ART)",
+  "group": "IT Minor Garrison Units",
+  "px": [
+   2562,
+   1586
+  ],
+  "stale_oldloc": "A4129"
+ },
+ {
+  "hex": "A4130",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT X Cp - none",
+  "group": "IT Unassigned Gun Units",
+  "px": [
+   2562,
+   1586
+  ],
+  "stale_oldloc": "A4129"
+ },
+ {
+  "hex": "A4130",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT Soluch - Soluch (SPA)",
+  "group": "IT Minor Garrison Units",
+  "px": [
+   2562,
+   1586
+  ],
+  "stale_oldloc": "A4129"
+ },
+ {
+  "hex": "A4829",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT Benina - Benina",
+  "group": "IT Minor Garrison Units",
+  "px": [
+   2520,
+   1076
+  ],
+  "stale_oldloc": "A4830"
+ },
+ {
+  "hex": "A4926",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT IILibCD - Bnghzi",
+  "group": "IT Benghazi Garrison",
+  "px": [
+   2183,
+   998
+  ],
+  "stale_oldloc": "A5128"
+ },
+ {
+  "hex": "A4926",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT VIII-II - Bnghzi",
+  "group": "IT Benghazi Garrison",
+  "px": [
+   2183,
+   998
+  ],
+  "stale_oldloc": "A5128"
+ },
+ {
+  "hex": "B4921",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT Mechili - Mechili",
+  "group": "IT Minor Garrison Units",
+  "px": [
+   4610,
+   1005
+  ],
+  "stale_oldloc": "B5021"
+ },
+ {
+  "hex": "B5504",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT Libyan - none",
+  "group": "IT Unassigned Infantry and Recon Units",
+  "px": [
+   3161,
+   567
+  ],
+  "stale_oldloc": "B5404"
+ },
+ {
+  "hex": "C1014",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT Grbub - Grbub",
+  "group": "IT Giariabub Oasis Complex Garrison",
+  "px": [
+   6872,
+   3850
+  ],
+  "stale_oldloc": "C1115"
+ },
+ {
+  "hex": "C1014",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT Grbub - Grbub (ART)",
+  "group": "IT Giariabub Oasis Complex Garrison",
+  "px": [
+   6872,
+   3850
+  ],
+  "stale_oldloc": "C1115"
+ },
+ {
+  "hex": "C1014",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT Grbub - Grbub (AA)",
+  "group": "IT Giariabub Oasis Complex Garrison",
+  "px": [
+   6872,
+   3850
+  ],
+  "stale_oldloc": "C1115"
+ },
+ {
+  "hex": "C1014",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT Grbub - Grbub (MMG)",
+  "group": "IT Giariabub Oasis Complex Garrison",
+  "px": [
+   6872,
+   3850
+  ],
+  "stale_oldloc": "C1115"
+ },
+ {
+  "hex": "C1014",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT Grbub - Grbub (MG)",
+  "group": "IT Giariabub Oasis Complex Garrison",
+  "px": [
+   6872,
+   3850
+  ],
+  "stale_oldloc": "C1115"
+ },
+ {
+  "hex": "C1014",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT Grbub - Grbub (SPA)",
+  "group": "IT Giariabub Oasis Complex Garrison",
+  "px": [
+   6872,
+   3850
+  ],
+  "stale_oldloc": "C1115"
+ },
+ {
+  "hex": "C1715",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT EGUG - el Grein",
+  "group": "IT Minor Garrison Units",
+  "px": [
+   6915,
+   3339
+  ],
+  "stale_oldloc": "C1014"
+ },
+ {
+  "hex": "C3019",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT FtMad - FtMad",
+  "group": "IT Minor Garrison Units",
+  "px": [
+   7298,
+   2391
+  ],
+  "stale_oldloc": "C3119"
+ },
+ {
+  "hex": "C3714",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 64 - Cat (ENG)",
+  "group": "IT 64th Catanzaro Division",
+  "px": [
+   6830,
+   1880
+  ],
+  "stale_oldloc": "C3714"
+ },
+ {
+  "hex": "C3814",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 204 - 4CCNN (ENG)",
+  "group": "IT 4th CCNN (3 January) Division",
+  "px": [
+   6872,
+   1807
+  ],
+  "stale_oldloc": "C3814"
+ },
+ {
+  "hex": "C3814",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 203 - 64 Cat",
+  "group": "IT 64th Catanzaro Division",
+  "px": [
+   6872,
+   1807
+  ],
+  "stale_oldloc": "C3814"
+ },
+ {
+  "hex": "C3822",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 2Maletti - Maletti",
+  "group": "IT Gruppo Maletti",
+  "px": [
+   7554,
+   1807
+  ],
+  "stale_oldloc": "C3822"
+ },
+ {
+  "hex": "C3914",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 204 - 4CCNN (ART)",
+  "group": "IT 4th CCNN (3 January) Division",
+  "px": [
+   6830,
+   1734
+  ],
+  "stale_oldloc": "C3914"
+ },
+ {
+  "hex": "C3914",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 64 - Cat (SPA)",
+  "group": "IT 64th Catanzaro Division",
+  "px": [
+   6830,
+   1734
+  ],
+  "stale_oldloc": "C3914"
+ },
+ {
+  "hex": "C3922",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 1Maletti - Maletti",
+  "group": "IT Gruppo Maletti",
+  "px": [
+   7512,
+   1734
+  ],
+  "stale_oldloc": "C3922"
+ },
+ {
+  "hex": "C4014",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 204 - 4CCNN (MG)",
+  "group": "IT 4th CCNN (3 January) Division",
+  "px": [
+   6872,
+   1661
+  ],
+  "stale_oldloc": "C4014"
+ },
+ {
+  "hex": "C4014",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 2 Libyan (ART)",
+  "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "px": [
+   6872,
+   1661
+  ],
+  "stale_oldloc": "C4014"
+ },
+ {
+  "hex": "C4014",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 64 - Cat (MG)",
+  "group": "IT 64th Catanzaro Division",
+  "px": [
+   6872,
+   1661
+  ],
+  "stale_oldloc": "C4014"
+ },
+ {
+  "hex": "C4020",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 1 Libyan - none",
+  "group": "IT 1st Libyan Infantry Division (Sibille)",
+  "px": [
+   7383,
+   1661
+  ],
+  "stale_oldloc": "C3921"
+ },
+ {
+  "hex": "C4022",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 3Sno-Sno - Maletti",
+  "group": "IT Gruppo Maletti",
+  "px": [
+   7554,
+   1661
+  ],
+  "stale_oldloc": "C4022"
+ },
+ {
+  "hex": "C4114",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 170 - 240-4CN",
+  "group": "IT 4th CCNN (3 January) Division",
+  "px": [
+   6830,
+   1588
+  ],
+  "stale_oldloc": "C4114"
+ },
+ {
+  "hex": "C4114",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT XVI-4L - 2 Libyan",
+  "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "px": [
+   6830,
+   1588
+  ],
+  "stale_oldloc": "C4114"
+ },
+ {
+  "hex": "C4114",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT III-142 - 64 Cat",
+  "group": "IT 64th Catanzaro Division",
+  "px": [
+   6830,
+   1588
+  ],
+  "stale_oldloc": "C4114"
+ },
+ {
+  "hex": "C4123",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 2Sno-Sno - Maletti",
+  "group": "IT Gruppo Maletti",
+  "px": [
+   7597,
+   1588
+  ],
+  "stale_oldloc": "C4123"
+ },
+ {
+  "hex": "C4214",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 17 - 270-4CN",
+  "group": "IT 4th CCNN (3 January) Division",
+  "px": [
+   6872,
+   1515
+  ],
+  "stale_oldloc": "C4214"
+ },
+ {
+  "hex": "C4214",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT XV-4L - 2 Libyan",
+  "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "px": [
+   6872,
+   1515
+  ],
+  "stale_oldloc": "C4214"
+ },
+ {
+  "hex": "C4214",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT II-142 - 64 Cat",
+  "group": "IT 64th Catanzaro Division",
+  "px": [
+   6872,
+   1515
+  ],
+  "stale_oldloc": "C4214"
+ },
+ {
+  "hex": "C4218",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 1 CCNN - (1CN)",
+  "group": "IT 1st CCNN (23 March) Division",
+  "px": [
+   7213,
+   1515
+  ],
+  "stale_oldloc": "C4217"
+ },
+ {
+  "hex": "C4314",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 3 - 270-4CN",
+  "group": "IT 4th CCNN (3 January) Division",
+  "px": [
+   6830,
+   1443
+  ],
+  "stale_oldloc": "C4314"
+ },
+ {
+  "hex": "C4314",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT XIV-4L - 2 Libyan",
+  "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "px": [
+   6830,
+   1443
+  ],
+  "stale_oldloc": "C4314"
+ },
+ {
+  "hex": "C4314",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT I-142 - 64 Cat",
+  "group": "IT 64th Catanzaro Division",
+  "px": [
+   6830,
+   1443
+  ],
+  "stale_oldloc": "C4314"
+ },
+ {
+  "hex": "C4321",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT Trvli - LTC",
+  "group": "IT The Libyan Tank Command",
+  "px": [
+   7426,
+   1443
+  ],
+  "stale_oldloc": "C4222"
+ },
+ {
+  "hex": "C4410",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 3 - Marines",
+  "group": "IT Tobruk Garrison",
+  "px": [
+   6531,
+   1370
+  ],
+  "stale_oldloc": "C4410"
+ },
+ {
+  "hex": "C4414",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 270Lgn - 4 CCNN",
+  "group": "IT 4th CCNN (3 January) Division",
+  "px": [
+   6872,
+   1370
+  ],
+  "stale_oldloc": "C4414"
+ },
+ {
+  "hex": "C4414",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 4 Libyan - 2 Libyan",
+  "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "px": [
+   6872,
+   1370
+  ],
+  "stale_oldloc": "C4414"
+ },
+ {
+  "hex": "C4414",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 142 - 64 Cat",
+  "group": "IT 64th Catanzaro Division",
+  "px": [
+   6872,
+   1370
+  ],
+  "stale_oldloc": "C4414"
+ },
+ {
+  "hex": "C4507",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 4 CCNN - (4CN)",
+  "group": "IT 4th CCNN (3 January) Division",
+  "px": [
+   6233,
+   1297
+  ],
+  "stale_oldloc": "C4509"
+ },
+ {
+  "hex": "C4511",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 2 - Marines",
+  "group": "IT Tobruk Garrison",
+  "px": [
+   6574,
+   1297
+  ],
+  "stale_oldloc": "C4511"
+ },
+ {
+  "hex": "C4514",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 176 - 240-4CN",
+  "group": "IT 4th CCNN (3 January) Division",
+  "px": [
+   6830,
+   1297
+  ],
+  "stale_oldloc": "C4514"
+ },
+ {
+  "hex": "C4514",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT VII-3L - 2 Libyan",
+  "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "px": [
+   6830,
+   1297
+  ],
+  "stale_oldloc": "C4514"
+ },
+ {
+  "hex": "C4514",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT III-141 - 64 Cat",
+  "group": "IT 64th Catanzaro Division",
+  "px": [
+   6830,
+   1297
+  ],
+  "stale_oldloc": "C4514"
+ },
+ {
+  "hex": "C4611",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 1 - Marines",
+  "group": "IT Tobruk Garrison",
+  "px": [
+   6616,
+   1224
+  ],
+  "stale_oldloc": "C4611"
+ },
+ {
+  "hex": "C4614",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 119 - 240-4CN",
+  "group": "IT 4th CCNN (3 January) Division",
+  "px": [
+   6872,
+   1224
+  ],
+  "stale_oldloc": "C4614"
+ },
+ {
+  "hex": "C4614",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT VI-3L - 2 Libyan",
+  "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "px": [
+   6872,
+   1224
+  ],
+  "stale_oldloc": "C4614"
+ },
+ {
+  "hex": "C4614",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT II-141 - 64 Cat",
+  "group": "IT 64th Catanzaro Division",
+  "px": [
+   6872,
+   1224
+  ],
+  "stale_oldloc": "C4614"
+ },
+ {
+  "hex": "C4714",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT II-3L - 2 Libyan",
+  "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "px": [
+   6830,
+   1151
+  ],
+  "stale_oldloc": "C4714"
+ },
+ {
+  "hex": "C4714",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT I-141 - 64 Cat",
+  "group": "IT 64th Catanzaro Division",
+  "px": [
+   6830,
+   1151
+  ],
+  "stale_oldloc": "C4714"
+ },
+ {
+  "hex": "C4715",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 70 - 240-4CN",
+  "group": "IT 4th CCNN (3 January) Division",
+  "px": [
+   6915,
+   1151
+  ],
+  "stale_oldloc": "C4715"
+ },
+ {
+  "hex": "C4807",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT LTC - none",
+  "group": "IT The Libyan Tank Command",
+  "px": [
+   6275,
+   1078
+  ],
+  "stale_oldloc": "C4907"
+ },
+ {
+  "hex": "C4811",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT III - 32 GaF",
+  "group": "IT Tobruk Garrison",
+  "px": [
+   6616,
+   1078
+  ],
+  "stale_oldloc": "C4811"
+ },
+ {
+  "hex": "C4814",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 3 Libyan - 2 Libyan",
+  "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "px": [
+   6872,
+   1078
+  ],
+  "stale_oldloc": "C4814"
+ },
+ {
+  "hex": "C4814",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 141 - 64 Cat",
+  "group": "IT 64th Catanzaro Division",
+  "px": [
+   6872,
+   1078
+  ],
+  "stale_oldloc": "C4814"
+ },
+ {
+  "hex": "C4815",
+  "side": "AXIS",
+  "kind": "unit",
+  "counter": "IT 240Lgn - 4 CCNN",
+  "group": "IT 4th CCNN (3 January) Division",
+  "px": [
+   6957,
+   1078
+  ],
+  "stale_oldloc": "C4815"
+ }
+]
