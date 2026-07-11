@@ -135,6 +135,29 @@ def test_generic_ranking_file_covers_the_whole_roster():
     assert set(generic) == set(rl.ROSTER)                  # every model is placed, no strays
 
 
+def test_final_report_excludes_errored_from_rankings_and_correlation(tmp_path, monkeypatch):
+    # an errored model (a handful of calls -> scripted fallback) must not appear in the CNA order,
+    # the generic order, or the correlation -- its fake-high score can't pollute the analysis.
+    monkeypatch.setattr(rl, "FINAL_PATH", tmp_path / "final.json")
+    healthy = _card("good/model", campaign={"mean_score": 20.0})
+    healthy["seeds"] = 1
+    healthy["cost"] = {"calls": 200, "failures": 0, "prompt_tokens": 0, "completion_tokens": 0,
+                       "est_cost_usd": 0.0, "cost_per_game_usd": 0.0}
+    errored = _card("fake/model", campaign={"mean_score": 99.0})
+    errored["seeds"] = 1
+    errored["cost"] = {"calls": 8, "failures": 0, "prompt_tokens": 0, "completion_tokens": 0,
+                       "est_cost_usd": 0.0, "cost_per_game_usd": 0.0}
+    rl.card_path(tmp_path, "good/model").write_text(json.dumps({"cards": [healthy]}))
+    rl.card_path(tmp_path, "fake/model").write_text(json.dumps({"cards": [errored]}))
+    generic = tmp_path / "generic.json"
+    generic.write_text(json.dumps({"ranking": ["fake/model", "good/model"]}))
+    final = rl.final_report(tmp_path, generic_path=generic)
+    assert "fake/model" not in final["cna_ranking"]        # errored dropped from the CNA order
+    assert "fake/model" not in final["generic_ranking"]    # and from the generic order
+    assert final["correlation"]["n"] == 1                  # only the one valid model remains common
+    assert any(c["model"] == "fake/model" and c["errored"] for c in final["cards"])
+
+
 # --- pool: crash-safety + resume (fault-injected, no network) ------------------
 
 def _failing_cmd(_model, _out_dir, *, mock, spec=None):

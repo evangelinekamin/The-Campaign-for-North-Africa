@@ -87,6 +87,17 @@ ENGINE_SHA = _engine_sha()
 # was driven below this floor -- cleanly below both the ~1500 opening and the timid plateau.
 STARVE_FLOOR = 500
 
+# A card is ERRORED -- its score is the SCRIPTED-FALLBACK general's, not the model's -- when the
+# model's API calls mostly failed: the StaffPolicy falls back to ScriptedPolicy on an empty
+# completion, so a model whose calls errored (or barely landed) scores the scripted seat's play.
+# A real 2-scenario game makes ~100-230 successful LLM calls; a handful means nearly every staff
+# decision ran on the fallback. Two independent tripwires: the API failure rate exceeded
+# MAX_FAILURE_RATE, OR successful calls-per-game fell below MIN_CALLS_PER_GAME (some failures never
+# reach the counter -- a killed/timed-out process just leaves too few calls, so the call floor
+# catches what the failure rate misses).
+MAX_FAILURE_RATE = 0.35
+MIN_CALLS_PER_GAME = 40
+
 # OpenRouter's public model catalogue (pricing per-token, in USD). Fetched only for a slug
 # absent from benchmark.PRICES; converted to PRICES' per-1M-token scale.
 _MODELS_URL = "https://openrouter.ai/api/v1/models"
@@ -336,7 +347,7 @@ def run_model(model: str, seeds: int, *, mock: bool, live: bool, floor: bool,
     usage = _sum_usage([o[1] for o in outs] + [o[3] for o in outs] + [o[5] for o in outs])
     total_secs = sum(o[6] for o in outs)
     games = 2 * seeds + (seeds if earned_crack else 0)
-    return {
+    card = {
         "model": model,
         "seeds": seeds,
         "floor": floor,
@@ -347,6 +358,62 @@ def run_model(model: str, seeds: int, *, mock: bool, live: bool, floor: bool,
         "cost": _cost_block(model, usage, games=games),      # both scenarios (+ earned-crack pass)
         "timing": _timing_block(total_secs, games, usage["completion_tokens"]),
     }
+    return {**card, **_validity(card)}                       # flag a scripted-fallback (errored) run
+
+
+def _calls_per_game(card: dict) -> float:
+    """Successful LLM calls per game (2 scenarios/seed) -- 0 when the seed count is unknown."""
+    seeds = card.get("seeds", 0)
+    return card.get("cost", {}).get("calls", 0) / (2 * seeds) if seeds else 0.0
+
+
+def _validity(card: dict) -> dict:
+    """(errored, failure_rate) computed from a card's OWN cost block + seed count -- pure, so it
+    flags EXISTING cards at merge/display time without re-running. Errored when the API failure rate
+    exceeds MAX_FAILURE_RATE OR successful calls-per-game fall below MIN_CALLS_PER_GAME. A card with
+    no usage to judge (no attempts, no seeds) is never errored -- we do not exclude blind."""
+    cost = card.get("cost", {})
+    calls, failures = cost.get("calls", 0), cost.get("failures", 0)
+    attempts = calls + failures
+    failure_rate = failures / attempts if attempts else 0.0
+    starved_calls = card.get("seeds", 0) > 0 and _calls_per_game(card) < MIN_CALLS_PER_GAME
+    errored = failure_rate > MAX_FAILURE_RATE or starved_calls
+    return {"errored": errored, "failure_rate": round(failure_rate, 4)}
+
+
+def _games_played(card: dict) -> int:
+    """Games behind a card's cost block: 2 scenarios/seed, +1 more/seed for the earned-crack pass."""
+    seeds = card.get("seeds", 0)
+    return 2 * seeds + (seeds if card.get("earned_crack") else 0)
+
+
+def _reprice(card: dict) -> dict:
+    """Correct a card whose dollar cost is $0.000 despite real tokens (the ':nitro' base slug whose
+    live /models fetch returned $0 at card time). Re-resolves the price from the CURATED PRICES table
+    ONLY (fetch stubbed to zero, so a card priced live keeps its number and no network is hit), and
+    rewrites only when a nonzero price now resolves. Returns a NEW card; healthy cards pass through
+    unchanged (same object)."""
+    cost = card.get("cost", {})
+    ptok, ctok = cost.get("prompt_tokens", 0), cost.get("completion_tokens", 0)
+    if (ptok or ctok) and not cost.get("est_cost_usd", 0.0):
+        (p_in, p_out), source = _price_for(card["model"], fetch=lambda _m: (0.0, 0.0))
+        if p_in or p_out:
+            usd = (ptok * p_in + ctok * p_out) / 1e6
+            games = _games_played(card) or 1
+            new_cost = {**cost, "price_source": source, "price_per_1m": [p_in, p_out],
+                        "est_cost_usd": round(usd, 4), "cost_per_game_usd": round(usd / games, 4)}
+            return {**card, "cost": new_cost}
+    return card
+
+
+def annotate(cards: list[dict]) -> list[dict]:
+    """Reprice any stale $0 card, then stamp (errored, failure_rate) -- the merge/display pass that
+    flags the existing cards WITHOUT re-running. Immutable: returns new cards, inputs untouched."""
+    out = []
+    for card in cards:
+        card = _reprice(card)
+        out.append({**card, **_validity(card)})
+    return out
 
 
 def _rank_key(card: dict) -> tuple:
@@ -371,11 +438,15 @@ def _rank_key(card: dict) -> tuple:
 
 
 def leaderboard(cards: list[dict]) -> None:
-    """MULTI-AXIS ranked scorecard (the owner's #1 concern -- don't ship a wall of zeros). Ranked
-    by _rank_key so models SEPARATE even when the single degree-of-success score collapses to 0;
-    every continuous signal it already computes is printed so the spread is legible (a wall of
-    zeros still orders by kill ratio / reject rate / ammo-drive / crack rate)."""
-    rows = sorted(cards, key=_rank_key, reverse=True)
+    """MULTI-AXIS ranked scorecard (the owner's #1 concern -- don't ship a wall of zeros). Only VALID
+    models are ranked (by _rank_key, so they SEPARATE even when the single degree-of-success score
+    collapses to 0); ERRORED models -- whose calls mostly failed, so their score is the scripted
+    fallback's, not real play -- are listed separately below with their failure rate. Validity is
+    (re)computed here at DISPLAY time, so the existing cards are flagged without re-running."""
+    cards = annotate(cards)                                   # reprice stale $ + flag errored
+    valid = [c for c in cards if not c["errored"]]
+    errored = [c for c in cards if c["errored"]]
+    rows = sorted(valid, key=_rank_key, reverse=True)
     print("\n=== LEADERBOARD (multi-axis: score, then crack / kill / reject / ammo-drive) ===")
     hdr = (f"{'model':<26}{'SCORE':>7}{'crack%':>7}{'kill':>6}{'rej%':>6}{'mAmmo':>7}"
            f"{'starv%':>7}{'adv':>5}{'invT':>6}{'tok/s':>7}{'min/gm':>7}{'$/gm':>8}")
@@ -390,6 +461,13 @@ def leaderboard(cards: list[dict]) -> None:
               f"{cam['mean_advance_pct']:>5.0f}{cam['mean_turn_invested']:>6}"
               f"{tm.get('completion_tok_per_s', 0):>7}{tm.get('mean_minutes_per_game', 0):>7}"
               f"{co['cost_per_game_usd']:>8}")
+    if errored:
+        print("\n=== EXCLUDED -- errored (high API-failure rate; score is scripted fallback, "
+              "not real play) ===")
+        print(f"{'model':<26}{'fail%':>7}{'calls/gm':>10}")
+        for c in sorted(errored, key=lambda c: (-c["failure_rate"], -_calls_per_game(c))):
+            print(f"{c['model'][:25]:<26}{100 * c['failure_rate']:>7.1f}"
+                  f"{_calls_per_game(c):>10.1f}")
 
 
 def merge_caches(sources: list[str], dest: str) -> dict:

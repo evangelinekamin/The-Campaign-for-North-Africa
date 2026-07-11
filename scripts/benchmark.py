@@ -52,6 +52,10 @@ PRICES = {
     "deepseek/deepseek-v4-pro":          (0.435, 0.87),
     "qwen/qwen3.7-max":                  (1.25, 3.75),
     "z-ai/glm-5.2":                      (0.93, 3.00),
+    # gpt-oss (open-weight): curated so the ':nitro' routing variant resolves a nonzero price
+    # OFFLINE via the base slug, never relying on a live /models fetch that can return $0.000.
+    "openai/gpt-oss-120b":               (0.036, 0.18),
+    "openai/gpt-oss-safeguard-20b":      (0.075, 0.30),
 }
 
 # Route to the fastest live endpoint. Many DeepSeek providers serve at 15-20 tok/s and

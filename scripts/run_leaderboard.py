@@ -379,19 +379,24 @@ def run_pool(models, out_dir: Path, *, parallel: int, openai_parallel: int, mock
 def final_report(out_dir: Path, generic_path=GENERIC, *, top: int = 5) -> dict:
     """Merge all cards, print the multi-axis leaderboard, write leaderboard_final.json, and run the
     Spearman/Kendall correlation vs the generic-capability ranking with the top over/under-performers."""
-    cards = merge_cards(out_dir)
+    cards = lb.annotate(merge_cards(out_dir))                  # reprice stale $ + flag errored at merge
     if not cards:
         print("no cards to merge -- nothing ran")
         return {}
     lb.leaderboard(cards)
-    cna_order = cna_ranking(cards)
-    generic_order = load_generic_ranking(generic_path)
+    # ERRORED models (their score is the scripted fallback's) are excluded from BOTH rankings, so a
+    # fake-high score can't pollute the generalship-vs-generic correlation.
+    valid = [c for c in cards if not c["errored"]]
+    errored_models = {c["model"] for c in cards if c["errored"]}
+    cna_order = cna_ranking(valid)
+    generic_order = [m for m in load_generic_ranking(generic_path) if m not in errored_models]
     rho, tau = spearman(cna_order, generic_order), kendall_tau(cna_order, generic_order)
     div = divergence_report(cna_order, generic_order, top=top)
     correlation = {"n": len(_common_ranks(cna_order, generic_order)[0]),
                    "spearman_rho": rho, "kendall_tau": tau, **div}
     final = {"engine_sha": lb.ENGINE_SHA, "cards": cards, "cna_ranking": cna_order,
-             "generic_ranking": generic_order, "correlation": correlation}
+             "generic_ranking": generic_order, "correlation": correlation,
+             "excluded_errored": sorted(errored_models)}
     Path(FINAL_PATH).write_text(json.dumps(final, indent=2))
     _print_correlation(correlation)
     print(f"\nwrote {FINAL_PATH}")

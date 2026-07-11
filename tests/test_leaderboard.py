@@ -196,8 +196,9 @@ def test_price_for_strips_the_variant_before_lookup_and_fetch():
         fetched["slug"] = m
         return (2.0, 4.0)
 
-    price, source = lb._price_for("openai/gpt-oss-120b:nitro", fetch=_capture)
-    assert fetched["slug"] == "openai/gpt-oss-120b"       # variant stripped before the catalogue call
+    # a slug whose BASE is absent from PRICES still strips the variant before the catalogue call.
+    price, source = lb._price_for("no-such/model-xyz:nitro", fetch=_capture)
+    assert fetched["slug"] == "no-such/model-xyz"         # variant stripped before the catalogue call
     assert price == (2.0, 4.0) and source == "openrouter"
 
 
@@ -259,6 +260,96 @@ def test_leaderboard_prints_and_ranks_without_error(capsys):
     out = capsys.readouterr().out
     assert "multi-axis" in out
     assert out.index("good/general") < out.index("mauled/advancer")   # good printed first
+
+
+# --- the validity gate: errored cards (scripted-fallback scores) are flagged + excluded ---
+
+def _priced_card(model, *, seeds, calls, failures=0, ptok=0, ctok=0, score=10.0):
+    """A minimal card carrying only what the validity gate + reprice read."""
+    return {
+        "model": model, "seeds": seeds, "earned_crack": None,
+        "campaign": {"mean_score": score, "mean_kill_ratio": 0.0, "reject_rate_pct": 0.0,
+                     "mean_advance_pct": 0.0, "mean_turn_invested": 0},
+        "siege": {"crack_rate_pct": 0.0, "mean_ammo_min": None, "starved_fraction": 0.0},
+        "cost": {"calls": calls, "failures": failures, "prompt_tokens": ptok,
+                 "completion_tokens": ctok, "est_cost_usd": 0.0, "cost_per_game_usd": 0.0},
+    }
+
+
+def test_validity_flags_a_card_that_mostly_failed_its_calls():
+    # the minimax/kimi profile: a handful of successful calls over a 2-scenario game means the staff
+    # ran on the ScriptedPolicy fallback for nearly every decision -- the score is not real play.
+    v = lb._validity(_priced_card("x/low", seeds=1, calls=8))
+    assert v["errored"] is True and v["failure_rate"] == 0.0
+
+
+def test_validity_flags_a_high_failure_rate_even_with_enough_calls():
+    # 37.5% of attempts failed though calls-per-game (50) clears the floor -> still errored.
+    v = lb._validity(_priced_card("x/flaky", seeds=5, calls=500, failures=300))
+    assert v["failure_rate"] > lb.MAX_FAILURE_RATE and v["errored"] is True
+
+
+def test_validity_passes_a_healthy_card():
+    v = lb._validity(_priced_card("x/good", seeds=1, calls=200))
+    assert v["errored"] is False and v["failure_rate"] == 0.0
+
+
+def test_validity_calls_per_game_boundary_is_the_pass_side():
+    assert lb._validity(_priced_card("x/edge", seeds=1, calls=80))["errored"] is False   # cpg 40 ok
+    assert lb._validity(_priced_card("x/edge2", seeds=1, calls=78))["errored"] is True   # cpg 39 out
+
+
+def test_validity_of_a_card_without_usage_is_never_errored():
+    # a synthetic/mock card carries no usage to judge -> we cannot call it errored (never exclude blind).
+    assert lb._validity({"model": "m", "campaign": {}, "siege": {}, "cost": {}})["errored"] is False
+
+
+def test_run_model_stamps_validity_on_the_scorecard():
+    card = _card()
+    assert "errored" in card and "failure_rate" in card
+    assert isinstance(card["failure_rate"], float)
+
+
+def test_leaderboard_ranks_only_valid_and_lists_errored_separately(capsys):
+    valid = _priced_card("valid/model", seeds=1, calls=200, score=15.0)
+    errored = _priced_card("errored/model", seeds=1, calls=8, score=99.0)   # fake-high scripted score
+    lb.leaderboard([errored, valid])
+    out = capsys.readouterr().out
+    assert "EXCLUDED" in out
+    # the errored model, despite its fake top score, is BELOW the EXCLUDED banner, not ranked.
+    assert out.index("valid/model") < out.index("EXCLUDED") < out.index("errored/model")
+
+
+# --- the gpt-oss $0.000 reprice: a $0 card with real tokens is corrected from PRICES ---
+
+def test_reprice_fixes_a_zero_cost_card_from_the_curated_table():
+    card = _priced_card("openai/gpt-oss-120b:nitro", seeds=5, calls=1080,
+                        ptok=3_008_090, ctok=819_983)
+    fixed = lb._reprice(card)
+    assert fixed["cost"]["est_cost_usd"] > 0.0
+    assert fixed["cost"]["price_source"] == "PRICES"          # resolved OFFLINE via the base slug
+
+
+def test_reprice_leaves_an_already_priced_card_untouched():
+    card = _priced_card("openai/gpt-oss-120b:nitro", seeds=5, calls=1080, ptok=1000, ctok=1000)
+    priced = {**card, "cost": {**card["cost"], "est_cost_usd": 5.0}}
+    assert lb._reprice(priced) is priced                      # no network, no clobber of a live price
+
+
+def test_no_non_errored_priced_card_costs_zero_with_real_tokens():
+    # against the REAL out/ cards (skipped if absent): after annotate (reprice + validity), every
+    # VALID card that spent tokens must carry a nonzero dollar cost -- the gpt-oss $0.000 regression.
+    import pytest
+    cards = []
+    for p in sorted(lb.OUT.glob("card_*.json")):
+        cards += json.loads(p.read_text()).get("cards", [])
+    if not cards:
+        pytest.skip("no real cards on disk")
+    for c in lb.annotate(cards):
+        co = c["cost"]
+        tokens = co.get("prompt_tokens", 0) + co.get("completion_tokens", 0)
+        if not c["errored"] and tokens > 0:
+            assert co["est_cost_usd"] > 0.0, f"{c['model']} priced $0 with {tokens} tokens"
 
 
 # --- throughput: per-process cache files fold back losslessly ---------------------
