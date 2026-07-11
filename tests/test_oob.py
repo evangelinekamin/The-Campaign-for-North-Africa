@@ -60,6 +60,58 @@ def test_oob_assigns_basic_morale_by_formation():
     assert next(v for k, v in m.items() if "OAS" in k) == 0         # 300th Oasis 0
 
 
+# --- C2-1: the September-1940 Italian 10th Army (rule 60.31 / rule-90 [4.44b]/[4.46b]/[4.48]) ---
+
+def test_classify_italian_tenth_army_counters():
+    # Weapon-suffix markers beat the parent formation; the Libyan Tank Command's
+    # tankettes read as armour; the Sahariano camel battalions as infantry.
+    assert oob.classify("IT 64 - Cat (MG)", "IT 64th Catanzaro Division") == "mg"
+    assert oob.classify("IT 204 - 4CCNN (ART)", "IT 4th CCNN (3 January) Division") == "artillery"
+    assert oob.classify("IT Grbub - Grbub (AA)", "IT Giariabub Oasis Complex Garrison") == "antitank"
+    assert oob.classify("IT 64 - Cat (ENG)", "IT 64th Catanzaro Division") == "infantry"
+    assert oob.classify("IT X Cp - none", "IT Unassigned Gun Units") == "artillery"
+    assert oob.classify("IT 1Maletti - Maletti", "IT Gruppo Maletti") == "artillery"
+    assert oob.classify("IT 3Sno-Sno - Maletti", "IT Gruppo Maletti") == "infantry"
+    assert oob.classify("IT Trvli - LTC", "IT The Libyan Tank Command") == "tank"
+    assert oob.classify("IT 1 Libyan - none", "IT 1st Libyan Infantry Division (Sibille)") == "infantry"
+    # Flying-boat "Alighting" areas and air strips are skipped, never mustered.
+    assert oob.classify("Airboat Alighting axis", "AX Alighting/") is None
+    assert oob.classify("Air Strip axis", "AX Airstrip/") is None
+
+
+def test_classify_italian_gate_leaves_desert_fox_untouched():
+    # The 'IT ' gate must not disturb the German/Commonwealth classifications.
+    assert oob.classify("GE 33 - 15 (ATG)", "GE 15th Panzer Division") == "antitank"
+    assert oob.classify("GE 3 - 300 OAS", "GE 300th Oasis Battalion") == "oasis"
+    assert oob.classify("AL SGSU 250RAF", "AL SGSU") is None
+
+
+def test_morale_italian_formations():
+    m = oob._morale_for                                                # signature: (group, counter)
+    assert m("IT The Libyan Tank Command", "IT LTC - none") == 0       # Babini gruppo (before "Libyan")
+    assert m("IT 2nd Libyan (Prescatori) Infantry Division", "II/3L") == -2
+    assert m("IT Gruppo Maletti", "1Maletti") == -2
+    assert m("IT 64th Catanzaro Division", "64 Cat") == -1
+    assert m("IT 4th CCNN (3 January) Division", "4CCNN") == 0        # [4.44b]: 1st & 4th CCNN are 0
+    assert m("IT Tobruk Garrison", "Marines") == -3
+    assert m("IT Giariabub Oasis Complex Garrison", "Grbub") == 0     # [4.44b] rates the oasis fortress 0
+    assert m("GE 300th Oasis Battalion", "300 OAS") == 0              # Oasis key still resolves for the DAK
+
+
+def test_italian_oob_builds_with_it_stats_and_roles():
+    # The raw Sept-1940 extraction has no nationality field, so build() infers IT from
+    # the 'IT ' prefix: every counter musters with Italian stats (not the German fallback)
+    # and a sensible role. Five weapon roles are represented across the 10th Army.
+    units, _ = oob.build(oob_file="oob_italian.json", sections="ABCDE", reinforcements_file=None)
+    italians = [u for u in units if u.side == Side.AXIS]
+    assert len(italians) == 61
+    assert all(u.cpa > 0 for u in italians)
+    roles = {sr.label for u in italians for sr in u.steps}
+    assert {"infantry", "artillery", "mg", "tank", "antitank"} <= roles
+    infantry = [u for u in italians if u.steps[0].label == "infantry"]
+    assert infantry and all(u.cpa == 10 for u in infantry)             # IT infantry CPA 10, not the GE 25
+
+
 def test_default_supply_is_faithfully_scarce():
     # The FAITHFUL default keeps only the authored start-line dumps: the spread-out
     # periphery (Italian rear divisions, the Cyrenaica screen) starts genuinely

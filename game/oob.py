@@ -54,12 +54,43 @@ def _nationality(side: str) -> str:
     return "GE" if side == "AXIS" else "CW"
 
 
-# Basic Morale by formation (rule 17.1, from the OA sheets; see cna-unit-stats-source).
+def _nat(rec: dict) -> str:
+    """Nationality for the stat lookup. The record's own field wins (Desert-Fox
+    reinforcements state it). Otherwise an 'IT '-prefixed counter/group is Italian -- the
+    raw campaign extraction carries no nationality -- and the rest fall back to side
+    (Axis=German, Commonwealth=CW). Desert-Fox on-map pieces carry no 'IT ' prefix, so
+    they resolve exactly as before (byte-identical)."""
+    if rec.get("nationality"):
+        return rec["nationality"]
+    if rec.get("counter", "").startswith("IT ") or rec.get("group", "").startswith("IT "):
+        return "IT"
+    return _nationality(rec["side"])
+
+
+# Basic Morale by formation (rule 17.1, from the [4.44b]/[4.44B] OA sheets; see
+# cna-unit-stats-source). _morale_for returns the FIRST substring match, so order is
+# specificity: a more-specific key must precede a shorter one it contains (e.g. "Libyan
+# Tank Command" before "Libyan"; the garrison/"Giarabub" keys before the generic "Oasis").
 FORMATION_MORALE = (
+    # German & Commonwealth (Desert Fox / siege) -- matched first, unchanged.
     ("5th Light", 2), ("15th Panzer", 2), ("90th", 2), ("164th", 1), ("Ariete", 1),
-    ("2nd Armoured", 2), ("9th Australian", 1), ("Indian", 1), ("Oasis", 0),
-    ("Pavia", -1), ("Bologna", -1), ("Brescia", -1), ("Savona", -1),  # Italian semi-mot divs
-    ("Trento", 0), ("Sabratha", -1),
+    ("2nd Armoured", 2), ("9th Australian", 1), ("Indian", 1),
+    # Italian garrisons are -3 (Tobruk/Benghazi/Bardia/Derna/minor) EXCEPT the Giarabub oasis
+    # fortress, which the [4.44b] sheet rates 0 (it famously held out for months). The Giarabub
+    # keys must precede the generic "Garrison" (-3), which precedes "Oasis" (rule 60.31).
+    ("Libyan Tank Command", 0),                                       # Babini gruppo (before "Libyan")
+    ("Giariabub", 0), ("Giarabub", 0), ("Garrison", -3), ("Oasis", 0),
+    # Italian semi-motorized infantry divisions (-1) with their 0/+1 exceptions. Cirene,
+    # Marmarica and Sirte have no [4.44b] sheet (melted units) -- -1 is INFERRED from the
+    # Catanzaro-class semi-mot pattern, the only 1940 sheet analogue.
+    ("Pavia", -1), ("Bologna", -1), ("Brescia", -1), ("Savona", -1),
+    ("Trento", 0), ("Sabratha", -1), ("Pistoia", -1), ("Trieste", 0),
+    ("Catanzaro", -1), ("Cirene", -1), ("Marmar", -1), ("Sirte", -1),
+    ("Littorio", 0), ("Folgore", 1), ("Giovani Fascisti", -3), ("GGFF", -3),
+    # Italian colonial (Libyan, -2), Maletti (-2), Blackshirt (CCNN). The 1st/2nd/4th CCNN
+    # divisions are morale 0 ([4.44b]); the 3rd CCNN (-2) would need its own key ahead of
+    # this one if it enters (rule 60.31 Tripoli reserve -- C2-3 reinforcements).
+    ("Libyan", -2), ("Maletti", -2), ("CCNN", 0),
 )
 
 
@@ -75,8 +106,29 @@ def _morale_for(group: str, counter: str) -> int:
 def classify(counter: str, group: str) -> str | None:
     """Map a counter to a stat role, or None to skip (feature / air base)."""
     c, g = counter, group
-    if "Air Strip" in c or "Airstrip" in c or "SGSU" in c:
-        return None                                  # airfields / air-support bases
+    if ("Air Strip" in c or "Airstrip" in c or "SGSU" in c or "Alighting" in c
+            or "Airstrip" in g or "Alighting" in g):
+        return None                                  # airfields / landing strips / flying-boat basins
+
+    if c.startswith("IT ") or g.startswith("IT "):   # 1940 Italian 10th Army (rule 60.31 / [4.44b])
+        if "(MG)" in c or "(MMG)" in c:
+            return "mg"                              # machinegun battalions / companies
+        if "(ART)" in c:
+            return "artillery"
+        if "(AA)" in c:
+            return "antitank"                        # emplaced dual-purpose CD / flak (immobility deferred)
+        if "(ENG)" in c or "(SPA)" in c:
+            return "infantry"                        # engineers / garrison support fight as infantry
+        if "Gun Units" in g:
+            return "artillery"                       # X Corpo & unassigned artillery
+        if "Sno" in c:
+            return "infantry"                        # Sahariano camel battalions (Maletti)
+        if "Maletti" in c:
+            return "artillery"                       # 1st / 2nd Maletti artillery battalions
+        if "Tank Command" in g:
+            return "tank"                            # Libyan Tank Command (M11/39 + CV33)
+        return "infantry"                            # colonial / Blackshirt / garrison / marine line infantry
+
     if "Rommel" in c or "DAK" in c or "SPt" in c or c.endswith(" Le - none"):
         return "hq"                                  # HQs (counter is authoritative)
     if "RNF" in c:
@@ -215,7 +267,7 @@ MODEL_DEFAULTS = {
 
 def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
                arrival_turn: int) -> Unit:
-    nat = rec.get("nationality") or _nationality(rec["side"])    # IT units set it explicitly
+    nat = _nat(rec)    # explicit field, else 'IT ' prefix, else side (see _nat)
     s = stats[nat][role]
     model_name = rec.get("model") or MODEL_DEFAULTS.get((nat, role))
     model = stats.get("models", {}).get(model_name, {})
