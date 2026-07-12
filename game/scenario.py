@@ -627,38 +627,84 @@ def _campaign_axis_cargo(gt: int, rng: random.Random) -> dict | None:
     return {c: tons_to_points(tonnage * frac, c) for c, frac in _CONVOY_SPLIT_56_22.items()}
 
 
-def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy, ...]:
-    """The Axis Mediterranean convoy as a calendar-driven timetable (56.2/56.4): one delivery
-    per month, on the month's first Game-Turn, landing at the rearmost Axis dump (Benghazi)
-    through PORT-Benghazi's 55.14 throttle. The tonnage piles at the rear; until the truck haul
-    (C3-2) it cannot reach the front, so the Axis lives off its start-line reservoir and
-    culminates driving on Alexandria. The Commonwealth base needs no lane -- it is seeded
-    inexhaustible (_campaign_cw_base)."""
+_CW_RAILHEAD = "D3714"                 # Mersa Matruh -- the RR terminus (rule 60.7)
+
+
+def _campaign_cw_railhead(supplies):
+    """The Mersa Matruh railhead dump (rule 60.7: "the RR runs to Mersa Matruh and ends
+    there"). The Commonwealth FORWARD dump (not the bottomless Cairo/Alexandria base) nearest
+    D3714 -- the rail lane refills it every turn so the Commonwealth can project supply WEST of
+    its rear base (its cpa/2 trace reaches only ~6-12 hexes, far short of the front), the faucet
+    that makes Operation Compass sustainable."""
+    rh = coords.to_axial(coords.parse(_CW_RAILHEAD))
+    fwd = [s for s in supplies if s.side == Side.ALLIED and not s.base and not s.is_dummy]
+    return min(fwd, key=lambda s: (distance(s.hex, rh), s.id)) if fwd else None
+
+
+def _campaign_axis_trucks(supplies, target) -> tuple[TruckFormation, ...]:
+    """The Axis 2nd/3rd-line motor-transport pool (rules 53 / 54.2 / 60.33), staged at the
+    Benghazi port-of-arrival where the Mediterranean convoys land -- the Quartermaster's
+    forward-haul lever, a lean ~1/6 slice of the 60.33 Tripoli row (heavy + medium).
+    LIMITATION (measured): the September-1940 field dumps sit ~48-76 hexes east of Benghazi,
+    far beyond the pool's ~30-CP single-hop reach (53.22), so the scripted single-port relay
+    (policy.truck_orders) bridges NOTHING -- faithful to the historical Tripoli-to-front wall,
+    but it means effective resupply needs a MANAGED multi-hop coastal relay (intermediate
+    staging dumps hauled leg by leg), which a Quartermaster agent can build but the scripted
+    reflex does not. The DAK's own trucks ([4.43b]) are deferred (state.trucks is static at
+    construction; no truck-arrival scheduler yet)."""
     rear = _axis_rear(supplies, target)
     if rear is None:
         return ()
-    rng = random.Random(seed)
+    return (
+        TruckFormation("AX-Truck-H", Side.AXIS, rear.hex, "heavy", points=8, line=3),
+        TruckFormation("AX-Truck-M", Side.AXIS, rear.hex, "medium", points=8, line=3),
+    )
+
+
+def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy, ...]:
+    """The supply source timetables. AXIS: the Mediterranean convoy (56.2/56.4), one delivery a
+    month landing at Benghazi through PORT-Benghazi's 55.14 throttle -- the tonnage piles at the
+    rear and is hauled forward by the lean truck pool (_campaign_axis_trucks), which culminates
+    as the front outruns it. COMMONWEALTH: the rail lane (rule 57 / 60.7), refilling the Mersa
+    Matruh railhead every turn so the Suez base's supply actually reaches a forward dump the
+    front can trace to -- without it the inexhaustible base is stranded 34+ hexes behind the
+    railhead and no westward counterattack can be sustained. The Cairo/Alexandria base itself is
+    seeded inexhaustible (_campaign_cw_base) and needs no lane."""
     convoys = []
-    for gt in range(1, max_turns + 1):
-        if (gt - 1) % calendar.GT_PER_MONTH != 0:      # one convoy per month (its first Game-Turn)
-            continue
-        cargo = _campaign_axis_cargo(gt, rng)
-        if cargo is not None:
-            convoys.append(Convoy(f"axis-conv-t{gt}", Side.AXIS, gt, "2", rear.id, cargo))   # 60.37 lane 2
+    railhead = _campaign_cw_railhead(supplies)
+    if railhead is not None:
+        load = _load_cargo()                           # rule 57 rail feed to the Egyptian railhead
+        convoys += [Convoy(f"cw-rail-t{gt}", Side.ALLIED, gt, "CW-RAILHEAD", railhead.id, dict(load))
+                    for gt in range(1, max_turns + 1)]
+    rear = _axis_rear(supplies, target)
+    if rear is not None:
+        rng = random.Random(seed)
+        for gt in range(1, max_turns + 1):
+            if (gt - 1) % calendar.GT_PER_MONTH != 0:  # one Axis convoy per month (its first Game-Turn)
+                continue
+            cargo = _campaign_axis_cargo(gt, rng)
+            if cargo is not None:
+                convoys.append(Convoy(f"axis-conv-t{gt}", Side.AXIS, gt, "2", rear.id, cargo))  # 60.37 lane 2
     return tuple(convoys)
 
 
 def _campaign_ports(supplies, target) -> tuple[Port, ...]:
-    """The Axis port of arrival (55.3): Benghazi, the forward Mediterranean harbour where the
-    convoys land, working at full efficiency (55.14 throttles by efficiency; the campaign's
-    bottleneck is the port-to-front haul, not the harbour). The Commonwealth base is a
-    bottomless MAJOR_CITY dump, not a throttled port, so it needs no Port entry."""
+    """The ports of arrival (55.3). AXIS: Benghazi, the forward Mediterranean harbour the
+    convoys land at, full efficiency (55.14 throttles by efficiency; the campaign's bottleneck
+    is the port-to-front haul, not the harbour). COMMONWEALTH: Mersa Matruh, the railhead the
+    rail lane feeds (rule 60.7). The bottomless Cairo/Alexandria MAJOR_CITY base needs no port."""
+    ports = []
     rear = _axis_rear(supplies, target)
-    if rear is None:
-        return ()
-    tons = _PORT_TONS.get("benghazi", _PORT_TONS["tripoli"])["tons"]
-    return (Port("PORT-Benghazi", Side.AXIS, rear.hex, "major", max_eff=10, eff=10,
-                 **_caps_tonnage(tons)),)
+    if rear is not None:
+        tons = _PORT_TONS.get("benghazi", _PORT_TONS["tripoli"])["tons"]
+        ports.append(Port("PORT-Benghazi", Side.AXIS, rear.hex, "major", max_eff=10, eff=10,
+                          **_caps_tonnage(tons)))
+    railhead = _campaign_cw_railhead(supplies)
+    if railhead is not None:
+        tons = _PORT_TONS.get("mersa matruh", _PORT_TONS.get("alexandria", _PORT_TONS["tripoli"]))["tons"]
+        ports.append(Port("PORT-Matruh", Side.ALLIED, railhead.hex, "major", max_eff=10, eff=10,
+                          **_caps_tonnage(tons)))
+    return tuple(ports)
 
 
 def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
@@ -667,10 +713,11 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     theatre and the whole clock. Its job is to prove the campaign MACHINERY runs end to
     end: the 111-turn x 3-OpStage clock, the eastern geography (Maps D/E), the calendar
     (season_offset so a September start reads fall), and the pluggable victory seam. The
-    real September-1940 armies are here (C2) and the convoy/supply economy (C3-1): the
-    Commonwealth's inexhaustible Suez base vs the Axis Mediterranean convoy. The forward
-    truck haul (C3-2) and balance (C4) land later. The objective is Alexandria (E3613),
-    far to the east -- the historical Axis goal.
+    real September-1940 armies are here (C2) and the full convoy/supply economy (C3): the
+    Commonwealth's inexhaustible Suez base + rail-fed Mersa Matruh railhead vs the Axis
+    Mediterranean convoy hauled forward from Benghazi by a lean truck pool. Commonwealth
+    offensive agency and balance (C4) land next. The objective is Alexandria (E3613), far
+    to the east -- the historical Axis goal.
 
     Victory is the faithful campaign spec (rule 64.7): the Axis wins by taking Alexandria
     and Cairo or by out-pointing the Commonwealth on the 64.73 geographic Victory-Point
@@ -709,6 +756,7 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         map_sections=frozenset("ABCDE"),
         season_offset=calendar.CAMPAIGN_SEASON_OFFSET,   # GT1 = September 1940 (fall)
         victory=campaign_victory.CampaignVictory(),      # rule 64.7 (see game.campaign_victory)
-        convoys=_campaign_convoys(supplies, target, max_turns, seed),   # C3: Axis Med convoys (56.4)
-        ports=_campaign_ports(supplies, target),                        # C3: PORT-Benghazi (55.14)
+        convoys=_campaign_convoys(supplies, target, max_turns, seed),   # C3: Axis Med + CW rail (56.4/60.7)
+        ports=_campaign_ports(supplies, target),                        # C3: PORT-Benghazi + PORT-Matruh
+        trucks=_campaign_axis_trucks(supplies, target),                 # C3-2: the Benghazi->front haul (53/60.33)
     )
