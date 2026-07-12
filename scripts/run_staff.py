@@ -118,11 +118,23 @@ def _default_axis(campaign_mode: bool):
     return ScriptedPolicy(attacker=Side.AXIS)
 
 
-def _staff(side: Side, cache: dict, journal: "Journal | None", *, live: bool) -> StaffPolicy:
-    """One live command staff for `side`: a StaffPolicy whose seats share the durable cache/journal
-    (keyed by sha256(model+prompt), so the two staffs never collide) -- the CW mirror is a second
-    of these on Side.ALLIED."""
-    return StaffPolicy(MockClient(_mock_staff), side=side,
+def _staff_cls(campaign_mode: bool):
+    """The staff class for the scenario: CampaignStaffPolicy on the full campaign (its Quartermaster
+    runs the multi-hop coastal haul so a live Axis staff can supply forward), the base StaffPolicy on
+    Rommel's Arrival (whose truck relay is byte-locked). Imported lazily so the rommel path never
+    loads the campaign stack."""
+    if campaign_mode:
+        from game.campaign_staff import CampaignStaffPolicy
+        return CampaignStaffPolicy
+    return StaffPolicy
+
+
+def _staff(side: Side, cache: dict, journal: "Journal | None", *, live: bool,
+           campaign_mode: bool = False) -> StaffPolicy:
+    """One live command staff for `side`: a StaffPolicy (or CampaignStaffPolicy) whose seats share the
+    durable cache/journal (keyed by sha256(model+prompt), so the two staffs never collide) -- the CW
+    mirror is a second of these on Side.ALLIED."""
+    return _staff_cls(campaign_mode)(MockClient(_mock_staff), side=side,
                        seat_clients=_seat_clients(cache, journal, live=live), max_workers=len(LLM_SEATS))
 
 
@@ -153,8 +165,9 @@ def _report(result, tag: str) -> None:
 
 def _mock(*, campaign_mode: bool = False, max_turns: "int | None" = None,
           both_staffs: bool = False) -> int:
-    axis = StaffPolicy(MockClient(_mock_staff), side=Side.AXIS)
-    allied = (StaffPolicy(MockClient(_mock_staff), side=Side.ALLIED) if both_staffs
+    cls = _staff_cls(campaign_mode)
+    axis = cls(MockClient(_mock_staff), side=Side.AXIS)
+    allied = (cls(MockClient(_mock_staff), side=Side.ALLIED) if both_staffs
               else _default_allied(campaign_mode))
     _report(_play(axis, allied, campaign_mode=campaign_mode, max_turns=max_turns), "MOCK")
     return 0
@@ -178,8 +191,9 @@ def _run(*, live: bool, campaign_mode: bool = False, max_turns: "int | None" = N
         journal_path.unlink(missing_ok=True)
     cache = load_cache(cache_path)
     journal = Journal(str(journal_path)) if live else None
-    axis = _staff(Side.AXIS, cache, journal, live=live)
-    allied = _staff(Side.ALLIED, cache, journal, live=live) if both_staffs else _default_allied(campaign_mode)
+    axis = _staff(Side.AXIS, cache, journal, live=live, campaign_mode=campaign_mode)
+    allied = (_staff(Side.ALLIED, cache, journal, live=live, campaign_mode=campaign_mode)
+              if both_staffs else _default_allied(campaign_mode))
     result = _play(axis, allied, campaign_mode=campaign_mode, max_turns=max_turns)
     _report(result, "LIVE" if live else "RECACHE")
     for name, pol in ([("axis", axis), ("cw", allied)] if both_staffs else [("axis", axis)]):

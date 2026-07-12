@@ -28,3 +28,16 @@ def test_both_sides_play_as_command_staffs():
     by_side = Counter(e.side for e in staff_log(res.events))
     assert by_side[Side.AXIS] > 0 and by_side[Side.ALLIED] > 0   # BOTH staffs deliberated
     assert fold(res.initial, res.events) == res.final            # the two-staff log folds cleanly
+
+
+def test_the_campaign_staff_runs_the_coastal_haul():
+    # CampaignStaffPolicy = the live LLM staff PLUS the campaign multi-hop coastal haul (the base
+    # StaffPolicy truck relay is left byte-locked for staff-on-rommel). So a campaign Axis staff's
+    # trucks actually run the leg-by-leg relay, where the base relay would freeze -- the fix that
+    # makes a live-staff balance game meaningful instead of a dead Axis economy.
+    from game.campaign_staff import CampaignStaffPolicy
+    axis = CampaignStaffPolicy(MockClient(_mock_staff), side=Side.AXIS)
+    allied = CampaignStaffPolicy(MockClient(_mock_staff), side=Side.ALLIED)
+    res = run(campaign(seed=4200, max_turns=16), axis=axis, allied=allied)
+    assert sum(1 for e in res.events if e.kind.name == "TRUCK_MOVED") > 0   # the haul is active
+    assert fold(res.initial, res.events) == res.final

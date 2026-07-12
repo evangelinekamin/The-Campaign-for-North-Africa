@@ -248,20 +248,13 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
     return orders
 
 
-class CampaignAxisPolicy(ScriptedPolicy):
-    """The scripted Axis for the FULL campaign: the base attacker (attacker=AXIS, so movement,
-    combat and elastic retreat are inherited and byte-identical to ScriptedPolicy(Side.AXIS))
-    PLUS the multi-hop coastal haul that lets the Panzerarmee fight east of Benghazi at all.
-    Campaign-only, so rommels_arrival / siege_of_tobruk (which seed trucks through the byte-
-    locked base relay) are untouched. Two overrides:
-      - truck_orders runs the leg-by-leg relay (campaign_truck_orders) instead of the base
-        single-hop port shuttle.
-      - supply_orders HIDES the staging dumps (id 'AX-Stage*') from the base leapfrog bridge,
-        which would otherwise walk the waypoint chain toward Alexandria and UNSTAGE the very
-        relay the trucks feed."""
-
-    def __init__(self):
-        super().__init__(attacker=Side.AXIS)
+class _CampaignAxisSupplyMixin:
+    """The campaign Axis forward-supply behaviour, shared by the scripted CampaignAxisPolicy and the
+    live CampaignStaffPolicy (game.campaign_staff): the multi-hop coastal truck haul
+    (campaign_truck_orders) instead of the base single-hop port shuttle, and hiding the AX-Stage
+    staging dumps from the base leapfrog bridge (which would otherwise walk the waypoint chain toward
+    Alexandria and UNSTAGE the relay the trucks feed). Campaign-only -- rommels_arrival /
+    siege_of_tobruk seed trucks through the byte-locked base relay and never construct these."""
 
     def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
         return campaign_truck_orders(state, side)
@@ -270,3 +263,13 @@ class CampaignAxisPolicy(ScriptedPolicy):
         staged_out = replace(state, supplies=tuple(
             s for s in state.supplies if not s.id.startswith("AX-Stage")))
         return super().supply_orders(staged_out, side)
+
+
+class CampaignAxisPolicy(_CampaignAxisSupplyMixin, ScriptedPolicy):
+    """The scripted Axis for the FULL campaign: the base attacker (attacker=AXIS, so movement, combat
+    and elastic retreat are inherited and byte-identical to ScriptedPolicy(Side.AXIS)) PLUS the
+    multi-hop coastal haul (see _CampaignAxisSupplyMixin) that lets the Panzerarmee fight east of
+    Benghazi at all."""
+
+    def __init__(self):
+        super().__init__(attacker=Side.AXIS)
