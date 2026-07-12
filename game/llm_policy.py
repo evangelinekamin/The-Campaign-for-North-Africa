@@ -197,25 +197,49 @@ _RULES = ("The Campaign for North Africa, a hex wargame. Hexes are axial [q,r]. 
 
 def build_movement_prompt(obs: dict) -> str:
     obj = obs["objective"]
+    # CAMPAIGN vs RUSH framing, keyed on the observation carrying the rule-64.73 victory
+    # cities (present only under CampaignVictory; see observation.observe). The campaign is a
+    # POSITIONAL, LOGISTICAL game -- hold the cities you can keep SUPPLIED -- so its mission,
+    # movement directive and supply caution are reframed away from racing the single far
+    # objective. Rommel's Arrival carries no victory_cities, so it takes the else branch and
+    # its prompt (byte-locked by the staff-on-rommel tests) is reproduced verbatim.
+    if obs.get("victory_cities"):
+        head = (f"MISSION (rule 64.73): the campaign is decided by which VICTORY CITIES each "
+                f"side HOLDS SUPPLIED at the final turn, not by reaching one far hex. The "
+                f"victory_cities list gives each city's vp (your points for holding it), "
+                f"controlled_by, and held_supplied (who holds it with a supplied unit -- only "
+                f"a supplied holder scores). Hex {obj['hex']} is a direction, not the prize.")
+        directive = ("Garrison and HOLD the victory cities you can keep supplied; a unit whose "
+                     "can_hold is false has outrun its fuel/ammo, so consolidate it back onto a "
+                     "suppliable line rather than pressing deeper. Keep stacks together.")
+        supply_note = ("A unit that outruns its supply, or a city you take but cannot keep "
+                       "supplied, scores NOTHING (64.73) -- prefer a shorter line you can hold; "
+                       "can_hold is whether a unit can trace BOTH fuel and ammo to hold ground "
+                       "(distinct from ammo-only defensible). ")
+    else:
+        head = (f"Objective: hex {obj['hex']} (controlled by "
+                f"{obj['controlled_by']}); aim to control it by the final turn.")
+        directive = "Advance toward the objective and keep stacks together."
+        supply_note = ""
     return (
         f"You command the {obs['your_side']} forces. {_RULES}\n"
         f"MOVEMENT phase, game-turn {obs['turn']}/{obs['max_turns']}, "
         f"Operations Stage {obs['stage']}/3, weather "
-        f"{obs['weather']}. Objective: hex {obj['hex']} (controlled by "
-        f"{obj['controlled_by']}); aim to control it by the final turn.\n"
+        f"{obs['weather']}. {head}\n"
         f"Situation (JSON):\n{json.dumps(obs)}\n"
         "For each combat unit you move, pick its destination FROM that unit's "
         "can_move_to list (those are the only hexes it can legally reach this turn; "
         "lower dist = closer to the objective). NEVER invent a hex not in can_move_to, "
         "and SKIP any unit whose can_move_to is empty or that carries a cannot_move "
-        "field -- it cannot act this turn. Advance toward the objective and "
-        "keep stacks together. Combined arms: units with a 'barrage' (artillery) or "
+        f"field -- it cannot act this turn. {directive} Combined arms: units with a "
+        "'barrage' (artillery) or "
         "'anti_armor' (guns/tanks) rating automatically bombard ADJACENT enemies -- "
         "move them onto a can_move_to hex marked firing_position to soften a target "
         "before assaulting it. Tanks (is_tank) need at least an equal infantry "
         "strength stacked with them or they lose close-assault power. Supply: a unit "
         "with supplied:false cannot move this turn; supply_contended:true means its "
         "dump is oversubscribed, so prioritise -- not every contended unit gets fuel. "
+        f"{supply_note}"
         "Don't exceed stack_limit stacking points on one hex (a destination's "
         "points_used is the SP already there).\n"
         'Reply with ONLY JSON: {"reasoning":"one sentence","moves":'

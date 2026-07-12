@@ -67,6 +67,13 @@ def _reserve_one_dests(state: GameState, u, side: Side, enemy_zoc, enemy_occupie
 
 def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
     target = state.objective_for(side)   # per-side 'forward': Axis east, offensive CW west
+    # Campaign framing (rule 64.7): when the state carries the CampaignVictory spec, the
+    # game is decided by HOLDING the 64.73 victory cities SUPPLIED, not by reaching one far
+    # objective hex -- so the observation surfaces those cities and a per-unit hold-ground
+    # supply flag. Every campaign-only field is gated on this (rommel/siege leave victory
+    # None), so their observation -- and the staff prompts observe() feeds -- stay
+    # byte-identical. `cities` is CampaignVictory's parsed 64.73 table, or None otherwise.
+    campaign_cities = getattr(state.victory, "cities", None)
     moving = state.phase == Phase.MOVEMENT
     enemy_zoc, enemy_occ = tactics.enemy_zoc_and_occupied(state, side) if moving else (None, None)
     roster = state.living(side) if moving else None    # phase-start snapshot the engine also uses
@@ -140,6 +147,14 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
         if u.is_combat:
             v["defensible"] = supply.plan_draw(
                 state, u, supply.AMMO, supply.ammo_cost(u, phasing=False)) is not None
+            # Campaign hold-ground test (rule 64.73): can this unit trace BOTH fuel and
+            # ammo, so it can HOLD a victory city for points? This is the exact predicate
+            # CampaignVictory scores on (CampaignVictory._supplied), so the agent sees the
+            # very test it will be graded by -- distinct from the ammo-only `defensible`
+            # (fights at full strength) and the movement-only fuel-gate `supplied` below
+            # (can pay this move). A unit with can_hold false has outrun its logistics.
+            if campaign_cities is not None:
+                v["can_hold"] = state.victory._supplied(state, u)
         if moving and u.is_combat:
             # Reserve status (rule 18.22) overrides the ordinary CPA reach: a Reserve II unit
             # is frozen; a Reserve I unit may only shuffle ONE hex, CP-free -- so its legal set
@@ -211,7 +226,7 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
             attack_options.append({"target": list(tgt), "your_attackers": ids,
                                    "enemy_stacking_points": pts})
 
-    return {
+    out = {
         "turn": state.turn,
         "max_turns": state.max_turns,
         "stage": state.stage,          # Operations Stage within the game-turn (1..3, rule 5.1)
@@ -246,3 +261,21 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
             for p in sorted(state.ports, key=lambda p: p.id) if p.side == side
         ],
     }
+    # The rule-64.73 victory cities -- the campaign's actual prize. For each city: its hex,
+    # name and this side's Geographic Occupation Point value (vp); who nominally controls it
+    # (controlled_by); and who, if anyone, holds it with a SUPPLIED combat unit (held_supplied
+    # == CampaignVictory._occupier -- only a supplied holder scores it, 64.73). held_supplied
+    # None means nobody currently banks it: taken-but-unsupplied ground is worth nothing.
+    if campaign_cities is not None:
+        vic = state.victory
+        out["victory_cities"] = [
+            {
+                "hex": list(ax),
+                "name": name,
+                "vp": avp if side == Side.AXIS else cvp,
+                "controlled_by": state.control_of(ax).value,
+                "held_supplied": (occ.value if (occ := vic._occupier(state, ax)) is not None else None),
+            }
+            for ax, avp, cvp, name in campaign_cities
+        ]
+    return out

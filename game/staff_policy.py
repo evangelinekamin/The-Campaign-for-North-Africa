@@ -152,26 +152,42 @@ def persona_preamble(seat: str) -> str:
 # The Chief's schwerpunkt order carried down to the two GOCs so they PRESS the objective
 # instead of parking on its perimeter -- the load-bearing storm directive. Static prose,
 # never a rulebook magnitude; it names no seat's persona so it can never cross-contaminate.
+# Used in Rommel's Arrival (a single-objective race); the campaign swaps in HOLD_DIRECTIVE.
 STORM_DIRECTIVE = (
     "STORM DIRECTIVE: every operations stage, every unit adjacent to the objective presses "
     "a combined-arms close-assault ON it -- commit EVERY attacker listed for the objective "
     "as one merged assault and never omit it. The garrison capitulates only when a dry-ammo "
     "or cohesion-broken stack is assaulted (15.15/15.88), so keep the assaults sustained.")
 
+# The campaign counterpart to the STORM DIRECTIVE (rule 64.73). The full campaign is not a
+# race to one hex but a five-year point tally over the victory cities, so the Chief's order
+# to the GOCs is to HOLD ground supplied, not to sprint past their logistics -- the fix for
+# both staffs outrunning supply and holding NO city supplied. Swapped in by intent_preamble
+# when the observation carries victory_cities, so Rommel's Arrival keeps the STORM_DIRECTIVE.
+HOLD_DIRECTIVE = (
+    "HOLD DIRECTIVE: the campaign is scored on the victory cities each side HOLDS SUPPLIED at "
+    "the end (64.73), not on reaching one far hex. Garrison and hold the cities you can keep "
+    "supplied; do NOT sprint units past their fuel and ammunition into unsupplied culmination. "
+    "A city taken but not kept supplied, or a unit whose can_hold is false, scores NOTHING -- "
+    "consolidate such units back onto a suppliable line.")
 
-def intent_preamble(intent: dict) -> str:
+
+def intent_preamble(intent: dict, campaign: bool = False) -> str:
     """The Chief's whitelisted intent as an 'ORDERS FROM THE CHIEF OF STAFF' block, prepended
     to every SUBORDINATE seat's prompt so the two GOCs plan TO the scheme instead of
     independently off the shared board (the top-down fix to the cosmetic hierarchy). Only the
     whitelisted _INTENT_FIELDS + the standing air/sea priorities cross the seat boundary --
     never free prose -- exactly the control-plane rule the persona cards already obey. Rendered
-    in fixed _INTENT_FIELDS order for byte-determinism; '' when no intent is framed yet."""
+    in fixed _INTENT_FIELDS order for byte-determinism; '' when no intent is framed yet. The
+    closing directive is the campaign HOLD_DIRECTIVE when `campaign` (the observation carries
+    victory_cities), else the Rommel's-Arrival STORM_DIRECTIVE -- the campaign-vs-rommel switch;
+    `campaign` defaults False so the staff-on-rommel prompt stays byte-identical."""
     if not intent:
         return ""
     body = "; ".join(f"{k}: {intent[k]}" for k in _INTENT_FIELDS if intent.get(k))
     return ("ORDERS FROM THE CHIEF OF STAFF -- plan to this intent: " + body
             + f". Air priority: {AIR_PRIORITY}. Sea priority: {SEA_PRIORITY}.\n"
-            + STORM_DIRECTIVE + "\n")
+            + (HOLD_DIRECTIVE if campaign else STORM_DIRECTIVE) + "\n")
 
 
 @dataclass(frozen=True, slots=True)
@@ -186,13 +202,23 @@ class SideTurnPlan:
 def build_intent_prompt(obs: dict) -> str:
     """The Chief's structured-intent prompt (staff-specific; the specialists reuse the
     unchanged movement/combat prompts). Embeds the same observation shape so a stub or
-    a live model can ground its frame, and asks for the whitelisted INTENT_FIELDS."""
+    a live model can ground its frame, and asks for the whitelisted INTENT_FIELDS. The
+    mission line is reframed to the rule-64.73 HOLD-the-victory-cities-supplied contest when
+    the observation carries victory_cities (the campaign), else it names the single objective
+    hex (Rommel's Arrival) -- byte-identical there, so staff-on-rommel is untouched."""
     obj = obs["objective"]
+    if obs.get("victory_cities"):
+        mission = (f"Mission (rule 64.73): frame an intent to HOLD the victory cities you can "
+                   f"keep SUPPLIED (see victory_cities in the JSON -- each city's vp, "
+                   f"controlled_by, held_supplied), NOT to rush hex {obj['hex']}. A city taken "
+                   f"but not kept supplied, or a unit that outruns its supply, scores nothing; "
+                   f"consolidate unsupplied units and garrison what you can hold.")
+    else:
+        mission = f"Objective: hex {obj['hex']} (controlled by {obj['controlled_by']})."
     return (
         f"COMMANDER'S INTENT. You are the Axis Chief of Staff, game-turn "
         f"{obs['turn']}/{obs['max_turns']}, Operations Stage {obs['stage']}/3, "
-        f"weather {obs['weather']}. Objective: hex {obj['hex']} (controlled by "
-        f"{obj['controlled_by']}).\nSituation (JSON):\n{json.dumps(obs)}\n"
+        f"weather {obs['weather']}. {mission}\nSituation (JSON):\n{json.dumps(obs)}\n"
         'Reply with ONLY JSON: {"intent":{"objective":"...","scheme":"...",'
         '"supply":"...","milestone":"...","risks":"..."}} -- one short sentence each.')
 
@@ -235,6 +261,7 @@ class StaffPolicy(ScriptedPolicy):
         self._intent: dict = {}                            # the Chief's live intent (subordinate preamble)
         self._pulse_orders: list[MoveOrder] | None = None  # stashed continual-movement pulse moves
         self._rejects: list = []                           # this side's Front rejects since last debrief
+        self._campaign = False                             # obs carries rule-64.73 victory_cities (HOLD framing)
 
     # --- LLM seam ---------------------------------------------------------------
     def _client_for(self, seat: str):
@@ -247,7 +274,7 @@ class StaffPolicy(ScriptedPolicy):
         to the scheme). The Chief authors the intent, so its own call carries no intent block."""
         pre = persona_preamble(seat)
         if seat != CHIEF:
-            pre += intent_preamble(self._intent)
+            pre += intent_preamble(self._intent, self._campaign)
         return self._client_for(seat).complete(pre + prompt)
 
     def _map_lanes(self, fn, lanes):
@@ -285,6 +312,7 @@ class StaffPolicy(ScriptedPolicy):
         self._intent = {}
         self._pulse_orders = None
         self._rejects = []
+        self._campaign = False
 
     # --- reject feedback (symmetric with LLMPolicy.debrief) ----------------------
     def debrief(self, events: list) -> None:
@@ -464,6 +492,7 @@ class StaffPolicy(ScriptedPolicy):
 
     def _deliberate_movement(self, state: GameState, side: Side) -> SideTurnPlan:
         obs = observe(state, side)
+        self._campaign = "victory_cities" in obs        # rule-64.73 HOLD framing for the seats' prompts
         idl = unit_lanes(state, side)
         # Narrative order per side-turn: the Chief frames the INTENT, the specialists
         # PROPOSE in-lane (in parallel, re-collected in FIXED lane order), then the
@@ -725,6 +754,7 @@ class StaffPolicy(ScriptedPolicy):
 
     def _deliberate_combat(self, state: GameState, side: Side) -> list[AttackOrder]:
         obs = observe(state, side)
+        self._campaign = "victory_cities" in obs        # rule-64.73 HOLD framing for the seats' prompts
         if not obs.get("attack_options"):
             return []
         idl = unit_lanes(state, side)
