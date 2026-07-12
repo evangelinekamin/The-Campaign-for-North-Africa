@@ -1276,6 +1276,9 @@ def _supply_movement(r: _Run, policy: Policy, side: Side) -> None:
         if su is None or su.side != side or su.empty:
             _reject_supply(r, side, actor, order, "no such active supply unit")
             continue
+        if su.base:
+            _reject_supply(r, side, actor, order, "a strategic rear base is immobile (rule 57)")
+            continue
         if su.id in moved:
             _reject_supply(r, side, actor, order, "already moved this OpStage (CPA 15/stage)")
             continue

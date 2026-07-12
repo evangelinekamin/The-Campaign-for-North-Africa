@@ -703,7 +703,7 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
                           **_caps_tonnage(tons)))
     railhead = _campaign_cw_railhead(supplies)
     if railhead is not None:
-        tons = _PORT_TONS.get("mersa matruh", _PORT_TONS.get("alexandria", _PORT_TONS["tripoli"]))["tons"]
+        tons = _PORT_TONS.get("mersa_matruh", _PORT_TONS["tripoli"])["tons"]   # 55.3 railhead tonnage
         ports.append(Port("PORT-Matruh", Side.ALLIED, railhead.hex, "major", max_eff=10, eff=10,
                           **_caps_tonnage(tons)))
     return tuple(ports)

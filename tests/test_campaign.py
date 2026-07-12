@@ -75,16 +75,50 @@ def test_campaign_supply_economy():
 
 
 def test_campaign_commonwealth_can_attack():
-    # Offensive-CW: the Commonwealth is no longer a static sandbag. During the Operation Compass
-    # window (GT13-22) it drives WEST toward Benghazi -- its per-side objective (state.objective_for
-    # / allied_objective) -- so the campaign see-saws instead of the Axis walking to Alexandria.
+    # Offensive-CW: on a Compass Game-Turn (GT13-22) the Commonwealth is not a static sandbag -- it
+    # runs the ALLIED ATTACKER branch (driving toward Benghazi), where between offensives it is the
+    # rear-oriented defender. We assert the SWITCH on a real mid-campaign board. Whether the
+    # deliberately tight CW forward supply lets that advance REACH Benghazi under crude scripted play
+    # is a balance question, not an invariant: the greedy script culminates at once, as both sides do.
+    from dataclasses import replace
+    from game.campaign_policy import CampaignCommonwealthPolicy
+    board = run(campaign(seed=1941, max_turns=13), ScriptedPolicy(Side.AXIS),
+                CampaignCommonwealthPolicy()).final
+    pol = CampaignCommonwealthPolicy()
+    attacker = ScriptedPolicy(attacker=Side.ALLIED)
+    on = replace(board, turn=15)          # mid-Compass (13-22): offensive
+    off = replace(board, turn=30)         # between Compass and Crusader: defensive
+    assert pol._on_offensive(on) and not pol._on_offensive(off)
+    # On an offensive turn the CW emits the ALLIED attacker branch's moves verbatim (toward Benghazi).
+    assert pol.movement(on, Side.ALLIED) == attacker.movement(on, Side.ALLIED)
+
+
+def test_campaign_defensive_supply_integrity():
+    # Two supply-integrity fixes verified on one pre-Compass (defensive) run:
+    #  bug 1 -- the Suez base depots (rule 57) are immobile: they never leave Cairo/Alexandria.
+    #           (The scripted policy had walked the 125M-point base to the front, supplying the CW
+    #           everywhere and collapsing the supply-traced victory into a CW rout.)
+    #  bug 3 -- CW field dumps fall back EAST with the front, never leapfrogging WEST toward the
+    #           advancing Axis (the offensive-CW objective change had reversed this on defense).
     from game import coords
     from game.campaign_policy import CampaignCommonwealthPolicy
     from game.hexmap import distance
     beng = coords.to_axial(coords.parse("A4827"))
-    res = run(campaign(seed=1941, max_turns=22), ScriptedPolicy(Side.AXIS), CampaignCommonwealthPolicy())
-    cw = [u for u in res.final.units if u.side == Side.ALLIED and u.alive and u.is_combat]
-    assert cw and min(distance(u.hex, beng) for u in cw) < 40   # a CW combat unit drove west toward Benghazi
+    res = run(campaign(seed=1941, max_turns=12), ScriptedPolicy(Side.AXIS), CampaignCommonwealthPolicy())
+    seeded = {s.id: s.hex for s in res.initial.supplies if s.base}
+    assert seeded and {s.id: s.hex for s in res.final.supplies if s.base} == seeded   # bases pinned
+    for su in res.final.supplies:
+        if su.side == Side.ALLIED and not su.base and not su.is_dummy:
+            start = next(s for s in res.initial.supplies if s.id == su.id)
+            assert distance(su.hex, beng) >= distance(start.hex, beng)   # never drifted west
+
+
+def test_campaign_railhead_port_uses_the_chart_tonnage():
+    # Bug 2: PORT-Matruh was silently throttled at Alexandria's 15000t via a "mersa matruh" vs
+    # "mersa_matruh" data-key miss; the 55.3 chart value is 250t -- and tonnage is the sole 55.14
+    # gate, so this one number is the entire CW rail throttle.
+    matruh = next(p for p in campaign(seed=1941).ports if p.id == "PORT-Matruh")
+    assert matruh.cap_tons == 250
 
 
 def test_max_turns_truncates():

@@ -176,6 +176,9 @@ class ScriptedPolicy(Policy):
         target = state.objective_for(side)   # dumps leapfrog toward the side's own objective
         orders: list[SupplyMoveOrder] = []
         for su in state.active_supplies(side):
+            if su.base:
+                continue                              # a strategic rear base (rule 57) is immobile
+                                                      # -- the front hauls FROM it, it never advances
             if su.fuel < supply.SUPPLY_MOVE_FUEL:
                 continue                              # no fuel to move (rule 32.24)
             if state.port_at(su.hex) is not None:

@@ -12,7 +12,7 @@ east, so only the ATTACK windows need encoding.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .events import Side
 from .policy import AttackOrder, MoveOrder, ScriptedPolicy, SupplyMoveOrder
@@ -55,11 +55,25 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
         return self._schedule.is_offensive(state.turn)
 
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
-        return (self._offensive if self._on_offensive(state) else super()).movement(state, side)
+        if self._on_offensive(state):
+            return self._offensive.movement(state, side)
+        return super().movement(self._rear_view(state), side)
 
     def combat(self, state: GameState, side: Side) -> list[AttackOrder]:
-        return (self._offensive if self._on_offensive(state) else super()).combat(state, side)
+        if self._on_offensive(state):
+            return self._offensive.combat(state, side)
+        return super().combat(self._rear_view(state), side)
 
     def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
-        # On the offensive the dumps must leapfrog WEST behind the advance, not hold in the rear.
-        return (self._offensive if self._on_offensive(state) else super()).supply_orders(state, side)
+        if self._on_offensive(state):
+            return self._offensive.supply_orders(state, side)
+        return super().supply_orders(self._rear_view(state), side)
+
+    def _rear_view(self, state: GameState) -> GameState:
+        """Between offensives the Commonwealth has NO westward objective -- it is a vanilla
+        rear-oriented defender, identical to the proven rommels_arrival CW. Hiding allied_objective
+        flips every objective_for(ALLIED) read (dump leapfrog, movement, combat) back toward the
+        Egyptian rear, so the front and its dumps fall back EAST with the pressure instead of
+        chasing Benghazi into the advancing Axis (rule 32.33). On the offensive the real state
+        (allied_objective = Benghazi) drives the attack west."""
+        return replace(state, allied_objective=None)
