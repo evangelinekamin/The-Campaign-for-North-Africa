@@ -171,6 +171,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             if stage < 3:                               # next Operations Stage: refresh the CPA window (6.16)
                 r.emit(EventKind.STAGE_ADVANCED, Side.SYSTEM, "SYSTEM", {"stage": stage + 1})
             else:                                       # a new game-turn re-opens at Operations Stage 1
+                _defer_crowded_reinforcements(r, r.state.turn + 1)   # rule 20: wait for stacking room
                 r.emit(EventKind.TURN_ADVANCED, Side.SYSTEM, "SYSTEM", {"turn": r.state.turn + 1})
 
     return RunResult(r.initial, r.events, r.state, winner, reason)
@@ -314,6 +315,31 @@ def _reinforcements(r: _Run) -> None:
         if u.arrival_turn == r.state.turn and u.alive:
             r.emit(EventKind.REINFORCEMENT_ARRIVED, u.side, "SYSTEM",
                    {"unit_id": u.id, "hex": list(u.hex), "turn": r.state.turn})
+
+
+def _defer_crowded_reinforcements(r: _Run, next_turn: int) -> None:
+    """Rule 20 -- reinforcements WAIT for stacking room. Before the game-turn advances (which
+    would otherwise pop a scheduled unit on-map via state.on_map the instant turn >= arrival_turn),
+    scan the units due to enter `next_turn` whose entry hex is already at the 9.31 hex limit and
+    DEFER them: bump arrival_turn one game-turn so the unit stays dormant (off-board, uncounted by
+    the stacking check) and retries next turn -- so the stacking invariant can never crash at the
+    TURN_ADVANCED fold. Units that fit are admitted greedily in deterministic id order, each
+    reserving its room, so two arrivals onto one hex cannot together over-stack. Fires ONLY when an
+    entry hex is genuinely over-full for an arrival, so every scenario whose reinforcements have
+    room at their arrival turn (the scripted seeds) emits nothing here and stays byte-identical."""
+    due = sorted((u for u in r.state.units
+                  if u.alive and not r.state.on_map(u) and u.arrival_turn == next_turn),
+                 key=lambda u: u.id)
+    admitted: dict = {}                                  # entry hex -> units that will fit this turn
+    for u in due:
+        terrain = r.state.terrain.terrain[u.hex]
+        present = list(r.state.units_at(u.hex)) + admitted.get(u.hex, [])
+        if stacking.within_hex_limit(present + [u], terrain):
+            admitted.setdefault(u.hex, []).append(u)     # fits: leave it to arrive on schedule
+        else:
+            r.emit(EventKind.REINFORCEMENT_DELAYED, u.side, "SYSTEM",
+                   {"unit_id": u.id, "hex": list(u.hex),
+                    "arrival_turn": next_turn + 1, "reason": "no stacking room"})
 
 
 def _interdiction_for(state: GameState, convoy):

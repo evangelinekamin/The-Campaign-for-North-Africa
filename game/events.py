@@ -47,6 +47,12 @@ class EventKind(str, Enum):
     WEATHER_ROLLED = "WEATHER_ROLLED"
     ORDER_REJECTED = "ORDER_REJECTED"
     REINFORCEMENT_ARRIVED = "REINFORCEMENT_ARRIVED"
+    # Rule 20: a scheduled unit whose entry hex has no stacking room this game-turn WAITS -- its
+    # arrival_turn is bumped one game-turn (game.engine._defer_crowded_reinforcements, run before
+    # the TURN_ADVANCED fold), so state.on_map keeps it dormant (off-board, uncounted by the 9.31
+    # stacking check) until room opens. The load-bearing dual of the marker REINFORCEMENT_ARRIVED:
+    # it folds by relocating the arrival in time rather than recording it.
+    REINFORCEMENT_DELAYED = "REINFORCEMENT_DELAYED"
     UNIT_MOVED = "UNIT_MOVED"
     UNIT_RETREATED = "UNIT_RETREATED"
     SUPPLY_MOVED = "SUPPLY_MOVED"

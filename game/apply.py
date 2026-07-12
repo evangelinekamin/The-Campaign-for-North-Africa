@@ -299,6 +299,14 @@ def apply(state: GameState, event: Event) -> GameState:
                        air_superiority={}, air_sighted=frozenset(),
                        naval=_refit_naval(state.naval))
 
+    if k == EventKind.REINFORCEMENT_DELAYED:
+        # Rule 20: a scheduled unit whose entry hex has no stacking room waits -- its
+        # arrival_turn is bumped one game-turn so state.on_map keeps it dormant (off-board,
+        # uncounted by the 9.31 stacking check) until room opens next game-turn. The event
+        # carries the new arrival_turn so fold(initial, events) reconstructs it exactly.
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, arrival_turn=p["arrival_turn"]))
+
     raise ValueError(f"unhandled event kind {k}")
 
 
