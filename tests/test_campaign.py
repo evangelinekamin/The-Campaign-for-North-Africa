@@ -130,6 +130,21 @@ def test_campaign_malta_throttles_the_axis_convoy():
     assert [e for e in res.events if e.kind.name == "CONVOY_INTERDICTED"]   # the convoy is skimmed
 
 
+def test_campaign_tobruk_lifeline_holds_only_when_the_commonwealth_takes_it():
+    # C4 Tobruk sea lifeline (rule 30/56.3): the SEA-TOBRUK ferry + PORT-Tobruk + the empty AL-Tobruk
+    # garrison dump are seeded, but 56.15 CANCELS the ferry while the Axis holds Tobruk (seeded
+    # control C4807=AXIS at GT1). Nothing lands in the garrison dump until the Commonwealth takes the
+    # fortress -- the historical shape (the siege lifeline serves a CW-held Tobruk, not day one).
+    st = campaign(seed=1941, max_turns=12)
+    assert any(c.lane == "SEA-TOBRUK" for c in st.convoys)              # the ferry is seeded every turn
+    assert any(p.id == "PORT-Tobruk" and p.side == Side.ALLIED for p in st.ports)   # the landing port
+    tob = coords.to_axial(coords.parse("C4807"))
+    assert st.control.get(tob) == Side.AXIS                             # Axis holds Tobruk in Sep 1940
+    res = run(campaign(seed=1941, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    alt = next(s for s in res.final.supplies if s.id == "AL-Tobruk")
+    assert alt.ammo == 0 and alt.fuel == 0 and alt.stores == 0          # empty: the ferry never landed while Axis-held
+
+
 def test_max_turns_truncates():
     assert campaign(max_turns=8).max_turns == 8
 

@@ -702,6 +702,10 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
         load = _load_cargo()                           # rule 57 rail feed to the Egyptian railhead
         convoys += [Convoy(f"cw-rail-t{gt}", Side.ALLIED, gt, "CW-RAILHEAD", railhead.id, dict(load))
                     for gt in range(1, max_turns + 1)]
+    # Tobruk sea lifeline (30 / 56.3): the per-turn ferry feeding the AL-Tobruk garrison dump.
+    # Cancelled by 56.15 while the Axis holds Tobruk, landing once the Commonwealth takes it.
+    convoys += [Convoy(f"tobruk-ferry-t{gt}", Side.ALLIED, gt, "SEA-TOBRUK", "AL-Tobruk", _load_cargo())
+                for gt in range(1, max_turns + 1)]
     rear = _axis_rear(supplies, target)
     if rear is not None:
         rng = random.Random(seed)
@@ -730,6 +734,11 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
         tons = _PORT_TONS.get("mersa_matruh", _PORT_TONS["tripoli"])["tons"]   # 55.3 railhead tonnage
         ports.append(Port("PORT-Matruh", Side.ALLIED, railhead.hex, "major", max_eff=10, eff=10,
                           **_caps_tonnage(tons)))
+    # PORT-Tobruk (55.3 campaign row: 1700 t, eff 5) -- the ferry's landing throttle. In the engine's
+    # HARBOUR_BLOCKED set so it never regenerates, hence seeded at max efficiency; the garrison's
+    # supply ceiling once the Commonwealth holds Tobruk.
+    ports.append(Port("PORT-Tobruk", Side.ALLIED, coords.to_axial(coords.parse(_TOBRUK)), "major",
+                      max_eff=5, eff=5, **_caps_tonnage(_PORT_TONS["tobruk"]["tons"])))
     return tuple(ports)
 
 
@@ -748,6 +757,41 @@ def _campaign_malta_interdiction(max_turns: int, bomb_points: int = _MALTA_BOMB_
     forward haul from an uncontested rear pile-up -- Malta's strangling of the sea lane, the
     historical reason the Panzerarmee was perpetually short of fuel."""
     return tuple(InterdictionOrder("2", t, bomb_points) for t in range(1, max_turns + 1))
+
+
+_TOBRUK = "C4807"    # the fortress (a 64.73 victory hex); the CW lifeline that lets a siege hold
+# Historically-correct September-1940 ownership. The 56.15 gate cancels a convoy whose destination
+# hex is ENEMY-controlled, but control_of defaults NEUTRAL and _naval_convoys runs before the first
+# _record_control -- so without this the GT1 Tobruk ferry would land inside Italian-held Tobruk.
+# Once CW combat units occupy Tobruk (Compass), _record_control flips it and the ferry starts
+# landing: self-correcting under any unfolding, with CONVOY_CANCELLED markers while the Axis holds it.
+_CAMPAIGN_CONTROL = {"C4807": Side.AXIS, "C4321": Side.AXIS, "A4827": Side.AXIS,        # Cyrenaican ports
+                     "D3714": Side.ALLIED, "E3613": Side.ALLIED, "E1730": Side.ALLIED}  # Egyptian rear
+
+
+def _campaign_initial_control() -> dict:
+    """Seed the Sep-1940 city ownership (rule 64.2) so the 56.15 convoy gate reads correctly from
+    Game-Turn 1 -- the Axis Cyrenaican harbours vs the Commonwealth's Egyptian base and railhead."""
+    return {coords.to_axial(coords.parse(lbl)): side for lbl, side in _CAMPAIGN_CONTROL.items()}
+
+
+def _campaign_tobruk_dump() -> SupplyUnit:
+    """Rule 30 / 56.3: the Commonwealth's Tobruk garrison dump, EMPTY at GT1 (the Axis holds Tobruk
+    in September 1940). It fills only from the SEA-TOBRUK ferry once the Commonwealth takes the
+    fortress (Compass); the garrison then traces to it at distance 0 -- the lifeline that lets a
+    besieged Tobruk hold on Close-Assault ammunition instead of starving out (15.15), as it
+    historically did. On the C4807 MAJOR_CITY hex, so its 54.12 dump capacity is unlimited."""
+    return SupplyUnit("AL-Tobruk", Side.ALLIED, coords.to_axial(coords.parse(_TOBRUK)),
+                      ammo=0, fuel=0, stores=0, water=0)
+
+
+def _campaign_tobruk_ferry_interdiction(max_turns: int, bomb_points: int = 200
+                                        ) -> tuple[InterdictionOrder, ...]:
+    """The Axis air-interdiction of the Tobruk sea ferry (rules 41.6 / 30) -- the CUTTABLE lane that
+    makes a siege winnable the FAITHFUL way (cut the lifeline) rather than impossible. Runs from
+    GT20, when the DAK and its Luftwaffe arrive within reach of the ferry; a cancelled ferry (while
+    the Axis holds Tobruk) skips interdiction entirely, and an unmatched order draws no dice."""
+    return tuple(InterdictionOrder("SEA-TOBRUK", t, bomb_points) for t in range(20, max_turns + 1))
 
 
 def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
@@ -779,7 +823,8 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     # the Axis port-of-arrival dump (Benghazi) the Mediterranean convoys land at, and the
     # historical coastal staging dumps (60.34) the campaign truck relay hauls forward along.
     supplies = (tuple(oob_supplies) + tuple(_campaign_cw_base())
-                + (_campaign_axis_base(),) + tuple(_campaign_staging_dumps()))
+                + (_campaign_axis_base(), _campaign_tobruk_dump())
+                + tuple(_campaign_staging_dumps()))
 
     # A hex a piece stands on is land (coastal ports colour-sample as sea); add + connect,
     # exactly as the corridor scenarios do.
@@ -795,7 +840,7 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     return GameState(
         turn=1, max_turns=max_turns, phase=Phase.WEATHER, active_side=Side.SYSTEM,
         seed=seed, weather="normal", vp=VP(),
-        terrain=tmap, control={}, units=tuple(units), target_hex=target,
+        terrain=tmap, control=_campaign_initial_control(), units=tuple(units), target_hex=target,
         allied_objective=coords.to_axial(coords.parse(_CW_OBJECTIVE)),   # offensive CW drives west (Compass)
         supplies=supplies, consumed=_zero_consumed(),
         initial_supply=_initial_supply(supplies),
@@ -805,5 +850,6 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         convoys=_campaign_convoys(supplies, target, max_turns, seed),   # C3: Axis Med + CW rail (56.4/60.7)
         ports=_campaign_ports(supplies, target),                        # C3: PORT-Benghazi + PORT-Matruh
         trucks=_campaign_axis_trucks(supplies, target),                 # C3-2: the Benghazi->front haul (53/60.33)
-        interdictions=_campaign_malta_interdiction(max_turns),          # C4: Malta throttles the Axis Med convoy (rule 44)
+        interdictions=(_campaign_malta_interdiction(max_turns)          # C4: Malta throttles the Axis Med convoy (rule 44)
+                       + _campaign_tobruk_ferry_interdiction(max_turns)),  # + the cuttable Tobruk-ferry lane (30/41.6)
     )
