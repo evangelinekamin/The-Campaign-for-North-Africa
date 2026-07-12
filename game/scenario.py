@@ -576,6 +576,8 @@ def siege_of_tobruk(seed: int = 1941, *, port_bomb: bool = False, raf: bool = Fa
 # --- the full campaign (rule 64) -----------------------------------------------
 
 _ALEXANDRIA = "E3613"       # the Axis objective (rule 64.7); land-verified on Map E.
+_CW_OBJECTIVE = "A4827"     # Benghazi -- the Axis port-of-arrival; the offensive Commonwealth's
+                            # westward drive (Operation Compass), the exact mirror of the Axis aim.
 
 
 # --- C3: the convoy / supply economy (rule 57 / 56.4 / 60.34). Campaign-only: the engine
@@ -751,6 +753,7 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         turn=1, max_turns=max_turns, phase=Phase.WEATHER, active_side=Side.SYSTEM,
         seed=seed, weather="normal", vp=VP(),
         terrain=tmap, control={}, units=tuple(units), target_hex=target,
+        allied_objective=coords.to_axial(coords.parse(_CW_OBJECTIVE)),   # offensive CW drives west (Compass)
         supplies=supplies, consumed=_zero_consumed(),
         initial_supply=_initial_supply(supplies),
         map_sections=frozenset("ABCDE"),

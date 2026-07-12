@@ -74,6 +74,19 @@ def test_campaign_supply_economy():
     assert axis_convoys and all(c.dest == "AX-Benghazi" for c in axis_convoys)
 
 
+def test_campaign_commonwealth_can_attack():
+    # Offensive-CW: the Commonwealth is no longer a static sandbag. During the Operation Compass
+    # window (GT13-22) it drives WEST toward Benghazi -- its per-side objective (state.objective_for
+    # / allied_objective) -- so the campaign see-saws instead of the Axis walking to Alexandria.
+    from game import coords
+    from game.campaign_policy import CampaignCommonwealthPolicy
+    from game.hexmap import distance
+    beng = coords.to_axial(coords.parse("A4827"))
+    res = run(campaign(seed=1941, max_turns=22), ScriptedPolicy(Side.AXIS), CampaignCommonwealthPolicy())
+    cw = [u for u in res.final.units if u.side == Side.ALLIED and u.alive and u.is_combat]
+    assert cw and min(distance(u.hex, beng) for u in cw) < 40   # a CW combat unit drove west toward Benghazi
+
+
 def test_max_turns_truncates():
     assert campaign(max_turns=8).max_turns == 8
 

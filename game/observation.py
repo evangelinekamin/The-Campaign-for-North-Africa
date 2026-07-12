@@ -66,7 +66,7 @@ def _reserve_one_dests(state: GameState, u, side: Side, enemy_zoc, enemy_occupie
 
 
 def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
-    target = state.target_hex
+    target = state.objective_for(side)   # per-side 'forward': Axis east, offensive CW west
     moving = state.phase == Phase.MOVEMENT
     enemy_zoc, enemy_occ = tactics.enemy_zoc_and_occupied(state, side) if moving else (None, None)
     roster = state.living(side) if moving else None    # phase-start snapshot the engine also uses

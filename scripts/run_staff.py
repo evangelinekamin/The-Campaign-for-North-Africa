@@ -87,9 +87,11 @@ def _seat_clients(cache: dict, *, live: bool) -> dict:
 
 
 def _play(axis, *, campaign_mode: bool = False, max_turns: "int | None" = None) -> object:
-    scen = (campaign(seed=SEED, max_turns=max_turns) if campaign_mode
-            else rommels_arrival(seed=SEED))
-    return run(scen, axis=axis, allied=ScriptedPolicy(attacker=Side.AXIS))
+    if campaign_mode:                                   # the Axis staff faces a Commonwealth that fights back
+        from game.campaign_policy import CampaignCommonwealthPolicy
+        return run(campaign(seed=SEED, max_turns=max_turns), axis=axis,
+                   allied=CampaignCommonwealthPolicy())
+    return run(rommels_arrival(seed=SEED), axis=axis, allied=ScriptedPolicy(attacker=Side.AXIS))
 
 
 def _report(result, tag: str) -> None:

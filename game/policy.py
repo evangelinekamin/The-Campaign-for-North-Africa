@@ -113,7 +113,7 @@ class ScriptedPolicy(Policy):
         if side != self.attacker:
             return self._defender_moves(state, side)
         enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, side)
-        target = state.target_hex
+        target = state.objective_for(side)   # attacker's objective; Axis east, offensive CW west
         orders: list[MoveOrder] = []
         for u in state.living(side):
             if not u.is_combat:
@@ -173,7 +173,7 @@ class ScriptedPolicy(Policy):
         combat_units = [u for u in state.living(side) if u.is_combat]
         if not combat_units:
             return []
-        target = state.target_hex
+        target = state.objective_for(side)   # dumps leapfrog toward the side's own objective
         orders: list[SupplyMoveOrder] = []
         for su in state.active_supplies(side):
             if su.fuel < supply.SUPPLY_MOVE_FUEL:

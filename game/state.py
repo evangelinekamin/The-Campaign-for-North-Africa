@@ -342,6 +342,11 @@ class GameState:
     consumed: dict                 # commodity -> int spent so far ("AMMO"/"FUEL")
     initial_supply: dict           # commodity -> int total EVER INTRODUCED (t0 dumps +
                                    # every SUPPLY_ARRIVED faucet); conservation check
+    # The hex the COMMONWEALTH advances toward when offensive (its "forward"). The Axis
+    # drives on target_hex (Alexandria/Tobruk, far east); an offensive Commonwealth drives
+    # WEST on the Axis rear (Benghazi). Default None -> objective_for falls back to
+    # target_hex, so every scenario that seeds no Commonwealth objective is byte-identical.
+    allied_objective: "Coord | None" = None
     # Siege of Tobruk (rule 25.14 / 25.16): when siege_rules is on, artillery barrage
     # batters fortifications down. fort_levels is the dynamic overlay of reduced
     # levels (hex -> current level); an absent hex reads its static base from
@@ -446,6 +451,15 @@ class GameState:
 
     def control_of(self, coord: Coord) -> Control:
         return self.control.get(coord, Control.NEUTRAL)
+
+    def objective_for(self, side: Side) -> Coord:
+        """The hex a side advances toward -- its 'forward'. The Axis drives on target_hex
+        (Alexandria/Tobruk); the Commonwealth, when offensive, on allied_objective (the Axis
+        rear). Falls back to target_hex, so every scenario that seeds no Commonwealth
+        objective -- rommel/siege included -- is unchanged for both sides."""
+        if side == Side.ALLIED and self.allied_objective is not None:
+            return self.allied_objective
+        return self.target_hex
 
     def fort_level(self, coord: Coord) -> int:
         """Current fortification level of a hex (rule 15.82 / 25.14): the dynamic
