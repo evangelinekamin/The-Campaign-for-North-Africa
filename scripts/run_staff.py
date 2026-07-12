@@ -7,6 +7,7 @@ byte-identical STAFF_* + orders with the model disconnected.
 
     python3 -m scripts.run_staff --mock                # deterministic dry-run, zero tokens
     python3 -m scripts.run_staff --live --campaign     # the live campaign (reads the key file)
+    python3 -m scripts.run_staff --live --campaign --both-staffs   # BOTH sides live (the CW mirror)
     python3 -m scripts.run_staff --live --fresh        # ignore any prior cache, start clean
     python3 -m scripts.run_staff --recache             # re-run against the populated cache, model OFF
 
@@ -52,8 +53,6 @@ MODEL = "openai/gpt-oss-120b"   # dev seat per the generalship leaderboard: comm
                                 # 507 tok/s, 3.6% illegal, N=5 (mercury-2 is the faster/pricier alternate)
 SEED = 4200
 OUT = Path(__file__).resolve().parent.parent / "out"
-LOG_PATH = OUT / "staff_smoke.log.json"
-CACHE_PATH = OUT / "staff_smoke.cache.json"
 
 
 def _load_key(path: str = KEY_FILE) -> None:
@@ -98,12 +97,26 @@ def _seat_clients(cache: dict, journal: "Journal | None", *, live: bool,
     return {seat: CachingClient(make(), cache, journal=journal) for seat in LLM_SEATS}
 
 
-def _play(axis, *, campaign_mode: bool = False, max_turns: "int | None" = None) -> object:
-    if campaign_mode:                                   # the Axis staff faces a Commonwealth that fights back
+def _default_allied(campaign_mode: bool):
+    """The scripted opponent the Axis staff faces when the Commonwealth is not itself a live staff:
+    the offensive-capable Commonwealth on the campaign, the pure defender on Rommel's Arrival."""
+    if campaign_mode:
         from game.campaign_policy import CampaignCommonwealthPolicy
-        return run(campaign(seed=SEED, max_turns=max_turns), axis=axis,
-                   allied=CampaignCommonwealthPolicy())
-    return run(rommels_arrival(seed=SEED), axis=axis, allied=ScriptedPolicy(attacker=Side.AXIS))
+        return CampaignCommonwealthPolicy()
+    return ScriptedPolicy(attacker=Side.AXIS)
+
+
+def _staff(side: Side, cache: dict, journal: "Journal | None", *, live: bool) -> StaffPolicy:
+    """One live command staff for `side`: a StaffPolicy whose seats share the durable cache/journal
+    (keyed by sha256(model+prompt), so the two staffs never collide) -- the CW mirror is a second
+    of these on Side.ALLIED."""
+    return StaffPolicy(MockClient(_mock_staff), side=side,
+                       seat_clients=_seat_clients(cache, journal, live=live), max_workers=len(LLM_SEATS))
+
+
+def _play(axis, allied, *, campaign_mode: bool = False, max_turns: "int | None" = None) -> object:
+    scenario = campaign(seed=SEED, max_turns=max_turns) if campaign_mode else rommels_arrival(seed=SEED)
+    return run(scenario, axis=axis, allied=allied)
 
 
 def _report(result, tag: str) -> None:
@@ -126,19 +139,23 @@ def _report(result, tag: str) -> None:
         print(f"    [{ln.beat}] {ln.text}")
 
 
-def _mock(*, campaign_mode: bool = False, max_turns: "int | None" = None) -> int:
+def _mock(*, campaign_mode: bool = False, max_turns: "int | None" = None,
+          both_staffs: bool = False) -> int:
     axis = StaffPolicy(MockClient(_mock_staff), side=Side.AXIS)
-    _report(_play(axis, campaign_mode=campaign_mode, max_turns=max_turns), "MOCK")
+    allied = (StaffPolicy(MockClient(_mock_staff), side=Side.ALLIED) if both_staffs
+              else _default_allied(campaign_mode))
+    _report(_play(axis, allied, campaign_mode=campaign_mode, max_turns=max_turns), "MOCK")
     return 0
 
 
 def _run(*, live: bool, campaign_mode: bool = False, max_turns: "int | None" = None,
-         fresh: bool = False) -> int:
+         fresh: bool = False, both_staffs: bool = False) -> int:
     if live:
         _load_key()
     OUT.mkdir(exist_ok=True)
-    log_path = OUT / ("staff_campaign.log.json" if campaign_mode else LOG_PATH.name)
-    cache_path = OUT / ("staff_campaign.cache.json" if campaign_mode else CACHE_PATH.name)
+    prefix = "staff_2sided" if both_staffs else ("staff_campaign" if campaign_mode else "staff_smoke")
+    log_path = OUT / f"{prefix}.log.json"
+    cache_path = OUT / f"{prefix}.cache.json"
     journal_path = Path(str(cache_path) + ".jsonl")
     # Durability + resume-by-default: load_cache recovers the compacted cache PLUS any journal a
     # prior kill left mid-run (folded on top, a torn final line tolerated), so a crashed live run
@@ -149,16 +166,16 @@ def _run(*, live: bool, campaign_mode: bool = False, max_turns: "int | None" = N
         journal_path.unlink(missing_ok=True)
     cache = load_cache(cache_path)
     journal = Journal(str(journal_path)) if live else None
-    seats = _seat_clients(cache, journal, live=live)
-    axis = StaffPolicy(MockClient(_mock_staff), side=Side.AXIS,
-                       seat_clients=seats, max_workers=len(LLM_SEATS))
-    result = _play(axis, campaign_mode=campaign_mode, max_turns=max_turns)
+    axis = _staff(Side.AXIS, cache, journal, live=live)
+    allied = _staff(Side.ALLIED, cache, journal, live=live) if both_staffs else _default_allied(campaign_mode)
+    result = _play(axis, allied, campaign_mode=campaign_mode, max_turns=max_turns)
     _report(result, "LIVE" if live else "RECACHE")
-    u = axis.usage()
-    print(f"  usage: model={MODEL} calls={u.get('calls', 0)} "
-          f"prompt_tok={u.get('prompt_tokens', 0)} completion_tok={u.get('completion_tokens', 0)} "
-          f"failures={u.get('failures', 0)} cache_hits={u.get('cache_hits', 0)} "
-          f"cache_misses={u.get('cache_misses', 0)}")
+    for name, pol in ([("axis", axis), ("cw", allied)] if both_staffs else [("axis", axis)]):
+        u = pol.usage()
+        print(f"  usage[{name}]: model={MODEL} calls={u.get('calls', 0)} "
+              f"prompt_tok={u.get('prompt_tokens', 0)} completion_tok={u.get('completion_tokens', 0)} "
+              f"failures={u.get('failures', 0)} cache_hits={u.get('cache_hits', 0)} "
+              f"cache_misses={u.get('cache_misses', 0)}")
     log_path.write_text(log_to_json(result.events))
     if journal is not None:
         journal.close()
@@ -179,14 +196,18 @@ def main() -> int:
                     help="cap the run at N Game-Turns (campaign smoke tests)")
     ap.add_argument("--fresh", action="store_true",
                     help="wipe any prior cache/journal and start a clean live run (default: resume)")
+    ap.add_argument("--both-staffs", action="store_true",
+                    help="run BOTH sides as live command staffs -- the CW staff mirror, not a scripted CW")
     args = ap.parse_args()
     if args.fresh and not args.live:
         ap.error("--fresh only applies to --live")
     if args.live:
-        return _run(live=True, campaign_mode=args.campaign, max_turns=args.turns, fresh=args.fresh)
+        return _run(live=True, campaign_mode=args.campaign, max_turns=args.turns, fresh=args.fresh,
+                    both_staffs=args.both_staffs)
     if args.recache:
-        return _run(live=False, campaign_mode=args.campaign, max_turns=args.turns)
-    return _mock(campaign_mode=args.campaign, max_turns=args.turns)
+        return _run(live=False, campaign_mode=args.campaign, max_turns=args.turns,
+                    both_staffs=args.both_staffs)
+    return _mock(campaign_mode=args.campaign, max_turns=args.turns, both_staffs=args.both_staffs)
 
 
 if __name__ == "__main__":
