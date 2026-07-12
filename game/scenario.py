@@ -710,11 +710,23 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
     if rear is not None:
         rng = random.Random(seed)
         for gt in range(1, max_turns + 1):
-            if (gt - 1) % calendar.GT_PER_MONTH != 0:  # one Axis convoy per month (its first Game-Turn)
+            if (gt - 1) % calendar.GT_PER_MONTH != 0:  # compute the month's cargo on its first Game-Turn
                 continue
-            cargo = _campaign_axis_cargo(gt, rng)
-            if cargo is not None:
-                convoys.append(Convoy(f"axis-conv-t{gt}", Side.AXIS, gt, "2", rear.id, cargo))  # 60.37 lane 2
+            month_cargo = _campaign_axis_cargo(gt, rng)
+            if month_cargo is None:
+                continue
+            # Quarter the month's 56.5 tonnage across its Game-Turns (56.2 "as they actually
+            # occurred"): the chart monthly total is preserved (remainder to the first week), but
+            # split so each weekly convoy lands UNDER the 55.14 port cap instead of one clipped
+            # surge -- and so Malta interdicts a convoy every turn, not once a month.
+            per = {c: v // calendar.GT_PER_MONTH for c, v in month_cargo.items()}
+            rem = {c: v - per[c] * calendar.GT_PER_MONTH for c, v in month_cargo.items()}
+            for i in range(calendar.GT_PER_MONTH):
+                wk = gt + i
+                if wk > max_turns:
+                    break
+                cargo = {c: per[c] + (rem[c] if i == 0 else 0) for c in month_cargo}
+                convoys.append(Convoy(f"axis-conv-t{wk}", Side.AXIS, wk, "2", rear.id, cargo))  # 60.37 lane 2
     return tuple(convoys)
 
 
@@ -742,21 +754,36 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
     return tuple(ports)
 
 
-_MALTA_BOMB_POINTS = 120   # placeholder Malta pressure on the Axis convoy (a calibration lever);
-                           # the 41.66 CRT skims a tens-of-percent per convoy arrival. Tune WITH the
-                           # forward haul + the Tobruk ferry -- the balance slice is measured whole.
+def _malta_bomb_points(gt: int) -> int:
+    """Historical Malta pressure on the Axis convoy, mapped to 41.66 CRT Bomb-Point columns (rule
+    44 is untranscribed -- a FLAGGED proxy, like the _TOBRUK_* weights): rising through 1941 to the
+    Force-K peak (Nov-Dec 1941), collapsing to zero under the Jan-Apr 1942 Luftwaffe blitz on the
+    island, then reviving as the RAF returns. A primary calibration lever for the Axis faucet."""
+    year, month = calendar.gt_to_month(gt)
+    if year <= 1940:
+        return 100
+    if year == 1941:
+        if month <= 6:
+            return 200
+        if month <= 10:
+            return 300
+        return 500                       # Nov-Dec 1941: Force K at its peak
+    if month <= 4:
+        return 0                          # Jan-Apr 1942: the Luftwaffe blitz suppresses Malta
+    if month <= 7:
+        return 150                        # May-Jul 1942
+    return 400                            # Aug-Dec 1942: the revival
 
 
-def _campaign_malta_interdiction(max_turns: int, bomb_points: int = _MALTA_BOMB_POINTS
-                                 ) -> tuple[InterdictionOrder, ...]:
-    """Rule 44 (Malta) abstracted as a static Commonwealth interdiction of the Axis Mediterranean
-    convoy lane (60.37 lane '2') -- the exact twin of the Tobruk-ferry interdiction. On each
-    game-turn the monthly convoy on lane '2' is under `bomb_points` of 41.66 CRT bombing, skimming
-    a tens-of-percent of its cargo before it lands at Benghazi (41.67), leaving a smaller
-    SUPPLY_ARRIVED beside a CONVOY_INTERDICTED marker. The counterweight that stops the Axis
-    forward haul from an uncontested rear pile-up -- Malta's strangling of the sea lane, the
-    historical reason the Panzerarmee was perpetually short of fuel."""
-    return tuple(InterdictionOrder("2", t, bomb_points) for t in range(1, max_turns + 1))
+def _campaign_malta_interdiction(max_turns: int) -> tuple[InterdictionOrder, ...]:
+    """Rule 44 (Malta) abstracted as a Commonwealth interdiction of the Axis Mediterranean convoy
+    lane (60.37 lane '2') -- the twin of the Tobruk-ferry interdiction. Each Game-Turn's convoy is
+    under _malta_bomb_points(gt) of 41.66 CRT bombing, skimming a tens-of-percent of its cargo
+    before it lands at Benghazi (41.67), leaving a smaller SUPPLY_ARRIVED beside a CONVOY_INTERDICTED
+    marker. The counterweight -- Malta's strangling of the sea lane that kept the Panzerarmee short
+    of fuel. Turns Malta is suppressed (bomb_points 0) seed no order and draw no dice."""
+    return tuple(InterdictionOrder("2", t, _malta_bomb_points(t))
+                 for t in range(1, max_turns + 1) if _malta_bomb_points(t) > 0)
 
 
 _TOBRUK = "C4807"    # the fortress (a 64.73 victory hex); the CW lifeline that lets a siege hold
@@ -835,6 +862,11 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     forts = _apply_major_cities(terrain)
     for lbl in _CW_BASE_HEXES.values():              # rule 57: the CW base stands on MAJOR_CITY hexes
         terrain[coords.to_axial(coords.parse(lbl))] = Terrain.MAJOR_CITY
+    # Benghazi is a city: stamp its terrain MAJOR_CITY (unlimited 54.12 dump capacity), so the Axis
+    # port-of-arrival dump no longer clips the convoy to a 5000-fuel Other-Terrain ceiling and the
+    # designed 55.3 port tonnage becomes the sole gate. Terrain only -- NOT added to _MAJOR_CITIES,
+    # so no 15.82 no-eviction fort is granted at the Axis rear.
+    terrain[coords.to_axial(coords.parse(_AXIS_PORT_HEX))] = Terrain.MAJOR_CITY
     tmap = replace(tmap, terrain=terrain, fortifications=forts)
 
     return GameState(
