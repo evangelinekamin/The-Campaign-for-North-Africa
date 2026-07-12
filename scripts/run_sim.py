@@ -100,14 +100,13 @@ def _line(e: Event) -> str:
     return ""
 
 
-def verify(result: RunResult, factory, *, check_determinism: bool = True) -> None:
+def verify(result: RunResult, factory, axis, allied, *, check_determinism: bool = True) -> None:
     replayed = fold(result.initial, result.events)
     assert replayed == result.final, "replay-equivalence FAILED: fold(log) != live state"
     print("\n--- self-checks ---")
     print(f"  replay-equivalence : OK  (fold over {len(result.events)} events == live state)")
     if check_determinism:
-        again = run(factory(seed=result.initial.seed),
-                    ScriptedPolicy(Side.AXIS), ScriptedPolicy(attacker=Side.AXIS))
+        again = run(factory(seed=result.initial.seed), axis, allied)
         assert determinism_signature(again.events) == determinism_signature(result.events), \
             "determinism FAILED: same seed produced a different event log"
         print(f"  determinism        : OK  (seed {result.initial.seed} reproduced byte-identical log)")
@@ -121,7 +120,7 @@ def summary(result: RunResult) -> None:
     rejects = sum(1 for e in result.events if e.kind == EventKind.ORDER_REJECTED)
     combats = sum(1 for e in result.events if e.kind == EventKind.COMBAT_RESOLVED)
     print("\n--- summary ---")
-    print(f"  winner   : {result.winner.value}  ({result.reason})")
+    print(f"  winner   : {result.winner.value if result.winner else 'draw'}  ({result.reason})")
     print(f"  turns    : {s.turn}/{s.max_turns}   events: {len(result.events)}   "
           f"combats: {combats}   rejections: {rejects}")
     print(f"  supply   : consumed {s.consumed['AMMO']}/{s.initial_supply['AMMO']} ammo, "
@@ -132,16 +131,22 @@ def summary(result: RunResult) -> None:
         print(f"    {u.id:<11} {state}")
 
 
-def _policies(model):
-    """Scripted doctrine by default; LLM Front Commanders if a model is given
-    (`llm:<model>`). Each side plays its own side (a contested objective is a real
-    race). LLM agents need OPENROUTER_API_KEY in the environment."""
-    if model is None:
-        return ScriptedPolicy(Side.AXIS), ScriptedPolicy(attacker=Side.AXIS)
-    from game.llm import OpenRouterClient
-    from game.llm_policy import LLMPolicy
-    client = OpenRouterClient(model)
-    return LLMPolicy(Side.AXIS, client), LLMPolicy(Side.ALLIED, client)
+def _policies(model, which):
+    """Scripted doctrine by default; LLM Front Commanders if a model is given (`llm:<model>`).
+    Each side plays its own side (a contested objective is a real race). On the full campaign the
+    scripted default is the CANONICAL campaign pairing -- the Axis multi-hop coastal haul
+    (CampaignAxisPolicy) vs the offensive-capable Commonwealth (CampaignCommonwealthPolicy) -- so
+    `run_sim campaign` exercises the real Benghazi-to-front supply economy, not the base single-
+    hop port shuttle. LLM agents need OPENROUTER_API_KEY in the environment."""
+    if model is not None:
+        from game.llm import OpenRouterClient
+        from game.llm_policy import LLMPolicy
+        client = OpenRouterClient(model)
+        return LLMPolicy(Side.AXIS, client), LLMPolicy(Side.ALLIED, client)
+    if which == "campaign":
+        from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy
+        return CampaignAxisPolicy(), CampaignCommonwealthPolicy()
+    return ScriptedPolicy(Side.AXIS), ScriptedPolicy(attacker=Side.AXIS)
 
 
 def main() -> int:
@@ -154,12 +159,12 @@ def main() -> int:
     # replay a specific game (seed + log -> identical state, brief §7).
     seed = next((int(a) for a in positional if a.isdigit()), random.randrange(1, 1_000_000))
 
-    axis, allied = _policies(model)
+    axis, allied = _policies(model, which)
     print(f"scenario: {which}   seed: {seed}   agents: "
           f"{'LLM (' + model + ')' if model else 'scripted'}")
     result = run(factory(seed=seed), axis=axis, allied=allied)
     narrate(result)
-    verify(result, factory, check_determinism=model is None)
+    verify(result, factory, axis, allied, check_determinism=model is None)
     summary(result)
     if model:
         print("\n  (LLM run: the event log is the exact record; fold replays it deterministically)")

@@ -106,6 +106,18 @@ def _default_allied(campaign_mode: bool):
     return ScriptedPolicy(attacker=Side.AXIS)
 
 
+def _default_axis(campaign_mode: bool):
+    """The scripted Axis opponent -- the twin of _default_allied for when the Commonwealth is the
+    live staff and the Axis is scripted: on the campaign the multi-hop coastal haul (60.33/60.34)
+    so the Panzerarmee actually fights east of Benghazi, on Rommel's Arrival the byte-locked base
+    attacker. This is the canonical scripted Axis of the campaign; keeping the two _default_*
+    helpers symmetric means either side can be the live staff against a faithful scripted foe."""
+    if campaign_mode:
+        from game.campaign_policy import CampaignAxisPolicy
+        return CampaignAxisPolicy()
+    return ScriptedPolicy(attacker=Side.AXIS)
+
+
 def _staff(side: Side, cache: dict, journal: "Journal | None", *, live: bool) -> StaffPolicy:
     """One live command staff for `side`: a StaffPolicy whose seats share the durable cache/journal
     (keyed by sha256(model+prompt), so the two staffs never collide) -- the CW mirror is a second

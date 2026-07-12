@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from game import coords
 from game.calendar import CAMPAIGN_SEASON_OFFSET, FINAL_GT
+from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy
 from game.campaign_victory import CampaignVictory
 from game.engine import determinism_signature, run
 from game.events import Side
@@ -81,8 +82,7 @@ def test_campaign_commonwealth_can_attack():
     # deliberately tight CW forward supply lets that advance REACH Benghazi under crude scripted play
     # is a balance question, not an invariant: the greedy script culminates at once, as both sides do.
     from dataclasses import replace
-    from game.campaign_policy import CampaignCommonwealthPolicy
-    board = run(campaign(seed=1941, max_turns=13), ScriptedPolicy(Side.AXIS),
+    board = run(campaign(seed=1941, max_turns=13), CampaignAxisPolicy(),
                 CampaignCommonwealthPolicy()).final
     pol = CampaignCommonwealthPolicy()
     attacker = ScriptedPolicy(attacker=Side.ALLIED)
@@ -101,10 +101,9 @@ def test_campaign_defensive_supply_integrity():
     #  bug 3 -- CW field dumps fall back EAST with the front, never leapfrogging WEST toward the
     #           advancing Axis (the offensive-CW objective change had reversed this on defense).
     from game import coords
-    from game.campaign_policy import CampaignCommonwealthPolicy
     from game.hexmap import distance
     beng = coords.to_axial(coords.parse("A4827"))
-    res = run(campaign(seed=1941, max_turns=12), ScriptedPolicy(Side.AXIS), CampaignCommonwealthPolicy())
+    res = run(campaign(seed=1941, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     seeded = {s.id: s.hex for s in res.initial.supplies if s.base}
     assert seeded and {s.id: s.hex for s in res.final.supplies if s.base} == seeded   # bases pinned
     for su in res.final.supplies:
@@ -125,10 +124,9 @@ def test_campaign_malta_throttles_the_axis_convoy():
     # C4 counterweight: rule 44 (Malta) abstracted -- the Axis Mediterranean convoy (60.37 lane "2")
     # is under a Commonwealth interdiction schedule, so it no longer lands its full tonnage
     # uncontested; each monthly arrival is skimmed on the 41.66 CRT.
-    from game.campaign_policy import CampaignCommonwealthPolicy
     st = campaign(seed=1941, max_turns=24)
     assert any(o.lane == "2" for o in st.interdictions)          # Malta is seeded on the Axis lane
-    res = run(campaign(seed=1941, max_turns=24), ScriptedPolicy(Side.AXIS), CampaignCommonwealthPolicy())
+    res = run(campaign(seed=1941, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     assert [e for e in res.events if e.kind.name == "CONVOY_INTERDICTED"]   # the convoy is skimmed
 
 
@@ -137,9 +135,10 @@ def test_max_turns_truncates():
 
 
 def test_campaign_is_deterministic():
-    # Same seed -> byte-identical event stream (a short slice keeps the test fast).
-    a = run(campaign(seed=7, max_turns=8), axis=ScriptedPolicy(), allied=ScriptedPolicy())
-    b = run(campaign(seed=7, max_turns=8), axis=ScriptedPolicy(), allied=ScriptedPolicy())
+    # Same seed -> byte-identical event stream, on the canonical scripted pairing (Axis haul +
+    # offensive-CW). A short slice keeps the test fast.
+    a = run(campaign(seed=7, max_turns=8), axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
+    b = run(campaign(seed=7, max_turns=8), axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
     assert determinism_signature(a.events) == determinism_signature(b.events)
 
 
@@ -147,7 +146,7 @@ def test_runs_full_span_to_campaign_victory():
     # The headline: the engine runs the entire GT1..111 campaign and terminates through
     # rule 64.7 (a graded 64.76 result or an auto-win/annihilation), not the built-in
     # Race-for-Tobruk logic.
-    res = run(campaign(seed=1941), axis=ScriptedPolicy(), allied=ScriptedPolicy())
+    res = run(campaign(seed=1941), axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
     assert res.final.turn <= FINAL_GT                      # by December 1942 (earlier if 64.7 auto-win)
     assert res.winner in (Side.AXIS, Side.ALLIED, None)    # None = a 64.76 draw
     assert "64.7" in res.reason

@@ -605,11 +605,35 @@ def _campaign_cw_base() -> list[SupplyUnit]:
 
 def _campaign_axis_base() -> SupplyUnit:
     """The Axis port-of-arrival dump at Benghazi (A4827), where the Mediterranean convoys land
-    (rule 60.34). Seeded empty -- the convoys fill it and, until the truck haul (C3-2), its
-    tonnage cannot reach the front, so the Axis fights on its start-line reservoir and
-    culminates as it advances (the historical Tripoli/Benghazi-to-front bottleneck)."""
+    (rule 60.34). Seeded with its 60.34 start-line stock -- the reservoir the coastal truck
+    relay (game.campaign_policy.campaign_truck_orders) lifts forward leg by leg along the
+    staging dumps, and the monthly convoys top up. NOT a rule-57 base (base=False): a forward
+    field harbour dump evaporates like any other (49.3)."""
     return SupplyUnit("AX-Benghazi", Side.AXIS, coords.to_axial(coords.parse(_AXIS_PORT_HEX)),
-                      ammo=0, fuel=0, stores=0, water=0)
+                      ammo=100, fuel=250, stores=100, water=0)
+
+
+def _campaign_staging_dumps() -> list[SupplyUnit]:
+    """The historical Axis coastal staging dumps (rule 60.34), Axis-held at Game-Turn 1 -- the
+    intermediate depots that let the lean Benghazi truck pool relay its landed tonnage forward
+    LEG BY LEG (each hop <= one 30-CP truck move, rule 53.22) instead of in one impossible ~75-
+    hex jump to the front. Two are pre-stocked from the 60.34 chart (Tobruk, Bardia); the rest
+    are empty waypoints spaced along the Via Balbia -- Benghazi -> W1 -> W2 -> Derna -> W3 ->
+    Tobruk -> Bardia -- each a forward dump campaign_truck_orders fills from the one behind it.
+
+    base=False deliberately: a field dump evaporates (49.3) and is NOT a rule-57 strategic base
+    -- exempting it would both mislabel the chain and freeze its stock. Labelled hexes go through
+    coords; the four probed waypoints are passed as raw axial (no rulebook label)."""
+    def ax(lbl: str):
+        return coords.to_axial(coords.parse(lbl))
+    return [
+        SupplyUnit("AX-Stage-Tobruk", Side.AXIS, ax("C4807"), ammo=200, fuel=2000, stores=500, water=0),
+        SupplyUnit("AX-Stage-Bardia", Side.AXIS, ax("C4321"), ammo=100, fuel=1000, stores=200, water=0),
+        SupplyUnit("AX-Stage-W1", Side.AXIS, (5, 36), ammo=0, fuel=0, stores=0, water=0),
+        SupplyUnit("AX-Stage-W2", Side.AXIS, (4, 45), ammo=0, fuel=0, stores=0, water=0),
+        SupplyUnit("AX-Stage-Derna", Side.AXIS, ax("B5925"), ammo=0, fuel=0, stores=0, water=0),
+        SupplyUnit("AX-Stage-W3", Side.AXIS, (15, 63), ammo=0, fuel=0, stores=0, water=0),
+    ]
 
 
 def _campaign_axis_cargo(gt: int, rng: random.Random) -> dict | None:
@@ -751,9 +775,11 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     # 8th Army builds up from Cairo, across the whole GT1..111 span.
     units, oob_supplies = oob.build(oob_file="oob_italian.json", extra_file="oob_campaign_extra.json",
                                     sections="ABCDE", reinforcements_file="reinforcements_campaign.json")
-    # C3: the supply economy -- the Commonwealth's inexhaustible Suez base (Cairo/Alexandria)
-    # and the Axis port-of-arrival dump (Benghazi) the Mediterranean convoys land at.
-    supplies = tuple(oob_supplies) + tuple(_campaign_cw_base()) + (_campaign_axis_base(),)
+    # C3: the supply economy -- the Commonwealth's inexhaustible Suez base (Cairo/Alexandria),
+    # the Axis port-of-arrival dump (Benghazi) the Mediterranean convoys land at, and the
+    # historical coastal staging dumps (60.34) the campaign truck relay hauls forward along.
+    supplies = (tuple(oob_supplies) + tuple(_campaign_cw_base())
+                + (_campaign_axis_base(),) + tuple(_campaign_staging_dumps()))
 
     # A hex a piece stands on is land (coastal ports colour-sample as sea); add + connect,
     # exactly as the corridor scenarios do.
