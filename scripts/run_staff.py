@@ -161,6 +161,19 @@ def _report(result, tag: str) -> None:
           f"stack(s) the opening staff cannot")
     for ln in story:
         print(f"    [{ln.beat}] {ln.text}")
+    # Campaign balance (rule 64.73): the VP tally + who holds which cities SUPPLIED -- the balance
+    # signal, printed straight from the final board so a live game reports it without a recache.
+    from game.campaign_victory import CampaignVictory
+    st = result.final
+    if isinstance(st.victory, CampaignVictory):
+        cv = st.victory
+        avp = sum(a for ax, a, c, n in cv.cities if cv._occupier(st, ax) == Side.AXIS)
+        cvp = sum(c for ax, a, c, n in cv.cities if cv._occupier(st, ax) == Side.ALLIED)
+        axs = sum(1 for u in st.living(Side.AXIS) if u.is_combat and u.strength >= 1 and cv._supplied(st, u))
+        cws = sum(1 for u in st.living(Side.ALLIED) if u.is_combat and u.strength >= 1 and cv._supplied(st, u))
+        print(f"  BALANCE (64.73): Axis {avp} - CW {cvp} VP | supplied units: Axis {axs}, CW {cws}")
+        print(f"    Axis holds supplied: {[n for ax, a, c, n in cv.cities if cv._occupier(st, ax) == Side.AXIS]}")
+        print(f"    CW holds supplied:   {[n for ax, a, c, n in cv.cities if cv._occupier(st, ax) == Side.ALLIED]}")
 
 
 def _mock(*, campaign_mode: bool = False, max_turns: "int | None" = None,
@@ -224,7 +237,12 @@ def main() -> int:
                     help="wipe any prior cache/journal and start a clean live run (default: resume)")
     ap.add_argument("--both-staffs", action="store_true",
                     help="run BOTH sides as live command staffs -- the CW staff mirror, not a scripted CW")
+    ap.add_argument("--model", default=None,
+                    help="override the model id (e.g. deepseek/deepseek-v4-flash); default the dev seat")
     args = ap.parse_args()
+    if args.model:
+        global MODEL
+        MODEL = args.model
     if args.fresh and not args.live:
         ap.error("--fresh only applies to --live")
     if args.live:
