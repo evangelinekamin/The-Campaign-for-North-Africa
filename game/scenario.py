@@ -709,6 +709,23 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
     return tuple(ports)
 
 
+_MALTA_BOMB_POINTS = 120   # placeholder Malta pressure on the Axis convoy (a calibration lever);
+                           # the 41.66 CRT skims a tens-of-percent per convoy arrival. Tune WITH the
+                           # forward haul + the Tobruk ferry -- the balance slice is measured whole.
+
+
+def _campaign_malta_interdiction(max_turns: int, bomb_points: int = _MALTA_BOMB_POINTS
+                                 ) -> tuple[InterdictionOrder, ...]:
+    """Rule 44 (Malta) abstracted as a static Commonwealth interdiction of the Axis Mediterranean
+    convoy lane (60.37 lane '2') -- the exact twin of the Tobruk-ferry interdiction. On each
+    game-turn the monthly convoy on lane '2' is under `bomb_points` of 41.66 CRT bombing, skimming
+    a tens-of-percent of its cargo before it lands at Benghazi (41.67), leaving a smaller
+    SUPPLY_ARRIVED beside a CONVOY_INTERDICTED marker. The counterweight that stops the Axis
+    forward haul from an uncontested rear pile-up -- Malta's strangling of the sea lane, the
+    historical reason the Panzerarmee was perpetually short of fuel."""
+    return tuple(InterdictionOrder("2", t, bomb_points) for t in range(1, max_turns + 1))
+
+
 def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     """The full Campaign for North Africa, walking skeleton (rule 64). One board-global
     A-E map, Game-Turn 1 (September 1940, rule 64.2) through Game-Turn 111 -- the whole
@@ -762,4 +779,5 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         convoys=_campaign_convoys(supplies, target, max_turns, seed),   # C3: Axis Med + CW rail (56.4/60.7)
         ports=_campaign_ports(supplies, target),                        # C3: PORT-Benghazi + PORT-Matruh
         trucks=_campaign_axis_trucks(supplies, target),                 # C3-2: the Benghazi->front haul (53/60.33)
+        interdictions=_campaign_malta_interdiction(max_turns),          # C4: Malta throttles the Axis Med convoy (rule 44)
     )

@@ -121,6 +121,17 @@ def test_campaign_railhead_port_uses_the_chart_tonnage():
     assert matruh.cap_tons == 250
 
 
+def test_campaign_malta_throttles_the_axis_convoy():
+    # C4 counterweight: rule 44 (Malta) abstracted -- the Axis Mediterranean convoy (60.37 lane "2")
+    # is under a Commonwealth interdiction schedule, so it no longer lands its full tonnage
+    # uncontested; each monthly arrival is skimmed on the 41.66 CRT.
+    from game.campaign_policy import CampaignCommonwealthPolicy
+    st = campaign(seed=1941, max_turns=24)
+    assert any(o.lane == "2" for o in st.interdictions)          # Malta is seeded on the Axis lane
+    res = run(campaign(seed=1941, max_turns=24), ScriptedPolicy(Side.AXIS), CampaignCommonwealthPolicy())
+    assert [e for e in res.events if e.kind.name == "CONVOY_INTERDICTED"]   # the convoy is skimmed
+
+
 def test_max_turns_truncates():
     assert campaign(max_turns=8).max_turns == 8
 
