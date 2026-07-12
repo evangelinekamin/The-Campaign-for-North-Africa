@@ -25,7 +25,7 @@ import json
 import os
 from typing import TYPE_CHECKING
 
-from . import coords
+from . import coords, supply
 from .events import Side
 
 if TYPE_CHECKING:                       # avoid a runtime import cycle (engine owns _Run)
@@ -58,13 +58,24 @@ class CampaignVictory:
                           data["auto_win"]["alexandria"] + data["auto_win"]["cairo"]]
 
     def _occupier(self, state, ax) -> "Side | None":
-        """The side holding a hex for victory purposes: a combat unit of at least 1 TOE
-        Strength there (rule 64.73). Non-combat units (truck convoys, bare HQs) and
-        supply dumps do not occupy. None if the hex is empty."""
+        """The side holding a hex for victory purposes: a SUPPLIED combat unit of at least 1
+        TOE Strength there (rule 64.73). Non-combat units (truck convoys, bare HQs) and supply
+        dumps do not occupy; nor does a unit that has OUTRUN its supply -- 64.73's occupation
+        quality-test is that a holder can trace Fuel and Ammunition, so a stranded spearhead on
+        a city scores nothing. This is what makes the campaign a logistical contest and not a
+        foot-race: the Axis must keep its advance supplied to bank the ground it takes."""
         for u in state.units_at(ax):
-            if u.is_combat and u.strength >= 1:
+            if u.is_combat and u.strength >= 1 and self._supplied(state, u):
                 return u.side
         return None
+
+    @staticmethod
+    def _supplied(state, u) -> bool:
+        """Rule 64.73 quality-test: the unit can trace both Fuel (its per-model rate; foot
+        units need none) and Ammunition to a reachable dump (game.supply.plan_draw over the
+        cpa/2 trace, 32.16). A unit that cannot has outrun its logistics."""
+        return (supply.plan_draw(state, u, supply.FUEL, supply.fuel_rate(u)) is not None
+                and supply.plan_draw(state, u, supply.AMMO, supply.ammo_cost(u, phasing=True)) is not None)
 
     def check(self, r: "_Run") -> tuple["Side | None", str]:
         s = r.state

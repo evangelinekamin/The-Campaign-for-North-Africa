@@ -13,8 +13,8 @@ from game import coords
 from game.campaign_victory import CampaignVictory, grade
 from game.events import Phase, Side
 from game.movement import TerrainMap
-from game.state import GameState, StepRecord, Unit, VP
-from game.terrain import Mobility
+from game.state import GameState, StepRecord, SupplyUnit, Unit, VP
+from game.terrain import Mobility, Terrain
 
 ALEX = ("E3613", "E3714")
 CAIRO = ("E1730", "E1829", "E1830", "E1930", "E1931")
@@ -37,10 +37,17 @@ def _unit(uid: str, side: Side, label: str, *, combat: bool = True, strength: in
                 is_combat=combat)
 
 
-def _state(units) -> GameState:
+def _state(units, *, supplied: bool = True) -> GameState:
+    # C3-3: a holder must trace supply (rule 64.73). By default co-locate a dump with each
+    # combat unit so the tally / auto-win tests exercise OCCUPATION; supplied=False strands the
+    # units (no dump) to test the supply gate itself. Terrain carries the unit hexes so the
+    # cpa/2 trace (game.supply.reachable_supplies) can reach a co-located dump.
+    terrain = {u.hex: Terrain.CLEAR for u in units}
+    supplies = (tuple(SupplyUnit(f"D-{u.id}", u.side, u.hex, ammo=999, fuel=999)
+                      for u in units if u.is_combat) if supplied else ())
     return GameState(turn=111, max_turns=111, phase=Phase.RECORD, active_side=Side.SYSTEM,
-                     seed=1, weather="normal", vp=VP(), terrain=TerrainMap(terrain={}),
-                     control={}, units=tuple(units), target_hex=(0, 0), supplies=(),
+                     seed=1, weather="normal", vp=VP(), terrain=TerrainMap(terrain=terrain),
+                     control={}, units=tuple(units), target_hex=(0, 0), supplies=supplies,
                      consumed={}, initial_supply={})
 
 
@@ -85,6 +92,14 @@ def test_noncombat_and_empty_do_not_occupy():
     # A non-combat unit on Tobruk scores nothing; nobody else holds a city -> draw.
     winner, _ = cv.decide(_R(_state([_unit("A1", Side.AXIS, "C4807", combat=False)])))
     assert winner is None
+
+
+def test_stranded_unit_does_not_occupy():
+    # C3-3 (rule 64.73 quality-test): a combat unit on a city that cannot trace supply has
+    # outrun its logistics and scores nothing -- the same unit, supplied, holds Tobruk.
+    cv = CampaignVictory()
+    assert cv.decide(_R(_state([_unit("A1", Side.AXIS, "C4807")], supplied=False)))[0] is None
+    assert cv.decide(_R(_state([_unit("A1", Side.AXIS, "C4807")], supplied=True)))[0] is Side.AXIS
 
 
 # --- 64.71 auto-win + annihilation --------------------------------------------
