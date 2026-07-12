@@ -101,3 +101,21 @@ def test_cross_lane_filter_over_a_real_validate_batch_collision():
     assert over                                           # the pile over-stacks
     kept = cross_lane_conflicts(conflicts, idl)
     assert any(c.hex == target for c in kept)             # surfaced as cross-lane
+
+
+def test_campaign_mobile_formations_route_to_the_mobile_corps():
+    # Staff-on-campaign convergence: the full-campaign OOB uses different group strings than
+    # Rommel's Arrival ("GE 5th Light Division", "IT 132 Ariete Division", "IT The Libyan Tank
+    # Command"), so lane_of matches the mobile MARKERS -- keeping the panzer/light divisions,
+    # the Italian armour and the Libyan Tank Command in the Mobile Corps, not the Infantry.
+    from game.scenario import campaign
+    st = campaign(seed=1941)   # over all units: the panzers arrive as reinforcements (GT18+)
+    axis = [u for u in st.units if u.side == Side.AXIS]
+    mob = {u.formation for u in axis if lane_of(u) == Lane.MOBILE}
+    assert any("Panzer" in f for f in mob)                 # 15 Panzer Division (reinforcement)
+    assert any("Light Division" in f for f in mob)         # 5th / 90th / 164th Light
+    assert any("Ariete" in f for f in mob)                 # Italian armour
+    assert any("Tank Command" in f for f in mob)           # the Libyan Tank Command (on-map GT1)
+    inf = {u.formation for u in axis if lane_of(u) == Lane.INFANTRY}
+    assert any("Catanzaro" in f for f in inf)              # Italian foot -> Infantry Corps
+    assert not any("Panzer" in f or "Tank Command" in f for f in inf)

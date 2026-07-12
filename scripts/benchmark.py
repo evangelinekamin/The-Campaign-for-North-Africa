@@ -151,7 +151,7 @@ def game_metrics(result) -> dict:
     supply_rejects = sum(v for k, v in reject_reasons.items()
                          if any(w in k for w in ("supply", "fuel", "ammo")))
     g = {
-        "winner": result.winner.value,
+        "winner": result.winner.value if result.winner else "draw",
         "advance_pct": advance,
         "turns": result.final.turn,
         "barrages": count(EventKind.BARRAGE_RESOLVED),

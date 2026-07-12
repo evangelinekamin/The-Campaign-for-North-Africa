@@ -35,7 +35,7 @@ from game.engine import run                                             # noqa: 
 from game.events import Side, log_to_json                               # noqa: E402
 from game.llm import CachingClient, MockClient, OpenRouterClient        # noqa: E402
 from game.policy import ScriptedPolicy                                  # noqa: E402
-from game.scenario import rommels_arrival                              # noqa: E402
+from game.scenario import campaign, rommels_arrival                    # noqa: E402
 from game.staff_events import staff_log                                 # noqa: E402
 from game.staff_policy import LLM_SEATS, StaffPolicy                    # noqa: E402
 
@@ -85,15 +85,16 @@ def _seat_clients(cache: dict, *, live: bool) -> dict:
     return {seat: CachingClient(inner(), cache) for seat in LLM_SEATS}
 
 
-def _play(axis) -> object:
-    return run(rommels_arrival(seed=SEED), axis=axis,
-               allied=ScriptedPolicy(attacker=Side.AXIS))
+def _play(axis, *, campaign_mode: bool = False, max_turns: "int | None" = None) -> object:
+    scen = (campaign(seed=SEED, max_turns=max_turns) if campaign_mode
+            else rommels_arrival(seed=SEED))
+    return run(scen, axis=axis, allied=ScriptedPolicy(attacker=Side.AXIS))
 
 
 def _report(result, tag: str) -> None:
     g = game_metrics(result)
     diary = staff_log(result.events)
-    print(f"\n[{tag}] winner={result.winner.value} advance={g['advance_pct']}% "
+    print(f"\n[{tag}] winner={result.winner.value if result.winner else 'draw'} advance={g['advance_pct']}% "
           f"turns={g['turns']} axis_moves={g['moves']} axis_assaults={g['axis_assaults']} "
           f"rejects={g['rejections']} reject_rate={g['reject_rate_game']}%")
     print(f"  staff_log: {len(diary)} STAFF_* events "
@@ -110,13 +111,13 @@ def _report(result, tag: str) -> None:
         print(f"    [{ln.beat}] {ln.text}")
 
 
-def _mock() -> int:
+def _mock(*, campaign_mode: bool = False, max_turns: "int | None" = None) -> int:
     axis = StaffPolicy(MockClient(_mock_staff), side=Side.AXIS)
-    _report(_play(axis), "MOCK")
+    _report(_play(axis, campaign_mode=campaign_mode, max_turns=max_turns), "MOCK")
     return 0
 
 
-def _run(*, live: bool) -> int:
+def _run(*, live: bool, campaign_mode: bool = False, max_turns: "int | None" = None) -> int:
     if live:
         _load_key()
     OUT.mkdir(exist_ok=True)
@@ -124,7 +125,7 @@ def _run(*, live: bool) -> int:
     seats = _seat_clients(cache, live=live)
     axis = StaffPolicy(MockClient(_mock_staff), side=Side.AXIS,
                        seat_clients=seats, max_workers=len(LLM_SEATS))
-    result = _play(axis)
+    result = _play(axis, campaign_mode=campaign_mode, max_turns=max_turns)
     _report(result, "LIVE" if live else "RECACHE")
     u = axis.usage()
     print(f"  usage: model={MODEL} calls={u.get('calls', 0)} "
@@ -143,12 +144,16 @@ def main() -> int:
     ap.add_argument("--live", action="store_true", help="one live smoke game on the dev model")
     ap.add_argument("--recache", action="store_true",
                     help="re-run against the populated cache with the model disconnected")
+    ap.add_argument("--campaign", action="store_true",
+                    help="run the full-campaign scenario (default: Rommel's Arrival)")
+    ap.add_argument("--turns", type=int, default=None,
+                    help="cap the run at N Game-Turns (campaign smoke tests)")
     args = ap.parse_args()
     if args.live:
-        return _run(live=True)
+        return _run(live=True, campaign_mode=args.campaign, max_turns=args.turns)
     if args.recache:
-        return _run(live=False)
-    return _mock()
+        return _run(live=False, campaign_mode=args.campaign, max_turns=args.turns)
+    return _mock(campaign_mode=args.campaign, max_turns=args.turns)
 
 
 if __name__ == "__main__":

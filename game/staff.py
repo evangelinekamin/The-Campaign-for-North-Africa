@@ -33,22 +33,27 @@ class Lane(enum.Enum):
     QM = "QM"
 
 
-# The armoured/mobile formations -- verbatim rommels_arrival OOB group strings.
-# IT Ariete is placed with the panzers (ADOPTED DECISION: Ariete -> GOC Mobile Corps).
+# The armoured/mobile formations. rommels_arrival uses these exact group strings; the full
+# campaign OOB uses its own (e.g. "GE 5th Light Division", "IT 132 Ariete Division", "IT The
+# Libyan Tank Command"), so lane_of also matches the mobile MARKERS below. IT Ariete/Littorio
+# and the Libyan Tank Command go to the Mobile Corps with the panzers (ADOPTED DECISION).
 MOBILE_FORMATIONS = frozenset({
     "GE 5th Light Panzer Division",
     "GE 15th Panzer Division",
     "IT Ariete Armoured Division",
 })
+_MOBILE_MARKERS = ("Panzer", "Light Division", "Ariete", "Littorio", "Armoured", "Tank Command")
 
 
 def lane_of(unit: Unit) -> Lane:
-    """The staff lane that owns `unit`, keyed on its formation (ground truth).
-    First-line trucks are the Quartermaster's carriers; the mobile formations are
-    the Mobile Corps; everything else is Infantry Corps."""
+    """The staff lane that owns `unit`, keyed on its formation (ground truth). First-line
+    trucks are the Quartermaster's carriers; the mobile formations (the panzer and light
+    divisions, the Italian armoured divisions and the Libyan Tank Command) are the Mobile
+    Corps; everything else is Infantry Corps."""
     if unit.is_first_line_truck:
         return Lane.QM
-    if unit.formation in MOBILE_FORMATIONS:
+    f = unit.formation
+    if f in MOBILE_FORMATIONS or any(m in f for m in _MOBILE_MARKERS):
         return Lane.MOBILE
     return Lane.INFANTRY
 
