@@ -5,9 +5,15 @@ the SAME StaffPolicy the MockClient proves, and writes the event log plus a
 sha256(model+prompt)->text sidecar cache BESIDE it, so a re-simulation reproduces
 byte-identical STAFF_* + orders with the model disconnected.
 
-    python3 -m scripts.run_staff --mock       # deterministic dry-run, zero tokens
-    python3 -m scripts.run_staff --live        # ONE live smoke game (reads the key file)
-    python3 -m scripts.run_staff --recache     # re-run against the populated cache, model OFF
+    python3 -m scripts.run_staff --mock                # deterministic dry-run, zero tokens
+    python3 -m scripts.run_staff --live --campaign     # the live campaign (reads the key file)
+    python3 -m scripts.run_staff --live --fresh        # ignore any prior cache, start clean
+    python3 -m scripts.run_staff --recache             # re-run against the populated cache, model OFF
+
+DURABILITY (a multi-hour campaign must survive a kill): every paid completion is fsync'd to a
+Journal sidecar the instant it returns, so --live RESUMES BY DEFAULT -- a SIGKILL loses at most
+the one call in flight, and re-running replays every finished turn FREE (model off for the cached
+prefix, live only past the crash point). A clean finish compacts the journal away.
 
 Two determinism regimes are demonstrated:
   * RECORDED-LOG REPLAY = fold(initial, events) -- pure, no client (checked every run).
@@ -24,6 +30,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -33,7 +40,8 @@ from game import narrator                                               # noqa: 
 from game.apply import fold                                              # noqa: E402
 from game.engine import run                                             # noqa: E402
 from game.events import Side, log_to_json                               # noqa: E402
-from game.llm import CachingClient, MockClient, OpenRouterClient        # noqa: E402
+from game.llm import (CachingClient, Journal, MockClient,               # noqa: E402
+                      OpenRouterClient, compact, load_cache)
 from game.policy import ScriptedPolicy                                  # noqa: E402
 from game.scenario import campaign, rommels_arrival                    # noqa: E402
 from game.staff_events import staff_log                                 # noqa: E402
@@ -76,14 +84,18 @@ class _Disconnected:
         return {}
 
 
-def _seat_clients(cache: dict, *, live: bool) -> dict:
-    """One client per LLM seat, each wrapped in the SHARED sidecar cache. Distinct inner
-    clients so parallel seats never race on usage. live=False plugs a disconnected inner
-    so a fully-cached re-run needs no network and no key."""
-    def inner():
+def _seat_clients(cache: dict, journal: "Journal | None", *, live: bool,
+                  inner_factory: "Callable[[], object] | None" = None) -> dict:
+    """One client per LLM seat, each wrapped in the SHARED sidecar cache AND durability journal:
+    distinct inner clients so parallel seats never race on usage, but the SAME cache dict + journal,
+    so every seat's paid call is fsync'd to the one journal. live=False plugs a disconnected inner
+    so a fully-cached re-run needs no network and no key; inner_factory overrides the inner (a test
+    injects a mock or a crashing double)."""
+    def default_inner():
         return (OpenRouterClient(MODEL, temperature=0.0, timeout=45, retries=1,
                                  provider=FAST_PROVIDER) if live else _Disconnected())
-    return {seat: CachingClient(inner(), cache) for seat in LLM_SEATS}
+    make = inner_factory or default_inner
+    return {seat: CachingClient(make(), cache, journal=journal) for seat in LLM_SEATS}
 
 
 def _play(axis, *, campaign_mode: bool = False, max_turns: "int | None" = None) -> object:
@@ -120,14 +132,24 @@ def _mock(*, campaign_mode: bool = False, max_turns: "int | None" = None) -> int
     return 0
 
 
-def _run(*, live: bool, campaign_mode: bool = False, max_turns: "int | None" = None) -> int:
+def _run(*, live: bool, campaign_mode: bool = False, max_turns: "int | None" = None,
+         fresh: bool = False) -> int:
     if live:
         _load_key()
     OUT.mkdir(exist_ok=True)
     log_path = OUT / ("staff_campaign.log.json" if campaign_mode else LOG_PATH.name)
     cache_path = OUT / ("staff_campaign.cache.json" if campaign_mode else CACHE_PATH.name)
-    cache = json.loads(cache_path.read_text()) if (not live and cache_path.exists()) else {}
-    seats = _seat_clients(cache, live=live)
+    journal_path = Path(str(cache_path) + ".jsonl")
+    # Durability + resume-by-default: load_cache recovers the compacted cache PLUS any journal a
+    # prior kill left mid-run (folded on top, a torn final line tolerated), so a crashed live run
+    # re-simulates with every finished turn replaying FREE -- only calls past the crash point reach
+    # the model. --fresh first wipes both files for a deliberately clean run.
+    if fresh:
+        cache_path.unlink(missing_ok=True)
+        journal_path.unlink(missing_ok=True)
+    cache = load_cache(cache_path)
+    journal = Journal(str(journal_path)) if live else None
+    seats = _seat_clients(cache, journal, live=live)
     axis = StaffPolicy(MockClient(_mock_staff), side=Side.AXIS,
                        seat_clients=seats, max_workers=len(LLM_SEATS))
     result = _play(axis, campaign_mode=campaign_mode, max_turns=max_turns)
@@ -138,7 +160,9 @@ def _run(*, live: bool, campaign_mode: bool = False, max_turns: "int | None" = N
           f"failures={u.get('failures', 0)} cache_hits={u.get('cache_hits', 0)} "
           f"cache_misses={u.get('cache_misses', 0)}")
     log_path.write_text(log_to_json(result.events))
-    cache_path.write_text(json.dumps(cache))
+    if journal is not None:
+        journal.close()
+    compact(cache_path, cache)                          # clean finish: fold the journal in, drop it
     print(f"  wrote {log_path.name} + {cache_path.name} ({len(cache)} cached prompts) under {OUT}/")
     return 0
 
@@ -153,9 +177,13 @@ def main() -> int:
                     help="run the full-campaign scenario (default: Rommel's Arrival)")
     ap.add_argument("--turns", type=int, default=None,
                     help="cap the run at N Game-Turns (campaign smoke tests)")
+    ap.add_argument("--fresh", action="store_true",
+                    help="wipe any prior cache/journal and start a clean live run (default: resume)")
     args = ap.parse_args()
+    if args.fresh and not args.live:
+        ap.error("--fresh only applies to --live")
     if args.live:
-        return _run(live=True, campaign_mode=args.campaign, max_turns=args.turns)
+        return _run(live=True, campaign_mode=args.campaign, max_turns=args.turns, fresh=args.fresh)
     if args.recache:
         return _run(live=False, campaign_mode=args.campaign, max_turns=args.turns)
     return _mock(campaign_mode=args.campaign, max_turns=args.turns)
