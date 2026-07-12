@@ -44,7 +44,7 @@ from game.scenario import siege_of_tobruk                              # noqa: E
 from game.staff_policy import LLM_SEATS, StaffPolicy                    # noqa: E402
 
 KEY_FILE = "/mnt/c/Users/evang/OneDrive/Desktop/as.txt"
-MODEL = "inception/mercury-2"   # dev seat: 337 tok/s, 0% model-reject, ~3min/game
+MODEL = "openai/gpt-oss-120b"   # dev seat per the generalship leaderboard (~$0.026/game, 3.6% illegal, N=5)
 BASE_SEED = 4200
 OUT = Path(__file__).resolve().parent.parent / "out"
 

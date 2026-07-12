@@ -1,6 +1,6 @@
 """Launcher for the live command-staff (design Steps 6-7). This script is NOT part of
 the immutable core: it loads the OpenRouter key into the environment ONCE, wires a real
-OpenRouterClient per staff seat (inception/mercury-2, throughput-routed) behind
+OpenRouterClient per staff seat (openai/gpt-oss-120b, throughput-routed) behind
 the SAME StaffPolicy the MockClient proves, and writes the event log plus a
 sha256(model+prompt)->text sidecar cache BESIDE it, so a re-simulation reproduces
 byte-identical STAFF_* + orders with the model disconnected.
@@ -40,7 +40,8 @@ from game.staff_events import staff_log                                 # noqa: 
 from game.staff_policy import LLM_SEATS, StaffPolicy                    # noqa: E402
 
 KEY_FILE = "/mnt/c/Users/evang/OneDrive/Desktop/as.txt"
-MODEL = "inception/mercury-2"   # dev seat: shootout winner -- 337 tok/s, 0% model-reject, ~3min/game
+MODEL = "openai/gpt-oss-120b"   # dev seat per the generalship leaderboard: command #9, ~$0.026/game,
+                                # 507 tok/s, 3.6% illegal, N=5 (mercury-2 is the faster/pricier alternate)
 SEED = 4200
 OUT = Path(__file__).resolve().parent.parent / "out"
 LOG_PATH = OUT / "staff_smoke.log.json"
@@ -121,7 +122,9 @@ def _run(*, live: bool, campaign_mode: bool = False, max_turns: "int | None" = N
     if live:
         _load_key()
     OUT.mkdir(exist_ok=True)
-    cache = json.loads(CACHE_PATH.read_text()) if (not live and CACHE_PATH.exists()) else {}
+    log_path = OUT / ("staff_campaign.log.json" if campaign_mode else LOG_PATH.name)
+    cache_path = OUT / ("staff_campaign.cache.json" if campaign_mode else CACHE_PATH.name)
+    cache = json.loads(cache_path.read_text()) if (not live and cache_path.exists()) else {}
     seats = _seat_clients(cache, live=live)
     axis = StaffPolicy(MockClient(_mock_staff), side=Side.AXIS,
                        seat_clients=seats, max_workers=len(LLM_SEATS))
@@ -132,9 +135,9 @@ def _run(*, live: bool, campaign_mode: bool = False, max_turns: "int | None" = N
           f"prompt_tok={u.get('prompt_tokens', 0)} completion_tok={u.get('completion_tokens', 0)} "
           f"failures={u.get('failures', 0)} cache_hits={u.get('cache_hits', 0)} "
           f"cache_misses={u.get('cache_misses', 0)}")
-    LOG_PATH.write_text(log_to_json(result.events))
-    CACHE_PATH.write_text(json.dumps(cache))
-    print(f"  wrote {LOG_PATH.name} + {CACHE_PATH.name} ({len(cache)} cached prompts) under {OUT}/")
+    log_path.write_text(log_to_json(result.events))
+    cache_path.write_text(json.dumps(cache))
+    print(f"  wrote {log_path.name} + {cache_path.name} ({len(cache)} cached prompts) under {OUT}/")
     return 0
 
 
