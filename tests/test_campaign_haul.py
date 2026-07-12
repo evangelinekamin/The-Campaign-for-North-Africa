@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from game import coords                                             # noqa: E402
 from game.apply import fold                                         # noqa: E402
 from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy  # noqa: E402
+from game.campaign_victory import CampaignVictory                   # noqa: E402
 from game.engine import determinism_signature, run                 # noqa: E402
 from game.events import Side                                        # noqa: E402
 from game.hexmap import distance                                   # noqa: E402
@@ -64,31 +65,52 @@ def test_gt1_campaign_relay_hauls_where_the_base_shuttle_strands():
     assert _hexes_east(camp[0].to) > _hexes_east(w1)
 
 
-def test_acceptance_haul_lands_fuel_and_ammo_deep_east_of_benghazi():
-    """Blueprint acceptance (b): over ~16 GT with the canonical scripted campaign pairing, the
-    truck relay lands BOTH fuel and ammo into dumps strictly EAST of Benghazi -- and walks the
-    chain DEEP (the base shuttle tops out at the first staging dump ~+7 hexes; the relay reaches
-    tens of hexes farther), the whole point of the multi-hop haul."""
-    res = run(campaign(seed=1941, max_turns=16), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+def test_acceptance_haul_runs_unfrozen_and_reaches_the_front():
+    """Blueprint acceptance, CORRECTED. The old test asserted only unload DEPTH into dumps -- but
+    the deep EARLY deliveries reach +40 hexes even when the pool then FREEZES (the shipped relay
+    stranded both trucks out of cargo fuel by GT3-4, 16 lifetime moves). Depth alone masked the
+    bug. The real acceptance is that the lean pool keeps RUNNING, supply reaches FORWARD along the
+    chain, and the front is supplied while it is still within the chain's reach:
+
+      (i)   NO FREEZE -- truck moves keep occurring well past GT10 (the buggy relay's last was GT3).
+      (ii)  FORWARD REACH -- the relay lands fuel AND ammo deep east of Benghazi (the base shuttle
+            tops out ~+7 hexes), and a deep staging dump still holds both commodities at GT24.
+      (iii) FRONT SUPPLIED -- at least one Axis front combat unit traces supply near the chain in
+            the opening, BEFORE the greedy scripted rush outruns its logistics (a faithful
+            culmination: by ~GT10 the rush has driven the front ~110 hexes east, out of the cpa/2
+            trace range of even its leapfrogging field dumps -- see campaign_truck_orders)."""
+    res = run(campaign(seed=1941, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     dump_hex = {s.id: s.hex for s in res.initial.supplies}
 
+    gt = moves_past_10 = deepest = 0
     fuel_east = ammo_east = False
-    deepest = 0
     for e in res.events:
-        if e.kind.name != "TRUCK_UNLOADED":
-            continue
-        hx = dump_hex[e.payload["supply_id"]]
-        east = _hexes_east(hx)
-        if east <= 0:                                      # only deliveries strictly east of the port
-            continue
-        cargo = e.payload["cargo"]
-        fuel_east = fuel_east or cargo.get("FUEL", 0) > 0
-        ammo_east = ammo_east or cargo.get("AMMO", 0) > 0
-        deepest = max(deepest, east)
+        if e.kind.name == "TURN_ADVANCED":
+            gt = e.payload.get("turn", gt)
+        elif e.kind.name == "TRUCK_MOVED" and gt > 10:
+            moves_past_10 += 1
+        elif e.kind.name == "TRUCK_UNLOADED":
+            east = _hexes_east(dump_hex[e.payload["supply_id"]])
+            if east > 0:                                    # deliveries strictly east of the port
+                cargo = e.payload["cargo"]
+                fuel_east = fuel_east or cargo.get("FUEL", 0) > 0
+                ammo_east = ammo_east or cargo.get("AMMO", 0) > 0
+                deepest = max(deepest, east)
 
-    assert fuel_east, "no fuel landed east of Benghazi"
-    assert ammo_east, "no ammo landed east of Benghazi"
+    assert moves_past_10 > 0, "the truck pool froze -- no truck moves past GT10"
+    assert fuel_east and ammo_east, "no fuel/ammo landed east of Benghazi"
     assert deepest >= 40, f"relay only reached +{deepest} hexes east (base shuttle stalls at ~+7)"
+    bardia = next(s for s in res.final.supplies if s.id == "AX-Stage-Bardia")
+    assert bardia.fuel > 0 and bardia.ammo > 0, "the deep chain is not kept fed"
+
+    # (iii) at least one Axis front combat unit is supplied near the chain in the opening, before
+    # the greedy rush drives it out of trace range (the final-GT count is 0 -- the culmination).
+    early = run(campaign(seed=1941, max_turns=6),
+                CampaignAxisPolicy(), CampaignCommonwealthPolicy()).final
+    victory = CampaignVictory()
+    supplied = [u for u in early.units if u.side == Side.AXIS and u.is_combat
+                and early.on_map(u) and u.strength >= 1 and victory._supplied(early, u)]
+    assert supplied, "no Axis combat unit supplied near the chain in the opening"
 
 
 def test_conservation_holds_over_the_haul():

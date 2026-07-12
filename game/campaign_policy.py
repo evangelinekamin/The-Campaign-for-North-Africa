@@ -111,16 +111,43 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
       - forward dumps are the friendly, non-dummy dumps strictly closer to the objective,
         scanned off state.supplies directly so EMPTY waypoints count (unlike active_supplies) --
         the chain fills into them.
-      - CARRYING (deliverable cargo aboard): UNLOAD everything bar a 3x-one-way FUEL reserve
-        (49.18) into the nearest forward dump in reach; if none is in reach, STEP toward the
-        nearest forward dump (a carried open-desert leg is legal, burning cargo fuel per hop).
-      - EMPTY (only its return reserve left): if its co-located dump has stock AND a forward
-        dump is in reach, LOAD (splitting the load FUEL/AMMO/STORES by the 56.22 fractions,
-        sized against residual cargo) + MOVE + UNLOAD in one order; else roll back toward the
-        nearest STOCKED dump farther from the objective to reload (the nearest REAR dump, not
-        always Benghazi)."""
+      - a hop burns cargo fuel (49.18); the carrying/empty split is purely by CARGO -- a truck's
+        fuel is always its own movement/return reserve, never re-counted as deliverable cargo, so
+        a truck ferrying its own return fuel is not mistaken for a delivery.
+      - every delivery RETAINS enough fuel to bail all the way back to the bottomless port (the
+        `anchor`, rearmost convoy-fed dump), sized to the drop hex's distance from it (`keep`) --
+        so a truck that chains deep still holds its way home even when a later forward reload loses
+        the race for a co-located dump's fuel to the other truck (the strand a flat 2x-hop reserve
+        could not survive).
+      - CARRYING (ammo/stores aboard): UNLOAD everything bar that return reserve into the DEEPEST
+        forward dump in reach the truck can AFFORD the hop to (a nearer, cheaper dump is the
+        fallback); if it can afford none, STEP toward the deepest forward dump, or -- stuck with
+        sub-hop fuel on a dump -- shed its ammo/stores into that co-located dump so it never
+        freezes holding an unmovable load.
+      - EMPTY (no cargo): if a co-located dump still has FUEL AND a forward dump is in reach, LOAD
+        (the 56.22 split) + MOVE + UNLOAD in one order, but ONLY when the truck can afford the move
+        and keep its return reserve (never a leg it cannot move). Otherwise RETURN toward the
+        anchor to reload, topping up from a co-located fuel dump so it is never stranded on fumes --
+        the cycle that keeps the lean pool running instead of walking itself dry against the
+        deepest staging dump."""
     orders: list[TruckOrder] = []
     objective = state.objective_for(side)
+    # The bottomless reload anchor: the rearmost friendly fuel dump (the convoy-fed port). Every
+    # return leg heads for it, and every delivery retains enough fuel to reach it from where it
+    # drops -- so a truck that chains deep still carries its own way home.
+    anchor = max((s for s in state.supplies if s.side == side and not s.is_dummy and s.fuel > 0),
+                 key=lambda s: (distance(s.hex, objective), s.id), default=None)
+
+    def keep(t, dest_hex):
+        """Fuel to RETAIN at dest_hex to trek back to the anchor: 2x the hex-distance's fuel
+        (terrain CP + ZOC detours overshoot the straight line) plus a hop of margin. This is what
+        lets a truck survive losing the race for a co-located dump's fuel to the other truck -- it
+        still holds its way home instead of stranding on a flat 2x-hop reserve."""
+        home = supply.truck_move_fuel(t, supply.truck_convoy_cpa(t.truck_class))
+        if anchor is None:
+            return 2 * home
+        return 2 * supply.truck_move_fuel(t, distance(dest_hex, anchor.hex)) + home
+
     for t in state.trucks:
         if t.side != side:
             continue
@@ -130,35 +157,54 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
                    if s.side == side and not s.is_dummy and s.hex != t.hex
                    and distance(s.hex, objective) < here]
         in_reach = [s for s in forward if s.hex in reach]
-        reserve = 3 * supply.truck_move_fuel(t, supply.truck_convoy_cpa(t.truck_class))
-        carrying = t.ammo > 0 or t.stores > 0 or t.fuel > reserve
+        colocated = next((s for s in state.supplies if s.side == side and not s.is_dummy
+                          and s.hex == t.hex), None)
 
-        if carrying:
-            delivered = False
-            if in_reach:
-                dest = min(in_reach, key=lambda s: (distance(s.hex, objective), reach[s.hex], s.id))
+        # CARRYING a delivery -- ammo/stores aboard. A truck's FUEL is always its own movement /
+        # return reserve, NEVER re-counted as cargo (a hop burns cargo fuel 49.18), so fuel alone
+        # never means "carrying". That is the split the old 3x-full-CPA reserve got wrong: it
+        # flipped a just-delivered truck to EMPTY to re-load in place, and it mistook a truck
+        # ferrying its own return fuel for a delivery.
+        if t.ammo > 0 or t.stores > 0:
+            # Deliver into the DEEPEST reachable dump the truck can AFFORD the hop to -- not
+            # blindly the farthest (which may cost more cargo fuel than it holds), so a nearer,
+            # cheaper dump is the fallback.
+            affordable = [s for s in in_reach
+                          if t.fuel >= supply.truck_move_fuel(t, reach[s.hex])]
+            if affordable:
+                dest = min(affordable, key=lambda s: (distance(s.hex, objective), reach[s.hex], s.id))
                 out = supply.truck_move_fuel(t, reach[dest.hex])
-                if t.fuel >= out:                          # can afford the hop's cargo-fuel burn
-                    unload: dict = {}
-                    if t.fuel - 3 * out > 0:               # keep 2x the one-way burn to get home
-                        unload["FUEL"] = t.fuel - 3 * out
-                    if t.ammo > 0:
-                        unload["AMMO"] = t.ammo
-                    if t.stores > 0:
-                        unload["STORES"] = t.stores
-                    if unload:
-                        orders.append(TruckOrder(t.id, to=dest.hex, unload_to=dest.id, unload=unload))
-                        delivered = True
-            if not delivered and forward:                  # nothing deliverable in reach -> close the gap
+                unload: dict = {}
+                surplus = t.fuel - out - keep(t, dest.hex)  # unload fuel bar the return reserve
+                if surplus > 0:
+                    unload["FUEL"] = surplus
+                if t.ammo > 0:
+                    unload["AMMO"] = t.ammo
+                if t.stores > 0:
+                    unload["STORES"] = t.stores
+                orders.append(TruckOrder(t.id, to=dest.hex, unload_to=dest.id, unload=unload))
+                continue
+            if forward:                                    # nothing affordable in reach -> close the gap
                 dest = min(forward, key=lambda s: (distance(s.hex, objective), s.id))
                 step = _step_toward(reach, t.hex, dest.hex)
                 if step is not None and t.fuel >= supply.truck_move_fuel(t, reach[step]):
                     orders.append(TruckOrder(t.id, to=step))
+                    continue
+            if colocated is not None:                      # sub-hop fuel, stuck on a dump: shed the
+                unload = {}                                # unmovable ammo/stores into it (a pure
+                if t.ammo > 0:                             # co-located transfer) so the truck is never
+                    unload["AMMO"] = t.ammo                # frozen holding a load it cannot move, and
+                if t.stores > 0:                           # is free to return for fuel next phase.
+                    unload["STORES"] = t.stores
+                orders.append(TruckOrder(t.id, unload_to=colocated.id, unload=unload))
             continue
 
-        colocated = next((s for s in state.supplies if s.side == side and not s.is_dummy
-                          and s.hex == t.hex), None)
-        if colocated is not None and not colocated.empty and in_reach:
+        # EMPTY of cargo. Reload a fresh forward leg from a co-located dump that still has FUEL and
+        # push it one hop -- but ONLY when the truck can then MOVE and keep its return reserve (the
+        # base relay's 49.18 guard, generalised to `keep`), so it never loads an ammo/stores-only
+        # leg it cannot move (the freeze) NOR delivers itself past the point of no return. A drained
+        # dump is no reload point -> fall to the return leg.
+        if colocated is not None and colocated.fuel > 0 and in_reach:
             dest = min(in_reach, key=lambda s: (distance(s.hex, objective), reach[s.hex], s.id))
             out = supply.truck_move_fuel(t, reach[dest.hex])
             cap = supply.truck_capacity(t.truck_class)
@@ -168,11 +214,9 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
                 take = min(getattr(colocated, c.lower()), max(0, room))
                 if take > 0:
                     load[c] = take
-            if load:
-                unload = {}
-                fuel_deliver = t.fuel + load.get("FUEL", 0) - 3 * out
-                if fuel_deliver > 0:
-                    unload["FUEL"] = fuel_deliver
+            fuel_deliver = t.fuel + load.get("FUEL", 0) - out - keep(t, dest.hex)
+            if fuel_deliver > 0:
+                unload = {"FUEL": fuel_deliver}
                 for c in ("AMMO", "STORES"):
                     amt = getattr(t, c.lower()) + load.get(c, 0)
                     if amt > 0:
@@ -181,14 +225,26 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
                                          to=dest.hex, unload_to=dest.id, unload=unload))
                 continue
 
-        rear = [s for s in state.supplies
-                if s.side == side and not s.is_dummy and not s.empty
-                and distance(s.hex, objective) > here]
-        if rear:
-            dest = min(rear, key=lambda s: (distance(s.hex, t.hex), s.id))
-            step = _step_toward(reach, t.hex, dest.hex)
-            if step is not None and t.fuel >= supply.truck_move_fuel(t, reach[step]):
-                orders.append(TruckOrder(t.id, to=step))
+        # No forward leg to make from here: RETURN toward the anchor to reload -- topping up from a
+        # co-located fuel dump to its return reserve so a truck at a drained chain-tip is never
+        # stranded on fumes. This is what keeps the lean pool cycling instead of walking itself dry.
+        if anchor is not None and distance(anchor.hex, objective) > here:
+            step = _step_toward(reach, t.hex, anchor.hex)
+            if step is not None:
+                load = None
+                need = keep(t, t.hex)
+                if colocated is not None and colocated.fuel > 0 and t.fuel < need:
+                    cap = supply.truck_capacity(t.truck_class)
+                    room = int(t.points * cap["FUEL"]) - t.fuel
+                    take = min(colocated.fuel, max(0, room), need - t.fuel)
+                    if take > 0:
+                        load = {"FUEL": take}
+                onboard = t.fuel + (load["FUEL"] if load else 0)
+                if onboard >= supply.truck_move_fuel(t, reach[step]):
+                    if load is not None:
+                        orders.append(TruckOrder(t.id, load_from=colocated.id, load=load, to=step))
+                    else:
+                        orders.append(TruckOrder(t.id, to=step))
     return orders
 
 

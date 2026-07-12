@@ -617,8 +617,8 @@ def _campaign_staging_dumps() -> list[SupplyUnit]:
     """The historical Axis coastal staging dumps (rule 60.34), Axis-held at Game-Turn 1 -- the
     intermediate depots that let the lean Benghazi truck pool relay its landed tonnage forward
     LEG BY LEG (each hop <= one 30-CP truck move, rule 53.22) instead of in one impossible ~75-
-    hex jump to the front. Two are pre-stocked from the 60.34 chart (Tobruk, Bardia); the rest
-    are empty waypoints spaced along the Via Balbia -- Benghazi -> W1 -> W2 -> Derna -> W3 ->
+    hex jump to the front. Three are pre-stocked from the 60.34 chart (Tobruk, Bardia, Derna); the
+    rest are empty waypoints spaced along the Via Balbia -- Benghazi -> W1 -> W2 -> Derna -> W3 ->
     Tobruk -> Bardia -- each a forward dump campaign_truck_orders fills from the one behind it.
 
     base=False deliberately: a field dump evaporates (49.3) and is NOT a rule-57 strategic base
@@ -631,7 +631,7 @@ def _campaign_staging_dumps() -> list[SupplyUnit]:
         SupplyUnit("AX-Stage-Bardia", Side.AXIS, ax("C4321"), ammo=100, fuel=1000, stores=200, water=0),
         SupplyUnit("AX-Stage-W1", Side.AXIS, (5, 36), ammo=0, fuel=0, stores=0, water=0),
         SupplyUnit("AX-Stage-W2", Side.AXIS, (4, 45), ammo=0, fuel=0, stores=0, water=0),
-        SupplyUnit("AX-Stage-Derna", Side.AXIS, ax("B5925"), ammo=0, fuel=0, stores=0, water=0),
+        SupplyUnit("AX-Stage-Derna", Side.AXIS, ax("B5925"), ammo=0, fuel=250, stores=50, water=0),
         SupplyUnit("AX-Stage-W3", Side.AXIS, (15, 63), ammo=0, fuel=0, stores=0, water=0),
     ]
 
