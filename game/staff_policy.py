@@ -64,10 +64,23 @@ FUEL_PRIORITY = (
 )
 
 
+# The full-campaign OOB names its mobile formations differently than Rommel's Arrival
+# ("GE 5th Light Division", "IT 132 Ariete Division", "IT The Libyan Tank Command"), so
+# without marker-matching the FUEL_PRIORITY lever would be a silent no-op off that one
+# scenario -- the same string drift lane_of carries (game.staff._MOBILE_MARKERS).
+_MOBILE_FUEL_MARKERS = ("Panzer", "Light Division", "Ariete", "Littorio", "Armoured", "Tank Command")
+
+
 def _formation_rank(formation: str) -> int:
-    """Chief fuel priority as a sort key: the ranked mobile formations first (in
-    order), every other formation after, ties stable by original batch position."""
-    return FUEL_PRIORITY.index(formation) if formation in FUEL_PRIORITY else len(FUEL_PRIORITY)
+    """Chief fuel priority as a sort key: the exact rommel mobile formations first (in order,
+    ranks 0-2, so the staff's Rommel's-Arrival fuel order is unchanged), then any other mobile
+    formation the campaign OOB names differently (matched by marker), then everything else. Ties
+    stable by original batch position."""
+    if formation in FUEL_PRIORITY:
+        return FUEL_PRIORITY.index(formation)
+    if any(m in formation for m in _MOBILE_FUEL_MARKERS):
+        return len(FUEL_PRIORITY)                            # campaign armour: above the infantry default
+    return len(FUEL_PRIORITY) + 1
 
 
 # --- static persona cards -----------------------------------------------------
