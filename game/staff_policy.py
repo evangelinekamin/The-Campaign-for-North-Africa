@@ -166,10 +166,13 @@ STORM_DIRECTIVE = (
 # when the observation carries victory_cities, so Rommel's Arrival keeps the STORM_DIRECTIVE.
 HOLD_DIRECTIVE = (
     "HOLD DIRECTIVE: the campaign is scored on the victory cities each side HOLDS SUPPLIED at "
-    "the end (64.73), not on reaching one far hex. Garrison and hold the cities you can keep "
-    "supplied; do NOT sprint units past their fuel and ammunition into unsupplied culmination. "
-    "A city taken but not kept supplied, or a unit whose can_hold is false, scores NOTHING -- "
-    "consolidate such units back onto a suppliable line.")
+    "the end (64.73), not on reaching one far hex. GARRISON FIRST: every victory city with "
+    "supply_on_hex true has a stocked dump standing on it -- a combat unit there is supplied by "
+    "definition and banks its points, so never leave one empty. Then advance only as far as your "
+    "supply follows: a dump can only move onto a hex your own combat units hold (32.33), so a "
+    "spearhead that races off alone strands its dumps permanently and the army starves. A city "
+    "taken but not kept supplied, or a unit whose can_hold is false, scores NOTHING -- consolidate "
+    "such units back onto a suppliable line.")
 
 
 def intent_preamble(intent: dict, campaign: bool = False) -> str:

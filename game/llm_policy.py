@@ -209,13 +209,20 @@ def build_movement_prompt(obs: dict) -> str:
                 f"victory_cities list gives each city's vp (your points for holding it), "
                 f"controlled_by, and held_supplied (who holds it with a supplied unit -- only "
                 f"a supplied holder scores). Hex {obj['hex']} is a direction, not the prize.")
-        directive = ("Garrison and HOLD the victory cities you can keep supplied; a unit whose "
-                     "can_hold is false has outrun its fuel/ammo, so consolidate it back onto a "
+        directive = ("FIRST, garrison every victory city with supply_on_hex true -- a stocked "
+                     "friendly dump stands ON it, so a combat unit there is supplied by definition "
+                     "and BANKS its vp: those are points you already own, and leaving them empty "
+                     "scores nothing. THEN advance only as far as your supply follows. A unit whose "
+                     "can_hold is false has outrun its fuel/ammo -- consolidate it back onto a "
                      "suppliable line rather than pressing deeper. Keep stacks together.")
         supply_note = ("A unit that outruns its supply, or a city you take but cannot keep "
                        "supplied, scores NOTHING (64.73) -- prefer a shorter line you can hold; "
                        "can_hold is whether a unit can trace BOTH fuel and ammo to hold ground "
-                       "(distinct from ammo-only defensible). ")
+                       "(distinct from ammo-only defensible). CRITICAL: a supply dump can only "
+                       "advance onto a hex held by one of your combat units (32.33), so it CANNOT "
+                       "follow a spearhead that races off alone -- if you sprint every unit forward, "
+                       "your dumps strand behind you and your whole army goes unsupplied for the "
+                       "rest of the war. Keep units back along the line so the dumps can leapfrog. ")
     else:
         head = (f"Objective: hex {obj['hex']} (controlled by "
                 f"{obj['controlled_by']}); aim to control it by the final turn.")

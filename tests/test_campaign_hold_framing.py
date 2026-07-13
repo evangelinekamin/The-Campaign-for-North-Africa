@@ -30,9 +30,14 @@ def test_campaign_observation_carries_victory_cities_and_can_hold():
     vc = obs["victory_cities"]
     assert vc and len(vc) == len(st.victory.cities)
     for c in vc:
-        assert set(c) == {"hex", "name", "vp", "controlled_by", "held_supplied"}
+        assert set(c) == {"hex", "name", "vp", "controlled_by", "held_supplied", "supply_on_hex"}
         assert c["controlled_by"] in ("AXIS", "ALLIED", "NEUTRAL")
         assert c["held_supplied"] in ("AXIS", "ALLIED", None)   # None = nobody banks it (unsupplied)
+    # (a2) supply_on_hex: a stocked friendly dump stands ON the city, so a garrison there traces at
+    # distance 0 and banks the points for free. The Axis staging dumps sit on Tobruk/Bardia/Benghazi
+    # -- 375 VP the AI was sprinting straight past into unsupplied culmination.
+    free = {c["name"] for c in vc if c["supply_on_hex"]}
+    assert {"Tobruk", "Bardia", "Benghazi"} <= free
     # VP is THIS side's Geographic Occupation Points: Tobruk is 200 to the Axis, 100 to the CW.
     assert next(c for c in vc if c["name"] == "Tobruk")["vp"] == 200
     assert next(c for c in observe(st, Side.ALLIED)["victory_cities"]

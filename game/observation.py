@@ -268,6 +268,10 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
     # None means nobody currently banks it: taken-but-unsupplied ground is worth nothing.
     if campaign_cities is not None:
         vic = state.victory
+        # supply_on_hex: a friendly dump holding BOTH fuel and ammunition stands ON this city, so a
+        # combat unit garrisoning it traces at distance 0 and is SUPPLIED by definition -- it banks
+        # the city's points. These are the cities you can hold for free: the supply is already there.
+        stocked = {s.hex for s in state.active_supplies(side) if s.fuel > 0 and s.ammo > 0}
         out["victory_cities"] = [
             {
                 "hex": list(ax),
@@ -275,6 +279,7 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
                 "vp": avp if side == Side.AXIS else cvp,
                 "controlled_by": state.control_of(ax).value,
                 "held_supplied": (occ.value if (occ := vic._occupier(state, ax)) is not None else None),
+                "supply_on_hex": ax in stocked,
             }
             for ax, avp, cvp, name in campaign_cities
         ]
