@@ -656,16 +656,63 @@ def _campaign_axis_cargo(gt: int, rng: random.Random) -> dict | None:
 
 _CW_RAILHEAD = "D3714"                 # Mersa Matruh -- the RR terminus (rule 60.7)
 
+# The Commonwealth supply SPINE, west (the front) to east (the Delta) -- the twin of the Axis
+# _campaign_staging_dumps, and the reason the Western Desert Force can attack at all.
+#   * WEST of the railhead: the Operation Compass FIELD SUPPLY DEPOTS (60.34). The Western Desert
+#     Force did not attack out of Egypt on its trace range -- it spent weeks lorrying dumps forward
+#     into the desert first, and then attacked out of THEM.
+#   * EAST of it: the Western Desert Railway stations. Not depots to haul into -- the line the
+#     RAILHEAD RETRACTS along when the enemy takes Mersa Matruh (54.3, _campaign_cw_rail_line).
+_CW_FIELD_DEPOTS = (("Sollum", "C4021"), ("Barrani", "C4131"))                    # 60.34, forward
+_CW_RAIL_STATIONS = (("Matruh", _CW_RAILHEAD), ("ElDaba", "D3329"), ("ElHamman", "E3007"))   # 54.3
+
+
+def _campaign_cw_depots() -> list[SupplyUnit]:
+    """The seeded Commonwealth spine (see _CW_FIELD_DEPOTS / _CW_RAIL_STATIONS above). Each leg is
+    within ONE 30-CP truck convoy hop of the one behind it (53.22), VERIFIED against
+    supply.reachable_truck_moves the way the Axis chain was: Matruh -> Sidi Barrani costs 29 CP and
+    Sidi Barrani -> Sollum 22, so no waypoint hex is needed. (What blocks the second leg on
+    Game-Turn 1 is the Italian 10th Army standing on it -- which is the point of the offensive, not
+    a gap in the chain.)
+
+    EMPTY, and base=False: a Field Supply Depot is hauled into, not pre-filled -- the lorries put
+    it there -- and it evaporates like any field dump (49.3), being no rule-57 strategic base."""
+    return [SupplyUnit(f"AL-Stage-{name}", Side.ALLIED, coords.to_axial(coords.parse(lbl)),
+                       ammo=0, fuel=0, stores=0, water=0)
+            for name, lbl in _CW_FIELD_DEPOTS + _CW_RAIL_STATIONS]
+
 
 def _campaign_cw_railhead(supplies):
     """The Mersa Matruh railhead dump (rule 60.7: "the RR runs to Mersa Matruh and ends
     there"). The Commonwealth FORWARD dump (not the bottomless Cairo/Alexandria base) nearest
     D3714 -- the rail lane refills it every turn so the Commonwealth can project supply WEST of
     its rear base (its cpa/2 trace reaches only ~6-12 hexes, far short of the front), the faucet
-    that makes Operation Compass sustainable."""
+    that makes Operation Compass sustainable. With the spine seeded that is AL-Stage-Matruh, the
+    depot standing ON Mersa Matruh -- so the rail lane, PORT-Matruh's 55.3 throttle and the lorry
+    pool all key off the one railhead, instead of off whichever field dump happened to lie nearest
+    it (which is how a passing Italian truck came to switch the Commonwealth's faucet off)."""
     rh = coords.to_axial(coords.parse(_CW_RAILHEAD))
     fwd = [s for s in supplies if s.side == Side.ALLIED and not s.base and not s.is_dummy]
     return min(fwd, key=lambda s: (distance(s.hex, rh), s.id)) if fwd else None
+
+
+def _campaign_cw_rail_line(supplies) -> tuple[str, ...]:
+    """The Commonwealth railway (rule 54.3) as the engine needs to see it: the ordered LINE of
+    depots it feeds, forward (the Mersa Matruh terminus, 60.7) to rear (the inexhaustible Delta
+    base, 57). game.engine._convoy_dest lands each turn's cargo in the first station on it the
+    enemy does not control.
+
+    THE RAILHEAD IS NOT A PLACE -- it is the furthest station of the operating railway the
+    Commonwealth still holds. Bound to one hex it dies to the first enemy vehicle that drives
+    across it: measured, an Italian vehicle stepped beside Mersa Matruh on Game-Turn 2 and the
+    56.15 gate then cancelled 55 STRAIGHT rail convoys -- GT3 to GT57, the whole of Operation
+    Compass -- on a railhead the Commonwealth had never lost. As a line it retracts instead."""
+    railhead = _campaign_cw_railhead(supplies)
+    if railhead is None:
+        return ()
+    have = {s.id for s in supplies}
+    rear = ("AL-Stage-ElDaba", "AL-Stage-ElHamman", "AL-Alexandria")   # 54.3 stations, then the base
+    return (railhead.id, *(sid for sid in rear if sid in have and sid != railhead.id))
 
 
 def _campaign_cw_trucks(supplies) -> tuple[TruckFormation, ...]:
@@ -716,7 +763,9 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
     railhead = _campaign_cw_railhead(supplies)
     if railhead is not None:
         load = _load_cargo()                           # rule 57 rail feed to the Egyptian railhead
-        convoys += [Convoy(f"cw-rail-t{gt}", Side.ALLIED, gt, "CW-RAILHEAD", railhead.id, dict(load))
+        line = _campaign_cw_rail_line(supplies)        # 54.3/60.7: the railhead RETRACTS, it never dies
+        convoys += [Convoy(f"cw-rail-t{gt}", Side.ALLIED, gt, "CW-RAILHEAD", railhead.id,
+                           dict(load), retarget=line)
                     for gt in range(1, max_turns + 1)]
     # Tobruk sea lifeline (30 / 56.3): the per-turn ferry feeding the AL-Tobruk garrison dump.
     # Cancelled by 56.15 while the Axis holds Tobruk, landing once the Commonwealth takes it.
@@ -865,9 +914,12 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     # C3: the supply economy -- the Commonwealth's inexhaustible Suez base (Cairo/Alexandria),
     # the Axis port-of-arrival dump (Benghazi) the Mediterranean convoys land at, and the
     # historical coastal staging dumps (60.34) the campaign truck relay hauls forward along.
+    # BOTH armies get a spine: the Axis one runs east from Benghazi, the Commonwealth one west
+    # from the rail-fed Mersa Matruh railhead (60.7) to the Compass Field Supply Depots. Without
+    # its own, the Western Desert Force cannot sustain an offensive one hex past the wire.
     dumps = (tuple(oob_supplies) + tuple(_campaign_cw_base())
              + (_campaign_axis_base(), _campaign_tobruk_dump())
-             + tuple(_campaign_staging_dumps()))
+             + tuple(_campaign_staging_dumps()) + tuple(_campaign_cw_depots()))
     # C5: THE WELLS (rules 52.1-52.3) -- the water SOURCES. Water is found in wells and only
     # wells (52.11), so without these the armies drink from nothing: the demand side (52.4) and
     # the 52.53 attrition were both live while total Axis water income across the whole campaign

@@ -20,7 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 
 from . import supply, wells
-from .events import Side
+from .events import Control, Side
 from .hexmap import Coord, distance
 from .policy import AttackOrder, MoveOrder, ScriptedPolicy, SupplyMoveOrder, TruckOrder
 from .scenario import _CONVOY_SPLIT_56_22
@@ -112,13 +112,17 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
         return super().combat(self._rear_view(state), side)
 
     def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
+        # The seeded spine stays put: a railhead, a railway station and a Field Supply Depot are
+        # places on the supply LINE, not field dumps that follow the army (see _without_staging).
+        state = _without_staging(state)
         if self._on_offensive(state):
             return self._offensive.supply_orders(state, side)
         return super().supply_orders(self._rear_view(state), side)
 
     def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
         # The Commonwealth hauls with the same multi-hop relay as the Axis (it is side-generic):
-        # from the rail-fed Mersa Matruh railhead forward to the dumps its offensives depend on.
+        # from the rail-fed Mersa Matruh railhead forward to the Field Supply Depots its offensives
+        # are launched out of (game.scenario._campaign_cw_depots).
         return campaign_truck_orders(state, side)
 
     def _rear_view(self, state: GameState) -> GameState:
@@ -131,6 +135,27 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
         return replace(state, allied_objective=None)
 
 
+_STAGING = ("AX-Stage", "AL-Stage")     # the seeded supply SPINES of both sides (60.34 / 54.3)
+
+
+def _without_staging(state: GameState) -> GameState:
+    """Hide both seeded spines from the base leapfrog bridge (rule 32.3). A staging dump is a fixed
+    depot ON the supply line -- a railhead, a railway station, a Field Supply Depot -- not a field
+    dump that follows the army: let the 32.3 bridge walk them toward the objective and the chain
+    the trucks feed UNSTAGES itself one hop at a time.
+
+    Their PORTS go with them. The bridge skips any dump standing on a harbour hex ("the port is
+    where convoys land; trucks haul it forward") -- a guard meant for the harbour dump ITSELF, which
+    here is a staging depot already hidden and already immobile. Left visible, PORT-Matruh would pin
+    every Commonwealth FIELD dump that ever falls back onto the Mersa Matruh railhead -- and falling
+    back onto the railhead is precisely what they do -- freezing the army's mobile supply on the one
+    hex it retreats to."""
+    staged = {s.hex for s in state.supplies if s.id.startswith(_STAGING)}
+    return replace(state,
+                   supplies=tuple(s for s in state.supplies if not s.id.startswith(_STAGING)),
+                   ports=tuple(p for p in state.ports if p.hex not in staged))
+
+
 def _step_toward(reach: dict, here: Coord, dest: Coord) -> "Coord | None":
     """The reachable hex nearest `dest` -- one Truck Convoy Phase move toward it (rule 53.22),
     or None if the truck is already as near as its convoy CPA can carry it. The module-level
@@ -138,6 +163,40 @@ def _step_toward(reach: dict, here: Coord, dest: Coord) -> "Coord | None":
     exactly as the base relay steps its return."""
     step = min(reach, key=lambda c: (distance(c, dest), reach[c], c))
     return step if step != here else None
+
+
+def _relay_source(state: GameState, side: Side, hx: Coord, anchor):
+    """The dump a relay truck standing on `hx` may LIFT from: the seeded supply SPINE, or the port
+    of arrival itself (the faucet). Never an army FIELD dump -- that stock belongs to the division
+    parked on it, and a lorry that carries it back off the division has done negative work.
+    Measured: the relay siphoned 1,365 of the 1,530 Fuel Points the Commonwealth's field dumps
+    owned, and a dump with no fuel cannot relocate (32.24) -- so every one of them froze on the
+    Mersa Matruh railhead, the army advanced with no mobile supply behind it, and it could hold
+    nothing it took.
+
+    The RICHEST such dump on the hex, not the first: dumps share hexes once the 32.3 bridge starts
+    walking field dumps around, and an empty one that had wandered onto the railhead MASKED the
+    rail-fed depot beneath it and froze the whole pool -- 4,700 Fuel Points under the truck's
+    wheels, read as DRY."""
+    here = [s for s in state.supplies
+            if s.side == side and not s.is_dummy and s.hex == hx
+            and (s.id.startswith(_STAGING) or (anchor is not None and s.id == anchor.id))]
+    return max(here, key=lambda s: (s.fuel, s.ammo + s.stores, s.id), default=None)
+
+
+def _load_56_22(t, dump) -> dict:
+    """A fresh load off `dump`, apportioned by the 56.22 fuel/ammo/stores tonnage split and sized
+    against the truck's REMAINING 54.2 capacity -- a truck home from a run still holds its return
+    reserve, so loading a full share on top of it would overrun the 53.12 Point ceiling and the
+    engine would reject the order."""
+    cap = supply.truck_capacity(t.truck_class)
+    load: dict = {}
+    for c, frac in _CONVOY_SPLIT_56_22.items():
+        room = int(frac * t.points * cap[c]) - getattr(t, c.lower())
+        take = min(getattr(dump, c.lower()), max(0, room))
+        if take > 0:
+            load[c] = take
+    return load
 
 
 def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
@@ -168,12 +227,15 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
         fallback); if it can afford none, STEP toward the deepest forward dump, or -- stuck with
         sub-hop fuel on a dump -- shed its ammo/stores into that co-located dump so it never
         freezes holding an unmovable load.
-      - EMPTY (no cargo): if a co-located dump still has FUEL AND a forward dump is in reach, LOAD
-        (the 56.22 split) + MOVE + UNLOAD in one order, but ONLY when the truck can afford the move
-        and keep its return reserve (never a leg it cannot move). Otherwise RETURN toward the
-        anchor to reload, topping up from a co-located fuel dump so it is never stranded on fumes --
-        the cycle that keeps the lean pool running instead of walking itself dry against the
-        deepest staging dump."""
+      - EMPTY (no cargo) on a dump that still has FUEL: LOAD the 56.22 split off it and MOVE +
+        UNLOAD into a forward dump within one hop -- only when the truck can afford the move AND
+        keep its return reserve (never a leg it cannot move, never a delivery past the point of no
+        return). With nothing forward in reach it drives at the nearest forward dump anyway, but
+        ONLY off the bottomless faucet (the anchor): a truck that loads out of an INTERMEDIATE depot
+        and drives deeper is not hauling supply forward, it is strip-mining its own chain.
+      - Otherwise RETURN toward the anchor to reload, topping up from a co-located fuel dump so it
+        is never stranded on fumes -- the cycle that keeps the lean pool running instead of walking
+        itself dry against the deepest staging dump."""
     orders: list[TruckOrder] = []
     objective = state.objective_for(side)
     # The 52.1-52.3 WELLS are geography, not depots: hide them from every dump scan below (the
@@ -185,10 +247,21 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
     # game.wells.)
     state = replace(state, supplies=tuple(s for s in state.supplies
                                           if not wells.is_water_source(s)))
-    # The bottomless reload anchor: the rearmost friendly fuel dump (the convoy-fed port). Every
-    # return leg heads for it, and every delivery retains enough fuel to reach it from where it
-    # drops -- so a truck that chains deep still carries its own way home.
-    anchor = max((s for s in state.supplies if s.side == side and not s.is_dummy and s.fuel > 0),
+    # THE RELOAD ANCHOR: the side's rearmost PORT OF ARRIVAL (55.3) -- the dump its convoys
+    # actually land in. Every return leg heads for it, and every delivery retains enough fuel to
+    # get back to it from where it drops, so a truck that chains deep still carries its own way
+    # home. It is the FAUCET, not merely "the rearmost dump that happens to hold fuel": for the
+    # Axis the two readings agree (Benghazi is both), but for the Commonwealth they differ
+    # fatally -- the rail lands at the Mersa Matruh railhead (60.7) while the rearmost fuelled
+    # dump is the bottomless Cairo base, 78 truck-hexes further east. Reading the puddle instead
+    # of the faucet marched the whole Commonwealth pool off to Cairo on its first return leg and
+    # idled it there for the rest of the war (measured: 10 truck moves in 111 game-turns, against
+    # the Axis's 394). The old reading survives as the fallback, for a state with no port at all.
+    faucets = {p.hex for p in state.ports if p.side == side}
+    anchor = max([s for s in state.supplies
+                  if s.side == side and not s.is_dummy and s.hex in faucets]
+                 or [s for s in state.supplies
+                     if s.side == side and not s.is_dummy and s.fuel > 0],
                  key=lambda s: (distance(s.hex, objective), s.id), default=None)
 
     def keep(t, dest_hex):
@@ -201,17 +274,32 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
             return 2 * home
         return 2 * supply.truck_move_fuel(t, distance(dest_hex, anchor.hex)) + home
 
+    enemy_held = Control.AXIS if side == Side.ALLIED else Control.ALLIED
     for t in state.trucks:
         if t.side != side:
             continue
         reach = supply.reachable_truck_moves(state, t)
         here = distance(t.hex, objective)
+        # The dumps to haul INTO: friendly, real, strictly closer to the objective -- and NOT on a
+        # hex the enemy holds. That last clause is 56.15's own logic (a convoy does not sail to a
+        # captured port) applied to the lorry: a depot the enemy is standing in is not a delivery
+        # address, it is a trap. Without it the DEEPEST forward "dump" for a Commonwealth truck is
+        # the empty garrison dump inside AXIS-HELD TOBRUK, 45 hexes behind the enemy front -- and
+        # the pool drives at it and is ZOC-boxed in the desert for the rest of the war. As the
+        # front moves, the chain extends itself: Sollum becomes a legal destination the game-turn
+        # Operation Compass takes it, which is exactly when the Field Supply Depot there is worth
+        # filling.
         forward = [s for s in state.supplies
                    if s.side == side and not s.is_dummy and s.hex != t.hex
-                   and distance(s.hex, objective) < here]
+                   and distance(s.hex, objective) < here
+                   and state.control_of(s.hex) != enemy_held]
         in_reach = [s for s in forward if s.hex in reach]
-        colocated = next((s for s in state.supplies if s.side == side and not s.is_dummy
-                          and s.hex == t.hex), None)
+        # The dump under the wheels, in its two distinct roles: what the truck may LIFT from (the
+        # supply line only -- see _relay_source) and what it may SHED an unmovable load into (any
+        # friendly dump: shedding is a delivery, and delivering into a field dump is the whole job).
+        colocated = _relay_source(state, side, t.hex, anchor)
+        sink = next((s for s in state.supplies if s.side == side and not s.is_dummy
+                     and s.hex == t.hex), None)
 
         # CARRYING a delivery -- ammo/stores aboard. A truck's FUEL is always its own movement /
         # return reserve, NEVER re-counted as cargo (a hop burns cargo fuel 49.18), so fuel alone
@@ -243,40 +331,60 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
                 if step is not None and t.fuel >= supply.truck_move_fuel(t, reach[step]):
                     orders.append(TruckOrder(t.id, to=step))
                     continue
-            if colocated is not None:                      # sub-hop fuel, stuck on a dump: shed the
+            if sink is not None:                           # sub-hop fuel, stuck on a dump: shed the
                 unload = {}                                # unmovable ammo/stores into it (a pure
                 if t.ammo > 0:                             # co-located transfer) so the truck is never
                     unload["AMMO"] = t.ammo                # frozen holding a load it cannot move, and
                 if t.stores > 0:                           # is free to return for fuel next phase.
                     unload["STORES"] = t.stores
-                orders.append(TruckOrder(t.id, unload_to=colocated.id, unload=unload))
+                orders.append(TruckOrder(t.id, unload_to=sink.id, unload=unload))
             continue
 
-        # EMPTY of cargo. Reload a fresh forward leg from a co-located dump that still has FUEL and
-        # push it one hop -- but ONLY when the truck can then MOVE and keep its return reserve (the
-        # base relay's 49.18 guard, generalised to `keep`), so it never loads an ammo/stores-only
-        # leg it cannot move (the freeze) NOR delivers itself past the point of no return. A drained
-        # dump is no reload point -> fall to the return leg.
-        if colocated is not None and colocated.fuel > 0 and in_reach:
-            dest = min(in_reach, key=lambda s: (distance(s.hex, objective), reach[s.hex], s.id))
-            out = supply.truck_move_fuel(t, reach[dest.hex])
-            cap = supply.truck_capacity(t.truck_class)
-            load: dict = {}
-            for c, frac in _CONVOY_SPLIT_56_22.items():    # 56.22 fuel/ammo/stores tonnage split
-                room = int(frac * t.points * cap[c]) - getattr(t, c.lower())
-                take = min(getattr(colocated, c.lower()), max(0, room))
-                if take > 0:
-                    load[c] = take
-            fuel_deliver = t.fuel + load.get("FUEL", 0) - out - keep(t, dest.hex)
-            if fuel_deliver > 0:
-                unload = {"FUEL": fuel_deliver}
-                for c in ("AMMO", "STORES"):
-                    amt = getattr(t, c.lower()) + load.get(c, 0)
-                    if amt > 0:
-                        unload[c] = amt
-                orders.append(TruckOrder(t.id, load_from=colocated.id, load=load,
-                                         to=dest.hex, unload_to=dest.id, unload=unload))
-                continue
+        # EMPTY of cargo, standing on a dump that still has FUEL: load a fresh forward leg (the
+        # 56.22 split) off it and run it.
+        if colocated is not None and colocated.fuel > 0 and (in_reach or forward):
+            load = _load_56_22(t, colocated)
+            if in_reach:
+                # A forward dump within one convoy hop -- LOAD + MOVE + UNLOAD in one order, but
+                # ONLY when the truck can afford the move and still keep its return reserve (the
+                # base relay's 49.18 guard, generalised to `keep`), so it never loads a leg it
+                # cannot move (the freeze) NOR delivers itself past the point of no return.
+                dest = min(in_reach, key=lambda s: (distance(s.hex, objective), reach[s.hex], s.id))
+                out = supply.truck_move_fuel(t, reach[dest.hex])
+                fuel_deliver = t.fuel + load.get("FUEL", 0) - out - keep(t, dest.hex)
+                if fuel_deliver > 0:
+                    unload = {"FUEL": fuel_deliver}
+                    for c in ("AMMO", "STORES"):
+                        amt = getattr(t, c.lower()) + load.get(c, 0)
+                        if amt > 0:
+                            unload[c] = amt
+                    orders.append(TruckOrder(t.id, load_from=colocated.id, load=load,
+                                             to=dest.hex, unload_to=dest.id, unload=unload))
+                    continue
+            elif anchor is not None and colocated.id == anchor.id:
+                # THE OPEN-DESERT LEG, and ONLY off the FAUCET. Nothing forward is within one hop,
+                # so load at the port of arrival and DRIVE AT the nearest forward dump anyway,
+                # exactly as the CARRYING branch already crosses a long leg. A truck standing on the
+                # railhead that answers "no dump in reach" by going home is standing where home IS:
+                # it simply idles there for the rest of the war, which is what froze the whole
+                # Commonwealth pool whenever an enemy screen pushed the Field Supply Depot past a
+                # single 30-CP hop.
+                #
+                # Off the faucet ONLY, because the faucet is bottomless and a forward depot is not.
+                # Let a truck load out of an INTERMEDIATE depot and drive deeper and the relay stops
+                # hauling supply forward and starts strip-mining its own chain: measured, the Axis
+                # pool emptied the Tobruk and Bardia staging dumps -- the very dumps that supply the
+                # garrisons banking those two cities under rule 64.73 -- and carried them off into
+                # the desert after a front that had long outrun it, costing the Axis every victory
+                # point it held. A truck with nothing reachable ahead of it goes BACK for more; it
+                # does not cannibalise the depot under its wheels.
+                dest = min(forward, key=lambda s: (distance(t.hex, s.hex),
+                                                   distance(s.hex, objective), s.id))
+                step = _step_toward(reach, t.hex, dest.hex)
+                if step is not None and t.fuel + load.get("FUEL", 0) >= supply.truck_move_fuel(
+                        t, reach[step]):
+                    orders.append(TruckOrder(t.id, load_from=colocated.id, load=load, to=step))
+                    continue
 
         # No forward leg to make from here: RETURN toward the anchor to reload -- topping up from a
         # co-located fuel dump to its return reserve so a truck at a drained chain-tip is never
@@ -304,10 +412,11 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
 class _CampaignAxisSupplyMixin:
     """The campaign Axis forward-supply behaviour, shared by the scripted CampaignAxisPolicy and the
     live CampaignStaffPolicy (game.campaign_staff): the multi-hop coastal truck haul
-    (campaign_truck_orders) instead of the base single-hop port shuttle, and hiding the AX-Stage
-    staging dumps from the base leapfrog bridge (which would otherwise walk the waypoint chain toward
-    Alexandria and UNSTAGE the relay the trucks feed). Campaign-only -- rommels_arrival /
-    siege_of_tobruk seed trucks through the byte-locked base relay and never construct these."""
+    (campaign_truck_orders) instead of the base single-hop port shuttle, and hiding the staging
+    dumps from the base leapfrog bridge (which would otherwise walk the waypoint chain toward
+    Alexandria and UNSTAGE the relay the trucks feed -- see _without_staging). Campaign-only --
+    rommels_arrival / siege_of_tobruk seed trucks through the byte-locked base relay and never
+    construct these."""
 
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
         # The standing garrison order applies to the live staff too: whatever the seats propose, the
@@ -319,9 +428,7 @@ class _CampaignAxisSupplyMixin:
         return campaign_truck_orders(state, side)
 
     def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
-        staged_out = replace(state, supplies=tuple(
-            s for s in state.supplies if not s.id.startswith("AX-Stage")))
-        return super().supply_orders(staged_out, side)
+        return super().supply_orders(_without_staging(state), side)
 
 
 class CampaignAxisPolicy(_CampaignAxisSupplyMixin, ScriptedPolicy):

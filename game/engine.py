@@ -407,12 +407,36 @@ def interdict(convoy, state: GameState, rng) -> dict:
     return _interdict(convoy, state, rng)[0]         # cargo only; the marker's dice ride separately
 
 
+def _convoy_dest(state: GameState, convoy):
+    """The dump a convoy actually lands its cargo in this game-turn, or None if it never sails.
+
+    Rule 56.15 cancels a convoy whose destination is in enemy hands, and for a PORT that is the
+    whole story -- a captured harbour receives nothing. A RAILHEAD is not a port. It is the
+    furthest point the OPERATING railway reaches that you still hold (54.3), and rule 60.7's "the
+    RR runs to Mersa Matruh and ends there" names the terminus, not the only station: let an enemy
+    vehicle drive across Mersa Matruh and the railhead falls BACK east down the line -- the trains
+    keep running, to the last station you control.
+
+    So the destination is a LINE (Convoy.retarget, ordered forward to rear) and this walks it: the
+    first station the enemy does not control is this turn's railhead. Deterministic by
+    construction -- the seeded order IS the key, no sort to drift. A convoy with NO line (every
+    convoy in every scenario but the campaign's Commonwealth rail lane) reads exactly `dest` under
+    the verbatim 56.15 test, so nothing else moves one byte."""
+    enemy = CONTROL_OF[_other(convoy.side)]
+    for sid in convoy.retarget or (convoy.dest,):
+        dump = state.supply(sid)
+        if dump is not None and state.control_of(dump.hex) != enemy:
+            return dump
+    return None
+
+
 def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
     """Naval Convoy Arrival (rule 48 V.C.7 Tactical Shipping + V.D Convoy Arrival): the
     supply SOURCE lands each due convoy's cargo into its destination dump, capped at the
     dump capacity (32.15 -- overflow is simply never credited, a miniature port throttle,
     CHUNK 3 makes it the real 55.14 efficiency gauge). A convoy to an enemy-captured port
-    never sails (56.15). Fires ONLY when convoys are due this game-turn, so every convoy-
+    never sails (56.15) -- unless it runs on rails, which RETRACT rather than die (54.3/60.7,
+    see _convoy_dest). Fires ONLY when convoys are due this game-turn, so every convoy-
     less scenario stays byte-identical (no Phase.LOGISTICS is emitted).
 
     `policies` (optional, backward-compatibly None for the scripted callers) hands the naval
@@ -435,9 +459,8 @@ def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
                 _drain_staff(r, pol, side)              # emitted before the CONVOY_INTERDICTED below
     port_landed: dict[tuple[str, str], int] = {}        # 55.14: cap is per-port-per-OpStage, not per-convoy
     for c in sorted(due, key=lambda c: c.id):           # deterministic arrival order
-        dump = r.state.supply(c.dest)
-        enemy_ctrl = CONTROL_OF[_other(c.side)]
-        if dump is None or r.state.control_of(dump.hex) == enemy_ctrl:   # 56.15
+        dump = _convoy_dest(r.state, c)                 # 56.15, plus the 54.3/60.7 retracting railhead
+        if dump is None:
             r.emit(EventKind.CONVOY_CANCELLED, c.side, "SYSTEM",
                    {"convoy_id": c.id, "lane": c.lane, "dest": c.dest, "reason": "port captured"})
             continue
@@ -465,8 +488,8 @@ def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
                        {"port_id": port.id, "commodity": k, "qty": landed[k],
                         "tons": supply.points_to_tons(landed[k], k), "eff": port.eff})
         if landed:                                      # nothing to land into a full dump
-            r.emit(EventKind.SUPPLY_ARRIVED, c.side, "SYSTEM",
-                   {"supply_id": c.dest, "cargo": landed, "lane": c.lane, "convoy_id": c.id})
+            r.emit(EventKind.SUPPLY_ARRIVED, c.side, "SYSTEM",   # dump.id == c.dest unless the railhead retracted
+                   {"supply_id": dump.id, "cargo": landed, "lane": c.lane, "convoy_id": c.id})
         if itd_order is not None:                       # 41.6/32.66: the bombing marker beside arrival
             interdictor = _other(c.side)
             r.emit(EventKind.CONVOY_INTERDICTED, interdictor, "SYSTEM",

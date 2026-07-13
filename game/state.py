@@ -171,13 +171,23 @@ class Convoy:
     `dest` is the destination dump id; `cargo` maps commodity -> points
     ({"AMMO": 40, "FUEL": 60}). The die-rolled tonnage-planning layer (56.21) and
     interdiction (56.13/41.6) are later refinements; this is the deterministic
-    56.2 timetable ("reflect Axis supplies as they actually occurred")."""
+    56.2 timetable ("reflect Axis supplies as they actually occurred").
+
+    `retarget` is the LINE the destination may retract along (rules 54.3 / 60.7), ordered
+    FORWARD (the terminus) to REAR (the base). A port is a place -- capture it and the
+    convoy never sails (56.15). A RAILHEAD is not: it is the furthest point the operating
+    railway reaches that you still hold, so an enemy vehicle standing on Mersa Matruh pushes
+    the railhead BACK east down the line rather than abolishing it. game.engine._convoy_dest
+    lands the cargo in the first station on this line the enemy does not control. Default ()
+    = no line, i.e. `dest` under the verbatim 56.15 test -- so every scenario but the
+    campaign's Commonwealth rail lane stays byte-identical."""
     id: str
     side: Side
     arrival_turn: int
     lane: str
     dest: str
     cargo: dict
+    retarget: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
