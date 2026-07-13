@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from game import coords
+from game import coords, wells
 from game.calendar import CAMPAIGN_SEASON_OFFSET, FINAL_GT
 from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy
 from game.campaign_victory import CampaignVictory
@@ -68,7 +68,9 @@ def test_campaign_supply_economy():
     # Mediterranean convoy faucet (56.4, landing at Benghazi in the west, to be hauled east).
     st = campaign(seed=1941)
     assert st.convoys and st.ports                          # the engine faucet is seeded
-    cw_base = [s for s in st.supplies if s.base]
+    # base=True marks BOTH the rule-57 strategic depots and the 52.1 wells (52.44: water in a
+    # well does not evaporate either) -- the two rear DEPOTS are the ones this test is about.
+    cw_base = [s for s in st.supplies if s.base and not wells.is_water_source(s)]
     assert len(cw_base) == 2 and all(s.side == Side.ALLIED for s in cw_base)
     assert all(s.fuel > 1_000_000 for s in cw_base)         # a reservoir no 111-turn draw exhausts
     axis_convoys = [c for c in st.convoys if c.side == Side.AXIS]

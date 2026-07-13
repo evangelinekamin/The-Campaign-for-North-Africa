@@ -17,7 +17,8 @@ import random
 from collections import deque
 from dataclasses import replace
 
-from . import calendar, campaign_victory, cna_map, coords, logistics_data, oob
+from . import (calendar, campaign_victory, cna_map, coords, logistics_data, oob,
+               wells)
 from .events import Phase, Side
 from .hexmap import distance, neighbors
 from .movement import TerrainMap, edge
@@ -864,16 +865,23 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     # C3: the supply economy -- the Commonwealth's inexhaustible Suez base (Cairo/Alexandria),
     # the Axis port-of-arrival dump (Benghazi) the Mediterranean convoys land at, and the
     # historical coastal staging dumps (60.34) the campaign truck relay hauls forward along.
-    supplies = (tuple(oob_supplies) + tuple(_campaign_cw_base())
-                + (_campaign_axis_base(), _campaign_tobruk_dump())
-                + tuple(_campaign_staging_dumps()))
+    dumps = (tuple(oob_supplies) + tuple(_campaign_cw_base())
+             + (_campaign_axis_base(), _campaign_tobruk_dump())
+             + tuple(_campaign_staging_dumps()))
+    # C5: THE WELLS (rules 52.1-52.3) -- the water SOURCES. Water is found in wells and only
+    # wells (52.11), so without these the armies drink from nothing: the demand side (52.4) and
+    # the 52.53 attrition were both live while total Axis water income across the whole campaign
+    # was ZERO. See game.wells for the model and its flagged proxies. The 60.34 dump chart is the
+    # tell: its Tobruk/Bardia/Benghazi/Derna dumps carry NO Water Points at all -- because those
+    # cities have wells -- while the two free-placed desert dumps carry 200 each.
+    water_sources = wells.wells()
 
     # A hex a piece stands on is land (coastal ports colour-sample as sea); add + connect,
     # exactly as the corridor scenarios do.
     terrain = dict(tmap.terrain)
-    for piece in (*units, *supplies):
+    for piece in (*units, *dumps, *water_sources):
         terrain.setdefault(piece.hex, Terrain.CLEAR)
-    _connect_pieces(terrain, [p.hex for p in (*units, *supplies)])
+    _connect_pieces(terrain, [p.hex for p in (*units, *dumps, *water_sources)])
     forts = _apply_major_cities(terrain)
     for lbl in _CW_BASE_HEXES.values():              # rule 57: the CW base stands on MAJOR_CITY hexes
         terrain[coords.to_axial(coords.parse(lbl))] = Terrain.MAJOR_CITY
@@ -883,6 +891,20 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     # so no 15.82 no-eviction fort is granted at the Axis rear.
     terrain[coords.to_axial(coords.parse(_AXIS_PORT_HEX))] = Terrain.MAJOR_CITY
     tmap = replace(tmap, terrain=terrain, fortifications=forts)
+
+    # The Commonwealth pipeline (52.22): laid over the FINAL land map, so the corridor walks real
+    # hexes and invents no terrain. Commonwealth-only -- the Axis may not use the defunct
+    # Barce-Benghazi railroad (52.22).
+    water_sources += wells.pipeline(tmap.terrain)
+
+    # The wells go in the supplies tuple LAST, and the convoy/port/truck geography below is
+    # derived from `dumps` (the armies' depots) ALONE. A well is geography, not a depot: it is
+    # not a port of arrival, no convoy lands in it, and no truck reloads from it. Feeding the
+    # wells to _axis_rear would hand "the rearmost Axis dump" -- the Benghazi harbour the whole
+    # Mediterranean convoy lands at -- to the well out at Jalo oasis. Order matters for the same
+    # reason: the policies' co-located-dump scans take the FIRST dump on a hex, and every one of
+    # Benghazi/Tobruk/Bardia/Derna/Cairo/Alexandria carries both a depot and a well.
+    supplies = dumps + water_sources
 
     return GameState(
         turn=1, max_turns=max_turns, phase=Phase.WEATHER, active_side=Side.SYSTEM,
@@ -894,10 +916,10 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         map_sections=frozenset("ABCDE"),
         season_offset=calendar.CAMPAIGN_SEASON_OFFSET,   # GT1 = September 1940 (fall)
         victory=campaign_victory.CampaignVictory(),      # rule 64.7 (see game.campaign_victory)
-        convoys=_campaign_convoys(supplies, target, max_turns, seed),   # C3: Axis Med + CW rail (56.4/60.7)
-        ports=_campaign_ports(supplies, target),                        # C3: PORT-Benghazi + PORT-Matruh
-        trucks=(_campaign_axis_trucks(supplies, target)                 # C3-2: the Benghazi->front haul (53/60.33)
-                + _campaign_cw_trucks(supplies)),                       # and the CW railhead->west haul (60.33)
+        convoys=_campaign_convoys(dumps, target, max_turns, seed),      # C3: Axis Med + CW rail (56.4/60.7)
+        ports=_campaign_ports(dumps, target),                           # C3: PORT-Benghazi + PORT-Matruh
+        trucks=(_campaign_axis_trucks(dumps, target)                    # C3-2: the Benghazi->front haul (53/60.33)
+                + _campaign_cw_trucks(dumps)),                          # and the CW railhead->west haul (60.33)
         interdictions=(_campaign_malta_interdiction(max_turns)          # C4: Malta throttles the Axis Med convoy (rule 44)
                        + _campaign_tobruk_ferry_interdiction(max_turns)),  # + the cuttable Tobruk-ferry lane (30/41.6)
     )

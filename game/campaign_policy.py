@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from . import supply
+from . import supply, wells
 from .events import Side
 from .hexmap import Coord, distance
 from .policy import AttackOrder, MoveOrder, ScriptedPolicy, SupplyMoveOrder, TruckOrder
@@ -176,6 +176,15 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
         deepest staging dump."""
     orders: list[TruckOrder] = []
     objective = state.objective_for(side)
+    # The 52.1-52.3 WELLS are geography, not depots: hide them from every dump scan below (the
+    # idiom _CampaignAxisSupplyMixin.supply_orders already uses to hide the AX-Stage waypoints
+    # from the base leapfrog). A well holds water and nothing else, so the relay can neither
+    # reload from one nor usefully fill one -- and left visible, the "deepest forward dump" for
+    # an Axis truck becomes the well standing on ALEXANDRIA and the whole pool marches at it.
+    # (Hauling water FROM a well is rule 52.45 and the 54.2 Water column -- deferred, see
+    # game.wells.)
+    state = replace(state, supplies=tuple(s for s in state.supplies
+                                          if not wells.is_water_source(s)))
     # The bottomless reload anchor: the rearmost friendly fuel dump (the convoy-fed port). Every
     # return leg heads for it, and every delivery retains enough fuel to reach it from where it
     # drops -- so a truck that chains deep still carries its own way home.
