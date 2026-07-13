@@ -1,10 +1,11 @@
 """The scripted policies for the FULL campaign -- both sides' campaign-only overrides that make
 the desert war SEE-SAW instead of one player sandbagging for 111 turns:
 
-  * CampaignCommonwealthPolicy -- a defender that goes over to the offensive on the historical
-    Game-Turn windows (Operation Compass, Crusader, Second Alamein), advancing toward
-    objective_for(ALLIED) (Benghazi, the Axis rear, far WEST) and culminating where it outruns
-    its supply; between offensives it holds and gives ground.
+  * CampaignCommonwealthPolicy -- an army that CONCENTRATES FORWARD onto the rail-fed railhead
+    between offensives (the Matruh line: the springboard every one of its offensives was
+    launched from) and goes over to the offensive on the historical Game-Turn windows
+    (Operation Compass, Crusader, Second Alamein), advancing toward objective_for(ALLIED)
+    (Benghazi, the Axis rear, far WEST) and culminating where it outruns its supply.
   * CampaignAxisPolicy -- the base attacker PLUS the multi-hop coastal supply haul
     (campaign_truck_orders) that lets the Panzerarmee fight east of Benghazi at all: the lean
     truck pool relays Benghazi's landed tonnage forward LEG BY LEG along the seeded staging
@@ -19,7 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from . import supply, wells
+from . import supply, tactics, wells
 from .events import Control, Side
 from .hexmap import Coord, distance
 from .policy import AttackOrder, MoveOrder, ScriptedPolicy, SupplyMoveOrder, TruckOrder
@@ -87,52 +88,282 @@ def hold_garrisons(orders: list, state: GameState, side: Side) -> list:
     return [o for o in orders if o.unit_id not in keep] if keep else orders
 
 
+_CW_RAIL_LANE = "CW-RAILHEAD"        # the Commonwealth rail lane (game.scenario._campaign_convoys)
+
+
+def railhead(state: GameState):
+    """THE LINE THE COMMONWEALTH FIGHTS FROM (rules 54.3 / 60.7): the RAIL-FED RAILHEAD -- the
+    forwardmost station of the Western Desert Railway the enemy does not hold. The trains run to it
+    EVERY Game-Turn, so it is the one place forward of the Delta where an army can stand and be fed;
+    and when the enemy drives across Mersa Matruh it RETRACTS east down the line (Matruh -> El Daba
+    -> El Hamman -> the Delta base) -- and the line the army holds retracts with it.
+
+    Read straight off the rail convoy's own retarget line and resolved with the engine's own 56.15
+    test (game.engine._convoy_dest), so the army concentrates on exactly the station the trains are
+    actually reaching -- one definition of 'the railhead', not two that can drift apart. The line is
+    bound once, at construction (game.scenario._campaign_cw_rail_line), which is also why it is read
+    from the convoy and not re-derived from state.supplies: a field dump that leapfrogs onto Mersa
+    Matruh would otherwise tie for 'the dump nearest the terminus' and hijack the railway.
+
+    If the enemy has driven over EVERY station the answer is the terminus itself -- the railway is
+    switched off and the hex that switches it back on is the line to fight for, not a reason to have
+    no line at all. None only for a state with no railway -- every scenario but the campaign --
+    which is what makes this policy safe to construct anywhere."""
+    line = next((c.retarget for c in state.convoys
+                 if c.side == Side.ALLIED and c.lane == _CW_RAIL_LANE and c.retarget), ())
+    by_id = {s.id: s for s in state.supplies}
+    for sid in line:
+        dump = by_id.get(sid)
+        if dump is not None and state.control_of(dump.hex) != Control.AXIS:
+            return dump
+    return by_id.get(line[0]) if line else None      # every station overrun: retake the terminus
+
+
+def _fed_by(state: GameState, unit, dump) -> bool:
+    """True when `unit` can draw its AMMUNITION from `dump` -- the rule-32.16 trace (cpa/2 CP,
+    blocked by enemy ZOC), which is the same test rule 64.73 scores a city's occupier on. It is
+    also, deliberately, the stop-line of the march below: a unit is ON the line when the line can
+    FEED it, so an army concentrating forward halts inside its own supply instead of walking past
+    it into the desert. Infantry (cpa 10) must close to ~5 hexes of the depot for that; the lorried
+    and armoured units trace ~12-13 and screen wider -- the deployment sorts itself by what each
+    formation can actually be fed at."""
+    return any(s.id == dump.id for s in supply.reachable_supplies(state, unit, supply.AMMO))
+
+
 class CampaignCommonwealthPolicy(ScriptedPolicy):
     """A scripted Commonwealth DEFENDER (attacker=AXIS, so every inherited reflex -- defender
-    moves and sorties, counter-assault, elastic retreat, initiative -- is unchanged) that switches
-    to the ATTACKER branch on the scheduled offensive Game-Turns, driving west toward
-    objective_for(ALLIED)."""
+    moves and sorties, counter-assault, elastic retreat, initiative -- is unchanged) that
+    CONCENTRATES ITS REAR ARMY FORWARD onto the rail-fed railhead between offensives (see
+    _concentrate) and switches to the ATTACKER branch on the scheduled offensive Game-Turns,
+    driving west toward objective_for(ALLIED)."""
 
     def __init__(self, schedule: OffensiveSchedule = CAMPAIGN_CW_OFFENSIVES):
-        super().__init__(attacker=Side.AXIS)                     # defender wiring, exactly like the base
+        super().__init__(attacker=Side.AXIS)                   # defender wiring, exactly like the base
         self._schedule = schedule
-        self._offensive = ScriptedPolicy(attacker=Side.ALLIED)   # the attacker branch for offensive turns
+        # The ADVANCE branch. It drives on whatever objective the view it is handed carries:
+        # Benghazi on an offensive Game-Turn, the assembly line between them.
+        self._advance = ScriptedPolicy(attacker=Side.ALLIED)
 
     def _on_offensive(self, state: GameState) -> bool:
         return self._schedule.is_offensive(state.turn)
 
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
-        orders = (self._offensive.movement(state, side) if self._on_offensive(state)
-                  else super().movement(self._rear_view(state), side))
+        orders = (self._advance.movement(state, side) if self._on_offensive(state)
+                  else self._concentrate(state, side))
         return hold_garrisons(orders, state, side)     # even an offensive keeps its supplied cities
+
+    def _concentrate(self, state: GameState, side: Side) -> list[MoveOrder]:
+        """THE FORWARD CONCENTRATION -- the Eighth Army marches to the line it fights from.
+
+        Between offensives the Commonwealth was a rear-oriented defender with no objective at all,
+        and the base defender reflex only sorties at an EXPOSED enemy stack within reach. So an army
+        that begins the war 60 hexes behind the front never sees one and NEVER MOVES: measured, the
+        76 combat reinforcements that arrive in the Nile Delta sat there for the entire war, ten CW
+        units stood near the railhead at Game-Turn 1 and ZERO stood there at Game-Turn 12, 40 or 80,
+        the rail-fed depot at Mersa Matruh filled to its cap with nobody to drink it, and the three
+        offensive windows then ordered an attack on Benghazi from 60 hexes behind the start line --
+        which cannot arrive, and could not be supplied if it did. The Commonwealth never fought.
+
+        The historical answer is the obvious one: the Eighth Army moved UP and stood on a forward
+        line -- Matruh, later Alamein -- and every one of its offensives was launched out of it. So
+        between offensives the rear army marches to the RAILHEAD (the line the trains reach, above)
+        and holds:
+
+          - THE REAR is everything further from the front (objective_for -- the Axis rear at
+            Benghazi, the direction of the whole war) than the railhead itself is. One-directional
+            BY CONSTRUCTION: a unit at or forward of the line is never in the rear, so the
+            concentration can never march the army BACKWARDS out of ground it has taken -- what it
+            holds forward of the line it keeps holding, and only the rear echelon comes up.
+          - IT MARCHES SPRING TO SPRING (_march), not as the crow flies -- and the dumps BRIDGE the
+            column behind it (_bridge) instead of racing to its head.
+          - IT GARRISONS THE RAILHEAD ITSELF. The first unit that can reach Mersa Matruh STANDS ON
+            IT (_march), and the standing garrison order then keeps it there for good -- the
+            railhead is a 64.73 victory city, and a supplied unit on it is banking points. This is
+            not a flourish, it is the load-bearing hex of the whole Commonwealth position: the rail
+            lane lands its cargo in the forwardmost station the enemy does not CONTROL (56.15/54.3),
+            and control flips to whoever last stood there. Measured: leave Mersa Matruh empty and a
+            single Axis armoured car, driving through on its way to Alexandria, takes the railhead,
+            the retraction walks El Daba -> El Hamman -> the Delta (all of them already driven over
+            by the same rush), and the Commonwealth's ENTIRE FAUCET switches off -- army, offensives
+            and all. An occupied hex cannot be driven through (the enemy must assault it), so one
+            battalion standing on the terminus keeps the trains running.
+          - IT STOPS ON SUPPLY, not on arrival: once the railhead is held, a unit halts as soon as
+            the line can FEED it (_fed_by), which is what keeps a concentration from becoming yet
+            another sprint into the desert -- the standing failure mode of every policy here. The
+            army ends up inside the trace of a depot the railway refills every turn, which is the
+            whole point: a supplied army on the start line.
+          - EVERYTHING ELSE HOLDS. Units already on the line, and the units the standing garrison
+            order keeps on their victory cities, are left to the base defender reflex (hold, and
+            sortie at an exposed enemy) exactly as before."""
+        line = railhead(state)
+        view = self._forward_view(state)
+        if line is None:                          # no railway: the vanilla rear-oriented defender
+            return super().movement(view, side)
+        front = state.objective_for(side)         # the direction of the war: the Axis rear
+        depth = distance(line.hex, front)
+        held = any(u.is_combat and u.hex == line.hex for u in state.living(side))
+        rear = [u for u in state.living(side)
+                if u.is_combat and distance(u.hex, front) > depth
+                and not (held and _fed_by(state, u, line))]
+        march = self._march(state, side, rear, line.hex, held)
+        moving = {o.unit_id for o in march}
+        hold = [o for o in super().movement(view, side) if o.unit_id not in moving]
+        return march + hold
+
+    def _march(self, state: GameState, side: Side, rear: list, assembly: Coord,
+               held: bool) -> list[MoveOrder]:
+        """THE ROUTE MARCH: SPRING TO SPRING, the one law of the Western Desert. A column that
+        marches on its objective AS THE CROW FLIES dies in the desert, and the two ways it dies are
+        the two things the desert has none of:
+
+          - WATER. It is found in wells and only wells (52.11), drawn on the same cpa/2 trace as
+            everything else (52.4), and every consecutive Operations Stage without it costs a
+            marching battalion a TOE Strength Point (52.53) -- three a Game-Turn. Measured on the
+            straight-line march: 149 water shortfalls and 81 attrition losses in SIX Game-Turns, and
+            the Nile Delta army was destroyed by the desert before it ever saw an Italian. An
+            infantryman's trace is barely five hexes, so his road is the wells -- which is simply
+            the coast road, and is why every army in this war used it.
+          - FUEL. A lorried or armoured unit pays fuel for every move (49.13) and may only draw it
+            from a dump it can trace. Between the Delta base and the railhead lie THIRTY-FOUR hexes
+            with no dump in them at all -- a ten-hex hole in the middle that a twelve-hex trace
+            cannot span. Measured: half the army (25 of 54 units) froze in it, out of fuel, having
+            walked itself into the one place it could not be refuelled from. Its bound (up to 22
+            hexes) can CLEAR the hole in one move -- but only if it is aimed at the far side.
+
+        So each unit marches at the next SPRING of the thing it will die without: a fuel-burner at
+        the nearest forward dump that holds FUEL, a marching man at the nearest forward source of
+        WATER (well, the Alexandria-Matruh pipeline, or any dump holding some). 'Forward' is the
+        truck relay's own test (campaign_truck_orders) -- strictly closer to the assembly than the
+        unit itself -- so reaching a spring drops it from the list and the next one down the line
+        becomes the target: a bucket brigade in reverse, the column hauling ITSELF along its own
+        supply chain. Every step must still close on the assembly (never a step backwards, so the
+        march always terminates), and the inherited gates all hold: fuel (a move it cannot pay for
+        is never proposed), stacking (9.14), and the tactical reachability the engine validates."""
+        if not rear:
+            return []
+        enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, side)
+        wet = [s for s in state.supplies if s.side == side and s.water > 0]
+        fuelled = [s for s in state.supplies if s.side == side and not s.is_dummy and s.fuel > 0]
+        orders: list[MoveOrder] = []
+        for u in rear:
+            if supply.plan_draw(state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None:
+                continue          # out of fuel -- every move pays (49.13); don't propose a reject
+            reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
+            if not held and assembly in reach and self._stacking_ok(state, u, assembly):
+                orders.append(MoveOrder(u.id, assembly))   # CLAIM the railhead: the trains run to it
+                held = True                                # only while it stands does the faucet run
+                continue
+            here = distance(u.hex, assembly)
+            springs = fuelled if supply.fuel_rate(u) else wet     # what THIS unit dies without
+            spring = min((s for s in springs if distance(s.hex, assembly) < here),
+                         key=lambda s: (distance(s.hex, u.hex), distance(s.hex, assembly), s.id),
+                         default=None)
+            target = spring.hex if spring is not None else assembly   # nothing ahead: straight at it
+            cands = [c for c in reach
+                     if c != u.hex and distance(c, assembly) < here   # only ever toward the line
+                     and self._stacking_ok(state, u, c)]
+            if cands:
+                dest = min(cands, key=lambda c: (distance(c, target), reach[c], c))
+                orders.append(MoveOrder(u.id, dest))
+        return orders
 
     def combat(self, state: GameState, side: Side) -> list[AttackOrder]:
         if self._on_offensive(state):
-            return self._offensive.combat(state, side)
-        return super().combat(self._rear_view(state), side)
+            return self._advance.combat(state, side)
+        return super().combat(self._forward_view(state), side)
+
+    def retreat_before_assault(self, state: GameState, side: Side,
+                               pinned: frozenset[str]) -> list[MoveOrder]:
+        # The elastic desert defense (13.0) with the LINE as its anchor: every unit still slips out
+        # of an assault it can, but the railhead's garrison stands. A garrison that slips off Mersa
+        # Matruh hands the enemy the hex, and with it the whole Commonwealth faucet (_concentrate)
+        # -- an elastic defense is a way to hold a line, not a way to lose one.
+        view = state if self._on_offensive(state) else self._forward_view(state)
+        return super().retreat_before_assault(view, side, pinned)
 
     def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
         # The seeded spine stays put: a railhead, a railway station and a Field Supply Depot are
         # places on the supply LINE, not field dumps that follow the army (see _without_staging).
-        state = _without_staging(state)
-        if self._on_offensive(state):
-            return self._offensive.supply_orders(state, side)
-        return super().supply_orders(self._rear_view(state), side)
+        # The FIELD dumps leapfrog toward the view's objective (32.3) -- so between offensives they
+        # come forward onto the assembly WITH the army they feed, instead of trailing back to a rear
+        # base that is already bottomless, and on an offensive they follow the attack west.
+        view = _without_staging(state if self._on_offensive(state)
+                                else self._forward_view(state))
+        return self._bridge(view, side) or super().supply_orders(view, side)
+
+    def _bridge(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
+        """THE SUPPLY BRIDGE (rule 32.3) -- a dump goes to the unit that has OUTRUN ITS FUEL, not to
+        the unit nearest the objective. StormPolicy's own answer to this exact failure, applied to a
+        column on the march instead of a column in the assault.
+
+        The base 32.3 bridge leapfrogs every dump to the MOST FORWARD unit it can reach, and that is
+        a trap for an army moving up: the dumps all race to the head of the column and stack on the
+        railhead (measured: four of the Commonwealth's five field dumps ended on the one hex), while
+        the lorried and armoured units strung out behind them sit in the thirty-four-hex hole
+        between the Delta base and the railhead with no dump in trace and no fuel to move -- half
+        the army, frozen, being marched at by nothing. A dump that is not under the units that
+        cannot move is not doing logistics.
+
+        So while ANY combat unit cannot pay for a move (49.13 -- the exact gate the march itself
+        checks), the dumps go to those units, nearest-the-front first, one dump per unit. With the
+        column moving again the bridge stands down and the ordinary forward leapfrog resumes."""
+        target = state.objective_for(side)
+        stranded = sorted((u for u in state.living(side) if u.is_combat
+                           and supply.plan_draw(state, u, supply.FUEL,
+                                                supply.fuel_cost(u, 1)) is None),
+                          key=lambda u: (distance(u.hex, target), u.id))
+        if not stranded:
+            return []
+        orders: list[SupplyMoveOrder] = []
+        claimed: set = set()
+        for su in state.active_supplies(side):
+            if su.base or su.fuel < supply.SUPPLY_MOVE_FUEL or state.port_at(su.hex) is not None:
+                continue          # a rule-57 base is immobile; a dry dump cannot move (32.24); a
+                                  # harbour dump stays where the convoys land (55)
+            reach = supply.reachable_moves(state, su)
+            pick = next((u for u in stranded if u.hex in reach and u.hex != su.hex
+                         and u.hex not in claimed), None)
+            if pick is not None:
+                claimed.add(pick.hex)
+                orders.append(SupplyMoveOrder(su.id, pick.hex))
+        return orders
 
     def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
         # The Commonwealth hauls with the same multi-hop relay as the Axis (it is side-generic):
         # from the rail-fed Mersa Matruh railhead forward to the Field Supply Depots its offensives
-        # are launched out of (game.scenario._campaign_cw_depots).
+        # are launched out of (game.scenario._campaign_cw_depots). The REAL state, deliberately: the
+        # lorries always haul toward the front (Benghazi), never toward the assembly they start on
+        # -- a relay pointed at its own railhead would find nothing forward of itself and stop.
         return campaign_truck_orders(state, side)
 
-    def _rear_view(self, state: GameState) -> GameState:
-        """Between offensives the Commonwealth has NO westward objective -- it is a vanilla
-        rear-oriented defender, identical to the proven rommels_arrival CW. Hiding allied_objective
-        flips every objective_for(ALLIED) read (dump leapfrog, movement, combat) back toward the
-        Egyptian rear, so the front and its dumps fall back EAST with the pressure instead of
-        chasing Benghazi into the advancing Axis (rule 32.33). On the offensive the real state
-        (allied_objective = Benghazi) drives the attack west."""
-        return replace(state, allied_objective=None)
+    def _forward_view(self, state: GameState) -> GameState:
+        """THE DEFENSIVE POSTURE'S VIEW OF THE WAR: BOTH objectives are THE LINE (the rail-fed
+        railhead). One substitution, and every inherited reflex starts defending the right hex:
+
+          - objective_for(ALLIED) -> the line: the march above and the 32.3 dump leapfrog both aim
+            at the assembly, so the army and its dumps come forward TOGETHER and stop there.
+          - target_hex -> the line: and THIS is what a ScriptedPolicy defender actually does with an
+            objective. It ANCHORS on it (_anchor_ids: whoever holds it never moves, never sorties,
+            never counter-assaults out of it) and it never UNCOVERS it (_uncovers gates every
+            sortie on leaving the objective covered). Pointed at Alexandria -- 60 hexes behind the
+            front, where the Commonwealth has not one unit -- both tests are vacuous: there are no
+            anchors, nothing is uncovered, and the reflex is free to throw the RAILHEAD'S OWN
+            GARRISON at the first exposed Italian it sees. Measured, that is exactly what it did:
+            Selby Force marched off Mersa Matruh on Game-Turn 1 and surrendered on Game-Turn 2,
+            leaving the terminus empty for an Axis armoured car to drive over on its way to
+            Alexandria. Anchor the defender on the line and the garrison stays.
+
+        This is what the old _rear_view got backwards. It blanked allied_objective, and
+        objective_for then fell back to state.target_hex -- ALEXANDRIA, the Commonwealth's OWN BASE.
+        The army's 'forward' was its own rear: the dumps fell back east and the army never came up
+        at all. Hiding the objective was the right instinct (an off-window defender must not chase
+        Benghazi into the advancing Axis, rule 32.33) but the wrong hex: the answer is not NO
+        objective, it is the RIGHT one -- the line you intend to hold. With no railway there is no
+        line, and the old rear-oriented defender is exactly what is wanted."""
+        line = railhead(state)
+        if line is None:
+            return replace(state, allied_objective=None)
+        return replace(state, target_hex=line.hex, allied_objective=line.hex)
 
 
 _STAGING = ("AX-Stage", "AL-Stage")     # the seeded supply SPINES of both sides (60.34 / 54.3)

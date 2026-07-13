@@ -105,17 +105,31 @@ def test_a_unit_on_a_major_city_can_trace_water():
 def test_the_axis_army_is_not_destroyed_by_thirst():
     # The regression this subsystem exists to prevent. Before the wells, the Italian 10th Army
     # was 96 combat units at Game-Turn 1 and 28 by GT12 -- destroyed by 52.53 attrition inside a
-    # month, with ZERO water ever drawn. The floor is set below the measured 72 (the residual is
-    # combat loss plus the ~20 units the campaign's dump network already leaves outside EVERY
-    # supply trace -- they can draw no ammo or stores either; see the module notes in game.wells).
+    # month, with ZERO water ever drawn.
+    #
+    # ASSERT THE THIRST, NOT THE HEADCOUNT. A bare survivor count was a fair gauge of thirst only
+    # while the Commonwealth sat out the war in the Nile Delta. It now concentrates on its railhead
+    # and FIGHTS (game.campaign_policy._concentrate), and the Italian units that rush past it have
+    # outrun their ammunition: measured at GT12, Axis TOE lost to ATTRITION FELL from 270 to 163 and
+    # water shortfalls from 533 to 322 -- the wells are working better than they ever did -- while
+    # TOE lost to 15.15 SURRENDER rose from 49 to 148. The army is smaller because it is being taken
+    # prisoner, which is Operation Compass and not a wells regression. So: the desert must not be
+    # what empties the Order of Battle, and the water must really be drunk.
     res = run(campaign(seed=1941, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     alive = [u for u in res.final.living(Side.AXIS) if u.is_combat]
-    assert len(alive) >= 70
+    assert len(alive) >= 45                              # 96 at GT1; 28 by GT12 before the wells
 
     drawn = sum(e.payload["qty"] for e in res.events
                 if e.kind == EventKind.SUPPLY_CONSUMED and e.side == Side.AXIS
                 and e.payload["commodity"] == supply.WATER)
     assert drawn > 1000                                  # was 892 across the ENTIRE 111-turn campaign
+
+    lost: dict[str, int] = {}
+    for e in res.events:
+        if e.kind == EventKind.STEP_LOST and e.side == Side.AXIS:
+            lost[e.payload.get("role")] = lost.get(e.payload.get("role"), 0) + e.payload["amount"]
+    assert lost.get("attrition", 0) < 200                # the desert takes a toll; not the army
+    assert lost.get("surrender", 0) > lost.get("attrition", 0) // 2   # the enemy takes the rest
 
 
 def test_benchmark_scenarios_have_no_wells():

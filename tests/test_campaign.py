@@ -91,8 +91,15 @@ def test_campaign_commonwealth_can_attack():
     on = replace(board, turn=15)          # mid-Compass (13-22): offensive
     off = replace(board, turn=30)         # between Compass and Crusader: defensive
     assert pol._on_offensive(on) and not pol._on_offensive(off)
-    # On an offensive turn the CW emits the ALLIED attacker branch's moves verbatim (toward Benghazi).
-    assert pol.movement(on, Side.ALLIED) == attacker.movement(on, Side.ALLIED)
+    # On an offensive turn the CW emits the ALLIED attacker branch's moves (toward Benghazi) -- less
+    # the standing garrison order, which no offensive countermands: a unit BANKING a supplied victory
+    # city keeps banking it (64.73). That order now bites, because the forward concentration means
+    # the Commonwealth actually holds one -- the rail-fed railhead at Mersa Matruh is itself a 64.73
+    # city, and its garrison does not join the attack.
+    from game.campaign_policy import garrison_units, hold_garrisons
+    assert garrison_units(on, Side.ALLIED), "the CW banks no victory city -- the check is vacuous"
+    assert pol.movement(on, Side.ALLIED) == hold_garrisons(
+        attacker.movement(on, Side.ALLIED), on, Side.ALLIED)
 
 
 def test_campaign_defensive_supply_integrity():
@@ -100,18 +107,31 @@ def test_campaign_defensive_supply_integrity():
     #  bug 1 -- the Suez base depots (rule 57) are immobile: they never leave Cairo/Alexandria.
     #           (The scripted policy had walked the 125M-point base to the front, supplying the CW
     #           everywhere and collapsing the supply-traced victory into a CW rout.)
-    #  bug 3 -- CW field dumps fall back EAST with the front, never leapfrogging WEST toward the
-    #           advancing Axis (the offensive-CW objective change had reversed this on defense).
+    #  bug 3 -- a CW field dump never gets AHEAD OF THE ARMY. The original bug was a dump chasing
+    #           the offensive objective (Benghazi) into the advancing Axis on a DEFENSIVE turn, and
+    #           the original guard was "no dump ever moves one hex west". That guard also forbade
+    #           the dumps coming FORWARD to the line the army now concentrates on -- which is the
+    #           whole point of them (32.33) -- so it is restated as the invariant it was really
+    #           protecting: the supply never leapfrogs out into the desert in front of the troops.
+    #           It follows them, to the railhead and to the units it must feed, and no further.
     from game import coords
     from game.hexmap import distance
     beng = coords.to_axial(coords.parse("A4827"))
     res = run(campaign(seed=1941, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     seeded = {s.id: s.hex for s in res.initial.supplies if s.base}
     assert seeded and {s.id: s.hex for s in res.final.supplies if s.base} == seeded   # bases pinned
+    spearhead = min(distance(u.hex, beng) for u in res.final.living(Side.ALLIED) if u.is_combat)
+    moved = 0
     for su in res.final.supplies:
         if su.side == Side.ALLIED and not su.base and not su.is_dummy:
             start = next(s for s in res.initial.supplies if s.id == su.id)
-            assert distance(su.hex, beng) >= distance(start.hex, beng)   # never drifted west
+            if su.hex == start.hex:
+                continue      # never relocated: the seeded spine, and the Tobruk garrison dump that
+                              # sits inside the Axis-held fortress waiting for the CW to take it
+            moved += 1
+            assert distance(su.hex, beng) >= spearhead, \
+                f"{su.id} leapfrogged past the army toward Benghazi"
+    assert moved, "no field dump relocated at all -- the 32.3 bridge is not under test"
 
 
 def test_campaign_railhead_port_uses_the_chart_tonnage():
