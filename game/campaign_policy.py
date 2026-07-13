@@ -48,6 +48,45 @@ ALAMEIN = (102, 111)
 CAMPAIGN_CW_OFFENSIVES = OffensiveSchedule((COMPASS, CRUSADER, ALAMEIN))
 
 
+def garrison_units(state: GameState, side: Side) -> set:
+    """THE STANDING GARRISON ORDER (rule 64.73). The campaign is scored on the victory cities a side
+    HOLDS SUPPLIED at the end, and a city with a stocked friendly dump standing on it supplies its
+    garrison at range zero -- so a combat unit already sitting on such a city is banking its points
+    for free, and marching it away throws them in the desert.
+
+    Measured, this is the single largest source of value destruction in the campaign: the Axis opens
+    holding Tobruk (200 VP) and Bardia (100 VP) with the Libyan Tank Command, and EVERY policy tried
+    -- scripted and LLM alike -- marched those garrisons east and finished with every victory city
+    empty (a 0-0 draw), while a side that did NOTHING AT ALL simply held them and won 300-10.
+
+    So one unit per supplied victory city stays put: a standing order no competent staff would
+    countermand. It prefers a non-tank holder, freeing the armour for manoeuvre (the real reason the
+    garrisons kept leaving: they ARE the armour, and the mobile lane wants them). Campaign-only --
+    it needs the 64.73 city table, which rommels_arrival / siege_of_tobruk do not carry."""
+    vic = state.victory
+    cities = getattr(vic, "cities", None)
+    if not cities:
+        return set()
+    held = set()
+    for ax, _avp, _cvp, _name in cities:
+        # Whoever is BANKING this city right now keeps banking it: a combat unit standing on it that
+        # can trace fuel AND ammo is exactly the 64.73 occupier test the campaign scores on.
+        here = [u for u in state.units_at(ax)
+                if u.side == side and u.alive and u.is_combat and u.strength >= 1
+                and vic._supplied(state, u)]
+        if here:
+            held.add(min(here, key=lambda u: (u.is_tank, u.id)).id)   # infantry first; armour is for manoeuvre
+    return held
+
+
+def hold_garrisons(orders: list, state: GameState, side: Side) -> list:
+    """Drop any move order for a unit under the standing garrison order (garrison_units): it holds
+    its supplied victory city and banks the points. Combat orders are untouched -- a garrison still
+    fights from its city. Applied by every campaign policy, scripted and staff alike."""
+    keep = garrison_units(state, side)
+    return [o for o in orders if o.unit_id not in keep] if keep else orders
+
+
 class CampaignCommonwealthPolicy(ScriptedPolicy):
     """A scripted Commonwealth DEFENDER (attacker=AXIS, so every inherited reflex -- defender
     moves and sorties, counter-assault, elastic retreat, initiative -- is unchanged) that switches
@@ -63,9 +102,9 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
         return self._schedule.is_offensive(state.turn)
 
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
-        if self._on_offensive(state):
-            return self._offensive.movement(state, side)
-        return super().movement(self._rear_view(state), side)
+        orders = (self._offensive.movement(state, side) if self._on_offensive(state)
+                  else super().movement(self._rear_view(state), side))
+        return hold_garrisons(orders, state, side)     # even an offensive keeps its supplied cities
 
     def combat(self, state: GameState, side: Side) -> list[AttackOrder]:
         if self._on_offensive(state):
@@ -76,6 +115,11 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
         if self._on_offensive(state):
             return self._offensive.supply_orders(state, side)
         return super().supply_orders(self._rear_view(state), side)
+
+    def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
+        # The Commonwealth hauls with the same multi-hop relay as the Axis (it is side-generic):
+        # from the rail-fed Mersa Matruh railhead forward to the dumps its offensives depend on.
+        return campaign_truck_orders(state, side)
 
     def _rear_view(self, state: GameState) -> GameState:
         """Between offensives the Commonwealth has NO westward objective -- it is a vanilla
@@ -255,6 +299,12 @@ class _CampaignAxisSupplyMixin:
     staging dumps from the base leapfrog bridge (which would otherwise walk the waypoint chain toward
     Alexandria and UNSTAGE the relay the trucks feed). Campaign-only -- rommels_arrival /
     siege_of_tobruk seed trucks through the byte-locked base relay and never construct these."""
+
+    def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
+        # The standing garrison order applies to the live staff too: whatever the seats propose, the
+        # units holding a supplied victory city stay on it. A staff may manoeuvre with everything
+        # else; it may not march the Tobruk and Bardia garrisons into the desert.
+        return hold_garrisons(super().movement(state, side), state, side)
 
     def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
         return campaign_truck_orders(state, side)

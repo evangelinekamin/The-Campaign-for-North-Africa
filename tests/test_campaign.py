@@ -145,6 +145,29 @@ def test_campaign_tobruk_lifeline_holds_only_when_the_commonwealth_takes_it():
     assert alt.ammo == 0 and alt.fuel == 0 and alt.stores == 0          # empty: the ferry never landed while Axis-held
 
 
+def test_the_standing_garrison_order_keeps_the_cities_it_banks():
+    # THE fix for the campaign's largest source of value destruction. The Axis OPENS the campaign
+    # banking Tobruk (200 VP) and Bardia (100 VP) -- the Libyan Tank Command garrisons them, supplied
+    # by the 60.34 staging dumps beneath them. Every policy tried (scripted AND live LLM staffs)
+    # marched those garrisons east and finished GT111 with every victory city EMPTY, a 0-0 draw --
+    # while a side that did NOTHING AT ALL simply held them and won 300-10. So a unit that is banking
+    # a city (on it and supplied = the exact 64.73 occupier test) is never given a move order.
+    from game.campaign_policy import garrison_units, hold_garrisons
+    from game.policy import MoveOrder
+    st = campaign(seed=1941)
+    cv = st.victory
+    banked = [n for ax, a, c, n in cv.cities if cv._occupier(st, ax) == Side.AXIS]
+    assert {"Tobruk", "Bardia"} <= set(banked)          # the Axis opens holding them, supplied
+    keep = garrison_units(st, Side.AXIS)
+    assert keep                                          # a garrison is pinned on each
+    # a move order for a garrison is dropped; every other unit still manoeuvres freely
+    held = next(iter(keep))
+    other = next(u.id for u in st.living(Side.AXIS) if u.is_combat and u.id not in keep)
+    orders = [MoveOrder(held, (0, 0)), MoveOrder(other, (0, 0))]
+    kept = hold_garrisons(orders, st, Side.AXIS)
+    assert [o.unit_id for o in kept] == [other]
+
+
 def test_max_turns_truncates():
     assert campaign(max_turns=8).max_turns == 8
 

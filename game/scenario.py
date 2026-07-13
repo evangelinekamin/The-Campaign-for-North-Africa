@@ -667,6 +667,21 @@ def _campaign_cw_railhead(supplies):
     return min(fwd, key=lambda s: (distance(s.hex, rh), s.id)) if fwd else None
 
 
+def _campaign_cw_trucks(supplies) -> tuple[TruckFormation, ...]:
+    """The Commonwealth 2nd/3rd-line motor-transport pool (rules 53 / 54.2 / 60.33), staged on the
+    Mersa Matruh railhead the rail lane feeds. Without it the Commonwealth has NO way to project
+    supply west of its railhead -- its trace reaches ~6-12 hexes -- so Operation Compass and Crusader
+    strand every unit they send toward Benghazi (measured: zero supplied Commonwealth units at GT111).
+    The Western Desert Force ran on lorries; this is the pool that hauled it to El Agheila."""
+    railhead = _campaign_cw_railhead(supplies)
+    if railhead is None:
+        return ()
+    return (
+        TruckFormation("AL-Truck-H", Side.ALLIED, railhead.hex, "heavy", points=8, line=3),
+        TruckFormation("AL-Truck-M", Side.ALLIED, railhead.hex, "medium", points=8, line=3),
+    )
+
+
 def _campaign_axis_trucks(supplies, target) -> tuple[TruckFormation, ...]:
     """The Axis 2nd/3rd-line motor-transport pool (rules 53 / 54.2 / 60.33), staged at the
     Benghazi port-of-arrival where the Mediterranean convoys land -- the Quartermaster's
@@ -881,7 +896,8 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         victory=campaign_victory.CampaignVictory(),      # rule 64.7 (see game.campaign_victory)
         convoys=_campaign_convoys(supplies, target, max_turns, seed),   # C3: Axis Med + CW rail (56.4/60.7)
         ports=_campaign_ports(supplies, target),                        # C3: PORT-Benghazi + PORT-Matruh
-        trucks=_campaign_axis_trucks(supplies, target),                 # C3-2: the Benghazi->front haul (53/60.33)
+        trucks=(_campaign_axis_trucks(supplies, target)                 # C3-2: the Benghazi->front haul (53/60.33)
+                + _campaign_cw_trucks(supplies)),                       # and the CW railhead->west haul (60.33)
         interdictions=(_campaign_malta_interdiction(max_turns)          # C4: Malta throttles the Axis Med convoy (rule 44)
                        + _campaign_tobruk_ferry_interdiction(max_turns)),  # + the cuttable Tobruk-ferry lane (30/41.6)
     )
