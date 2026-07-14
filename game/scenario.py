@@ -1235,6 +1235,7 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         supplies=supplies, consumed=_zero_consumed(),
         initial_supply=_initial_supply(supplies),
         villages=village_hexes,                          # 54.12: the missing capacity row
+        dump_capture=True,                               # 32.13/54.15: a dump entered is a dump taken
         map_sections=frozenset("ABCDE"),
         season_offset=calendar.CAMPAIGN_SEASON_OFFSET,   # GT1 = September 1940 (fall)
         victory=campaign_victory.CampaignVictory(),      # rule 64.7 (see game.campaign_victory)

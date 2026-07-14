@@ -462,6 +462,20 @@ class GameState:
     # decision, not a claim that the rule is universal. See game.villages.
     villages: frozenset = frozenset()
 
+    # [32.13]/[54.15]/[49.19] DUMP CAPTURE: an enemy combat unit entering a FIELD dump's hex takes
+    # it, supplies and all. See engine._capture_dumps for the rule and for why a rule-57 base and a
+    # 52.1 well (base=True) are not capturable counters.
+    #
+    # DEFAULT FALSE, AND THIS IS A FLAGGED ASYMMETRY PENDING A DECISION -- not a claim that 32.13 is
+    # campaign-only. It is a general rule and it fires immediately in the benchmark scenarios:
+    # measured, on GAME-TURN 1 of BOTH rommels_arrival and siege_of_tobruk the Axis walks onto
+    # AL-Dump#2 and takes 567 Ammo / 799 Fuel / 509 Stores / 501 Water off the Commonwealth, moving
+    # each scenario's determinism_signature (9339d2b308d7 -> 50f594d7cdb5, 5ba4da88d107 ->
+    # 8d866769c834). Those two signatures are the regression lock the LLM generalship leaderboard is
+    # published against, so turning 32.13 on for them is a re-baseline decision for Eve, not one to
+    # take inside a task. Only game.scenario.campaign sets it.
+    dump_capture: bool = False
+
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:
         for u in self.units:

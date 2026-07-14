@@ -137,9 +137,13 @@ def test_campaign_defensive_supply_integrity():
     assert seeded and {s.id: s.hex for s in res.final.supplies if s.base} == seeded   # bases pinned
     spearhead = min(distance(u.hex, beng) for u in res.final.living(Side.ALLIED) if u.is_combat)
     moved = 0
+    seeded_hex = {s.id: s.hex for s in res.initial.supplies}
     for su in res.final.supplies:
         if su.side == Side.ALLIED and not su.base and not su.is_dummy:
-            start = next(s for s in res.initial.supplies if s.id == su.id)
+            if su.id not in seeded_hex:
+                continue      # FOUNDED mid-campaign (rule 54.11): it never "relocated" anywhere --
+                              # the depot list is no longer frozen at construction
+            start = res.initial.supply(su.id)
             if su.hex == start.hex:
                 continue      # never relocated: the seeded spine, and the Tobruk garrison dump that
                               # sits inside the Axis-held fortress waiting for the CW to take it

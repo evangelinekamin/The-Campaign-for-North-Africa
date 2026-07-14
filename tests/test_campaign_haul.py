@@ -88,7 +88,14 @@ def test_acceptance_haul_runs_unfrozen_and_reaches_the_front():
             culmination: by ~GT10 the rush has driven the front ~110 hexes east, out of the cpa/2
             trace range of even its leapfrogging field dumps -- see campaign_truck_orders)."""
     res = run(campaign(seed=1941, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    # The depot list is no longer FROZEN at construction: rule 54.11 lets an army found a dump on any
+    # hex, and the relay now extends its chain forward onto the ground the army is standing on
+    # (campaign_policy._forward_depot_sites). So a TRUCK_UNLOADED may name a depot that did not exist
+    # at t0 -- fold the SUPPLY_DUMP_ESTABLISHED events in, or the lookup below KeyErrors on the first
+    # dump the lorries build.
     dump_hex = {s.id: s.hex for s in res.initial.supplies}
+    dump_hex.update({e.payload["supply_id"]: tuple(e.payload["hex"]) for e in res.events
+                     if e.kind.name == "SUPPLY_DUMP_ESTABLISHED"})
 
     gt = moves_past_10 = deepest = 0
     fuel_east = ammo_east = False

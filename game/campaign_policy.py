@@ -35,7 +35,7 @@ from .events import Control, Side
 from .hexmap import Coord, distance
 from .policy import AttackOrder, MoveOrder, ScriptedPolicy, SupplyMoveOrder, TruckOrder
 from .scenario import _CONVOY_SPLIT_56_22
-from .state import GameState
+from .state import GameState, SupplyUnit
 
 __all__ = ["CAMPAIGN_CW_OFFENSIVES", "CampaignAxisPolicy", "CampaignCommonwealthPolicy",
            "OffensiveSchedule", "campaign_truck_orders", "garrison_units", "hold_depots",
@@ -521,6 +521,176 @@ def _a_link_in_the_chain(s, anchor) -> bool:
     return s.id.startswith(STAGING) or (anchor is not None and s.id == anchor.id)
 
 
+def _field_dump_id(side: Side, hx: Coord) -> str:
+    """A deterministic id for a dump founded at `hx` (54.11). Derived from the hex, so the stateless
+    relay names the same depot every time it recomputes and never mints a duplicate."""
+    return f"{'AX' if side == Side.AXIS else 'AL'}-Field-{hx[0]}-{hx[1]}"
+
+
+def _forward_depot_sites(state: GameState, side: Side, objective: Coord, here: int,
+                         enemy_held, reach: dict) -> list:
+    """[54.11]/[54.16] THE CHAIN EXTENDS ITSELF -- the hexes the relay may FOUND a new depot on,
+    handed to the leapfrog below as ordinary delivery addresses so no special case is needed.
+
+    Rule 54.11: "ANY HEX CAN BE USED AS A SUPPLY DUMP." Rule 54.16: "Establishing a viable dump
+    network should be TOP PRIORITY for logistics commanders." The engine could not do it -- no
+    EventKind created a dump and game.apply never appended to state.supplies, so the depot list was
+    FROZEN AT CONSTRUCTION for all 111 Game-Turns. The relay could therefore only ever deliver into
+    depots placed in September 1940; the army marched away from them and starved. Measured: both
+    armies ended ~9 hexes beyond the nearest stocked dump -- JUST outside the 32.16 cpa/2 trace --
+    and stayed there, with 5-8% of the Axis and 29% of the Commonwealth able to draw a single Point
+    of supply, from Game-Turn 10 to Game-Turn 111. Ninety per cent of both armies were logistically
+    dead for the entire war.
+
+    WHERE. On a hex a friendly COMBAT UNIT is standing on: forward of the lorry, inside its 53.22
+    convoy reach, holding no dump already, with no enemy on it and not on ground the enemy controls.
+    Not in empty desert -- a depot the army is not standing on is a depot the enemy walks onto
+    (32.13) -- and not behind the front, where the seeded chain already reaches. That single clause
+    makes the network follow the army instead of the army starving away from the network, and the
+    sort in the caller does the rest: it fills the CHAIN first (_a_link_in_the_chain) and only then
+    the deepest of these, which is the leading brigade's own hex.
+
+    Founded EMPTY by the engine the instant a lorry unloads into it (engine._establish_dump), so
+    nothing is minted and conservation is untouched."""
+    taken = {s.hex for s in state.supplies if not s.is_dummy}       # never two dumps on one hex
+    sites: list = []
+    for u in sorted(state.living(side), key=lambda u: u.id):
+        if not u.is_combat or u.strength < 1 or u.hex in taken:
+            continue
+        if distance(u.hex, objective) >= here or u.hex not in reach:
+            continue
+        if state.enemies_at(u.hex, side) or state.control_of(u.hex) == enemy_held:
+            continue
+        taken.add(u.hex)
+        sites.append(SupplyUnit(_field_dump_id(side, u.hex), side, u.hex, ammo=0, fuel=0))
+    return sites
+
+
+def _can_trace(state: GameState, u) -> bool:
+    """The rule-64.73 occupation quality-test, asked of a unit anywhere: can it draw both Fuel (its
+    per-model rate -- FOOT infantry burns none at all, 49.12) and Ammunition off a dump inside the
+    32.16 cpa/2 trace? This is the same question game.campaign_victory._supplied asks, written
+    without the victory object so the movement layer can ask it too."""
+    return (supply.plan_draw(state, u, supply.FUEL, supply.fuel_rate(u)) is not None
+            and supply.plan_draw(state, u, supply.AMMO, supply.ammo_cost(u, phasing=True)) is not None)
+
+
+def keep_in_trace(orders: list, state: GameState, side: Side) -> list:
+    """[54.16]/[32.16] DO NOT OUTRUN YOUR SUPPLY -- the consolidation constraint, as a transform on an
+    army's move orders, in the same idiom as hold_garrisons.
+
+    ############################################################################################
+    # NOT WIRED. Built, unit-tested (tests/test_dumps.py) and MEASURED IN THREE FORMS OVER FIVE
+    # SEEDS -- and not applied by any policy, because none of the three is fit to ship. It is kept
+    # because it is correct, because it is the missing half of the consolidation story, and because
+    # the thing that blocks it is NAMED below and is somebody's next task. Wiring it in as it stands
+    # would trade one broken campaign for another.
+    #
+    #   BOTH SIDES, STRICT -- kills the Axis beeline outright (the 10th Army's furthest-east hex on
+    #     Game-Turn 4 falls from r=133, Alexandria, to r=81-100: SIDI BARRANI, which is where
+    #     Graziani actually stopped) and raises the supplied fraction from 29% to 77-91%. AND IT
+    #     PARALYSES THE EIGHTH ARMY. Measured, seed 1941, Game-Turn 60: 42 Commonwealth combat units
+    #     alive, THIRTY-ONE of them sitting in the Nile Delta, ONE at the railhead. That is precisely
+    #     the defect CampaignCommonwealthPolicy._concentrate exists to cure, resurrected -- now with
+    #     a 91% "supplied" score to flatter it, because a division parked on the bottomless Cairo
+    #     base is by definition in supply. A metric that rewards an army for not fighting is
+    #     measuring the wrong thing, and this is the trap it sets.
+    #   BOTH SIDES, PERMISSIVE (a supplied unit may cross dry ground; only a starving one is
+    #     pinned) -- does NOTHING. The Axis dump CARPET (32.3: a depot relocates 15 CP per OpStage,
+    #     faster than the infantry it feeds) simply keeps the spearhead in trace as it runs. GT4:
+    #     r=122-131. The beeline walks straight through it.
+    #   AXIS ONLY -- dampens the beeline (GT4: r=88-109) but is worse overall: the Commonwealth
+    #     marches west into a now better-supplied Axis and is destroyed (18-36 combat units alive
+    #     against 43 before). Scores go 445-20, 445-20, 445-20, 420-20, 400-30.
+    #
+    # THE BLOCKER, and it is one sentence: OUR SUPPLY TRACE RUNS TO DUMPS AND TO NOTHING ELSE. The
+    # Commonwealth's rear railway stations (AL-Stage-ElHamman, AL-Stage-ElDaba) are transit nodes
+    # that correctly sit at ZERO -- stock flows forward to the railhead -- so four hundred miles of
+    # Egypt, along a working railway, inside Britain's own base area, reads to a dump-trace as
+    # out-of-supply desert. Give the trace the Commonwealth railroad (54.3: "the RR may move
+    # supplies... 1500 tons per Operations Stage") and its pipeline (52.22: "the railroad hexes are
+    # pipelines in and of themselves") and the Eighth Army can march up its own railway in supply,
+    # the strict form stops paralysing it, and the 10th Army still halts at Sidi Barrani. That is the
+    # order of work.
+    ############################################################################################
+
+    A unit that CAN trace supply where it stands may not march to a hex where it CANNOT. It is not a
+    magnitude we invented and it is not a leash on the advance: the moment the lorries push a depot
+    forward (_forward_depot_sites, rule 54.11) the trace moves with it and the same march becomes
+    legal. The army advances at the pace of its logistics, which is the thesis of the whole game
+    ("the design thrust of CNA is logistics: the availability and proper use of supplies and trucks"
+    -- the 32.0 commentary, which then predicts EXACTLY our bug: "try motorizing all Italian
+    divisions in 1940, doubling Italian initial supply outlay and arrival. WATCH THEM WINTER IN
+    CAIRO").
+
+    TWO CLAUSES:
+
+      * A unit that CAN trace supply may not march to a hex where it CANNOT. It advances at the pace
+        its logistics can follow, and no faster.
+      * A unit that is ALREADY DRY may move ONLY into the trace, or strictly NEARER a stocked depot.
+        It walks back to its supply, or to where its supply has caught up. It does not march on.
+
+    The second clause is not decoration, and getting it wrong is instructive. Written first as "a unit
+    out of trace may move freely -- it needs to seek supply", the constraint did NOTHING: the base
+    attacker's proposer only ever offers hexes strictly CLOSER TO THE OBJECTIVE, so "freely" meant
+    "onward to Alexandria". The starving unit was the one unit on the map with a licence to keep
+    marching, and the 10th Army -- every man of which is out of trace by Game-Turn 3 -- beelined
+    through the gap exactly as before. An escape hatch that only opens forward is not an escape hatch.
+
+    The strict first clause is what pins the 10th Army at Sidi Barrani; the permissive reading of
+    it does nothing at all (see the three measurements above). The cost of that strictness is that
+    it forbids a supplied unit from crossing dry ground even to reach a stocked depot on the far
+    side -- which the rulebook WOULD allow (49.14 gives every unit a tank of fuel; 51.22 gives it
+    two Game-Turns of rations before attrition touches it) -- and that is precisely the clause the
+    missing rail/pipeline trace would repair.
+
+    WHY THE POLICY AND NOT THE ENGINE: the engine already halts a unit that cannot pay a move's Fuel
+    (49.13/49.16, engine._draw_move_fuel), and that is the rulebook's own gate. But FOOT infantry
+    burns NO FUEL AT ALL (49.12), so that gate never touched the Italian 10th Army for one hex of the
+    war -- which is why it walked sixty hexes into Egypt and stood on Alexandria on Game-Turn 4. The
+    rulebook does not forbid an infantryman from walking into the desert; it merely kills him there
+    (51.22 stores attrition, 52.53 thirst, 15.15 dry-ammunition surrender), and it kills him far too
+    slowly to stop a scripted policy that cannot see it coming. So the restraint belongs where the
+    judgement belongs: in the staff that gives the order. FLAGGED as doctrine, not as rule.
+
+    """
+    if not orders:
+        return orders
+    fed: dict = {}
+    # The depots that count: friendly, real, holding AMMUNITION -- the commodity every unit needs and
+    # the one that runs a foot battalion dry (49.12: infantry burns no Fuel at all, so a fuel-only
+    # depot feeds it nothing). Wells are geography and hold water only, so they are never "supply".
+    depots = [s.hex for s in state.supplies
+              if s.side == side and not s.is_dummy and s.ammo > 0
+              and not wells.is_water_source(s)]
+    if not depots:
+        return orders                          # no depot anywhere: never freeze the army
+
+    def ok(u, dest: Coord) -> bool:
+        key = (dest, u.cpa, u.mobility, supply.fuel_rate(u), supply.ammo_cost(u, phasing=True))
+        if key not in fed:
+            fed[key] = _can_trace(state, replace(u, hex=dest))
+        return fed[key]
+
+    def toward_supply(frm: Coord, dest: Coord) -> bool:
+        return (min(distance(dest, d) for d in depots)
+                < min(distance(frm, d) for d in depots))
+
+    out = []
+    for o in orders:
+        u = state.unit(o.unit_id)
+        if u is None:
+            continue
+        if _can_trace(state, u):
+            if ok(u, o.to):                    # IN SUPPLY: it may not march OUT of supply
+                out.append(o)
+            continue
+        if ok(u, o.to) or toward_supply(u.hex, o.to):
+            out.append(o)                      # DRY: only into the trace, or nearer a depot
+        # otherwise: HOLD. A starving unit does not march deeper into the desert.
+    return out
+
+
 def _room_in(state, dump, commodity: str) -> int:
     """The 54.12 HEADROOM of `dump`: how many more Points of `commodity` its hex may legally hold.
     A dump is not a bottomless hole -- supply.dump_capacity_at caps it by terrain AND location (a
@@ -678,6 +848,11 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
                    if s.side == side and not s.is_dummy and s.hex != t.hex
                    and distance(s.hex, objective) < here
                    and state.control_of(s.hex) != enemy_held]
+        # [54.11] ...and the depots that DO NOT EXIST YET. The chain extends itself onto the hexes
+        # the army is actually standing on, so the network follows the advance instead of the
+        # advance starving away from the network (_forward_depot_sites). They are ordinary delivery
+        # addresses from here down; the engine founds one the instant a lorry unloads into it.
+        forward += _forward_depot_sites(state, side, objective, here, enemy_held, reach)
         in_reach = [s for s in forward if s.hex in reach]
         # The dump under the wheels, in its two distinct roles: what the truck may LIFT from (the
         # supply line only -- see _relay_source) and what it may SHED an unmovable load into (any

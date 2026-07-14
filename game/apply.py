@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from .events import Control, Event, EventKind, Phase, Side
-from .state import GameState, StepRecord, VP
+from .state import GameState, StepRecord, SupplyUnit, VP
 
 
 def apply(state: GameState, event: Event) -> GameState:
@@ -99,6 +99,21 @@ def apply(state: GameState, event: Event) -> GameState:
     if k == EventKind.SUPPLY_MOVED:
         su = state.supply(p["supply_id"])
         return state.with_supply(replace(su, hex=tuple(p["to"])))
+
+    if k == EventKind.SUPPLY_DUMP_ESTABLISHED:
+        # 54.11: "Any hex can be used as a supply dump." A pure APPEND of an EMPTY dump -- it
+        # mints nothing, so conservation (on_hand + consumed == initial) holds trivially; the
+        # supplies arrive by the TRUCK_UNLOADED that follows it.
+        su = SupplyUnit(p["supply_id"], Side(p["side"]), tuple(p["hex"]),
+                        ammo=0, fuel=0, stores=0, water=0)
+        return replace(state, supplies=state.supplies + (su,))
+
+    if k == EventKind.SUPPLY_CAPTURED:
+        # 32.13 / 54.15 / 49.19: an enemy combat unit entered the dump's hex, so the dump (and
+        # everything in it) changes hands. A pure OWNERSHIP flip -- no point is minted or
+        # destroyed, so the conservation identity is untouched.
+        su = state.supply(p["supply_id"])
+        return state.with_supply(replace(su, side=Side(p["to"])))
 
     if k == EventKind.SUPPLY_CONSUMED:
         su = state.supply(p["supply_id"])

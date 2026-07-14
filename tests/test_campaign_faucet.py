@@ -321,10 +321,12 @@ def test_the_commonwealth_trucks_actually_run():
             assert distance(t.hex, CAIRO) >= distance(MATRUH, CAIRO), \
                 f"{t.id} idled back at the base ({t.hex})"
 
-    # and the haul reaches a FORWARD depot: supply is west of the railhead, where the front is
-    forward = [e for e in unloads
-               if _west_of_matruh(next(s.hex for s in res.initial.supplies
-                                       if s.id == e.payload["supply_id"]))]
+    # and the haul reaches a FORWARD depot: supply is west of the railhead, where the front is.
+    # The depot list GROWS now (rule 54.11: the relay founds its own forward dumps), so an unload may
+    # name a depot that did not exist at t0 -- read the hexes off the final board, not the setup.
+    dump_hex = {s.id: s.hex for s in res.initial.supplies}
+    dump_hex.update({s.id: s.hex for s in res.final.supplies})
+    forward = [e for e in unloads if _west_of_matruh(dump_hex[e.payload["supply_id"]])]
     assert forward, "nothing was ever hauled west of the railhead"
 
     # A forward Field Supply Depot actually FILLS. Asked of the chain, not of one named link: the

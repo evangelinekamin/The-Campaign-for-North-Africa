@@ -102,6 +102,24 @@ class EventKind(str, Enum):
     TRUCK_LOADED = "TRUCK_LOADED"
     TRUCK_MOVED = "TRUCK_MOVED"
     TRUCK_UNLOADED = "TRUCK_UNLOADED"
+    # [54.11] "ANY HEX CAN BE USED AS A SUPPLY DUMP." SUPPLY_DUMP_ESTABLISHED {supply_id, side,
+    # hex} appends a NEW, EMPTY dump to state.supplies -- the missing engine subsystem. Until it
+    # existed the depot list was FROZEN AT CONSTRUCTION for all 111 Game-Turns: no EventKind
+    # created a dump, apply.py never appended to state.supplies, and _truck_unload rejected any
+    # unload with "no co-located friendly dump to unload into". An army therefore could not build
+    # the dump network rule 54.16 calls its "top priority", could not extend its chain forward as
+    # it advanced, and so could never consolidate an advance. Folds to a pure append of an EMPTY
+    # dump -- it mints nothing, so conservation holds trivially; the supplies arrive by the
+    # TRUCK_UNLOADED that follows.
+    SUPPLY_DUMP_ESTABLISHED = "SUPPLY_DUMP_ESTABLISHED"
+    # [32.13]/[54.15]/[49.19] DUMP CAPTURE. SUPPLY_CAPTURED {supply_id, from, to, ammo, fuel,
+    # stores, water} flips a field dump's OWNER when an enemy combat unit enters its hex: "if any
+    # enemy combat unit enters a Supply Unit's hex, that unit is captured (and its supplies used
+    # immediately and freely)" [32.13], which the full logistics game states as "dumps may be used
+    # by any Player as supply sources" [54.15] and "fuel is non-denominational -- it can be used by
+    # either player, making a supply dump a worthwhile objective" [49.19]. A CONSERVING transfer of
+    # ownership: not one point is minted or destroyed, so on_hand+consumed==initial is untouched.
+    SUPPLY_CAPTURED = "SUPPLY_CAPTURED"
     # Commonwealth railroad (rule 54.3, the inland rail DISTRIBUTION layer). RAIL_HAULED
     # {from_dump, to_dump, commodity, qty} is a CONSERVING dump->dump transfer over the
     # rail network (both dumps rail-connected; qty <= 1500 tons/OpStage of ONE commodity,

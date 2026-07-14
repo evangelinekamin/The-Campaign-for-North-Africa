@@ -16,7 +16,8 @@ import random
 from dataclasses import dataclass
 from typing import Protocol
 
-from . import combat, combat_tables, cp_costs, logistics_data, stacking, supply, tactics, weather
+from . import (combat, combat_tables, cp_costs, logistics_data, stacking, supply, tactics,
+               weather, wells)
 from .apply import apply
 from .events import Control, Event, EventKind, Phase, Side
 from .hexmap import distance, is_adjacent, neighbors
@@ -145,15 +146,18 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                 _reserve_designation(r, policies[side], side)   # 48 V.G / 18.11: hold units back (phasing)
                 r.go(Phase.MOVEMENT, side)
                 _movement(r, policies, side)            # segment 0 (ungated); Reaction (8.5) rides inside
+                _capture_dumps(r)                       # 32.13: a dump entered by the enemy changes hands
                 _rommel_move(r, policies[side], side)   # 31.1: the leader repositions (Axis only, self-guarded)
                 _breakdown(r, side)                     # 21.24: check vehicles that ceased moving
                 _supply_movement(r, policies[side], side)   # supply follows the army (32.3)
                 _debrief(side)                          # which moves/pincers actually formed
                 r.go(Phase.COMBAT, side)
                 _combat(r, policies, side)
+                _capture_dumps(r)                       # 32.13: retreats and advances-after-combat too
                 _breakdown(r, _other(side))             # 21.22: the enemy's retreats accrued BP too
                 _repair(r, side)                        # 22.12: the phasing side's Repair Phase
                 _continual_movement(r, policies, side)  # 8.2/8.23 + 18.13: the exploitation pulse loop
+                _capture_dumps(r)                       # 32.13: and the exploitation pulse
             for side in (first, second):
                 _truck_convoys(r, policies[side], side)  # V.J: 2nd/3rd-line truck convoys (48)
             r.go(Phase.RECORD, Side.SYSTEM)
@@ -1361,6 +1365,78 @@ def _supply_movement(r: _Run, policy: Policy, side: Side) -> None:
         moved.add(su.id)
 
 
+def _capture_dumps(r: _Run) -> None:
+    """[32.13] "If any enemy combat unit enters a Supply Unit's hex, that unit is CAPTURED (and its
+    supplies used immediately and freely)." The full logistics game says the same thing twice more:
+    [54.15] "Dumps may be used by any Player as supply sources", and [49.19] "Fuel is
+    non-denominational. It can be used by either player, MAKING A SUPPLY DUMP A WORTHWHILE
+    OBJECTIVE."
+
+    THIS IS THE HISTORICAL ENGINE OF OPERATION COMPASS, and it is the feedback loop without which no
+    desert offensive is ever sustainable: an advance beyond your own chain starves, so nothing is
+    ever taken, so the score is the September-1940 setup frozen for 111 Game-Turns. Measured before
+    it existed: a Commonwealth combat unit stood ON AX-Stage-Derna, holding 36,209 Fuel Points, at
+    Game-Turn 15 -- and drew nothing, because the dump belonged to the enemy. One captured Derna
+    dump is ten to twenty-six times the Commonwealth's entire forward delivery rate.
+
+    A SWEEP, not a hook on UNIT_MOVED: a unit enters a hex through five different doors (movement,
+    Reaction 8.5, Retreat Before Assault 13.21, combat retreat, the 8.2 exploitation pulse) and the
+    rule does not care which. Idempotent and deterministic (dumps in id order), so running it after
+    movement, after combat and after the exploitation pulse costs nothing when nothing changed.
+
+    A BASE IS NOT CAPTURABLE, and this is a FLAGGED PROXY. `base=True` marks the rule-57 strategic
+    rear base (AL-Cairo / AL-Alexandria) and the 52.1 wells. Neither is a Supply Dump counter that
+    32.13 can pick up: the base is OUR ABSTRACTION of an off-map Nile Delta / Suez source of
+    unlimited capacity (54.12), seeded at 125,000,000 points precisely because it stands for a
+    faucet rather than a pile, and a well is geography. Leaving an infinite dump lying on the map as
+    a capturable prize is not faithfulness, it is a bug with a rules citation: measured under a
+    laboratory capture rule that did not exempt it, the Axis took the Commonwealth's base depots and
+    its score went 380 -> 434 with its supplied strength jumping from 4 units to 23-41. The engine
+    already treats `base` as "immobile strategic source, not a field dump" in _supply_movement
+    (rule 57) and _evaporate (49.3); this is the third clause of the same distinction.
+
+    DEFERRED, and flagged: [54.14] the defender's option to BLOW a dump before it falls (expend a
+    third of the unit's CPA, roll on the 54.17 Supply Dump Demolition Table for the percentage of
+    each commodity destroyed), including the blow-as-you-retreat clause. Without it capture is
+    strictly a gift to the attacker, where the rules give the defender a chance to deny it. It needs
+    a policy decision ("do I burn my own fuel?") that no scripted policy here can yet make.
+
+    GATED on state.dump_capture, which ONLY game.scenario.campaign sets. 32.13 is a general rule and
+    this is not a claim otherwise -- it fires on Game-Turn 1 of both byte-locked benchmark scenarios
+    and moves their published determinism_signature. See the field's comment in game.state."""
+    if not r.state.dump_capture:
+        return
+    for su in sorted(r.state.supplies, key=lambda s: s.id):
+        if su.base or su.is_dummy:               # 57 / 52.1: a base and a well are not counters
+            continue
+        if su.empty:
+            # AN EMPTY DUMP IS NOT A PRIZE. 32.13 captures a Supply Unit "and its supplies", and by
+            # 32.15 a Supply Unit with nothing left in it is REMOVED from the map altogether -- there
+            # is no counter there to take. Skipping it is not a softening of the rule, it is the rule:
+            # what 32.13 transfers is the supplies.
+            #
+            # AND IT IS LOAD-BEARING. The campaign deliberately parks the Commonwealth's Operation
+            # Compass Field Supply Depots INSIDE cities the Axis is holding on Game-Turn 1 -- an empty
+            # AL-Stage-Sollum under the Italian garrison at Sollum, an empty AL-Tobruk under the one in
+            # Tobruk (60.34) -- because what keeps those depots dry is not distance but CONTROL, and
+            # taking the city is what fixes it (campaign_claim.spine_awaits_control). Capturing them on
+            # Game-Turn 1 does not loot one Point, and it severs the Commonwealth's supply spine before
+            # the war starts: measured, the take-and-hold then claimed NO CITY AT ALL for the whole
+            # campaign, because no city could be fed. Nobody "enters" a dump that was under their feet
+            # at the setup.
+            continue
+        here = [u for u in r.state.units_at(su.hex) if u.is_combat and u.strength >= 1]
+        if not here:
+            continue
+        holders = {u.side for u in here}
+        if su.side in holders or len(holders) != 1:   # contested, or the owner is still standing on it
+            continue
+        captor = next(iter(holders))
+        r.emit(EventKind.SUPPLY_CAPTURED, captor, f"{captor.value}/Front",
+               {"supply_id": su.id, "from": su.side.value, "to": captor.value,
+                "ammo": su.ammo, "fuel": su.fuel, "stores": su.stores, "water": su.water})
+
+
 def _reject_supply(r: _Run, side: Side, actor: str, order, reason: str) -> None:
     r.emit(EventKind.ORDER_REJECTED, side, actor,
            {"order": "supply_move", "supply_id": order.supply_id,
@@ -1437,8 +1513,27 @@ def _truck_move(r: _Run, side: Side, actor: str, order, truck, moved: set) -> bo
 
 
 def _truck_unload(r: _Run, side: Side, actor: str, order, truck) -> None:
+    """Unload a convoy into the dump at its hex -- ESTABLISHING that dump first if the hex has
+    none (rule 54.11: "Any hex can be used as a supply dump").
+
+    THE MISSING SUBSYSTEM. Until now this rejected any unload whose `unload_to` named no existing
+    dump, NO EventKind ever created one, and game.apply never appended to state.supplies -- so the
+    depot list was FROZEN AT CONSTRUCTION for the whole 111-turn campaign. An army could not build
+    the network rule 54.16 calls "top priority" for a logistics commander, could not extend its
+    chain forward as it advanced, and therefore could never CONSOLIDATE an advance: measured, both
+    armies ended ~9 hexes beyond the nearest stocked dump -- just outside the 32.16 cpa/2 trace --
+    and stayed there, with 5-8% of the Axis and 29% of the Commonwealth able to draw a single point
+    of supply, from Game-Turn 10 to Game-Turn 111.
+
+    A dump is established only where the convoy is STANDING (54.11) and only if the hex holds no
+    friendly dump already. It is born EMPTY and the TRUCK_UNLOADED below fills it, so nothing is
+    minted and conservation is untouched."""
     dump = r.state.supply(order.unload_to)
-    if dump is None or dump.side != side or dump.hex != truck.hex:
+    if dump is None:                                    # 54.11: establish it where the lorries are
+        dump = _establish_dump(r, side, actor, order, truck)
+        if dump is None:
+            return
+    if dump.side != side or dump.hex != truck.hex:
         _reject_truck(r, side, actor, order, "no co-located friendly dump to unload into")
         return
     cap = supply.dump_capacity_at(r.state, dump.hex)                  # 54.12 ceiling
@@ -1451,6 +1546,23 @@ def _truck_unload(r: _Run, side: Side, actor: str, order, truck) -> None:
     if cargo:
         r.emit(EventKind.TRUCK_UNLOADED, side, actor,
                {"truck_id": truck.id, "supply_id": dump.id, "cargo": cargo})
+
+
+def _establish_dump(r: _Run, side: Side, actor: str, order, truck):
+    """[54.11] Found a new, EMPTY supply dump on the hex the convoy is standing on, under the id
+    the order named. Refused if the hex already carries a friendly dump (unload into that one) or
+    if an enemy combat unit is standing there. Returns the new dump, or None on rejection."""
+    here = [s for s in r.state.supplies if s.hex == truck.hex and s.side == side
+            and not wells.is_water_source(s)]
+    if here:
+        _reject_truck(r, side, actor, order, "a friendly dump already stands on this hex (54.11)")
+        return None
+    if r.state.enemies_at(truck.hex, side):
+        _reject_truck(r, side, actor, order, "cannot establish a dump under an enemy unit (54.11)")
+        return None
+    r.emit(EventKind.SUPPLY_DUMP_ESTABLISHED, side, actor,
+           {"supply_id": order.unload_to, "side": side.value, "hex": list(truck.hex)})
+    return r.state.supply(order.unload_to)
 
 
 def _reject_truck(r: _Run, side: Side, actor: str, order, reason: str) -> None:
