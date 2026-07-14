@@ -592,6 +592,21 @@ _CW_BASE_HEXES = {"Cairo": "E1730", "Alexandria": "E3613"}   # rule 57 / 60.44 u
 _AXIS_PORT_HEX = "A4827"                                     # Benghazi -- forward Axis harbour (60.34)
 _CW_BASE_SEED = _UNLIMITED // 8    # a reservoir no 111-turn draw can exhaust (MAJOR_CITY = unlimited cap)
 
+# [25.12] "Each major city on the game-map is a Level 2 fortification. CAIRO AND ALEXANDRIA ARE
+# LEVEL 3 FORTIFICATIONS." The Delta carried level ZERO -- the only unfortified major cities on the
+# map were the two the whole war was fought for. It is also the rule-64.71 auto-win objective (the
+# Axis wins the war OUTRIGHT by occupying every hex of both), so the hexes are one and the same set
+# and are read from the one table that already enumerates them.
+_DELTA_FORT = 3
+
+
+def delta_hexes() -> tuple:
+    """Every hex of Alexandria and Cairo: the 64.71 auto-win objective, and (25.12) the map's two
+    Level 3 fortifications. Two hexes of Alexandria, five of Cairo, off the 64.7 city table."""
+    aw = campaign_victory.load_victory_cities()["auto_win"]
+    return tuple(coords.to_axial(coords.parse(h))
+                 for h in aw["alexandria"] + aw["cairo"])
+
 
 def _campaign_cw_base() -> list[SupplyUnit]:
     """Rule 57 / 60.44: the Commonwealth's inexhaustible Suez base -- a dump on Cairo and
@@ -1180,8 +1195,9 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         terrain.setdefault(piece.hex, Terrain.CLEAR)
     _connect_pieces(terrain, [p.hex for p in (*units, *dumps, *water_sources)])
     forts = _apply_major_cities(terrain)
-    for lbl in _CW_BASE_HEXES.values():              # rule 57: the CW base stands on MAJOR_CITY hexes
-        terrain[coords.to_axial(coords.parse(lbl))] = Terrain.MAJOR_CITY
+    for h in delta_hexes():                          # rule 57 + 25.12: the Delta, at Level 3
+        terrain[h] = Terrain.MAJOR_CITY
+        forts[h] = _DELTA_FORT
     # Benghazi is a city: stamp its terrain MAJOR_CITY (unlimited 54.12 dump capacity), so the Axis
     # port-of-arrival dump no longer clips the convoy to a 5000-fuel Other-Terrain ceiling and the
     # designed 55.3 port tonnage becomes the sole gate. Terrain only -- NOT added to _MAJOR_CITIES,

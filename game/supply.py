@@ -206,7 +206,26 @@ def _pool(su, commodity: str) -> int:
 
 def reachable_supplies(state: GameState, unit: Unit, commodity: str):
     """Friendly supply units holding `commodity`, within half the unit's CPA,
-    nearest first (deterministic). Trace blocked by enemy ZOC / units (32.16)."""
+    nearest first (deterministic). Trace blocked by enemy ZOC / units (32.16).
+
+    THE WELL-CONTROL GATE, MEASURED AND REJECTED (kept as a note so it is not re-invented). game.wells
+    models a well as one Supply Unit PER SIDE -- a flagged proxy for side-neutral geography -- which
+    hands an invader a private, bottomless, Axis-owned well on every hex of the defender's homeland
+    (AX-Well-Cairo, AX-Well-Alexandria: 125,000,000 Water Points apiece). The obvious repair is to
+    deny a side any water source on a hex the enemy CONTROLS (54.41). Implemented and measured over
+    5 seeds, it does not earn its place:
+
+      * it changes NOTHING about the Delta, because the blocking above already does the job -- a
+        GARRISONED city hex is enemy-OCCUPIED, so no trace ever reaches the well standing on it.
+        With the rule-64.71 Delta garrison in place (campaign_claim.delta_garrison), Axis unit-turns
+        on Alexandria/Cairo are ZERO in 5/5 seeds with the gate and ZERO without it;
+      * and it is PERVERSE, because engine._record_control flips control to whoever last STOOD on a
+        hex (54.41 is a rail-transport rule). One Italian column driving through El Daba therefore
+        poisons the well against the Commonwealth for the rest of the war -- measured, the Eighth
+        Army was denied ITS OWN WELLS IN ITS OWN COUNTRY behind the Axis rush, and its Game-Turn-12
+        strength fell from 23 combat units to 17.
+
+    What actually denies the enemy a well is standing on it. That is already modelled."""
     budget = unit.cpa / 2
     mob = Mobility.FOOT if unit.mobility in NON_MOT_CLASSES else Mobility.MOTORIZED
     enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, unit.side)

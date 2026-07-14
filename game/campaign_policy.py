@@ -44,6 +44,21 @@ __all__ = ["CAMPAIGN_CW_OFFENSIVES", "CampaignAxisPolicy", "CampaignCommonwealth
 
 # --- the rule-64.73 standing orders, SIDE-GENERIC (see game.campaign_claim) -----------------------
 
+def _standing_plan(state: GameState, side: Side, *, escort: bool) -> tuple:
+    """THE STANDING ORDERS, in priority order: the 64.71 DELTA first, then the 64.73 cities.
+
+    A pure function of the state (like claims() itself), so the movement half and the supply half
+    of the take-and-hold cannot disagree about who is going where -- neither needs to remember the
+    other. A unit sent to hold Alexandria is not also available to go and take Sollum: the Delta
+    claims are computed first and their units struck from the city plan, never the reverse. A city
+    is worth Victory Points; the Delta is worth the war (64.71)."""
+    delta = campaign_claim.delta_claims(state, side)
+    busy = {c.unit_id for c in delta}
+    cities = tuple(c for c in campaign_claim.claims(state, side, escort=escort)
+                   if c.unit_id not in busy)
+    return delta + cities
+
+
 def take_and_hold_moves(state: GameState, side: Side, army: list[MoveOrder], *,
                         escort: bool) -> list[MoveOrder]:
     """THE TAKE-AND-HOLD, written as a TRANSFORM on an army's move orders -- the same idiom as
@@ -66,7 +81,7 @@ def take_and_hold_moves(state: GameState, side: Side, army: list[MoveOrder], *,
     `escort` rides through to claims(): may a flying column's DEPOT march with it (32.33)? True for
     an army on the offensive; False for one that would only be walking its mobile supply into the
     enemy's advance (see CampaignCommonwealthPolicy._on_offensive)."""
-    plan = campaign_claim.claims(state, side, escort=escort)
+    plan = _standing_plan(state, side, escort=escort)
     take = campaign_claim.claim_moves(state, side, plan)
     busy = {c.unit_id for c in plan}
     orders = take + [o for o in army if o.unit_id not in busy]
@@ -87,7 +102,7 @@ def take_and_hold_supply(state: GameState, side: Side, army: list[SupplyMoveOrde
       * And no field dump ever parks on a seeded Field Supply Depot and MASKS it from the lorries
         (keep_off_the_spine -- the hex belongs to the chain)."""
     follow = campaign_claim.claim_supply(state, side,
-                                         campaign_claim.claims(state, side, escort=escort))
+                                         _standing_plan(state, side, escort=escort))
     busy = {o.supply_id for o in follow}
     rest = [o for o in hold_depots(army, state, side) if o.supply_id not in busy]
     return campaign_claim.keep_off_the_spine(follow + rest, state, side)
@@ -314,11 +329,21 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
     def retreat_before_assault(self, state: GameState, side: Side,
                                pinned: frozenset[str]) -> list[MoveOrder]:
         # The elastic desert defense (13.0) with the LINE as its anchor: every unit still slips out
-        # of an assault it can, but the railhead's garrison stands. A garrison that slips off Mersa
-        # Matruh hands the enemy the hex, and with it the whole Commonwealth faucet (_concentrate)
-        # -- an elastic defense is a way to hold a line, not a way to lose one.
+        # of an assault it can, but a GARRISON UNDER A STANDING ORDER STANDS. A garrison that slips
+        # off Mersa Matruh hands the enemy the hex, and with it the whole Commonwealth faucet
+        # (_concentrate) -- an elastic defense is a way to hold a line, not a way to lose one.
+        #
+        # AND RBA IS THE OTHER DOOR OUT OF A CITY. Retreat Before Assault is VOLUNTARY movement
+        # (13.21), so it is a second order channel entirely, and hold_garrisons never watched it:
+        # rule 15.82 forbids EVICTING a garrison from a major city, but nothing forbids the garrison
+        # from politely leaving. Measured, and this is how the Delta fell in three weeks with seven
+        # battalions standing in it: the Commonwealth garrisoned all seven hexes of Alexandria and
+        # Cairo by Game-Turn 3 exactly as ordered, the Italians closed up and announced an assault on
+        # Game-Turn 4, the elastic defense slipped BR-1-Ches and BR-2-KOR out of Alexandria to make
+        # room -- and six Italian battalions walked into the empty city on Game-Turn 5. The standing
+        # order has to hold BOTH doors or it holds neither.
         view = state if self._on_offensive(state) else self._forward_view(state)
-        return super().retreat_before_assault(view, side, pinned)
+        return hold_garrisons(super().retreat_before_assault(view, side, pinned), state, side)
 
     def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
         # The army's ORDINARY 32.3 leapfrog, over which take_and_hold_supply lays the standing orders
@@ -862,6 +887,15 @@ class CampaignAxisPolicy(_CampaignAxisSupplyMixin, ScriptedPolicy):
 
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
         return take_and_hold_moves(state, side, super().movement(state, side), escort=True)
+
+    def retreat_before_assault(self, state: GameState, side: Side,
+                               pinned: frozenset[str]) -> list[MoveOrder]:
+        # The garrison half of the standing order, on the OTHER door out of a city (13.21: Retreat
+        # Before Assault is voluntary movement, so hold_garrisons has to watch it too -- see the
+        # Commonwealth's own override). Symmetric by design: the Axis opens the war standing on
+        # Tobruk and Bardia, and a garrison that slips out of a fortress to dodge an assault has
+        # thrown the city away just as surely as one that marched off east.
+        return hold_garrisons(super().retreat_before_assault(state, side, pinned), state, side)
 
     def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
         return take_and_hold_supply(state, side, super().supply_orders(state, side), escort=True)

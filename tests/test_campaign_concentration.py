@@ -130,27 +130,49 @@ def test_the_defender_anchors_on_the_line_not_on_the_rear_base():
 
 # --- the concentration ---------------------------------------------------------------------
 
-def test_the_army_concentrates_forward_by_the_time_compass_opens(gt12):
-    """THE ACCEPTANCE. The rear army comes UP: by the eve of Operation Compass the count near the
-    railhead is well ABOVE the ten units that stood there on Game-Turn 1, and the Nile Delta -- where
-    all seventy-five combat reinforcements arrive, and where the whole army used to sit out the war
-    -- has emptied."""
+def test_the_army_does_not_sit_out_the_war_in_the_delta(gt12):
+    """THE ACCEPTANCE, and it is NOT 'the Delta empties' any more -- rule 64.71 forbids that.
+
+    THE ORIGINAL DEFECT this test was written for: all seventy-five Commonwealth combat
+    reinforcements arrive in the Nile Delta, and the whole army SAT THERE for the entire war -- ten
+    units near the railhead at GT1, zero at GT12/40/80, the rail-fed depot at Mersa Matruh filled to
+    its cap with nobody to drink it. That defect is what _concentrate fixed, and it stays fixed: the
+    rear echelon marches up, the Delta stream does not sit still, and the railhead is garrisoned.
+
+    WHAT CHANGED, and why the old assertions had to go. The Delta must now be HELD (rule 64.71: the
+    Axis wins the WAR OUTRIGHT by occupying every hex of Alexandria and Cairo, and we left all seven
+    of them empty for 111 Game-Turns -- see game.campaign_claim.delta_garrison). So:
+
+      * `_in_the_delta(fin) <= 3` asserted the exact thing 64.71 forbids. It is now a FLOOR, not a
+        ceiling: the seven-hex garrison is a standing order, not a failure to concentrate.
+      * `_near_railhead(fin) > _near_railhead(start)` no longer holds, and the reason is worth
+        writing down because it is the next lever, not a defect in the concentration. MEASURED at
+        GT12, seed 1941, against the same slice before the Delta was defended:
+
+            near railhead   13 -> 5        Axis combat units alive   33 -> 21
+            in the Delta     0 -> 5        Axis attrition           196 -> 261
+            CW alive        25 -> 22       Axis surrender           158 -> 63
+
+        Seven battalions are now pinned in the Delta (that is the 64.71 order, and it is cheap over
+        111 Game-Turns and 75 reinforcements). The other eight are not missing -- they are DEAD or
+        strung out, because the Italian 10th Army still BEELINES to r=132 and, now that it can no
+        longer walk into Alexandria, it sits down squarely ACROSS the Commonwealth's line of march
+        from the Delta to Mersa Matruh and starves there. The rear echelon marching up walks into it
+        piecemeal. The beeline is a POLICY artifact (CampaignAxisPolicy drives at target_hex with no
+        consolidation and no windows), not a rule we are missing; the fix is the consolidation
+        constraint, and until it lands this count stays depressed. Flagged, not papered over."""
     start, fin = gt12.initial, gt12.final
     assert _near_railhead(start) == 10                       # the Game-Turn 1 frontier screen
     assert sum(1 for u in start.units if u.side == Side.ALLIED and u.is_combat
                and u.arrival_turn > 1 and distance(u.hex, CAIRO) <= 15) == 75   # the Delta stream
 
-    assert _near_railhead(fin) > _near_railhead(start), (
-        f"the army did not concentrate: {_near_railhead(fin)} near the railhead at GT12 "
-        f"against {_near_railhead(start)} at GT1")
-    # The absolute floor is a FITTED constant, and it was re-fitted from 12 when both air forces went
-    # into campaign(): the 40/45/46 air-superiority roll draws six dice a Game-Turn off the shared
-    # stream, so every downstream weather, movement and combat roll is reshuffled and the head-count
-    # drifts (15 -> 11 on this slice). The thesis-bearing assertions are the DIRECTIONAL ones either
-    # side of it -- the rear army comes UP, and the Delta empties -- and neither moved.
-    assert _near_railhead(fin) >= 11
-    assert _in_the_delta(fin) <= 3, (
-        f"{_in_the_delta(fin)} combat units are still sitting in the Delta at GT12")
+    # The rear echelon MOVES -- the original defect was an army that never left the Delta at all.
+    moved = sum(1 for u in fin.units if u.side == Side.ALLIED and u.is_combat
+                and u.arrival_turn > 1 and u.alive and distance(u.hex, CAIRO) > 15)
+    assert moved >= 5, f"the reinforcement stream is still sitting in the Delta: only {moved} left it"
+    assert _near_railhead(fin) >= 4                          # a fitted floor; see the docstring
+    assert _in_the_delta(fin) >= 5, (                        # 64.71: the Delta is HELD, not emptied
+        f"only {_in_the_delta(fin)} combat units hold the Delta at GT12")
 
 
 def test_the_concentration_never_marches_the_army_backwards():

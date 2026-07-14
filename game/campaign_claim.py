@@ -128,11 +128,95 @@ def garrison_units(state: GameState, side: Side) -> set:
 
 
 def hold_garrisons(orders: list, state: GameState, side: Side) -> list:
-    """Drop any move order for a unit under the standing garrison order (garrison_units): it holds
-    its supplied victory city and banks the points. Combat orders are untouched -- a garrison still
-    fights from its city. Applied by every campaign policy, scripted and staff alike."""
-    keep = garrison_units(state, side)
+    """Drop any move order for a unit under a standing garrison order -- the 64.73 victory cities
+    (garrison_units) and the 64.71 Delta (delta_garrison). It holds its ground and banks what it is
+    standing on. Combat orders are untouched -- a garrison still fights from its city. Applied by
+    every campaign policy, scripted and staff alike."""
+    keep = garrison_units(state, side) | delta_garrison(state, side)
     return [o for o in orders if o.unit_id not in keep] if keep else orders
+
+
+# --- [64.71] THE DELTA: the hexes that are not worth points, they are worth the WAR ---------------
+
+def delta_hexes(state: GameState) -> tuple:
+    """Rule 64.71's auto-win objective -- every hex of ALEXANDRIA and CAIRO. () for any scenario
+    carrying no CampaignVictory, which is every scenario but the campaign, and is what keeps every
+    helper below safe to call anywhere (the byte-locked benchmarks included)."""
+    return tuple(getattr(state.victory, "objective", None) or ())
+
+
+def _occupied(state: GameState, side: Side, ax: Coord) -> bool:
+    """A living combat unit of `side` standing on the hex. NOT the 64.73 banking test: to DENY the
+    Delta a body on the ground is enough, supplied or not -- 64.71 asks only who occupies it."""
+    return any(u.side == side and u.alive and u.is_combat and u.strength >= 1
+               for u in state.units_at(ax))
+
+
+def delta_garrison(state: GameState, side: Side) -> set:
+    """THE DELTA STANDING ORDER (rule 64.71). The Axis does not win the Delta on points -- it wins
+    the WAR, outright and instantly, by occupying every hex of Alexandria AND Cairo with a combat
+    unit. So those seven hexes are worth more to the Commonwealth than the entire 64.73 table put
+    together, and the one unit standing on each of them never marches away. Ever.
+
+    They are NOT 64.73 victory cities and score nothing, which is exactly why the existing standing
+    garrison order left all seven of them EMPTY for a hundred and eleven Game-Turns while the
+    forward concentration marched the Eighth Army west -- and why, measured over five seeds, six
+    Italian battalions were sitting on Alexandria by Game-Turn 6 of a war they entered at the wire,
+    on top of the Commonwealth's own bottomless base dump. No staff on earth leaves the hex that
+    loses the war undefended because the scorebook gives it nothing.
+
+    Commonwealth-only: to the Axis these hexes are the OBJECTIVE, not a thing to garrison. Prefers
+    a non-tank holder, exactly as garrison_units does -- the armour is wanted in the desert."""
+    if side != Side.ALLIED:
+        return set()
+    keep = set()
+    for ax in delta_hexes(state):
+        here = [u for u in state.units_at(ax)
+                if u.side == side and u.alive and u.is_combat and u.strength >= 1]
+        if here:
+            keep.add(min(here, key=lambda u: (u.is_tank, u.id)).id)
+    return keep
+
+
+def delta_claims(state: GameState, side: Side) -> tuple[Claim, ...]:
+    """THE DELTA, TAKEN AND HELD -- the dual of delta_garrison, and it outranks every 64.73 claim
+    there is (take_and_hold_moves puts it first): a city is worth points, the Delta is worth the war.
+
+    Every UNOCCUPIED objective hex gets the nearest free combat unit sent to stand on it. No feed
+    test and no escorting depot: the rule-57 base dumps -- AL-Cairo and AL-Alexandria, bottomless --
+    are already standing ON the Delta, so a garrison there is fed by construction, and there is
+    nothing for a flying column to carry. It rides claim_moves like any other claim.
+
+    A garrison already in place is not re-claimed (it is pinned by delta_garrison instead), so the
+    order costs the army seven battalions once and nothing thereafter.
+
+    AND IT NEVER SPENDS THE ARMOUR. is_tank sorts BEFORE distance, not after it: a tank is drafted
+    into the Delta only if the Commonwealth has no infantryman left anywhere who could stand there
+    instead. Base defence is a job for base troops -- the anti-aircraft regiments of Alexandria and
+    Cairo are already sitting in the Delta -- and the tanks are wanted five hundred miles west.
+    (Measured with distance sorting first: the claim is recomputed every stage, so the moment a
+    Delta hex fell vacant it went to whichever unit was NEAREST *that* stage -- which, once the
+    armoured reinforcements start landing in Cairo, is 2-RTR and 7-RTR. The standing order quietly
+    impounded the Eighth Army's tank regiments in the Nile Delta for the duration of the war.)"""
+    if side != Side.ALLIED:
+        return ()
+    hexes = delta_hexes(state)
+    if not hexes:
+        return ()
+    held = garrison_units(state, side) | delta_garrison(state, side)
+    free = [u for u in state.living(side)
+            if u.is_combat and u.strength >= 1 and u.id not in held]
+    taken: set = set()
+    plan: list[Claim] = []
+    for ax in hexes:
+        if _occupied(state, side, ax):
+            continue                          # already denied -- delta_garrison keeps it that way
+        pick = next((u for u in sorted(free, key=lambda u: (u.is_tank, distance(u.hex, ax), u.id))
+                     if u.id not in taken), None)
+        if pick is not None:
+            plan.append(Claim(ax, "Delta", pick.id, None))
+            taken.add(pick.id)
+    return tuple(plan)
 
 
 def depot_on(state: GameState, side: Side, ax: Coord):
