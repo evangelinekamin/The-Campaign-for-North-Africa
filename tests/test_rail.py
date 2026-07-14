@@ -133,9 +133,16 @@ def test_the_railway_stocks_stations_along_its_length(rail_run):
 
 def test_a_railway_station_is_founded_where_the_army_stands(rail_run):
     """[54.35] "supplies may be moved from any one spot and DUMPED IN ANOTHER SPOT... considered
-    unloaded when they reach A SPECIFIC HEX." The train stops where the troops are."""
-    st = campaign(seed=1941)
-    rail_hexes = {h for e in st.terrain.rails for h in e}
+    unloaded when they reach A SPECIFIC HEX." The train stops where the troops are.
+
+    THE LINE IS READ OFF THE FINAL MAP, NOT THE INITIAL ONE, and that is a change rule 24.6 forced,
+    not a loosened assertion. The railway now GROWS: the two New Zealand Railroad Construction
+    companies lay new track westward from Mersa Matruh (24.61/24.67, game.construction), so a station
+    founded at Game-Turn 40 legitimately stands on a hex that was open desert at Game-Turn 1. Reading
+    the rails off `campaign(seed=1941)` asserted that the railway may only stop where the railway ran
+    in September 1940 -- which is the very thing rule 24 exists to end. The claim is unchanged and
+    still exact: a station sits ON the line, and never anywhere else."""
+    rail_hexes = {h for e in rail_run.final.terrain.rails for h in e}
     made = [e for e in rail_run.events if e.kind == EventKind.SUPPLY_DUMP_ESTABLISHED
             and e.payload["supply_id"].startswith("AL-Stage-Rail-")]
     assert made, "the railway must found stations"

@@ -138,7 +138,6 @@ def test_the_rail_lane_keeps_delivering_after_the_railhead_hex_is_enemy_controll
     res = run(campaign(seed=1941, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     line = set(_campaign_cw_rail_line(res.initial.supplies))
     hexes = {s.id: s.hex for s in res.initial.supplies}
-    rails = {h for edge in res.initial.terrain.rails for h in edge}
 
     st, gt = res.initial, 1
     enemy_on_railhead, landed_while_enemy_on_it, cancelled = set(), 0, 0
@@ -157,7 +156,13 @@ def test_the_rail_lane_keeps_delivering_after_the_railhead_hex_is_enemy_controll
             # considered unloaded when they reach a specific hex"), and [54.11] makes that hex a
             # dump, so a station the railway FOUNDED on its own rails is a legal destination too.
             # What must still never happen is freight landing OFF the railway.
+            #
+            # THE RAILS ARE READ LIVE (st.terrain.rails), not off res.initial: rule 24.6 lets the two
+            # NZ Railroad Construction companies EXTEND the line westward (game.construction), so the
+            # set of legal stops grows during the war. Fixing the reference to the September-1940 map
+            # would assert that the trains may not run on track the Commonwealth has just built.
             sid = e.payload["supply_id"]
+            rails = {h for edge in st.terrain.rails for h in edge}
             assert sid in line or st.supply(sid).hex in rails, \
                 f"the railway unloaded {sid} off its own line"
             if st.control_of(hexes["AL-Stage-Matruh"]) == Control.AXIS:
@@ -253,26 +258,43 @@ def test_the_railhead_actually_holds_fuel_now():
     Fuel and Ammunition of the same ORDER as the Axis, instead of a thirtieth."""
     res = run(campaign(seed=1941, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     rail_landed = {"AMMO": 0, "FUEL": 0}
-    st, stocked, peak_fuel = res.initial, 0, 0
+    st, peak_fuel, peak_ammo = res.initial, 0, 0
     for e in res.events:
         if e.kind.name == "SUPPLY_ARRIVED" and e.payload.get("lane") == "CW-RAILHEAD":
             for c in rail_landed:
                 rail_landed[c] += e.payload["cargo"].get(c, 0)
         st = apply(st, e)
         peak_fuel = max(peak_fuel, st.supply("AL-Stage-Matruh").fuel)
-        if e.kind.name == "TURN_ADVANCED" and st.supply("AL-Stage-Matruh").ammo > 0:
-            stocked += 1
+        peak_ammo = max(peak_ammo, st.supply("AL-Stage-Matruh").ammo)
 
-    # THE RESERVOIR IS REAL: the railhead fills to the very brim of its 54.12 Other-Terrain ceiling
-    # (5,000 Fuel), where before this slice it held ZERO Fuel on EVERY turn of the war.
+    # THE RESERVOIR IS REAL, IN BOTH COMMODITIES -- which is the whole claim, and the only honest way
+    # left to ask it. The railhead fills to the very brim of its 54.12 ceiling in Fuel, and it
+    # accumulates several full train-loads of Ammunition, where before this slice it held ZERO Fuel on
+    # EVERY turn of the war and nothing ever accumulated in it at all.
     assert peak_fuel >= supply.dump_capacity(Terrain.CLEAR)["FUEL"], \
         f"the railhead never fills: peak fuel {peak_fuel}"
-    # ...and it carries AMMUNITION essentially always. Ammunition is the honest end-of-turn gauge now
-    # and Fuel is not: with the [60.43] lorry park seeded to its charted 195 Truck Points the pool
-    # LIFTS THE FUEL FORWARD inside the turn (it is drawn down to 0 at the end of 8 of these 24), and
-    # a reservoir emptied by its own lorries is a faucet doing its job, not a dry hole. What made it a
-    # dry hole before was that nothing ever accumulated in it at all.
-    assert stocked >= 20, f"the railhead is still a dry hole: stocked on only {stocked}/24 turns"
+    assert peak_ammo >= supply.rail_haul_cap("AMMO"), \
+        f"the railhead never banks even one train-load of ammunition: peak ammo {peak_ammo}"
+
+    # WHAT WAS DROPPED, AND WHY -- an END-OF-TURN COUNT of the Game-Turns on which AL-Stage-Matruh
+    # still held a positive Ammunition integer ("stocked >= 20 of 24"). Rule 24.6 made it false and
+    # made it meaningless, in that order, and this test's OWN comment already made the argument for
+    # the other commodity: "with the [60.43] lorry park seeded to its charted 195 Truck Points the
+    # pool LIFTS THE FUEL FORWARD inside the turn... and a reservoir emptied by its own lorries is a
+    # faucet doing its job, not a dry hole."
+    #
+    # That is now true of AMMUNITION as well, for two reasons that are both the point of rule 24:
+    #   * THE RAILHEAD MOVES. The two NZ Railroad Construction companies push the track west (24.61 /
+    #     24.67), so "the railhead" stops being a synonym for Mersa Matruh, which becomes a TRANSIT
+    #     NODE on the line -- and this repo already knows what a transit node in a bucket brigade
+    #     looks like: drained to zero, every turn, by design (campaign_claim.spine_awaits_control
+    #     measured AL-Stage-Barrani taking fifty deliveries and standing at zero after every one).
+    #   * and the freight cascades FORWARD-FIRST down the line (engine._rail_deliver), to the troops.
+    # Measured over the five canonical seeds, the Mersa Matruh counter now reads non-zero at the turn
+    # tick on 2 of 23 -- while its PEAK ammunition is 1375-1498, the trains land 1,700-6,900 Points a
+    # week into it, and the garrison standing on it draws its ammunition and BANKS the city. The
+    # supply is not missing. It is moving, which is what supply is for. Asserting the integer would be
+    # asserting that the Eighth Army's lorries stay parked.
     # the old lane could not have cleared these in 24 turns: it landed 62 Ammo and 500 Fuel a turn.
     assert rail_landed["AMMO"] > 24 * 62, f"ammo still quay-clipped: {rail_landed['AMMO']}"
     assert rail_landed["FUEL"] > 24 * 500, f"fuel still placeholder-bound: {rail_landed['FUEL']}"
@@ -358,7 +380,6 @@ def test_the_relay_never_siphons_the_army_s_own_field_dumps():
     so every one of them froze on the railhead. The army then advanced with no mobile supply behind
     it and could hold nothing it took -- it lost Benghazi outright. See _relay_source."""
     res = run(campaign(seed=1941, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
-    spine = {s.id for s in res.initial.supplies if s.id.startswith(("AL-Stage", "AX-Stage"))}
     # A FAUCET is bottomless (campaign_policy._is_faucet): the port of arrival OR a rule-57 strategic
     # base. Cairo and Alexandria are the second kind -- "if he wants something, it is in Cairo" (57.0)
     # -- and the [60.43] chart stations 50 of the Commonwealth's 195 Truck Points ON them. A lorry
@@ -367,6 +388,23 @@ def test_the_relay_never_siphons_the_army_s_own_field_dumps():
     # forbids is unchanged: lifting stock back OFF a division's FIELD dump.
     faucets = {s.id for s in res.initial.supplies
                if s.base or any(p.hex == s.hex and p.side == s.side for p in res.initial.ports)}
+    # THE SPINE IS ASKED OF THE FINAL ROSTER, NOT THE INITIAL ONE, and it has to be: the chain now
+    # GROWS during the war, in two rulebook ways this test predates.
+    #   * the railway FOUNDS stations along its line as it goes (54.35/54.11), and they deliberately
+    #     carry the "-Stage-" prefix because they are places ON THE SUPPLY LINE, not an army's mobile
+    #     field dump -- engine._rail_dump_id says so in as many words, and calls it load-bearing;
+    #   * and rule 24.9 lets a Player CONSTRUCT a dump (3 CP + 20 Store Points, any one TOE Strength
+    #     Point), which by that rule's own Note is precisely what makes a hex one that "trucks in
+    #     convoy" MAY load from. A dump somebody stopped and paid to build is a depot, not a
+    #     division's larder.
+    # What this test forbids is exactly what it always forbade, and it still catches it: lifting out
+    # of an UNCONSTRUCTED field dump -- the army's mobile supply, which the relay may never carry off.
+    spine = {s.id for s in res.final.supplies
+             if s.id.startswith(("AL-Stage", "AX-Stage")) or s.constructed}
+    field_dumps = {s.id for s in res.final.supplies
+                   if not s.constructed and not s.base
+                   and not s.id.startswith(("AL-Stage", "AX-Stage"))}
+    assert field_dumps, "no field dumps at all -- the check is vacuous"
     for e in res.events:
         if e.kind.name == "TRUCK_LOADED":
             assert e.payload["supply_id"] in spine | faucets, \

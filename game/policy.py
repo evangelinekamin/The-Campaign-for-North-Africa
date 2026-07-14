@@ -59,7 +59,26 @@ class DemolitionOrder:
     extra_thirds: int = 0
 
 
-Order = MoveOrder | AttackOrder | SupplyMoveOrder | TruckOrder | DemolitionOrder
+@dataclass(frozen=True, slots=True)
+class BuildOrder:
+    """[24.0] One construction project, initiated or continued in the Construction Segment.
+
+    `item` is what is being built -- 'RAIL' (24.6: a new hex of the Alexandria-Mersa Matruh-Tobruk
+    line, buildable only by the two New Zealand Railroad Construction companies, 24.61) or 'DUMP'
+    (24.9: a supply dump, buildable by any one TOE Strength Point of any type, for 3 CP and 20
+    Store Points). `unit_ids` are the units doing the work -- more than one because 24.62 makes the
+    PAIR of NZRRC companies twice as fast as one. `hex` is the site.
+
+    Everything else the rule demands -- who may build (24.61/23.13), whether the site is the next
+    hex of the surveyed line (24.67), whether the enemy holds it (24.65), the Store Points on hand
+    (24.64/24.13), the weather (24.22) -- the engine re-validates (game.engine._construction), like
+    every other order."""
+    item: str                       # 'RAIL' (24.6) | 'DUMP' (24.9)
+    hex: Coord
+    unit_ids: tuple[str, ...]
+
+
+Order = MoveOrder | AttackOrder | SupplyMoveOrder | TruckOrder | DemolitionOrder | BuildOrder
 
 
 class Policy:
@@ -81,6 +100,9 @@ class Policy:
 
     def demolition(self, state: GameState, side: Side) -> list[DemolitionOrder]:
         return []  # optional: blow your own dump rather than lose it to the enemy (rule 54.14)
+
+    def construction(self, state: GameState, side: Side) -> list[BuildOrder]:
+        return []  # optional: build railroad / supply dumps in the Construction Segment (rule 24)
 
     def continual_movement(self, state: GameState, side: Side) -> list[MoveOrder]:
         """Continual Movement go/no-go (rule 8.2): return the intended continuation moves for the

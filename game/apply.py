@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from .events import Control, Event, EventKind, Phase, Side
+from .movement import edge
 from .state import GameState, StepRecord, SupplyUnit, VP
 
 
@@ -127,6 +128,30 @@ def apply(state: GameState, event: Event) -> GameState:
         # destroyed, so the conservation identity is untouched.
         su = state.supply(p["supply_id"])
         return state.with_supply(replace(su, side=Side(p["to"])))
+
+    if k == EventKind.SUPPLY_DUMP_CONSTRUCTED:
+        # 24.9: the heap of supplies in this hex is now a CONSTRUCTED supply dump, which by the
+        # rule's own Note is the one thing that lets a truck "in convoy" LOAD from it -- a link in
+        # the chain rather than a one-way sink. A pure flag: the 3 CP ride CP_EXPENDED and the 20
+        # Store Points SUPPLY_CONSUMED, so conservation is untouched here.
+        su = state.supply(p["supply_id"])
+        return state.with_supply(replace(su, constructed=True))
+
+    if k == EventKind.CONSTRUCTION_ADVANCED:
+        # 24.11/24.62: one Construction Segment of work banked on the site, counted in COMPANY-
+        # STAGES. Pure bookkeeping onto the Under Construction marker; the Store Points it costs
+        # ride the SUPPLY_CONSUMED emitted beside it.
+        return state.with_construction(tuple(p["hex"]), p["progress"])
+
+    if k == EventKind.CONSTRUCTION_COMPLETED:
+        # 24.11a/24.67: the track is laid. The new hex joins the map's rail edge-set, extending the
+        # line from the head it grew out of ("construction must start from the last completed hex...
+        # no hex may be skipped"), and the Under Construction marker comes off. The ONE dynamic
+        # thing on an otherwise static TerrainMap -- because a built railroad hex is exactly that:
+        # "unbuilt railroad hexes simply do not exist" until they are built (24.67).
+        hx, frm = tuple(p["hex"]), tuple(p["from"])
+        tmap = replace(state.terrain, rails=state.terrain.rails | {edge(frm, hx)})
+        return replace(state, terrain=tmap).with_construction(hx, 0)
 
     if k == EventKind.SUPPLY_CONSUMED:
         su = state.supply(p["supply_id"])

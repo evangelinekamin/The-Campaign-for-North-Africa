@@ -166,23 +166,67 @@ def _land_path(terrain: dict, start: Coord, end: Coord) -> list[Coord]:
 
 
 def corridor(terrain: dict, data: dict | None = None) -> tuple[Coord, ...]:
-    """THE WESTERN DESERT RAILWAY, as a chain of hexes: the ONE piece of geography that is both
-    the [54.3] Commonwealth railroad and the [52.22] water pipeline, because the rulebook says
-    they are the same thing -- "the Commonwealth Player may consider any operating Railroad hex
-    to be a pipeline for water" (52.22), "the railroad hexes are pipelines in and of themselves"
-    (54.33). Deriving both from this one function is what stops the rails and the pipeline from
-    drifting into two different lines.
+    """THE COMMONWEALTH RAILWAY, as a chain of hexes: the ONE piece of geography that is both the
+    [54.3] Commonwealth railroad and the [52.22] water pipeline, because the rulebook says they are
+    the same thing -- "the Commonwealth Player may consider any operating Railroad hex to be a
+    pipeline for water" (52.22), "the railroad hexes are pipelines in and of themselves" (54.33).
+    Deriving both from this one function is what stops the rails and the pipeline from drifting into
+    two different lines.
 
-    At the campaign's September-1940 start the RR "runs to Mersa Matruh and ends there" (60.7),
-    so the corridor runs Alexandria -> Mersa Matruh.
+    IT RUNS CAIRO -> ALEXANDRIA -> MERSA MATRUH, and the first leg was missing. Rule 24.6 names the
+    line in one sentence and we had modelled half of it: "the rail complex that CRISSCROSSES THE NILE
+    DELTA and extends towards Mersa Matruh (eventually to be completed at Tobruk)". The corridor was
+    laid from Alexandria only, so between the rule-57 base at CAIRO -- "he has an unlimited amount of
+    supplies of all types in Cairo at all times; HIS PROBLEM IS SOLELY TO GET IT TO WHERE HE WANTS IT"
+    -- and Alexandria there lay NINETEEN HEXES OF TRACKLESS NOTHING, in the middle of Britain's own
+    base area, with not one supply point in them.
 
-    FLAGGED PROXY: the map's rail geography is untranscribed (the VASSAL extract carries terrain
-    and roads, not rails), so the corridor is the shortest LAND path between the two transcribed
-    endpoints in data/wells.json. It walks real hexes and invents no terrain, but its exact hex
-    chain is OURS, not the map's."""
+    MEASURED, and it is what made the consolidation constraint unshippable: a Commonwealth foot
+    battalion traces five Capability Points -- about three hexes -- so standing in Cairo it could
+    trace supply at Cairo, and at Alexandria, and NOWHERE IN BETWEEN. The whole Eighth Army lands in
+    Cairo as reinforcements. Under campaign_policy.keep_in_trace ("do not outrun your supply") it
+    therefore could not take one step out of the Nile Delta for the entire war -- thirty of thirty-two
+    combat units still sitting in it at Game-Turn 42 -- and the reason was not a rule and not a
+    doctrine. It was a hole in the map.
+
+    FLAGGED PROXY: the map's rail geography is untranscribed (the VASSAL extract carries terrain and
+    roads, not rails), so each leg is the shortest LAND path between the transcribed endpoints in
+    data/wells.json. It walks real hexes and invents no terrain, but its exact hex chain is OURS, not
+    the map's -- and a single line is a thin model of a "complex that crisscrosses" the Delta. It is
+    the conservative thin one: one line where the rulebook gives a network."""
     data = data or load()
     spec = data["pipeline"]
-    return tuple(_land_path(terrain, _ax(spec["from"]), _ax(spec["to"])))
+    delta = _land_path(terrain, _ax(spec["base"]), _ax(spec["from"]))       # 24.6: the Delta complex
+    west = _land_path(terrain, _ax(spec["from"]), _ax(spec["to"]))          # 60.7: ...to Mersa Matruh
+    return tuple(delta[:-1] + west)
+
+
+def rail_survey(terrain: dict, data: dict | None = None) -> tuple[Coord, ...]:
+    """[24.67] THE SURVEYED ROUTE THE RAILWAY MAY BE BUILT ALONG -- Mersa Matruh, westward, to
+    Tobruk. The line rule 60.7 leaves unfinished and rule 24.6 lets the Commonwealth finish.
+
+        "There are two railroad lines on the game-maps: the rail complex that crisscrosses the Nile
+         Delta and extends towards Mersa Matruh (EVENTUALLY TO BE COMPLETED AT TOBRUK)..." (24.6)
+        "The Alexandria-Mersa Matruh-Tobruk line may be constructed in only ONE SPECIFIC DIRECTION.
+         Construction must start from the last completed hex extending from Mersa Matruh and grow
+         westward towards Tobruk. NO HEX MAY BE SKIPPED." (24.67)
+
+    So it is a LINE, not a freedom -- "neither Player may invent new stretches" (24.51, of roads, and
+    24.67 is stricter still) -- and it is returned ordered, head first. It OPENS with Mersa Matruh
+    itself, the terminus rule 60.7 already gives the Commonwealth: the first hex of new track must
+    extend from the last completed one, so the completed one has to be on the line to extend from
+    (game.construction.rail_head).
+
+    Same FLAGGED PROXY as corridor() above, and for the same reason: the map's rail geography is
+    untranscribed, so the route is the shortest LAND path between the two transcribed endpoints. It
+    walks real hexes, invents no terrain and crosses no sea -- and the real Western Desert Railway
+    hugged this same coastal strip, which is why it ran through Sidi Barrani and Capuzzo."""
+    data = data or load()
+    spec = data["pipeline"]
+    return tuple(_land_path(terrain, _ax(spec["to"]), _ax(RAIL_OBJECTIVE)))
+
+
+RAIL_OBJECTIVE = "C4807"    # Tobruk -- 24.6's "eventually to be completed at Tobruk"
 
 
 def pipeline(terrain: dict, data: dict | None = None) -> tuple[SupplyUnit, ...]:

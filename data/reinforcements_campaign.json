@@ -2335,6 +2335,46 @@
       "nationality": "IT",
       "morale": -3,
       "arrival_turn": 97
+    },
+    {
+      "_comment": "[23.13] / [24.61] / Construction Chart footnote f: 'the Commonwealth Player's one South African Road Construction Battalion and two New Zealand Railroad Construction Battalions'. All three were MISSING from this OOB, so rule 24.6 had no unit that could execute it and the Western Desert Railway could never leave Mersa Matruh -- which is the rulebook's own answer to the deadlock that killed this campaign. ARRIVAL IS A FLAGGED PROXY: the campaign OOB's engineer rows are untranscribed, so all three are anchored to the 2nd New Zealand Division's own first infantry arrival in this same file (6 NZ Bde, Game-Turn 6), at its entry hex.",
+      "counter": "10 NZ RR Constr Coy",
+      "group": "CW NZ Railway Construction",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "rr_engineer",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 6
+    },
+    {
+      "counter": "13 NZ RR Constr Coy",
+      "group": "CW NZ Railway Construction",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "rr_engineer",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 6
+    },
+    {
+      "counter": "1 SA Road Constr Bn",
+      "group": "CW SA Road Construction",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "road_engineer",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 6
     }
   ]
 }

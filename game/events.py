@@ -29,6 +29,10 @@ class Control(str, Enum):
 class Phase(str, Enum):
     WEATHER = "WEATHER"
     LOGISTICS = "LOGISTICS"        # naval-convoy arrival (rule 48 V.C.7/V.D); SYSTEM-owned
+    CONSTRUCTION = "CONSTRUCTION"  # Construction Segment of the Organization Phase (48 V.C.4 /
+                                   # rule 24.11); the phasing side's own beat, BEFORE it moves --
+                                   # "units involved in such work may not be moved (voluntarily)
+                                   # during the remainder of the current Operations Stage" (48 V.C.4.b)
     RESERVE = "RESERVE"            # Reserve Designation Phase (rule 48 V.G / 18.12); phasing side
     MOVEMENT = "MOVEMENT"
     COMBAT = "COMBAT"
@@ -130,6 +134,34 @@ class EventKind(str, Enum):
     # A pure SINK, folded exactly like 49.3 evaporation (dump down, consumed up), so the
     # conservation identity on_hand+consumed==initial holds.
     SUPPLY_DUMP_BLOWN = "SUPPLY_DUMP_BLOWN"
+    # [24.0] CONSTRUCTION -- the Construction Segment of the Organization Phase (48 V.C.4).
+    # "Fortifications, minefields, air facilities, repair facilities, roads, RAILROADS and SUPPLY
+    # DUMPS all come into existence (for the most part) through construction. Construction entails
+    # the use of manpower under the leadership of Engineers, along with the expenditure of time and
+    # supplies."
+    #
+    # CONSTRUCTION_ADVANCED {item, hex, unit_ids, stages, progress} folds one Construction Segment
+    # of work onto GameState.construction[hex] -- `stages` company-stages accrued this segment (one
+    # per working company, 24.62), `progress` the running total. The Store Points it costs (24.64:
+    # one per railroad hex, "actually expended in the Construction Segment") ride the existing
+    # SUPPLY_CONSUMED, so conservation is untouched.
+    #
+    # CONSTRUCTION_COMPLETED {item, hex, from} is 24.11's Construction Completion Step. For a
+    # RAILROAD it folds the new hex into the map's rail edge-set -- the ONE dynamic thing on an
+    # otherwise static TerrainMap, and the rulebook's own idiom: 24.67's Railhead marker "indicates
+    # the extent of construction", and "unbuilt railroad hexes simply do not exist". It clears the
+    # hex's Under Construction marker. Emitted only where a line is surveyed (GameState.rail_line),
+    # which is the campaign alone.
+    #
+    # SUPPLY_DUMP_CONSTRUCTED {supply_id, unit_id, cp, stores} is rule 24.9, and it is NOT a
+    # multi-stage project: "a supply dump may be constructed by having any one TOE Strength Point of
+    # any type expend three Capability Points and 20 Store Points in a hex". No engineer, no elapsed
+    # time. It folds SupplyUnit.constructed=True -- which is what lets a truck in convoy LOAD from
+    # the hex (24.9's Note), turning a heap of supplies the army dropped in the desert into a LINK
+    # the bucket brigade can lift from. The 3 CP ride CP_EXPENDED and the 20 Stores SUPPLY_CONSUMED.
+    CONSTRUCTION_ADVANCED = "CONSTRUCTION_ADVANCED"
+    CONSTRUCTION_COMPLETED = "CONSTRUCTION_COMPLETED"
+    SUPPLY_DUMP_CONSTRUCTED = "SUPPLY_DUMP_CONSTRUCTED"
     # Commonwealth railroad (rule 54.3, the inland rail DISTRIBUTION layer). RAIL_HAULED
     # {from_dump, to_dump, commodity, qty} is a CONSERVING dump->dump transfer over the
     # rail network (both dumps rail-connected; qty <= 1500 tons/OpStage of ONE commodity,

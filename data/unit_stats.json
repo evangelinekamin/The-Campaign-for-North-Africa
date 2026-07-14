@@ -19,9 +19,12 @@
     "tank":      {"type": "g",  "cpa": 25, "oca": 3, "dca": 3, "steps": 8, "mobility": "VEHICLE", "is_tank": true, "armor_protection": 3, "anti_armor": 4},
     "recon":     {"type": "pp", "cpa": 45, "oca": 2, "dca": 3, "steps": 6, "mobility": "RECCE", "armor_protection": 2, "anti_armor": 2},
     "artillery": {"type": "x",  "cpa": 20, "oca": 0, "dca": 1, "steps": 6, "mobility": "MOTORIZED", "barrage": 8, "vulnerability": 5},
-    "antitank":  {"type": "aa", "cpa": 15, "oca": 1, "dca": 2, "steps": 8, "mobility": "MOTORIZED", "anti_armor": 4, "vulnerability": 2}
+    "antitank":  {"type": "aa", "cpa": 15, "oca": 1, "dca": 2, "steps": 8, "mobility": "MOTORIZED", "anti_armor": 4, "vulnerability": 2},
+    "_engineer_comment": "[23.0]/[24.61]/[23.13] The Commonwealth's construction units, and the two rows the OOB was missing entirely. The Construction Chart's footnote f names them: 'the Commonwealth Player's one South African Road Construction Battalion and two New Zealand Railroad Construction Battalions'; 24.61 names the NZRRC pair by number ('the 10th and the 13th') and makes them THE ONLY UNITS IN THE GAME THAT MAY BUILD RAILROAD. is_combat false, oca/dca 0 and sp 0 are the RULE (23.11: engineers 'have no real combat value, nor do they exert Zones of Control... not combat units in any way, shape, or form'). PROXY, FLAGGED: their row of the [4.46a] Commonwealth Unit Characteristics Chart is untranscribed, so CPA 30 / 1 step / MOTORIZED mirrors the CW hq row. The `engineer` field is what they may be USED for -- 23.13: the NZRRC are 'used solely for the construction and repair of Railroads', the 1 S.A. Road Construction unit 'solely for Road work'. The road battalion is SEEDED BUT IDLE: rule 24.5 road construction is not implemented (the map's unfinished-road hexes are untranscribed), so it exists as the rulebook's counter and builds nothing yet.",
+    "rr_engineer":   {"type": "e", "cpa": 30, "oca": 0, "dca": 0, "steps": 1, "mobility": "MOTORIZED", "is_combat": false, "sp": 0, "engineer": "RAIL"},
+    "road_engineer": {"type": "e", "cpa": 30, "oca": 0, "dca": 0, "steps": 1, "mobility": "MOTORIZED", "is_combat": false, "sp": 0, "engineer": "ROAD"}
   },
-  "IT": {
+"IT": {
     "_comment": "Italian role stats -- representative (weaker CA, older kit than German); tank/gun MODELS (M13/M14 etc.) come from the [4.48] chart via each unit's model. Flagged for [4.46] Italian Unit Characteristics Chart verification.",
     "hq":        {"type": "a",  "cpa": 30, "oca": 0, "dca": 1, "steps": 1, "mobility": "MOTORIZED", "is_combat": false, "sp": 0},
     "oasis":     {"type": "r",  "cpa": 20, "oca": 1, "dca": 1, "steps": 1, "mobility": "FOOT", "sp": 0},

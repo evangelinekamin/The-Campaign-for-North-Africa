@@ -297,6 +297,11 @@ def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
         # the OA charts, robust to formation-name spelling); else derive it from the group.
         morale=rec["morale"] if "morale" in rec else _morale_for(rec["group"], rec["counter"]),
         is_combat=s.get("is_combat", True),
+        # [23.0]/[24.61] Engineer capability and what it may be used FOR: 'RAIL' for the two New
+        # Zealand Railroad Construction companies (the only units that may build railroad, 24.61),
+        # 'ROAD' for the 1 SA Road Construction Battalion (23.13). '' for everything else, which is
+        # every unit in every OOB that carries no engineer row -- so nothing else moves.
+        engineer=s.get("engineer", ""),
         arrival_turn=arrival_turn,
         formation=rec["group"],
         # Rule 9.16a: a garrison in its assigned home hex is free of the stacking limit

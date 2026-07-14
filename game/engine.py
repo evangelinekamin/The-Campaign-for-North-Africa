@@ -16,8 +16,8 @@ import random
 from dataclasses import dataclass
 from typing import Protocol
 
-from . import (combat, combat_tables, cp_costs, logistics_data, stacking, supply, tactics,
-               weather, wells)
+from . import (combat, combat_tables, construction, cp_costs, logistics_data, stacking, supply,
+               tactics, weather, wells)
 from .apply import apply
 from .events import Control, Event, EventKind, Phase, Side
 from .hexmap import distance, is_adjacent, neighbors
@@ -85,6 +85,14 @@ class _Run:
         self.events: list[Event] = []
         self._seq = 0
         self.fort_hits: dict[Coord, int] = {}   # accumulated barrage hits per hex (25.14)
+        # [24.12] The units BOOKED on a construction project this Operations Stage. "Units involved
+        # in construction may not expend any Capability Points during an Operations Stage; otherwise
+        # that construction is halted" (24.12), and 48 V.C.4.b: they "may not be moved (voluntarily)
+        # during the remainder of the current Operations Stage". _movement drops their orders, so the
+        # pin is structural rather than a penalty applied after the fact. Cleared at the OpStage
+        # boundary, like the 15.81 Engaged marker -- and empty for every scenario that never builds,
+        # which is what keeps them byte-identical.
+        self.building: set[str] = set()
 
     def emit(self, kind: EventKind, side: Side, actor: str, payload: dict,
              rng_draws: tuple[int, ...] = ()) -> None:
@@ -143,6 +151,8 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             _air_superiority(r)                          # 40/45/46: contest the sky this OpStage (per arena)
             for side in (first, second):                # 7.16: Player A (first) then Player B (last)
                 _debrief(side)                          # enemy portion + own last combat
+                _construction(r, policies[side], side)  # 48 V.C.4 / 24.11: the Construction Segment,
+                                                        # BEFORE movement -- 24.12 pins whoever works
                 _reserve_designation(r, policies[side], side)   # 48 V.G / 18.11: hold units back (phasing)
                 r.go(Phase.MOVEMENT, side)
                 _blow_dumps(r, policies[side], side)    # 54.14: deny the enemy your stocks -- BEFORE
@@ -180,6 +190,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             else:                                       # a new game-turn re-opens at Operations Stage 1
                 _defer_crowded_reinforcements(r, r.state.turn + 1)   # rule 20: wait for stacking room
                 r.emit(EventKind.TURN_ADVANCED, Side.SYSTEM, "SYSTEM", {"turn": r.state.turn + 1})
+            r.building.clear()                          # 24.12: the pin lasts one Operations Stage
 
     return RunResult(r.initial, r.events, r.state, winner, reason)
 
@@ -502,8 +513,8 @@ def _rail_stops(r: _Run, convoy, terminus) -> list:
     enemy = CONTROL_OF[_other(convoy.side)]
     on_line = {h for e in rails for h in e}
     manned = {u.hex for u in state.living(convoy.side) if u.is_combat} & on_line
-    out: list = []
-    for h in sorted(h for h in manned if state.control_of(h) != enemy):   # 52.22: OPERATING hexes
+
+    def stop_at(h):
         dump = _dump_on(state, convoy.side, h)
         if dump is not None and dump.base:
             # RULE 57: the railway hauls supply AWAY from the bottomless base, never into it. The
@@ -512,13 +523,42 @@ def _rail_stops(r: _Run, convoy, terminus) -> list:
             # SOURCE. Left as a stop, the garrison standing on Alexandria would make the base a
             # destination and throw a whole share of the 54.32 haul into a 125,000,000-point depot
             # that did not need it -- the one way this change could quietly cost the army supply.
-            continue
-        out.append(dump or h)
+            return None
+        return dump or h
+
+    # Forward-first: westernmost (smallest axial r) first. A dump object and a bare hex both answer
+    # to the same key, so an established station and a fresh one sort into one line. The ORDER is
+    # load-bearing: _rail_deliver gives each stop an even cut and then CASCADES the remainder down
+    # this list, so whatever stands first gets the surplus of the whole train.
+    out = [s for s in (stop_at(h) for h in sorted(h for h in manned
+                                                  if state.control_of(h) != enemy))   # 52.22
+           if s is not None]
     if terminus is not None and terminus.id not in {d.id for d in out if not isinstance(d, tuple)}:
         out.append(terminus)                        # the railhead is always served (60.7)
-    # Forward-first: westernmost (smallest axial r) first. A dump object and a bare hex both answer
-    # to the same key, so an established station and a fresh one sort into one line.
-    return sorted(out, key=lambda d: (d if isinstance(d, tuple) else d.hex)[1])
+    out.sort(key=lambda d: (d if isinstance(d, tuple) else d.hex)[1])
+
+    # [24.67] AND THE CONSTRUCTION RAILHEAD, wherever the New Zealanders have pushed it to -- LAST.
+    # "A Railhead marker is provided to indicate the extent of construction": the end of the track is
+    # where a train can go and no further, so it is a stop by definition, manned or not, and it has to
+    # be, because the gang laying the next hex are ENGINEERS (23.11 -- not combat units "in any way,
+    # shape, or form"), `manned` never sees them, and 24.64 wants a Store Point present WITH them. A
+    # railway whose builders starve does not get built.
+    #
+    # BUT IT GOES ON THE END OF THE CASCADE, and this is not a nicety -- it is a measured regression.
+    # Sorted forward-first with everything else, the construction railhead is by definition the
+    # westernmost stop on the line, so it took the even cut AND the entire surplus of the train: at
+    # Game-Turn 12 the whole 54.32 haul was running fifty miles past the Eighth Army to a hex with two
+    # engineer companies on it, and MERSA MATRUH -- the railhead the army actually stands on and
+    # fights from -- was left at ZERO Ammunition and ZERO Fuel. The freight goes to the TROOPS; the
+    # work site gets its ration, which is one Store Point a hex. Both are 54.35's free choice of where
+    # to set the load down, and this is the choice a staff would make.
+    head = construction.rail_head(state)
+    if head is not None and state.control_of(head) != enemy and head not in manned:
+        stop = stop_at(head)
+        if stop is not None and (isinstance(stop, tuple)
+                                 or stop.id not in {d.id for d in out if not isinstance(d, tuple)}):
+            out.append(stop)
+    return out
 
 
 def _dump_on(state: GameState, side: Side, hex_):
@@ -1186,6 +1226,14 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
         if u.reserve == 2:                              # 18.22: Reserve II never moves
             _reject(r, side, actor, order, "Reserve II units may not move (18.22)")
             continue
+        if u.id in r.building:                          # 24.12 / 48 V.C.4.b: a unit booked on a
+            _reject(r, side, actor, order,              # construction project this Operations Stage
+                    "involved in construction: may not move or spend CP this OpStage (24.12)")
+            continue
+        if u.engineer and r.state.control_of(order.to) == CONTROL_OF[_other(side)]:
+            _reject(r, side, actor, order,              # 23.11: "Engineer units may never enter
+                    "an engineer may not voluntarily enter an enemy-controlled hex (23.11)")
+            continue                                    # Enemy-controlled hexes voluntarily"
         if u.effective_strength == 0:                   # 21.44: all vehicles broken down
             _reject(r, side, actor, order, "all vehicles broken down, may not move (21.44)")
             continue
@@ -1792,6 +1840,146 @@ def _establish_dump(r: _Run, side: Side, actor: str, order, truck):
 def _reject_truck(r: _Run, side: Side, actor: str, order, reason: str) -> None:
     r.emit(EventKind.ORDER_REJECTED, side, actor,
            {"order": "truck_convoy", "truck_id": order.truck_id, "reason": reason})
+
+
+# --- [24.0] THE CONSTRUCTION SEGMENT (rule 48 V.C.4) --------------------------------------------
+
+def _construction(r: _Run, policy: Policy, side: Side) -> None:
+    """The Construction Segment of the Organization Phase (48 V.C.4), in its two charted Steps.
+
+    THE ENGINE HAD NO CONSTRUCTION AT ALL. Rule 24's opening sentence lists railroads and supply
+    dumps among the things that "come into existence through construction", and neither could: the
+    map's rail edge-set was frozen at Mersa Matruh where rule 60.7 leaves it, and a supply dump was
+    either seeded in September 1940 or founded free by a passing lorry. So the Commonwealth could
+    not do the one thing that won it this campaign -- push its railhead west and eat off it -- and
+    neither side could turn a heap of supplies in the desert into a depot its lorries could lift
+    from again (24.9's Note).
+
+      a. COMPLETION STEP (24.11): "any work scheduled for completion is finished". A railroad hex
+         with its two company-stages banked (24.62) joins the map.
+      b. INITIATION / CONTINUATION STEP: work is booked for this Operations Stage. Every gate the
+         rule names is checked here and nowhere else -- who may build (24.61/24.9), the surveyed
+         line and no skipped hex (24.67), the enemy's control (24.65), the Store Points on hand in
+         the hex (24.64/24.13/24.9), the weather (24.22).
+
+    THE 24.12 PIN is honoured by CONSTRUCTION COMING FIRST. "Units involved in construction may not
+    expend any Capability Points during an Operations Stage; otherwise that construction is halted",
+    and 48 V.C.4.b: "any units involved in such work may not be moved during the remainder of the
+    current Operations Stage". So the Segment runs BEFORE the side's Movement Phase, and the units
+    it books are struck from that stage's movement (r.building) -- the pin is structural, not a
+    check after the fact. A unit that is not booked is free to move, which is 24.16's voluntary cease.
+
+    Fires only when a policy issues a BuildOrder, so every scenario in this repo that does not
+    construct emits no Phase.CONSTRUCTION and stays byte-identical."""
+    orders = policy.construction(r.state, side)
+    projects = [h for h, n in sorted(r.state.construction.items())
+                if n >= construction.RAIL_COMPANY_STAGES]
+    if not orders and not projects:
+        return
+    r.go(Phase.CONSTRUCTION, side)
+    actor = f"{side.value}/Engineers"
+    for hx in projects:                                  # a. the Construction Completion Step (24.11)
+        _complete_rail(r, side, actor, hx)
+    booked: set = set()
+    for order in orders:                                 # b. Initiation / Continuation
+        if order.item == construction.RAIL:
+            _build_rail(r, side, actor, order, booked)
+        elif order.item == construction.DUMP:
+            _build_dump(r, side, actor, order)
+    r.building |= booked                                 # 24.12: they may not move this stage
+
+
+def _complete_rail(r: _Run, side: Side, actor: str, hx: Coord) -> None:
+    """[24.11]a / [24.67] The track is laid: the hex joins the map's rail edge-set, extending the
+    line from the head it grew out of, and its Under Construction marker comes off. From this
+    Operations Stage the trains run to it (54.35 / _rail_stops), which is the whole point."""
+    link = construction.rail_edge(r.state, hx)
+    if link is None:                                     # the line moved on without it: drop the work
+        r.emit(EventKind.CONSTRUCTION_ADVANCED, side, actor,
+               {"item": construction.RAIL, "hex": list(hx), "unit_ids": [], "stages": 0,
+                "progress": 0})
+        return
+    frm = next(iter(link - {hx}))
+    r.emit(EventKind.CONSTRUCTION_COMPLETED, side, actor,
+           {"item": construction.RAIL, "hex": list(hx), "from": list(frm)})
+
+
+def _build_rail(r: _Run, side: Side, actor: str, order, booked: set) -> None:
+    """[24.6] Lay one hex of new track. Every clause of the rule is a line of this function.
+
+    THE GANG WORKS FROM THE RAILHEAD, NOT FROM THE HEX IT IS LAYING. The Construction Chart's Build
+    row for Railroad restricts it in three words -- "building limited to HEAD or track" -- and 24.63
+    says the same of a rebuild: "the unit may rebuild the hex IT OCCUPIES plus any two hexes ADJACENT
+    to the Engineer unit". So the companies stand on the last completed hex and push the line out in
+    front of them, which is how a railway has always been built.
+
+    It is also the only reading that works, and the rule is coherent because of it: 24.64 wants one
+    Store Point "PRESENT WITH THE ENGINEER UNIT and actually expended in the Construction Segment",
+    and the hex about to be railed is a patch of empty desert with nothing in it. The railhead is
+    where the trains stop (54.35 / _rail_stops), so the railhead is where the stores are. The railway
+    feeds its own construction, hex by hex, and that is exactly what it did."""
+    hx = tuple(order.hex)
+    head = construction.rail_head(r.state)
+    if hx != construction.rail_next(r.state) or head is None:
+        _reject_build(r, side, actor, order, "no hex may be skipped: build from the railhead (24.67)")
+        return
+    if not construction.rail_buildable(r.state, side, hx):
+        _reject_build(r, side, actor, order,
+                      "enemy-held hex (24.65) or foul weather (24.22)")
+        return
+    gang = [u for u in (r.state.unit(uid) for uid in order.unit_ids)
+            if u is not None and u.side == side and r.state.on_map(u)
+            and construction.builds_rail(u) and u.hex == head and u.cp_used == 0]
+    if not gang:
+        _reject_build(r, side, actor, order,
+                      "only the two NZ Railroad Construction companies, standing on the railhead, "
+                      "may build railroad (24.61 / Construction Chart: 'limited to head or track')")
+        return
+    progress = r.state.construction.get(hx, 0)
+    if progress == 0:                                     # 24.64/24.13: the Stores are expended AT THE
+        dump = construction.dump_at(r.state, side, head)  # START, out of the pile the gang stands on
+        if dump is None or dump.stores < construction.RAIL_STORES:
+            _reject_build(r, side, actor, order,
+                          "one Store Point must be present with the engineer and expended (24.64)")
+            return
+        r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+               {"supply_id": dump.id, "commodity": supply.STORES,
+                "qty": construction.RAIL_STORES, "unit_id": gang[0].id})
+    stages = len(gang)                                   # 24.62: one company-stage per company
+    r.emit(EventKind.CONSTRUCTION_ADVANCED, side, actor,
+           {"item": construction.RAIL, "hex": list(hx), "unit_ids": [u.id for u in gang],
+            "stages": stages, "progress": progress + stages})
+    booked.update(u.id for u in gang)
+
+
+def _build_dump(r: _Run, side: Side, actor: str, order) -> None:
+    """[24.9] Construct a supply dump: three Capability Points and twenty Store Points, spent by any
+    one TOE Strength Point of any type standing in the hex. What it buys is the Note -- from now on
+    "trucks in convoy" MAY load from this hex, so the heap of supplies the army dropped in the desert
+    becomes a LINK its bucket brigade can lift out of (53.14/54.16) instead of a one-way sink."""
+    hx = tuple(order.hex)
+    dump = construction.dump_at(r.state, side, hx)
+    u = next((u for u in (r.state.unit(uid) for uid in order.unit_ids)
+              if u is not None and u.side == side and r.state.on_map(u)
+              and construction.can_construct_dump(r.state, side, u, dump)), None)
+    if u is None:
+        _reject_build(r, side, actor, order,
+                      "needs 1 TOE Strength Point with 3 CP and 20 Stores in the hex (24.9)")
+        return
+    r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+           {"supply_id": dump.id, "commodity": supply.STORES,
+            "qty": construction.DUMP_STORES, "unit_id": u.id})
+    r.emit(EventKind.CP_EXPENDED, side, actor,
+           {"unit_id": u.id, "activity": "construct_dump", "cp": construction.DUMP_CP})
+    r.emit(EventKind.SUPPLY_DUMP_CONSTRUCTED, side, actor,
+           {"supply_id": dump.id, "unit_id": u.id, "cp": construction.DUMP_CP,
+            "stores": construction.DUMP_STORES})
+
+
+def _reject_build(r: _Run, side: Side, actor: str, order, reason: str) -> None:
+    r.emit(EventKind.ORDER_REJECTED, side, actor,
+           {"order": "construction", "item": order.item, "hex": list(order.hex),
+            "unit_ids": list(order.unit_ids), "reason": reason})
 
 
 def _other(side: Side) -> Side:

@@ -66,6 +66,14 @@ class Unit:
     is_first_line_truck: bool = False
     is_pure_aa: bool = False
     is_garrison_home: bool = False
+    # [23.0]/[24.61] ENGINEER CAPABILITY, and what it may be used FOR. '' is every ordinary unit.
+    # 'RAIL' is the two New Zealand Railroad Construction companies -- "the only units that may
+    # BUILD railroads" (24.61) and, per 23.13, "used solely for the construction and repair of
+    # Railroads". 'ROAD' is the 1st South African Road Construction Battalion, "used solely for
+    # Road work" (23.13). An engineer is NOT a combat unit "in any way, shape or form" (23.11), so
+    # it carries is_combat=False and never banks a city, exerts a ZOC or is assaulted. Default ''
+    # keeps every scenario without engineers byte-identical.
+    engineer: str = ''             # '' | 'RAIL' (NZRRC, 24.61) | 'ROAD' (1 SA RC Bn, 23.13)
     formation: str = ''            # OOB organisational group; the staff layer addresses by it
     fuel_rate: int = 0             # 49.19 Fuel Consumption Rate; 0 -> supply.fuel_rate proxy
     # Consecutive-shortfall counters (rules 51/52), folded via replace. Reset when the
@@ -155,6 +163,29 @@ class SupplyUnit:
     # from the 49.3 evaporation loss. Defaults False so every field dump -- and every
     # pre-C3 scenario -- evaporates exactly as before (byte-identical).
     base: bool = False
+    # [24.9] A CONSTRUCTED supply dump, as against a heap of supplies lying in a hex.
+    #
+    # Rule 24.9 draws a distinction the engine had collapsed, and it is the difference between a
+    # LINK in a supply chain and a one-way sink. A dump is CONSTRUCTED by "any one TOE Strength
+    # Point of any type" expending three Capability Points and 20 Store Points in the hex -- no
+    # engineer, no elapsed time. Its Note then says what that buys:
+    #
+    #   "Supplies may be placed in a hex NOT containing a constructed supply dump. The only
+    #    restriction on the use of such supplies is that trucks 'in convoy' may not load such
+    #    supplies."
+    #
+    # So a lorry may always SET DOWN a load anywhere (54.11/54.35 -- that is the pile a truck
+    # unload founds, game.engine._establish_dump, and it is free because the rulebook makes it
+    # free); a unit standing near it may always eat from it (32.16). What only a CONSTRUCTED dump
+    # can do is give supply BACK to a truck in convoy -- which is precisely what a bucket brigade
+    # needs of its intermediate depots (53.14/54.16). The 60.34 staging depots, the rule-57 bases
+    # and the ports of arrival are constructed by construction; a depot the army founds in the
+    # desert is not, until somebody builds it.
+    #
+    # Default False = an unconstructed pile, so every dump the trucks and the railway have ever
+    # founded reads exactly as it did (the relay was already refusing to lift from them by policy;
+    # see campaign_policy._relay_source). game.scenario stamps the seeded depots True.
+    constructed: bool = False
 
     @property
     def empty(self) -> bool:
@@ -476,6 +507,26 @@ class GameState:
     # take inside a task. Only game.scenario.campaign sets it.
     dump_capture: bool = False
 
+    # --- [24.0] CONSTRUCTION -------------------------------------------------------------------
+    # `construction` is the Under Construction marker (24.33/24.42): hex -> COMPANY-STAGES of work
+    # accrued on the project standing there. Rule 24.62 is stated in exactly those units -- "one
+    # NZRRC company requires two OpStages to build one hex of new track; TWO NZRRC companies in the
+    # same hex can build one hex in one OpStage" -- so a hex needs two company-stages and each
+    # company present contributes one per Construction Segment. One counter, no special case for
+    # the pair. Completed work is popped (24.11: "construction is completed at the beginning of the
+    # Construction Segment of a succeeding Operations Stage").
+    #
+    # `rail_line` is the SURVEYED route the Alexandria-Mersa Matruh-Tobruk railway may be built
+    # along, ordered from the first unbuilt hex WESTWARD to Tobruk. Rule 24.67: "construction must
+    # start from the last completed hex extending from Mersa Matruh and grow westward towards
+    # Tobruk. NO HEX MAY BE SKIPPED... Unbuilt railroad hexes simply do not exist." A line, not a
+    # freedom: neither Player may invent new stretches of railway any more than of road (24.51).
+    #
+    # Both default empty -- no scenario but the campaign surveys a line, and with no line and no
+    # engineers no construction order can ever validate, so every other scenario is byte-identical.
+    construction: dict = field(default_factory=dict)
+    rail_line: tuple = ()
+
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:
         for u in self.units:
@@ -564,6 +615,15 @@ class GameState:
         fort_levels = dict(self.fort_levels)
         fort_levels[coord] = level
         return replace(self, fort_levels=fort_levels)
+
+    def with_construction(self, coord: Coord, stages: int) -> "GameState":
+        """Set (or, at 0, clear) the company-stages of work accrued on `coord` (rule 24.11)."""
+        work = dict(self.construction)
+        if stages > 0:
+            work[coord] = stages
+        else:
+            work.pop(coord, None)
+        return replace(self, construction=work)
 
     def with_supply(self, su: "SupplyUnit") -> "GameState":
         supplies = tuple(su if s.id == su.id else s for s in self.supplies)

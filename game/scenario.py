@@ -669,6 +669,11 @@ def _campaign_axis_cargo(gt: int, rng: random.Random) -> dict | None:
     return {c: tons_to_points(tonnage * frac, c) for c, frac in _CONVOY_SPLIT_56_22.items()}
 
 
+# [24.9] The OOB's own field dumps -- the mobile supply that rides with a division (32.3) and
+# follows it about the desert. Everything else the campaign seeds is a place ON the supply line, and
+# is a CONSTRUCTED dump (see the stamp in campaign()). game.oob._place_dumps mints these ids.
+_MOBILE_DUMPS = ("AX-Dump", "AL-Dump")
+
 _CW_RAILHEAD = "D3714"                 # Mersa Matruh -- the RR terminus (rule 60.7)
 
 # The Commonwealth supply SPINE, west (the front) to east (the Delta) -- the twin of the Axis
@@ -1223,6 +1228,12 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     tmap = replace(tmap, rails=frozenset(edge(a, b) for a, b
                                          in zip(rail_corridor, rail_corridor[1:])))
     water_sources += wells.pipeline(tmap.terrain)
+    # [24.6]/[24.67] ...AND THE ROUTE IT MAY BE FINISHED ALONG. The line "extends towards Mersa
+    # Matruh (eventually to be completed at TOBRUK)", and the two New Zealand Railroad Construction
+    # companies are the only units in the game that may lay it (24.61). Surveyed here, built hex by
+    # westward hex by game.engine._construction; the Axis has no railway construction at all, which
+    # is the rulebook's asymmetry and not ours (see game.construction).
+    rail_line = wells.rail_survey(tmap.terrain)
 
     # THE 54.12 VILLAGE ROW (see game.villages). Read off the FINAL map, so every hex stamped
     # MAJOR_CITY above -- Tobruk, Bardia, Benghazi, Cairo, Alexandria -- keeps its unlimited city
@@ -1231,6 +1242,21 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     # the hexes the whole logistics chain stands on. Campaign-only, so the byte-locked benchmark
     # scenarios keep reading the Other-Terrain row (state.villages defaults empty).
     village_hexes = villages.village_hexes(tmap.terrain)
+
+    # [24.9] THE SUPPLY LINE IS CONSTRUCTED; THE ARMY'S MOBILE DUMPS ARE NOT. Rule 24.9's Note makes
+    # a constructed dump the only kind a truck "in convoy" may LOAD from -- the difference between a
+    # LINK in a bucket brigade and a one-way sink. The places ON the line are constructed depots and
+    # always were: the 60.34 Axis staging chain, the 60.44 Commonwealth Field Supply Depots and rail
+    # stations, the ports of arrival, and the rule-57 bases (54.11: "all major cities are natural
+    # supply dumps"). The FIELD dumps the OOB rides the armies in with are not -- they are the
+    # mobile supply that follows the division (32.3), and a lorry that carries a division's stock
+    # back off it has done negative work (measured; see campaign_policy._relay_source).
+    #
+    # Which is what makes 24.9 a DECISION rather than a formality: an army that wants its forward
+    # dump to become a link in the chain must stop and build it -- 3 Capability Points and 20 Store
+    # Points, by any one TOE Strength Point standing on it.
+    dumps = tuple(d if d.id.startswith(_MOBILE_DUMPS) else replace(d, constructed=True)
+                  for d in dumps)
 
     # The wells go in the supplies tuple LAST, and the convoy/port/truck geography below is
     # derived from `dumps` (the armies' depots) ALONE. A well is geography, not a depot: it is
@@ -1250,6 +1276,7 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         initial_supply=_initial_supply(supplies),
         villages=village_hexes,                          # 54.12: the missing capacity row
         dump_capture=True,                               # 32.13/54.15: a dump entered is a dump taken
+        rail_line=rail_line,                             # 24.6/24.67: the route west the NZRRC may build
         map_sections=frozenset("ABCDE"),
         season_offset=calendar.CAMPAIGN_SEASON_OFFSET,   # GT1 = September 1940 (fall)
         victory=campaign_victory.CampaignVictory(),      # rule 64.7 (see game.campaign_victory)

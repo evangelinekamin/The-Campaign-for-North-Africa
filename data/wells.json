@@ -86,7 +86,9 @@
   "pipeline": {
     "_comment": "[52.22]/[52.23] The Commonwealth Player may consider any operating RAILROAD hex to be a pipeline for water; a pipeline (or RR hex) is a source 'similar to a major city' -- unlimited, never depleted, never poisoned. [60.7] at the campaign start: 'There are no minefields, fortifications, or pipeline (other than those provided by the RR). The RR runs to Mersa Matruh (D3714) and ends there.' The Axis may NOT use the defunct Barce-Benghazi railroad for this (52.22), so the pipeline is Commonwealth-only.",
     "_proxy": "PROXY GEOGRAPHY, FLAGGED: the map's rail line is not transcribed (TerrainMap.rails is empty -- see the RAIL SEED note in game.scenario.rommels_arrival). The corridor is therefore laid as the shortest LAND path between the two transcribed endpoints, so it invents no terrain and crosses no sea; the real Western Desert Railway hugs the same coastal strip.",
+    "_delta": "[24.6] The line is 'the rail complex that CRISSCROSSES THE NILE DELTA and extends towards Mersa Matruh (eventually to be completed at Tobruk)'. `base` is CAIRO -- the rule-57 supply base, 'an unlimited amount of supplies of all types in Cairo at all times; HIS PROBLEM IS SOLELY TO GET IT TO WHERE HE WANTS IT' -- `from` is Alexandria, `to` the Mersa Matruh terminus of rule 60.7. The Cairo-Alexandria leg was MISSING, which left nineteen hexes of trackless nothing inside Britain's own base area: a Commonwealth foot battalion traces five Capability Points, so standing in Cairo (where the whole Eighth Army lands as reinforcements) it could trace supply at Cairo, and at Alexandria, and NOWHERE IN BETWEEN. See game.wells.corridor.",
     "side": "ALLIED",
+    "base": "E1730",
     "from": "E3613",
     "to": "D3714"
   }
