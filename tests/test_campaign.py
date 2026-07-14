@@ -73,8 +73,13 @@ def test_campaign_supply_economy():
     cw_base = [s for s in st.supplies if s.base and not wells.is_water_source(s)]
     assert len(cw_base) == 2 and all(s.side == Side.ALLIED for s in cw_base)
     assert all(s.fuel > 1_000_000 for s in cw_base)         # a reservoir no 111-turn draw exhausts
+    # The Axis lands at TWO ports of arrival, not one (56.11/56.18: the Convoy Air Distance chart
+    # names six Axis lanes, and two of them run to TOBRUK -- the harbour the Axis has held since
+    # Game-Turn 1). Benghazi takes the Mediterranean convoy the lorries haul east; Tobruk takes the
+    # sea lifeline that feeds the fortress garrison at distance 0.
     axis_convoys = [c for c in st.convoys if c.side == Side.AXIS]
-    assert axis_convoys and all(c.dest == "AX-Benghazi" for c in axis_convoys)
+    assert axis_convoys
+    assert {c.dest for c in axis_convoys} == {"AX-Benghazi", "AX-Stage-Tobruk"}
 
 
 def test_campaign_commonwealth_can_attack():
@@ -167,9 +172,15 @@ def test_campaign_tobruk_lifeline_holds_only_when_the_commonwealth_takes_it():
     # garrison dump are seeded, but 56.15 CANCELS the ferry while the Axis holds Tobruk (seeded
     # control C4807=AXIS at GT1). Nothing lands in the garrison dump until the Commonwealth takes the
     # fortress -- the historical shape (the siege lifeline serves a CW-held Tobruk, not day one).
+    #
+    # The harbour itself is a PLACE, not a possession: ONE Port on the hex (the 55.3 chart lists one
+    # Tobruk), flagged with the side that HOLDS the city at Game-Turn 1 -- the Axis, which is what
+    # engine._air_port reads to decide whose harbour may be bombed. The 56.15 gate, keyed on CONTROL,
+    # is what actually decides which side's convoy sails into it. See tests/test_campaign_lifeline.py.
     st = campaign(seed=1941, max_turns=12)
     assert any(c.lane == "SEA-TOBRUK" for c in st.convoys)              # the ferry is seeded every turn
-    assert any(p.id == "PORT-Tobruk" and p.side == Side.ALLIED for p in st.ports)   # the landing port
+    tobruk_ports = [p for p in st.ports if p.id == "PORT-Tobruk"]
+    assert len(tobruk_ports) == 1 and tobruk_ports[0].side == Side.AXIS   # one harbour, the GT1 holder's
     tob = coords.to_axial(coords.parse("C4807"))
     assert st.control.get(tob) == Side.AXIS                             # Axis holds Tobruk in Sep 1940
     res = run(campaign(seed=1941, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())

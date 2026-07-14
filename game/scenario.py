@@ -767,9 +767,33 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
         convoys += [Convoy(f"cw-rail-t{gt}", Side.ALLIED, gt, "CW-RAILHEAD", railhead.id,
                            dict(load), retarget=line)
                     for gt in range(1, max_turns + 1)]
-    # Tobruk sea lifeline (30 / 56.3): the per-turn ferry feeding the AL-Tobruk garrison dump.
-    # Cancelled by 56.15 while the Axis holds Tobruk, landing once the Commonwealth takes it.
+    # THE TOBRUK SEA LIFELINE, BOTH HALVES (rules 30 / 56.3 / 56.11) -- ONE harbour, TWO lanes, and
+    # rule 56.15 hands it from one to the other the Game-Turn the city changes hands.
+    #
+    #   * SEA-TOBRUK -- the Commonwealth ferry into the AL-Tobruk garrison dump. The historical
+    #     Tobruk Ferry Service; it sails only while the Commonwealth holds the fortress.
+    #   * "6" -- the AXIS lane, Italy -> Tobruk (the 56.18 Convoy Air Distance chart names the six
+    #     Axis lanes: 1 Sicily->Bizerta, 2 Sicily->Tripoli, 3 Italy->Benghazi, 4 Greece->Benghazi,
+    #     5 Greece->Tobruk, 6 Italy->Tobruk). THE RULEBOOK GIVES THE AXIS TWO CONVOY LANES TO
+    #     TOBRUK and the campaign sailed neither: the Axis has held Tobruk since Game-Turn 1 --
+    #     it was an ITALIAN port, and Italy supplied its army through it -- yet its only supply
+    #     forward of Benghazi was a sixty-hex truck haul. Measured, that is why its 200 Victory
+    #     Points were one hex deep and a coin-flip: cut the land chain (take Benghazi and the
+    #     56.15 gate kills the Mediterranean convoy for the rest of the war) and the Tobruk
+    #     garrison starves to a 15.15 dry-ammunition surrender. Fed by sea it is a FORTRESS,
+    #     which is what it historically was -- and the besieger's job becomes what it historically
+    #     was too: CUT THE SEA LANE (_campaign_tobruk_axis_interdiction).
+    #
+    # It lands in AX-Stage-Tobruk, the 60.34 staging dump standing ON the city, so the garrison
+    # traces to it at distance 0 -- the exact mirror of AL-Tobruk under the ferry. Neither lane is
+    # a free faucet: engine._naval_convoys throttles both through the ONE 55.3 harbour (1700 t,
+    # eff 5 -> 425 Ammunition Points/OpStage; see _campaign_ports), and 56.15 cancels whichever of
+    # them is sailing into a city the enemy now controls. They hand off automatically, in both
+    # directions, for as many times as the fortress changes hands.
     convoys += [Convoy(f"tobruk-ferry-t{gt}", Side.ALLIED, gt, "SEA-TOBRUK", "AL-Tobruk", _load_cargo())
+                for gt in range(1, max_turns + 1)]
+    convoys += [Convoy(f"tobruk-axis-t{gt}", Side.AXIS, gt, _AXIS_TOBRUK_LANE, "AX-Stage-Tobruk",
+                       _load_cargo())
                 for gt in range(1, max_turns + 1)]
     rear = _axis_rear(supplies, target)
     if rear is not None:
@@ -799,7 +823,24 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
     """The ports of arrival (55.3). AXIS: Benghazi, the forward Mediterranean harbour the
     convoys land at, full efficiency (55.14 throttles by efficiency; the campaign's bottleneck
     is the port-to-front haul, not the harbour). COMMONWEALTH: Mersa Matruh, the railhead the
-    rail lane feeds (rule 60.7). The bottomless Cairo/Alexandria MAJOR_CITY base needs no port."""
+    rail lane feeds (rule 60.7). The bottomless Cairo/Alexandria MAJOR_CITY base needs no port.
+
+    AND TOBRUK -- which is A HARBOUR, NOT A POSSESSION. There is ONE Tobruk in the 55.3 chart
+    (1700 t, Efficiency Level 5, "starts below eff 5 -- San Giorgio partially blocks harbour") and
+    ONE Port object here, because that is how the engine already reads a port: GameState.port_at is
+    keyed by HEX, engine._naval_convoys throttles whatever lands there with no side test at all, and
+    rule 56.15 gates the sailing on CONTROL of the destination hex. So the harbour serves whoever
+    holds the city -- the Italians and then the Panzerarmee until Compass/Crusader takes it, the
+    Commonwealth afterwards -- and a second, duplicate Port on the same hex would only make port_at
+    ambiguous. It is flagged with the side that HOLDS Tobruk at Game-Turn 1 (the Axis -- see
+    _CAMPAIGN_CONTROL: it was an Italian port and Italy supplied its army through it), which is what
+    engine._air_port reads to decide whose harbour may be bombed.
+
+    Kept under the id PORT-Tobruk so the San Giorgio block already modelled in the engine
+    (HARBOUR_BLOCKED: no 55.18 regeneration, ever) keeps applying -- the scuttled cruiser does not
+    care who owns the quay. The 1700-t rating is the chart's; at eff 5/5 it crosses (54.5) to a
+    landing ceiling of 425 AMMUNITION Points per Operations Stage, which is the real gate on either
+    side's Tobruk lifeline."""
     ports = []
     rear = _axis_rear(supplies, target)
     if rear is not None:
@@ -811,10 +852,7 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
         tons = _PORT_TONS.get("mersa_matruh", _PORT_TONS["tripoli"])["tons"]   # 55.3 railhead tonnage
         ports.append(Port("PORT-Matruh", Side.ALLIED, railhead.hex, "major", max_eff=10, eff=10,
                           **_caps_tonnage(tons)))
-    # PORT-Tobruk (55.3 campaign row: 1700 t, eff 5) -- the ferry's landing throttle. In the engine's
-    # HARBOUR_BLOCKED set so it never regenerates, hence seeded at max efficiency; the garrison's
-    # supply ceiling once the Commonwealth holds Tobruk.
-    ports.append(Port("PORT-Tobruk", Side.ALLIED, coords.to_axial(coords.parse(_TOBRUK)), "major",
+    ports.append(Port("PORT-Tobruk", Side.AXIS, coords.to_axial(coords.parse(_TOBRUK)), "major",
                       max_eff=5, eff=5, **_caps_tonnage(_PORT_TONS["tobruk"]["tons"])))
     return tuple(ports)
 
@@ -851,7 +889,13 @@ def _campaign_malta_interdiction(max_turns: int) -> tuple[InterdictionOrder, ...
                  for t in range(1, max_turns + 1) if _malta_bomb_points(t) > 0)
 
 
-_TOBRUK = "C4807"    # the fortress (a 64.73 victory hex); the CW lifeline that lets a siege hold
+_TOBRUK = "C4807"    # the fortress (a 64.73 victory hex); the sea lifeline that lets a siege hold
+# [56.18] the Axis naval-convoy lane Italy -> Tobruk. The Convoy Air Distance chart names all six
+# (1 Sicily->Bizerta, 2 Sicily->Tripoli, 3 Italy->Benghazi, 4 Greece->Benghazi, 5 Greece->Tobruk,
+# 6 Italy->Tobruk), so the Axis run into the harbour it holds is the rulebook's own lane, not an
+# invented one. (Benghazi's lane is labelled "2" above -- a pre-existing mislabel against this
+# chart, which reads 3/4 for Benghazi. Left alone: the label is the Malta interdiction's key.)
+_AXIS_TOBRUK_LANE = "6"
 # Historically-correct September-1940 ownership. The 56.15 gate cancels a convoy whose destination
 # hex is ENEMY-controlled, but control_of defaults NEUTRAL and _naval_convoys runs before the first
 # _record_control -- so without this the GT1 Tobruk ferry would land inside Italian-held Tobruk.
@@ -884,6 +928,27 @@ def _campaign_tobruk_ferry_interdiction(max_turns: int, bomb_points: int = 200
     GT20, when the DAK and its Luftwaffe arrive within reach of the ferry; a cancelled ferry (while
     the Axis holds Tobruk) skips interdiction entirely, and an unmatched order draws no dice."""
     return tuple(InterdictionOrder("SEA-TOBRUK", t, bomb_points) for t in range(20, max_turns + 1))
+
+
+def _campaign_tobruk_axis_interdiction(max_turns: int, bomb_points: int = 200
+                                       ) -> tuple[InterdictionOrder, ...]:
+    """THE MIRROR: the COMMONWEALTH's interdiction of the Axis Tobruk run (rules 41.6 / 30) -- the
+    Mediterranean Fleet out of Alexandria and the Desert Air Force over the Gulf of Bomba, which is
+    what made the Tobruk run murderous for the Axis in every year of this war. Without it the sea
+    lifeline above would make the fortress INVULNERABLE: rule 15.82 grants Tobruk no eviction, so it
+    falls only to a 15.15 dry-ammunition surrender, and a garrison fed by an uncontested sea lane
+    never goes dry. A besieger has to be able to fight the lane.
+
+    The exact twin of _campaign_tobruk_ferry_interdiction, at the same FLAGGED 200 Bomb-Point weight
+    (the [41.5] 161..200 column, a 5-20% per-turn skim) -- no new magnitude on either side of the
+    duel. It runs from Game-Turn 1, where the ferry's Axis interdiction runs from GT20, and the
+    difference is not a thumb on the scale: the Luftwaffe has to ARRIVE (it reaches the theatre with
+    the DAK at GT20), while the Mediterranean Fleet and the RAF are already at Alexandria in
+    September 1940. A cancelled convoy (the Commonwealth holding Tobruk) skips interdiction entirely,
+    and an unmatched order draws no dice -- so the schedule is inert the moment the lane changes
+    hands, and the ferry's own gauntlet takes over."""
+    return tuple(InterdictionOrder(_AXIS_TOBRUK_LANE, t, bomb_points)
+                 for t in range(1, max_turns + 1))
 
 
 def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
@@ -972,6 +1037,7 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         ports=_campaign_ports(dumps, target),                           # C3: PORT-Benghazi + PORT-Matruh
         trucks=(_campaign_axis_trucks(dumps, target)                    # C3-2: the Benghazi->front haul (53/60.33)
                 + _campaign_cw_trucks(dumps)),                          # and the CW railhead->west haul (60.33)
-        interdictions=(_campaign_malta_interdiction(max_turns)          # C4: Malta throttles the Axis Med convoy (rule 44)
-                       + _campaign_tobruk_ferry_interdiction(max_turns)),  # + the cuttable Tobruk-ferry lane (30/41.6)
+        interdictions=(_campaign_malta_interdiction(max_turns)             # C4: Malta throttles the Axis Med convoy (rule 44)
+                       + _campaign_tobruk_ferry_interdiction(max_turns)    # + BOTH halves of the Tobruk sea duel
+                       + _campaign_tobruk_axis_interdiction(max_turns)),   #   (30/41.6): each side can fight the other's lane
     )

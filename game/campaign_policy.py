@@ -3,14 +3,21 @@ the desert war SEE-SAW instead of one player sandbagging for 111 turns:
 
   * CampaignCommonwealthPolicy -- an army that CONCENTRATES FORWARD onto the rail-fed railhead
     between offensives (the Matruh line: the springboard every one of its offensives was
-    launched from), goes over to the offensive on the historical Game-Turn windows (Operation
+    launched from), and goes over to the offensive on the historical Game-Turn windows (Operation
     Compass, Crusader, Second Alamein) advancing toward objective_for(ALLIED) (Benghazi, the Axis
-    rear, far WEST), and -- the point of the whole exercise -- TAKES THE VICTORY CITIES ON THE WAY
-    (game.campaign_claim) instead of sprinting past them at the objective hex.
+    rear, far WEST).
   * CampaignAxisPolicy -- the base attacker PLUS the multi-hop coastal supply haul
     (campaign_truck_orders) that lets the Panzerarmee fight east of Benghazi at all: the lean
     truck pool relays Benghazi's landed tonnage forward LEG BY LEG along the seeded staging
     dumps (rule 60.34), where the shared single-hop base relay can only shuttle the port.
+
+BOTH OF THEM PLAY THE 64.73 POINTS (take_and_hold_moves / take_and_hold_supply below). The campaign
+is scored on the victory CITIES a side holds SUPPLIED at the final Game-Turn, and for a long time
+only the Commonwealth was taught to play them: the Axis never garrisoned a city it took and threw
+away Bardia -- a hundred points it OPENS HOLDING -- every single game. A campaign whose grade turns
+on which side we made competent is not balanced, it is broken. So the standing orders of rule 64.73
+are side-generic (game.campaign_claim was already written that way) and both staffs keep them; what
+decides the war is then the war.
 
 Campaign-ONLY: rommels_arrival / siege_of_tobruk keep the base ScriptedPolicy (whose byte-locked
 truck relay they seed trucks through), so their event streams stay byte-identical. Neither the
@@ -32,7 +39,58 @@ from .state import GameState
 
 __all__ = ["CAMPAIGN_CW_OFFENSIVES", "CampaignAxisPolicy", "CampaignCommonwealthPolicy",
            "OffensiveSchedule", "campaign_truck_orders", "garrison_units", "hold_depots",
-           "hold_garrisons", "railhead"]
+           "hold_garrisons", "railhead", "take_and_hold_moves", "take_and_hold_supply"]
+
+
+# --- the rule-64.73 standing orders, SIDE-GENERIC (see game.campaign_claim) -----------------------
+
+def take_and_hold_moves(state: GameState, side: Side, army: list[MoveOrder], *,
+                        escort: bool) -> list[MoveOrder]:
+    """THE TAKE-AND-HOLD, written as a TRANSFORM on an army's move orders -- the same idiom as
+    hold_garrisons itself, and the shape that lets BOTH campaign policies keep the rule-64.73
+    standing orders over whatever march each of them would otherwise make (the Commonwealth's
+    concentrate-or-attack, the Axis's drive on Alexandria).
+
+      * TAKE -- campaign_claim.claims detaches the nearest unit that could actually be FED there to
+        each victory city this side does not already bank, and claim_moves marches it at ITS city
+        instead of at the far objective.
+      * A DETACHED UNIT IS OUT OF THE GENERAL ADVANCE -- every unit in the plan, not merely the ones
+        with a move order in it. The one that has ALREADY REACHED its city emits no move (there is
+        nowhere to go), and if that left it in the advance the attacker branch would march it
+        straight back off toward the objective the same stage -- the city taken and abandoned in one
+        breath. It stands on the hex it took, banked or not: an occupied city is what flips its
+        control, and control is what lets the lorries fill the depot that will bank it.
+      * HOLD -- and whatever the army proposed, the unit BANKING a supplied victory city stays on it
+        (hold_garrisons). A standing order no competent staff would countermand, on either side.
+
+    `escort` rides through to claims(): may a flying column's DEPOT march with it (32.33)? True for
+    an army on the offensive; False for one that would only be walking its mobile supply into the
+    enemy's advance (see CampaignCommonwealthPolicy._on_offensive)."""
+    plan = campaign_claim.claims(state, side, escort=escort)
+    take = campaign_claim.claim_moves(state, side, plan)
+    busy = {c.unit_id for c in plan}
+    orders = take + [o for o in army if o.unit_id not in busy]
+    return hold_garrisons(orders, state, side)
+
+
+def take_and_hold_supply(state: GameState, side: Side, army: list[SupplyMoveOrder], *,
+                         escort: bool) -> list[SupplyMoveOrder]:
+    """The dual of take_and_hold_moves, on the DEPOTS (rule 32.33, game.campaign_claim). The plan is
+    recomputed rather than passed in: claims() is a pure function of the state, so the depot's orders
+    cannot disagree with its garrison's, and neither half needs to remember the other.
+
+      * THE DEPOTS OF THE TAKE-AND-HOLD COME FIRST (claim_supply): a depot marching with a garrison
+        to a city that has none is the only thing that will make that city BANKABLE (64.73), so it
+        outranks the ordinary forward leapfrog.
+      * The depot already feeding a banked city never leapfrogs away from it (hold_depots) -- a depot
+        walked off a city un-banks it just as surely as marching the garrison off does.
+      * And no field dump ever parks on a seeded Field Supply Depot and MASKS it from the lorries
+        (keep_off_the_spine -- the hex belongs to the chain)."""
+    follow = campaign_claim.claim_supply(state, side,
+                                         campaign_claim.claims(state, side, escort=escort))
+    busy = {o.supply_id for o in follow}
+    rest = [o for o in hold_depots(army, state, side) if o.supply_id not in busy]
+    return campaign_claim.keep_off_the_spine(follow + rest, state, side)
 
 
 @dataclass(frozen=True)
@@ -102,9 +160,10 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
     """A scripted Commonwealth DEFENDER (attacker=AXIS, so every inherited reflex -- defender
     moves and sorties, counter-assault, elastic retreat, initiative -- is unchanged) that
     CONCENTRATES ITS REAR ARMY FORWARD onto the rail-fed railhead between offensives (see
-    _concentrate), switches to the ATTACKER branch on the scheduled offensive Game-Turns driving
-    west toward objective_for(ALLIED), and TAKES THE VICTORY CITIES AS IT GOES (_take, and see
-    game.campaign_claim) instead of running the whole army past them at the objective hex."""
+    _concentrate) and switches to the ATTACKER branch on the scheduled offensive Game-Turns, driving
+    west toward objective_for(ALLIED). Over that march lie the rule-64.73 standing orders
+    (take_and_hold_moves / take_and_hold_supply): it TAKES THE VICTORY CITIES AS IT GOES instead of
+    running the whole army past them at the objective hex -- the same orders the Axis now keeps."""
 
     def __init__(self, schedule: OffensiveSchedule = CAMPAIGN_CW_OFFENSIVES):
         super().__init__(attacker=Side.AXIS)                   # defender wiring, exactly like the base
@@ -116,35 +175,21 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
     def _on_offensive(self, state: GameState) -> bool:
         return self._schedule.is_offensive(state.turn)
 
-    def _take(self, state: GameState, side: Side) -> tuple:
-        """THE TAKE-AND-HOLD (rule 64.73, game.campaign_claim): the detachments sent to occupy the
-        victory cities this army does not yet bank. Recomputed from the state in both the Movement
-        and the Supply Movement Phase -- it is a pure function of the state, so the depot's orders
-        cannot disagree with its garrison's.
-
-        A DEPOT ONLY MARCHES WITH A GARRISON ON AN OFFENSIVE (`escort`). Off-window the Commonwealth
-        is a defender concentrating on the railhead, and the only cities it can bank are the ones its
-        seeded spine already feeds -- Mersa Matruh and Sidi Barrani, which it stands on anyway. To
-        detach a field dump then would be to walk the army's mobile supply WEST into the oncoming
-        Panzerarmee (32.33's trap: a dump can only be recovered from a hex a friendly combat unit
-        still holds) for a city the offensive has not yet reached. So off-window the take-and-hold
-        garrisons only what the line ALREADY feeds; the expeditions ride with the offensives."""
-        return campaign_claim.claims(state, side, escort=self._on_offensive(state))
+    def _escort(self, state: GameState) -> bool:
+        """A DEPOT ONLY MARCHES WITH A GARRISON ON AN OFFENSIVE (claims(escort=)). Off-window the
+        Commonwealth is a defender concentrating on the railhead, and the only cities it can bank are
+        the ones its seeded spine already feeds -- Mersa Matruh and Sidi Barrani, which it stands on
+        anyway. To detach a field dump then would be to walk the army's mobile supply WEST into the
+        oncoming Panzerarmee (32.33's trap: a dump can only be recovered from a hex a friendly combat
+        unit still holds) for a city the offensive has not yet reached. So off-window the
+        take-and-hold garrisons only what the line ALREADY feeds; the expeditions ride with the
+        offensives."""
+        return self._on_offensive(state)
 
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
-        plan = self._take(state, side)
-        take = campaign_claim.claim_moves(state, side, plan)
-        # A DETACHED UNIT IS OUT OF THE GENERAL ADVANCE -- every unit in the plan, not merely the ones
-        # with a move order in it. The one that has ALREADY REACHED its city emits no move (there is
-        # nowhere to go), and if that left it in the advance the attacker branch would march it
-        # straight back off toward Benghazi the same stage -- the city taken and abandoned in one
-        # breath. It stands on the hex it took, banked or not: an occupied city is what flips its
-        # control, and control is what lets the lorries fill the depot that will bank it.
-        busy = {c.unit_id for c in plan}
-        orders = (self._advance.movement(state, side) if self._on_offensive(state)
-                  else self._concentrate(state, side))
-        orders = take + [o for o in orders if o.unit_id not in busy]
-        return hold_garrisons(orders, state, side)     # even an offensive keeps its supplied cities
+        army = (self._advance.movement(state, side) if self._on_offensive(state)
+                else self._concentrate(state, side))
+        return take_and_hold_moves(state, side, army, escort=self._escort(state))
 
     def _concentrate(self, state: GameState, side: Side) -> list[MoveOrder]:
         """THE FORWARD CONCENTRATION -- the Eighth Army marches to the line it fights from.
@@ -276,27 +321,17 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
         return super().retreat_before_assault(view, side, pinned)
 
     def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
-        # THE DEPOTS OF THE TAKE-AND-HOLD COME FIRST (rule 32.33, campaign_claim.claim_supply): a
-        # depot marching with a garrison to a city that has none is the only thing that will make
-        # that city BANKABLE (64.73), so it outranks both the stranded-fuel bridge and the ordinary
-        # forward leapfrog -- and the depot already feeding a banked city (hold_depots) never
-        # leapfrogs away from it at all.
-        #
-        # Everything else is unchanged. The seeded spine stays put: a railhead, a railway station and
-        # a Field Supply Depot are places on the supply LINE, not field dumps that follow the army
-        # (see _without_staging). The remaining FIELD dumps leapfrog toward the view's objective
-        # (32.3) -- so between offensives they come forward onto the assembly WITH the army they
-        # feed, instead of trailing back to a rear base that is already bottomless, and on an
-        # offensive they follow the attack west.
-        follow = campaign_claim.claim_supply(state, side, self._take(state, side))
-        busy = {o.supply_id for o in follow}
+        # The army's ORDINARY 32.3 leapfrog, over which take_and_hold_supply lays the standing orders
+        # of rule 64.73. The seeded spine stays put: a railhead, a railway station and a Field Supply
+        # Depot are places on the supply LINE, not field dumps that follow the army (see
+        # _without_staging). The remaining FIELD dumps bridge the units that have outrun their fuel
+        # (_bridge), else leapfrog toward the view's objective (32.3) -- so between offensives they
+        # come forward onto the assembly WITH the army they feed, instead of trailing back to a rear
+        # base that is already bottomless, and on an offensive they follow the attack west.
         view = _without_staging(state if self._on_offensive(state)
                                 else self._forward_view(state))
-        rest = self._bridge(view, side) or super().supply_orders(view, side)
-        orders = follow + [o for o in hold_depots(rest, state, side) if o.supply_id not in busy]
-        # ...and NO field dump ever parks on a Field Supply Depot and masks it from the lorries
-        # (campaign_claim.keep_off_the_spine -- the hex belongs to the chain).
-        return campaign_claim.keep_off_the_spine(orders, state, side)
+        army = self._bridge(view, side) or super().supply_orders(view, side)
+        return take_and_hold_supply(state, side, army, escort=self._escort(state))
 
     def _bridge(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
         """THE SUPPLY BRIDGE (rule 32.3) -- a dump goes to the unit that has OUTRUN ITS FUEL, not to
@@ -417,6 +452,27 @@ def _relay_source(state: GameState, side: Side, hx: Coord, anchor):
             if s.side == side and not s.is_dummy and s.hex == hx
             and (s.id.startswith(STAGING) or (anchor is not None and s.id == anchor.id))]
     return max(here, key=lambda s: (s.fuel, s.ammo + s.stores, s.id), default=None)
+
+
+def _a_link_in_the_chain(s, anchor) -> bool:
+    """Could the relay LIFT this load out again? The exact dual of _relay_source, asked on the
+    DESTINATION side: a seeded staging depot or the port of arrival is a LINK -- supply goes in one
+    end and comes out the other -- while a FIELD dump is a one-way sink (a lorry may never carry a
+    division's stock back off it).
+
+    THE RELAY FILLS THE CHAIN BEFORE IT FILLS A SINK, and this is what says so. Both are legal
+    delivery addresses -- pouring supply into the army's field dumps IS the job -- but a sink that
+    happens to lie DEEPER than the chain's own tail must never be allowed to divert the brigade past
+    it, because everything poured in there stops moving for good.
+
+    MEASURED, and it cost the Axis a hundred Victory Points the moment it got the take-and-hold: a
+    flying column planted its escort field dump on SOLLUM -- which sits forward of Bardia -- and the
+    lorries, chasing 'the deepest forward dump', drove the entire Mediterranean tonnage past
+    AX-Stage-Bardia and into it. Sixteen deliveries went in over twenty-four Game-Turns and not one
+    Point ever came out. AX-Stage-Bardia -- the larder of the garrison banking BARDIA, worth a
+    hundred -- went from 1,598 Fuel to ZERO, its garrison could no longer trace, and the
+    Commonwealth walked the city off it."""
+    return s.id.startswith(STAGING) or (anchor is not None and s.id == anchor.id)
 
 
 def _load_56_22(t, dump) -> dict:
@@ -548,7 +604,8 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
             affordable = [s for s in in_reach
                           if t.fuel >= supply.truck_move_fuel(t, reach[s.hex])]
             if affordable:
-                dest = min(affordable, key=lambda s: (distance(s.hex, objective), reach[s.hex], s.id))
+                dest = min(affordable, key=lambda s: (not _a_link_in_the_chain(s, anchor),
+                                                      distance(s.hex, objective), reach[s.hex], s.id))
                 out = supply.truck_move_fuel(t, reach[dest.hex])
                 unload: dict = {}
                 surplus = t.fuel - out - keep(t, dest.hex)  # unload fuel bar the return reserve
@@ -561,7 +618,8 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
                 orders.append(TruckOrder(t.id, to=dest.hex, unload_to=dest.id, unload=unload))
                 continue
             if forward:                                    # nothing affordable in reach -> close the gap
-                dest = min(forward, key=lambda s: (distance(s.hex, objective), s.id))
+                dest = min(forward, key=lambda s: (not _a_link_in_the_chain(s, anchor),
+                                                   distance(s.hex, objective), s.id))
                 step = _step_toward(reach, t.hex, dest.hex)
                 if step is not None and t.fuel >= supply.truck_move_fuel(t, reach[step]):
                     orders.append(TruckOrder(t.id, to=step))
@@ -584,10 +642,29 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
                 # ONLY when the truck can afford the move and still keep its return reserve (the
                 # base relay's 49.18 guard, generalised to `keep`), so it never loads a leg it
                 # cannot move (the freeze) NOR delivers itself past the point of no return.
-                dest = min(in_reach, key=lambda s: (distance(s.hex, objective), reach[s.hex], s.id))
+                dest = min(in_reach, key=lambda s: (not _a_link_in_the_chain(s, anchor),
+                                                    distance(s.hex, objective), reach[s.hex], s.id))
+                # AND THE CHAIN IS NEVER CANNIBALISED TO FILL A SINK. Lifting from link N to fill
+                # link N+1 is the bucket brigade -- the whole job. Lifting from link N to fill a
+                # FIELD dump, which the relay may never lift back OUT of (_relay_source), pours the
+                # chain into a hole: the load stops moving for good and the link it came from is
+                # emptier than before. Only the ANCHOR may fill a sink, because the anchor is the
+                # bottomless port of arrival and giving supply away is what a faucet is for.
+                #
+                # This is the same law the OPEN-DESERT leg below already keeps ("off the faucet
+                # ONLY"), which is why it never bit until now: no Axis field dump had ever sat within
+                # one 30-CP hop of the chain. The take-and-hold puts one there -- a flying column's
+                # escort depot, planted on SOLLUM, three hexes past the chain's tail at Bardia -- and
+                # the lorries promptly began pumping AX-Stage-Bardia straight through into it.
+                # MEASURED at Game-Turn 24: 8,616 Fuel Points delivered INTO Bardia and 8,611 lifted
+                # back OUT, the larder of the garrison banking a hundred Victory Points left at ZERO.
+                # A truck with nothing but a sink ahead of it goes BACK for more (the return leg
+                # below); it does not carry the depot under its wheels off into the desert.
+                cannibalises = (not _a_link_in_the_chain(dest, anchor)
+                                and (anchor is None or colocated.id != anchor.id))
                 out = supply.truck_move_fuel(t, reach[dest.hex])
                 fuel_deliver = t.fuel + load.get("FUEL", 0) - out - keep(t, dest.hex)
-                if fuel_deliver > 0:
+                if not cannibalises and fuel_deliver > 0:
                     unload = {"FUEL": fuel_deliver}
                     for c in ("AMMO", "STORES"):
                         amt = getattr(t, c.lower()) + load.get(c, 0)
@@ -613,7 +690,8 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
                 # the desert after a front that had long outrun it, costing the Axis every victory
                 # point it held. A truck with nothing reachable ahead of it goes BACK for more; it
                 # does not cannibalise the depot under its wheels.
-                dest = min(forward, key=lambda s: (distance(t.hex, s.hex),
+                dest = min(forward, key=lambda s: (not _a_link_in_the_chain(s, anchor),
+                                                   distance(t.hex, s.hex),
                                                    distance(s.hex, objective), s.id))
                 step = _step_toward(reach, t.hex, dest.hex)
                 if step is not None and t.fuel + load.get("FUEL", 0) >= supply.truck_move_fuel(
@@ -645,19 +723,18 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
 
 
 class _CampaignAxisSupplyMixin:
-    """The campaign Axis forward-supply behaviour, shared by the scripted CampaignAxisPolicy and the
+    """The campaign Axis forward-SUPPLY behaviour, shared by the scripted CampaignAxisPolicy and the
     live CampaignStaffPolicy (game.campaign_staff): the multi-hop coastal truck haul
     (campaign_truck_orders) instead of the base single-hop port shuttle, and hiding the staging
     dumps from the base leapfrog bridge (which would otherwise walk the waypoint chain toward
     Alexandria and UNSTAGE the relay the trucks feed -- see _without_staging). Campaign-only --
     rommels_arrival / siege_of_tobruk seed trucks through the byte-locked base relay and never
-    construct these."""
+    construct these.
 
-    def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
-        # The standing garrison order applies to the live staff too: whatever the seats propose, the
-        # units holding a supplied victory city stay on it. A staff may manoeuvre with everything
-        # else; it may not march the Tobruk and Bardia garrisons into the desert.
-        return hold_garrisons(super().movement(state, side), state, side)
+    SUPPLY ONLY. The rule-64.73 standing orders on the ARMY are take_and_hold_moves /
+    take_and_hold_supply, which each campaign policy lays over its own march; the live staff keeps
+    just the garrison half of them (game.campaign_staff), because the whole point of a staff is that
+    it decides where the rest of the army goes."""
 
     def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
         return campaign_truck_orders(state, side)
@@ -667,10 +744,24 @@ class _CampaignAxisSupplyMixin:
 
 
 class CampaignAxisPolicy(_CampaignAxisSupplyMixin, ScriptedPolicy):
-    """The scripted Axis for the FULL campaign: the base attacker (attacker=AXIS, so movement, combat
-    and elastic retreat are inherited and byte-identical to ScriptedPolicy(Side.AXIS)) PLUS the
+    """The scripted Axis for the FULL campaign: the base attacker (attacker=AXIS, so combat and
+    elastic retreat are inherited and byte-identical to ScriptedPolicy(Side.AXIS)), PLUS the
     multi-hop coastal haul (see _CampaignAxisSupplyMixin) that lets the Panzerarmee fight east of
-    Benghazi at all."""
+    Benghazi at all, PLUS -- exactly as the Commonwealth has -- the rule-64.73 take-and-hold.
+
+    THE AXIS PLAYS THE POINTS TOO. It opens the campaign holding Tobruk (200) and Bardia (100) and
+    controlling Benghazi (75) and Derna (25); it garrisoned none of them and marched the whole army
+    east at Alexandria, so it banked whatever the standing garrison order happened to pin and threw
+    the rest away -- measured, it lost Bardia in every seed, a hundred Victory Points it starts the
+    war standing on. It is on the offensive at all times, so its flying columns take their depots
+    with them (escort=True); everything else -- which city, which unit, whether it can be fed there
+    at all -- is campaign_claim's side-generic judgement, the same judgement the Commonwealth uses."""
 
     def __init__(self):
         super().__init__(attacker=Side.AXIS)
+
+    def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
+        return take_and_hold_moves(state, side, super().movement(state, side), escort=True)
+
+    def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
+        return take_and_hold_supply(state, side, super().supply_orders(state, side), escort=True)

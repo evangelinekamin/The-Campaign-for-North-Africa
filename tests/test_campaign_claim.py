@@ -22,7 +22,7 @@ from game.apply import fold                                              # noqa:
 from game.campaign_policy import (CampaignAxisPolicy,                    # noqa: E402
                                   CampaignCommonwealthPolicy)
 from game.engine import determinism_signature, run                       # noqa: E402
-from game.events import Side                                             # noqa: E402
+from game.events import Control, Side                                    # noqa: E402
 from game.policy import ScriptedPolicy, SupplyMoveOrder                  # noqa: E402
 from game.scenario import campaign, rommels_arrival, siege_of_tobruk     # noqa: E402
 
@@ -47,16 +47,35 @@ def _banked(state, side: Side) -> set:
 
 # --- TAKE ----------------------------------------------------------------------------------------
 
-def test_the_commonwealth_takes_the_cities_it_used_to_sprint_past():
-    """THE ACCEPTANCE. The old policy banked exactly Mersa Matruh, Sidi Barrani and Benghazi -- the
-    two it happened to be standing on and the one it was aimed at -- and left SOLLUM, BARDIA, DERNA,
-    TOBRUK and the three oases empty for a hundred and eleven Game-Turns. The take-and-hold goes and
-    gets them, and keeps the ones it was already banking."""
+def test_both_sides_take_the_cities_they_used_to_sprint_past():
+    """THE ACCEPTANCE, now asked of BOTH armies -- because both of them have the take-and-hold, and
+    it is the same side-generic code (campaign_policy.take_and_hold_moves).
+
+    *** AND THE ANSWER CHANGED WHEN THE AXIS GOT IT. *** With the Commonwealth alone playing the
+    64.73 points, this test asserted the CW banked SOLLUM and DERNA by Game-Turn 30 -- and it did.
+    It was WALKING INTO EMPTY CITIES. The Axis had marched off them and garrisoned nothing, so
+    Operation Compass never had to fight for a hex. Give the Axis the same standing orders and it
+    puts IT-1-Libyan on Sollum before Compass even opens; a garrisoned hex cannot be walked onto; and
+    the Commonwealth -- measured across the full campaign, seed 1941 -- now takes exactly ONE city in
+    the entire war: BARDIA, on Game-Turn 57, Operation Crusader.
+
+    That is not a regression in the mechanism. It is the mechanism telling the truth: the
+    Commonwealth's offensive could only ever take ground the enemy had abandoned. What it reveals --
+    that the Western Desert Force cannot break a defended city -- is a BALANCE finding, and it is
+    recorded in the commit that made both sides competent, not papered over here.
+
+    So what this test now pins is the thing that must stay true on both sides: an army keeps the
+    cities it banks, and goes and gets the ones it does not."""
     fin = _run(30).final
-    banked = _banked(fin, Side.ALLIED)
-    assert {"Mersa Matruh", "Sidi Barrani"} <= banked        # the old ones are not thrown away
-    assert "Sollum" in banked, f"Sollum was never taken: {sorted(banked)}"
-    assert "Derna" in banked, f"Derna was never taken: {sorted(banked)}"
+    cw, ax = _banked(fin, Side.ALLIED), _banked(fin, Side.AXIS)
+    # The Commonwealth keeps the two its own seeded spine feeds and it stands on.
+    assert {"Mersa Matruh", "Sidi Barrani"} <= cw
+    # The AXIS -- which used to bank whatever the garrison order happened to pin and throw the rest
+    # away -- now holds its own rear: BENGHAZI (its port of arrival, never once garrisoned in 111
+    # Game-Turns) and SOLLUM, on top of the Tobruk and Bardia it opens the war standing on.
+    assert {"Tobruk", "Bardia"} <= ax, f"the Axis threw away what it opened holding: {sorted(ax)}"
+    assert "Benghazi" in ax, f"the Axis still does not garrison its own port: {sorted(ax)}"
+    assert not (cw & ax)                                    # a city is banked by at most one side
 
 
 def test_occupying_sollum_brings_the_supply_chain_up_to_it():
@@ -69,22 +88,36 @@ def test_occupying_sollum_brings_the_supply_chain_up_to_it():
     Take the hex and the supply comes up behind it (spine_awaits_control: what was missing was never
     distance, it was CONTROL). And the ten points are the least of it -- a stocked depot ON Sollum is
     what puts BARDIA, three hexes away and worth FIFTY, inside a Commonwealth supply trace for the
-    first time in the campaign."""
+    first time in the campaign.
+
+    *** PINNED ON THE HINGE ITSELF, NOT ON WINNING THE FIGHT FOR IT. *** The Axis now garrisons
+    Sollum (it has the take-and-hold too), so the Commonwealth no longer walks onto the hex by
+    Game-Turn 24 -- and an outcome test would then be measuring the Axis's defence, not this
+    shortcut. What must hold, and what actually failed before spine_awaits_control existed, is the
+    JUDGEMENT: a city carrying our OWN empty Field Supply Depot on an ENEMY-CONTROLLED hex is dry
+    because of CONTROL, not distance, so it is claimed and a unit is sent -- and NO field dump is
+    sent with it (the depot is already there; a second one would only mask it from the lorries)."""
     res = _run(24)
     assert res.initial.supply("AL-Stage-Sollum").empty        # seeded empty: hauled into, not filled
     fin = res.final
-    assert fin.control_of(SOLLUM) != res.initial.control_of(SOLLUM), "Sollum never changed hands"
-    assert fin.victory._occupier(fin, SOLLUM) == Side.ALLIED, "Sollum is held but not SUPPLIED"
 
-    fed = [d for d in fin.supplies
-           if d.side == Side.ALLIED and d.hex == SOLLUM and d.ammo > 0]
-    assert fed, "no Commonwealth depot came up to Sollum"
+    # The hinge: our own depot, empty, on a hex the enemy holds -- distance is not the problem.
+    assert campaign_claim.spine_awaits_control(fin, Side.ALLIED, SOLLUM)
+    assert campaign_claim.depot_on(fin, Side.ALLIED, SOLLUM).empty
+    assert fin.control_of(SOLLUM) == Control.AXIS
 
-    # THE PAYOFF: Bardia is now inside a Commonwealth trace, which it never was before.
+    # ...so a unit is claimed for it -- ALONE, with no field dump in tow.
+    plan = {c.city: c for c in campaign_claim.claims(fin, Side.ALLIED, escort=True)}
+    assert SOLLUM in plan, "Sollum is not even claimed -- the shortcut is dead"
+    assert plan[SOLLUM].depot_id is None, "a field dump was sent to MASK the depot already on Sollum"
+
+    # AND THIS IS THE WHOLE POINT OF THE SHORTCUT: the honest trace test says NO. A Commonwealth
+    # battalion standing on Sollum TODAY could not be fed there -- the depot under it is dry, because
+    # the enemy is standing in the hex and no lorry delivers into it. Gate the claim on can_be_fed
+    # alone and Sollum is declined for ever, on evidence that taking the hex is exactly what fixes.
     from dataclasses import replace
-    cw = [u for u in fin.living(Side.ALLIED) if u.is_combat and u.strength >= 1]
-    assert any(fin.victory._supplied(fin, replace(u, hex=BARDIA)) for u in cw), \
-        "taking Sollum did not bring Bardia into supply -- the 50 points stay out of reach"
+    sent = fin.unit(plan[SOLLUM].unit_id)
+    assert not fin.victory._supplied(fin, replace(sent, hex=SOLLUM))
 
 
 def test_you_do_not_besiege_a_city_you_could_not_hold():
@@ -131,13 +164,20 @@ def test_the_desert_oases_are_reachable_but_not_suppliable_so_no_depot_goes_ther
 def test_a_depot_feeding_a_banked_city_never_leapfrogs_away_from_it():
     """The dual of the standing garrison order, and the half without which the other half is
     worthless: the base 32.3 bridge leapfrogs every fuelled dump toward the objective, so the turn
-    after a depot arrives at Derna it would march straight off again to the head of the column and
-    the city it had just made bankable would stop scoring."""
+    after a depot arrives at Sollum it would march straight off again to the head of the column and
+    the city it had just made bankable would stop scoring.
+
+    ASKED OF THE AXIS, because that is where a depot is now doing this job. Both policies run the
+    identical side-generic transform (campaign_policy.take_and_hold_supply), and the Axis is the side
+    that at Game-Turn 24 is feeding a banked city off a FIELD dump (AX-Dump#5, standing on Sollum);
+    the Commonwealth banks only cities its seeded SPINE already feeds, which garrison_depots
+    deliberately does not pin (a staging depot is immobile anyway -- see the docstring there). Asking
+    the Commonwealth here would be a vacuous test, and it says so out loud."""
     fin = _run(24).final
-    pol = CampaignCommonwealthPolicy()
-    pinned = campaign_claim.garrison_depots(fin, Side.ALLIED)
+    pol = CampaignAxisPolicy()
+    pinned = campaign_claim.garrison_depots(fin, Side.AXIS)
     assert pinned, "no depot is feeding a banked city -- the check is vacuous"
-    moved = {o.supply_id for o in pol.supply_orders(fin, Side.ALLIED)}
+    moved = {o.supply_id for o in pol.supply_orders(fin, Side.AXIS)}
     assert not (pinned & moved), f"a garrison's own depot was ordered away: {sorted(pinned & moved)}"
 
 

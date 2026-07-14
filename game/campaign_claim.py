@@ -359,7 +359,22 @@ def claims(state: GameState, side: Side, *, escort: bool = True) -> tuple[Claim,
                 # (AL-Stage-Sollum sits three hexes away with 560 Ammunition Points, once Sollum is
                 # taken) and is held by ONE Italian marine battalion the cut Axis chain has left
                 # unsupplied; TOBRUK can be supplied by NONE of them, and is left alone.
-                if can_be_fed(u, ax):
+                #
+                # ...OR IF OUR OWN DEPOT IS STANDING ON IT (`spine`, spine_awaits_control) -- the
+                # SAME question the un-besieged branch below asks, and it must be asked here too.
+                # can_be_fed reads what the depot holds TODAY, and a Field Supply Depot of ours under
+                # an enemy GARRISON holds nothing today for exactly the reason the garrison is the
+                # problem: no lorry delivers into a hex the enemy is standing in. Ask only can_be_fed
+                # and the city is never claimed, never besieged, and our own depot on it stays dry for
+                # the whole war -- which is the precise failure spine_awaits_control was written to
+                # end, resurrected the moment the enemy leaves a battalion behind instead of driving
+                # through. MEASURED (seed 1941, once the Axis got the take-and-hold and put
+                # IT-1-Libyan on SOLLUM): the Commonwealth stopped claiming Sollum at all,
+                # AL-Stage-Sollum -- the third link of its OWN supply chain -- stood empty to Game-Turn
+                # 111, and with it BARDIA stayed outside any Commonwealth trace. Sollum is no
+                # fortress: 15.82 grants it no eviction rights, so it CAN be assaulted off, and
+                # Operation Compass did exactly that.
+                if spine or can_be_fed(u, ax):
                     plan.append(Claim(ax, name, u.id, None))
                     break
                 continue
