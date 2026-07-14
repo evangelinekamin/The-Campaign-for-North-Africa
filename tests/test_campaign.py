@@ -106,15 +106,30 @@ def test_campaign_commonwealth_can_attack():
     #     Commonwealth actually holds one -- the rail-fed railhead at Mersa Matruh is itself a 64.73
     #     city, and its garrison does not join the attack.
     from game import campaign_claim
-    from game.campaign_policy import garrison_units, hold_garrisons
+    from game.campaign_policy import (_standing_plan, garrison_units, hold_garrisons,
+                                      keep_in_trace)
     assert garrison_units(on, Side.ALLIED), "the CW banks no victory city -- the check is vacuous"
-    plan = campaign_claim.claims(on, Side.ALLIED, escort=True)
-    assert plan, "the take-and-hold claims no city -- the check is vacuous"
+    assert campaign_claim.claims(on, Side.ALLIED, escort=True), \
+        "the take-and-hold claims no city -- the check is vacuous"
+    # THE PIPELINE GREW TWO STAGES, and the reconstruction has to grow with it or it is asserting
+    # last week's code. Both are rules this repo did not have when the test was written:
+    #   * [54.16]/[32.16] keep_in_trace -- the general advance may not outrun its supply. It is laid
+    #     over the ARMY half only; the standing orders' detachments are not filtered by it, because
+    #     each has already answered the same question better (a city claim only goes where the unit
+    #     could be FED; a 32.33 desert column carries its larder). See keep_in_trace.
+    #   * [24.6] the railway gang -- the two NZ Railroad Construction companies march to the railhead
+    #     and lay track. They are ENGINEERS, not combat units (23.11), so no other proposer in this
+    #     repo will ever emit an order for them and their orders simply ride alongside.
+    # The claim is unchanged and just as tight: on a Compass Game-Turn the Commonwealth runs the
+    # ALLIED ATTACKER branch, with the rule-64.73 standing orders laid over it, and the composition
+    # is exactly this and nothing else.
+    plan = _standing_plan(on, Side.ALLIED, escort=True)
     take = campaign_claim.claim_moves(on, Side.ALLIED, plan)
     busy = {c.unit_id for c in plan}
-    assert pol.movement(on, Side.ALLIED) == hold_garrisons(
-        take + [o for o in attacker.movement(on, Side.ALLIED) if o.unit_id not in busy],
-        on, Side.ALLIED)
+    march = keep_in_trace([o for o in attacker.movement(on, Side.ALLIED) if o.unit_id not in busy],
+                          on, Side.ALLIED)
+    assert pol.movement(on, Side.ALLIED) == (
+        pol._railway(on, Side.ALLIED) + hold_garrisons(take + march, on, Side.ALLIED))
 
 
 def test_campaign_defensive_supply_integrity():

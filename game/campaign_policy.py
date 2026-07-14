@@ -28,37 +28,50 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from . import campaign_claim, supply, tactics, wells
+from . import campaign_claim, construction, supply, tactics, wells
 from .campaign_claim import (STAGING, garrison_units,   # the rule-64.73 standing orders, re-exported
                              hold_depots, hold_garrisons)   # (game.campaign_staff and the tests import them from here)
 from .events import Control, Side
 from .hexmap import Coord, distance
-from .policy import (AttackOrder, DemolitionOrder, MoveOrder, ScriptedPolicy,
+from .policy import (AttackOrder, BuildOrder, DemolitionOrder, MoveOrder, ScriptedPolicy,
                      SupplyMoveOrder, TruckOrder)
 from .scenario import _CONVOY_SPLIT_56_22
 from .state import GameState, SupplyUnit
 
 __all__ = ["CAMPAIGN_CW_OFFENSIVES", "CampaignAxisPolicy", "CampaignCommonwealthPolicy",
-           "OffensiveSchedule", "campaign_truck_orders", "deny_dumps", "garrison_units",
-           "hold_depots", "hold_garrisons", "railhead", "take_and_hold_moves",
-           "take_and_hold_supply"]
+           "OffensiveSchedule", "build_the_chain", "campaign_truck_orders", "deny_dumps",
+           "garrison_units", "hold_depots", "hold_garrisons", "keep_in_trace", "railhead",
+           "take_and_hold_moves", "take_and_hold_supply"]
 
 
 # --- the rule-64.73 standing orders, SIDE-GENERIC (see game.campaign_claim) -----------------------
 
 def _standing_plan(state: GameState, side: Side, *, escort: bool) -> tuple:
-    """THE STANDING ORDERS, in priority order: the 64.71 DELTA first, then the 64.73 cities.
+    """THE STANDING ORDERS, in priority order: the 64.71 DELTA first, then the 64.73 cities, then the
+    32.33 DESERT COLUMNS that open the ground the next city will be taken from.
 
     A pure function of the state (like claims() itself), so the movement half and the supply half
     of the take-and-hold cannot disagree about who is going where -- neither needs to remember the
     other. A unit sent to hold Alexandria is not also available to go and take Sollum: the Delta
     claims are computed first and their units struck from the city plan, never the reverse. A city
-    is worth Victory Points; the Delta is worth the war (64.71)."""
+    is worth Victory Points; the Delta is worth the war (64.71); and a column is worth the NEXT city,
+    which is why it is computed last, out of whatever the scored objectives did not want.
+
+    The columns ride only with an army that is ON THE OFFENSIVE (`escort`, the same gate the flying
+    columns already keep). A defender that walks its mobile supply west into the oncoming
+    Panzerarmee has not pushed a depot forward, it has posted one to the enemy (32.33's trap: a dump
+    is only recoverable from a hex a friendly combat unit still holds)."""
     delta = campaign_claim.delta_claims(state, side)
     busy = {c.unit_id for c in delta}
     cities = tuple(c for c in campaign_claim.claims(state, side, escort=escort)
                    if c.unit_id not in busy)
-    return delta + cities
+    if not escort:
+        return delta + cities
+    busy |= {c.unit_id for c in cities}
+    busy |= {c.depot_id for c in cities if c.depot_id}
+    columns = tuple(c for c in campaign_claim.column_claims(state, side, busy)
+                    if c.depot_id not in busy)
+    return delta + cities + columns
 
 
 def take_and_hold_moves(state: GameState, side: Side, army: list[MoveOrder], *,
@@ -80,14 +93,20 @@ def take_and_hold_moves(state: GameState, side: Side, army: list[MoveOrder], *,
       * HOLD -- and whatever the army proposed, the unit BANKING a supplied victory city stays on it
         (hold_garrisons). A standing order no competent staff would countermand, on either side.
 
+      * AND THE ARMY DOES NOT OUTRUN ITS SUPPLY (keep_in_trace, rules 54.16/32.16). The general
+        advance -- everything the standing orders did not detach -- may only march where it can still
+        eat. The DETACHMENTS are not filtered by it and must not be: each has already answered the
+        same question better (a city claim only goes where the unit could be FED; a 32.33 column
+        carries its larder). See keep_in_trace, which is where the whole argument is.
+
     `escort` rides through to claims(): may a flying column's DEPOT march with it (32.33)? True for
     an army on the offensive; False for one that would only be walking its mobile supply into the
     enemy's advance (see CampaignCommonwealthPolicy._on_offensive)."""
     plan = _standing_plan(state, side, escort=escort)
     take = campaign_claim.claim_moves(state, side, plan)
     busy = {c.unit_id for c in plan}
-    orders = take + [o for o in army if o.unit_id not in busy]
-    return hold_garrisons(orders, state, side)
+    march = keep_in_trace([o for o in army if o.unit_id not in busy], state, side)
+    return hold_garrisons(take + march, state, side)
 
 
 def take_and_hold_supply(state: GameState, side: Side, army: list[SupplyMoveOrder], *,
@@ -206,7 +225,88 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
         army = (self._advance.movement(state, side) if self._on_offensive(state)
                 else self._concentrate(state, side))
-        return take_and_hold_moves(state, side, army, escort=self._escort(state))
+        # The railway gang is never in `army`: an engineer is not a combat unit "in any way, shape,
+        # or form" (23.11), and every proposer in this repo skips a non-combat unit. So its orders
+        # simply ride alongside, and no unit can be ordered twice.
+        return self._railway(state, side) + take_and_hold_moves(state, side, army,
+                                                                escort=self._escort(state))
+
+    def _railway(self, state: GameState, side: Side) -> list[MoveOrder]:
+        """[24.6] THE TWO NEW ZEALAND RAILROAD CONSTRUCTION COMPANIES GO WHERE THE TRACK ENDS.
+
+        They are the only units in the game that may build railroad (24.61) and the railway is the
+        only thing that moves the Commonwealth's whole supply trace west instead of one column's, so
+        their standing order is the simplest in this file: march to the next hex of the surveyed line
+        and stand on it. The Construction Segment then books them (engine._construction), rule 24.12
+        pins them for the Operations Stage, and two of them stacked lay a hex of track per stage
+        (24.62).
+
+        THE MARCH IS TO THE RAILHEAD, not to the hex being laid: the Construction Chart restricts
+        building to "head or track", so the gang stands on the last completed hex and pushes the line
+        out in front of it (engine._build_rail). That is also where the Store Points are -- 24.64
+        wants one present WITH the engineer, and the next hex of the line is empty desert.
+
+        THEY MARCH SPRING TO SPRING like everyone else (_march) -- they are MOTORIZED and burn fuel
+        (49.13), and the road from Cairo to Mersa Matruh is forty hexes of desert with a ten-hex hole
+        in the middle of it. What feeds them once they are past Mersa Matruh is the railway itself:
+        engine._rail_stops serves the RAILHEAD (24.67's marker: the end of the track is where a train
+        can go and no further) whether or not a combat unit is standing on it, precisely because these
+        two are not combat units and a railway whose builders starve does not get built.
+
+        Rule 24.65 will refuse to lay track on a hex the enemy controls or occupies, and rule 23.11
+        forbids an engineer to enter one at all, so the line simply stops until the Eighth Army takes
+        the ground back. The railway FOLLOWS the army; the army then eats off the railway. Neither
+        half moves without the other, which is the desert war."""
+        head = construction.rail_head(state)
+        if head is None or construction.rail_next(state) is None:
+            return []                                    # no line, or the line is finished
+        gang = [u for u in state.living(side)
+                if construction.builds_rail(u) and u.hex != head
+                and state.control_of(head) != Control.AXIS]      # 23.11: never into enemy ground
+        if not gang:
+            return []
+        # AND THE GANG DOES NOT OUTRUN ITS SUPPLY EITHER (keep_in_trace). It is not exempt from the
+        # desert because it carries shovels: it is MOTORIZED, it burns fuel to move (49.13), and
+        # between Alexandria and Mersa Matruh lie thirty-four hexes with no depot in them. Measured
+        # without this line: both companies dashed sixty Capability Points out of Alexandria in one
+        # stage, ran dry at (33,118) in the middle of the hole, and sat there for the rest of the war
+        # -- so not one hex of railway was ever laid. They creep up the line behind the army instead,
+        # station by station, as the trains found them (54.35). The railway follows the army; it does
+        # not race it.
+        return keep_in_trace(self._march(state, side, gang, head, held=True), state, side)
+
+    def construction(self, state: GameState, side: Side) -> list[BuildOrder]:
+        """[24.6]/[24.9] The Construction Segment's standing orders: lay the next hex of the Western
+        Desert Railway with whichever NZRRC companies are standing on the railhead, and construct the
+        forward dump the chain needs next (build_the_chain). The engine re-validates every clause.
+
+        THE RAILWAY IS ONLY LAID ON GROUND THE ARMY HOLDS, and that is DOCTRINE, not rule -- 24.65
+        forbids building only on an "Enemy-controlled or Enemy-occupied" hex, so NEUTRAL desert nobody
+        has ever walked over is legal track by the letter of it. It is also a catastrophe, and this is
+        the measurement that says so.
+
+        MEASURED, five seeds, the full GT1-111, with the letter of 24.65 and nothing more: the two New
+        Zealand companies laid fourteen hexes of track STRAIGHT INTO NO-MAN'S-LAND -- the surveyed line
+        runs Mersa Matruh to Tobruk and nobody had contested most of it -- and the trains then
+        obediently ran the 54.32 haul out to the stations they founded there, forward-first
+        (engine._rail_deliver). The freight went to empty desert. Mersa Matruh, where the Eighth Army
+        and 115 of its 195 Truck Points actually stand, was thinned; the forward stations were
+        captured under 32.13 or evaporated under 49.3. Seed 1941 went from a COMMONWEALTH MARGINAL
+        VICTORY (120-180) to an AXIS SMASHING VICTORY (275-80) -- the railway lost the Commonwealth
+        the war it had just won without it.
+
+        The historical Western Desert Railway was built BEHIND the front, through ground the Eighth
+        Army held, and it reached Capuzzo only after Crusader had taken Capuzzo. So the gang lays track
+        on a hex the Commonwealth CONTROLS -- one a combat unit of ours has stood on (54.41) -- and
+        nowhere else. The railway FOLLOWS the army. It does not lead it into the desert."""
+        orders = build_the_chain(state, side)
+        head, site = construction.rail_head(state), construction.rail_next(state)
+        gang = tuple(u.id for u in sorted(state.living(side), key=lambda u: u.id)
+                     if construction.builds_rail(u) and u.hex == head)
+        if (site is not None and gang and construction.rail_buildable(state, side, site)
+                and state.control_of(site) == Control.ALLIED):     # doctrine: only ground we hold
+            orders.append(BuildOrder(construction.RAIL, site, gang))
+        return orders
 
     def _concentrate(self, state: GameState, side: Side) -> list[MoveOrder]:
         """THE FORWARD CONCENTRATION -- the Eighth Army marches to the line it fights from.
@@ -478,10 +578,17 @@ def _relay_source(state: GameState, side: Side, hx: Coord, anchor):
     The RICHEST such dump on the hex, not the first: dumps share hexes once the 32.3 bridge starts
     walking field dumps around, and an empty one that had wandered onto the railhead MASKED the
     rail-fed depot beneath it and froze the whole pool -- 4,700 Fuel Points under the truck's
-    wheels, read as DRY."""
+    wheels, read as DRY.
+
+    [24.9] AND A DUMP THE ARMY HAS BUILT. "The only restriction on the use of such supplies is that
+    trucks 'in convoy' may not load such supplies" -- of an UNconstructed pile. A dump somebody has
+    stopped and paid three Capability Points and twenty Store Points to construct is a proper supply
+    dump, and the lorries may load from it. This is what lets the chain grow past the last depot that
+    was seeded in September 1940 (build_the_chain); until it existed the relay's own guard, written to
+    stop it strip-mining the divisions, also silently forbade it to ever lengthen its own line."""
     here = [s for s in state.supplies
             if s.side == side and not s.is_dummy and s.hex == hx
-            and (s.id.startswith(STAGING) or _is_faucet(s, anchor))]
+            and (s.constructed or s.id.startswith(STAGING) or _is_faucet(s, anchor))]
     return max(here, key=lambda s: (s.fuel, s.ammo + s.stores, s.id), default=None)
 
 
@@ -524,7 +631,7 @@ def _a_link_in_the_chain(s, anchor) -> bool:
     Point ever came out. AX-Stage-Bardia -- the larder of the garrison banking BARDIA, worth a
     hundred -- went from 1,598 Fuel to ZERO, its garrison could no longer trace, and the
     Commonwealth walked the city off it."""
-    return s.id.startswith(STAGING) or (anchor is not None and s.id == anchor.id)
+    return s.constructed or s.id.startswith(STAGING) or (anchor is not None and s.id == anchor.id)
 
 
 def _field_dump_id(side: Side, hx: Coord) -> str:
@@ -632,92 +739,73 @@ def deny_dumps(state: GameState, side: Side) -> list:
     return orders
 
 
+def build_the_chain(state: GameState, side: Side) -> list[BuildOrder]:
+    """[24.9] CONSTRUCT THE FORWARD DUMP -- turn the heap of supplies at the head of the advance into
+    a LINK the lorries can lift out of again, and the bucket brigade grows one hop longer.
+
+    Rule 24.9's Note is the whole of this: "supplies may be placed in a hex not containing a
+    constructed supply dump. The only restriction on the use of such supplies is that TRUCKS 'IN
+    CONVOY' MAY NOT LOAD SUCH SUPPLIES." So a lorry may always set a load down in the desert (54.11 --
+    that is what engine._establish_dump does, and it is free because the rulebook makes it free) and
+    the army may eat off it at once. What three Capability Points and twenty Store Points BUY is the
+    right to give supply back to a truck: a pile is a one-way sink, a constructed dump is a link.
+
+    THIS IS THE SECOND CHOKE-POINT, and it is a quiet one. The relay may only reload from the supply
+    LINE (campaign_policy._relay_source: a lorry that carries a division's stock back off it has done
+    negative work -- measured, it once siphoned 1,365 of the Commonwealth's 1,530 forward Fuel Points
+    and froze every field dump it owned). But the LINE was whatever September 1940 seeded and nothing
+    else: the Commonwealth's ends at Sollum, the Axis's at Bardia. So the chain could never grow, and
+    an army that advanced past the last seeded depot was hauling from a hundred hexes back for the
+    rest of the war. 24.9 is the rulebook handing both sides the tool to extend it -- and making them
+    pay for it, and stop to do it.
+
+    THE DOCTRINE, and it is FLAGGED AS DOCTRINE: 24.9 says a Player MAY construct a dump and says
+    nothing about when. Ours builds one when it would actually LENGTHEN THE CHAIN -- a dump forward of
+    the chain's current head, with a combat unit standing on it and the twenty Stores on hand. Not
+    every dump the army sits on (that would spend 20 Stores a time to license the lorries to
+    strip-mine the front-line divisions), and never behind the head (the chain already reaches there).
+    Side-generic, like every other standing order here: the Panzerarmee may extend its chain east on
+    exactly the same terms, which is the point -- what 24 gives the Commonwealth alone is the RAILWAY."""
+    objective = state.objective_for(side)
+    head = campaign_claim.chain_head(state, side, objective)
+    if head is None:
+        return []
+    reach = distance(head.hex, objective)
+    orders: list[BuildOrder] = []
+    for su in sorted(state.supplies, key=lambda s: s.id):
+        if su.side != side or su.constructed or su.base or su.is_dummy:
+            continue
+        if wells.is_water_source(su) or distance(su.hex, objective) >= reach:
+            continue                       # behind the head: the chain already reaches this hex
+        if construction.stores_at(state, side, su.hex) < construction.DUMP_STORES:
+            continue                       # 24.9/24.13: the twenty Stores must be ON HAND in the hex
+        crew = [u for u in sorted(state.units_at(su.hex), key=lambda u: u.id)
+                if u.side == side and construction.can_construct_dump(state, side, u, su)]
+        if crew:
+            orders.append(BuildOrder(construction.DUMP, su.hex, (crew[0].id,)))
+    return orders
+
+
 def keep_in_trace(orders: list, state: GameState, side: Side) -> list:
     """[54.16]/[32.16] DO NOT OUTRUN YOUR SUPPLY -- the consolidation constraint, as a transform on an
     army's move orders, in the same idiom as hold_garrisons.
 
-    ############################################################################################
-    # NOT WIRED. Built, unit-tested (tests/test_dumps.py) and MEASURED IN THREE FORMS OVER FIVE
-    # SEEDS -- and not applied by any policy, because none of the three is fit to ship. It is kept
-    # because it is correct, because it is the missing half of the consolidation story, and because
-    # the thing that blocks it is NAMED below and is somebody's next task. Wiring it in as it stands
-    # would trade one broken campaign for another.
-    #
-    #   BOTH SIDES, STRICT -- kills the Axis beeline outright (the 10th Army's furthest-east hex on
-    #     Game-Turn 4 falls from r=133, Alexandria, to r=81-100: SIDI BARRANI, which is where
-    #     Graziani actually stopped) and raises the supplied fraction from 29% to 77-91%. AND IT
-    #     PARALYSES THE EIGHTH ARMY. Measured, seed 1941, Game-Turn 60: 42 Commonwealth combat units
-    #     alive, THIRTY-ONE of them sitting in the Nile Delta, ONE at the railhead. That is precisely
-    #     the defect CampaignCommonwealthPolicy._concentrate exists to cure, resurrected -- now with
-    #     a 91% "supplied" score to flatter it, because a division parked on the bottomless Cairo
-    #     base is by definition in supply. A metric that rewards an army for not fighting is
-    #     measuring the wrong thing, and this is the trap it sets.
-    #   BOTH SIDES, PERMISSIVE (a supplied unit may cross dry ground; only a starving one is
-    #     pinned) -- does NOTHING. The Axis dump CARPET (32.3: a depot relocates 15 CP per OpStage,
-    #     faster than the infantry it feeds) simply keeps the spearhead in trace as it runs. GT4:
-    #     r=122-131. The beeline walks straight through it.
-    #   AXIS ONLY -- dampens the beeline (GT4: r=88-109) but is worse overall: the Commonwealth
-    #     marches west into a now better-supplied Axis and is destroyed (18-36 combat units alive
-    #     against 43 before). Scores go 445-20, 445-20, 445-20, 420-20, 400-30.
-    #
-    # THE FIRST BLOCKER IS NOW GONE, and it did not save the strict form. Our supply trace ran to
-    # DUMPS AND NOTHING ELSE, and the railway kept exactly ONE of them stocked -- the lane landed its
-    # whole 1500-tons-per-OpStage haul on the Mersa Matruh railhead and left four hundred miles of
-    # working railway at ZERO. Rule 54.3 (engine._rail_stops) fixed that: the train now stops where
-    # the army stands and founds a station there (54.11/54.35), all along its line.
-    #
-    # ==========================================================================================
-    # THEN IT WAS WIRED, STRICT, BOTH SIDES, AND MEASURED (scripts.measure_campaign, 5 seeds, the
-    # full GT1-111) -- AND THE MEASUREMENT REJECTED IT. A FOURTH truthful negative. Read this before
-    # you wire it again.
-    #
-    #   IT FIXED WHAT IT WAS FOR. The 10th Army's furthest-east hex fell from r=132-133 (ALEXANDRIA,
-    #     reached on Game-Turn 4 in every seed) to r=95-99, the Mersa Matruh approaches. Axis
-    #     supplied-AND-FORWARD went 4-16% -> 25-67%. Both armies SURVIVED -- combat units alive
-    #     roughly doubled (Axis 27-52 -> 63-105, Commonwealth 13-39 -> 25-76). And the railway DID
-    #     cure the Delta paralysis this docstring used to predict: 54-76 Commonwealth units stood
-    #     FORWARD of the Delta, against the thirty-one that used to sit in it.
-    #
-    #   AND IT FROZE THE WAR. Axis 425-20 IN ALL FIVE SEEDS -- where the unwired campaign returns
-    #     three distinct scores (425-20, 225-120, 375-80, 375-80, 375-30). THE DICE MATTERED LESS,
-    #     NOT MORE. The Eighth Army reached the railhead and stopped: it banked Mersa Matruh and Sidi
-    #     Barrani and never took another city. Operation Compass did not run. TWO TESTS IN THIS REPO
-    #     SAY SO IN SO MANY WORDS AND BOTH GO RED: test_campaign_concentration's "the army does not
-    #     sit out the war in the delta", and test_campaign's "commonwealth can attack" (which gets an
-    #     EMPTY order list). That is the guardrail working.
-    #
-    # THE SECOND BLOCKER, and it is the next task. campaign_policy._forward_depot_sites founds a
-    # depot ONLY on a hex a friendly COMBAT UNIT is standing on ("not in empty desert -- a depot the
-    # army is not standing on is a depot the enemy walks onto"). This constraint forbids a unit from
-    # standing anywhere it cannot eat. So THE ARMY CANNOT REACH A HEX UNTIL A DEPOT FEEDS IT, AND A
-    # DEPOT CANNOT BE FOUNDED UNTIL THE ARMY REACHES IT. Circular -- and it bites the moment the rails
-    # end, because rule 60.7 runs the RR to Mersa Matruh and no further, so everything west of it must
-    # be lorried. PROVEN: Sollum is 10 hexes from Sidi Barrani; the widest Commonwealth trace radius
-    # on this map is 9 (VEHICLE, CPA 25 -> 12.5 CP); ZERO Commonwealth combat units could trace supply
-    # standing on Sollum. AL-Stage-Sollum -- the seeded Field Supply Depot ON Sollum -- is empty and
-    # Axis-held from Game-Turn 1, and campaign_claim.spine_awaits_control will not deliver into a hex
-    # the enemy holds. The Eighth Army is one hex of trace short of its own war, forever.
-    #
-    # THE UNLOCK is the rulebook's own, and scenario._CW_FIELD_DEPOTS already says it: the Western
-    # Desert Force "did not attack out of Egypt on its trace range -- it spent weeks lorrying dumps
-    # forward into the desert first, and then attacked out of THEM" (60.34). Either let the relay
-    # found a depot FORWARD of the army inside its 53.22 convoy reach, or let 32.33's escort carry a
-    # supply unit with the combat unit it "begins and remains stacked with". The guard that forbids
-    # the first was written because an exposed forward depot was a free gift to 32.13 -- which is
-    # exactly what 54.14 now answers, except 54.14 needs a unit standing ON the dump to blow it, so
-    # an UNescorted depot is still a gift. 32.33's escort is therefore the cleaner unlock.
-    ############################################################################################
+    WIRED AT LAST, and only because rule 32.33 and rule 24 arrived to pay for it. FOUR earlier
+    measurements rejected it and the log of them is kept below, because the thing that finally made it
+    shippable is exactly the thing every one of those measurements said was missing.
 
-    A unit that CAN trace supply where it stands may not march to a hex where it CANNOT. It is not a
-    magnitude we invented and it is not a leash on the advance: the moment the lorries push a depot
-    forward (_forward_depot_sites, rule 54.11) the trace moves with it and the same march becomes
-    legal. The army advances at the pace of its logistics, which is the thesis of the whole game
-    ("the design thrust of CNA is logistics: the availability and proper use of supplies and trucks"
-    -- the 32.0 commentary, which then predicts EXACTLY our bug: "try motorizing all Italian
-    divisions in 1940, doubling Italian initial supply outlay and arrival. WATCH THEM WINTER IN
-    CAIRO").
+    IT IS LAID OVER THE GENERAL ADVANCE ALONE (take_and_hold_moves), and that is the whole design.
+    The standing orders' DETACHMENTS are not filtered by it, because each of them has already
+    answered the same question in a better-informed way: a city claim is only made where the unit
+    could be FED (campaign_claim.can_be_fed -- rule 64.73's own trace test, asked of the destination),
+    and a 32.33 DESERT COLUMN is in supply BY CONSTRUCTION -- its depot ends the Movement Phase in its
+    own hex (engine._supply_movement runs after engine._movement), which satisfies not merely the
+    32.16 trace at distance zero but the stricter thing the full logistics game asks: 49.15, "for fuel
+    to be consumed, it must be present in the SAME HEX with the consuming unit". Reading a column's
+    destination against the depot's CURRENT hex would say it is marching into the desert. It is
+    marching with its larder.
 
-    TWO CLAUSES:
+    TWO CLAUSES, then, for everyone else:
 
       * A unit that CAN trace supply may not march to a hex where it CANNOT. It advances at the pace
         its logistics can follow, and no faster.
@@ -731,13 +819,6 @@ def keep_in_trace(orders: list, state: GameState, side: Side) -> list:
     marching, and the 10th Army -- every man of which is out of trace by Game-Turn 3 -- beelined
     through the gap exactly as before. An escape hatch that only opens forward is not an escape hatch.
 
-    The strict first clause is what pins the 10th Army at Sidi Barrani; the permissive reading of
-    it does nothing at all (see the three measurements above). The cost of that strictness is that
-    it forbids a supplied unit from crossing dry ground even to reach a stocked depot on the far
-    side -- which the rulebook WOULD allow (49.14 gives every unit a tank of fuel; 51.22 gives it
-    two Game-Turns of rations before attrition touches it) -- and that is precisely the clause the
-    missing rail/pipeline trace would repair.
-
     WHY THE POLICY AND NOT THE ENGINE: the engine already halts a unit that cannot pay a move's Fuel
     (49.13/49.16, engine._draw_move_fuel), and that is the rulebook's own gate. But FOOT infantry
     burns NO FUEL AT ALL (49.12), so that gate never touched the Italian 10th Army for one hex of the
@@ -747,6 +828,41 @@ def keep_in_trace(orders: list, state: GameState, side: Side) -> list:
     slowly to stop a scripted policy that cannot see it coming. So the restraint belongs where the
     judgement belongs: in the staff that gives the order. FLAGGED as doctrine, not as rule.
 
+    ############################################################################################
+    # THE FOUR REJECTIONS, kept so nobody re-runs them. Every one of these was measured over five
+    # seeds and none of them shipped.
+    #
+    #   BOTH SIDES, STRICT (before the railway) -- killed the Axis beeline (GT4 furthest-east fell
+    #     from r=133, Alexandria, to r=81-100: SIDI BARRANI, where Graziani actually stopped) and
+    #     PARALYSED the Eighth Army: 31 of 42 Commonwealth combat units sitting in the Nile Delta at
+    #     Game-Turn 60, with a 91% "supplied" score to flatter it -- because a division parked on the
+    #     bottomless Cairo base is by definition in supply. That trap is why scripts.measure_campaign
+    #     reports supplied-AND-FORWARD.
+    #   BOTH SIDES, PERMISSIVE (a supplied unit may cross dry ground; only a starving one is pinned)
+    #     -- did NOTHING. The Axis dump CARPET (32.3: a depot relocates 15 CP per OpStage, faster
+    #     than the infantry it feeds) keeps the spearhead in trace as it runs. GT4: r=122-131.
+    #   AXIS ONLY -- dampened the beeline (GT4: r=88-109) and was worse overall: the Commonwealth
+    #     marched west into a now better-supplied Axis and was destroyed. 445-20, 445-20, 445-20,
+    #     420-20, 400-30.
+    #   BOTH SIDES, STRICT, WITH THE RAILWAY FEEDING ITS LINE (54.3/54.35) -- fixed what it was for
+    #     (10th Army culminates at r=95-99; Axis supplied-and-forward 4-16% -> 25-67%; both armies
+    #     survive, combat units alive roughly double) AND FROZE THE WAR: Axis 425-20 in ALL FIVE
+    #     SEEDS, where the unwired campaign returns three distinct scores. Operation Compass did not
+    #     run. Two tests went red and both named the defect.
+    #
+    # THE BLOCKER, in one sentence: _forward_depot_sites founds a depot ONLY where a friendly combat
+    # unit stands, and this constraint forbids a unit from standing where it cannot eat -- so the army
+    # could not reach a hex until a depot fed it, and a depot could not be founded until the army
+    # reached it. It bit the moment the rails ended (60.7: the RR runs to Mersa Matruh and no
+    # further). Sollum is ten hexes from Sidi Barrani; the widest Commonwealth trace on this map is
+    # nine; measured, ZERO Commonwealth combat units could trace supply standing on Sollum.
+    #
+    # THE TWO KEYS, and the rulebook cut them both. [32.33] the escorted desert column, which walks a
+    # depot forward INSIDE the army's supply because the depot IS the army's supply
+    # (campaign_claim.column_claims + the `escorted` clause above); and [24.6] the railway the
+    # Commonwealth may BUILD west from Mersa Matruh -- and the Axis may not -- which moves the whole
+    # trace, not merely one column's (game.construction).
+    ############################################################################################
     """
     if not orders:
         return orders
@@ -906,6 +1022,13 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
     # of the faucet marched the whole Commonwealth pool off to Cairo on its first return leg and
     # idled it there for the rest of the war (measured: 10 truck moves in 111 game-turns, against
     # the Axis's 394). The old reading survives as the fallback, for a state with no port at all.
+    # MEASURED AND REVERTED, so it is not re-invented: anchoring the relay on the RAILHEAD instead of
+    # the port (the loading point walks west with the track, which is the real reason Britain built
+    # the railway) reads beautifully and wrecks the campaign. The [60.43] chart stations 50 of the
+    # Commonwealth's Truck Points in CAIRO and ALEXANDRIA; move their reload point 80 hexes west to a
+    # forward railhead and they can no longer reach it, the Delta park idles for the whole war, and
+    # the Eighth Army never comes forward at all (GT12: ZERO reinforcements left the Delta, against
+    # three before). The port of arrival is where the trucks live. It stays the anchor.
     faucets = {p.hex for p in state.ports if p.side == side}
     anchor = max([s for s in state.supplies
                   if s.side == side and not s.is_dummy and s.hex in faucets]
@@ -1133,6 +1256,14 @@ class _CampaignAxisSupplyMixin:
     def demolition(self, state: GameState, side: Side) -> list[DemolitionOrder]:
         # [54.14] Deny the enemy your stocks -- symmetric, both sides, one standing order (deny_dumps).
         return deny_dumps(state, side)
+
+    def construction(self, state: GameState, side: Side) -> list[BuildOrder]:
+        # [24.9] The Panzerarmee extends its chain east on exactly the same terms the Eighth Army
+        # extends its own (build_the_chain). What it does NOT get is 24.6: the Construction Chart's
+        # Build row for Railroad reads NZERC and there is no Axis row at all. That asymmetry is the
+        # rulebook's, and it is the historical one -- the Eighth Army could push a railhead west and
+        # be fed off it; Rommel could only lengthen a lorry haul from Benghazi.
+        return build_the_chain(state, side)
 
     def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
         return campaign_truck_orders(state, side)

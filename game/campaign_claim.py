@@ -48,6 +48,7 @@ from .policy import MoveOrder, SupplyMoveOrder
 from .state import GameState
 
 STAGING = ("AX-Stage", "AL-Stage")     # the seeded supply SPINES of both sides (60.34 / 54.3)
+COLUMN = "Column"                      # the Claim.name of a [32.33] desert column (column_claims)
 
 
 def _cities(state: GameState) -> tuple:
@@ -493,6 +494,117 @@ def claims(state: GameState, side: Side, *, escort: bool = True) -> tuple[Claim,
     return tuple(plan)
 
 
+def chain_head(state: GameState, side: Side, objective: Coord):
+    """The forwardmost dump the lorry relay may LIFT OUT OF -- the head of the bucket brigade. A
+    CONSTRUCTED dump (24.9's Note: only a constructed dump may give supply back to "trucks in
+    convoy") or the bottomless rear base, whichever stands nearest the objective.
+
+    This is the frontier of the whole logistics system, and it is what a desert column may not
+    outrun. Everything behind it can be refilled; everything ahead of it lives on what it carries."""
+    links = [s for s in state.supplies
+             if s.side == side and not s.is_dummy and not wells.is_water_source(s)
+             and (s.constructed or s.base)]
+    return min(links, key=lambda s: (distance(s.hex, objective), s.id), default=None)
+
+
+def column_claims(state: GameState, side: Side, busy: set) -> tuple[Claim, ...]:
+    """[32.33]/[60.34] THE DESERT COLUMN -- the escorted depot that goes FIRST, and the answer to the
+    deadlock that stopped this campaign dead.
+
+    THE DEADLOCK. A depot may only be founded where the army stands (54.11, via the lorry relay), and
+    an army may not stand where it cannot eat (54.16 -- campaign_policy.keep_in_trace, the
+    consolidation constraint the whole campaign needs and could not afford). So the army cannot reach
+    a hex until a depot feeds it, and a depot cannot be founded until the army reaches it. It bites
+    the moment the rails end: rule 60.7 runs the railway to Mersa Matruh and no further, Sollum is ten
+    hexes past Sidi Barrani, and the widest Commonwealth supply trace on this map is nine. Measured,
+    ZERO Commonwealth combat units could trace supply standing on Sollum. The Eighth Army was
+    permanently one hex of trace short of its own war.
+
+    THE RULEBOOK BREAKS IT, and in the rulebook's own voice. Rule 32.33: "a supply unit being
+    transported by Motorization Points... may be moved in the friendly Movement and Combat Phase ONLY
+    IF IT BEGINS AND REMAINS STACKED WITH A FRIENDLY COMBAT UNIT." An escorted depot is SELF-SUPPLYING
+    BY CONSTRUCTION -- the dump is in the escort's own hex, which satisfies not merely the 32.16 trace
+    but the stricter thing the full logistics game asks (49.15: "for fuel to be consumed it must be
+    present in the same hex with the consuming unit"). So a combat unit escorting a depot may go
+    anywhere the depot can go, in supply the whole way, and the depot it plants when it arrives
+    extends the trace for the army coming up behind it. That is not an exploit; it is Operation
+    Compass. Rule 60.34, quoted in scenario._CW_FIELD_DEPOTS: the Western Desert Force "did not attack
+    out of Egypt on its trace range -- it spent weeks lorrying dumps forward into the desert first,
+    and then attacked out of THEM."
+
+    So: when the army is on the offensive and its OBJECTIVE lies outside its supply, one pair per
+    spare depot is detached to march at the objective TOGETHER -- at the depot's 32.58A pace of 15 CP
+    (claim_moves does the pairing) -- and the rest of the army follows into the trace they plant. The
+    claims machinery does all of it; a column is an ordinary Claim whose "city" is a patch of desert.
+
+    THE ONE THING A COLUMN MAY NOT DO IS OUTRUN THE LORRIES. Its destination must stay within one
+    53.22 convoy hop of the chain's head (chain_head above / within_a_lorry_hop) -- the same clause
+    that declines Siwa and Jalo, and for the same measured reason: a depot the relay can never reach
+    is not a link, it is a box of supplies dying in the sand (49.3 evaporates six per cent of it a
+    week). So the column advances at the pace the chain can follow, the chain extends behind it
+    (24.9), and where the Commonwealth builds its railway (24.6) the chain's head moves west on its
+    own. THAT is the thesis of this game, and it is now the shape of the code.
+
+    Never the army's LAST spare depot, exactly as the city claims guard it: an army with no mobile
+    supply behind it cannot hold what it takes."""
+    objective = state.objective_for(side)
+    head = chain_head(state, side, objective)
+    if head is None:
+        return ()
+    pinned = garrison_depots(state, side)
+    # `busy` carries the units AND the depots the higher-priority claims have already spent (the id
+    # namespaces are disjoint, so one set does for both). A column is made of what the scored
+    # objectives did not want.
+    spare = sorted((s for s in state.active_supplies(side)
+                    if is_field_dump(s) and s.id not in pinned and s.id not in busy and s.ammo > 0
+                    and s.fuel >= supply.SUPPLY_MOVE_FUEL and state.port_at(s.hex) is None),
+                   key=lambda s: (distance(s.hex, objective), s.id))
+    if len(spare) < 2:                     # never the last one: the army keeps its mobile supply
+        return ()
+    held = garrison_units(state, side)
+    free = [u for u in state.living(side)
+            if u.is_combat and u.strength >= 1 and u.id not in held and u.id not in busy
+            and supply.plan_draw(state, u, supply.FUEL, supply.fuel_cost(u, 1)) is not None]
+    if not free:
+        return ()
+    hops: dict = {}
+    reach: dict = {}
+    plan: list[Claim] = []
+    taken: set = set()
+    for depot in spare[:len(spare) - 1]:
+        if depot.id not in reach:
+            reach[depot.id] = supply.reachable_moves(state, depot)
+        # The escort is the nearest unit the depot could actually STACK WITH this stage (32.33's
+        # "begins and remains stacked"): the depot has to be able to reach the hex the pair will
+        # stand on, and claim_moves then steps them there together.
+        pick = next((u for u in sorted(free, key=lambda u: (distance(u.hex, depot.hex), u.is_tank, u.id))
+                     if u.id not in taken
+                     and (u.hex == depot.hex or u.hex in reach[depot.id])), None)
+        if pick is None:
+            continue
+        # 54.16: the column may not step beyond one lorry hop of the chain's head. If the pair is
+        # already standing there, it has arrived -- it holds, plants, and waits for the chain.
+        if not within_a_lorry_hop(state, side, head.hex, pick.hex, hops):
+            continue
+        plan.append(Claim(objective, COLUMN, pick.id, depot.id))
+        taken.add(pick.id)
+    return tuple(plan)
+
+
+def column_reach(state: GameState, side: Side, head, hops: dict) -> frozenset:
+    """The hexes a desert column may step to: within ONE 53.22 truck-convoy hop of the chain's head
+    (54.16 -- "set up your dumps so that each is within a one-OpStage truck ride from the next.
+    Otherwise you are asking for trouble"). The leash, and the whole of it."""
+    if head is None:
+        return frozenset()
+    if head.hex not in hops:
+        truck = next((t for t in state.trucks if t.side == side), None)
+        if truck is None:
+            return frozenset()
+        hops[head.hex] = supply.reachable_truck_moves(state, replace(truck, hex=head.hex))
+    return frozenset(hops[head.hex])
+
+
 def claim_moves(state: GameState, side: Side, plan: tuple[Claim, ...]) -> list[MoveOrder]:
     """THE DETOUR: each detached unit marches at ITS CITY instead of at the far objective. This is
     the whole defect being fixed -- the base attacker only ever proposes a hex strictly closer to
@@ -514,6 +626,8 @@ def claim_moves(state: GameState, side: Side, plan: tuple[Claim, ...]) -> list[M
     if not plan:
         return []
     enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, side)
+    hops: dict = {}
+    leash: frozenset | None = None
     orders: list[MoveOrder] = []
     for c in plan:
         u = state.unit(c.unit_id)
@@ -526,6 +640,14 @@ def claim_moves(state: GameState, side: Side, plan: tuple[Claim, ...]) -> list[M
                 continue
             follow = supply.reachable_moves(state, depot)
             reach = {h: cp for h, cp in reach.items() if h in follow or h == depot.hex}
+        if c.name == COLUMN:
+            # 54.16: A DESERT COLUMN MAY NOT OUTRUN ITS LORRIES. Its objective is the far end of the
+            # war (Benghazi, Alexandria) and it would happily walk the whole way; the leash is the
+            # chain's own head, one 53.22 convoy hop behind (column_claims). It advances as the chain
+            # advances, and not one hex faster.
+            if leash is None:
+                leash = column_reach(state, side, chain_head(state, side, c.city), hops)
+            reach = {h: cp for h, cp in reach.items() if h in leash}
         here = distance(u.hex, c.city)
         cands = [h for h in reach
                  if h != u.hex and distance(h, c.city) < here     # only ever toward the city

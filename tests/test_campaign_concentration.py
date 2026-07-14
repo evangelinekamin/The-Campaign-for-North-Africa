@@ -226,7 +226,24 @@ def test_the_railhead_is_held_and_the_faucet_keeps_running(gt12):
     cancelled = [e for e in gt12.events if e.kind.name == "CONVOY_CANCELLED"
                  and e.payload.get("lane") == "CW-RAILHEAD"]
     assert not cancelled, f"the rail faucet died {len(cancelled)} times"
-    assert fin.supply("AL-Stage-Matruh").ammo > 0           # and it is actually filling
+
+    # ...AND IT IS ACTUALLY FILLING. Asked of the DELIVERIES, not of the counter's end-of-turn
+    # integer, and that is a restatement rule 24.6 forced. The railhead now MOVES -- the two NZ
+    # Railroad Construction companies push the track west (24.61/24.67) -- so Mersa Matruh becomes a
+    # transit node on the line, and a transit node in a bucket brigade is drained to zero every turn
+    # BY DESIGN (campaign_claim.spine_awaits_control measured exactly that of AL-Stage-Barrani: fifty
+    # deliveries, zero on hand after every one). Measured here: the trains land 1,700-6,900 supply
+    # Points a week into Mersa Matruh, its Ammunition peaks at ~1,470 and its Fuel at its full 54.12
+    # Village ceiling of 8,000 -- and the garrison standing on it draws its ammunition and BANKS the
+    # city. The faucet runs. What it does not do is leave a puddle for the scorekeeper.
+    landed = sum(q for e in gt12.events
+                 if e.kind.name == "SUPPLY_ARRIVED" and e.payload.get("lane") == "CW-RAILHEAD"
+                 and e.payload["supply_id"] == "AL-Stage-Matruh"
+                 for q in e.payload["cargo"].values())
+    assert landed > 0, "the rail lane never delivered one Point into the Mersa Matruh railhead"
+    garrison = [u for u in fin.units_at(MATRUH) if u.side == Side.ALLIED and u.is_combat]
+    assert any(fin.victory._supplied(fin, u) for u in garrison), \
+        "the railhead garrison cannot trace supply -- it banks nothing (64.73)"
 
 
 def test_the_standing_garrison_order_still_holds(gt12):
