@@ -466,7 +466,7 @@ def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
             continue
         # 41.6/32.66: skim the CRT loss at sea BEFORE landing (identity + no rng if unbombed)
         cargo, itd_order, pct_lost, tons_lost, itd_dice = _interdict(c, r.state, r.rng)
-        cap = supply.dump_capacity(r.state.terrain.terrain[dump.hex])   # 54.12, keyed by dump terrain
+        cap = supply.dump_capacity_at(r.state, dump.hex)   # 54.12, by dump terrain + village overlay
         # 56.28: a port's built-in dump throttles what a SHIP lands over it (55.14). A RAILWAY
         # delivery is not a ship (54.3): it has its own charted capacity (54.32, 1500 t/OpStage)
         # and never touches the quay, so it bypasses the harbour gate. Convoy.rail defaults False,
@@ -1441,7 +1441,7 @@ def _truck_unload(r: _Run, side: Side, actor: str, order, truck) -> None:
     if dump is None or dump.side != side or dump.hex != truck.hex:
         _reject_truck(r, side, actor, order, "no co-located friendly dump to unload into")
         return
-    cap = supply.dump_capacity(r.state.terrain.terrain[dump.hex])     # 54.12 ceiling
+    cap = supply.dump_capacity_at(r.state, dump.hex)                  # 54.12 ceiling
     cargo: dict = {}
     for c, q in order.unload.items():
         onhand = getattr(dump, c.lower())

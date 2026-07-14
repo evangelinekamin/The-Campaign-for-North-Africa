@@ -498,10 +498,11 @@ def _a_link_in_the_chain(s, anchor) -> bool:
 
 def _room_in(state, dump, commodity: str) -> int:
     """The 54.12 HEADROOM of `dump`: how many more Points of `commodity` its hex may legally hold.
-    A dump is not a bottomless hole -- supply.dump_capacity caps it by terrain (a major city is
-    unlimited, anything else takes the Other-Terrain row) -- and the engine lands only what fits,
-    silently. Any order sized past this ceiling is a no-op, so the relay asks first."""
-    cap = supply.dump_capacity(state.terrain.terrain[dump.hex])
+    A dump is not a bottomless hole -- supply.dump_capacity_at caps it by terrain AND location (a
+    major city is unlimited, a village takes the Village row, anything else the Other-Terrain row)
+    -- and the engine lands only what fits, silently. Any order sized past this ceiling is a no-op,
+    so the relay asks first."""
+    cap = supply.dump_capacity_at(state, dump.hex)
     return max(0, cap[commodity] - getattr(dump, commodity.lower()))
 
 

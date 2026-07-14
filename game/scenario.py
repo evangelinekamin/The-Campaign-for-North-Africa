@@ -17,7 +17,7 @@ import random
 from collections import deque
 from dataclasses import replace
 
-from . import (calendar, campaign_victory, cna_map, coords, logistics_data, oob,
+from . import (calendar, campaign_victory, cna_map, coords, logistics_data, oob, villages,
                wells)
 from .events import Phase, Side
 from .hexmap import distance, neighbors
@@ -1194,6 +1194,14 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     # Barce-Benghazi railroad (52.22).
     water_sources += wells.pipeline(tmap.terrain)
 
+    # THE 54.12 VILLAGE ROW (see game.villages). Read off the FINAL map, so every hex stamped
+    # MAJOR_CITY above -- Tobruk, Bardia, Benghazi, Cairo, Alexandria -- keeps its unlimited city
+    # ceiling and the named villages beneath it get theirs. This is a LOCATION overlay: it moves
+    # no unit, shifts no combat and fortifies nothing (8.37 / 25.12); it raises the dump ceiling of
+    # the hexes the whole logistics chain stands on. Campaign-only, so the byte-locked benchmark
+    # scenarios keep reading the Other-Terrain row (state.villages defaults empty).
+    village_hexes = villages.village_hexes(tmap.terrain)
+
     # The wells go in the supplies tuple LAST, and the convoy/port/truck geography below is
     # derived from `dumps` (the armies' depots) ALONE. A well is geography, not a depot: it is
     # not a port of arrival, no convoy lands in it, and no truck reloads from it. Feeding the
@@ -1210,6 +1218,7 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         allied_objective=coords.to_axial(coords.parse(_CW_OBJECTIVE)),   # offensive CW drives west (Compass)
         supplies=supplies, consumed=_zero_consumed(),
         initial_supply=_initial_supply(supplies),
+        villages=village_hexes,                          # 54.12: the missing capacity row
         map_sections=frozenset("ABCDE"),
         season_offset=calendar.CAMPAIGN_SEASON_OFFSET,   # GT1 = September 1940 (fall)
         victory=campaign_victory.CampaignVictory(),      # rule 64.7 (see game.campaign_victory)

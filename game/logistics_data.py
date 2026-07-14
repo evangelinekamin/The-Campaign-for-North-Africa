@@ -70,12 +70,24 @@ def evaporation_percent() -> dict:
             "hot_additional": e["hot_weather_additional_percent"]}
 
 
+def _dump_cap_row(name: str) -> dict:
+    """One row of the [54.12] Supply Dump Capacity Chart, keyed by engine commodity name."""
+    row = _data()["supply_dump_capacity_54_12"][name]
+    return {"AMMO": row["ammo"], "FUEL": row["fuel"],
+            "STORES": row["stores"], "WATER": row["water"]}
+
+
 def dump_other_terrain_cap() -> dict:
     """[54.12] Supply Dump Capacity Chart, the Other-Terrain row (the ceiling a
     non-city dump hex may hold), keyed by engine commodity name."""
-    row = _data()["supply_dump_capacity_54_12"]["other_terrain"]
-    return {"AMMO": row["ammo"], "FUEL": row["fuel"],
-            "STORES": row["stores"], "WATER": row["water"]}
+    return _dump_cap_row("other_terrain")
+
+
+def dump_village_cap() -> dict:
+    """[54.12] Supply Dump Capacity Chart, the VILLAGE row -- the ceiling a dump in a village
+    hex may hold (2,500 Ammo / 8,000 Fuel / 3,000 Stores / 1,000 Water). Between the Major-City
+    row (unlimited) and Other Terrain. See game.villages for which hexes carry a village."""
+    return _dump_cap_row("village")
 
 
 def fuel_rate_proxy() -> dict:

@@ -450,6 +450,17 @@ class GameState:
     # September = fall) stamps the offset so weather.season_for_turn reads turn +
     # season_offset. Default 0 leaves every local-clock scenario byte-identical.
     season_offset: int = 0
+    # The [54.12]/[8.37] VILLAGE overlay: the hexes carrying a village. A village is a LOCATION,
+    # never a terrain type ("Village/Bir/Oasis -- same as terrain in hex for all purposes", 8.37),
+    # so it changes no movement cost, no combat shift and no fortification (25.12) -- it raises the
+    # 54.12 dump ceiling of its hex, and nothing else (game.supply.dump_capacity_at).
+    #
+    # Default frozenset() reads the Other-Terrain row everywhere, so every scenario that seeds no
+    # gazetteer is byte-identical. ONLY game.scenario.campaign seeds it: the benchmark scenarios
+    # (rommels_arrival / siege_of_tobruk) are BYTE-LOCKED to a published determinism_signature and
+    # are therefore still village-BLIND -- a known, flagged asymmetry pending a re-baseline
+    # decision, not a claim that the rule is universal. See game.villages.
+    villages: frozenset = frozenset()
 
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:

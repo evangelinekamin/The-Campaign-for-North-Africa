@@ -722,7 +722,7 @@ class StaffPolicy(ScriptedPolicy):
             dump = state.supply(dump_id)
             if dump is None:
                 continue
-            cap = supply.dump_capacity(state.terrain.terrain[dump.hex])
+            cap = supply.dump_capacity_at(state, dump.hex)
             for commodity in sorted(incoming[dump_id]):
                 headroom = cap.get(commodity, 0) - getattr(dump, commodity.lower())
                 over = incoming[dump_id][commodity] - headroom

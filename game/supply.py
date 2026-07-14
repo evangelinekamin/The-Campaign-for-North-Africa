@@ -35,22 +35,37 @@ STORES = "STORES"
 WATER = "WATER"
 COMMODITIES = (AMMO, FUEL, STORES, WATER)
 
-# 54.12 Supply Dump Capacity Chart (points), keyed by the dump-hex terrain. A major
-# city (and the Tunis/Tripoli off-map boxes) holds an unlimited amount; any other
-# dump hex is "Other Terrain". Villages (2500/8000/3000/1000) are not distinctly
-# modelled on the colour-sampled map, so a non-city dump reads the Other row. The
-# faucet fills UP TO these ceilings (game.engine._naval_convoys); overflow is never
-# credited, so conservation stays exact. Sourced from data/logistics_rates.json so the
-# ceiling is the rulebook's ([54.12] Other-Terrain), not a magic number.
+# 54.12 Supply Dump Capacity Chart (points). THREE of the chart's rows are live here: a major
+# city (and the Tunis/Tripoli off-map boxes) holds an unlimited amount; a VILLAGE holds
+# 2500/8000/3000/1000; any other dump hex is "Other Terrain" (1500/5000/1000/1000). A village is
+# a LOCATION, not a terrain type ([8.37]: "Village/Bir/Oasis -- same as terrain in hex for all
+# purposes"), so it rides as an overlay set of hexes on GameState -- see game.villages for the
+# gazetteer and dump_capacity_at below for the lookup. The faucet fills UP TO these ceilings
+# (game.engine._naval_convoys); overflow is never credited, so conservation stays exact. Sourced
+# from data/logistics_rates.json so the ceilings are the rulebook's, not magic numbers.
 _UNLIMITED = 10 ** 9
 _OTHER_CAP = logistics_data.dump_other_terrain_cap()
+_VILLAGE_CAP = logistics_data.dump_village_cap()
 
 
-def dump_capacity(terrain: Terrain) -> dict:
-    """The 54.12 per-commodity ceiling for a dump on `terrain`."""
+def dump_capacity(terrain: Terrain, *, village: bool = False) -> dict:
+    """The 54.12 per-commodity ceiling for a dump on `terrain`, in a village or not.
+
+    The rows are exclusive and Major City is the higher: a hex that is BOTH a city and a named
+    place (Tobruk, Bardia, Benghazi) keeps the unlimited city row. `village` defaults False, so
+    every caller that does not know the location -- and every byte-locked benchmark scenario --
+    reads exactly the Other-Terrain row it read before."""
     if terrain == Terrain.MAJOR_CITY:
         return {c: _UNLIMITED for c in COMMODITIES}
-    return dict(_OTHER_CAP)
+    return dict(_VILLAGE_CAP if village else _OTHER_CAP)
+
+
+def dump_capacity_at(state: GameState, hex: Coord) -> dict:
+    """The 54.12 ceiling for a dump standing on `hex` of THIS map: the terrain row, overlaid with
+    the Village row when the hex carries a village (state.villages, seeded by game.scenario.
+    campaign). The single place the engine and the policies should ask -- passing a bare Terrain
+    is village-blind by construction."""
+    return dump_capacity(state.terrain.terrain[hex], village=hex in state.villages)
 
 
 # 54.5 Equivalent Weights: tons per one supply Point (Ammo 4t, Fuel 1/8t, Stores 1t,
