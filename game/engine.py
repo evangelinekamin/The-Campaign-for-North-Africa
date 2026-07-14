@@ -12,13 +12,13 @@ still a placeholder CRT (the real land combat — rule 11 — is the next slice)
 from __future__ import annotations
 
 import math
-import random
 from dataclasses import dataclass, replace
 from typing import Protocol
 
 from . import (combat, combat_tables, construction, cp_costs, logistics_data, stacking, supply,
                tactics, weather, wells)
 from .apply import apply
+from .dice import DiceBox
 from .events import Control, Event, EventKind, Phase, Side
 from .hexmap import distance, is_adjacent, neighbors
 from .invariants import check
@@ -81,7 +81,13 @@ class _Run:
     def __init__(self, initial: GameState):
         self.initial = initial
         self.state = initial
-        self.rng = random.Random(initial.seed)
+        # THE INSTRUMENT (game.dice). One INDEPENDENT stream per subsystem, all derived from
+        # the master seed. This used to be a single random.Random shared by every die in the
+        # game, and because subsystems draw CONDITIONALLY (_interdict rolls only when an
+        # InterdictionOrder covers the lane), changing the number of draws in one subsystem
+        # reshuffled the dice every other subsystem saw. Every A/B that toggled a
+        # conditionally-drawing feature was measuring that reshuffle. See game/dice.py.
+        self.dice = DiceBox(initial.seed)
         self.events: list[Event] = []
         self._seq = 0
         self.fort_hits: dict[Coord, int] = {}   # accumulated barrage hits per hex (25.14)
@@ -103,8 +109,11 @@ class _Run:
         check(self.state)
         self.events.append(e)
 
-    def d6(self) -> int:
-        return self.rng.randint(1, 6)
+    def d6(self, subsystem: str) -> int:
+        """One die, from `subsystem`'s own stream (game.dice.SUBSYSTEMS). The subsystem is
+        named at every call site on purpose: which stream a die comes off is a property of
+        the rule being resolved, and it is the one thing that must never be guessed."""
+        return self.dice.d6(subsystem)
 
     def go(self, phase: Phase, side: Side) -> None:
         self.emit(EventKind.PHASE_ADVANCED, Side.SYSTEM, "SYSTEM",
@@ -223,7 +232,7 @@ def _initiative(r: _Run, axis_recalled: bool = False) -> None:
     al_rating = s.initiative_ratings.get("ALLIED", 0)
     draws: list[int] = []
     while True:                                          # 7.14: ties reroll
-        ad, ld = r.d6(), r.d6()
+        ad, ld = r.d6("initiative"), r.d6("initiative")
         draws += [ad, ld]
         axis_total, allied_total = ad + ax_rating, ld + al_rating
         if axis_total != allied_total:
@@ -292,7 +301,7 @@ def _rommel_recall(r: _Run) -> bool:
         return False
     if rom.in_germany:
         r.emit(EventKind.ROMMEL_RECALLED, Side.AXIS, "SYSTEM", {"in_germany": False})
-    d1, d2 = r.d6(), r.d6()
+    d1, d2 = r.d6("rommel"), r.d6("rommel")
     recalled = d1 + d2 == 12
     # Emit UNCONDITIONALLY, carrying the 2d6, so the recall roll's dice are certified in the
     # log every game-turn (not only on a 12). A non-12 folds in_germany=False -- a no-op on the
@@ -405,9 +414,18 @@ def _apply_convoy_loss(cargo: dict, pct: int) -> tuple[dict, int]:
 def _interdict(convoy, state: GameState, rng):
     """The interdiction worker shared by interdict() and _naval_convoys: returns
     (reduced_cargo, order|None, pct_lost, tons_lost, dice). Draws the two [41.66] CRT dice on
-    `rng` ONLY when an InterdictionOrder covers this lane+turn, so an interdiction-free lane
-    draws no rng and returns the cargo verbatim with dice=() (byte-identical). The dice ride out
-    so the CONVOY_INTERDICTED marker can certify them in the log."""
+    `rng` ONLY when an InterdictionOrder covers this lane+turn; an interdiction-free lane draws
+    nothing and returns the cargo verbatim with dice=(). The dice ride out so the
+    CONVOY_INTERDICTED marker can certify them in the log.
+
+    THIS IS THE CONDITIONAL DRAW THAT BROKE THE INSTRUMENT, and the fix is that `rng` is now
+    interdiction's OWN stream (game.dice), never the whole engine's. It used to be the shared
+    one, and the docstring here defended the conditional draw as "byte-identical" -- which is
+    exactly backwards: skipping a draw on the SHARED stream kept an unbombed lane's log stable
+    while shifting every weather, breakdown, morale and CRT roll for the rest of the war the
+    moment you DID bomb one. Malta was measured through that and pronounced inert. Whether this
+    function draws or not must now be invisible to every other subsystem, and tests/test_dice.py
+    holds that line."""
     order = _interdiction_for(state, convoy)
     if order is None:
         return dict(convoy.cargo), None, 0, 0, ()
@@ -420,11 +438,12 @@ def _interdict(convoy, state: GameState, rng):
 def interdict(convoy, state: GameState, rng) -> dict:
     """Air interdiction of a convoy in transit (rules 41.6 / 32.63-32.66) -- the crack's
     ferry-cut, the convoys/ports/trucks idiom carried into the AIR arena. If no
-    InterdictionOrder covers this convoy's lane this game-turn, the cargo arrives verbatim
-    and NO die is drawn (byte-identical). Otherwise the seam rolls 2d6 on the [41.5] Air
-    Bombardment CRT (41.66) and skims that tens-of-percent off the cargo (41.67, split evenly,
-    each LOST amount rounded up) before it lands. Returns the (possibly reduced) cargo; the
-    paired CONVOY_INTERDICTED marker rides in _naval_convoys beside the smaller SUPPLY_ARRIVED."""
+    InterdictionOrder covers this convoy's lane this game-turn, the cargo arrives verbatim and
+    no die is drawn. Otherwise the seam rolls 2d6 on the [41.5] Air Bombardment CRT (41.66) and
+    skims that tens-of-percent off the cargo (41.67, split evenly, each LOST amount rounded up)
+    before it lands. Returns the (possibly reduced) cargo; the paired CONVOY_INTERDICTED marker
+    rides in _naval_convoys beside the smaller SUPPLY_ARRIVED. `rng` is interdiction's own
+    stream -- pass r.dice.stream("interdiction"), never a stream another subsystem shares."""
     return _interdict(convoy, state, rng)[0]         # cargo only; the marker's dice ride separately
 
 
@@ -671,7 +690,8 @@ def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
                    {"convoy_id": c.id, "lane": c.lane, "dest": c.dest, "reason": "port captured"})
             continue
         # 41.6/32.66: skim the CRT loss at sea BEFORE landing (identity + no rng if unbombed)
-        cargo, itd_order, pct_lost, tons_lost, itd_dice = _interdict(c, r.state, r.rng)
+        cargo, itd_order, pct_lost, tons_lost, itd_dice = _interdict(
+            c, r.state, r.dice.stream("interdiction"))
         if c.rail and r.state.terrain.rails:
             # [54.3] THE RAILWAY UNLOADS ALONG ITS LINE, not all at the terminus (see _rail_stops).
             # A ship has one quay; a train has a whole railway of hexes it may set freight down at
@@ -924,12 +944,12 @@ def _weather(r: _Run) -> None:
     every section (29.31), so it needs no location roll. The single emitted label is
     what every downstream coupling (breakdown shift, evaporation, movement cost) reads."""
     season = weather.season_for_turn(r.state.turn + r.state.season_offset)
-    d1, d2 = r.d6(), r.d6()
+    d1, d2 = r.d6("weather"), r.d6("weather")
     label = weather.weather_for_roll(season, d1 * 10 + d2)
     draws = (d1, d2)
     sections: frozenset = frozenset()
     if weather.is_foul(label):
-        d3 = r.d6()
+        d3 = r.d6("weather")
         draws = (d1, d2, d3)
         sections = weather.foul_sections(d3)
         theater = r.state.map_sections
@@ -966,7 +986,7 @@ def _air_superiority(r: _Run) -> None:
     r.go(Phase.LOGISTICS, Side.SYSTEM)                   # a SYSTEM housekeeping beat, like convoys
     for arena in sorted({w.arena for w in r.state.air}):
         axis_f, allied_f = _air_arena_fighters(r.state, arena)
-        ad, ld = r.d6(), r.d6()
+        ad, ld = r.d6("air_superiority"), r.d6("air_superiority")
         axis_total, allied_total = axis_f + ad, allied_f + ld
         if axis_total > allied_total:
             victor, margin = Side.AXIS.value, axis_total - allied_total
@@ -1094,7 +1114,7 @@ def _air_recon(r: _Run, side: Side, tgt: Coord) -> None:
     revealed: list[dict] = []
     draws: list[int] = []
     for e in enemies:
-        offset = r.rng.randint(-2, 2)                    # 42.24: TOE +-2
+        offset = r.dice.stream("recon").randint(-2, 2)   # 42.24: TOE +-2 (not a d6)
         draws.append(offset)
         revealed.append({"class": _barrage_class(e), "toe": max(0, e.strength + offset)})
     r.emit(EventKind.AIR_RECON_RESOLVED, side, f"{side.value}/Air",
@@ -1140,7 +1160,7 @@ def _naval_bombardment(r: _Run, side: Side, pinned: set[str]) -> None:
             continue
         tgt, victim, actual = aim
         cls = _barrage_class(victim)
-        d1, d2 = r.d6(), r.d6()
+        d1, d2 = r.d6("naval_bombardment"), r.d6("naval_bombardment")
         shift = combat_tables.barrage_terrain_shift(     # 12.33 terrain / fortification
             state0.terrain.terrain[tgt], state0.fort_level(tgt), cls)
         pin, loss = combat_tables.barrage_result(cls, actual, d1 * 10 + d2, column_shift=shift)
@@ -1471,7 +1491,7 @@ def _breakdown(r: _Run, side: Side) -> None:
         col = combat_tables.breakdown_column(u.bp_accumulated, u.bar, wshift)
         if col <= u.bp_checked_column:                                       # 21.26 gate
             continue
-        d1, d2 = r.d6(), r.d6()
+        d1, d2 = r.d6("breakdown"), r.d6("breakdown")
         pct = combat_tables.breakdown_result(u.bp_accumulated, u.bar, wshift, d1 * 10 + d2)
         broken = _broken_count(pct, u.effective_strength)
         r.emit(EventKind.BREAKDOWN_CHECKED, side, actor,
@@ -1533,7 +1553,7 @@ def _repair(r: _Run, side: Side) -> None:
             for sid, qty in draws:
                 r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
                        {"supply_id": sid, "commodity": supply.FUEL, "qty": qty, "unit_id": cur.id})
-        die = r.d6()
+        die = r.d6("repair")
         cur = r.state.unit(u.id)                        # re-read after the fuel draw
         repaired = _repaired_count(vclass, combat_tables.field_repair(vclass, die), cur.broken_down)
         if repaired > 0:
@@ -1720,7 +1740,7 @@ def _blow_dumps(r: _Run, policy: Policy, side: Side) -> None:
                     if x.side == side and x.is_combat)
         mod = supply.demolition_modifier(dump, r.state.terrain.terrain[dump.hex],
                                          extra_thirds=thirds, stack_points=stack)
-        die = r.rng.randint(1, 6)
+        die = r.d6("demolition")
         pct = supply.demolition_percent(die + mod)
         destroyed = supply.demolition_loss(dump, pct)
         r.emit(EventKind.SUPPLY_DUMP_BLOWN, side, f"{side.value}/Engineers",
@@ -2320,7 +2340,7 @@ def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
             if raw <= 0 or target_unit is None:
                 continue
             cls = _barrage_class(target_unit)
-            d1, d2 = r.d6(), r.d6()
+            d1, d2 = r.d6("barrage"), r.d6("barrage")
             shift = combat_tables.barrage_terrain_shift(          # 12.33 terrain / fortification
                 state0.terrain.terrain[tgt], state0.fort_level(tgt), cls)
             pin, loss = combat_tables.barrage_result(
@@ -2388,7 +2408,7 @@ def _anti_armor_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
             raw = sum(u.raw_anti_armor for u in armed)
             if raw <= 0:
                 continue
-            d1, d2 = r.d6(), r.d6()
+            d1, d2 = r.d6("anti_armor"), r.d6("anti_armor")
             shift = combat_tables.anti_armor_terrain_shift(      # 14.32 terrain / fortification
                 state0.terrain.terrain[tgt], state0.fort_level(tgt))
             dmg = combat_tables.anti_armor_damage(combat.actual_points(raw, False),
@@ -2479,7 +2499,8 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
         _resolve_surrender(r, side, actor, target, armed_atk, defenders,
                            atk_surr, def_surr, atk_m - def_m, (*atk_md, *def_md))
         return True
-    ab, asm, db, dsm = r.d6(), r.d6(), r.d6(), r.d6()
+    ab, asm, db, dsm = (r.d6("close_assault"), r.d6("close_assault"),
+                        r.d6("close_assault"), r.d6("close_assault"))
     res = combat.resolve(
         attacker_raw=sum(u.raw_offense for u in armed_atk),
         defender_raw=sum(u.raw_defense for u in armed_def),     # unarmed defenders -> 0
@@ -2567,7 +2588,7 @@ def _adjusted_morale(r: _Run, units, *,
     if not live:
         return 0, (0, 0), False
     largest = max(live, key=lambda u: (u.stacking_points, u.strength))
-    d1, d2 = r.d6(), r.d6()
+    d1, d2 = r.d6("morale"), r.d6("morale")
     mod = combat_tables.morale_modifier(largest.cohesion, d1 * 10 + d2)
     surrendered = mod == "SURR" and _honors_surrender(
         largest.morale, largest.cohesion, enemy_overwhelms)

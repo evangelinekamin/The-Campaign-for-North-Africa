@@ -26,6 +26,7 @@ from game.hexmap import distance                                   # noqa: E402
 from game.policy import ScriptedPolicy                             # noqa: E402
 from game.scenario import campaign, rommels_arrival, siege_of_tobruk  # noqa: E402
 from game.state import TruckFormation                              # noqa: E402
+from baselines import BENCHMARKS                                    # noqa: E402
 
 _BENGHAZI = coords.to_axial(coords.parse("A4827"))
 _ALEXANDRIA = coords.to_axial(coords.parse("E3613"))
@@ -141,7 +142,7 @@ def test_rommel_and_siege_stay_byte_identical():
     determinism_signature (axis=allied=ScriptedPolicy(AXIS), seed 42) must hold at the pre-change
     baseline, and no 'AX-Stage' campaign dump may leak into their supplies."""
     axis = ScriptedPolicy(Side.AXIS)
-    baselines = {"rommel": "9339d2b308d7", "siege": "5ba4da88d107"}
+    baselines = BENCHMARKS            # tests/baselines.py -- the ONE place, and why they moved
     for name, build in (("rommel", rommels_arrival), ("siege", siege_of_tobruk)):
         res = run(build(seed=42), axis, axis)
         sig = hashlib.sha256(determinism_signature(res.events).encode()).hexdigest()[:12]

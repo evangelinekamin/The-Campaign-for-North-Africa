@@ -268,17 +268,19 @@ def test_determinism_preserved_with_ports():
 
 
 def test_siege_still_crackable_through_the_throttle():
-    # The Benghazi rear throttle must not starve the Axis barrage below the crack path:
-    # a strong seed still batters the wall through it. The faithful two-level clock (rules
-    # 5/48) runs THREE Operations Stages per game-turn, each with its own 29.0 weather roll,
-    # so the whole seeded dice stream reshuffled again and the seeds that crack SHIFTED with
-    # it -- and shifted once more when General Rommel's 31.4 +5 CPA perturbed the shared
-    # stream, and AGAIN when the SEA-TOBRUK air-interdiction schedule (41.6) drew its per-
-    # ferry CRT dice into that same stream. That is the owner's siege knob
-    # (BARRAGE_HITS_PER_FORT_LEVEL / Axis ammo schedule), NOT a magnitude to bend here. This
-    # test guards only that the path SURVIVES.
+    # The Benghazi rear throttle must not starve the Axis barrage below the crack path: a strong
+    # seed still batters the wall through it.
+    #
+    # The seed note that stood here listed the THREE times these seeds had to be re-pinned because
+    # "the shared stream" was perturbed by the two-level clock, then by Rommel's +5 CPA, then by
+    # the SEA-TOBRUK interdiction schedule "drawing its per-ferry CRT dice into that same stream".
+    # All three were one bug -- the single shared rng -- and T0-0 fixed it: barrage has its own
+    # stream now (game/dice.py), so no unrelated subsystem can move these seeds again.
+    # Re-pinned by the fix: (4, 10, 14) -> (16, 162). MEASURED: the 25.14 crack is rare in both
+    # engines (3/60 seeds old, 2/220 new). The crack RATE is the owner's siege knob, NOT a
+    # magnitude to bend here. This test guards only that the path SURVIVES.
     battered = False
-    for seed in (4, 10, 14):
+    for seed in (16, 162):
         res = run(siege_of_tobruk(seed=seed),
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         if any(e.kind == EventKind.FORT_REDUCED and tuple(e.payload["hex"]) == TOBRUK

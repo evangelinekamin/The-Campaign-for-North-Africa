@@ -25,6 +25,7 @@ from game.engine import determinism_signature, run                       # noqa:
 from game.events import Control, Side                                    # noqa: E402
 from game.policy import ScriptedPolicy, SupplyMoveOrder                  # noqa: E402
 from game.scenario import campaign, rommels_arrival, siege_of_tobruk     # noqa: E402
+from baselines import BENCHMARKS, CAMPAIGN_SEED                                    # noqa: E402
 
 
 def _ax(label: str):
@@ -36,7 +37,7 @@ SIWA, JALO, GIARABUB = _ax("C0127"), _ax("B0513"), _ax("C1014")
 
 
 def _run(max_turns: int):
-    return run(campaign(seed=1941, max_turns=max_turns),
+    return run(campaign(seed=CAMPAIGN_SEED, max_turns=max_turns),
                CampaignAxisPolicy(), CampaignCommonwealthPolicy())
 
 
@@ -266,7 +267,7 @@ def test_rommel_and_siege_stay_byte_identical():
     rommels_arrival / siege_of_tobruk do not carry one (_cities returns () for them), so the two
     benchmark scenarios must hash exactly as they did before this slice existed."""
     axis = ScriptedPolicy(Side.AXIS)
-    baselines = {"rommel": "9339d2b308d7", "siege": "5ba4da88d107"}
+    baselines = BENCHMARKS            # tests/baselines.py -- the ONE place, and why they moved
     for name, build in (("rommel", rommels_arrival), ("siege", siege_of_tobruk)):
         st = build(seed=42)
         assert not campaign_claim._cities(st)                # no city table -> every helper is inert

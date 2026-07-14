@@ -18,10 +18,11 @@ from game.engine import determinism_signature, run
 from game.events import Side
 from game.policy import ScriptedPolicy
 from game.scenario import campaign
+from baselines import CAMPAIGN_SEED                                 # noqa: E402
 
 
 def test_builds_full_theatre():
-    st = campaign(seed=1941)
+    st = campaign(seed=CAMPAIGN_SEED)
     assert st.map_sections == frozenset("ABCDE")
     assert st.season_offset == CAMPAIGN_SEASON_OFFSET     # September 1940 = fall
     assert st.max_turns == FINAL_GT                        # GT111
@@ -36,7 +37,7 @@ def test_campaign_fields_the_september_1940_army():
     # plus the rule-60.31 gap-fill) -- not the Desert-Fox placeholder. The partial setup
     # save omitted two infantry divisions and nearly all the armour; the gap-fill restores
     # them, so the reconstructed divisions and the Libyan Tank Command are on the board.
-    ax = [u for u in campaign(seed=1941).units if u.side == Side.AXIS]
+    ax = [u for u in campaign(seed=CAMPAIGN_SEED).units if u.side == Side.AXIS]
     assert len(ax) >= 90                                   # ~95: 61 extracted + ~34 gap-fill
     formations = {u.formation for u in ax}
     assert any("Cirene" in f for f in formations)          # reconstructed 63rd Cirene
@@ -48,7 +49,7 @@ def test_campaign_runs_the_reinforcement_flow():
     # C2-3: the rule-20 reinforcement schedule ([4.43b]/[4.43a]) is wired in -- Rommel and
     # the DAK arrive from Tripoli from GT20, the 8th Army builds up from Cairo. Checked at
     # build time; the full-span arrival is exercised by test_runs_full_span_to_campaign_victory.
-    st = campaign(seed=1941)
+    st = campaign(seed=CAMPAIGN_SEED)
     reinf = [u for u in st.units if u.arrival_turn > 0]
     assert len(reinf) >= 150                              # the major formations of both schedules
     rommel = next(u for u in st.units if "Rommel" in u.id)
@@ -66,7 +67,7 @@ def test_campaign_supply_economy():
     # C3-1: the convoy/supply economy is wired -- the Commonwealth's inexhaustible Suez base
     # (Cairo + Alexandria on MAJOR_CITY hexes, exempt from evaporation) and the Axis
     # Mediterranean convoy faucet (56.4, landing at Benghazi in the west, to be hauled east).
-    st = campaign(seed=1941)
+    st = campaign(seed=CAMPAIGN_SEED)
     assert st.convoys and st.ports                          # the engine faucet is seeded
     # base=True marks BOTH the rule-57 strategic depots and the 52.1 wells (52.44: water in a
     # well does not evaporate either) -- the two rear DEPOTS are the ones this test is about.
@@ -89,7 +90,7 @@ def test_campaign_commonwealth_can_attack():
     # deliberately tight CW forward supply lets that advance REACH Benghazi under crude scripted play
     # is a balance question, not an invariant: the greedy script culminates at once, as both sides do.
     from dataclasses import replace
-    board = run(campaign(seed=1941, max_turns=13), CampaignAxisPolicy(),
+    board = run(campaign(seed=CAMPAIGN_SEED, max_turns=13), CampaignAxisPolicy(),
                 CampaignCommonwealthPolicy()).final
     pol = CampaignCommonwealthPolicy()
     attacker = ScriptedPolicy(attacker=Side.ALLIED)
@@ -147,7 +148,7 @@ def test_campaign_defensive_supply_integrity():
     from game import coords
     from game.hexmap import distance
     beng = coords.to_axial(coords.parse("A4827"))
-    res = run(campaign(seed=1941, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    res = run(campaign(seed=CAMPAIGN_SEED, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     seeded = {s.id: s.hex for s in res.initial.supplies if s.base}
     assert seeded and {s.id: s.hex for s in res.final.supplies if s.base} == seeded   # bases pinned
     spearhead = min(distance(u.hex, beng) for u in res.final.living(Side.ALLIED) if u.is_combat)
@@ -172,7 +173,7 @@ def test_campaign_railhead_port_uses_the_chart_tonnage():
     # Bug 2: PORT-Matruh was silently throttled at Alexandria's 15000t via a "mersa matruh" vs
     # "mersa_matruh" data-key miss; the 55.3 chart value is 250t -- and tonnage is the sole 55.14
     # gate, so this one number is the entire CW rail throttle.
-    matruh = next(p for p in campaign(seed=1941).ports if p.id == "PORT-Matruh")
+    matruh = next(p for p in campaign(seed=CAMPAIGN_SEED).ports if p.id == "PORT-Matruh")
     assert matruh.cap_tons == 250
 
 
@@ -180,9 +181,9 @@ def test_campaign_malta_throttles_the_axis_convoy():
     # C4 counterweight: rule 44 (Malta) abstracted -- the Axis Mediterranean convoy (60.37 lane "2")
     # is under a Commonwealth interdiction schedule, so it no longer lands its full tonnage
     # uncontested; each monthly arrival is skimmed on the 41.66 CRT.
-    st = campaign(seed=1941, max_turns=24)
+    st = campaign(seed=CAMPAIGN_SEED, max_turns=24)
     assert any(o.lane == "2" for o in st.interdictions)          # Malta is seeded on the Axis lane
-    res = run(campaign(seed=1941, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    res = run(campaign(seed=CAMPAIGN_SEED, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     assert [e for e in res.events if e.kind.name == "CONVOY_INTERDICTED"]   # the convoy is skimmed
 
 
@@ -196,13 +197,13 @@ def test_campaign_tobruk_lifeline_holds_only_when_the_commonwealth_takes_it():
     # Tobruk), flagged with the side that HOLDS the city at Game-Turn 1 -- the Axis, which is what
     # engine._air_port reads to decide whose harbour may be bombed. The 56.15 gate, keyed on CONTROL,
     # is what actually decides which side's convoy sails into it. See tests/test_campaign_lifeline.py.
-    st = campaign(seed=1941, max_turns=12)
+    st = campaign(seed=CAMPAIGN_SEED, max_turns=12)
     assert any(c.lane == "SEA-TOBRUK" for c in st.convoys)              # the ferry is seeded every turn
     tobruk_ports = [p for p in st.ports if p.id == "PORT-Tobruk"]
     assert len(tobruk_ports) == 1 and tobruk_ports[0].side == Side.AXIS   # one harbour, the GT1 holder's
     tob = coords.to_axial(coords.parse("C4807"))
     assert st.control.get(tob) == Side.AXIS                             # Axis holds Tobruk in Sep 1940
-    res = run(campaign(seed=1941, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    res = run(campaign(seed=CAMPAIGN_SEED, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     alt = next(s for s in res.final.supplies if s.id == "AL-Tobruk")
     assert alt.ammo == 0 and alt.fuel == 0 and alt.stores == 0          # empty: the ferry never landed while Axis-held
 
@@ -216,7 +217,7 @@ def test_the_standing_garrison_order_keeps_the_cities_it_banks():
     # a city (on it and supplied = the exact 64.73 occupier test) is never given a move order.
     from game.campaign_policy import garrison_units, hold_garrisons
     from game.policy import MoveOrder
-    st = campaign(seed=1941)
+    st = campaign(seed=CAMPAIGN_SEED)
     cv = st.victory
     banked = [n for ax, a, c, n in cv.cities if cv._occupier(st, ax) == Side.AXIS]
     assert {"Tobruk", "Bardia"} <= set(banked)          # the Axis opens holding them, supplied
@@ -246,7 +247,7 @@ def test_runs_full_span_to_campaign_victory():
     # The headline: the engine runs the entire GT1..111 campaign and terminates through
     # rule 64.7 (a graded 64.76 result or an auto-win/annihilation), not the built-in
     # Race-for-Tobruk logic.
-    res = run(campaign(seed=1941), axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
+    res = run(campaign(seed=CAMPAIGN_SEED), axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
     assert res.final.turn <= FINAL_GT                      # by December 1942 (earlier if 64.7 auto-win)
     assert res.winner in (Side.AXIS, Side.ALLIED, None)    # None = a 64.76 draw
     assert "64.7" in res.reason

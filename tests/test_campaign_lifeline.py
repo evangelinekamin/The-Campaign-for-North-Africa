@@ -53,6 +53,7 @@ from game.scenario import (_AXIS_TOBRUK_LANE, campaign,                  # noqa:
                            rommels_arrival, siege_of_tobruk)
 from game.state import AirMission                                        # noqa: E402
 from game.supply import port_landing_cap                                 # noqa: E402
+from baselines import ROMMELS_ARRIVAL, SIEGE_OF_TOBRUK              # noqa: E402
 
 TOBRUK = coords.to_axial(coords.parse("C4807"))
 BARDIA = coords.to_axial(coords.parse("C4321"))
@@ -316,5 +317,5 @@ def test_benchmark_scenarios_byte_identical():
     """Everything above is campaign-only: the Tobruk lanes and ports are seeded in scenario.campaign
     (rommels_arrival keeps its own _rommel_ports / _rommel_convoys), and the take-and-hold needs the
     64.73 city table, which campaign_claim._cities returns () for in every other scenario."""
-    assert _sig(rommels_arrival) == "9339d2b308d7"
-    assert _sig(siege_of_tobruk) == "5ba4da88d107"
+    assert _sig(rommels_arrival) == ROMMELS_ARRIVAL     # tests/baselines.py -- the ONE place
+    assert _sig(siege_of_tobruk) == SIEGE_OF_TOBRUK

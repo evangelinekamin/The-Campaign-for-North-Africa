@@ -49,6 +49,7 @@ from game.events import Control, Side                               # noqa: E402
 from game.hexmap import distance                                    # noqa: E402
 from game.policy import ScriptedPolicy                              # noqa: E402
 from game.scenario import campaign, rommels_arrival, siege_of_tobruk  # noqa: E402
+from baselines import BENCHMARKS, CAMPAIGN_SEED                                    # noqa: E402
 
 MATRUH = coords.to_axial(coords.parse("D3714"))       # the railhead (60.7) -- and the line
 ELDABA = coords.to_axial(coords.parse("D3329"))       # the next station east (54.3)
@@ -76,7 +77,7 @@ def _in_the_delta(state, side=Side.ALLIED) -> int:
 def gt12():
     """The campaign run up to the eve of Operation Compass -- the concentration with no offensive
     yet to spend it. One run, shared: the engine is deterministic."""
-    return run(campaign(seed=1941, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    return run(campaign(seed=CAMPAIGN_SEED, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
 
 
 # --- the line ------------------------------------------------------------------------------
@@ -88,7 +89,7 @@ def test_the_line_is_the_rail_fed_railhead_and_it_retracts():
     Matruh and the line falls back down the railway with the trains (54.3); drive him over every
     station and the line becomes the terminus again -- the hex to retake to switch the railway back
     on, not a reason to have no line at all."""
-    st = campaign(seed=1941)
+    st = campaign(seed=CAMPAIGN_SEED)
     assert railhead(st).id == "AL-Stage-Matruh"
     assert railhead(st).hex == MATRUH
 
@@ -114,7 +115,7 @@ def test_the_defender_anchors_on_the_line_not_on_the_rear_base():
     surrendered on Game-Turn 2.
 
     The defensive view points both objectives at the line, so the garrison stays."""
-    st = campaign(seed=1941)
+    st = campaign(seed=CAMPAIGN_SEED)
     pol = CampaignCommonwealthPolicy()
     assert not pol._on_offensive(st)
 
@@ -195,7 +196,7 @@ def test_the_concentration_never_marches_the_army_backwards():
     concentration can therefore never walk the army back out of ground it has taken -- which an
     assembly that simply rallied everyone on the railhead would do the moment Operation Compass
     ended, abandoning every fortress it had just captured."""
-    st = campaign(seed=1941)
+    st = campaign(seed=CAMPAIGN_SEED)
     pol = CampaignCommonwealthPolicy()
     line = railhead(st)
     depth = distance(line.hex, st.objective_for(Side.ALLIED))
@@ -271,7 +272,7 @@ def test_the_commonwealth_can_mount_a_supplied_offensive():
     any point in Operation Compass -- the faucet and the lorry relay were healthy and the depot at
     Sidi Barrani was full, but the army was sixty hexes away and there was nobody to drink it. With
     the army on the line it launches from, the offensive is supplied where it is fought."""
-    res = run(campaign(seed=1941, max_turns=COMPASS.stop - 1),
+    res = run(campaign(seed=CAMPAIGN_SEED, max_turns=COMPASS.stop - 1),
               CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     fin, vic = res.final, CampaignVictory()
     forward = [u for u in _combat(fin, Side.ALLIED)
@@ -297,7 +298,7 @@ def test_rommel_and_siege_stay_byte_identical():
     benchmark scenarios never construct (they run ScriptedPolicy on both sides), and neither carries
     a railway for it to anchor on. They must not move one byte."""
     axis = ScriptedPolicy(Side.AXIS)
-    baselines = {"rommel": "9339d2b308d7", "siege": "5ba4da88d107"}
+    baselines = BENCHMARKS            # tests/baselines.py -- the ONE place, and why they moved
     for name, build in (("rommel", rommels_arrival), ("siege", siege_of_tobruk)):
         res = run(build(seed=42), axis, axis)
         sig = hashlib.sha256(determinism_signature(res.events).encode()).hexdigest()[:12]

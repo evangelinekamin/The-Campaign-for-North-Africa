@@ -46,6 +46,7 @@ from game.events import EventKind                                    # noqa: E40
 from game.policy import MotorizeOrder, ScriptedPolicy, SupplyMoveOrder   # noqa: E402
 from game.scenario import campaign, rommels_arrival, siege_of_tobruk # noqa: E402
 from game.state import Side, TruckFormation                          # noqa: E402
+from baselines import ROMMELS_ARRIVAL, SIEGE_OF_TOBRUK              # noqa: E402
 
 
 class _Column(ScriptedPolicy):
@@ -285,8 +286,8 @@ def test_rommel_and_siege_stay_byte_identical():
     signatures would shift. Measuring a rulebook magnitude against a placeholder pool measures the
     placeholder. The campaign's parks ARE the transcribed 60.33/60.43 charts."""
     axis = ScriptedPolicy(Side.AXIS)
-    for name, build, baseline in (("rommel", rommels_arrival, "9339d2b308d7"),
-                                  ("siege", siege_of_tobruk, "5ba4da88d107")):
+    for name, build, baseline in (("rommel", rommels_arrival, ROMMELS_ARRIVAL),
+                                  ("siege", siege_of_tobruk, SIEGE_OF_TOBRUK)):
         st = build(seed=42)
         assert not st.motorized_supply and not st.motorization
         res = run(st, axis, axis)

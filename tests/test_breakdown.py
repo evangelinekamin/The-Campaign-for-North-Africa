@@ -343,6 +343,9 @@ from game.state import SupplyUnit
 
 
 class _FixedDie:                                                # force a known 22.8 field die
+    """Loaded into the REPAIR stream alone (_Run.dice.load, game.dice), so pinning the field-
+    repair die cannot reach the weather or breakdown dice this scenario also rolls."""
+
     def __init__(self, val):
         self.val = val
 
@@ -377,7 +380,7 @@ def _repair_run(tank, *, weather="clear", die=3, fuel=50):
                    consumed={}, initial_supply={"FUEL": fuel})
     r = _Run(st)
     r.state = st
-    r.rng = _FixedDie(die)
+    r.dice.load("repair", _FixedDie(die))
     _repair(r, Side.AXIS)
     return r
 
@@ -428,7 +431,7 @@ def test_repair_skipped_in_enemy_controlled_hex():
                    supplies=(dump,), consumed={}, initial_supply={"FUEL": 50})
     r = _Run(st)
     r.state = st
-    r.rng = _FixedDie(3)
+    r.dice.load("repair", _FixedDie(3))
     _repair(r, Side.AXIS)
     assert not r.events                                          # 22.13a
     assert r.state.unit("T1").broken_down == 6

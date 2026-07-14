@@ -42,6 +42,7 @@ from game.policy import BuildOrder, MoveOrder, Policy, ScriptedPolicy
 from game.scenario import campaign, rommels_arrival
 from game.state import GameState, StepRecord, SupplyUnit, Unit, VP
 from game.terrain import Mobility, Terrain
+from baselines import ROMMELS_ARRIVAL                               # noqa: E402
 
 
 # --- a tiny surveyed line, so the rules can be pinned without a 111-turn campaign ---------------
@@ -346,4 +347,4 @@ def test_a_scenario_that_surveys_no_line_can_never_build_and_stays_byte_identica
     res = run(st, ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.AXIS))
     assert not any(e.phase == Phase.CONSTRUCTION for e in res.events)
     sig = hashlib.sha256(determinism_signature(res.events).encode()).hexdigest()[:12]
-    assert sig == "9339d2b308d7", f"rule 24 moved the byte-locked benchmark: {sig}"
+    assert sig == ROMMELS_ARRIVAL, f"rule 24 moved the benchmark: {sig}"   # tests/baselines.py

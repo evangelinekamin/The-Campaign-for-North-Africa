@@ -170,7 +170,10 @@ class _RommelMover(Policy):
 
 
 class _FixedDice:
-    """A drop-in for _Run.rng returning a pinned d6 sequence (raises if over-drawn)."""
+    """A pinned d6 sequence (raises if over-drawn), loaded into ONE subsystem's stream via
+    _Run.dice.load (game.dice). Pinning a stream by name rather than replacing the engine's
+    whole rng is the point of the dice box: a pinned Rommel die can no longer bend the
+    weather, and a test that pins nothing else proves that subsystem drew what it drew."""
 
     def __init__(self, seq):
         self.seq = list(seq)
@@ -212,7 +215,7 @@ def test_rommel_does_not_move_for_the_allied_side_or_when_in_germany():
 
 def test_berlin_recall_sends_rommel_to_germany_and_signals_the_clamp():
     r = _Run(_state([_unit("GE-Pz", Side.AXIS, (0, 0))], Rommel(hex=(0, 0))))
-    r.rng = _FixedDice([6, 6])                             # a 12
+    r.dice.load("rommel", _FixedDice([6, 6]))              # a 12
     assert _rommel_recall(r) is True                      # -> _initiative clamps the Axis rating
     ev = [e for e in r.events if e.kind == EventKind.ROMMEL_RECALLED]
     assert len(ev) == 1 and ev[0].payload["in_germany"] is True and ev[0].rng_draws == (6, 6)
@@ -221,7 +224,7 @@ def test_berlin_recall_sends_rommel_to_germany_and_signals_the_clamp():
 
 def test_berlin_recall_stays_put_on_a_non_twelve():
     r = _Run(_state([_unit("GE-Pz", Side.AXIS, (0, 0))], Rommel(hex=(0, 0))))
-    r.rng = _FixedDice([3, 4])
+    r.dice.load("rommel", _FixedDice([3, 4]))
     assert _rommel_recall(r) is False
     # The roll is now emitted UNCONDITIONALLY so its dice are certified even on a non-12; the
     # in_germany=False fold is a no-op on the on-map Rommel.
@@ -232,7 +235,7 @@ def test_berlin_recall_stays_put_on_a_non_twelve():
 
 def test_berlin_recall_auto_returns_then_rolls_normally():
     r = _Run(_state([_unit("GE-Pz", Side.AXIS, (0, 0))], Rommel(hex=(0, 0), in_germany=True)))
-    r.rng = _FixedDice([2, 5])                             # returns, then a non-12 roll
+    r.dice.load("rommel", _FixedDice([2, 5]))              # returns, then a non-12 roll
     assert _rommel_recall(r) is False
     # Two beats now: the dice-free auto-return, then the certified (non-12) roll.
     ev = [e for e in r.events if e.kind == EventKind.ROMMEL_RECALLED]
@@ -244,7 +247,7 @@ def test_berlin_recall_auto_returns_then_rolls_normally():
 
 def test_recall_draws_no_dice_and_is_silent_when_no_rommel():
     r = _Run(_state([_unit("GE-Pz", Side.AXIS, (0, 0))]))  # rommel None
-    r.rng = _FixedDice([])                                 # would IndexError if any die were drawn
+    r.dice.load("rommel", _FixedDice([]))                  # would IndexError if any die were drawn
     assert _rommel_recall(r) is False
     assert not any(e.kind.name.startswith("ROMMEL") for e in r.events)
 
@@ -254,7 +257,7 @@ def test_recall_clamps_axis_initiative_to_three_and_forces_a_roll():
                  initiative_fixed=Side.AXIS, initiative_fixed_until=99,
                  initiative_ratings={"AXIS": 5, "ALLIED": 0})
     r = _Run(st)
-    r.rng = _FixedDice([6, 1])                             # axis 6 + min(5,3)=9 ; allied 1 + 0 = 1
+    r.dice.load("initiative", _FixedDice([6, 1]))          # axis 6 + min(5,3)=9 ; allied 1 + 0 = 1
     _initiative(r, axis_recalled=True)
     ev = next(e for e in r.events if e.kind == EventKind.INITIATIVE_DETERMINED)
     assert "fixed" not in ev.payload                      # 7.15 hold suspended -> a real roll

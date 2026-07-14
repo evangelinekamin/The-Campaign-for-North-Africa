@@ -244,15 +244,23 @@ def test_siege_of_tobruk_machinery_intact():
     wall is still battered down (FORT_REDUCED fires at the objective across seeds),
     which never happens with siege OFF.
 
-    Seed note: the faithful two-level clock (rules 5/48) runs THREE Operations Stages per
-    game-turn, each with its own 29.0 weather roll, so the seeded stream is reshuffled again
-    and the seeds that crack shifted with it -- and again when General Rommel's 31.4 +5 CPA
-    (his 300th-Oasis companion) widened one Axis move at El Agheila, and AGAIN when the
-    SEA-TOBRUK air-interdiction schedule (41.6) drew its per-ferry CRT dice into the shared
-    stream. This guards only that the 25.14 path SURVIVES -- the crack rate is the owner's
-    siege knob, not tuned here."""
+    SEED NOTE -- AND THIS IS THE LAST TIME IT SHOULD EVER NEED WRITING. The note that used to
+    stand here recorded the seeds being re-pinned THREE separate times: once when the two-level
+    clock added a weather roll per Operations Stage, once when Rommel's 31.4 +5 CPA widened an
+    Axis move, and once when "the SEA-TOBRUK air-interdiction schedule (41.6) drew its per-ferry
+    CRT dice into the shared stream". Every one of those was the SAME BUG -- one shared rng, so
+    any subsystem that drew a die re-indexed the barrage. That is T0-0, and it is fixed: the
+    barrage now has its own stream (game/dice.py) and an unrelated subsystem can no longer move
+    these seeds.
+
+    Re-pinned once more, by the fix itself: (4, 10, 14) -> (16, 162). MEASURED, siege_of_tobruk,
+    the 25.14 wall-batter is a RARE event in both engines -- it fires on 3/60 seeds under the old
+    shared stream (which is exactly why 4/10/14 were chosen) and on 2/220 under the new one. The
+    rate is small either way and the difference is not significant on these counts; the crack rate
+    is the owner's siege knob (BARRAGE_HITS_PER_FORT_LEVEL / the Axis ammo schedule), not a
+    magnitude to bend here. This guards only that the 25.14 path SURVIVES."""
     battered = False
-    for seed in (4, 10, 14):
+    for seed in (16, 162):
         res = run(siege_of_tobruk(seed=seed),
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         assert res.initial.siege_rules is True

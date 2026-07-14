@@ -55,6 +55,7 @@ from game.scenario import (_campaign_cw_rail_line, _campaign_rail_cargo,  # noqa
                            siege_of_tobruk)
 from game.state import Convoy                                            # noqa: E402
 from game.terrain import Terrain                                         # noqa: E402
+from baselines import BENCHMARKS, CAMPAIGN_SEED                                    # noqa: E402
 
 MATRUH = coords.to_axial(coords.parse("D3714"))       # the railhead (60.7)
 ELDABA = coords.to_axial(coords.parse("D3329"))       # the next station east (54.3)
@@ -78,7 +79,7 @@ def test_the_rail_line_is_seeded_forward_to_rear():
     Western Desert Railway stations east of it, ending at the inexhaustible Delta base (57).
     Ordered, because the order IS the resolution -- the first station the enemy does not hold
     is this turn's railhead."""
-    st = campaign(seed=1941)
+    st = campaign(seed=CAMPAIGN_SEED)
     line = _campaign_cw_rail_line(st.supplies)
     assert line == ("AL-Stage-Matruh", "AL-Stage-ElDaba", "AL-Stage-ElHamman", "AL-Alexandria")
     by_id = {s.id: s for s in st.supplies}
@@ -97,7 +98,7 @@ def test_a_convoy_with_no_line_reads_56_15_verbatim():
     the destination hex is not enemy-held, and never sails once it is. This is the byte-identity
     guarantee, stated as a property."""
     assert Convoy.__dataclass_fields__["retarget"].default == ()
-    st = campaign(seed=1941)
+    st = campaign(seed=CAMPAIGN_SEED)
     ferry = next(c for c in st.convoys if c.lane == "SEA-TOBRUK")
     assert ferry.retarget == ()
     assert _convoy_dest(st, ferry) is None                         # Axis holds Tobruk at GT1 (56.15)
@@ -113,7 +114,7 @@ def test_the_railhead_retracts_east_when_the_enemy_stands_on_it():
     """THE FIX for defect (A), stated at the seam. An enemy on Mersa Matruh does not switch the
     Commonwealth's railway off -- it pushes the railhead back one station (54.3). Push him down
     the whole line and the trains still run, to the Delta base itself."""
-    st = campaign(seed=1941)
+    st = campaign(seed=CAMPAIGN_SEED)
     rail = next(c for c in st.convoys if c.lane == "CW-RAILHEAD")
     by_id = {s.id: s for s in st.supplies}
 
@@ -135,7 +136,7 @@ def test_the_rail_lane_keeps_delivering_after_the_railhead_hex_is_enemy_controll
     overrun the railhead country early -- that was the whole bug. What must not happen is the
     faucet dying with it: rail cargo keeps landing on the game-turns the old code cancelled, and
     it lands in the station the Commonwealth still holds."""
-    res = run(campaign(seed=1941, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    res = run(campaign(seed=CAMPAIGN_SEED, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     line = set(_campaign_cw_rail_line(res.initial.supplies))
     hexes = {s.id: s.hex for s in res.initial.supplies}
 
@@ -230,7 +231,7 @@ def test_the_harbour_does_not_throttle_the_railway():
     This does NOT make the Commonwealth lifeline uncuttable -- it moves the cut to where it belongs.
     You do not cut a railway by bombing a quay; you cut it by TAKING THE RAIL HEXES, and the railhead
     then retracts east down the line (test_the_railhead_retracts_east_when_the_enemy_stands_on_it)."""
-    st = campaign(seed=1941)
+    st = campaign(seed=CAMPAIGN_SEED)
     rail = [c for c in st.convoys if c.lane == "CW-RAILHEAD"]
     assert rail and all(c.rail for c in rail), "the rail lane is not flagged as a railway"
     assert all(not c.rail for c in st.convoys if c.lane != "CW-RAILHEAD"), \
@@ -256,7 +257,7 @@ def test_the_railhead_actually_holds_fuel_now():
     With the charted tonnage on the trains and the quay out of the way, the railhead carries a real
     reservoir -- the thing a 32.16 supply trace can actually reach -- and the Commonwealth lands
     Fuel and Ammunition of the same ORDER as the Axis, instead of a thirtieth."""
-    res = run(campaign(seed=1941, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    res = run(campaign(seed=CAMPAIGN_SEED, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     rail_landed = {"AMMO": 0, "FUEL": 0}
     st, peak_fuel, peak_ammo = res.initial, 0, 0
     for e in res.events:
@@ -308,7 +309,7 @@ def test_the_commonwealth_field_supply_depots_are_seeded_within_one_truck_hop():
     convoy hop (53.22) of the one behind it, so the relay can actually bucket-brigade into it.
     (What blocks the second leg at Game-Turn 1 is the Italian 10th Army standing on it -- which
     is the point of the offensive, not a seeding bug.)"""
-    st = campaign(seed=1941)
+    st = campaign(seed=CAMPAIGN_SEED)
     depots = {s.id: s for s in st.supplies if s.id.startswith("AL-Stage")}
     assert {"AL-Stage-Matruh", "AL-Stage-Barrani", "AL-Stage-Sollum"} <= set(depots)
     assert depots["AL-Stage-Barrani"].hex == BARRANI and depots["AL-Stage-Sollum"].hex == SOLLUM
@@ -340,7 +341,7 @@ def test_the_commonwealth_trucks_actually_run():
     """THE ACCEPTANCE for (B). The lorry pool must CYCLE -- load at the railhead, haul west, come
     back -- for the whole span, not drive to Cairo once and idle there. Measured against the old
     behaviour: 10 truck moves in 111 game-turns, both formations parked on Cairo at the end."""
-    res = run(campaign(seed=1941, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    res = run(campaign(seed=CAMPAIGN_SEED, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     moves = [e for e in res.events if e.kind.name == "TRUCK_MOVED" and e.side == Side.ALLIED]
     unloads = [e for e in res.events if e.kind.name == "TRUCK_UNLOADED" and e.side == Side.ALLIED]
     assert len(moves) >= 24, f"the Commonwealth pool barely ran: {len(moves)} moves in 24 game-turns"
@@ -379,7 +380,7 @@ def test_the_relay_never_siphons_the_army_s_own_field_dumps():
     of the 1,530 Fuel Points its field dumps owned, and a dump with no fuel cannot relocate (32.24),
     so every one of them froze on the railhead. The army then advanced with no mobile supply behind
     it and could hold nothing it took -- it lost Benghazi outright. See _relay_source."""
-    res = run(campaign(seed=1941, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    res = run(campaign(seed=CAMPAIGN_SEED, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     # A FAUCET is bottomless (campaign_policy._is_faucet): the port of arrival OR a rule-57 strategic
     # base. Cairo and Alexandria are the second kind -- "if he wants something, it is in Cairo" (57.0)
     # -- and the [60.43] chart stations 50 of the Commonwealth's 195 Truck Points ON them. A lorry
@@ -433,7 +434,7 @@ def test_operation_compass_has_stocked_supply_forward_of_the_railhead():
     open desert is only about six hexes. The next link that WOULD reach it, Sollum, is inside the
     Italian 10th Army's front line. That is an army-deployment and offensive-pacing problem for the
     scripted policy (the same one that stops it garrisoning what it takes), not a broken faucet."""
-    res = run(campaign(seed=1941, max_turns=22), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    res = run(campaign(seed=CAMPAIGN_SEED, max_turns=22), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     st, stocked_turns = res.initial, 0
     for e in res.events:
         st = apply(st, e)
@@ -454,7 +455,7 @@ def test_the_staging_chain_never_leapfrogs():
     the 32.3 leapfrog bridge must not walk the chain the trucks feed. (The Axis mixin already
     hides its AX-Stage waypoints for exactly this reason; the Commonwealth chain needs the same
     guard, and would otherwise unstage itself one hop at a time.)"""
-    res = run(campaign(seed=1941, max_turns=16), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    res = run(campaign(seed=CAMPAIGN_SEED, max_turns=16), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     start = {s.id: s.hex for s in res.initial.supplies if s.id.startswith(("AL-Stage", "AX-Stage"))}
     assert start
     for s in res.final.supplies:
@@ -469,7 +470,7 @@ def test_conservation_holds_over_the_faucet():
     between dumps. Nothing is minted: the recorded log folds byte-identically back to the final
     state, and game.invariants (on_hand + consumed == initial, per commodity) never raises --
     the engine checks it after every applied event, so a clean run IS the conservation proof."""
-    res = run(campaign(seed=1941, max_turns=16), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    res = run(campaign(seed=CAMPAIGN_SEED, max_turns=16), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     assert fold(res.initial, res.events) == res.final
     for c, initial in res.final.initial_supply.items():
         on_hand = (sum(getattr(s, c.lower()) for s in res.final.supplies)
@@ -481,7 +482,7 @@ def test_rommel_and_siege_stay_byte_identical():
     """THE HARD CONSTRAINT. The Convoy field is DEFAULTED and the depots are campaign-only, so the
     two benchmark scenarios must hash exactly as they did before this slice existed."""
     axis = ScriptedPolicy(Side.AXIS)
-    baselines = {"rommel": "9339d2b308d7", "siege": "5ba4da88d107"}
+    baselines = BENCHMARKS            # tests/baselines.py -- the ONE place, and why they moved
     for name, build in (("rommel", rommels_arrival), ("siege", siege_of_tobruk)):
         st = build(seed=42)
         assert all(c.retarget == () for c in st.convoys)              # no rail line leaks in

@@ -32,6 +32,7 @@ from game.policy import MoveOrder, ScriptedPolicy
 from game.scenario import campaign, rommels_arrival, siege_of_tobruk
 from game.state import SupplyUnit
 from game.terrain import Terrain
+from baselines import BENCHMARKS                                    # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -200,7 +201,7 @@ def test_rommel_and_siege_stay_byte_identical():
     assert siege_of_tobruk(seed=42).dump_capture is False
 
     axis = ScriptedPolicy(Side.AXIS)
-    baselines = {"rommel": "9339d2b308d7", "siege": "5ba4da88d107"}
+    baselines = BENCHMARKS            # tests/baselines.py -- the ONE place, and why they moved
     for name, build in (("rommel", rommels_arrival), ("siege", siege_of_tobruk)):
         res = run(build(seed=42), axis, axis)
         sig = hashlib.sha256(determinism_signature(res.events).encode()).hexdigest()[:12]
