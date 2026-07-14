@@ -33,15 +33,16 @@ from .campaign_claim import (STAGING, garrison_units,   # the rule-64.73 standin
                              hold_depots, hold_garrisons)   # (game.campaign_staff and the tests import them from here)
 from .events import Control, Side
 from .hexmap import Coord, distance
-from .policy import (AttackOrder, BuildOrder, DemolitionOrder, MoveOrder, ScriptedPolicy,
-                     SupplyMoveOrder, TruckOrder)
+from .policy import (AttackOrder, BuildOrder, DemolitionOrder, MotorizeOrder, MoveOrder,
+                     ScriptedPolicy, SupplyMoveOrder, TruckOrder)
 from .scenario import _CONVOY_SPLIT_56_22
 from .state import GameState, SupplyUnit
 
 __all__ = ["CAMPAIGN_CW_OFFENSIVES", "CampaignAxisPolicy", "CampaignCommonwealthPolicy",
-           "OffensiveSchedule", "build_the_chain", "campaign_truck_orders", "deny_dumps",
-           "garrison_units", "hold_depots", "hold_garrisons", "keep_in_trace", "railhead",
-           "take_and_hold_moves", "take_and_hold_supply"]
+           "OffensiveSchedule", "build_the_chain", "campaign_motorization",
+           "campaign_truck_orders", "deny_dumps", "garrison_units", "hold_depots",
+           "hold_garrisons", "keep_in_trace", "railhead", "take_and_hold_moves",
+           "take_and_hold_supply"]
 
 
 # --- the rule-64.73 standing orders, SIDE-GENERIC (see game.campaign_claim) -----------------------
@@ -127,6 +128,116 @@ def take_and_hold_supply(state: GameState, side: Side, army: list[SupplyMoveOrde
     busy = {o.supply_id for o in follow}
     rest = [o for o in hold_depots(army, state, side) if o.supply_id not in busy]
     return campaign_claim.keep_off_the_spine(follow + rest, state, side)
+
+
+def _still_following(view: GameState, side: Side, dump: SupplyUnit) -> bool:
+    """Has this depot still got an army IN FRONT of it -- somewhere forward to be carried to?
+
+    THE STABLE TEST, and it has to be stable or 32.32 eats the campaign. The Organization Phase
+    commits the lorries BEFORE the army moves (32.32), but the depot is carried AFTER it
+    (engine._supply_movement), so the quartermaster's reach-based leapfrog names a DIFFERENT set of
+    depots at the two moments -- an OpStage's ZOC and the front's exact hex both shift under it. A
+    column stood down on that flicker is a column that is not there when the depot needs it:
+    MEASURED (seed 7, before this test existed), the Eighth Army's depots were REFUSED a move 71
+    times against 63 granted, its offensives died, and three of five seeds froze at the identical
+    445-20 -- the signature of a campaign in which nothing changes hands. That was never rule
+    32.32's thirty Truck Points doing the damage; it was standing the column down and raising it
+    again every OpStage, which is a per-hex toll and precisely what the rule is NOT.
+
+    So: distance to the objective, no reach, no ZOC. The army only ever gets closer to its
+    objective, so a depot behind it stays behind it, and a column raised for it STANDS -- which is
+    what 32.32 says a Motorization Point assignment is.
+
+    `view` is the POLICY'S OWN view, not the raw state, and that matters: off its offensive windows
+    the Commonwealth plans its supply against the RAILHEAD (_forward_view), not against Benghazi, so
+    a persistence test run on the raw objective would pin a column to every rear depot in Egypt for
+    the whole war -- measured, 92% of the Eighth Army's Medium park under depots that were never
+    going anywhere. The test has to ask the question the quartermaster actually asked."""
+    obj = view.objective_for(side)
+    here = distance(dump.hex, obj)
+    return any(distance(u.hex, obj) < here for u in view.living(side) if u.is_combat)
+
+
+def campaign_motorization(state: GameState, side: Side, wish: list[SupplyMoveOrder],
+                          view: GameState | None = None) -> list[MotorizeOrder]:
+    """[32.32] THE DECISION THE DESERT WAR IS ACTUALLY ABOUT: which depots get the lorries.
+
+    "THIRTY Motorization Points are required to transport one real supply unit", and by 32.51 a
+    Motorization Point IS a Medium Truck Point -- so every depot this staff pushes forward is thirty
+    Medium Truck Points lifted OUT of the freight relay that is hauling the army's fuel and
+    ammunition to the front. The park is finite and charted (60.33: the Axis fields 150 Medium Points
+    on-map, four columns and a bit; 60.43: the Commonwealth 130, four), so the pool RUNS DRY, and
+    when it does the rest of the quartermaster's list simply does not move. That is the whole point.
+    Free, a depot outran the infantry it fed (15 CP an OpStage) and the desert filled with them.
+
+    A STANDING RESERVATION (32.32: attached AND detached only in the Organization Phase; 32.56 "the
+    unit they are ASSIGNED to"), so the assignment is rebuilt each Organization Phase against a
+    PRIORITY LIST and then LEFT ALONE:
+
+      1. the depots the quartermaster names this OpStage, in take_and_hold_supply's own order --
+         the ones marching with a garrison to a rule-64.73 city first (a depot is the only thing
+         that makes a city BANKABLE), the ordinary forward leapfrog after;
+      2. then every depot already under a column that still has an army in front of it to follow
+         (_still_following) -- so a column STANDS across the OpStages instead of being raised and
+         stood down every beat, which is a per-hex toll and not this rule.
+
+    The park's own limit cuts that list off (130 Medium Points buy the Commonwealth four columns and
+    no more), and a depot below the cut loses its lorries to the depot above it -- which is exactly
+    the contested pool the rule creates. The engine re-validates all of it (engine._organization /
+    supply.column_legs); the arithmetic here only keeps the staff from ordering columns it cannot pay
+    for. Inert unless the rule is live (state.motorized_supply)."""
+    if not state.motorized_supply:
+        return []
+    view = state if view is None else view
+    mediums = sorted((t for t in state.trucks
+                      if t.side == side and t.truck_class == supply.MOTORIZATION_CLASS),
+                     key=lambda t: t.id)
+    cap = sum(t.points for t in mediums) // supply.MOTORIZATION_POINTS   # columns the park can raise
+
+    named = {o.supply_id for o in wish}
+    ranked: list[str] = []
+    for sid in [o.supply_id for o in wish] + sorted(state.motorization):
+        dump = state.supply(sid)
+        if sid in ranked or dump is None or dump.side != side:
+            continue
+        if dump.empty or dump.base or dump.is_dummy:         # nothing carriable here
+            continue
+        if sid not in named and not _still_following(view, side, dump):
+            continue                                         # arrived: the column has done its job
+        ranked.append(sid)
+    keep = ranked[:cap]
+
+    orders: list[MotorizeOrder] = []
+    free = {t.id: supply.free_points(state, t) for t in mediums}
+    for sid, legs in sorted(state.motorization.items()):      # stand down what fell below the cut
+        if sid in keep or not any(t and t.side == side
+                                  for t in (state.truck(tid) for tid, _ in legs)):
+            continue
+        orders.append(MotorizeOrder(sid, ()))
+        for tid, pts in legs:
+            if tid in free:
+                free[tid] += pts                             # the lorries come back to the pool
+
+    for sid in keep:                                         # fund the list until the park is dry
+        if sid in state.motorization:
+            continue                                         # already has its thirty -- it STANDS
+        pick, need = [], supply.MOTORIZATION_POINTS
+        # THE SLACKEST FORMATION FIRST -- mirrors supply.column_legs exactly (which re-sorts the ids
+        # it is handed), so the staff's arithmetic and the engine's draw can never disagree. Taking
+        # the last twenty Points from a twenty-Point lorry group deletes it from the relay entirely.
+        for t in sorted(mediums, key=lambda t: (-free[t.id], t.id)):
+            take = min(need, free[t.id])
+            if take > 0:
+                pick.append((t.id, take))
+                need -= take
+            if need == 0:
+                break
+        if need > 0:
+            break                                            # 32.32: the park is dry -- no more columns
+        for tid, take in pick:
+            free[tid] -= take
+        orders.append(MotorizeOrder(sid, tuple(tid for tid, _ in pick)))
+    return orders
 
 
 @dataclass(frozen=True)
@@ -459,6 +570,19 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
                                 else self._forward_view(state))
         army = self._bridge(view, side) or super().supply_orders(view, side)
         return take_and_hold_supply(state, side, army, escort=self._escort(state))
+
+    def motorization(self, state: GameState, side: Side) -> list[MotorizeOrder]:
+        # [32.32] The Eighth Army pays for its own desert columns out of the same 60.43 park that
+        # hauls its freight up from the Delta -- the identical charge the Panzerarmee now pays.
+        # This is the rule that made Compass a matter of "spending weeks lorrying dumps forward
+        # into the desert first, and THEN attacking out of them" (60.34): the lorries doing the
+        # first half are not doing the second.
+        #
+        # The view is the one supply_orders itself planned against (the railhead off-window, the
+        # objective on it), so a column is only held for a depot THIS policy is actually marching.
+        view = _without_staging(state if self._on_offensive(state)
+                                else self._forward_view(state))
+        return campaign_motorization(state, side, self.supply_orders(state, side), view=view)
 
     def _bridge(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
         """THE SUPPLY BRIDGE (rule 32.3) -- a dump goes to the unit that has OUTRUN ITS FUEL, not to
@@ -1050,6 +1174,16 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
     for t in state.trucks:
         if t.side != side:
             continue
+        # [32.32] THE RELAY HAULS WITH THE LORRIES IT STILL HAS. A formation with Truck Points booked
+        # under a desert column (supply.free_points) is a SMALLER convoy: it may lift less (53.12)
+        # and it burns less getting there (49.18). Plan against the freed-up remainder, exactly as
+        # engine._truck_order validates against it -- a relay that budgeted its full strength would
+        # order lifts the engine then rejects, and the freight would simply stop. Fully committed ->
+        # no convoy at all this OpStage; those lorries are carrying a depot.
+        free = supply.free_points(state, t)
+        if free <= 0:
+            continue
+        t = replace(t, points=free)
         reach = supply.reachable_truck_moves(state, t)
         here = distance(t.hex, objective)
         # The dumps to haul INTO: friendly, real, strictly closer to the objective -- and NOT on a
@@ -1270,6 +1404,14 @@ class _CampaignAxisSupplyMixin:
 
     def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
         return super().supply_orders(_without_staging(state), side)
+
+    def motorization(self, state: GameState, side: Side) -> list[MotorizeOrder]:
+        # [32.32] Pay for the desert column, out of the same park that hauls the freight. The wish
+        # is this policy's OWN supply_orders -- whatever it means to march, in its own priority
+        # order -- so the two halves of the rule can never disagree about which depot is going where,
+        # and the view is the one it planned against (the staging chain hidden, _without_staging).
+        return campaign_motorization(state, side, self.supply_orders(state, side),
+                                     view=_without_staging(state))
 
 
 class CampaignAxisPolicy(_CampaignAxisSupplyMixin, ScriptedPolicy):

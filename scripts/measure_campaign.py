@@ -75,6 +75,20 @@ def snapshot(state, side: Side) -> tuple[int, int, int]:
     return sum(1 for u in fwd if _can_trace(state, u)), len(fwd), len(live)
 
 
+def lorries(state, side: Side) -> tuple[int, int, int]:
+    """[32.32] THE CONTESTED POOL: (committed, medium park, whole park) Truck Points of `side`.
+
+    `committed` is the Truck Points standing UNDER a desert column and therefore NOT hauling
+    freight -- thirty per depot on the move (32.32), drawn from the Medium class (32.51). This is
+    the decision the rule creates and the one number that shows it being paid: every point here is
+    a point of the 60.33/60.43 park that is carrying a depot instead of the army's fuel."""
+    committed = sum(pts for legs in state.motorization.values() for tid, pts in legs
+                    if (t := state.truck(tid)) is not None and t.side == side)
+    park = [t for t in state.trucks if t.side == side]
+    medium = sum(t.points for t in park if t.truck_class == "medium")
+    return committed, medium, sum(t.points for t in park)
+
+
 def measure(seed: int) -> dict:
     """Run one full campaign and read the criterion off it.
 
@@ -89,12 +103,23 @@ def measure(seed: int) -> dict:
     # Fold the log once, snapshotting only at the CLOSE of each probe turn (a snapshot Dijkstras
     # every unit's trace, so it must not run per-event).
     probes: dict[int, dict] = {}
+    pool: dict[int, dict] = {}
+    peak_columns = {Side.AXIS: 0, Side.ALLIED: 0}
+    tied_up = {Side.AXIS: 0, Side.ALLIED: 0}      # Truck-Point-OpStages spent carrying depots
+    stages = 0
     state = initial
     for e, nxt in zip(result.events, result.events[1:] + [None]):
         state = apply(state, e)
+        if e.kind == EventKind.STAGE_ADVANCED or e.kind == EventKind.TURN_ADVANCED:
+            stages += 1
+            for s in (Side.AXIS, Side.ALLIED):
+                c, _, _ = lorries(state, s)
+                tied_up[s] += c
+                peak_columns[s] = max(peak_columns[s], c // 30)
         closing = nxt is None or nxt.turn != e.turn
         if closing and e.turn in PROBES:
             probes[e.turn] = {s: snapshot(state, s) for s in (Side.AXIS, Side.ALLIED)}
+            pool[e.turn] = {s: lorries(state, s) for s in (Side.AXIS, Side.ALLIED)}
 
     # Culmination: the furthest-east hex any Axis combat unit stood on, per game-turn.
     east: dict[int, int] = defaultdict(int)
@@ -108,7 +133,16 @@ def measure(seed: int) -> dict:
              for e in result.events
              if e.kind == EventKind.HEX_CONTROL_CHANGED and tuple(e.payload["coord"]) in cities]
 
+    # [32.32] The column ledger: how often the staff raised one, and how often the rule REFUSED a
+    # depot the lorries to move (the park dry -- the contention, in the log).
+    attached = sum(1 for e in result.events if e.kind == EventKind.MOTORIZATION_ATTACHED)
+    refused = sum(1 for e in result.events if e.kind == EventKind.ORDER_REJECTED
+                  and "32.32" in str(e.payload.get("reason", "")))
+
     return {"seed": seed, "probes": probes, "east": dict(east), "flips": flips,
+            "pool": pool, "peak_columns": peak_columns,
+            "mean_tied": {s: tied_up[s] / max(1, stages) for s in tied_up},
+            "attached": attached, "refused": refused,
             "winner": result.winner, "reason": result.reason}
 
 
@@ -137,6 +171,26 @@ def main() -> None:
                 pct = 100 * sup // alive if alive else 0
                 row.append(f"GT{gt}: {sup:>2}/{alive:<2} ({pct:>3}%)")
             print(f"    {side.value:<7} " + "  ".join(row))
+    print("\n=== [32.32] THE LORRY POOL: Truck Points CARRYING DEPOTS vs HAULING FREIGHT ===")
+    print("    committed / medium park (whole park).  Thirty Medium Truck Points per desert column")
+    print("    (32.32 + 32.51).  Axis medium park 150 of 215 on-map; Commonwealth 130 of 195.\n")
+    for r in runs:
+        print(f"  seed {r['seed']}")
+        for side in (Side.AXIS, Side.ALLIED):
+            row = []
+            for gt in PROBES:
+                p = r["pool"].get(gt)
+                if p is None:
+                    row.append(f"GT{gt}:   --   ")
+                    continue
+                com, med, whole = p[side]
+                row.append(f"GT{gt}: {com:>3}/{med:<3}({100*com//med if med else 0:>2}%)")
+            print(f"    {side.value:<7} " + "  ".join(row))
+        print(f"      columns raised {r['attached']:>3} | depot-moves REFUSED for want of lorries "
+              f"{r['refused']:>4} | peak columns AX {r['peak_columns'][Side.AXIS]} "
+              f"CW {r['peak_columns'][Side.ALLIED]}")
+        print(f"      mean Truck Points under a column, per OpStage: "
+              f"AX {r['mean_tied'][Side.AXIS]:>5.1f}   CW {r['mean_tied'][Side.ALLIED]:>5.1f}")
     print("\n=== CULMINATION: furthest-EAST hex an Axis combat unit reached (r) ===")
     print("    Sidi Barrani r=86, Mersa Matruh r=100, Alexandria r=133 (the 64.71 objective)\n")
     for r in runs:

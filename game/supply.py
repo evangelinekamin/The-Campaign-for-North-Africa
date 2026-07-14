@@ -26,7 +26,7 @@ import math
 
 from . import logistics_data, movement, tactics
 from .hexmap import Coord
-from .state import GameState, Port, SupplyUnit, TruckFormation, Unit
+from .state import GameState, Port, Side, SupplyUnit, TruckFormation, Unit
 from .terrain import Mobility, NON_MOT_CLASSES, Terrain
 
 AMMO = "AMMO"
@@ -284,6 +284,87 @@ def truck_move_fuel(truck: TruckFormation, cp_spent: float) -> int:
     if cp_spent <= 0:
         return 0
     return TRUCK_CHARS[truck.truck_class]["fuel_factor"] * math.ceil(cp_spent / 5) * truck.points
+
+
+# --- [32.32] MOTORIZATION POINTS -- what a desert column costs the lorry pool -------------------
+# "THIRTY Motorization Points are required to transport one real supply unit" [32.32], and
+# "Motorization Points are used IN PLACE OF Truck Points... treated in all aspects as MEDIUM Truck
+# Points" [32.51]. One pool, one exchange rate, straight off the page: a desert column costs THIRTY
+# MEDIUM TRUCK POINTS out of the same 60.33/60.43 park that hauls the army's freight.
+#
+# FLAGGED, the single interpolation in this rule: 32.51 denominates a Motorization Point as a MEDIUM
+# Truck Point and the rulebook offers NO Light/Heavy conversion, so none is modelled -- a column is
+# raised from Medium Truck Points or it is not raised. (A side with only Heavy lorries could not
+# form one. Both charted parks are Medium-heavy -- Axis 150 M of 215 on-map, Commonwealth 130 of 195
+# -- so the constraint bites where the rulebook aims it, at the freight backbone, and nowhere else.)
+# FLAGGED PROXY, and it is the biggest one in this rule: THE COLUMN HAS NO GEOGRAPHY. The thirty
+# Points are a SIDE-WIDE claim on the Medium park -- the ledger does not require the lorries to be
+# anywhere near the depot they are carrying, because routing lorries to depots is a truck-dispatch
+# subsystem this engine does not have. The consequence is that only the SIZE of the Medium park
+# matters, and that collides with a flagged omission: [60.33] charts 140 Medium Truck Points at
+# TRIPOLI, which game.scenario._campaign_axis_trucks cannot seed because Tripoli has no hex on the
+# playable map. So the Axis fights on 150 of its charted 290 Medium Points -- and 150 is EXACTLY
+# five columns. A staff that raises five therefore has NOTHING left to haul with, and its Benghazi
+# lifeline stops dead (measured: Axis freight 1,143,908 -> 298,489 in seed 99). That knife-edge is
+# ours, not the rulebook's. Seeding the Tripoli row, or modelling co-location, is the next lever.
+MOTORIZATION_POINTS = 30                 # [32.32] per REAL supply unit (a dummy needs 6 -- deferred
+                                         # with the rest of the 32.18 dummy-counter game)
+MOTORIZATION_CLASS = "medium"            # [32.51] "treated in all aspects as Medium Truck Points"
+
+
+def committed_points(state: GameState, truck_id: str) -> int:
+    """[32.32] Truck Points of `truck_id` standing under a supply column right now -- lorries that
+    are carrying a depot and are therefore NOT hauling freight. The whole cost of the rule."""
+    return sum(pts for legs in state.motorization.values()
+               for tid, pts in legs if tid == truck_id)
+
+
+def free_points(state: GameState, truck: TruckFormation) -> int:
+    """The Truck Points of `truck` still available to the freight relay: its strength less whatever
+    32.32 has reserved under a desert column. This is the contested pool, and it is why pushing a
+    depot forward is a DECISION rather than a free gift (engine._truck_order feeds the convoy a
+    formation reduced to exactly this, so both the 53.12 load ceiling and the 49.18 fuel burn shrink
+    with it)."""
+    return truck.points - committed_points(state, truck.id)
+
+
+def motorized(state: GameState, dump_id: str) -> bool:
+    """[32.32] "A supply unit not assigned the minimum necessary number of Motorization Points MAY
+    NOT BE MOVED." Does this dump have its thirty?"""
+    legs = state.motorization.get(dump_id, ())
+    return sum(pts for _, pts in legs) >= MOTORIZATION_POINTS
+
+
+def column_legs(state: GameState, side: Side, truck_ids: tuple) -> tuple:
+    """Draw MOTORIZATION_POINTS from the named formations: ((truck_id, points), ...), or () if they
+    cannot muster the thirty between them (32.32).
+
+    ACROSS formations deliberately. A column is thirty Truck Points, not one lorry group: the
+    Commonwealth's charted park is dispersed over Cairo / Alexandria / the railhead by 60.43's own
+    restrictions, and forcing each column to come out of a single formation would strand its 20-point
+    Alexandria row forever and cost the Commonwealth a column the CHART gives it -- an artefact of
+    how we pooled the rows into formations, not a rule.
+
+    THE SLACKEST FORMATION FIRST, and this is not cosmetic. Drawn in the order the caller happened to
+    name them, the first column took ALL TWENTY of the Alexandria row's Medium Points and left it with
+    none -- and a formation with nothing free hauls nothing at all (engine._truck_order), so a single
+    thirty-point column DELETED A WHOLE LORRY GROUP from the relay. Measured: one column cost the
+    Commonwealth 40% of its freight, when thirty of its 130 Medium Points is 23% of the class. A
+    quartermaster details lorries off the group that has them to spare; taking the last twenty from a
+    twenty-point group is not a rule, it is a bug."""
+    need, legs = MOTORIZATION_POINTS, []
+    pool = sorted((t for t in (state.truck(tid) for tid in truck_ids)
+                   if t is not None and t.side == side          # 32.51: a column is MEDIUM Truck
+                   and t.truck_class == MOTORIZATION_CLASS),    # Points, and only those
+                  key=lambda t: (-free_points(state, t), t.id))
+    for t in pool:
+        take = min(need, free_points(state, t))
+        if take > 0:
+            legs.append((t.id, take))
+            need -= take
+        if need == 0:
+            return tuple(legs)
+    return ()                                          # 32.32: short of thirty -> no column at all
 
 
 def reachable_truck_moves(state: GameState, truck: TruckFormation) -> dict:

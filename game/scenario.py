@@ -1276,6 +1276,34 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         initial_supply=_initial_supply(supplies),
         villages=village_hexes,                          # 54.12: the missing capacity row
         dump_capture=True,                               # 32.13/54.15: a dump entered is a dump taken
+        # [32.32] THE DESERT COLUMN'S PRICE -- BUILT, TESTED, AND MEASURED OFF. This is not an
+        # oversight and it is not balance: the rule is implemented in full (game.engine._organization,
+        # game.supply.MOTORIZATION_POINTS, tests/test_motorization.py) and turning it on here breaks
+        # the campaign. Measured, all five seeds:
+        #
+        #   * Commonwealth freight delivered COLLAPSES 62% (440,293 -> 167,853 supply points, seed
+        #     1941) while the Axis loses 2.7% and does not change its depot movement AT ALL (55 -> 54).
+        #     The rule is a Commonwealth-only tax, because the Commonwealth is the side whose whole
+        #     operational method IS the lorried dump (60.34), and its charted Medium park buys FOUR
+        #     columns (130 Points / 30).
+        #   * Eight behaviour tests fail, among them "the Commonwealth can mount a supplied offensive"
+        #     and "the haul reaches the front" -- six slices of work undone.
+        #   * And it does not even move the lean it was meant to move: Axis 4/5 before, Axis 4/5 after.
+        #
+        # WHY, and this is the finding: 32.32 prices a SCARCE COUNTER, and our engine has an ABUNDANT
+        # PILE POPULATION. In the abstract game a Supply Unit is a counter a player owns a handful of
+        # (32.41-32.47, and 32.14 caps them 5 per city), so thirty Motorization Points each is
+        # affordable. In the full Logistics Game, 54.11 ("any hex can be used as a supply dump") plus
+        # truck-unload dump creation plus 24.9 construction leaves DOZENS of dumps on the map and the
+        # leapfrog wants several marching every OpStage. Thirty Medium Truck Points apiece against a
+        # 130-Point park is bankrupt on the first turn. Section 32's own General Rule is the warning
+        # we walked past: it applies "if the Players are playing the Land Game WITHOUT the Air and
+        # Logistics Games". The two systems are alternatives. The price cannot be imported without the
+        # population it was priced for.
+        motorized_supply=False,                          # 32.32: thirty Medium Truck Points per desert
+                                                         # column, out of the SAME 60.33/60.43 park that
+                                                         # hauls the freight -- we took 32.33's permission
+                                                         # and never paid its price. See game.state.
         rail_line=rail_line,                             # 24.6/24.67: the route west the NZRRC may build
         map_sections=frozenset("ABCDE"),
         season_offset=calendar.CAMPAIGN_SEASON_OFFSET,   # GT1 = September 1940 (fall)

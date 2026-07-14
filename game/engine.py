@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import math
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Protocol
 
 from . import (combat, combat_tables, construction, cp_costs, logistics_data, stacking, supply,
@@ -151,6 +151,9 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             _air_superiority(r)                          # 40/45/46: contest the sky this OpStage (per arena)
             for side in (first, second):                # 7.16: Player A (first) then Player B (last)
                 _debrief(side)                          # enemy portion + own last combat
+                _organization(r, policies[side], side)  # 32.32: the ONE beat MP may be attached to
+                                                        # or detached from a dump -- BEFORE the
+                                                        # Construction Segment, which is inside it
                 _construction(r, policies[side], side)  # 48 V.C.4 / 24.11: the Construction Segment,
                                                         # BEFORE movement -- 24.12 pins whoever works
                 _reserve_designation(r, policies[side], side)   # 48 V.G / 18.11: hold units back (phasing)
@@ -1545,11 +1548,98 @@ def _reject(r: _Run, side: Side, actor: str, order: MoveOrder, reason: str,
             "reason": reason})
 
 
+def _organization(r: _Run, policy: Policy, side: Side) -> None:
+    """[32.32] THE ORGANIZATION PHASE: detail lorries to carry a depot, or stand them down.
+
+    "Supply Units may be transported by Motorization Points. THIRTY Motorization Points are required
+    to transport one real supply unit... Motorization Points may be attached/detached to supply
+    units ONLY DURING THE ORGANIZATION PHASE of an OpStage. A supply unit not assigned the minimum
+    necessary number of Motorization Points may not be moved."
+
+    THIS IS THE PRICE OF THE DESERT COLUMN, AND UNTIL NOW WE TOOK THE PERMISSION AND NEVER PAID IT.
+    32.33 lets a dump march with the army; 32.32 says what that costs, and 32.51 says whose pocket
+    it comes out of -- "Motorization Points are used IN PLACE OF Truck Points... treated in all
+    aspects as MEDIUM Truck Points". One pool, not two: in the abstract game you are issued MP and
+    no trucks, in the full Logistics Game trucks and no MP, and 32.51 is the exchange rate between
+    them. So thirty Motorization Points is thirty MEDIUM Truck Points out of the same 60.33/60.43
+    park that hauls the army's fuel and ammunition, and every depot pushed forward is thirty Truck
+    Points of freight that does not reach the front. Free, the Axis carpeted the desert with depots
+    that chased its own spearhead (a dump moves 15 CP/OpStage, faster than the infantry it feeds).
+
+    A STANDING RESERVATION, NOT A PER-HEX TOLL. The rule hinges BOTH halves on the Organization
+    Phase and 32.56 speaks of "the unit they are ASSIGNED to", so the lorries stay under the depot,
+    out of the freight rotation, until their owner stands them down here in a later Organization
+    Phase. The column keeps costing for as long as it stands.
+
+    THE RELEASE SWEEP first: a column whose depot has been captured (32.13), blown empty (54.14) or
+    otherwise stopped being a carriable field dump has nothing left to carry, and its lorries would
+    otherwise be hostage to it for the rest of the war. They come back HERE, in the Organization
+    Phase, because that is the only beat the rule lets them come back in -- so a depot lost on
+    Game-Turn 20 still ties up thirty Truck Points until the next Organization Phase, which is
+    friction the rule genuinely implies.
+
+    FLAGGED (32.56): "If their assigned unit is captured, the Motorization Points are also captured
+    and may be used by the Enemy." We give them back to their owner rather than to the captor. The
+    captor's half means minting Truck Points for the enemy on a captured hex -- a truck-OOB change,
+    not this slice."""
+    if not r.state.motorized_supply:      # the flagged campaign gate (game.state.motorized_supply)
+        return
+    r.go(Phase.ORGANIZATION, side)
+    actor = f"{side.value}/Logistics"
+    for sid, legs in sorted(r.state.motorization.items()):
+        if not any(t.side == side for tid, _ in legs for t in (r.state.truck(tid),) if t):
+            continue                                   # not this side's lorries
+        su = r.state.supply(sid)
+        if su is not None and su.side == side and not su.empty and not su.base:
+            continue                                   # still a live field dump: the column stands
+        r.emit(EventKind.MOTORIZATION_DETACHED, side, actor,
+               {"supply_id": sid, "legs": [list(x) for x in legs],
+                "points": sum(p for _, p in legs), "reason": "lost"})
+
+    for order in policy.motorization(r.state, side):
+        su = r.state.supply(order.supply_id)
+        if not order.truck_ids:                        # the detach: stand the column down
+            if order.supply_id in r.state.motorization:
+                legs = r.state.motorization[order.supply_id]
+                r.emit(EventKind.MOTORIZATION_DETACHED, side, actor,
+                       {"supply_id": order.supply_id, "legs": [list(x) for x in legs],
+                        "points": sum(p for _, p in legs), "reason": "orders"})
+            continue
+        if su is None or su.side != side or su.empty or su.base or su.is_dummy:
+            _reject_motorize(r, side, actor, order, "no such carriable field dump")
+            continue
+        if order.supply_id in r.state.motorization:
+            continue                                   # already under a column -- nothing to do
+        legs = supply.column_legs(r.state, side, order.truck_ids)
+        if not legs:                                   # 32.32: short of the thirty -> no column
+            _reject_motorize(r, side, actor, order,
+                             "fewer than thirty free Medium Truck Points (32.32/32.51)")
+            continue
+        r.emit(EventKind.MOTORIZATION_ATTACHED, side, actor,
+               {"supply_id": order.supply_id, "truck_ids": list(order.truck_ids),
+                "legs": [list(x) for x in legs], "points": sum(p for _, p in legs)})
+
+
+def _reject_motorize(r: _Run, side: Side, actor: str, order, why: str) -> None:
+    r.emit(EventKind.ORDER_REJECTED, side, actor,
+           {"order": "motorize", "supply_id": order.supply_id,
+            "truck_ids": list(order.truck_ids), "reason": why})
+
+
 def _supply_movement(r: _Run, policy: Policy, side: Side) -> None:
     """Relocate supply units with the advancing army (rule 32.3): a carried dump
-    moves up to CPA 15 as medium-truck, costs a flat 1 Fuel Point (32.24) drawn
+    moves up to CPA 15 as medium-truck (32.58A), costs a flat 1 Fuel Point (32.24) drawn
     from its own trucks, and must end stacked with a friendly combat unit (32.33).
-    Validated at the boundary like every other order."""
+    Validated at the boundary like every other order.
+
+    AND IT MUST HAVE ITS THIRTY MOTORIZATION POINTS (32.32) -- the lorries booked onto it back in
+    the Organization Phase (_organization). "A supply unit not assigned the minimum necessary number
+    of Motorization Points may not be moved" is the plainest sentence in Section 32, and without it
+    the desert column is free: a depot that outruns the infantry it feeds, at no cost to the army's
+    freight. The escorting combat unit still pays NOTHING extra, and that is correct -- 32.58C, the
+    attached points "are not required to expend CP's if stacked with combat units participating in
+    combat", and 32.33 asks only that the dump begin and remain stacked with one. The column's whole
+    price is the thirty Truck Points and the one Fuel Point, and both are now charged."""
     actor = f"{side.value}/Logistics"
     moved: set = set()               # a dump relocates at most once per OpStage (32.58A)
     for order in policy.supply_orders(r.state, side):
@@ -1559,6 +1649,10 @@ def _supply_movement(r: _Run, policy: Policy, side: Side) -> None:
             continue
         if su.base:
             _reject_supply(r, side, actor, order, "a strategic rear base is immobile (rule 57)")
+            continue
+        if r.state.motorized_supply and not supply.motorized(r.state, su.id):
+            _reject_supply(r, side, actor, order,
+                           "no Motorization Points assigned -- thirty are required (32.32)")
             continue
         if su.id in moved:
             _reject_supply(r, side, actor, order, "already moved this OpStage (CPA 15/stage)")
@@ -1732,16 +1826,35 @@ def _truck_convoys(r: _Run, policy: Policy, side: Side) -> None:
 
 
 def _truck_order(r: _Run, side: Side, actor: str, order, moved: set) -> None:
+    """One truck-convoy order, run against the formation's FREE Truck Points (32.32).
+
+    THE CONTENDED POOL, and it is the whole reason this rule earns its keep. A formation with thirty
+    of its Points booked under a desert column (game.supply.free_points) drives the freight run as
+    the SMALLER convoy it now is: its 53.12 load ceiling falls with the lorries it no longer has,
+    and so does the 49.18 fuel it burns getting there. Book five columns out of the Axis's 150
+    Medium Points at Benghazi and there is no Axis medium freight at all.
+
+    `_convoy` re-reads state each leg (the load leg folds cargo onto the formation, so the move leg
+    must see it) and shrinks it to what is actually free. With no columns standing this is the
+    formation itself, unchanged -- which is why every truck-bearing scenario stays byte-identical."""
+    def _convoy():
+        t = r.state.truck(order.truck_id)
+        return replace(t, points=supply.free_points(r.state, t))
+
     truck = r.state.truck(order.truck_id)
     if truck is None or truck.side != side:
         _reject_truck(r, side, actor, order, "no such truck formation under this command")
         return
-    if order.load and not _truck_load(r, side, actor, order, r.state.truck(truck.id)):
+    if supply.free_points(r.state, truck) <= 0:
+        _reject_truck(r, side, actor, order,
+                      "every Truck Point of this formation is under a supply column (32.32)")
         return
-    if order.to is not None and not _truck_move(r, side, actor, order, r.state.truck(truck.id), moved):
+    if order.load and not _truck_load(r, side, actor, order, _convoy()):
+        return
+    if order.to is not None and not _truck_move(r, side, actor, order, _convoy(), moved):
         return
     if order.unload:
-        _truck_unload(r, side, actor, order, r.state.truck(truck.id))
+        _truck_unload(r, side, actor, order, _convoy())
 
 
 def _truck_load(r: _Run, side: Side, actor: str, order, truck) -> bool:
@@ -1966,9 +2079,14 @@ def _build_dump(r: _Run, side: Side, actor: str, order) -> None:
         _reject_build(r, side, actor, order,
                       "needs 1 TOE Strength Point with 3 CP and 20 Stores in the hex (24.9)")
         return
-    r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
-           {"supply_id": dump.id, "commodity": supply.STORES,
-            "qty": construction.DUMP_STORES, "unit_id": u.id})
+    # [24.13]/[32.15] The twenty Store Points come OUT OF THE HEX, not out of one counter. The
+    # can_construct_dump check counts every friendly pile standing here (construction.stores_at), so
+    # the charge must be drawn the same way or a hex whose stores are SPLIT between two co-located
+    # dumps passes the check and over-drains the one the engine happened to name -- an
+    # InvariantViolation, and one that predates rule 32.32 (see construction.stores_draw).
+    for sid, qty in construction.stores_draw(r.state, side, hx, construction.DUMP_STORES):
+        r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+               {"supply_id": sid, "commodity": supply.STORES, "qty": qty, "unit_id": u.id})
     r.emit(EventKind.CP_EXPENDED, side, actor,
            {"unit_id": u.id, "activity": "construct_dump", "cp": construction.DUMP_CP})
     r.emit(EventKind.SUPPLY_DUMP_CONSTRUCTED, side, actor,

@@ -129,6 +129,18 @@ def apply(state: GameState, event: Event) -> GameState:
         su = state.supply(p["supply_id"])
         return state.with_supply(replace(su, side=Side(p["to"])))
 
+    if k == EventKind.MOTORIZATION_ATTACHED:
+        # 32.32: thirty Medium Truck Points (32.51) book onto the dump and out of the freight pool.
+        # The lorries are RESERVED, never minted or spent, so conservation is untouched -- the whole
+        # cost of this rule is the freight those Truck Points are now not hauling (supply.free_points).
+        legs = tuple((tid, pts) for tid, pts in p["legs"])
+        return replace(state, motorization={**state.motorization, p["supply_id"]: legs})
+
+    if k == EventKind.MOTORIZATION_DETACHED:
+        # 32.32's other hinge: the column stands down and the lorries go back on the freight run.
+        book = {k2: v for k2, v in state.motorization.items() if k2 != p["supply_id"]}
+        return replace(state, motorization=book)
+
     if k == EventKind.SUPPLY_DUMP_CONSTRUCTED:
         # 24.9: the heap of supplies in this hex is now a CONSTRUCTED supply dump, which by the
         # rule's own Note is the one thing that lets a truck "in convoy" LOAD from it -- a link in

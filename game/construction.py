@@ -148,6 +148,32 @@ def stores_at(state: GameState, side: Side, hx: Coord) -> int:
                if s.side == side and s.hex == hx and not s.is_dummy)
 
 
+def stores_draw(state: GameState, side: Side, hx: Coord, qty: int) -> list[tuple[str, int]]:
+    """[24.13]/[32.15] Spend `qty` Store Points OUT OF THE HEX: ((supply_id, qty), ...), the piles
+    drawn from and how much each gives up. Field dumps first (by id), the bottomless rule-57 base
+    last, so a garrison spends what it carried before it spends Cairo's.
+
+    THE BUG THIS FIXES, and it is a real one that predates rule 32.32. `stores_at` counts what EVERY
+    friendly dump on the hex holds -- 24.13's "on hand in the hex", and correct, since 32.15 lets a
+    Player rearrange supplies among co-located Supply Units for free -- but engine._build_dump then
+    consumed all twenty Store Points from ONE of them (`dump_at`, the first by id). Two dumps sharing
+    a hex with the stores split between them passed the check and over-drained the named one:
+    MEASURED, "supply AL-Field-22-87 has negative STORES pool -6", an InvariantViolation that took
+    the whole campaign down. The check counts the hex, so the charge must come out of the hex."""
+    legs: list[tuple[str, int]] = []
+    here = sorted((s for s in state.supplies
+                   if s.side == side and s.hex == hx and not s.is_dummy),
+                  key=lambda s: (s.base, s.id))
+    for s in here:
+        take = min(qty, s.stores)
+        if take > 0:
+            legs.append((s.id, take))
+            qty -= take
+        if qty == 0:
+            break
+    return legs
+
+
 def dump_at(state: GameState, side: Side, hx: Coord):
     """The side's own dump standing on `hx` -- the heap of supplies a 24.9 construction turns into a
     proper dump. Rule 24.9 lets a Player designate ANY hex a supply dump, empty or not; ours requires

@@ -527,6 +527,41 @@ class GameState:
     construction: dict = field(default_factory=dict)
     rail_line: tuple = ()
 
+    # --- [32.32] MOTORIZATION POINTS: THE LORRIES UNDER THE DESERT COLUMN -----------------------
+    # `motorization` is the ATTACHMENT LEDGER: supply_id -> ((truck_id, points), ...), the Truck
+    # Points of the side's own 60.33/60.43 park currently standing under that supply dump. Rule
+    # 32.32 in full: "Supply Units may be transported by Motorization Points. THIRTY Motorization
+    # Points are required to transport one real supply unit... Motorization Points may be
+    # attached/detached to supply units only during the Organization Phase of an OpStage. A supply
+    # unit not assigned the minimum necessary number of Motorization Points MAY NOT BE MOVED."
+    #
+    # THE READING, and it is the whole point of this field. 32.51: "Motorization Points are used IN
+    # PLACE OF Truck Points... treated in all aspects as Medium Truck Points." In the abstract game
+    # you are issued MP and no trucks; in the full Logistics Game you are issued trucks and no MP.
+    # There is ONE transport pool either way, and 32.51 gives its exchange rate outright -- an MP IS
+    # a Medium Truck Point. So thirty Motorization Points is THIRTY MEDIUM TRUCK POINTS out of the
+    # same finite lorry park that is already hauling the army's fuel and ammunition forward
+    # (game.supply.MOTORIZATION_POINTS / MOTORIZATION_CLASS). Every dump pushed forward is 30 medium
+    # Truck Points not hauling freight. That is the central logistical decision of the desert war
+    # and this ledger is where it is paid.
+    #
+    # A STANDING RESERVATION, NOT A PER-HEX TOLL: 32.32 hinges attach/detach on the Organization
+    # Phase and 32.56 speaks of "the unit they are ASSIGNED to", so the points stay committed across
+    # Game-Turns until the owner detaches them in a later Organization Phase (engine._organization).
+    # An entry here is a claim on the pool for as long as it stands, not a fare paid per move.
+    #
+    # `motorized_supply` is the campaign gate, and it is a FLAGGED ASYMMETRY pending a re-baseline
+    # decision -- NOT a claim that 32.32 is campaign-only. It is a general rule. It is gated because
+    # rommels_arrival / siege_of_tobruk seed a truck pool that is an explicitly FLAGGED PLACEHOLDER
+    # (game.scenario._rommel_trucks: "REPRESENTATIVE strength, pending the real rule-61 truck OOB...
+    # a plausible-DAK placeholder, not a transcribed chart value") -- 6 Medium Truck Points against
+    # this rule's 30, so under 32.32 no dump in either benchmark scenario could EVER move, and both
+    # published determinism_signatures (9339d2b308d7 / 5ba4da88d107) would shift. Measuring a
+    # rulebook magnitude against a placeholder pool measures the placeholder. The campaign's parks
+    # ARE the transcribed 60.33/60.43 charts, so only game.scenario.campaign turns this on.
+    motorization: dict = field(default_factory=dict)
+    motorized_supply: bool = False
+
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:
         for u in self.units:

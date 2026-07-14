@@ -29,6 +29,10 @@ class Control(str, Enum):
 class Phase(str, Enum):
     WEATHER = "WEATHER"
     LOGISTICS = "LOGISTICS"        # naval-convoy arrival (rule 48 V.C.7/V.D); SYSTEM-owned
+    ORGANIZATION = "ORGANIZATION"  # the Organization Phase proper (rule 32.32): the ONE beat of an
+                                   # OpStage in which Motorization Points may be attached to or
+                                   # detached from a supply unit. Entered only where the rule is
+                                   # live (GameState.motorized_supply), so no other scenario sees it.
     CONSTRUCTION = "CONSTRUCTION"  # Construction Segment of the Organization Phase (48 V.C.4 /
                                    # rule 24.11); the phasing side's own beat, BEFORE it moves --
                                    # "units involved in such work may not be moved (voluntarily)
@@ -162,6 +166,28 @@ class EventKind(str, Enum):
     CONSTRUCTION_ADVANCED = "CONSTRUCTION_ADVANCED"
     CONSTRUCTION_COMPLETED = "CONSTRUCTION_COMPLETED"
     SUPPLY_DUMP_CONSTRUCTED = "SUPPLY_DUMP_CONSTRUCTED"
+    # [32.32] MOTORIZATION -- the thirty Truck Points under a desert column, and the freight they
+    # are therefore not hauling. "Motorization Points may be attached/detached to supply units ONLY
+    # DURING THE ORGANIZATION PHASE of an OpStage. A supply unit not assigned the minimum necessary
+    # number of Motorization Points may not be moved."
+    #
+    # MOTORIZATION_ATTACHED {supply_id, truck_ids, legs, points} books thirty Medium Truck Points
+    # (32.51) of the side's own 60.33/60.43 park onto a dump; MOTORIZATION_DETACHED {supply_id,
+    # legs, points, reason} gives them back. Both fold GameState.motorization and NOTHING ELSE: the
+    # lorries are neither minted nor consumed, they are RESERVED, so conservation is untouched and
+    # the whole cost is opportunity cost (game.supply.free_points -- the freight convoy is handed a
+    # formation shrunk by exactly what is committed, so its 53.12 load ceiling AND its 49.18 fuel
+    # burn both fall).
+    #
+    # `reason` on the detach is legible only: 'orders' (the staff stood the column down in the
+    # Organization Phase) or 'lost' (the dump was captured or blown out from under it -- the column
+    # has nothing left to carry). FLAGGED DEFERRAL: 32.56 says that when the unit MPs are assigned
+    # to is captured "the Motorization Points are also captured and may be used by the Enemy". We
+    # release them to their owner instead of transferring them to the captor -- half of 32.56, the
+    # safe half. Doing it properly means minting Truck Points for the enemy at the captured hex,
+    # which is a truck-OOB change and not this slice.
+    MOTORIZATION_ATTACHED = "MOTORIZATION_ATTACHED"
+    MOTORIZATION_DETACHED = "MOTORIZATION_DETACHED"
     # Commonwealth railroad (rule 54.3, the inland rail DISTRIBUTION layer). RAIL_HAULED
     # {from_dump, to_dump, commodity, qty} is a CONSERVING dump->dump transfer over the
     # rail network (both dumps rail-connected; qty <= 1500 tons/OpStage of ONE commodity,

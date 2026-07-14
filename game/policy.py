@@ -78,7 +78,27 @@ class BuildOrder:
     unit_ids: tuple[str, ...]
 
 
-Order = MoveOrder | AttackOrder | SupplyMoveOrder | TruckOrder | DemolitionOrder | BuildOrder
+@dataclass(frozen=True, slots=True)
+class MotorizeOrder:
+    """[32.32] Attach or detach the lorries under a supply dump, in the Organization Phase.
+
+    `truck_ids` names the Medium formations (32.51) the thirty Motorization Points are drawn from,
+    in priority order -- the engine takes what is free from each in turn until it has its thirty
+    (game.supply.column_legs) and REJECTS the order if they cannot muster them between them ("a
+    supply unit not assigned the minimum necessary number of Motorization Points may not be moved").
+    An EMPTY `truck_ids` is the detach: stand the column down and give the lorries back to the
+    freight relay.
+
+    This is the order that makes the desert column cost something. Every one issued is thirty Truck
+    Points out of the same finite park (60.33/60.43) that hauls the army's fuel and ammunition, for
+    as long as it stands -- 32.32 hinges attach AND detach on the Organization Phase, so it is a
+    STANDING RESERVATION, not a fare paid per hex."""
+    supply_id: str
+    truck_ids: tuple[str, ...] = ()
+
+
+Order = (MoveOrder | AttackOrder | SupplyMoveOrder | TruckOrder | DemolitionOrder | BuildOrder
+         | MotorizeOrder)
 
 
 class Policy:
@@ -90,6 +110,9 @@ class Policy:
 
     def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
         return []  # optional: relocate supply to follow the advance (rule 32.3)
+
+    def motorization(self, state: GameState, side: Side) -> list[MotorizeOrder]:
+        return []  # optional: detail lorries to carry a dump, or stand them down (rule 32.32)
 
     def retreat_before_assault(self, state: GameState, side: Side,
                                pinned: frozenset[str]) -> list[MoveOrder]:
