@@ -45,12 +45,13 @@ from game.campaign_policy import (CampaignAxisPolicy,                    # noqa:
                                   _CampaignAxisSupplyMixin, _without_staging,
                                   take_and_hold_moves, take_and_hold_supply)
 from game.campaign_staff import CampaignStaffPolicy                      # noqa: E402
-from game.engine import (HARBOUR_BLOCKED, _convoy_dest,                  # noqa: E402
-                         determinism_signature, run)
+from game.engine import (HARBOUR_BLOCKED, _air_support, _convoy_dest,   # noqa: E402
+                         _Run, determinism_signature, run)
 from game.events import Control, EventKind, Side                         # noqa: E402
 from game.policy import ScriptedPolicy                                   # noqa: E402
 from game.scenario import (_AXIS_TOBRUK_LANE, campaign,                  # noqa: E402
                            rommels_arrival, siege_of_tobruk)
+from game.state import AirMission                                        # noqa: E402
 from game.supply import port_landing_cap                                 # noqa: E402
 
 TOBRUK = coords.to_axial(coords.parse("C4807"))
@@ -139,20 +140,104 @@ def test_the_commonwealth_can_fight_the_axis_tobruk_lane():
     assert cut and all(e.side == Side.ALLIED for e in cut)      # the interdictor is the Commonwealth
 
 
-def test_the_axis_tobruk_garrison_is_fed_by_sea():
-    """The point of the whole exercise: the Axis holding Tobruk is now supplied FROM THE SEA, not
-    from a sixty-hex truck haul out of a Benghazi the Commonwealth can switch off. Measured on a
-    real slice: the lane lands, the staging dump under the fortress is refilled, and the garrison
-    banks the 200 Victory Points of rule 64.73."""
+def test_the_axis_tobruk_garrison_is_fed_by_sea_until_the_harbour_is_bombed_shut():
+    """The point of the whole exercise, in BOTH halves. The Axis holding Tobruk is supplied FROM THE
+    SEA -- not by a sixty-hex truck haul out of a Benghazi the Commonwealth can switch off -- and
+    that lifeline is CUTTABLE. Both halves, or it is not a siege: it is a freehold.
+
+    The lane lands into the staging dump under the fortress while the harbour works. Then the Desert
+    Air Force bombs the harbour (41.39B, engine._air_port), and because PORT-Tobruk is
+    HARBOUR_BLOCKED -- the scuttled San Giorgio, which only engineers clear (55.26) -- the
+    Efficiency it loses never comes back. The 425-Point/OpStage throat ratchets shut and the lane
+    stops sailing for the rest of the war.
+
+    UNTIL THIS SLICE THIS TEST ASSERTED THE LANE LANDED ON ALL TWELVE TURNS, and that was precisely
+    the bug. campaign() seeded air=(), so no AirWing existed, so engine._air_port could never fire,
+    so no harbour could ever fall below full efficiency and NO SEA LANE COULD EVER BE CUT. Measured:
+    the Axis lane landed 425 Ammunition Points a turn into a garrison drawing three and a half -- a
+    121x oversupply -- and the Commonwealth interdicted it on 111 turns out of 111 while denying it
+    exactly ZERO Ammunition, because the 41.66 CRT skims a percentage off a cargo the 55.14 port cap
+    has already clipped back to 425 anyway. Tobruk's 200 Victory Points belonged permanently to
+    whoever stood there on Game-Turn 1. Only efficiency 0 cuts a sea lifeline."""
     res = run(campaign(seed=1941, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     landed = [e for e in res.events
               if e.kind == EventKind.SUPPLY_ARRIVED and e.payload["lane"] == AXIS_LANE]
-    assert len(landed) == 12                                    # every Game-Turn: the Axis holds it
+
+    # (1) THE LIFELINE IS REAL: it sails while the harbour works, into the dump under the fortress.
+    assert landed, "the Axis never got a single sea delivery into the Tobruk it holds"
     assert all(e.payload["supply_id"] == AX_DUMP for e in landed)
     assert sum(e.payload["cargo"].get("AMMO", 0) for e in landed) > 0
-    fin = res.final
-    assert fin.victory._occupier(fin, TOBRUK) == Side.AXIS      # ...and it is BANKING the fortress
-    assert fin.supply(AX_DUMP).ammo > 0                         # fed, not draining
+
+    # (2) AND IT IS CUTTABLE: the Commonwealth bombs the harbour to nothing, and it STAYS there.
+    bombs = [e for e in res.events
+             if e.kind == EventKind.PORT_EFFICIENCY_CHANGED
+             and e.payload["port_id"] == "PORT-Tobruk" and e.side == Side.ALLIED]
+    assert bombs, "the Desert Air Force never touched the harbour"
+    assert res.final.port("PORT-Tobruk").eff == 0, "the harbour was never actually shut"
+    assert "PORT-Tobruk" in HARBOUR_BLOCKED                      # 55.26: no 55.18 regen, ever
+
+    # (3) SO THE LANE STOPS. Nothing lands once the throat is closed -- that is the whole siege.
+    shut = min(e.turn for e in bombs if e.payload["level"] == 0)
+    assert not [e for e in landed if e.turn > shut], \
+        "the sea lane went on landing supply into a harbour that had been bombed shut"
+    assert len(landed) < 12, "the lane was never cut -- the fortress is still invulnerable"
+
+
+# --- (A2) THE HARBOUR DUEL: WHOEVER BESIEGES, BOMBS ------------------------------------------------
+
+def test_both_air_forces_exist_and_the_besieger_is_the_one_who_bombs():
+    """campaign() seeded air=(). One empty tuple, and the consequence ran all the way down: no
+    AirWing, so no air beat fires; no air beat, so engine._air_port is unreachable; no _air_port, so
+    no port can ever lose Efficiency; and no port can lose Efficiency, so NO HARBOUR CAN EVER BE CUT.
+    Tobruk was invulnerable by construction and its 200 Victory Points were a Game-Turn-1 gift.
+
+    Both air forces are seeded now, and the SCHEDULE is symmetric: each side flies a port mission at
+    PORT-Tobruk every turn, all war. The ENGINE decides who is besieging -- _air_port reads CONTROL
+    of the hex and refuses the side standing in the city ("never bomb your own harbour"). So the
+    roles hand off automatically, in both directions, every time the fortress changes hands, exactly
+    as the 56.15 convoy lane already hands the sea route over. One Tobruk, one harbour, one Port."""
+    st = campaign(seed=1941, max_turns=8)
+    assert {w.side for w in st.air} == {Side.AXIS, Side.ALLIED}, "an air force is missing"
+    assert all(w.arena == "LAND" and w.strike > 0 for w in st.air), "a wing cannot bomb anything"
+
+    missions = [m for m in st.air_missions if m.kind == "port"]
+    assert missions and all(m.target == "PORT-Tobruk" for m in missions)
+    assert {m.side for m in missions} == {Side.AXIS, Side.ALLIED}, "the duel is one-sided"
+
+    # the Axis HOLDS Tobruk at Game-Turn 1, so the Commonwealth is the besieger and bombs; the Axis
+    # mission is refused against its own harbour. The engine reads control, not the seeded flag.
+    res = run(campaign(seed=1941, max_turns=8), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    bombs = [e for e in res.events if e.kind == EventKind.PORT_EFFICIENCY_CHANGED
+             and e.payload["port_id"] == "PORT-Tobruk"]
+    assert bombs, "nobody bombed the harbour"
+    assert {e.side for e in bombs} == {Side.ALLIED}, \
+        "the Axis bombed the harbour of the city it is standing in"
+    assert res.initial.control_of(TOBRUK) == Control.AXIS
+
+
+def test_a_side_never_bombs_the_harbour_of_a_city_it_holds():
+    """The rule the duel turns on, stated directly at the seam: _air_port refuses the HOLDER. Take
+    Tobruk with the Commonwealth and the Commonwealth's own standing mission goes quiet, while the
+    Axis's -- which has been a no-op all war -- comes alive. That is what makes it a duel and not a
+    one-way ratchet, and it is why the harbour is read from CONTROL and not from the side stamped on
+    the Port at setup (there is only ONE Tobruk in the 55.3 chart, and it serves whoever holds it)."""
+    st = campaign(seed=1941, max_turns=4)
+    both = tuple(AirMission(s, "port", "PORT-Tobruk", 1) for s in (Side.AXIS, Side.ALLIED))
+
+    def bombers(holder: Control) -> set:
+        """Who actually gets a bomb through, with `holder` standing in the city."""
+        state = replace(st, control={**st.control, TOBRUK: holder}, air_missions=both)
+        out = set()
+        for side in (Side.AXIS, Side.ALLIED):
+            r = _Run(state)
+            _air_support(r, side, set())                  # the side flies its due LAND missions
+            if any(e.kind == EventKind.PORT_EFFICIENCY_CHANGED
+                   and e.payload["port_id"] == "PORT-Tobruk" for e in r.events):
+                out.add(side)
+        return out
+
+    assert bombers(Control.AXIS) == {Side.ALLIED}, "the holder bombed its own harbour (Axis-held)"
+    assert bombers(Control.ALLIED) == {Side.AXIS}, "the holder bombed its own harbour (CW-held)"
 
 
 # --- (B) BOTH SIDES PLAY THE 64.73 POINTS ---------------------------------------------------------

@@ -161,7 +161,17 @@ def test_the_axis_army_is_not_destroyed_by_thirst():
     # The desert takes a toll; it does not empty the army. Both halves are asserted: the attrition
     # stays well under the 329 of the no-take-and-hold world, AND a real Order of Battle is still in
     # the field a month in (28 was the pre-wells disaster this subsystem exists to prevent).
-    assert lost.get("attrition", 0) < 250
+    #
+    # RE-FITTED from 250 when the air went in, and the reason is the POINT of the air, not a defect:
+    # the Axis Tobruk sea lane carries a Supply Unit of WATER (1,000 Points a turn, _load_cargo) into
+    # the staging dump under the fortress, and that lane used to be UNCUTTABLE -- campaign() seeded
+    # no AirWing, so engine._air_port was unreachable and no harbour could ever lose Efficiency. The
+    # Desert Air Force now bombs PORT-Tobruk shut by Game-Turn 2 and, because the harbour is
+    # HARBOUR_BLOCKED, it never reopens. So the garrison drinks its wells and the desert instead of
+    # a bottomless sea faucet, and the thirst toll rises with it (measured: 217 -> 279 on this slice,
+    # with the same 39 combat units still standing). That is a besieger starving a fortress, which is
+    # exactly what rule 15.15 is for.
+    assert lost.get("attrition", 0) < 300
     assert len([u for u in res.final.living(Side.AXIS) if u.is_combat]) > 35
 
 

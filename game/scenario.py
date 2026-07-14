@@ -715,6 +715,47 @@ def _campaign_cw_rail_line(supplies) -> tuple[str, ...]:
     return (railhead.id, *(sid for sid in rear if sid in have and sid != railhead.id))
 
 
+# [54.32] "The Commonwealth supply capacity of the railroad is 1500 tons per Operations Stage in
+# either direction." The charted capacity of the Western Desert Railway -- the exact twin of the
+# Axis's [56.5] convoy tonnage, and the number the campaign was missing. Transcribed from the rule
+# text (docs/rules/54-supply-co-ordination.md); it is not in the 90-charts play-aid, so it lives
+# here beside _PORT_TONS rather than in data/logistics_rates.json.
+_RAIL_TONS_PER_OPSTAGE = 1500
+_RAIL_STAGE_COMMODITIES = ("AMMO", "FUEL", "STORES")   # 54.33: one type per stage. Water is piped.
+
+
+def _campaign_rail_cargo(gt: int) -> dict:
+    """One Game-Turn of Western Desert Railway freight (rules 54.32 / 54.33 / 54.34).
+
+    54.32 rates the railroad at 1,500 TONS PER OPERATIONS STAGE, and a Game-Turn is three
+    Operations Stages (engine.run), so a week of trains is three stage-loads. 54.33 lets the
+    railroad carry only ONE type of supply at a time -- "it may move fuel, ammunition, or stores,
+    not any combination of the three" -- so each stage is a single commodity, and its tonnage
+    crosses to Points through the 54.5 Equivalent Weights (a ton of ammunition is a quarter of a
+    Point; a ton of fuel is eight, which is why the same train is worth 375 Ammunition or 12,000
+    Fuel). Water is NOT hauled: 54.33 says it need not be -- "the railroad hexes are pipelines in
+    and of themselves" -- and game.wells.pipeline already seeds that corridor, Alexandria to Mersa
+    Matruh, as an unlimited 52.23 water source.
+
+    54.34 stands the railway down for ONE Operations Stage a calendar month, hauling water for its
+    own use. WHICH stage is the player's call -- "Players must state each month which Operations
+    Stage they are not using the railroad" -- and this schedule gives up the STORES stage in the
+    month's first week, the load a fighting army misses least. That choice is a flagged SCHEDULING
+    proxy; the 1,500-ton magnitude behind it is the rulebook's own.
+
+    What this REPLACES is the bug: the lane used to ship one _load_cargo() Supply Unit a week --
+    a placeholder borrowed from Tobruk's 61.36 built-in dump -- which put 500 Fuel a turn on the
+    trains against the Axis convoy's charted thousands. Measured over the full campaign, the
+    Commonwealth landed 55,500 Fuel to the Axis's 1,770,000."""
+    stages = list(_RAIL_STAGE_COMMODITIES)
+    if (gt - 1) % calendar.GT_PER_MONTH == 0:           # 54.34: one OpStage a month carries water
+        stages.remove("STORES")
+    cargo = {c: 0 for c in COMMODITIES}
+    for c in stages:
+        cargo[c] += tons_to_points(_RAIL_TONS_PER_OPSTAGE, c)
+    return cargo
+
+
 def _campaign_cw_trucks(supplies) -> tuple[TruckFormation, ...]:
     """The Commonwealth 2nd/3rd-line motor-transport pool (rules 53 / 54.2 / 60.33), staged on the
     Mersa Matruh railhead the rail lane feeds. Without it the Commonwealth has NO way to project
@@ -762,10 +803,15 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
     convoys = []
     railhead = _campaign_cw_railhead(supplies)
     if railhead is not None:
-        load = _load_cargo()                           # rule 57 rail feed to the Egyptian railhead
         line = _campaign_cw_rail_line(supplies)        # 54.3/60.7: the railhead RETRACTS, it never dies
+        # rail=True: a train is not a ship. It carries the railroad's OWN charted capacity
+        # (54.32, _campaign_rail_cargo) and never crosses a quay, so the 55.14 harbour throttle
+        # does not apply to it -- see state.Convoy. Mersa Matruh is BOTH a 250-ton harbour and the
+        # railway terminus, and putting the Western Desert Railway through the harbour's cranes
+        # clipped it to a twenty-fourth of its rated capacity (measured: 62 of 1,500 Ammunition
+        # Points a turn).
         convoys += [Convoy(f"cw-rail-t{gt}", Side.ALLIED, gt, "CW-RAILHEAD", railhead.id,
-                           dict(load), retarget=line)
+                           _campaign_rail_cargo(gt), retarget=line, rail=True)
                     for gt in range(1, max_turns + 1)]
     # THE TOBRUK SEA LIFELINE, BOTH HALVES (rules 30 / 56.3 / 56.11) -- ONE harbour, TWO lanes, and
     # rule 56.15 hands it from one to the other the Game-Turn the city changes hands.
@@ -855,6 +901,58 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
     ports.append(Port("PORT-Tobruk", Side.AXIS, coords.to_axial(coords.parse(_TOBRUK)), "major",
                       max_eff=5, eff=5, **_caps_tonnage(_PORT_TONS["tobruk"]["tons"])))
     return tuple(ports)
+
+
+# --- C4: the air war over the harbours (rules 40-46 at the abstract 32.0/58.0 grain) ----------
+# FLAGGED PROXY: the 34.6/59.3 Initial Air Strengths chart is untranscribed (see state.AirWing,
+# which says so of its own magnitudes), so these Air Points are proxies. They are deliberately
+# SYMMETRIC -- neither side is handed the sky by fiat -- because this is the UNTUNED structural
+# baseline: the 40/45/46 superiority roll should decide who flies, not the seeding. Period-varying
+# strengths (the Luftwaffe's 1941-42 ascendancy, the Desert Air Force's 1942 revival) are the
+# obvious calibration lever, and deliberately NOT pulled here.
+_AIR_FIGHTERS = 8          # F: the fighter pool contesting air superiority each Operations Stage
+_AIR_STRIKE = 6            # S: the strike points that batter a harbour (41.39B)
+
+
+def _campaign_air() -> tuple[AirWing, ...]:
+    """A LAND-arena air wing for BOTH sides -- the Luftwaffe/Regia Aeronautica and the Desert Air
+    Force. The campaign seeded NONE, and that single omission is why its Tobruk was invulnerable:
+    with state.air empty no air beat fires at all, engine._air_port is unreachable, no port can
+    ever lose Efficiency, and a HARBOUR_BLOCKED harbour therefore can never be shut. Measured, the
+    Axis Tobruk sea lane landed 425 Ammunition Points a turn into a garrison drawing 3.5 -- a 121x
+    oversupply the Commonwealth interdicted on 111 turns out of 111 while denying it exactly zero
+    Ammunition, because the 41.66 CRT skims a PERCENTAGE off a cargo the 55.14 port cap has already
+    clipped back to 425. Only efficiency 0 -- a bombed-shut harbour -- actually cuts a sea lane."""
+    return (AirWing("LW-land", Side.AXIS, "LAND",
+                    fighters=_AIR_FIGHTERS, strike=_AIR_STRIKE, recon=0),
+            AirWing("DAF-land", Side.ALLIED, "LAND",
+                    fighters=_AIR_FIGHTERS, strike=_AIR_STRIKE, recon=0))
+
+
+def _campaign_air_missions(max_turns: int) -> tuple[AirMission, ...]:
+    """THE SIEGE OF TOBRUK AS A DUEL: both sides bomb the harbour, every game-turn, all war.
+
+    There is ONE Tobruk, one harbour and one Port object (see _campaign_ports), and it serves
+    whoever holds the city. So the SCHEDULE is symmetric and the ENGINE decides who is besieging:
+    _air_port reads CONTROL of the hex and refuses the side that holds it ("never bomb your own
+    harbour"), letting the other one through. The holder is fed by sea; the besieger must bomb the
+    quay shut and starve the garrison to a rule-15.15 dry-ammunition surrender. The roles hand off
+    automatically, in both directions, as many times as the fortress changes hands -- exactly as
+    the 56.15 convoy lane already hands the sea route from one side to the other.
+
+    PORT-Tobruk is HARBOUR_BLOCKED (the scuttled San Giorgio, 55.26): it never regenerates, so a
+    bomb that lands STAYS landed and the 425-Point/OpStage lifeline ratchets shut for good. That is
+    what makes Tobruk's 200 Victory Points something a side has to EARN and then keep fed, instead
+    of the free gift of whoever happened to be standing there on Game-Turn 1.
+
+    NO mission is flown at Mersa Matruh, and that is not an oversight. Its harbour is real (55.3:
+    250 tons) but it is not what feeds the Eighth Army -- the RAILWAY is (54.3), and a railway is
+    not cut by bombing a quay. It is cut by taking the rail hexes, which pushes the railhead back
+    east down the line (_campaign_cw_rail_line). That is the Axis's lever against the Commonwealth
+    lifeline, and it is a GROUND one -- which is how Rommel actually did it."""
+    return tuple(AirMission(side, "port", "PORT-Tobruk", t)
+                 for t in range(1, max_turns + 1)
+                 for side in (Side.AXIS, Side.ALLIED))
 
 
 def _malta_bomb_points(gt: int) -> int:
@@ -1040,4 +1138,6 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         interdictions=(_campaign_malta_interdiction(max_turns)             # C4: Malta throttles the Axis Med convoy (rule 44)
                        + _campaign_tobruk_ferry_interdiction(max_turns)    # + BOTH halves of the Tobruk sea duel
                        + _campaign_tobruk_axis_interdiction(max_turns)),   #   (30/41.6): each side can fight the other's lane
+        air=_campaign_air(),                                # C4: BOTH air forces (34/40-46) -- without
+        air_missions=_campaign_air_missions(max_turns),     # them no harbour can ever be cut (41.39B)
     )

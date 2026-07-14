@@ -50,7 +50,8 @@ from game.engine import _convoy_dest, determinism_signature, run         # noqa:
 from game.events import Control, Side                                    # noqa: E402
 from game.hexmap import distance                                         # noqa: E402
 from game.policy import ScriptedPolicy                                   # noqa: E402
-from game.scenario import (_campaign_cw_rail_line, campaign, rommels_arrival,  # noqa: E402
+from game.scenario import (_campaign_cw_rail_line, _campaign_rail_cargo,  # noqa: E402
+                           _RAIL_TONS_PER_OPSTAGE, campaign, rommels_arrival,
                            siege_of_tobruk)
 from game.state import Convoy                                            # noqa: E402
 
@@ -166,6 +167,93 @@ def test_the_rail_lane_keeps_delivering_after_the_railhead_hex_is_enemy_controll
     chain = ("AL-Stage-Matruh", "AL-Stage-Barrani", "AL-Stage-Sollum")
     assert any(fin.supply(d).fuel > 0 for d in chain), \
         f"the rail faucet filled no Field Supply Depot: {[(d, fin.supply(d).fuel) for d in chain]}"
+
+
+# --- (C) THE CHARTED RAIL CAPACITY (54.32 / 54.33 / 54.34) --------------------------------
+#
+# The faucet was still ~30x too small after (A) and (B), and for two separate reasons -- one in
+# the CARGO and one in the GATE. Measured over the full 111 Game-Turns, the Commonwealth landed
+# 2,876 Ammunition and 55,500 Fuel; the Axis landed 74,610 and 1,821,055.
+
+def test_the_railway_carries_its_charted_tonnage_not_a_placeholder_supply_unit():
+    """CAUSE ONE: the lane shipped one _load_cargo() Supply Unit a week -- a placeholder borrowed
+    from Tobruk's 61.36 built-in dump (500 Fuel) -- while the Axis convoy got its full charted 56.5
+    monthly tonnage. The railway has a charted capacity of its own and nobody had used it: 54.32,
+    "the Commonwealth supply capacity of the railroad is 1500 tons per Operations Stage".
+
+    Three Operations Stages to a Game-Turn (engine.run), one commodity per stage (54.33: "it may
+    move fuel, ammunition, or stores -- not any combination of the three"), crossed to Points by the
+    54.5 Equivalent Weights. And 54.34 stands the line down for one stage a month to haul its own
+    water -- which is also why no Water rides the train (54.33: "the railroad hexes are pipelines in
+    and of themselves"; game.wells.pipeline already seeds that corridor)."""
+    ammo = supply.tons_to_points(_RAIL_TONS_PER_OPSTAGE, supply.AMMO)      # 1500 t / 4 t = 375
+    fuel = supply.tons_to_points(_RAIL_TONS_PER_OPSTAGE, supply.FUEL)      # 1500 t x 8 = 12,000
+    stores = supply.tons_to_points(_RAIL_TONS_PER_OPSTAGE, supply.STORES)  # 1500 t x 1 = 1,500
+
+    full = _campaign_rail_cargo(2)                       # an ordinary week: all three stages run
+    assert full == {"AMMO": ammo, "FUEL": fuel, "STORES": stores, "WATER": 0}
+
+    stood_down = _campaign_rail_cargo(1)                 # 54.34: one stage a month carries water
+    assert stood_down["STORES"] == 0
+    assert stood_down["AMMO"] == ammo and stood_down["FUEL"] == fuel
+    assert all(_campaign_rail_cargo(gt)["WATER"] == 0 for gt in range(1, 30))   # 54.33: never water
+
+
+def test_the_harbour_does_not_throttle_the_railway():
+    """CAUSE TWO, and the bigger one. Mersa Matruh is BOTH a 250-ton harbour (55.3) and the Western
+    Desert Railway terminus (60.7), and engine._naval_convoys gates every convoy landing on a port
+    hex by the 55.14 harbour throttle -- because it assumed a Convoy is a ship. So the whole railway
+    was being unloaded over a fishing quay: measured, 62 of every 1,500 Ammunition Points offered
+    actually landed, a twenty-fourth of the rated capacity, while the trains sat full.
+
+    A train is not a ship. Rule 55 rates what a HARBOUR lands from the sea; rule 54.3 gives the
+    RAILROAD its own capacity over its own iron. Convoy.rail marks the difference, and it defaults
+    False, so every sea convoy in every scenario still reads the harbour gate exactly as before.
+
+    This does NOT make the Commonwealth lifeline uncuttable -- it moves the cut to where it belongs.
+    You do not cut a railway by bombing a quay; you cut it by TAKING THE RAIL HEXES, and the railhead
+    then retracts east down the line (test_the_railhead_retracts_east_when_the_enemy_stands_on_it)."""
+    st = campaign(seed=1941)
+    rail = [c for c in st.convoys if c.lane == "CW-RAILHEAD"]
+    assert rail and all(c.rail for c in rail), "the rail lane is not flagged as a railway"
+    assert all(not c.rail for c in st.convoys if c.lane != "CW-RAILHEAD"), \
+        "a SEA convoy was flagged as a railway -- it would escape its own 55.14 harbour throttle"
+    assert Convoy.__dataclass_fields__["rail"].default is False        # byte-identity: ships default
+
+    # the harbour is still THERE (it is real geography, and the lorry relay anchors on it) -- it
+    # simply no longer stands between the trains and the railhead dump.
+    railhead = next(s for s in st.supplies if s.id == "AL-Stage-Matruh")
+    port = st.port_at(railhead.hex)
+    assert port is not None and port.id == "PORT-Matruh"
+    clipped = supply.port_landing_cap(port, supply.AMMO)               # what the quay WOULD allow
+    assert clipped < _campaign_rail_cargo(2)["AMMO"], \
+        "the harbour rating no longer bites the rail cargo -- this test has stopped proving anything"
+
+
+def test_the_railhead_actually_holds_fuel_now():
+    """THE ACCEPTANCE, and the measurement that names the bug. Before this slice the Mersa Matruh
+    railhead dump held ZERO Fuel on EVERY Game-TurN of the war: the lane delivered 500 a week, the
+    lorries lifted all 500 the moment it landed, and the dump they lifted it from was empty again
+    before any combat unit could trace to it. A railhead with nothing in it is not a faucet.
+
+    With the charted tonnage on the trains and the quay out of the way, the railhead carries a real
+    reservoir -- the thing a 32.16 supply trace can actually reach -- and the Commonwealth lands
+    Fuel and Ammunition of the same ORDER as the Axis, instead of a thirtieth."""
+    res = run(campaign(seed=1941, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    rail_landed = {"AMMO": 0, "FUEL": 0}
+    st, stocked = res.initial, 0
+    for e in res.events:
+        if e.kind.name == "SUPPLY_ARRIVED" and e.payload.get("lane") == "CW-RAILHEAD":
+            for c in rail_landed:
+                rail_landed[c] += e.payload["cargo"].get(c, 0)
+        st = apply(st, e)
+        if e.kind.name == "TURN_ADVANCED" and st.supply("AL-Stage-Matruh").fuel > 0:
+            stocked += 1
+
+    assert stocked >= 20, f"the railhead is still a dry hole: fuelled on only {stocked}/24 turns"
+    # the old lane could not have cleared these in 24 turns: it landed 62 Ammo and 500 Fuel a turn.
+    assert rail_landed["AMMO"] > 24 * 62, f"ammo still quay-clipped: {rail_landed['AMMO']}"
+    assert rail_landed["FUEL"] > 24 * 500, f"fuel still placeholder-bound: {rail_landed['FUEL']}"
 
 
 # --- (B) the trucks -----------------------------------------------------------------------

@@ -180,7 +180,17 @@ class Convoy:
     the railhead BACK east down the line rather than abolishing it. game.engine._convoy_dest
     lands the cargo in the first station on this line the enemy does not control. Default ()
     = no line, i.e. `dest` under the verbatim 56.15 test -- so every scenario but the
-    campaign's Commonwealth rail lane stays byte-identical."""
+    campaign's Commonwealth rail lane stays byte-identical.
+
+    `rail` marks a delivery that arrives BY RAILWAY (rule 54.3) rather than by sea. It is not a
+    ship, so it is not unloaded over a quay: the rule-55.14 harbour throttle (a port's tonnage
+    rating scaled by its Efficiency Level) does not apply to it, and game.engine._naval_convoys
+    skips the port gate. This is the difference between rule 54.3 -- which gives the Commonwealth
+    railroad its OWN charted capacity, 1,500 tons per Operations Stage (54.32) -- and rule 55,
+    which rates what a HARBOUR can land from ships. Mersa Matruh is both a 250-ton harbour (55.3)
+    and the Western Desert Railway terminus (60.7); without this flag the engine put the whole
+    railway through the quayside cranes and clipped it to a twenty-fourth of its charted capacity.
+    Default False = every existing convoy is a ship, so every scenario stays byte-identical."""
     id: str
     side: Side
     arrival_turn: int
@@ -188,6 +198,7 @@ class Convoy:
     dest: str
     cargo: dict
     retarget: tuple[str, ...] = ()
+    rail: bool = False
 
 
 @dataclass(frozen=True, slots=True)

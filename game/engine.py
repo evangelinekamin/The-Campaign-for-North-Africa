@@ -467,7 +467,11 @@ def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
         # 41.6/32.66: skim the CRT loss at sea BEFORE landing (identity + no rng if unbombed)
         cargo, itd_order, pct_lost, tons_lost, itd_dice = _interdict(c, r.state, r.rng)
         cap = supply.dump_capacity(r.state.terrain.terrain[dump.hex])   # 54.12, keyed by dump terrain
-        port = r.state.port_at(dump.hex)                # 56.28: a port's built-in dump
+        # 56.28: a port's built-in dump throttles what a SHIP lands over it (55.14). A RAILWAY
+        # delivery is not a ship (54.3): it has its own charted capacity (54.32, 1500 t/OpStage)
+        # and never touches the quay, so it bypasses the harbour gate. Convoy.rail defaults False,
+        # so every sea convoy in every scenario reads exactly as before.
+        port = None if c.rail else r.state.port_at(dump.hex)
         landed: dict = {}
         for k, v in cargo.items():
             onhand = getattr(dump, k.lower())
@@ -850,8 +854,17 @@ def _air_port(r: _Run, side: Side, port_id: str) -> None:
     port = r.state.port(port_id)
     if port is None or port.eff <= 0:
         return
-    if port.side == side:                                # never bomb your OWN harbour
-        return
+    # A harbour belongs to whoever HOLDS the city, not to whoever held it at setup. There is one
+    # Tobruk in the 55.3 chart and one Port object on the hex (scenario._campaign_ports), serving
+    # each side in turn -- rule 56.15 already gates its convoy lane on CONTROL, and this is the
+    # matching read: the game-turn the fortress changes hands, besieger and besieged swap, and
+    # with them who may bomb the quay. That is the whole siege duel -- the holder is fed by sea,
+    # the besieger must bomb the harbour shut -- and it has to run in BOTH directions. Falls back
+    # to the seeded side on a hex neither player has entered, so a scenario that records no
+    # control there reads exactly as before.
+    holder = r.state.control_of(port.hex)
+    if holder == CONTROL_OF[side] or (holder == Control.NEUTRAL and port.side == side):
+        return                                           # never bomb your OWN harbour
     r.emit(EventKind.PORT_EFFICIENCY_CHANGED, side, f"{side.value}/Air",
            {"port_id": port.id, "level": port.eff - 1, "strength": strength})
 

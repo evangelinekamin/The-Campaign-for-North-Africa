@@ -111,13 +111,22 @@ def test_occupying_sollum_brings_the_supply_chain_up_to_it():
     assert SOLLUM in plan, "Sollum is not even claimed -- the shortcut is dead"
     assert plan[SOLLUM].depot_id is None, "a field dump was sent to MASK the depot already on Sollum"
 
-    # AND THIS IS THE WHOLE POINT OF THE SHORTCUT: the honest trace test says NO. A Commonwealth
-    # battalion standing on Sollum TODAY could not be fed there -- the depot under it is dry, because
-    # the enemy is standing in the hex and no lorry delivers into it. Gate the claim on can_be_fed
-    # alone and Sollum is declined for ever, on evidence that taking the hex is exactly what fixes.
+    # THE SHORTCUT'S EVIDENCE -- AND WHAT CHANGED UNDERNEATH IT. The hinge is untouched and asserted
+    # above: the depot ON Sollum is still EMPTY and the hex is still ENEMY-HELD, which is what
+    # spine_awaits_control reads and why Sollum is claimed with no dump in tow.
+    #
+    # What is no longer true is the old COROLLARY -- that a Commonwealth battalion standing on Sollum
+    # today could not be fed there either, so gating the claim on can_be_fed alone would decline
+    # Sollum for ever. It would not, now: the railway finally carries its charted 54.32 tonnage, so
+    # the link BEHIND Sollum -- the Sidi Barrani Field Supply Depot -- is stocked, and a 32.16 trace
+    # from Sollum reaches it. Before that fix the entire Commonwealth chain was dry (the railhead
+    # held ZERO Fuel on every turn of the war) and the honest trace test said NO everywhere. The
+    # judgement was right then and is right now; the ground under it is finally supplied.
     from dataclasses import replace
     sent = fin.unit(plan[SOLLUM].unit_id)
-    assert not fin.victory._supplied(fin, replace(sent, hex=SOLLUM))
+    assert campaign_claim.depot_on(fin, Side.ALLIED, SOLLUM).empty      # the depot ON it: still dry
+    assert fin.victory._supplied(fin, replace(sent, hex=SOLLUM)), \
+        "the chain behind Sollum cannot feed a battalion standing on it -- the rail faucet is dead"
 
 
 def test_you_do_not_besiege_a_city_you_could_not_hold():
