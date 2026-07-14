@@ -434,6 +434,162 @@ def _convoy_dest(state: GameState, convoy):
     return None
 
 
+# --- [54.3] THE RAILWAY UNLOADS ALONG ITS LINE --------------------------------------------------
+def _rail_dump_id(side: Side, hex_: Coord) -> str:
+    """The id a railway-established station takes on the hex it is unloaded at (54.11). Keyed on the
+    hex, so the same station keeps the same counter for the whole war.
+
+    IT MUST CARRY THE "-Stage-" PREFIX, and this is load-bearing, not cosmetic. campaign_claim.STAGING
+    ("AX-Stage"/"AL-Stage") is how the whole campaign layer tells a PLACE ON THE SUPPLY LINE from an
+    army's MOBILE FIELD DUMP, and a railway station is emphatically the former -- the same family as
+    the Mersa Matruh railhead and the Operation Compass Field Supply Depots. Three separate rules key
+    off it, and every one of them was wrong while these were called "AL-Rail-":
+
+      * campaign_claim.is_field_dump would have called a station a mobile dump, and engine.
+        _supply_movement (32.3) would have WALKED THE STATIONS OFF THE RAILWAY with the army;
+      * campaign_policy._relay_source lets a lorry LIFT only from the supply line or a faucet -- so
+        the railway was stocking forty stations THE TRUCK RELAY COULD NOT LOAD FROM, which severs
+        the one chain this whole change exists to build (rail -> station -> lorry -> the front);
+      * campaign_claim.hold_depots keeps a field dump from parking on top of a spine hex and masking
+        it (measured, twice, and both times it cost the campaign a hundred Victory Points)."""
+    return f"{'AX' if side == Side.AXIS else 'AL'}-Stage-Rail-{hex_[0]:02d}.{hex_[1]:03d}"
+
+
+def _rail_stops(r: _Run, convoy, terminus) -> list:
+    """[54.35] The hexes this game-turn's train unloads its freight at, FORWARD-FIRST.
+
+    THE BUG THIS FIXES, and it is the one that made every knob downstream inert. The lane landed
+    its whole 1500-tons-per-OpStage haul (54.32) on ONE dump -- the Mersa Matruh railhead -- and
+    left every other station on four hundred miles of working railway at ZERO. Our supply trace
+    runs to DUMPS and to nothing else (32.16), so the Nile Delta and the railhead were the only two
+    hexes in Egypt where an Eighth Army battalion could eat, and the four hundred miles of Britain's
+    own base area between them read as out-of-supply desert. The army could not march up its own
+    railway, so it never consolidated an advance, so nothing ever changed hands, so the final score
+    was the September-1940 depot geography read out 111 turns later.
+
+    THE RULE. 54.35: "supplies may be moved from any one spot and DUMPED IN ANOTHER SPOT. Supplies
+    are considered unloaded when they REACH A SPECIFIC HEX." 54.11: "ANY HEX can be used as a supply
+    dump." So the railway's freight may be set down at any hex on the line, at the player's choice,
+    every Operations Stage -- and 54.16 tells him to ("establishing a viable dump network should be
+    TOP PRIORITY for logistics commanders"). There is no reason on earth for a rail hex with an army
+    standing on it to be empty: the train simply stops there.
+
+    THE STOPS, therefore, are: every OPERATING rail hex (52.22 -- one the enemy does not control;
+    54.41 gives him control by being the last to pass a combat unit through it) that a friendly
+    COMBAT UNIT IS STANDING ON, plus the `terminus` railhead, which is always served because it is
+    the forward depot the army is heading for. Ordered forward-first (this map's axial r IS the
+    east-west axis, so the smallest r is the westernmost hex = nearest the enemy).
+
+    A unit standing on a stop ends up with a dump IN ITS OWN HEX, which satisfies not just the
+    32.16 trace but the STRICTER rule the full logistics game actually asks for (49.15: "for fuel to
+    be consumed, it must be present in the same hex with the consuming unit"; 51.15: "Stores must be
+    present in the hex to be used"). Units NEAR the line then trace to those dumps at cpa/2.
+
+    FLAGGED AS DOCTRINE, NOT RULE: WHICH hex the player unloads at is his free choice under 54.35,
+    and "stop where the troops are" is our staff's standing order, not a magnitude out of the book.
+    What is NOT ours is the tonnage -- the haul is exactly the 54.32 charted 1500 tons/OpStage it
+    always was. This moves WHERE the freight lands, and not one point of HOW MUCH.
+
+    With no combat unit on the line the stop list is just the terminus, which is precisely today's
+    behaviour -- so a state with no rails (every scenario but the campaign) reads byte-identical."""
+    state = r.state
+    rails = state.terrain.rails
+    if not rails:                                   # no railway: the vanilla single-destination lane
+        return [terminus]
+    enemy = CONTROL_OF[_other(convoy.side)]
+    on_line = {h for e in rails for h in e}
+    manned = {u.hex for u in state.living(convoy.side) if u.is_combat} & on_line
+    out: list = []
+    for h in sorted(h for h in manned if state.control_of(h) != enemy):   # 52.22: OPERATING hexes
+        dump = _dump_on(state, convoy.side, h)
+        if dump is not None and dump.base:
+            # RULE 57: the railway hauls supply AWAY from the bottomless base, never into it. The
+            # Commonwealth "has an unlimited amount of supplies of all types in Cairo at all times;
+            # HIS PROBLEM IS SOLELY TO GET IT TO WHERE HE WANTS IT." The Delta end of the line is a
+            # SOURCE. Left as a stop, the garrison standing on Alexandria would make the base a
+            # destination and throw a whole share of the 54.32 haul into a 125,000,000-point depot
+            # that did not need it -- the one way this change could quietly cost the army supply.
+            continue
+        out.append(dump or h)
+    if terminus is not None and terminus.id not in {d.id for d in out if not isinstance(d, tuple)}:
+        out.append(terminus)                        # the railhead is always served (60.7)
+    # Forward-first: westernmost (smallest axial r) first. A dump object and a bare hex both answer
+    # to the same key, so an established station and a fresh one sort into one line.
+    return sorted(out, key=lambda d: (d if isinstance(d, tuple) else d.hex)[1])
+
+
+def _dump_on(state: GameState, side: Side, hex_):
+    """The friendly FIELD dump already standing on `hex_`, if any -- the existing Mersa Matruh
+    railhead, an Operation Compass Field Supply Depot, a station the train founded last week.
+
+    ONE DUMP PER HEX, which is the idiom _establish_dump already enforces for the lorries ("a
+    friendly dump already stands on this hex (54.11)"), and here it is load-bearing: a second dump
+    beside the first would hand that hex a SECOND 54.12 Supply Dump Capacity, silently doubling the
+    ceiling the whole logistics chain is throttled by. 32.14 permits several Supply Units to stack,
+    but our dump IS the hex's capacity, not a counter, so it must not be minted twice. A well or a
+    pipeline hex is geography, never a freight depot, so it is skipped (game.wells.is_water_source)."""
+    return next((s for s in sorted(state.supplies, key=lambda s: s.id)
+                 if s.hex == hex_ and s.side == side and not s.is_dummy
+                 and not wells.is_water_source(s)), None)
+
+
+def _rail_deliver(r: _Run, convoy, terminus, cargo: dict) -> None:
+    """Land one game-turn of railway freight (54.32) across the line's stops (_rail_stops).
+
+    EQUAL SHARES, THEN CASCADE FORWARD. Each stop takes an even cut of the haul -- capped by its
+    54.12 Supply Dump Capacity -- and whatever will not fit (or the integer remainder) cascades to
+    the stops in forward-first order until the train is empty. A garrison on the line gets enough to
+    eat; the surplus still runs up to the front, which is where a staff sends it.
+
+    The total landed is UNCHANGED -- it is the 54.32 haul, to the point. Nothing is minted here that
+    was not minted before; it merely gets off the train at more than one station."""
+    stops = [d for d in (_rail_station(r, convoy, s) for s in _rail_stops(r, convoy, terminus))
+             if d is not None]
+    if not stops:
+        return
+    for commodity in sorted(cargo):
+        left = cargo[commodity]
+        if left <= 0:
+            continue
+        share = left // len(stops)
+        for cut in (share, left):                   # even cut, then the forward cascade takes the rest
+            for dump in stops:
+                if left <= 0:
+                    break
+                cap = supply.dump_capacity_at(r.state, dump.hex)[commodity]
+                onhand = getattr(r.state.supply(dump.id), commodity.lower())
+                qty = min(cut, left, cap - onhand)
+                if qty > 0:
+                    left -= qty
+                    r.emit(EventKind.SUPPLY_ARRIVED, convoy.side, "SYSTEM",
+                           {"supply_id": dump.id, "cargo": {commodity: qty},
+                            "lane": convoy.lane, "convoy_id": convoy.id})
+
+
+def _rail_station(r: _Run, convoy, stop):
+    """The dump a stop unloads into, ESTABLISHING it where the train first sets freight down
+    (54.11: "any hex can be used as a supply dump"). Born EMPTY -- the SUPPLY_ARRIVED that follows
+    fills it -- so nothing is minted and conservation is untouched. base=False: a railway station in
+    the desert is a field dump and evaporates like one (49.3), can be captured (32.13) and blown
+    (54.14).
+
+    Returns None -- the train runs through without stopping -- when the station's counter EXISTS BUT
+    IS THE ENEMY'S. That is not a corner case, it is the war: the Axis overruns a station, 32.13
+    hands him the dump, he moves on, and the hex is ours again by control while the counter is still
+    his. Re-founding "AL-Rail-26.100" there would put a SECOND Supply Unit with the SAME ID on the
+    map -- and state.supply() resolves an id to the first match while the conservation invariant sums
+    ALL of them, so the duplicate double-counts and game.invariants fails loud (it did: AMMO on_hand
+    ran 299 points over initial). You cannot unload into a dump the enemy owns; you must retake it."""
+    if not isinstance(stop, tuple):
+        return stop
+    sid = _rail_dump_id(convoy.side, stop)
+    if r.state.supply(sid) is not None:             # the enemy holds our station's counter
+        return None
+    r.emit(EventKind.SUPPLY_DUMP_ESTABLISHED, convoy.side, "SYSTEM",
+           {"supply_id": sid, "side": convoy.side.value, "hex": list(stop)})
+    return r.state.supply(sid)
+
+
 def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
     """Naval Convoy Arrival (rule 48 V.C.7 Tactical Shipping + V.D Convoy Arrival): the
     supply SOURCE lands each due convoy's cargo into its destination dump, capped at the
@@ -470,34 +626,42 @@ def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
             continue
         # 41.6/32.66: skim the CRT loss at sea BEFORE landing (identity + no rng if unbombed)
         cargo, itd_order, pct_lost, tons_lost, itd_dice = _interdict(c, r.state, r.rng)
-        cap = supply.dump_capacity_at(r.state, dump.hex)   # 54.12, by dump terrain + village overlay
-        # 56.28: a port's built-in dump throttles what a SHIP lands over it (55.14). A RAILWAY
-        # delivery is not a ship (54.3): it has its own charted capacity (54.32, 1500 t/OpStage)
-        # and never touches the quay, so it bypasses the harbour gate. Convoy.rail defaults False,
-        # so every sea convoy in every scenario reads exactly as before.
-        port = None if c.rail else r.state.port_at(dump.hex)
-        landed: dict = {}
-        for k, v in cargo.items():
-            onhand = getattr(dump, k.lower())
-            room = min(cap[k], onhand + v) - onhand     # 54.12 dump headroom
+        if c.rail and r.state.terrain.rails:
+            # [54.3] THE RAILWAY UNLOADS ALONG ITS LINE, not all at the terminus (see _rail_stops).
+            # A ship has one quay; a train has a whole railway of hexes it may set freight down at
+            # (54.35), and 54.16 tells the player to use them. The haul is the same 54.32 tonnage --
+            # only its destinations change. Gated on a rails edge-set, which ONLY the campaign seeds,
+            # so every other scenario's convoy falls through to the verbatim single-dump landing.
+            _rail_deliver(r, c, dump, cargo)
+        else:
+            cap = supply.dump_capacity_at(r.state, dump.hex)   # 54.12, by dump terrain + village overlay
+            # 56.28: a port's built-in dump throttles what a SHIP lands over it (55.14). A RAILWAY
+            # delivery is not a ship (54.3): it has its own charted capacity (54.32, 1500 t/OpStage)
+            # and never touches the quay, so it bypasses the harbour gate. Convoy.rail defaults False,
+            # so every sea convoy in every scenario reads exactly as before.
+            port = None if c.rail else r.state.port_at(dump.hex)
+            landed: dict = {}
+            for k, v in cargo.items():
+                onhand = getattr(dump, k.lower())
+                room = min(cap[k], onhand + v) - onhand     # 54.12 dump headroom
+                if port is not None:
+                    # 55.14 harbour throttle: several convoys sharing one port this OpStage draw
+                    # from ONE cap, so subtract what earlier convoys already landed there.
+                    already = port_landed.get((port.id, k), 0)
+                    room = min(room, supply.port_landing_cap(port, k) - already)
+                if room > 0:
+                    landed[k] = room
             if port is not None:
-                # 55.14 harbour throttle: several convoys sharing one port this OpStage draw
-                # from ONE cap, so subtract what earlier convoys already landed there.
-                already = port_landed.get((port.id, k), 0)
-                room = min(room, supply.port_landing_cap(port, k) - already)
-            if room > 0:
-                landed[k] = room
-        if port is not None:
-            for k, q in landed.items():
-                port_landed[(port.id, k)] = port_landed.get((port.id, k), 0) + q
-        if port is not None:                            # legible per-commodity landing beat
-            for k in sorted(landed):
-                r.emit(EventKind.PORT_UNLOADED, c.side, "SYSTEM",
-                       {"port_id": port.id, "commodity": k, "qty": landed[k],
-                        "tons": supply.points_to_tons(landed[k], k), "eff": port.eff})
-        if landed:                                      # nothing to land into a full dump
-            r.emit(EventKind.SUPPLY_ARRIVED, c.side, "SYSTEM",   # dump.id == c.dest unless the railhead retracted
-                   {"supply_id": dump.id, "cargo": landed, "lane": c.lane, "convoy_id": c.id})
+                for k, q in landed.items():
+                    port_landed[(port.id, k)] = port_landed.get((port.id, k), 0) + q
+            if port is not None:                        # legible per-commodity landing beat
+                for k in sorted(landed):
+                    r.emit(EventKind.PORT_UNLOADED, c.side, "SYSTEM",
+                           {"port_id": port.id, "commodity": k, "qty": landed[k],
+                            "tons": supply.points_to_tons(landed[k], k), "eff": port.eff})
+            if landed:                                  # nothing to land into a full dump
+                r.emit(EventKind.SUPPLY_ARRIVED, c.side, "SYSTEM",   # dump.id == c.dest unless the railhead retracted
+                       {"supply_id": dump.id, "cargo": landed, "lane": c.lane, "convoy_id": c.id})
         if itd_order is not None:                       # 41.6/32.66: the bombing marker beside arrival
             interdictor = _other(c.side)
             r.emit(EventKind.CONVOY_INTERDICTED, interdictor, "SYSTEM",

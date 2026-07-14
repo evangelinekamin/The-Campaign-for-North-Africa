@@ -165,27 +165,50 @@ def _land_path(terrain: dict, start: Coord, end: Coord) -> list[Coord]:
     return list(reversed(path))
 
 
+def corridor(terrain: dict, data: dict | None = None) -> tuple[Coord, ...]:
+    """THE WESTERN DESERT RAILWAY, as a chain of hexes: the ONE piece of geography that is both
+    the [54.3] Commonwealth railroad and the [52.22] water pipeline, because the rulebook says
+    they are the same thing -- "the Commonwealth Player may consider any operating Railroad hex
+    to be a pipeline for water" (52.22), "the railroad hexes are pipelines in and of themselves"
+    (54.33). Deriving both from this one function is what stops the rails and the pipeline from
+    drifting into two different lines.
+
+    At the campaign's September-1940 start the RR "runs to Mersa Matruh and ends there" (60.7),
+    so the corridor runs Alexandria -> Mersa Matruh.
+
+    FLAGGED PROXY: the map's rail geography is untranscribed (the VASSAL extract carries terrain
+    and roads, not rails), so the corridor is the shortest LAND path between the two transcribed
+    endpoints in data/wells.json. It walks real hexes and invents no terrain, but its exact hex
+    chain is OURS, not the map's."""
+    data = data or load()
+    spec = data["pipeline"]
+    return tuple(_land_path(terrain, _ax(spec["from"]), _ax(spec["to"])))
+
+
 def pipeline(terrain: dict, data: dict | None = None) -> tuple[SupplyUnit, ...]:
     """[52.22]/[52.23] The Commonwealth water pipeline: the Egyptian railroad corridor.
 
     The Commonwealth "may consider any operating Railroad hex to be a pipeline for water",
     and a pipeline hex is a water source "similar to a major city" -- unlimited, never
-    depleted, never poisoned (52.23), and never evaporating (52.44, hence base=True). At the
-    campaign's September-1940 start the RR "runs to Mersa Matruh and ends there" (60.7), so
-    the corridor runs Alexandria -> Mersa Matruh. Axis-excluded by 52.22 (it may not use the
-    defunct Barce-Benghazi line), which is exactly the asymmetry that let the Eighth Army
-    live in the desert while the Panzerarmee carried its water.
+    depleted, never poisoned (52.23), and never evaporating (52.44, hence base=True). Axis-
+    excluded by 52.22 (it may not use the defunct Barce-Benghazi line), which is exactly the
+    asymmetry that let the Eighth Army live in the desert while the Panzerarmee carried its water.
 
-    FLAGGED PROXY: the map's rail geography is untranscribed (TerrainMap.rails is empty), so
-    the corridor is the shortest LAND path between the two transcribed endpoints."""
+    THIS IS THE CONDUIT HALF OF THE RAILWAY, and the rulebook draws the line between the halves
+    itself. WATER is drawn straight off the rail hex -- 52.23 makes an RR hex "a source of water
+    similar to a major city", so a unit that reaches the line drinks, with no train and no dump.
+    AMMUNITION, FUEL and STORES are NOT: they must be hauled by the railway (54.32) and UNLOADED
+    at a hex (54.35) before anyone can eat them (49.15: "for fuel to be consumed, it must be
+    present in the same hex"; 51.15: "Stores must be present in the hex to be used"). That freight
+    half is game.engine._rail_stops -- and note 52.23's analogy is drawn for WATER alone ("a source
+    of WATER similar to a major city"), which is precisely what forbids extending it to the rest."""
     data = data or load()
     spec = data["pipeline"]
     side = Side[spec["side"]]
     prefix = dict(_SIDE_PREFIX)[side]
-    path = _land_path(terrain, _ax(spec["from"]), _ax(spec["to"]))
     return tuple(SupplyUnit(f"{prefix}{PIPE_ID_MARK}{i:02d}", side, hexid,
                             ammo=0, fuel=0, stores=0, water=UNLIMITED_WELL, base=True)
-                 for i, hexid in enumerate(path))
+                 for i, hexid in enumerate(corridor(terrain, data)))
 
 
 def well_hexes(data: dict | None = None) -> tuple[Coord, ...]:

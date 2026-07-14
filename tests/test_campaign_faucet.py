@@ -138,6 +138,7 @@ def test_the_rail_lane_keeps_delivering_after_the_railhead_hex_is_enemy_controll
     res = run(campaign(seed=1941, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     line = set(_campaign_cw_rail_line(res.initial.supplies))
     hexes = {s.id: s.hex for s in res.initial.supplies}
+    rails = {h for edge in res.initial.terrain.rails for h in edge}
 
     st, gt = res.initial, 1
     enemy_on_railhead, landed_while_enemy_on_it, cancelled = set(), 0, 0
@@ -148,7 +149,17 @@ def test_the_rail_lane_keeps_delivering_after_the_railhead_hex_is_enemy_controll
         elif e.kind.name == "CONVOY_CANCELLED" and e.payload["lane"] == "CW-RAILHEAD":
             cancelled += 1
         elif e.kind.name == "SUPPLY_ARRIVED" and e.payload.get("lane") == "CW-RAILHEAD":
-            assert e.payload["supply_id"] in line                 # only ever into a station on the line
+            # ON THE LINE, and nowhere else. This used to read "supply_id in line" -- the four
+            # SEEDED stations -- which pinned the very bug [54.3] had to fix: the train landed its
+            # whole 1500-tons-per-OpStage haul on the terminus and left four hundred miles of
+            # working railway at zero. [54.35] lets the player set his freight down at ANY hex on
+            # the line ("supplies may be moved from any one spot and dumped in another spot...
+            # considered unloaded when they reach a specific hex"), and [54.11] makes that hex a
+            # dump, so a station the railway FOUNDED on its own rails is a legal destination too.
+            # What must still never happen is freight landing OFF the railway.
+            sid = e.payload["supply_id"]
+            assert sid in line or st.supply(sid).hex in rails, \
+                f"the railway unloaded {sid} off its own line"
             if st.control_of(hexes["AL-Stage-Matruh"]) == Control.AXIS:
                 enemy_on_railhead.add(gt)
                 landed_while_enemy_on_it += 1

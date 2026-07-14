@@ -1205,9 +1205,23 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     terrain[coords.to_axial(coords.parse(_AXIS_PORT_HEX))] = Terrain.MAJOR_CITY
     tmap = replace(tmap, terrain=terrain, fortifications=forts)
 
-    # The Commonwealth pipeline (52.22): laid over the FINAL land map, so the corridor walks real
-    # hexes and invents no terrain. Commonwealth-only -- the Axis may not use the defunct
-    # Barce-Benghazi railroad (52.22).
+    # THE WESTERN DESERT RAILWAY (rule 54.3), laid over the FINAL land map so it walks real hexes
+    # and invents no terrain. ONE corridor (game.wells.corridor), read TWICE, because the rulebook
+    # says the rails and the pipeline are the same hexes:
+    #   * as the rails edge-set (54.3), which is what the railway HAULS freight along -- 1500 tons
+    #     of ONE commodity per Operations Stage (54.32/54.33), unloaded at a hex (54.35) into a
+    #     dump (54.11). That is engine._rail_stops, and it is the half that was missing: the lane
+    #     used to land its whole haul on the Mersa Matruh railhead and leave every other station on
+    #     four hundred miles of line at ZERO, so the Eighth Army could not eat on its own railway.
+    #   * as the water pipeline (52.22/52.23), which needs no train at all -- an RR hex simply IS
+    #     "a source of water similar to a major city", unlimited and undepletable.
+    # Commonwealth-only: the Axis may not use the defunct Barce-Benghazi railroad (52.22), and its
+    # 54.4 right to run rolling stock over CAPTURED Commonwealth rail (five contiguous controlled
+    # hexes + 250 Stores/100 Fuel imported as locomotives) is DEFERRED and flagged -- the Axis
+    # hauls by lorry from Benghazi, which is the historical asymmetry, not a thumb on the scale.
+    rail_corridor = wells.corridor(tmap.terrain)
+    tmap = replace(tmap, rails=frozenset(edge(a, b) for a, b
+                                         in zip(rail_corridor, rail_corridor[1:])))
     water_sources += wells.pipeline(tmap.terrain)
 
     # THE 54.12 VILLAGE ROW (see game.villages). Read off the FINAL map, so every hex stamped

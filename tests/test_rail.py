@@ -15,14 +15,17 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from game import supply
+import pytest
+
+from game import supply, wells
 from game.apply import apply
 from game.engine import determinism_signature, run
 from game.events import Event, EventKind, Phase, Side
 from game.invariants import check
 from game.movement import TerrainMap, edge
 from game.policy import ScriptedPolicy
-from game.scenario import coastal_corridor
+from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy
+from game.scenario import campaign, coastal_corridor
 from game.state import GameState, SupplyUnit, VP
 from game.terrain import Terrain
 
@@ -94,3 +97,63 @@ def test_railless_scenario_byte_identical():
     b = run(coastal_corridor(seed=11), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
     assert determinism_signature(a.events) == determinism_signature(b.events)
     assert not any(e.kind == EventKind.RAIL_HAULED for e in a.events)
+
+
+# --- [54.3]/[54.35] THE RAILWAY UNLOADS ALONG ITS LINE ---------------------------------------
+# The campaign seeds the Western Desert Railway (Alexandria -> Mersa Matruh) as a real rails
+# edge-set, and the rail lane now sets its freight down at the stations the army is standing on
+# (engine._rail_stops) instead of piling all 1500 tons/OpStage on the one forward railhead. These
+# pin the geography, the "unload where the troops are" rule, and the two things that must NOT move:
+# the total hauled, and the byte-identity of every rail-less scenario.
+
+@pytest.fixture(scope="module")
+def rail_run():
+    return run(campaign(seed=1941, max_turns=25), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+
+
+def test_the_campaign_lays_a_real_railway():
+    """[54.3]/[52.22] The rails and the water pipeline are the SAME hexes -- the rulebook says so
+    ("the railroad hexes are pipelines in and of themselves", 54.33), so both read one corridor."""
+    st = campaign(seed=1941)
+    assert st.terrain.rails, "the campaign must lay the Western Desert Railway"
+    rail_hexes = {h for e in st.terrain.rails for h in e}
+    pipe_hexes = {su.hex for su in st.supplies if wells.PIPE_ID_MARK in su.id}
+    assert rail_hexes == pipe_hexes, "the rails and the 52.22 pipeline must be one line"
+
+
+def test_the_railway_stocks_stations_along_its_length(rail_run):
+    """THE BUG THIS FIXES: the lane used to land its whole haul on ONE dump (Mersa Matruh) and leave
+    four hundred miles of working railway at ZERO, so the only hexes in Egypt an Eighth Army
+    battalion could eat on were the Delta and that railhead."""
+    fed = {e.payload["supply_id"] for e in rail_run.events
+           if e.kind == EventKind.SUPPLY_ARRIVED and e.payload["lane"] == "CW-RAILHEAD"}
+    assert len(fed) > 1, "the railway must stock more than the terminus"
+    assert any(sid.startswith("AL-Stage-Rail-") for sid in fed), "it must found stations on its line (54.11)"
+
+
+def test_a_railway_station_is_founded_where_the_army_stands(rail_run):
+    """[54.35] "supplies may be moved from any one spot and DUMPED IN ANOTHER SPOT... considered
+    unloaded when they reach A SPECIFIC HEX." The train stops where the troops are."""
+    st = campaign(seed=1941)
+    rail_hexes = {h for e in st.terrain.rails for h in e}
+    made = [e for e in rail_run.events if e.kind == EventKind.SUPPLY_DUMP_ESTABLISHED
+            and e.payload["supply_id"].startswith("AL-Stage-Rail-")]
+    assert made, "the railway must found stations"
+    assert all(tuple(e.payload["hex"]) in rail_hexes for e in made), "a station must sit ON the line"
+
+
+def test_the_railway_hauls_no_more_than_it_ever_did(rail_run):
+    """The 54.32 magnitude is UNTOUCHED. This moves WHERE the freight lands, not one point of HOW
+    MUCH: a game-turn of trains is still the charted 1500 tons/OpStage, crossed at 54.5."""
+    from game.scenario import _campaign_rail_cargo
+    landed: dict = {}
+    for e in rail_run.events:
+        if e.kind == EventKind.SUPPLY_ARRIVED and e.payload["lane"] == "CW-RAILHEAD" and e.turn == 5:
+            for c, q in e.payload["cargo"].items():
+                landed[c] = landed.get(c, 0) + q
+    for c, q in landed.items():
+        assert q <= _campaign_rail_cargo(5)[c], f"{c}: the railway landed more than 54.32 allows"
+
+
+def test_the_railway_conserves(rail_run):
+    check(rail_run.final)
