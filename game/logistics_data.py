@@ -70,6 +70,21 @@ def evaporation_percent() -> dict:
             "hot_additional": e["hot_weather_additional_percent"]}
 
 
+def demolition_percent_54_17() -> dict:
+    """[54.17] SUPPLY DUMP DEMOLITION TABLE: the percentage of EVERY commodity in a dump destroyed,
+    keyed by the MODIFIED die roll (int), with the chart's "8 or more" row under the key 8.
+
+    TRANSCRIBED VERBATIM, AND IT IS NOT MONOTONE -- FLAGGED FOR OCR QA, NOT SILENTLY REPAIRED. The
+    chart as transcribed reads  -2:0  -1:33  0:0  1:10  2:20  3:33  4:50  5:75  6:100  7:33  8+:100,
+    so a modified -1 destroys a THIRD of the dump while a 0 destroys nothing, and a 7 undoes a 6.
+    Two cells (-1 and 7) are almost certainly a column slip in the scan of page 14: every other cell
+    climbs 0/10/20/33/50/75/100 exactly as a demolition table should. We do NOT "fix" them here --
+    data/logistics_rates.json is this project's transcription of the rulebook and correcting a
+    magnitude on our own judgement is precisely what we may not do. It is reported instead."""
+    row = _data()["supply_dump_demolition_54_17"]["percent_by_modified_die"]
+    return {(8 if k == "8+" else int(k)): v for k, v in row.items()}
+
+
 def _dump_cap_row(name: str) -> dict:
     """One row of the [54.12] Supply Dump Capacity Chart, keyed by engine commodity name."""
     row = _data()["supply_dump_capacity_54_12"][name]

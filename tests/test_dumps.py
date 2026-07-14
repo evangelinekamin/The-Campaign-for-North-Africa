@@ -16,17 +16,22 @@ nothing to consolidate INTO.
 from __future__ import annotations
 
 import hashlib
+from dataclasses import replace
 
 import pytest
 
 from game import supply
-from game.campaign_policy import (CampaignAxisPolicy, CampaignCommonwealthPolicy,
+from game import tactics
+from game.hexmap import neighbors
+from game.campaign_policy import (CampaignAxisPolicy, CampaignCommonwealthPolicy, deny_dumps,
                                   keep_in_trace)
 from game.engine import determinism_signature, run
 from game.events import EventKind, Side
 from game.invariants import check
 from game.policy import MoveOrder, ScriptedPolicy
 from game.scenario import campaign, rommels_arrival, siege_of_tobruk
+from game.state import SupplyUnit
+from game.terrain import Terrain
 
 
 @pytest.fixture(scope="module")
@@ -67,19 +72,44 @@ def test_the_founded_network_conserves_supply(gt30):
 
 # --- [32.13] a dump can be captured ---------------------------------------------------------
 
-def test_a_field_dump_is_captured_when_the_enemy_enters_its_hex(gt30):
+def _overrun(dump_id: str):
+    """A campaign state with an enemy combat unit standing ON a stocked dump -- the 32.13 trigger,
+    constructed rather than waited for.
+
+    IT HAS TO BE CONSTRUCTED NOW, and that is itself a finding. Since [54.14] (blow the dump) and the
+    wired consolidation constraint landed, capture is NEAR-EXTINCT in the campaign: an army that does
+    not outrun its trace does not walk onto the enemy's depots, and an owner who is about to lose one
+    BURNS it. Measured over the full 111 turns: 0 captures in four seeds of five (4 in seed 2026, all
+    after Game-Turn 40). Hanging the rule's test on a 30-turn slice of a campaign trajectory was
+    always the fragile way to test it; this pins the RULE."""
+    st = campaign(seed=1941)
+    dump = st.supply(dump_id)
+    foe = next(u for u in st.living(tactics.other(dump.side)) if u.is_combat)
+    # The hex must be UNCONTESTED: 32.13 captures a dump the enemy has taken, not one its owner is
+    # still standing on (engine._capture_dumps). Clear the owner's garrison off it.
+    others = tuple(u for u in st.units
+                   if u.id != foe.id and not (u.hex == dump.hex and u.side == dump.side))
+    return replace(st, units=(replace(foe, hex=dump.hex),) + others), dump, foe
+
+
+def test_a_field_dump_is_captured_when_the_enemy_enters_its_hex():
     """[32.13] "If any enemy combat unit enters a Supply Unit's hex, that unit is captured (and its
     supplies used immediately and freely)." [49.19]: "Fuel is non-denominational... making a supply
     dump a worthwhile objective." """
-    took = [e for e in gt30.events if e.kind == EventKind.SUPPLY_CAPTURED]
-    assert took, "no dump ever changed hands -- 32.13 is still unimplemented"
-    for e in took:
-        assert e.payload["from"] != e.payload["to"]
+    st, dump, _foe = _overrun("AL-Stage-Matruh")
+    res = run(replace(st, max_turns=1), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    took = [e for e in res.events if e.kind == EventKind.SUPPLY_CAPTURED
+            and e.payload["supply_id"] == dump.id]
+    assert took, "no dump changed hands -- 32.13 did not fire on an overrun depot"
+    assert took[0].payload["from"] != took[0].payload["to"]
+    assert res.final.supply(dump.id).side == Side.AXIS
 
 
-def test_capture_moves_supply_and_never_mints_it(gt30):
+def test_capture_moves_supply_and_never_mints_it():
     """CONSERVATION. Capture flips an owner; it does not create or destroy a Point."""
-    check(gt30.final)
+    st, dump, _foe = _overrun("AL-Stage-Matruh")
+    res = run(replace(st, max_turns=1), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    check(res.final)
 
 
 def test_the_bottomless_base_is_not_capturable(gt30):
@@ -175,3 +205,108 @@ def test_rommel_and_siege_stay_byte_identical():
         res = run(build(seed=42), axis, axis)
         sig = hashlib.sha256(determinism_signature(res.events).encode()).hexdigest()[:12]
         assert sig == baselines[name], f"{name} byte-identity broken: {sig} != {baselines[name]}"
+
+
+# --- [54.14]/[54.17] BLOW THE DUMP ----------------------------------------------------------
+# Rule 32.13 hands an overrun dump to the enemy. 54.14 is the defender's answer -- and without it
+# capture is a pure one-way gift to whoever is advancing, which in September 1940 is the Axis all
+# the way to the wire. These pin the CP bill, the 54.17 table, the sink, and the doctrine.
+
+def test_only_a_non_gun_unit_may_blow_a_dump():
+    """[54.14] "Only non-gun units may attempt to blow dumps"."""
+    st = campaign(seed=1941)
+    dump = next(s for s in st.supplies if s.id == "AL-Stage-Matruh")
+    gun = next(u for u in st.units if u.is_gun)
+    assert not supply.can_blow(replace(gun, hex=dump.hex), dump)
+
+
+def test_the_attempt_costs_a_third_of_basic_cpa():
+    """[54.14] "expend Capability Points equal to one-third (rounded up) of the attempting unit's
+    basic CPA" -- and "may never expend more than the unit's basic CPA"."""
+    st = campaign(seed=1941)
+    u = next(u for u in st.units if u.is_combat and not u.is_gun and u.cpa == 10)
+    assert supply.demolition_cp(u, 0) == 4                    # ceil(10/3)
+    assert supply.demolition_cp(u, 2) == 10                   # 3 x 4 = 12, clamped at the CPA
+    assert supply.demolition_cp(u, 9) <= u.cpa                # never over the CPA, whatever is asked
+
+
+def test_extra_thirds_are_bounded_by_the_cp_the_unit_actually_has():
+    """[54.14] "a unit may not exceed its CPA to blow a dump" -- so the +1s bought before the roll
+    are bounded by the CP left this Operations Stage, not merely by the chart."""
+    st = campaign(seed=1941)
+    u = next(u for u in st.units if u.is_combat and not u.is_gun and u.cpa == 10)
+    assert supply.affordable_thirds(u, 2) == 2                       # fresh: can buy both
+    assert supply.affordable_thirds(replace(u, cp_used=7.0), 2) == 0  # 3 CP left: the bare attempt
+
+
+def test_the_54_17_table_is_the_rulebooks():
+    """[54.17] Supply Dump Demolition Table, transcribed. NOT MONOTONE at -1 and 7 -- an OCR column
+    slip we transcribe verbatim rather than "fix" (see logistics_data.demolition_percent_54_17)."""
+    assert supply.demolition_percent(1) == 10
+    assert supply.demolition_percent(4) == 50
+    assert supply.demolition_percent(6) == 100
+    assert supply.demolition_percent(99) == 100        # clamped to the "8 or more" row
+    assert supply.demolition_percent(-9) == 0          # clamped to the "-2" row
+
+
+def test_a_major_city_is_two_harder_to_blow_and_a_small_dump_one_easier():
+    """[54.17] modifiers, and the one piece of structure in them: the city clause and the small-dump
+    clause are EXCLUSIVE ("-2 if in a Major City hex. IF NOT, THEN +1 if the dump is 500 or less")."""
+    big = SupplyUnit("X", Side.ALLIED, (0, 0), ammo=900, fuel=900)
+    small = SupplyUnit("X", Side.ALLIED, (0, 0), ammo=10, fuel=10)
+    st3 = {"stack_points": 3}                                   # a proper stack: no -1
+    assert supply.demolition_modifier(big, Terrain.MAJOR_CITY, **st3) == -2
+    assert supply.demolition_modifier(small, Terrain.MAJOR_CITY, **st3) == -2   # city wins; no +1
+    assert supply.demolition_modifier(small, Terrain.CLEAR, **st3) == 1         # small dump: +1
+    assert supply.demolition_modifier(big, Terrain.CLEAR, **st3) == 0
+    # "-1 if the attempting unit(s) TOTAL one Stacking Point or less" -- a LONE battalion
+    assert supply.demolition_modifier(big, Terrain.CLEAR, stack_points=1) == -1
+
+
+def _about_to_fall(dump_id: str):
+    """A campaign state in which `dump_id` is ABOUT TO FALL: one friendly battalion standing on it,
+    an overwhelming enemy stack in the next hex. Built by moving real counters, so every rule the
+    doctrine and the engine consult (CPA, gun/non-gun, stacking, strength) reads a real unit."""
+    st = campaign(seed=1941)
+    dump = st.supply(dump_id)
+    holder = next(u for u in st.living(dump.side) if u.is_combat and not u.is_gun)
+    nxt = next(h for h in sorted(neighbors(dump.hex)) if st.terrain.exists(h))
+    foe = [u for u in st.living(tactics.other(dump.side)) if u.is_combat][:4]
+    units = [replace(holder, hex=dump.hex)] + [replace(u, hex=nxt) for u in foe]
+    keep = {u.id for u in units}
+    return replace(st, units=tuple(units) + tuple(u for u in st.units if u.id not in keep)), holder
+
+
+def test_a_dump_about_to_fall_is_blown():
+    """[54.14] The whole point: an enemy stack next door that we cannot hold off, and the depot goes
+    up rather than into his hands."""
+    st, holder = _about_to_fall("AL-Stage-Matruh")
+    orders = deny_dumps(st, Side.ALLIED)
+    assert any(o.supply_id == "AL-Stage-Matruh" and o.unit_id == holder.id for o in orders)
+
+
+def test_a_garrison_that_can_hold_does_not_burn_its_own_dump():
+    """THE DOCTRINE (campaign_policy.deny_dumps), flagged as doctrine and not rule: burn a depot only
+    when it is ABOUT TO FALL. Tobruk and Bardia sit with enemies adjacent for sixty turns and do not
+    fall (15.82 forbids eviction); a garrison that torched its fuel every stage of the siege would
+    not be denying the enemy anything, it would be committing arson. With NO enemy adjacent at all,
+    a dump is never blown."""
+    st = campaign(seed=1941)
+    assert not deny_dumps(st, Side.AXIS), "no enemy adjacent: nothing may be blown"
+    assert not deny_dumps(st, Side.ALLIED)
+
+
+def test_blowing_a_dump_destroys_supply_and_never_moves_it():
+    """A pure SINK, folded like 49.3 evaporation -- the supply is DESTROYED, not transferred, so
+    on_hand + consumed == initial still holds. That is what makes it denial and not a handover."""
+    st, holder = _about_to_fall("AL-Stage-Matruh")
+    before = st.supply("AL-Stage-Matruh")
+    res = run(replace(st, max_turns=1), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    blown = [e for e in res.events if e.kind == EventKind.SUPPLY_DUMP_BLOWN]
+    assert blown, "a retreating army must be able to deny its stocks"
+    for e in blown:
+        assert e.payload["destroyed"], "a blow that destroys nothing is not an event"
+        assert all(q > 0 for q in e.payload["destroyed"].values())
+    after = res.final.supply("AL-Stage-Matruh")
+    assert after.fuel < before.fuel, "the fuel must be GONE, not handed over"
+    check(res.final)                    # on_hand + consumed == initial: a sink, not a mint

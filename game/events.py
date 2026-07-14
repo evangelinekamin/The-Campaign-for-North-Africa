@@ -120,6 +120,16 @@ class EventKind(str, Enum):
     # either player, making a supply dump a worthwhile objective" [49.19]. A CONSERVING transfer of
     # ownership: not one point is minted or destroyed, so on_hand+consumed==initial is untouched.
     SUPPLY_CAPTURED = "SUPPLY_CAPTURED"
+    # [54.14]/[54.17] BLOW THE DUMP. SUPPLY_DUMP_BLOWN {supply_id, unit_id, cp, die, modifier, pct,
+    # destroyed:{commodity: qty}} with rng_draws=(die,) is the DEFENDER'S ANSWER TO 32.13: "Players
+    # may attempt to BLOW supply dumps and their supplies" -- expend a third of a non-gun unit's
+    # basic CPA, roll one die, cross-index the 54.17 Supply Dump Demolition Table, and that
+    # percentage of EVERY commodity in the dump is destroyed. Without it, capture is a one-way gift
+    # to whoever is advancing, and in September 1940 that is the Axis. With it, an overrun dump is a
+    # DECISION -- burn your own fuel, or leave it to the enemy who is one hex away.
+    # A pure SINK, folded exactly like 49.3 evaporation (dump down, consumed up), so the
+    # conservation identity on_hand+consumed==initial holds.
+    SUPPLY_DUMP_BLOWN = "SUPPLY_DUMP_BLOWN"
     # Commonwealth railroad (rule 54.3, the inland rail DISTRIBUTION layer). RAIL_HAULED
     # {from_dump, to_dump, commodity, qty} is a CONSERVING dump->dump transfer over the
     # rail network (both dumps rail-connected; qty <= 1500 tons/OpStage of ONE commodity,

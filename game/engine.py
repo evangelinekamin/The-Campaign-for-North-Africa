@@ -145,6 +145,9 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                 _debrief(side)                          # enemy portion + own last combat
                 _reserve_designation(r, policies[side], side)   # 48 V.G / 18.11: hold units back (phasing)
                 r.go(Phase.MOVEMENT, side)
+                _blow_dumps(r, policies[side], side)    # 54.14: deny the enemy your stocks -- BEFORE
+                                                        # you move off them, and before he moves onto
+                                                        # them ("blown in any segment of an OpStage")
                 _movement(r, policies, side)            # segment 0 (ungated); Reaction (8.5) rides inside
                 _capture_dumps(r)                       # 32.13: a dump entered by the enemy changes hands
                 _rommel_move(r, policies[side], side)   # 31.1: the leader repositions (Axis only, self-guarded)
@@ -1529,6 +1532,63 @@ def _supply_movement(r: _Run, policy: Policy, side: Side) -> None:
         moved.add(su.id)
 
 
+def _blow_dumps(r: _Run, policy: Policy, side: Side) -> None:
+    """[54.14] "Players may attempt to BLOW supply dumps and their supplies." The defender's answer
+    to 32.13, and the rule that turns an overrun depot from a WINDFALL into a DECISION.
+
+    Without it, dump capture is strictly a one-way gift to whoever is advancing -- and in September
+    1940 that is the Axis, all the way to the wire. The rulebook does not leave a retreating army
+    its stocks to hand over: it lets it burn them, at a price, with a die.
+
+    THE RULE, in full. Only NON-GUN units may attempt (54.14). Only one Phasing unit per hex may
+    attempt a particular dump per Player-Turn (enforced by `done` below). The attempt costs one
+    third of the unit's BASIC CPA, rounded up, and may never cost more than its whole CPA. The
+    Player may announce, BEFORE rolling, that he is spending an additional one-third or two-thirds
+    for +1 on the die each. One die, modified by 54.17, cross-indexed on the Supply Dump Demolition
+    Table, gives the percentage of EVERY commodity in the dump that is destroyed.
+
+    WHOSE dump: 54.14 says "supply dumps", not "your supply dumps", and 54.15 makes any dump usable
+    by any player -- so an ATTACKER may blow a dump he cannot carry off just as a defender may deny
+    his own. The order names the dump; the engine only checks the unit is standing on it. What it
+    will NOT blow is a rule-57 strategic base or a 52.1 well (neither is a Supply Dump counter --
+    the same exemption _capture_dumps makes, for the same reason).
+
+    DEFERRED and flagged: 13.25's blow-as-you-retreat-before-assault (the same attempt at a flat 1/3
+    CPA, vacating the hex regardless of the result) -- the retreat path is a separate segment and
+    the standing order below already fires a stage earlier, when the enemy first comes adjacent.
+    Also 32.17, the abstract game's simpler destroy-a-Supply-Unit roll, which this supersedes."""
+    done: set = set()
+    for order in policy.demolition(r.state, side):
+        u, dump = r.state.unit(order.unit_id), r.state.supply(order.supply_id)
+        if u is None or dump is None or not r.state.on_map(u) or u.side != side:
+            continue
+        if dump.base or dump.is_dummy or dump.empty:   # 57 / 52.1: not a Supply Dump counter
+            continue
+        if (u.hex, dump.id) in done or not supply.can_blow(u, dump):
+            continue                                   # 54.14: one Phasing unit per hex per dump
+        done.add((u.hex, dump.id))
+        # 54.14 twice over ("may never expend more than the unit's basic CPA... may not exceed its
+        # CPA"): the +1s bought before the roll are bounded by the CP the unit actually has left.
+        thirds = supply.affordable_thirds(u, order.extra_thirds)
+        cp = supply.demolition_cp(u, thirds)
+        # 54.17: "-1 if the attempting unit(S) TOTAL one Stacking Point or less" -- the STACK on the
+        # dump's hex, not the one counter (see supply.demolition_modifier: every combat counter here
+        # is a 1-Stacking-Point battalion, so a per-unit reading would make the -1 a constant).
+        stack = sum(x.stacking_points for x in r.state.units_at(dump.hex)
+                    if x.side == side and x.is_combat)
+        mod = supply.demolition_modifier(dump, r.state.terrain.terrain[dump.hex],
+                                         extra_thirds=thirds, stack_points=stack)
+        die = r.rng.randint(1, 6)
+        pct = supply.demolition_percent(die + mod)
+        destroyed = supply.demolition_loss(dump, pct)
+        r.emit(EventKind.SUPPLY_DUMP_BLOWN, side, f"{side.value}/Engineers",
+               {"supply_id": dump.id, "unit_id": u.id, "cp": cp, "die": die, "modifier": mod,
+                "pct": pct, "destroyed": destroyed}, rng_draws=(die,))
+        if cp > 0:                                     # 54.14: the CPA bill, whatever the die said
+            r.emit(EventKind.CP_EXPENDED, side, f"{side.value}/Engineers",
+                   {"unit_id": u.id, "activity": "blow_dump", "cp": cp})
+
+
 def _capture_dumps(r: _Run) -> None:
     """[32.13] "If any enemy combat unit enters a Supply Unit's hex, that unit is CAPTURED (and its
     supplies used immediately and freely)." The full logistics game says the same thing twice more:
@@ -1559,11 +1619,11 @@ def _capture_dumps(r: _Run) -> None:
     already treats `base` as "immobile strategic source, not a field dump" in _supply_movement
     (rule 57) and _evaporate (49.3); this is the third clause of the same distinction.
 
-    DEFERRED, and flagged: [54.14] the defender's option to BLOW a dump before it falls (expend a
-    third of the unit's CPA, roll on the 54.17 Supply Dump Demolition Table for the percentage of
-    each commodity destroyed), including the blow-as-you-retreat clause. Without it capture is
-    strictly a gift to the attacker, where the rules give the defender a chance to deny it. It needs
-    a policy decision ("do I burn my own fuel?") that no scripted policy here can yet make.
+    THE DEFENDER'S ANSWER IS NOW LIVE: [54.14] blowing the dump (_blow_dumps, above). Capture is no
+    longer a one-way gift to whoever is advancing -- a non-gun unit standing on a depot the enemy has
+    come adjacent to may spend a third of its CPA, roll on the 54.17 Demolition Table, and burn the
+    percentage it rolls. That makes an overrun depot a DECISION ("do I burn my own fuel?") rather
+    than a windfall, which is what the rules always said it was.
 
     GATED on state.dump_capture, which ONLY game.scenario.campaign sets. 32.13 is a general rule and
     this is not a claim otherwise -- it fires on Game-Turn 1 of both byte-locked benchmark scenarios

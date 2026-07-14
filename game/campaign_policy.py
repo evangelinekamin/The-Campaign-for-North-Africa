@@ -33,13 +33,15 @@ from .campaign_claim import (STAGING, garrison_units,   # the rule-64.73 standin
                              hold_depots, hold_garrisons)   # (game.campaign_staff and the tests import them from here)
 from .events import Control, Side
 from .hexmap import Coord, distance
-from .policy import AttackOrder, MoveOrder, ScriptedPolicy, SupplyMoveOrder, TruckOrder
+from .policy import (AttackOrder, DemolitionOrder, MoveOrder, ScriptedPolicy,
+                     SupplyMoveOrder, TruckOrder)
 from .scenario import _CONVOY_SPLIT_56_22
 from .state import GameState, SupplyUnit
 
 __all__ = ["CAMPAIGN_CW_OFFENSIVES", "CampaignAxisPolicy", "CampaignCommonwealthPolicy",
-           "OffensiveSchedule", "campaign_truck_orders", "garrison_units", "hold_depots",
-           "hold_garrisons", "railhead", "take_and_hold_moves", "take_and_hold_supply"]
+           "OffensiveSchedule", "campaign_truck_orders", "deny_dumps", "garrison_units",
+           "hold_depots", "hold_garrisons", "railhead", "take_and_hold_moves",
+           "take_and_hold_supply"]
 
 
 # --- the rule-64.73 standing orders, SIDE-GENERIC (see game.campaign_claim) -----------------------
@@ -395,6 +397,10 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
                 orders.append(SupplyMoveOrder(su.id, pick.hex))
         return orders
 
+    def demolition(self, state: GameState, side: Side) -> list[DemolitionOrder]:
+        # [54.14] Deny the enemy your stocks -- symmetric, both sides, one standing order (deny_dumps).
+        return deny_dumps(state, side)
+
     def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
         # The Commonwealth hauls with the same multi-hop relay as the Axis (it is side-generic):
         # from the rail-fed Mersa Matruh railhead forward to the Field Supply Depots its offensives
@@ -573,6 +579,57 @@ def _can_trace(state: GameState, u) -> bool:
     without the victory object so the movement layer can ask it too."""
     return (supply.plan_draw(state, u, supply.FUEL, supply.fuel_rate(u)) is not None
             and supply.plan_draw(state, u, supply.AMMO, supply.ammo_cost(u, phasing=True)) is not None)
+
+
+def deny_dumps(state: GameState, side: Side) -> list:
+    """[54.14] BLOW THE DUMP -- the standing order that makes an overrun depot a DECISION.
+
+    Rule 32.13 hands a dump, and everything in it, to any enemy combat unit that walks onto its hex.
+    Until 54.14 existed on our side of the engine that was a pure one-way gift to whoever was
+    advancing -- and in September 1940 that is the Italian 10th Army, all the way to the wire. The
+    rulebook never left a retreating army its stocks to hand over: it let it burn them, at a price
+    (a third of the unit's CPA) and with a die (the 54.17 Demolition Table).
+
+    THE DOCTRINE, and it is FLAGGED AS DOCTRINE, NOT RULE -- 54.14 says a player MAY blow a dump,
+    and says nothing whatever about when he should. Ours burns a depot only when it is ABOUT TO
+    FALL, which we read as: an enemy combat unit is ADJACENT, and the enemy strength next to the hex
+    OUTWEIGHS the friendly strength standing on it. Both halves matter.
+
+      * Without the adjacency test an army torches its own supply at the first sign of trouble.
+      * Without the OUTWEIGHED test, the Tobruk and Bardia garrisons -- which sit with enemies
+        adjacent for sixty turns and do not fall, because rule 15.82's fortification forbids
+        eviction -- would burn their own fuel every Operations Stage of the siege. A garrison that
+        can hold does not blow its dump; that is not denial, it is arson.
+
+    We do not blow a base (rule 57) or a well (52.1): neither is a Supply Dump counter, which is the
+    same exemption engine._capture_dumps makes and for the same reason. The engine re-validates all
+    of it (non-gun, co-located, CP available, one attempt per hex per dump)."""
+    orders: list = []
+    mine: dict = {}                           # hex -> my combat units standing there
+    for u in state.living(side):
+        if u.is_combat:
+            mine.setdefault(u.hex, []).append(u)
+    if not mine:
+        return orders
+    enemy = [u for u in state.living(tactics.other(side)) if u.is_combat and u.strength >= 1]
+    for su in sorted(state.supplies, key=lambda s: s.id):
+        if su.side != side or su.base or su.is_dummy or su.empty or wells.is_water_source(su):
+            continue                          # 57 / 52.1: a base and a well are not Supply Dumps
+        held = mine.get(su.hex)
+        if not held:
+            continue                          # 54.14: only a unit ON the dump can blow it
+        threat = sum(u.effective_strength for u in enemy if distance(u.hex, su.hex) == 1)
+        if not threat or threat <= sum(u.effective_strength for u in held):
+            continue                          # nobody adjacent, or we can hold it: no arson
+        demolisher = next((u for u in sorted(held, key=lambda u: u.id)
+                           if supply.can_blow(u, su)), None)
+        if demolisher is not None:
+            # Buy the +1s: 54.14 lets the attempt spend an additional two-thirds of the unit's basic
+            # CPA before rolling, and a unit about to lose the hex has no better use for the CP. The
+            # engine clamps what it cannot afford (supply.affordable_thirds).
+            orders.append(DemolitionOrder(demolisher.id, su.id,
+                                          extra_thirds=supply.DEMOLITION_MAX_THIRDS))
+    return orders
 
 
 def keep_in_trace(orders: list, state: GameState, side: Side) -> list:
@@ -1035,6 +1092,10 @@ class _CampaignAxisSupplyMixin:
     take_and_hold_supply, which each campaign policy lays over its own march; the live staff keeps
     just the garrison half of them (game.campaign_staff), because the whole point of a staff is that
     it decides where the rest of the army goes."""
+
+    def demolition(self, state: GameState, side: Side) -> list[DemolitionOrder]:
+        # [54.14] Deny the enemy your stocks -- symmetric, both sides, one standing order (deny_dumps).
+        return deny_dumps(state, side)
 
     def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
         return campaign_truck_orders(state, side)

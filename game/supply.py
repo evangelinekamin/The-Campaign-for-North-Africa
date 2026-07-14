@@ -325,6 +325,89 @@ def rail_reachable(tmap: movement.TerrainMap, start: Coord) -> frozenset:
     return frozenset(seen)
 
 
+# --- [54.14]/[54.17] BLOWING A SUPPLY DUMP ------------------------------------
+_DEMOLITION_54_17: dict = logistics_data.demolition_percent_54_17()
+DEMOLITION_MAX_THIRDS = 2      # 54.14: "an additional one-third or two-thirds" of basic CPA
+
+
+def demolition_cp(unit: Unit, extra_thirds: int = 0) -> int:
+    """54.14: the Capability Points an attempt to blow a dump costs -- one-third of the attempting
+    unit's BASIC CPA (rounded up), plus each `extra_thirds` the Player announces before rolling to
+    buy a +1 on the die. "The attempting Player may never expend more than the unit's basic CPA
+    attempting to blow a dump", so the whole bill is clamped at the CPA."""
+    third = math.ceil(unit.cpa / 3)
+    return min(unit.cpa, third * (1 + max(0, min(extra_thirds, DEMOLITION_MAX_THIRDS))))
+
+
+def demolition_modifier(dump: SupplyUnit, terrain: Terrain, *,
+                        extra_thirds: int = 0, stack_points: int = 1) -> int:
+    """54.17's cumulative die-roll modifiers for an attempt on `dump`.
+
+      +1  for each additional 1/3 of basic CPA expended (54.14)
+      -1  if the attempting unit(s) total one Stacking Point or less
+      -2  if the attempt is made in a Major City hex.  IF NOT, THEN
+      +1  if the total of the dump's supplies is 500 points or less
+
+    Two readings that are load-bearing, and both are the chart's own words:
+
+      * "the attempting UNIT(S) TOTAL one Stacking Point or less" is a test on the STACK, not on the
+        counter -- `stack_points` is the total Stacking Points of the friendly units on the dump's
+        hex. It has to be. EVERY combat counter in this OOB is a battalion-equivalent of exactly ONE
+        Stacking Point, so reading it per-unit would fire the -1 on every attempt in the game and
+        the modifier would be a constant, not a modifier. A lone battalion gets the -1; a proper
+        stack does not, which is the distinction the chart is drawing.
+      * the city clause and the small-dump clause are EXCLUSIVE ("-2 if in a Major City hex. IF NOT,
+        THEN +1 if the dump is 500 or less") -- the one piece of structure in the modifier list.
+
+    DEFERRED AND FLAGGED: the chart's "+1 if the attempting unit is a full (non-shell) division".
+    game.state.Unit carries no organisation size and no division-shell status -- every counter here
+    is a battalion-equivalent -- so the modifier has nothing to key off. Omitting it is the
+    CONSERVATIVE half (it can only ever help the demolisher), which is the right way to be wrong
+    about a rule that lets a retreating army deny its stocks."""
+    mod = max(0, min(extra_thirds, DEMOLITION_MAX_THIRDS))
+    if stack_points <= 1:
+        mod -= 1
+    if terrain == Terrain.MAJOR_CITY:
+        mod -= 2
+    elif dump.ammo + dump.fuel + dump.stores + dump.water <= 500:
+        mod += 1
+    return mod
+
+
+def demolition_percent(modified_die: int) -> int:
+    """54.17: the percentage of EVERY commodity in the dump destroyed, by modified die. Clamped to
+    the chart's end rows ("-2" and "8 or more")."""
+    return _DEMOLITION_54_17[max(-2, min(8, modified_die))]
+
+
+def demolition_loss(dump: SupplyUnit, pct: int) -> dict:
+    """The Points of each commodity a `pct` demolition destroys. Rounded DOWN, so a blown dump that
+    still holds a point still holds it -- the conservative half, and the one that keeps a 33% result
+    from quietly emptying a nearly-empty dump."""
+    return {c: _pool(dump, c) * pct // 100 for c in COMMODITIES if _pool(dump, c) * pct // 100 > 0}
+
+
+def can_blow(unit: Unit, dump: SupplyUnit) -> bool:
+    """54.14: who may attempt. "Only NON-GUN units may attempt to blow dumps" -- and the unit must
+    be alive, a combat unit standing ON the dump's hex, with the CP left to pay the 1/3-CPA bill."""
+    return (unit.is_combat and not unit.is_gun and unit.hex == dump.hex
+            and unit.cpa - unit.cp_used >= demolition_cp(unit))
+
+
+def affordable_thirds(unit: Unit, requested: int) -> int:
+    """The largest number of EXTRA thirds of basic CPA (0..`requested`, capped at the 54.14 maximum
+    of two) that `unit` can still pay for this Operations Stage.
+
+    54.14 twice: "the attempting Player may never expend more than the unit's basic CPA attempting
+    to blow a dump", and "a unit may not exceed its CPA to blow a dump". So the +1s the Player buys
+    before rolling are bounded by the CP he actually has left, not merely by the chart. A unit that
+    has spent most of its stage retreating gets the bare attempt and no bonus -- which is exactly
+    the tension the rule is for."""
+    left = unit.cpa - unit.cp_used
+    return max((n for n in range(min(requested, DEMOLITION_MAX_THIRDS), -1, -1)
+                if demolition_cp(unit, n) <= left), default=0)
+
+
 def plan_draw(state: GameState, unit: Unit, commodity: str, need: int):
     """A list of (supply_id, qty) drawing `need` of commodity from reachable
     dumps (nearest first), or None if the unit cannot be supplied that much."""

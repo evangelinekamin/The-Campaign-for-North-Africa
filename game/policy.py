@@ -48,7 +48,18 @@ class TruckOrder:
     unload: dict | None = None
 
 
-Order = MoveOrder | AttackOrder | SupplyMoveOrder | TruckOrder
+@dataclass(frozen=True, slots=True)
+class DemolitionOrder:
+    """[54.14] Blow a supply dump. `unit_id` is the non-gun combat unit standing on it, paying one
+    third of its basic CPA (rounded up); `extra_thirds` (0-2) buys +1 on the 54.17 die per extra
+    third of CPA announced BEFORE the roll -- "the Player may adjust the die roll by announcing,
+    before rolling the die, that he is expending an additional one-third or two-thirds"."""
+    unit_id: str
+    supply_id: str
+    extra_thirds: int = 0
+
+
+Order = MoveOrder | AttackOrder | SupplyMoveOrder | TruckOrder | DemolitionOrder
 
 
 class Policy:
@@ -67,6 +78,9 @@ class Policy:
 
     def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
         return []  # optional: haul supply forward with 2nd/3rd-line truck convoys (rule 48 V.J)
+
+    def demolition(self, state: GameState, side: Side) -> list[DemolitionOrder]:
+        return []  # optional: blow your own dump rather than lose it to the enemy (rule 54.14)
 
     def continual_movement(self, state: GameState, side: Side) -> list[MoveOrder]:
         """Continual Movement go/no-go (rule 8.2): return the intended continuation moves for the

@@ -44,6 +44,19 @@ def apply(state: GameState, event: Event) -> GameState:
         consumed[commodity] = consumed.get(commodity, 0) + p["qty"]
         return replace(state.with_supply(drained), consumed=consumed)
 
+    if k == EventKind.SUPPLY_DUMP_BLOWN:
+        # 54.14 / 54.17: the owner burns his own dump rather than hand it to the enemy one hex away.
+        # The engine baked the destroyed amounts (the 54.17 roll is a fact, not a re-derivation), so
+        # this folds exactly like evaporation -- drain each commodity, credit consumed[] -- and
+        # on_hand+consumed==initial holds. Every commodity in the dump goes at the same percentage.
+        su = state.supply(p["supply_id"])
+        consumed = dict(state.consumed)
+        for commodity, qty in p["destroyed"].items():
+            attr = commodity.lower()
+            su = replace(su, **{attr: getattr(su, attr) - qty})
+            consumed[commodity] = consumed.get(commodity, 0) + qty
+        return replace(state.with_supply(su), consumed=consumed)
+
     if k == EventKind.SUPPLY_ARRIVED:
         # Faucet, the dual of SUPPLY_CONSUMED (cargo is ALREADY post-cap -- the engine
         # baked the landed amounts, per the event-sourcing rule that outcomes are facts).
