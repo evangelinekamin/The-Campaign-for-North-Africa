@@ -660,15 +660,52 @@ def keep_in_trace(orders: list, state: GameState, side: Side) -> list:
     #     marches west into a now better-supplied Axis and is destroyed (18-36 combat units alive
     #     against 43 before). Scores go 445-20, 445-20, 445-20, 420-20, 400-30.
     #
-    # THE BLOCKER, and it is one sentence: OUR SUPPLY TRACE RUNS TO DUMPS AND TO NOTHING ELSE. The
-    # Commonwealth's rear railway stations (AL-Stage-ElHamman, AL-Stage-ElDaba) are transit nodes
-    # that correctly sit at ZERO -- stock flows forward to the railhead -- so four hundred miles of
-    # Egypt, along a working railway, inside Britain's own base area, reads to a dump-trace as
-    # out-of-supply desert. Give the trace the Commonwealth railroad (54.3: "the RR may move
-    # supplies... 1500 tons per Operations Stage") and its pipeline (52.22: "the railroad hexes are
-    # pipelines in and of themselves") and the Eighth Army can march up its own railway in supply,
-    # the strict form stops paralysing it, and the 10th Army still halts at Sidi Barrani. That is the
-    # order of work.
+    # THE FIRST BLOCKER IS NOW GONE, and it did not save the strict form. Our supply trace ran to
+    # DUMPS AND NOTHING ELSE, and the railway kept exactly ONE of them stocked -- the lane landed its
+    # whole 1500-tons-per-OpStage haul on the Mersa Matruh railhead and left four hundred miles of
+    # working railway at ZERO. Rule 54.3 (engine._rail_stops) fixed that: the train now stops where
+    # the army stands and founds a station there (54.11/54.35), all along its line.
+    #
+    # ==========================================================================================
+    # THEN IT WAS WIRED, STRICT, BOTH SIDES, AND MEASURED (scripts.measure_campaign, 5 seeds, the
+    # full GT1-111) -- AND THE MEASUREMENT REJECTED IT. A FOURTH truthful negative. Read this before
+    # you wire it again.
+    #
+    #   IT FIXED WHAT IT WAS FOR. The 10th Army's furthest-east hex fell from r=132-133 (ALEXANDRIA,
+    #     reached on Game-Turn 4 in every seed) to r=95-99, the Mersa Matruh approaches. Axis
+    #     supplied-AND-FORWARD went 4-16% -> 25-67%. Both armies SURVIVED -- combat units alive
+    #     roughly doubled (Axis 27-52 -> 63-105, Commonwealth 13-39 -> 25-76). And the railway DID
+    #     cure the Delta paralysis this docstring used to predict: 54-76 Commonwealth units stood
+    #     FORWARD of the Delta, against the thirty-one that used to sit in it.
+    #
+    #   AND IT FROZE THE WAR. Axis 425-20 IN ALL FIVE SEEDS -- where the unwired campaign returns
+    #     three distinct scores (425-20, 225-120, 375-80, 375-80, 375-30). THE DICE MATTERED LESS,
+    #     NOT MORE. The Eighth Army reached the railhead and stopped: it banked Mersa Matruh and Sidi
+    #     Barrani and never took another city. Operation Compass did not run. TWO TESTS IN THIS REPO
+    #     SAY SO IN SO MANY WORDS AND BOTH GO RED: test_campaign_concentration's "the army does not
+    #     sit out the war in the delta", and test_campaign's "commonwealth can attack" (which gets an
+    #     EMPTY order list). That is the guardrail working.
+    #
+    # THE SECOND BLOCKER, and it is the next task. campaign_policy._forward_depot_sites founds a
+    # depot ONLY on a hex a friendly COMBAT UNIT is standing on ("not in empty desert -- a depot the
+    # army is not standing on is a depot the enemy walks onto"). This constraint forbids a unit from
+    # standing anywhere it cannot eat. So THE ARMY CANNOT REACH A HEX UNTIL A DEPOT FEEDS IT, AND A
+    # DEPOT CANNOT BE FOUNDED UNTIL THE ARMY REACHES IT. Circular -- and it bites the moment the rails
+    # end, because rule 60.7 runs the RR to Mersa Matruh and no further, so everything west of it must
+    # be lorried. PROVEN: Sollum is 10 hexes from Sidi Barrani; the widest Commonwealth trace radius
+    # on this map is 9 (VEHICLE, CPA 25 -> 12.5 CP); ZERO Commonwealth combat units could trace supply
+    # standing on Sollum. AL-Stage-Sollum -- the seeded Field Supply Depot ON Sollum -- is empty and
+    # Axis-held from Game-Turn 1, and campaign_claim.spine_awaits_control will not deliver into a hex
+    # the enemy holds. The Eighth Army is one hex of trace short of its own war, forever.
+    #
+    # THE UNLOCK is the rulebook's own, and scenario._CW_FIELD_DEPOTS already says it: the Western
+    # Desert Force "did not attack out of Egypt on its trace range -- it spent weeks lorrying dumps
+    # forward into the desert first, and then attacked out of THEM" (60.34). Either let the relay
+    # found a depot FORWARD of the army inside its 53.22 convoy reach, or let 32.33's escort carry a
+    # supply unit with the combat unit it "begins and remains stacked with". The guard that forbids
+    # the first was written because an exposed forward depot was a free gift to 32.13 -- which is
+    # exactly what 54.14 now answers, except 54.14 needs a unit standing ON the dump to blow it, so
+    # an UNescorted depot is still a gift. 32.33's escort is therefore the cleaner unlock.
     ############################################################################################
 
     A unit that CAN trace supply where it stands may not march to a hex where it CANNOT. It is not a
