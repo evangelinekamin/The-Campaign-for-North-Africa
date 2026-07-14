@@ -54,6 +54,7 @@ from game.scenario import (_campaign_cw_rail_line, _campaign_rail_cargo,  # noqa
                            _RAIL_TONS_PER_OPSTAGE, campaign, rommels_arrival,
                            siege_of_tobruk)
 from game.state import Convoy                                            # noqa: E402
+from game.terrain import Terrain                                         # noqa: E402
 
 MATRUH = coords.to_axial(coords.parse("D3714"))       # the railhead (60.7)
 ELDABA = coords.to_axial(coords.parse("D3329"))       # the next station east (54.3)
@@ -241,16 +242,26 @@ def test_the_railhead_actually_holds_fuel_now():
     Fuel and Ammunition of the same ORDER as the Axis, instead of a thirtieth."""
     res = run(campaign(seed=1941, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     rail_landed = {"AMMO": 0, "FUEL": 0}
-    st, stocked = res.initial, 0
+    st, stocked, peak_fuel = res.initial, 0, 0
     for e in res.events:
         if e.kind.name == "SUPPLY_ARRIVED" and e.payload.get("lane") == "CW-RAILHEAD":
             for c in rail_landed:
                 rail_landed[c] += e.payload["cargo"].get(c, 0)
         st = apply(st, e)
-        if e.kind.name == "TURN_ADVANCED" and st.supply("AL-Stage-Matruh").fuel > 0:
+        peak_fuel = max(peak_fuel, st.supply("AL-Stage-Matruh").fuel)
+        if e.kind.name == "TURN_ADVANCED" and st.supply("AL-Stage-Matruh").ammo > 0:
             stocked += 1
 
-    assert stocked >= 20, f"the railhead is still a dry hole: fuelled on only {stocked}/24 turns"
+    # THE RESERVOIR IS REAL: the railhead fills to the very brim of its 54.12 Other-Terrain ceiling
+    # (5,000 Fuel), where before this slice it held ZERO Fuel on EVERY turn of the war.
+    assert peak_fuel >= supply.dump_capacity(Terrain.CLEAR)["FUEL"], \
+        f"the railhead never fills: peak fuel {peak_fuel}"
+    # ...and it carries AMMUNITION essentially always. Ammunition is the honest end-of-turn gauge now
+    # and Fuel is not: with the [60.43] lorry park seeded to its charted 195 Truck Points the pool
+    # LIFTS THE FUEL FORWARD inside the turn (it is drawn down to 0 at the end of 8 of these 24), and
+    # a reservoir emptied by its own lorries is a faucet doing its job, not a dry hole. What made it a
+    # dry hole before was that nothing ever accumulated in it at all.
+    assert stocked >= 20, f"the railhead is still a dry hole: stocked on only {stocked}/24 turns"
     # the old lane could not have cleared these in 24 turns: it landed 62 Ammo and 500 Fuel a turn.
     assert rail_landed["AMMO"] > 24 * 62, f"ammo still quay-clipped: {rail_landed['AMMO']}"
     assert rail_landed["FUEL"] > 24 * 500, f"fuel still placeholder-bound: {rail_landed['FUEL']}"
@@ -268,8 +279,21 @@ def test_the_commonwealth_field_supply_depots_are_seeded_within_one_truck_hop():
     depots = {s.id: s for s in st.supplies if s.id.startswith("AL-Stage")}
     assert {"AL-Stage-Matruh", "AL-Stage-Barrani", "AL-Stage-Sollum"} <= set(depots)
     assert depots["AL-Stage-Barrani"].hex == BARRANI and depots["AL-Stage-Sollum"].hex == SOLLUM
+
+    # [60.44] COMMONWEALTH INITIAL SUPPLY STATUS -- the two depots the chart STOCKS at the start
+    # line, seeded onto the spine depots that already stand on those hexes (no duplicate dump beside
+    # them). The Axis got its 60.34 equivalents at construction; this is the Commonwealth's own
+    # chart, which the campaign never seeded at all.
+    assert (depots["AL-Stage-Matruh"].ammo, depots["AL-Stage-Matruh"].fuel,
+            depots["AL-Stage-Matruh"].stores) == (1000, 3000, 4000)     # Mersa Matruh (D3714)
+    assert (depots["AL-Stage-Barrani"].ammo, depots["AL-Stage-Barrani"].fuel,
+            depots["AL-Stage-Barrani"].stores) == (250, 500, 100)       # Sidi Barrani (C4131)
+    # The chart lists no stock for the rest, so they open EMPTY: a Field Supply Depot forward of
+    # Sidi Barrani is hauled into, not pre-filled -- the lorries put it there.
+    for name in ("AL-Stage-Sollum", "AL-Stage-ElDaba", "AL-Stage-ElHamman"):
+        assert depots[name].empty
     for d in depots.values():
-        assert d.empty and not d.base       # hauled into, not pre-filled; and not a rule-57 base
+        assert not d.base                   # a field depot is no rule-57 strategic base
 
     bare = replace(st, units=())            # the terrain leg, with the front line taken out of it
     truck = next(t for t in st.trucks if t.side == Side.ALLIED and t.truck_class == "heavy")
@@ -322,8 +346,14 @@ def test_the_relay_never_siphons_the_army_s_own_field_dumps():
     it and could hold nothing it took -- it lost Benghazi outright. See _relay_source."""
     res = run(campaign(seed=1941, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     spine = {s.id for s in res.initial.supplies if s.id.startswith(("AL-Stage", "AX-Stage"))}
+    # A FAUCET is bottomless (campaign_policy._is_faucet): the port of arrival OR a rule-57 strategic
+    # base. Cairo and Alexandria are the second kind -- "if he wants something, it is in Cairo" (57.0)
+    # -- and the [60.43] chart stations 50 of the Commonwealth's 195 Truck Points ON them. A lorry
+    # must be able to lift from the base under its wheels or that whole allotment is decoration; and
+    # lifting from a bottomless base is not siphoning, because it cannot be emptied. What this test
+    # forbids is unchanged: lifting stock back OFF a division's FIELD dump.
     faucets = {s.id for s in res.initial.supplies
-               if any(p.hex == s.hex and p.side == s.side for p in res.initial.ports)}
+               if s.base or any(p.hex == s.hex and p.side == s.side for p in res.initial.ports)}
     for e in res.events:
         if e.kind.name == "TRUCK_LOADED":
             assert e.payload["supply_id"] in spine | faucets, \

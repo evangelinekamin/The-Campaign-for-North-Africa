@@ -666,6 +666,23 @@ _CW_RAILHEAD = "D3714"                 # Mersa Matruh -- the RR terminus (rule 6
 _CW_FIELD_DEPOTS = (("Sollum", "C4021"), ("Barrani", "C4131"))                    # 60.34, forward
 _CW_RAIL_STATIONS = (("Matruh", _CW_RAILHEAD), ("ElDaba", "D3329"), ("ElHamman", "E3007"))   # 54.3
 
+# [60.44] COMMONWEALTH INITIAL SUPPLY STATUS -- the charted start-line stock, transcribed. The Axis
+# got its 60.34 equivalents (Tobruk/Bardia/Benghazi/Derna) at construction; the Commonwealth's own
+# chart was never seeded at all, so the Western Desert Force opened the war standing on an EMPTY
+# railhead and an EMPTY Sidi Barrani, with nothing forward of the Delta but what a 16-Truck-Point
+# pool could carry. Keyed by the depot NAME on the spine above; the chart lists no stock for Sollum,
+# El Daba or El Hamman, so those stay empty (a Field Supply Depot is hauled into, not pre-filled).
+#
+# NOT seeded, and flagged: the chart's third row, "Dump I" (500 Ammo / 750 Fuel / 500 Stores), is a
+# FREE-PLACEMENT dump -- "may be placed anywhere in Egypt on map C or D" -- as are its dummy twin
+# and the Air Supply allotment (200/250/50, distributed among air facilities). The Axis 60.34 chart
+# carries the exact same unseeded remainder (its Dump 1, Dump 2, C0716 and airfield allotment), so
+# the two sides' free-placement dumps are left out TOGETHER rather than one side's being banked.
+_CW_DUMPS_60_44 = {
+    "Matruh":  {"ammo": 1000, "fuel": 3000, "stores": 4000},    # Mersa Matruh (D3714)
+    "Barrani": {"ammo":  250, "fuel":  500, "stores":  100},    # Sidi Barrani (C4131)
+}
+
 
 def _campaign_cw_depots() -> list[SupplyUnit]:
     """The seeded Commonwealth spine (see _CW_FIELD_DEPOTS / _CW_RAIL_STATIONS above). Each leg is
@@ -675,10 +692,11 @@ def _campaign_cw_depots() -> list[SupplyUnit]:
     Game-Turn 1 is the Italian 10th Army standing on it -- which is the point of the offensive, not
     a gap in the chain.)
 
-    EMPTY, and base=False: a Field Supply Depot is hauled into, not pre-filled -- the lorries put
-    it there -- and it evaporates like any field dump (49.3), being no rule-57 strategic base."""
+    Mersa Matruh and Sidi Barrani open STOCKED, to the [60.44] chart above -- these are the existing
+    spine depots, filled, not new dumps beside them. The rest start EMPTY. All base=False: a Field
+    Supply Depot evaporates like any field dump (49.3), being no rule-57 strategic base."""
     return [SupplyUnit(f"AL-Stage-{name}", Side.ALLIED, coords.to_axial(coords.parse(lbl)),
-                       ammo=0, fuel=0, stores=0, water=0)
+                       water=0, **_CW_DUMPS_60_44.get(name, {"ammo": 0, "fuel": 0, "stores": 0}))
             for name, lbl in _CW_FIELD_DEPOTS + _CW_RAIL_STATIONS]
 
 
@@ -756,39 +774,103 @@ def _campaign_rail_cargo(gt: int) -> dict:
     return cargo
 
 
+# --- [60.33] / [60.43] THE SECOND/THIRD-LINE TRUCK PARKS -------------------------------------
+# The rulebook charts BOTH sides' 2nd/3rd-line motor transport IN FULL, by location, in Truck Points
+# (1 Point = 10 lorries, 53.0). The campaign seeded a token 8 Heavy + 8 Medium a side -- about a
+# thirteenth of the charted parks -- and the lorries then WERE the war: the Commonwealth's rail-fed
+# railhead could stand there holding 1,476 Ammunition and 3,000-5,000 Fuel and still put only ~48
+# Ammunition and ~1,000 Fuel a turn on the road, because 16 Truck Points is the whole of the 54.2
+# capacity there was to load. The pool was the binder on everything upstream of it.
+#
+# Both charts grant FREE PLACEMENT inside a restriction -- the player "may assign them and place
+# them as he wishes, within the restrictions listed" -- so the hexes chosen below are OUR ASSIGNMENT
+# of the allotment, flagged as such at each site, and every row goes to the location its own
+# restriction names. The magnitudes are the rulebook's and are transcribed, not tuned.
+_TRUCKS_60_33 = {                    # [60.33] Italian Second-Third Line Trucks (Truck Points)
+    "Tripoli":           {"light": 25, "medium": 140, "heavy": 40},
+    "Anywhere in Libya": {"light": 30, "medium": 100, "heavy": 25},
+    "Any Air Facility":  {"light": 10, "medium":  50, "heavy":  0},
+}
+_TRUCKS_60_43 = {                    # [60.43] Commonwealth Second-Third Line Trucks (Truck Points)
+    "Any hex in Cairo":  {"light":  0, "medium": 40, "heavy": 10},
+    "Alexandria":        {"light": 10, "medium": 20, "heavy":  0},
+    "Anywhere, maps":    {"light": 15, "medium": 40, "heavy":  5},
+    "Any Air Facility":  {"light":  5, "medium": 30, "heavy": 20},
+}
+
+
+def _truck_park(prefix: str, side: Side, hexpos, *rows: dict) -> list[TruckFormation]:
+    """One TruckFormation per 54.2 class, pooling the chart `rows` assigned to `hexpos`.
+
+    All THREE classes are modelled, Light included: game.supply.truck_capacity carries the full 54.2
+    chart, so the Light rows are honoured rather than folded away (a Light Truck Point hauls 50 Fuel
+    and 2 Ammunition, at the longest convoy reach on the chart -- CPA 40 against Medium/Heavy's 30)."""
+    pool = {cls: sum(row.get(cls, 0) for row in rows) for cls in ("light", "medium", "heavy")}
+    return [TruckFormation(f"{prefix}-{cls[0].upper()}", side, hexpos, cls, points=pts, line=3)
+            for cls, pts in pool.items() if pts > 0]
+
+
 def _campaign_cw_trucks(supplies) -> tuple[TruckFormation, ...]:
-    """The Commonwealth 2nd/3rd-line motor-transport pool (rules 53 / 54.2 / 60.33), staged on the
-    Mersa Matruh railhead the rail lane feeds. Without it the Commonwealth has NO way to project
-    supply west of its railhead -- its trace reaches ~6-12 hexes -- so Operation Compass and Crusader
-    strand every unit they send toward Benghazi (measured: zero supplied Commonwealth units at GT111).
-    The Western Desert Force ran on lorries; this is the pool that hauled it to El Agheila."""
+    """The Commonwealth 2nd/3rd-line motor-transport pool: the [60.43] chart in full, 195 Truck
+    Points against the 16 the campaign used to seed. Without lorries the Commonwealth cannot project
+    supply one hex west of its railhead -- a unit's own trace reaches ~6-12 -- so Operation Compass
+    and Crusader strand every unit they send toward Benghazi. The Western Desert Force ran on
+    lorries; this is the park that hauled it to El Agheila.
+
+    OUR ASSIGNMENT of the chart's free placement, row by row:
+      * "Any hex in Cairo" (40 M / 10 H) -> Cairo, and "Alexandria" (10 L / 20 M) -> Alexandria:
+        placed exactly where the chart's restriction puts them, on the rule-57 Delta base. They sit
+        60 and 34 hexes BEHIND the railhead and must drive up to join the relay -- which is the real
+        Delta lorry park, and which is why campaign_policy._is_faucet must let a lorry lift from the
+        bottomless base under its wheels. (Seeded dry with nothing loadable beneath them, as the
+        relay stood, all fifty of those Truck Points would have idled in the Delta for the whole war.)
+      * "Anywhere, maps" (15 L / 40 M / 5 H) -> the Mersa Matruh RAILHEAD: the rail-fed faucet (60.7)
+        and the exact hex the pool binds at. Not the forward Field Supply Depots -- on Game-Turn 1
+        Sollum and Sidi Barrani lie in the path of the advancing Italian 10th Army, and a staff does
+        not park its lorry reserve in front of an oncoming army.
+      * "Any Air Facility" (5 L / 30 M / 20 H) -> the railhead as well. FLAGGED PROXY: game.state.
+        AirWing is HEXLESS -- the engine plays air at the 32.0/58.0 abstract grain and owns no
+        air-facility hex to park a lorry on -- so rather than drop the row silently it goes to the
+        supply hub of the forward airfield line, which Matruh, Fuka and Sidi Haneish all sit on."""
     railhead = _campaign_cw_railhead(supplies)
     if railhead is None:
         return ()
-    return (
-        TruckFormation("AL-Truck-H", Side.ALLIED, railhead.hex, "heavy", points=8, line=3),
-        TruckFormation("AL-Truck-M", Side.ALLIED, railhead.hex, "medium", points=8, line=3),
-    )
+    def ax(lbl: str):
+        return coords.to_axial(coords.parse(lbl))
+    return tuple(
+        _truck_park("AL-Truck-Cairo", Side.ALLIED, ax(_CW_BASE_HEXES["Cairo"]),
+                    _TRUCKS_60_43["Any hex in Cairo"])
+        + _truck_park("AL-Truck-Alex", Side.ALLIED, ax(_CW_BASE_HEXES["Alexandria"]),
+                      _TRUCKS_60_43["Alexandria"])
+        + _truck_park("AL-Truck-Matruh", Side.ALLIED, railhead.hex,
+                      _TRUCKS_60_43["Anywhere, maps"], _TRUCKS_60_43["Any Air Facility"]))
 
 
 def _campaign_axis_trucks(supplies, target) -> tuple[TruckFormation, ...]:
-    """The Axis 2nd/3rd-line motor-transport pool (rules 53 / 54.2 / 60.33), staged at the
-    Benghazi port-of-arrival where the Mediterranean convoys land -- the Quartermaster's
-    forward-haul lever, a lean ~1/6 slice of the 60.33 Tripoli row (heavy + medium).
-    LIMITATION (measured): the September-1940 field dumps sit ~48-76 hexes east of Benghazi,
-    far beyond the pool's ~30-CP single-hop reach (53.22), so the scripted single-port relay
-    (policy.truck_orders) bridges NOTHING -- faithful to the historical Tripoli-to-front wall,
-    but it means effective resupply needs a MANAGED multi-hop coastal relay (intermediate
-    staging dumps hauled leg by leg), which a Quartermaster agent can build but the scripted
-    reflex does not. The DAK's own trucks ([4.43b]) are deferred (state.trucks is static at
-    construction; no truck-arrival scheduler yet)."""
+    """The Axis 2nd/3rd-line motor-transport pool: the [60.33] chart's ON-MAP rows, 215 Truck Points,
+    staged at the Benghazi port-of-arrival where the Mediterranean convoys land and where the coastal
+    relay (campaign_policy.campaign_truck_orders) reloads.
+
+    OUR ASSIGNMENT: "Anywhere in Libya" (30 L / 100 M / 25 H) -> Benghazi, which is in Libya and is
+    the single hex the entire Axis economy passes through. "Any Air Facility" (10 L / 50 M) -> Benghazi
+    too: a FLAGGED PROXY on the same grounds as the Commonwealth's (AirWing is hexless), and its
+    natural home regardless, since Benina and El Berca -- Benghazi's airfields -- are two hexes away.
+
+    *** THE TRIPOLI ROW IS NOT SEEDED, AND THAT IS NOT A CONCESSION -- IT IS THE AXIS'S WAR. *** The
+    chart's largest row by a wide margin -- 25 Light / 140 Medium / 40 Heavy, 205 of the Italian
+    park's 420 Truck Points, very nearly half of it -- is restricted to TRIPOLI, and Tripoli has no
+    hex. It is the off-map "Tripoli Box" (rule 22.31 / 8.88; data/victory_cities.json records
+    tripoli: null -- "no hex exists in sections A-E"). No hex on the playable map may hold that row,
+    and the engine has no truck-ARRIVAL scheduler to walk it east ([4.43b] deferred: state.trucks is
+    static at construction). So it stays off the board, flagged, and the Axis fights on the half of
+    its park that is actually in the theatre -- which is the literal historical fact the campaign is
+    about: the lorries were at Tripoli, fifteen hundred kilometres behind the wire, and that is
+    exactly why the Panzerarmee could never be fed at Alamein."""
     rear = _axis_rear(supplies, target)
     if rear is None:
         return ()
-    return (
-        TruckFormation("AX-Truck-H", Side.AXIS, rear.hex, "heavy", points=8, line=3),
-        TruckFormation("AX-Truck-M", Side.AXIS, rear.hex, "medium", points=8, line=3),
-    )
+    return tuple(_truck_park("AX-Truck-Benghazi", Side.AXIS, rear.hex,
+                             _TRUCKS_60_33["Anywhere in Libya"], _TRUCKS_60_33["Any Air Facility"]))
 
 
 def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy, ...]:

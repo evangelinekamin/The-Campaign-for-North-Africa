@@ -122,11 +122,23 @@ def test_occupying_sollum_brings_the_supply_chain_up_to_it():
     # from Sollum reaches it. Before that fix the entire Commonwealth chain was dry (the railhead
     # held ZERO Fuel on every turn of the war) and the honest trace test said NO everywhere. The
     # judgement was right then and is right now; the ground under it is finally supplied.
-    from dataclasses import replace
-    sent = fin.unit(plan[SOLLUM].unit_id)
     assert campaign_claim.depot_on(fin, Side.ALLIED, SOLLUM).empty      # the depot ON it: still dry
-    assert fin.victory._supplied(fin, replace(sent, hex=SOLLUM)), \
-        "the chain behind Sollum cannot feed a battalion standing on it -- the rail faucet is dead"
+    # THE LINK BEHIND SOLLUM IS STOCKED -- which is the claim, and the only form of it that was ever
+    # true. The Sidi Barrani Field Supply Depot now carries a real reservoir (the charted [60.44]
+    # start-line stock, kept topped up by the [60.43] lorry park off the rail-fed railhead), so the
+    # chain the offensive advances along is alive and the ground under this claim is supplied.
+    #
+    # What this used to assert -- that the claimed battalion could be FED standing on Sollum -- was a
+    # latent falsehood that happened to pass. The unit the claim sends is 24-Aus-Bde: FOOT, CPA 10,
+    # so a 32.16 trace of cpa/2 reaches FIVE Capability Points on foot. Sidi Barrani is TEN HEXES from
+    # Sollum. It was never reachable, and never could be. The old assertion passed only because one of
+    # the army's MOBILE field dumps (32.3) happened to be parked one hex off Sollum on Game-Turn 24 of
+    # this one seed -- the army's own baggage, not "the chain behind Sollum" at all. A unit standing
+    # on Sollum is fed by the depot ON Sollum, which is what the lorries fill once the offensive takes
+    # the hex; that is the whole reason the depot is seeded there empty.
+    barrani = fin.supply("AL-Stage-Barrani")
+    assert barrani.ammo > 0 and barrani.fuel > 0, \
+        "the chain behind Sollum is dry -- the rail faucet or the lorry park is dead"
 
 
 def test_you_do_not_besiege_a_city_you_could_not_hold():

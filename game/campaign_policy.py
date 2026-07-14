@@ -450,8 +450,29 @@ def _relay_source(state: GameState, side: Side, hx: Coord, anchor):
     wheels, read as DRY."""
     here = [s for s in state.supplies
             if s.side == side and not s.is_dummy and s.hex == hx
-            and (s.id.startswith(STAGING) or (anchor is not None and s.id == anchor.id))]
+            and (s.id.startswith(STAGING) or _is_faucet(s, anchor))]
     return max(here, key=lambda s: (s.fuel, s.ammo + s.stores, s.id), default=None)
+
+
+def _is_faucet(s, anchor) -> bool:
+    """A BOTTOMLESS source: the side's port of arrival (the reload `anchor`) or a rule-57 strategic
+    base -- Cairo and Alexandria, where "if he wants something, it is in Cairo" (57.0). Everything
+    else on the map is a finite depot whose stock belongs to somebody.
+
+    The relay guards jealously against lifting supply back OUT of a depot (see _relay_source and
+    _a_link_in_the_chain: it has already cost the Axis a hundred Victory Points once). A faucet is
+    the exception, and the reason is simply that giving supply away is what a faucet is FOR: it
+    cannot be strip-mined, because it cannot be emptied.
+
+    This is what lets the [60.43] DELTA PARK exist at all. The chart stations 40 Medium + 10 Heavy
+    Truck Points in CAIRO and 10 Light + 20 Medium in ALEXANDRIA -- both on the rule-57 base, both
+    far behind the railhead. A lorry standing on that base could neither load from it nor refuel
+    from it, because the relay admitted only the staging chain and the anchor; seeded dry, with no
+    liftable dump underneath, all fifty of those Truck Points would have sat in the Delta for the
+    entire war and the chart's largest Commonwealth allotment would have been a decoration.
+    (The wells are stripped from `state` before any of this runs, so `base` here means the Delta
+    base and nothing else -- a water source is geography, not a faucet.)"""
+    return s.base or (anchor is not None and s.id == anchor.id)
 
 
 def _a_link_in_the_chain(s, anchor) -> bool:
@@ -473,6 +494,53 @@ def _a_link_in_the_chain(s, anchor) -> bool:
     hundred -- went from 1,598 Fuel to ZERO, its garrison could no longer trace, and the
     Commonwealth walked the city off it."""
     return s.id.startswith(STAGING) or (anchor is not None and s.id == anchor.id)
+
+
+def _room_in(state, dump, commodity: str) -> int:
+    """The 54.12 HEADROOM of `dump`: how many more Points of `commodity` its hex may legally hold.
+    A dump is not a bottomless hole -- supply.dump_capacity caps it by terrain (a major city is
+    unlimited, anything else takes the Other-Terrain row) -- and the engine lands only what fits,
+    silently. Any order sized past this ceiling is a no-op, so the relay asks first."""
+    cap = supply.dump_capacity(state.terrain.terrain[dump.hex])
+    return max(0, cap[commodity] - getattr(dump, commodity.lower()))
+
+
+def _lands_anything(state, dump, t, out: int, reserve: int) -> bool:
+    """Is `dump` a DELIVERY ADDRESS for this lorry -- would anything it carries actually land there?
+
+    A dump at its 54.12 ceiling accepts nothing, and the engine lands nothing into it SILENTLY (see
+    engine._truck_unload). So a relay that reads a full depot as a destination drives to it, unloads
+    air, drives home for more, and repeats that until the war ends. This is the question that stops
+    it: room for the ammo I hold, or the stores I hold, or the fuel I could spare after the trip."""
+    if t.ammo > 0 and _room_in(state, dump, "AMMO") > 0:
+        return True
+    if t.stores > 0 and _room_in(state, dump, "STORES") > 0:
+        return True
+    return t.fuel - out - reserve > 0 and _room_in(state, dump, "FUEL") > 0
+
+
+def _fit_to_dest(state, load: dict, t, dest) -> dict:
+    """Trim a fresh load to what the DESTINATION can actually land (54.12) -- never lift what cannot
+    be put down.
+
+    A lorry that picks up a commodity its delivery address is already full of can NEVER unload it. It
+    stays `carrying` for ever, so it can never stop to load a real cargo, and the carrying branch then
+    shuttles it to and fro between two full dumps until the last Game-Turn.
+
+    MEASURED, the moment the charts landed: the railway lands 1,500 STORES a Game-Turn (54.32) into a
+    railhead whose 54.12 Other-Terrain ceiling is 1,000, so Stores pinned at the cap the length of the
+    Commonwealth spine -- and the 70-Point Medium park, the biggest formation the Commonwealth owns,
+    lifted 157 Stores on Game-Turn 7 and spent the next hundred Game-Turns driving Mersa Matruh to
+    Sidi Barrani and back with them still aboard, delivering NOTHING and burning 1,260 Fuel a turn out
+    of the forward depot it was sent there to fill."""
+    fitted = dict(load)
+    for c in ("AMMO", "STORES"):
+        room = max(0, _room_in(state, dest, c) - getattr(t, c.lower()))
+        if fitted.get(c, 0) > room:
+            fitted[c] = room
+        if fitted.get(c, 0) <= 0:
+            fitted.pop(c, None)
+    return fitted
 
 
 def _load_56_22(t, dump) -> dict:
@@ -597,12 +665,17 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
         # never means "carrying". That is the split the old 3x-full-CPA reserve got wrong: it
         # flipped a just-delivered truck to EMPTY to re-load in place, and it mistook a truck
         # ferrying its own return fuel for a delivery.
-        if t.ammo > 0 or t.stores > 0:
+        carrying = t.ammo > 0 or t.stores > 0
+        if carrying:
             # Deliver into the DEEPEST reachable dump the truck can AFFORD the hop to -- not
             # blindly the farthest (which may cost more cargo fuel than it holds), so a nearer,
             # cheaper dump is the fallback.
+            # ...and only where something will actually LAND (_lands_anything): a depot standing at
+            # its 54.12 ceiling is not a delivery address, it is a wall.
             affordable = [s for s in in_reach
-                          if t.fuel >= supply.truck_move_fuel(t, reach[s.hex])]
+                          if t.fuel >= supply.truck_move_fuel(t, reach[s.hex])
+                          and _lands_anything(state, s, t, supply.truck_move_fuel(t, reach[s.hex]),
+                                              keep(t, s.hex))]
             if affordable:
                 dest = min(affordable, key=lambda s: (not _a_link_in_the_chain(s, anchor),
                                                       distance(s.hex, objective), reach[s.hex], s.id))
@@ -617,25 +690,40 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
                     unload["STORES"] = t.stores
                 orders.append(TruckOrder(t.id, to=dest.hex, unload_to=dest.id, unload=unload))
                 continue
-            if forward:                                    # nothing affordable in reach -> close the gap
-                dest = min(forward, key=lambda s: (not _a_link_in_the_chain(s, anchor),
-                                                   distance(s.hex, objective), s.id))
+            deliverable = [s for s in forward
+                           if _lands_anything(state, s, t, 0, keep(t, s.hex))]
+            if deliverable:                                # nothing affordable in reach -> close the gap
+                dest = min(deliverable, key=lambda s: (not _a_link_in_the_chain(s, anchor),
+                                                       distance(s.hex, objective), s.id))
                 step = _step_toward(reach, t.hex, dest.hex)
                 if step is not None and t.fuel >= supply.truck_move_fuel(t, reach[step]):
                     orders.append(TruckOrder(t.id, to=step))
                     continue
             if sink is not None:                           # sub-hop fuel, stuck on a dump: shed the
-                unload = {}                                # unmovable ammo/stores into it (a pure
-                if t.ammo > 0:                             # co-located transfer) so the truck is never
-                    unload["AMMO"] = t.ammo                # frozen holding a load it cannot move, and
-                if t.stores > 0:                           # is free to return for fuel next phase.
-                    unload["STORES"] = t.stores
-                orders.append(TruckOrder(t.id, unload_to=sink.id, unload=unload))
-            continue
+                # unmovable ammo/stores into it (a pure co-located transfer) so the truck is never
+                # frozen holding a load it cannot move, and is free to return for fuel next phase.
+                #
+                # ONLY WHAT WILL ACTUALLY LAND, and if none of it will, DO NOT `continue`. A dump has
+                # a 54.12 ceiling (game.supply.dump_capacity) and the engine silently lands nothing
+                # into a full one -- so a blind shed order became a NO-OP the truck re-issued every
+                # OpStage, for ever, a livelock that never moved and never burned a Point. Measured
+                # the moment the [60.44] chart put real stock on Sidi Barrani: the depot reached its
+                # Other-Terrain ceiling, and the 70-Point Medium park -- the largest formation the
+                # Commonwealth owns -- sat on it holding 157 Stores it could not put down, making ONE
+                # move in twenty-five Game-Turns. A lorry that cannot unload here drives home instead.
+                unload = {c: min(getattr(t, c.lower()), _room_in(state, sink, c))
+                          for c in ("AMMO", "STORES")}
+                unload = {c: q for c, q in unload.items() if q > 0}
+                if unload:
+                    orders.append(TruckOrder(t.id, unload_to=sink.id, unload=unload))
+                    continue
 
         # EMPTY of cargo, standing on a dump that still has FUEL: load a fresh forward leg (the
-        # 56.22 split) off it and run it.
-        if colocated is not None and colocated.fuel > 0 and (in_reach or forward):
+        # 56.22 split) off it and run it. `not carrying` is what the CARRYING block's old
+        # unconditional `continue` used to say: a lorry with a load still aboard has a delivery to
+        # finish and must never stop to pick up MORE. It now falls through to the return leg
+        # instead of `continue`-ing, so that guard has to be stated here rather than implied.
+        if not carrying and colocated is not None and colocated.fuel > 0 and (in_reach or forward):
             load = _load_56_22(t, colocated)
             if in_reach:
                 # A forward dump within one convoy hop -- LOAD + MOVE + UNLOAD in one order, but
@@ -644,6 +732,7 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
                 # cannot move (the freeze) NOR delivers itself past the point of no return.
                 dest = min(in_reach, key=lambda s: (not _a_link_in_the_chain(s, anchor),
                                                     distance(s.hex, objective), reach[s.hex], s.id))
+                load = _fit_to_dest(state, load, t, dest)   # never lift what dest cannot land (54.12)
                 # AND THE CHAIN IS NEVER CANNIBALISED TO FILL A SINK. Lifting from link N to fill
                 # link N+1 is the bucket brigade -- the whole job. Lifting from link N to fill a
                 # FIELD dump, which the relay may never lift back OUT of (_relay_source), pours the
@@ -661,7 +750,7 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
                 # A truck with nothing but a sink ahead of it goes BACK for more (the return leg
                 # below); it does not carry the depot under its wheels off into the desert.
                 cannibalises = (not _a_link_in_the_chain(dest, anchor)
-                                and (anchor is None or colocated.id != anchor.id))
+                                and not _is_faucet(colocated, anchor))
                 out = supply.truck_move_fuel(t, reach[dest.hex])
                 fuel_deliver = t.fuel + load.get("FUEL", 0) - out - keep(t, dest.hex)
                 if not cannibalises and fuel_deliver > 0:
@@ -673,7 +762,7 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
                     orders.append(TruckOrder(t.id, load_from=colocated.id, load=load,
                                              to=dest.hex, unload_to=dest.id, unload=unload))
                     continue
-            elif anchor is not None and colocated.id == anchor.id:
+            elif _is_faucet(colocated, anchor):
                 # THE OPEN-DESERT LEG, and ONLY off the FAUCET. Nothing forward is within one hop,
                 # so load at the port of arrival and DRIVE AT the nearest forward dump anyway,
                 # exactly as the CARRYING branch already crosses a long leg. A truck standing on the
@@ -699,10 +788,20 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
                     orders.append(TruckOrder(t.id, load_from=colocated.id, load=load, to=step))
                     continue
 
-        # No forward leg to make from here: RETURN toward the anchor to reload -- topping up from a
+        # No forward leg to make from here: HEAD FOR THE ANCHOR to reload -- topping up from a
         # co-located fuel dump to its return reserve so a truck at a drained chain-tip is never
-        # stranded on fumes. This is what keeps the lean pool cycling instead of walking itself dry.
-        if anchor is not None and distance(anchor.hex, objective) > here:
+        # stranded on fumes. This is what keeps the pool cycling instead of walking itself dry.
+        #
+        # ANY truck not standing on the anchor, in EITHER direction. The guard used to read "the
+        # anchor is further from the objective than I am" -- i.e. only a truck FORWARD of the anchor
+        # was ever sent back to it -- which silently stranded every lorry that began the war BEHIND
+        # the port of arrival. The [60.43] chart stations 30 Truck Points in ALEXANDRIA, 34 hexes
+        # behind the Mersa Matruh railhead: measured, they made exactly ONE delivery, to El Hamman,
+        # and then sat there for the remaining 108 Game-Turns, because from El Hamman -- still east
+        # of the railhead -- the relay had no leg that would take them west to it. A lorry with
+        # nothing to carry drives to the faucet; which side of it he happens to be on is not a
+        # reason to park in the desert.
+        if anchor is not None and t.hex != anchor.hex:
             step = _step_toward(reach, t.hex, anchor.hex)
             if step is not None:
                 load = None

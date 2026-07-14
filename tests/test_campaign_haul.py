@@ -48,8 +48,16 @@ def test_gt1_campaign_relay_hauls_where_the_base_shuttle_strands():
     afford the drive back -- so the base emits nothing, while the campaign relay loads from
     that forward dump and pushes the stock DEEPER east."""
     st = campaign(seed=1941)
-    # (1) at GT1 the campaign relay hauls Benghazi's stock forward.
-    assert CampaignAxisPolicy().truck_orders(st, Side.AXIS)
+    # (1) on GAME-TURN 1 the campaign relay hauls Benghazi's stock forward. Asked of a RUN, not of
+    # the raw construction state: with the [60.33] park seeded to its charted strength the Axis pool
+    # is 215 Truck Points, and the 150-Point Medium convoy burns 900 Fuel on a 30-CP hop (49.18)
+    # against the 250 Fuel Points the 60.34 chart leaves at Benghazi -- so at the instant of
+    # construction it genuinely cannot afford to roll. It rolls in the Truck Convoy Phase, once the
+    # Logistics Phase has landed the month's convoy in the port beneath it, which is Game-Turn 1.
+    res = run(campaign(seed=1941, max_turns=1), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    assert [e for e in res.events
+            if e.kind.name == "TRUCK_MOVED" and e.side == Side.AXIS and e.turn == 1], \
+        "the campaign relay hauled nothing on Game-Turn 1"
 
     # (2) a truck out of cargo fuel on the (now stocked) first staging dump W1.
     w1 = (5, 36)
