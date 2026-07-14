@@ -91,15 +91,25 @@ def test_campaign_commonwealth_can_attack():
     on = replace(board, turn=15)          # mid-Compass (13-22): offensive
     off = replace(board, turn=30)         # between Compass and Crusader: defensive
     assert pol._on_offensive(on) and not pol._on_offensive(off)
-    # On an offensive turn the CW emits the ALLIED attacker branch's moves (toward Benghazi) -- less
-    # the standing garrison order, which no offensive countermands: a unit BANKING a supplied victory
-    # city keeps banking it (64.73). That order now bites, because the forward concentration means
-    # the Commonwealth actually holds one -- the rail-fed railhead at Mersa Matruh is itself a 64.73
-    # city, and its garrison does not join the attack.
+    # On an offensive turn the CW runs the ALLIED attacker branch (driving toward Benghazi), with the
+    # two standing orders of rule 64.73 laid over it:
+    #   * THE TAKE-AND-HOLD (game.campaign_claim) DETACHES units to go and get the victory cities the
+    #     army does not yet bank -- the whole point of the offensive being the POINTS, not the far
+    #     objective hex. A detached unit is out of the general advance (it has its own orders).
+    #   * THE STANDING GARRISON ORDER, which no offensive countermands: a unit BANKING a supplied
+    #     victory city keeps banking it. That order bites because the forward concentration means the
+    #     Commonwealth actually holds one -- the rail-fed railhead at Mersa Matruh is itself a 64.73
+    #     city, and its garrison does not join the attack.
+    from game import campaign_claim
     from game.campaign_policy import garrison_units, hold_garrisons
     assert garrison_units(on, Side.ALLIED), "the CW banks no victory city -- the check is vacuous"
+    plan = campaign_claim.claims(on, Side.ALLIED, escort=True)
+    assert plan, "the take-and-hold claims no city -- the check is vacuous"
+    take = campaign_claim.claim_moves(on, Side.ALLIED, plan)
+    busy = {c.unit_id for c in plan}
     assert pol.movement(on, Side.ALLIED) == hold_garrisons(
-        attacker.movement(on, Side.ALLIED), on, Side.ALLIED)
+        take + [o for o in attacker.movement(on, Side.ALLIED) if o.unit_id not in busy],
+        on, Side.ALLIED)
 
 
 def test_campaign_defensive_supply_integrity():

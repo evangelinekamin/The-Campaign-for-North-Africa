@@ -107,17 +107,24 @@ def test_the_axis_army_is_not_destroyed_by_thirst():
     # was 96 combat units at Game-Turn 1 and 28 by GT12 -- destroyed by 52.53 attrition inside a
     # month, with ZERO water ever drawn.
     #
-    # ASSERT THE THIRST, NOT THE HEADCOUNT. A bare survivor count was a fair gauge of thirst only
-    # while the Commonwealth sat out the war in the Nile Delta. It now concentrates on its railhead
-    # and FIGHTS (game.campaign_policy._concentrate), and the Italian units that rush past it have
-    # outrun their ammunition: measured at GT12, Axis TOE lost to ATTRITION FELL from 270 to 163 and
-    # water shortfalls from 533 to 322 -- the wells are working better than they ever did -- while
-    # TOE lost to 15.15 SURRENDER rose from 49 to 148. The army is smaller because it is being taken
-    # prisoner, which is Operation Compass and not a wells regression. So: the desert must not be
-    # what empties the Order of Battle, and the water must really be drunk.
+    # ASSERT THE THIRST, NOT THE HEADCOUNT -- and the headcount is now no gauge of thirst AT ALL.
+    # A bare survivor count was a fair proxy only while the Commonwealth sat out the war in the Nile
+    # Delta. It now concentrates on its railhead, FIGHTS (campaign_policy._concentrate), and TAKES THE
+    # VICTORY CITIES (campaign_claim) -- and the Italian 10th Army is being destroyed the way it was
+    # destroyed in 1940: captured. Measured at GT12 against a Commonwealth that merely sits still:
+    #
+    #     losses        pure defender   take-and-hold
+    #     attrition          329             145        <-- the DESERT: less than half as deadly
+    #     surrender           49             148        <-- the ENEMY: three times as deadly
+    #     water drawn       7314            4477
+    #     survivors           55              31
+    #
+    # So the army shrinks while ATTRITION FALLS BY 56%: it is being taken prisoner, which is Operation
+    # Compass (the real 10th Army lost 130,000 men to it) and not a wells regression. The survivor
+    # count can no longer separate the two worlds -- 31 alive here versus 28 in the pre-wells disaster
+    # -- so it is not what this test asks. It asks the CAUSE: the water must really be drunk, and the
+    # desert must not be what empties the Order of Battle.
     res = run(campaign(seed=1941, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
-    alive = [u for u in res.final.living(Side.AXIS) if u.is_combat]
-    assert len(alive) >= 45                              # 96 at GT1; 28 by GT12 before the wells
 
     drawn = sum(e.payload["qty"] for e in res.events
                 if e.kind == EventKind.SUPPLY_CONSUMED and e.side == Side.AXIS
@@ -130,6 +137,7 @@ def test_the_axis_army_is_not_destroyed_by_thirst():
             lost[e.payload.get("role")] = lost.get(e.payload.get("role"), 0) + e.payload["amount"]
     assert lost.get("attrition", 0) < 200                # the desert takes a toll; not the army
     assert lost.get("surrender", 0) > lost.get("attrition", 0) // 2   # the enemy takes the rest
+    assert res.final.living(Side.AXIS)                   # and it is not annihilated inside a month
 
 
 def test_benchmark_scenarios_have_no_wells():

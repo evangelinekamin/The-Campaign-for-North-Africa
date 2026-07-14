@@ -155,9 +155,17 @@ def test_the_rail_lane_keeps_delivering_after_the_railhead_hex_is_enemy_controll
     # the historical shape: the Axis reaches the railhead, and the rail keeps running anyway.
     if enemy_on_railhead:
         assert landed_while_enemy_on_it > 0
-    # the faucet actually FILLS the chain during Operation Compass, not just after it
+    # The faucet actually FILLS THE CHAIN during Operation Compass, not just after it. Asked of the
+    # chain and not of one named link: the relay is a bucket brigade that LIFTS from a staging depot
+    # to fill the one in front of it, so the fuel ends up at the chain's HEAD and every link behind
+    # it is a transit node drained to zero. Which link is the head moves as the front does -- with
+    # the take-and-hold occupying Sollum (game.campaign_claim) it is AL-Stage-Sollum; before that the
+    # hex stayed Axis-controlled, the relay would not deliver into it, and the chain stopped at
+    # Sidi Barrani.
     fin = res.final
-    assert fin.supply("AL-Stage-Matruh").fuel > 0 or fin.supply("AL-Stage-Barrani").fuel > 0
+    chain = ("AL-Stage-Matruh", "AL-Stage-Barrani", "AL-Stage-Sollum")
+    assert any(fin.supply(d).fuel > 0 for d in chain), \
+        f"the rail faucet filled no Field Supply Depot: {[(d, fin.supply(d).fuel) for d in chain]}"
 
 
 # --- (B) the trucks -----------------------------------------------------------------------
@@ -206,7 +214,16 @@ def test_the_commonwealth_trucks_actually_run():
                if _west_of_matruh(next(s.hex for s in res.initial.supplies
                                        if s.id == e.payload["supply_id"]))]
     assert forward, "nothing was ever hauled west of the railhead"
-    assert res.final.supply("AL-Stage-Barrani").fuel > 0, "the Field Supply Depot never filled"
+
+    # A forward Field Supply Depot actually FILLS. Asked of the chain, not of one named link: the
+    # relay lifts from each staging depot to fill the one ahead of it, so the stock ends up at the
+    # chain's HEAD and the links behind are transit nodes at zero. With the take-and-hold occupying
+    # SOLLUM (game.campaign_claim) the head is AL-Stage-Sollum -- the third link, which the old code
+    # could never fill at all: the Commonwealth swept past the hex for the whole war, it stayed
+    # Axis-CONTROLLED, and the relay will not deliver into a hex the enemy holds.
+    depots = ("AL-Stage-Barrani", "AL-Stage-Sollum")
+    assert any(res.final.supply(d).fuel > 0 for d in depots), \
+        f"no Field Supply Depot filled: {[(d, res.final.supply(d).fuel) for d in depots]}"
 
 
 def test_the_relay_never_siphons_the_army_s_own_field_dumps():
