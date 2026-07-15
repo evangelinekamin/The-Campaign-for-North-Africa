@@ -123,11 +123,18 @@ def apply(state: GameState, event: Event) -> GameState:
         return replace(state, supplies=state.supplies + (su,))
 
     if k == EventKind.SUPPLY_CAPTURED:
-        # 32.13 / 54.15 / 49.19: an enemy combat unit entered the dump's hex, so the dump (and
-        # everything in it) changes hands. A pure OWNERSHIP flip -- no point is minted or
-        # destroyed, so the conservation identity is untouched.
-        su = state.supply(p["supply_id"])
-        return state.with_supply(replace(su, side=Side(p["to"])))
+        # 32.13 / 54.15: an enemy combat unit entered the dump's hex, so the dump changes hands.
+        # But capture is TAXED (49.19 / 50.16 / 51.16): only 1/3 (round up) of the Ammunition and
+        # 50% of the Stores are usable by the captor -- the rest are LOST -- while Fuel passes intact
+        # and Water is untaxed. Flip the owner AND drain the baked `lost`, crediting consumed[] so
+        # on_hand + consumed == initial holds (the loss folds exactly like a consume/demolition).
+        su = replace(state.supply(p["supply_id"]), side=Side(p["to"]))
+        consumed = dict(state.consumed)
+        for commodity, qty in p.get("lost", {}).items():
+            attr = commodity.lower()
+            su = replace(su, **{attr: getattr(su, attr) - qty})
+            consumed[commodity] = consumed.get(commodity, 0) + qty
+        return replace(state.with_supply(su), consumed=consumed)
 
     if k == EventKind.MOTORIZATION_ATTACHED:
         # 32.32: thirty Medium Truck Points (32.51) book onto the dump and out of the freight pool.

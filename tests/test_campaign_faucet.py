@@ -243,8 +243,13 @@ def test_the_harbour_does_not_throttle_the_railway():
     railhead = next(s for s in st.supplies if s.id == "AL-Stage-Matruh")
     port = st.port_at(railhead.hex)
     assert port is not None and port.id == "PORT-Matruh"
-    clipped = supply.port_landing_cap(port, supply.AMMO)               # what the quay WOULD allow
-    assert clipped < _campaign_rail_cargo(2)["AMMO"], \
+    # what the quay WOULD allow is its 55.3 SHARED tonnage budget (Mersa Matruh 250 t at eff 1/1); the
+    # rail carries the railroad's OWN 54.32 capacity (~1500 t), far more -- routing the trains through
+    # the cranes would clip them to a fraction, which is exactly why a railway bypasses the harbour gate.
+    quay_tons = supply.port_tonnage_budget(port)
+    rail = _campaign_rail_cargo(2)
+    rail_tons = sum(rail[c] * supply.TONS_PER_POINT[c] for c in rail)
+    assert quay_tons < rail_tons, \
         "the harbour rating no longer bites the rail cargo -- this test has stopped proving anything"
 
 

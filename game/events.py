@@ -120,13 +120,15 @@ class EventKind(str, Enum):
     # dump -- it mints nothing, so conservation holds trivially; the supplies arrive by the
     # TRUCK_UNLOADED that follows.
     SUPPLY_DUMP_ESTABLISHED = "SUPPLY_DUMP_ESTABLISHED"
-    # [32.13]/[54.15]/[49.19] DUMP CAPTURE. SUPPLY_CAPTURED {supply_id, from, to, ammo, fuel,
-    # stores, water} flips a field dump's OWNER when an enemy combat unit enters its hex: "if any
-    # enemy combat unit enters a Supply Unit's hex, that unit is captured (and its supplies used
-    # immediately and freely)" [32.13], which the full logistics game states as "dumps may be used
-    # by any Player as supply sources" [54.15] and "fuel is non-denominational -- it can be used by
-    # either player, making a supply dump a worthwhile objective" [49.19]. A CONSERVING transfer of
-    # ownership: not one point is minted or destroyed, so on_hand+consumed==initial is untouched.
+    # [32.13]/[49.19]/[50.16]/[51.16] DUMP CAPTURE. SUPPLY_CAPTURED {supply_id, from, to, ammo, fuel,
+    # stores, water, lost:{commodity: qty}} flips a field dump's OWNER when an enemy combat unit
+    # enters its hex ("if any enemy combat unit enters a Supply Unit's hex, that unit is captured"
+    # [32.13]), and TAXES what he may use: the full game keeps only one-third (round up) of the
+    # captured Ammunition [50.16] and 50% of the Stores [51.16] -- the rest are LOST -- while Fuel
+    # passes intact (non-denominational [49.19]) and Water is untaxed. (The abstract game's "used
+    # immediately and freely" is 32.13/47.0, which do not license the full game.) The `lost` amounts
+    # are drained and credited to consumed[], so on_hand+consumed==initial holds -- a taxed handover,
+    # folded like a consume, not a mint.
     SUPPLY_CAPTURED = "SUPPLY_CAPTURED"
     # [54.14]/[54.17] BLOW THE DUMP. SUPPLY_DUMP_BLOWN {supply_id, unit_id, cp, die, modifier, pct,
     # destroyed:{commodity: qty}} with rng_draws=(die,) is the DEFENDER'S ANSWER TO 32.13: "Players

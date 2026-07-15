@@ -107,10 +107,41 @@ def test_a_field_dump_is_captured_when_the_enemy_enters_its_hex():
 
 
 def test_capture_moves_supply_and_never_mints_it():
-    """CONSERVATION. Capture flips an owner; it does not create or destroy a Point."""
+    """CONSERVATION. Capture flips an owner and TAXES the stock (50.16/51.16); it mints nothing, and
+    the taxed loss is credited to consumed[], so on_hand + consumed == initial still holds."""
     st, dump, _foe = _overrun("AL-Stage-Matruh")
     res = run(replace(st, max_turns=1), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     check(res.final)
+
+
+def test_capture_tax_is_one_third_ammo_and_half_stores():
+    """[50.16] only one-third of captured Ammo, ROUNDED UP, is usable; [51.16] fifty per cent of the
+    Stores; [49.19] Fuel is non-denominational and passes untaxed; Water is untaxed. The pure
+    formula (supply.captured_usable) -- the plan's measured seed-1941 haul was 3275 Ammo / 8188
+    Stores, keeping 1092 / 4094."""
+    assert supply.captured_usable("AMMO", 3275) == 1092     # ceil(3275/3)
+    assert supply.captured_usable("AMMO", 3) == 1 and supply.captured_usable("AMMO", 1) == 1
+    assert supply.captured_usable("STORES", 8188) == 4094   # 8188 // 2
+    assert supply.captured_usable("STORES", 5) == 2         # 51.16 silent on rounding -> usable half floored
+    assert supply.captured_usable("FUEL", 5000) == 5000     # 49.19 non-denominational: intact
+    assert supply.captured_usable("WATER", 300) == 300      # untaxed
+
+
+def test_captured_supply_is_taxed_not_used_freely():
+    """[50.16]/[51.16]: in the FULL game capture is TAXED, not "used immediately and freely" (the
+    abstract 32.13 the old code cited). Only one-third of the captured Ammunition (round up) and 50%
+    of the Stores are usable; the rest are LOST. Fuel passes intact (49.19), Water untaxed. The event
+    bakes the per-commodity `lost` from the stock AT capture (the rail lane tops the railhead up
+    before the Axis overruns it, so read the payload, not the setup value)."""
+    st, dump, _foe = _overrun("AL-Stage-Matruh")     # starts 1000 Ammo / 3000 Fuel / 4000 Stores / 0 Water
+    res = run(replace(st, max_turns=1), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    p = next(e for e in res.events if e.kind == EventKind.SUPPLY_CAPTURED
+             and e.payload["supply_id"] == dump.id).payload
+    assert p["lost"]["AMMO"] == p["ammo"] - supply.captured_usable("AMMO", p["ammo"])       # 50.16 taxed
+    assert p["lost"]["STORES"] == p["stores"] - supply.captured_usable("STORES", p["stores"])  # 51.16 taxed
+    assert p["lost"]["AMMO"] > 0 and p["lost"]["STORES"] > 0                                 # something was lost
+    assert "FUEL" not in p["lost"] and "WATER" not in p["lost"]      # 49.19 fuel intact; water untaxed
+    check(res.final)                                 # the lost points are credited to consumed[]
 
 
 def test_the_bottomless_base_is_not_capturable(gt30):

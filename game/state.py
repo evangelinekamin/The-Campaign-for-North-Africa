@@ -317,10 +317,11 @@ class Port:
     harbour crippled by a scuttled ship lands only a fraction of a convoy's cargo. Each
     commodity has a Point cap (cap_ammo..cap_water, proxy magnitudes for the untranscribed
     55.3 chart); cap_tons is the port's tonnage rating (55.13), crossed to Points at the
-    landing edge via the 54.5 Equivalent Weights (game.supply.port_landing_cap). `eff` is
-    the current Efficiency Level, `max_eff` the assigned maximum (55.12); Tobruk seeds
-    eff=2/max_eff=5 -- the San Giorgio scuttled in the harbour costs it three levels
-    (30.17 / 55.25). `kind` is "major" (men + supplies) or "minor" (supplies only, 55.11).
+    landing edge via the 54.5 Equivalent Weights (game.supply). `eff` is the current
+    Efficiency Level, `max_eff` the assigned maximum (55.12), both seeded per scenario from
+    the 55.3 chart: the full campaign starts Tobruk at eff 2 of max 5 -- the San Giorgio
+    scuttled in the harbour costing it three levels (30.17 / 55.25) -- while the Desert Fox
+    benchmark uses 61.6's verbatim 7/7. `kind` is "major" (men + supplies) or "minor" (supplies only, 55.11).
     Efficiency regenerates +1/OpStage up to max_eff (55.18), except a permanent harbour
     BLOCK that only engineers clear (55.26; see game.engine.HARBOUR_BLOCKED)."""
     id: str

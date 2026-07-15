@@ -682,7 +682,8 @@ def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
             if hasattr(pol, "naval_command"):
                 pol.naval_command(r.state, side)        # stages the officer's interdiction beats
                 _drain_staff(r, pol, side)              # emitted before the CONVOY_INTERDICTED below
-    port_landed: dict[tuple[str, str], int] = {}        # 55.14: cap is per-port-per-OpStage, not per-convoy
+    port_landed: dict[tuple[str, str], int] = {}        # 55.14: per-commodity sub-cap, per-port-per-OpStage
+    port_tons: dict[str, float] = {}                    # 55.3: the ONE shared tonnage budget per port per OpStage
     for c in sorted(due, key=lambda c: c.id):           # deterministic arrival order
         dump = _convoy_dest(r.state, c)                 # 56.15, plus the 54.3/60.7 retracting railhead
         if dump is None:
@@ -706,17 +707,34 @@ def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
             # and never touches the quay, so it bypasses the harbour gate. Convoy.rail defaults False,
             # so every sea convoy in every scenario reads exactly as before.
             port = None if c.rail else r.state.port_at(dump.hex)
-            landed: dict = {}
+            # (a) what each commodity WANTS to land: 54.12 dump headroom, then the port's SECONDARY
+            # per-commodity sub-cap (_UNLIMITED for campaign ports; convoys sharing a port this
+            # OpStage subtract what earlier ones already landed).
+            want: dict = {}
             for k, v in cargo.items():
                 onhand = getattr(dump, k.lower())
                 room = min(cap[k], onhand + v) - onhand     # 54.12 dump headroom
                 if port is not None:
-                    # 55.14 harbour throttle: several convoys sharing one port this OpStage draw
-                    # from ONE cap, so subtract what earlier convoys already landed there.
                     already = port_landed.get((port.id, k), 0)
                     room = min(room, supply.port_landing_cap(port, k) - already)
                 if room > 0:
-                    landed[k] = room
+                    want[k] = room
+            # (b) 55.3/55.14 THE SHARED TONNAGE THROTTLE. A port ships ONE total tonnage per OpStage
+            # across ALL commodities (55.3: "the TOTAL tonnage of supplies... in one Operations Stage"),
+            # NOT the whole allowance per commodity. When the manifest outweighs the remaining budget,
+            # every commodity lands the same fraction of what it wanted -- mix-preserving and order-
+            # independent (the rules let the player pick the split; proportional is the least-biased
+            # reading of a fixed cargo, and it avoids a commodity-ordering artefact that would starve
+            # one commodity to feed another). 54.5 crosses each Point to its tonnage.
+            if port is not None and want:
+                remaining = supply.port_tonnage_budget(port) - port_tons.get(port.id, 0.0)
+                want_tons = sum(q * supply.TONS_PER_POINT[k] for k, q in want.items())
+                if want_tons > remaining:
+                    frac = remaining / want_tons if want_tons > 0 else 0.0
+                    want = {k: math.floor(q * frac) for k, q in want.items()}
+                port_tons[port.id] = port_tons.get(port.id, 0.0) + sum(
+                    q * supply.TONS_PER_POINT[k] for k, q in want.items())
+            landed = {k: q for k, q in want.items() if q > 0}
             if port is not None:
                 for k, q in landed.items():
                     port_landed[(port.id, k)] = port_landed.get((port.id, k), 0) + q
@@ -1823,9 +1841,19 @@ def _capture_dumps(r: _Run) -> None:
         if su.side in holders or len(holders) != 1:   # contested, or the owner is still standing on it
             continue
         captor = next(iter(holders))
+        # 49.19/50.16/51.16: capture is TAXED. Only one-third (round up) of the Ammunition and 50%
+        # of the Stores are usable by the captor; the rest are LOST. Fuel passes intact (non-
+        # denominational) and Water is untaxed. Bake the per-commodity loss so the SUPPLY_CAPTURED
+        # handler drains it and credits consumed[] -- conservation holds, exactly as SUPPLY_DUMP_BLOWN
+        # bakes its destroyed amounts. (This is the FULL-GAME tax; the old code cited 32.13, the
+        # ABSTRACT game's "used immediately and freely", which 47.0/32.0 do not license here.)
+        lost = {c: getattr(su, c.lower()) - supply.captured_usable(c, getattr(su, c.lower()))
+                for c in supply.COMMODITIES}
+        lost = {c: q for c, q in lost.items() if q > 0}
         r.emit(EventKind.SUPPLY_CAPTURED, captor, f"{captor.value}/Front",
                {"supply_id": su.id, "from": su.side.value, "to": captor.value,
-                "ammo": su.ammo, "fuel": su.fuel, "stores": su.stores, "water": su.water})
+                "ammo": su.ammo, "fuel": su.fuel, "stores": su.stores, "water": su.water,
+                "lost": lost})
 
 
 def _reject_supply(r: _Run, side: Side, actor: str, order, reason: str) -> None:

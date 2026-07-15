@@ -52,7 +52,7 @@ from game.policy import ScriptedPolicy                                   # noqa:
 from game.scenario import (_AXIS_TOBRUK_LANE, campaign,                  # noqa: E402
                            rommels_arrival, siege_of_tobruk)
 from game.state import AirMission                                        # noqa: E402
-from game.supply import port_landing_cap                                 # noqa: E402
+from game.supply import port_tonnage_budget                             # noqa: E402
 from baselines import ROMMELS_ARRIVAL, SIEGE_OF_TOBRUK              # noqa: E402
 
 TOBRUK = coords.to_axial(coords.parse("C4807"))
@@ -76,13 +76,14 @@ def test_tobruk_is_one_harbour_not_two():
     assert tob.id == "PORT-Tobruk"                        # the id the San Giorgio block keys off
     assert tob.id in HARBOUR_BLOCKED                      # 55.25/55.26: no 55.18 regen, ever
     assert tob.cap_tons == 1700                           # [55.3] the chart, verbatim
-    assert (tob.eff, tob.max_eff) == (5, 5)               # [55.3] Efficiency Level 5
+    assert (tob.eff, tob.max_eff) == (2, 5)               # [55.3] max Efficiency 5; 55.25 San Giorgio starts it at 2
     # ...and it is flagged with the side that HOLDS Tobruk on Game-Turn 1 (rule 64.2): the Axis.
     assert tob.side == Side.AXIS
     assert st.control_of(TOBRUK) == Control.AXIS
-    # The 1700 t crosses (54.5) to the real gate on EITHER side's lifeline: 425 Ammunition
-    # Points per Operations Stage -- which is what the besieger must cut to force a 15.15 surrender.
-    assert port_landing_cap(tob, "AMMO") == 425
+    # 55.3 gates the lifeline by ONE shared tonnage budget across all commodities (not a per-commodity
+    # cap): 1700 t at eff 2/5 crosses (54.5) to 680 t per Operations Stage -- the real gate on either
+    # side's Tobruk lifeline, which the besieger must cut to force a 15.15 surrender.
+    assert port_tonnage_budget(tob) == 680                # ceil(1700 * 2/5)
 
 
 def test_both_sides_have_a_tobruk_sea_lane():

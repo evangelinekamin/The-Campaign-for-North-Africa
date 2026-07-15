@@ -86,9 +86,16 @@ def test_port_landing_cap_is_efficiency_gated():
     assert supply.port_landing_cap(p, "FUEL") == math.ceil(100 * 2 / 5)     # 40
 
 
-def test_convoy_lands_only_the_throttled_amount():
-    # A convoy carrying a full port-load lands only ceil(cap * eff/max_eff) (55.14),
-    # and initial_supply rises by exactly that -- no conservation fault.
+def test_convoy_lands_only_the_shared_tonnage_budget():
+    # 55.3/55.14: a port ships ONE shared tonnage budget across ALL commodities per Operations
+    # Stage ("the TOTAL tonnage of supplies... in one Operations Stage"), NOT the whole allowance
+    # per commodity. A manifest that outweighs the budget lands a MIX-PRESERVING proportional
+    # fraction; the total landed tonnage never exceeds the budget, and initial_supply rises by
+    # exactly what lands -- no conservation fault.
+    #
+    # This test formerly asserted {AMMO:120, FUEL:40, STORES:200, WATER:60} = 695 tons through a
+    # 480-ton port, which ENSHRINED the per-commodity bug (each commodity independently drew the
+    # port's whole tonnage). That is 55.3 misread as a per-commodity allowance; corrected here (T0-3).
     p = Port("P", Side.ALLIED, (0, 0), "major", max_eff=5, eff=2,
              cap_ammo=300, cap_fuel=100, cap_stores=500, cap_water=150, cap_tons=1200)
     dump = SupplyUnit("D", Side.ALLIED, (0, 0), ammo=0, fuel=0, stores=0, water=0)
@@ -98,9 +105,14 @@ def test_convoy_lands_only_the_throttled_amount():
     _naval_convoys(r)
     arrived = [e for e in r.events if e.kind == EventKind.SUPPLY_ARRIVED]
     assert len(arrived) == 1
-    assert arrived[0].payload["cargo"] == {"AMMO": 120, "FUEL": 40, "STORES": 200, "WATER": 60}
+    landed = arrived[0].payload["cargo"]
+    budget = supply.port_tonnage_budget(p)                # ceil(1200 * 2/5) = 480 t, shared
+    landed_tons = sum(q * supply.TONS_PER_POINT[k] for k, q in landed.items())
+    assert landed_tons <= budget                          # 55.3: the TOTAL tonnage is capped, once
+    assert landed_tons > budget * 0.98                    # and the port works to (very near) capacity
+    assert set(landed) == {"AMMO", "FUEL", "STORES", "WATER"}   # mix preserved -- nothing starved
     d = r.state.supply("D")
-    assert (d.ammo, d.fuel, d.stores, d.water) == (120, 40, 200, 60)
+    assert (d.ammo, d.fuel, d.stores, d.water) == tuple(landed[k] for k in supply.COMMODITIES)
     for c in supply.COMMODITIES:                          # conservation exact
         on_hand = sum(getattr(su, c.lower()) for su in r.state.supplies)
         assert on_hand + r.state.consumed[c] == r.state.initial_supply[c]
@@ -136,9 +148,11 @@ def test_port_unloaded_beat_is_emitted_with_tons_and_eff():
     assert {b.payload["commodity"] for b in beats} == {"AMMO", "FUEL", "STORES", "WATER"}
     ammo_beat = next(b for b in beats if b.payload["commodity"] == "AMMO")
     assert ammo_beat.payload["port_id"] == "P"
-    assert ammo_beat.payload["qty"] == 120
     assert ammo_beat.payload["eff"] == 2
-    assert ammo_beat.payload["tons"] == supply.points_to_tons(120, "AMMO")   # 480
+    # the beat reports the ACTUAL landed qty (a proportional slice of the 55.3 shared budget)
+    # and crosses it to tonnage via 54.5 -- assert that internal consistency, not a fixed magnitude
+    assert ammo_beat.payload["qty"] > 0
+    assert ammo_beat.payload["tons"] == supply.points_to_tons(ammo_beat.payload["qty"], "AMMO")
 
 
 def test_throttle_ignored_without_a_port():
@@ -216,18 +230,23 @@ def test_tobruk_seeded_at_full_efficiency_per_61_6():
 
 
 def test_tobruk_ferry_feeds_the_garrison_at_full_efficiency():
-    # At the 61.6 Efficiency 7/7 the ferry lands min(cargo, 55.14 tonnage throttle) each
-    # turn; that effective delivery must still cover the garrison's per-turn draw (peak
-    # ~176 Stores). Now the CARGO binds for some commodities and the 1700 t throttle for
-    # others -- either way each lands a positive amount and Stores clears the draw.
+    # At 61.6 Efficiency 7/7 the ferry lands its manifest through the 55.3 SHARED tonnage budget
+    # (1700 t): the manifest outweighs it, so every commodity lands the same proportional slice.
+    # That throttled STORES delivery must still cover the garrison's ~176 Stores/turn peak draw.
+    # Run the ACTUAL landing edge (engine._naval_convoys), don't recompute it, so the test tracks
+    # the real shared-budget throttle rather than the per-commodity sub-cap.
     s = rommels_arrival()
     tob = s.port_at(TOBRUK)
     ferry = next(c for c in s.convoys if c.lane == "SEA-TOBRUK")
-    for c in supply.COMMODITIES:
-        landed = min(ferry.cargo[c], supply.port_landing_cap(tob, c))
-        assert landed > 0                                 # every commodity lands something
-    stores_landed = min(ferry.cargo["STORES"], supply.port_landing_cap(tob, "STORES"))
-    assert stores_landed >= 180                           # covers the ~176 Stores peak draw
+    dump = SupplyUnit("D", Side.ALLIED, tob.hex, ammo=0, fuel=0, stores=0, water=0)
+    conv = Convoy("f", Side.ALLIED, 1, "SEA-TOBRUK", "D", dict(ferry.cargo))
+    r = _Run(_port_state(tob, dump, [conv]))
+    _naval_convoys(r)
+    d = r.state.supply("D")
+    assert all(getattr(d, c.lower()) > 0 for c in supply.COMMODITIES)   # every commodity lands something
+    assert d.stores >= 180                                              # covers the ~176 Stores peak draw
+    landed_tons = sum(getattr(d, c.lower()) * supply.TONS_PER_POINT[c] for c in supply.COMMODITIES)
+    assert landed_tons <= supply.port_tonnage_budget(tob)              # 55.3 shared budget respected
 
 
 # --- port-less scenarios stay byte-identical ---------------------------------

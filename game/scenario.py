@@ -24,7 +24,7 @@ from .hexmap import distance, neighbors
 from .movement import TerrainMap, edge
 from .state import (AirMission, AirWing, Convoy, GameState, InterdictionOrder,
                     Port, StepRecord, SupplyUnit, TruckFormation, Unit, VP)
-from .supply import COMMODITIES, _UNLIMITED, tons_to_points
+from .supply import COMMODITIES, TONS_PER_POINT, _UNLIMITED, tons_to_points
 from .terrain import Hexside, Mobility, Terrain
 
 LENGTH = 8
@@ -333,6 +333,23 @@ def _load_cargo() -> dict:
     per-turn cargo (game.oob DUMP_* = Tobruk's 61.36 built-in + a wells/rail Water proxy)."""
     return {"AMMO": oob.DUMP_AMMO, "FUEL": oob.DUMP_FUEL,
             "STORES": oob.DUMP_STORES, "WATER": oob.DUMP_WATER}
+
+
+def _campaign_tobruk_cargo() -> dict:
+    """The per-Game-Turn Tobruk lifeline cargo -- BOTH the Commonwealth ferry and the Axis lane 6
+    into the San-Giorgio-crippled harbour -- sized to what that harbour can actually land, so the
+    lane no longer plans 3.5x its quay (T0-17). 55.3 rates Tobruk 1700 t; at eff 2/5 (55.25) that
+    crosses (54.5) to 680 t/OpStage. The old _load_cargo() shipped 7229 t -- 1500 Ammunition into a
+    quay that lands ~170 -- and 56.27 forbids shipping over capacity (the un-landable overflow was
+    silently annihilated). FLAGGED PROXY: this keeps the representative 61.36 MIX but scales its
+    tonnage to the harbour, inventing no new ratio; the real fix is the 56.21/56.22 convoy-planning
+    decision (deferred, T1-9)."""
+    base = _load_cargo()
+    base_tons = sum(base[c] * TONS_PER_POINT[c] for c in base)
+    tob = _PORT_TONS["tobruk"]
+    budget = math.ceil(tob["tons"] * (tob["efficiency_level"] - 3) / tob["efficiency_level"])  # eff 2/5 -> 680 t
+    frac = budget / base_tons
+    return {c: max(1, math.floor(base[c] * frac)) for c in base}
 
 
 def _caps_tonnage(tons: int) -> dict:
@@ -934,14 +951,15 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
     #
     # It lands in AX-Stage-Tobruk, the 60.34 staging dump standing ON the city, so the garrison
     # traces to it at distance 0 -- the exact mirror of AL-Tobruk under the ferry. Neither lane is
-    # a free faucet: engine._naval_convoys throttles both through the ONE 55.3 harbour (1700 t,
-    # eff 5 -> 425 Ammunition Points/OpStage; see _campaign_ports), and 56.15 cancels whichever of
+    # a free faucet: engine._naval_convoys throttles both through the ONE 55.3 harbour (1700 t at
+    # eff 2/5 -> a 680 t/OpStage SHARED tonnage budget; see _campaign_ports), and 56.15 cancels whichever of
     # them is sailing into a city the enemy now controls. They hand off automatically, in both
     # directions, for as many times as the fortress changes hands.
-    convoys += [Convoy(f"tobruk-ferry-t{gt}", Side.ALLIED, gt, "SEA-TOBRUK", "AL-Tobruk", _load_cargo())
+    convoys += [Convoy(f"tobruk-ferry-t{gt}", Side.ALLIED, gt, "SEA-TOBRUK", "AL-Tobruk",
+                       _campaign_tobruk_cargo())     # T0-17: sized to the 55.3 harbour, not 3.5x it
                 for gt in range(1, max_turns + 1)]
     convoys += [Convoy(f"tobruk-axis-t{gt}", Side.AXIS, gt, _AXIS_TOBRUK_LANE, "AX-Stage-Tobruk",
-                       _load_cargo())
+                       _campaign_tobruk_cargo())     # T0-17: sized to the 55.3 harbour, not 3.5x it
                 for gt in range(1, max_turns + 1)]
     rear = _axis_rear(supplies, target)
     if rear is not None:
@@ -986,22 +1004,30 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
 
     Kept under the id PORT-Tobruk so the San Giorgio block already modelled in the engine
     (HARBOUR_BLOCKED: no 55.18 regeneration, ever) keeps applying -- the scuttled cruiser does not
-    care who owns the quay. The 1700-t rating is the chart's; at eff 5/5 it crosses (54.5) to a
-    landing ceiling of 425 AMMUNITION Points per Operations Stage, which is the real gate on either
-    side's Tobruk lifeline."""
+    care who owns the quay. The 1700-t rating is the chart's; at eff 2/5 (55.25 San Giorgio) it
+    crosses (54.5) to a 680 t/Operations-Stage SHARED tonnage budget across all commodities, which is
+    the real gate on either side's Tobruk lifeline."""
     ports = []
     rear = _axis_rear(supplies, target)
     if rear is not None:
-        tons = _PORT_TONS.get("benghazi", _PORT_TONS["tripoli"])["tons"]
-        ports.append(Port("PORT-Benghazi", Side.AXIS, rear.hex, "major", max_eff=10, eff=10,
-                          **_caps_tonnage(tons)))
+        chart = _PORT_TONS.get("benghazi", _PORT_TONS["tripoli"])   # 55.3: Benghazi Efficiency Level 3
+        eff = chart["efficiency_level"]
+        ports.append(Port("PORT-Benghazi", Side.AXIS, rear.hex, "major", max_eff=eff, eff=eff,
+                          **_caps_tonnage(chart["tons"])))
     railhead = _campaign_cw_railhead(supplies)
     if railhead is not None:
-        tons = _PORT_TONS.get("mersa_matruh", _PORT_TONS["tripoli"])["tons"]   # 55.3 railhead tonnage
-        ports.append(Port("PORT-Matruh", Side.ALLIED, railhead.hex, "major", max_eff=10, eff=10,
-                          **_caps_tonnage(tons)))
+        chart = _PORT_TONS.get("mersa_matruh", _PORT_TONS["tripoli"])   # 55.3: Mersa Matruh Efficiency Level 1
+        eff = chart["efficiency_level"]
+        ports.append(Port("PORT-Matruh", Side.ALLIED, railhead.hex, "major", max_eff=eff, eff=eff,
+                          **_caps_tonnage(chart["tons"])))
+    tob = _PORT_TONS["tobruk"]      # 55.3: Tobruk max Efficiency 5, 1700 t
+    # 55.25 / 30.17: the scuttled San Giorgio starts Tobruk THREE levels down, at 2 of max 5 --
+    # NOT the 55.12 maximum, and NOT the 60.7/61.6 printed "Efficiency Level 7" (an OCR/errata 5->7
+    # in this typeface; see the port plan section 8). HARBOUR_BLOCKED stops 55.18 regen, so it stays
+    # pinned at 2 for the whole campaign -- 1700 t at eff 2/5 crosses (54.5) to a 680 t/OpStage gate.
     ports.append(Port("PORT-Tobruk", Side.AXIS, coords.to_axial(coords.parse(_TOBRUK)), "major",
-                      max_eff=5, eff=5, **_caps_tonnage(_PORT_TONS["tobruk"]["tons"])))
+                      max_eff=tob["efficiency_level"], eff=tob["efficiency_level"] - 3,
+                      **_caps_tonnage(tob["tons"])))
     return tuple(ports)
 
 
@@ -1020,11 +1046,11 @@ def _campaign_air() -> tuple[AirWing, ...]:
     """A LAND-arena air wing for BOTH sides -- the Luftwaffe/Regia Aeronautica and the Desert Air
     Force. The campaign seeded NONE, and that single omission is why its Tobruk was invulnerable:
     with state.air empty no air beat fires at all, engine._air_port is unreachable, no port can
-    ever lose Efficiency, and a HARBOUR_BLOCKED harbour therefore can never be shut. Measured, the
-    Axis Tobruk sea lane landed 425 Ammunition Points a turn into a garrison drawing 3.5 -- a 121x
-    oversupply the Commonwealth interdicted on 111 turns out of 111 while denying it exactly zero
-    Ammunition, because the 41.66 CRT skims a PERCENTAGE off a cargo the 55.14 port cap has already
-    clipped back to 425. Only efficiency 0 -- a bombed-shut harbour -- actually cuts a sea lane."""
+    ever lose Efficiency, and a HARBOUR_BLOCKED harbour therefore can never be shut. And interdiction
+    alone cannot cut the lane: the 41.66 CRT skims a PERCENTAGE off a cargo the 55.3 SHARED tonnage
+    budget has already clipped to the harbour's 680 t/OpStage (eff 2/5), so a cut that still leaves the
+    manifest over the budget lands the same tonnage -- arithmetically inert (see the Tobruk
+    interdiction tests). Only efficiency 0 -- a bombed-shut harbour -- actually cuts a sea lane."""
     return (AirWing("LW-land", Side.AXIS, "LAND",
                     fighters=_AIR_FIGHTERS, strike=_AIR_STRIKE, recon=0),
             AirWing("DAF-land", Side.ALLIED, "LAND",
@@ -1043,7 +1069,7 @@ def _campaign_air_missions(max_turns: int) -> tuple[AirMission, ...]:
     the 56.15 convoy lane already hands the sea route from one side to the other.
 
     PORT-Tobruk is HARBOUR_BLOCKED (the scuttled San Giorgio, 55.26): it never regenerates, so a
-    bomb that lands STAYS landed and the 425-Point/OpStage lifeline ratchets shut for good. That is
+    bomb that lands STAYS landed and the 680 t/OpStage lifeline ratchets shut for good. That is
     what makes Tobruk's 200 Victory Points something a side has to EARN and then keep fed, instead
     of the free gift of whoever happened to be standing there on Game-Turn 1.
 
@@ -1175,7 +1201,8 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     # flow (rule 20 / [4.43b]/[4.43a]): Rommel and the DAK arrive from Tripoli from GT20, the
     # 8th Army builds up from Cairo, across the whole GT1..111 span.
     units, oob_supplies = oob.build(oob_file="oob_italian.json", extra_file="oob_campaign_extra.json",
-                                    sections="ABCDE", reinforcements_file="reinforcements_campaign.json")
+                                    sections="ABCDE", reinforcements_file="reinforcements_campaign.json",
+                                    dump_pools=oob.CAMPAIGN_DUMP_POOLS)   # 64.3: the full campaign uses Section 60
     # C3: the supply economy -- the Commonwealth's inexhaustible Suez base (Cairo/Alexandria),
     # the Axis port-of-arrival dump (Benghazi) the Mediterranean convoys land at, and the
     # historical coastal staging dumps (60.34) the campaign truck relay hauls forward along.

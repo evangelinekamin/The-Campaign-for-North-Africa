@@ -87,12 +87,25 @@ def points_to_tons(points: int, commodity: str) -> int:
     return math.ceil(points * TONS_PER_POINT[commodity])
 
 
+def port_tonnage_budget(port: Port) -> int:
+    """55.3/55.14: a port's TOTAL supply tonnage per Operations Stage, ACROSS ALL commodities,
+    at its current Efficiency Level. The 55.3 'Maximum Tonnage' is a single total ("the TOTAL
+    tonnage of supplies that may be shipped in and/or out in one Operations Stage"), NOT a
+    per-commodity allowance -- so this is the ONE shared budget a port ships within, and the
+    landing edge (game.engine._naval_convoys) crosses it to Points per commodity via 54.5.
+    Reduced by damage to ceil(max_tons * eff / max_eff) -- the rulebook's own Benghazi worked
+    example: 2500 t at Efficiency 1 of 3 -> ceil(2500 * 1/3) = 834 t (data 55.14 reduction rule)."""
+    return math.ceil(port.cap_tons * port.eff / port.max_eff)
+
+
 def port_landing_cap(port: Port, commodity: str) -> int:
-    """55.14: a port's effective per-OpStage receiving cap for `commodity` at its current
-    Efficiency Level -- the smaller of the explicit per-commodity Point cap and the 54.5
-    tonnage-derived cap, scaled by eff/max_eff. 'Round all reductions upward' (55.14)."""
-    cap = min(getattr(port, "cap_" + commodity.lower()), tons_to_points(port.cap_tons, commodity))
-    return math.ceil(cap * port.eff / port.max_eff)
+    """55.14: a SECONDARY per-commodity sub-cap on receiving `commodity`, from the port's
+    explicit per-commodity Point cap (cap_ammo..cap_water) scaled by eff/max_eff. The BINDING
+    harbour throttle is the shared tonnage budget (port_tonnage_budget) -- 55.3's Maximum Tonnage
+    is a total, not a per-commodity limit -- so this sub-cap is _UNLIMITED for the campaign's
+    ports (tonnage the sole valve) and finite only where a scenario sets an explicit cap_k.
+    'Round all reductions upward' (55.14)."""
+    return math.ceil(getattr(port, "cap_" + commodity.lower()) * port.eff / port.max_eff)
 
 
 def regen_eff(port: Port) -> int | None:
@@ -194,12 +207,29 @@ def stores_cost(unit: Unit) -> int:
 
 def water_cost(unit: Unit, *, hot: bool = False) -> int:
     """Water a unit needs this Operations Stage (rule 52.4). Infantry: 1 flat (52.41,
-    regardless of TOE). Vehicle/gun/truck: 1 per TOE Strength Point (52.42). Hot
-    weather adds a further point (52.43; the exact addition is not charted -- PROXY +1).
+    regardless of TOE). Vehicle/gun/truck: 1 per TOE Strength Point (52.42). Hot weather
+    DOUBLES the requirement (rule 29.35: "During hot weather, water requirements for all
+    units are doubled") -- so a 6-TOE panzer battalion pays 12, not 7; infantry's flat 1
+    becomes 2 (unchanged from the old +1 proxy, which was only ever right for base 1).
     52.42's 'if it used any CPA' condition is charged for every on-map mobile unit under
     the one-Operations-Stage cadence; true per-stage gating waits for CHUNK 5."""
     base = max(1, unit.strength) if _is_vehicle_type(unit) else 1
-    return base + (1 if hot else 0)
+    return base * 2 if hot else base
+
+
+def captured_usable(commodity: str, qty: int) -> int:
+    """How many Points of `commodity` an enemy may USE when he captures a dump holding `qty`
+    (49.19 / 50.16 / 51.16). Ammunition is specialized: only one-third, ROUNDED UP, is usable
+    and the rest are lost (50.16 -- and again, on the remaining third, at each recapture). Stores:
+    fifty per cent (51.16). Fuel is non-denominational and passes intact (49.19); Water is untaxed
+    (no rule names a capture loss for it). NB 50.16 says 'rounded up' explicitly while 51.16 gives
+    no rounding, so the usable Stores half is FLOORED -- a flagged reading of the silence, not the
+    round-up 50.16 spells out."""
+    if commodity == AMMO:
+        return math.ceil(qty / 3)      # 50.16: one-third, rounded up
+    if commodity == STORES:
+        return qty // 2                # 51.16: fifty per cent (usable half floored; see docstring)
+    return qty                         # 49.19 Fuel non-denominational; Water untaxed
 
 
 def _pool(su, commodity: str) -> int:

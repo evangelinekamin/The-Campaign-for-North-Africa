@@ -170,6 +170,26 @@ def cw_dump_pool_61_36() -> dict:
     return {"AMMO": p["ammo"], "FUEL": p["fuel"], "STORES": p["stores"]}
 
 
+def _scenario_60() -> dict:
+    return _data()["scenario_60_campaign_initial_supply"]
+
+
+def axis_dump_pool_60_34() -> dict:
+    """[60.34] the FULL-CAMPAIGN Axis anonymous field-dump pool (Dump 1 + Dump 2), split
+    across the Axis field dumps by game.oob. Rule 64.3 mandates Section 60 for the entire
+    campaign -- this REPLACES the 61.44 Desert-Fox pool (which gave 9600 Fuel, not 3000)."""
+    p = _scenario_60()["axis_field_dump_pool_60_34"]
+    return {"AMMO": p["ammo"], "FUEL": p["fuel"], "STORES": p["stores"], "WATER": p["water"]}
+
+
+def cw_dump_pool_60_44() -> dict:
+    """[60.44] the FULL-CAMPAIGN Commonwealth anonymous field-dump pool (Dump I). 64.3
+    mandates Section 60; this REPLACES the 61.36 Desert-Fox pool. 60.44 charts NO dump
+    Water (deferred 52.7 wells / 54.3 rail; unlimited water at Cairo/Alexandria)."""
+    p = _scenario_60()["commonwealth_field_dump_pool_60_44"]
+    return {"AMMO": p["ammo"], "FUEL": p["fuel"], "STORES": p["stores"]}
+
+
 def tobruk_builtin_61_36() -> dict:
     """[61.36] Tobruk's built-in supply (fuel/ammo/stores); Tobruk is itself a dump."""
     p = _scenario_61()["commonwealth_tobruk_builtin_61_36"]

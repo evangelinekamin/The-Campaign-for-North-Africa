@@ -10,6 +10,23 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-14 -- CAUSE: the Phase-0.3 supply-faucet block. Two of its six items move the
+benchmark logs. T0-3: the 55.3 port throttle is ONE shared tonnage budget across ALL commodities per
+Operations Stage (landed proportionally when the manifest outweighs it), not the whole tonnage spent
+again on each commodity -- so every harbour delivery in both scenarios changes. T0-7: rule 29.35, hot
+weather DOUBLES water requirements, where the engine had added a flat +1 -- so the water gate over
+every multi-TOE vehicle moves. Both benchmarks land convoys through a port and run vehicles in hot
+weather, so both logs move wholesale. The other four faucet items are campaign-only and touch neither
+benchmark: T0-2 (section-60 pools -- the Desert Fox benchmarks correctly keep section 61 per 64.3),
+T0-4 (charted port efficiencies, campaign ports), T0-12 (captured-supply tax, gated on dump_capture),
+T0-17 (the Tobruk convoy size, campaign lanes). NO chart magnitude was bent -- these ARE the charted
+magnitudes (55.3's total tonnage; 29.35's doubled water). Determinism holds: each new hash reproduces
+byte-for-byte across two runs.
+
+    rommels_arrival   6f3f33484911 -> 885fe7721583
+    siege_of_tobruk   443e21f712cf -> f1adc99b60b4
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-14 -- CAUSE: the Phase-0.2 chart fixes (T0-1, T0-8, T0-19), the numbers we
 mis-read off the 1979 scan. T0-1: broken-tank FIELD repair is 10% on a die of 2/3/4, not 100% -- the
 OCR bled "10%*" into "100%" (combat_tables._FIELD_REPAIR + data/breakdown_rates.json; re-read off PDF
@@ -67,8 +84,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "6f3f33484911"
-SIEGE_OF_TOBRUK = "443e21f712cf"
+ROMMELS_ARRIVAL = "885fe7721583"
+SIEGE_OF_TOBRUK = "f1adc99b60b4"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

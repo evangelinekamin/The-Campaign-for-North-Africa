@@ -27,18 +27,28 @@ _COMMODITIES = ("AMMO", "FUEL", "STORES", "WATER")
 # supply (500 Fuel / 1500 Ammo / 1000 Stores), plus a FLAGGED wells/rail Water proxy
 # (52.7/54.3 deferred; 61.36 charts no Tobruk dump water). Used for the Tobruk lifeline
 # dump and the rail/ferry per-turn loads (game.scenario). The field dumps are seeded
-# separately from the 61.44/61.36 pools (see _place_dumps).
+# separately from the section-60/61 start-line pools (see _place_dumps).
 _TOBRUK_BUILTIN = logistics_data.tobruk_builtin_61_36()
 DUMP_AMMO = _TOBRUK_BUILTIN["AMMO"]      # 1500 [61.36]
 DUMP_FUEL = _TOBRUK_BUILTIN["FUEL"]      # 500  [61.36]
 DUMP_STORES = _TOBRUK_BUILTIN["STORES"]  # 1000 [61.36]
 DUMP_WATER = 1000                        # FLAGGED wells/rail proxy (52.7/54.3 deferred)
 
-# [61.44]/[61.36] FULL-LOGISTICS start-line supply pools, distributed over each side's
-# dumps by _place_dumps (authored, deterministic even split, clipped to the 54.12 caps).
-_AXIS_DUMP_POOL = logistics_data.axis_dump_pool_61_44()   # AMMO/FUEL/STORES/WATER
-_CW_DUMP_POOL = logistics_data.cw_dump_pool_61_36()        # AMMO/FUEL/STORES (no charted water)
-_CW_WATER_PROXY = 1600                                     # FLAGGED wells/rail Water (52.7/54.3)
+# START-LINE ANONYMOUS field-dump pools, distributed over each side's field dumps by _place_dumps
+# (authored even split, clipped to the 54.12 caps). Rule 64.3 keys the pool to WHERE the campaign
+# begins: the Rommel-start / Desert Fox scenarios use SECTION 61 (the DEFAULT -- rommels_arrival,
+# siege_of_tobruk), while the FULL campaign from September 1940 uses SECTION 60 (CAMPAIGN_DUMP_POOLS,
+# passed by game.scenario.campaign). Loading the 61.44 pool into the full campaign handed the Axis
+# 9600 Fuel where 60.34 charts 3000 -- the bug T0-2 fixes.
+_CW_WATER_PROXY = 1600                                      # FLAGGED Desert Fox wells/rail Water (52.7/54.3)
+DESERT_FOX_DUMP_POOLS = {
+    Side.AXIS: logistics_data.axis_dump_pool_61_44(),                               # [61.44] AMMO/FUEL/STORES/WATER
+    Side.ALLIED: {**logistics_data.cw_dump_pool_61_36(), "WATER": _CW_WATER_PROXY},  # [61.36] + wells/rail proxy
+}
+CAMPAIGN_DUMP_POOLS = {
+    Side.AXIS: logistics_data.axis_dump_pool_60_34(),      # [60.34] AMMO/FUEL/STORES/WATER (400)
+    Side.ALLIED: logistics_data.cw_dump_pool_60_44(),      # [60.44] AMMO/FUEL/STORES -- 60.44 charts NO CW dump water
+}
 _OTHER_CAP = logistics_data.dump_other_terrain_cap()       # [54.12] Other-Terrain ceilings
 
 # [49.13]/[4.47-4.49] per-model Fuel Consumption Rate, keyed by model name.
@@ -150,7 +160,7 @@ def classify(counter: str, group: str) -> str | None:
 
 def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
           reinforcements_file: str | None = "reinforcements_desert_fox.json",
-          extra_file: str | None = None,
+          extra_file: str | None = None, dump_pools: dict | None = None,
           ) -> tuple[list[Unit], list[SupplyUnit]]:
     """Build engine units/supplies from an OOB file. If `sections` is given (e.g.
     "ABC"), only pieces whose hex is in those map sections are kept (rear units on
@@ -158,7 +168,9 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
     units that enter on their arrival_turn at an axial entry hex. `extra_file` adds
     further on-map pieces from a second OOB file (same schema), so a hand-authored
     campaign gap-fill can layer onto a raw VASSAL extraction without editing it; an
-    on-map record may carry an explicit `role` to override classify()."""
+    on-map record may carry an explicit `role` to override classify(). `dump_pools`
+    (Side -> commodity->points) is the 64.3 start-line field-dump pool; it defaults to
+    the SECTION-61 Desert Fox pools, and game.scenario.campaign passes SECTION 60."""
     stats = _load("unit_stats.json")
     units: list[Unit] = []
     dumps_meta: list[tuple[str, Side, tuple]] = []   # (uid, side, hex) placed after the loop
@@ -183,7 +195,7 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
         if role is not None:
             units.append(_make_unit(rec, side, ax, role, stats, seen, 0))
 
-    supplies: list[SupplyUnit] = _place_dumps(dumps_meta)
+    supplies: list[SupplyUnit] = _place_dumps(dumps_meta, dump_pools or DESERT_FOX_DUMP_POOLS)
 
     for rec in (_load(reinforcements_file).get("reinforcements", []) if reinforcements_file else []):
         side = Side.AXIS if rec["side"] == "AXIS" else Side.ALLIED
@@ -215,34 +227,26 @@ def rommel_entity(oob_file: str = "oob_desert_fox.json",
     return None
 
 
-def _dump_pool(side: Side) -> dict:
-    """The [61.44]/[61.36] start-line supply pool for `side`, as commodity->points.
-    The Axis pool carries its charted Water (61.44); the Commonwealth pool has no
-    charted dump Water, so a FLAGGED wells/rail proxy is layered on (52.7/54.3)."""
-    if side == Side.AXIS:
-        return dict(_AXIS_DUMP_POOL)
-    return {**_CW_DUMP_POOL, "WATER": _CW_WATER_PROXY}
-
-
 def _share(total: int, n: int, i: int) -> int:
     """Deterministic even split of `total` over `n` slots; the first `total % n`
     slots carry the extra point so the pool is conserved exactly."""
     return total // n + (1 if i < total % n else 0)
 
 
-def _place_dumps(dumps_meta: list[tuple[str, Side, tuple]]) -> list[SupplyUnit]:
-    """Authored, deterministic placement of each side's 61.44/61.36 supply pool over
-    its dump hexes: an even split (remainder to the earliest dumps) clipped to the
-    54.12 Other-Terrain ceilings. Real-scale (Regime B) start-line reservoir -- the
-    fuel the 49.13 x-strength demand draws on. The rulebook's <=50% (Axis) / <=25%
-    (CW) per-dump placement caps are honoured wherever the (abstracted) corridor's
-    dump count allows; the binding ceiling here is 54.12, which every share clears."""
+def _place_dumps(dumps_meta: list[tuple[str, Side, tuple]], pools: dict) -> list[SupplyUnit]:
+    """Authored, deterministic placement of each side's start-line field-dump pool (`pools`,
+    keyed by Side -- SECTION 61 for the Desert Fox, SECTION 60 for the full campaign, per 64.3)
+    over its dump hexes: an even split (remainder to the earliest dumps) clipped to the 54.12
+    Other-Terrain ceilings. Real-scale (Regime B) start-line reservoir -- the fuel the 49.13
+    x-strength demand draws on. The section-60/61 charts constrain WHERE the anonymous dumps go
+    (Axis: map-C Libya, clear of Commonwealth units; CW: Egypt on map C/D), not how the pool
+    splits; the binding ceiling here is 54.12, which every share clears."""
     by_side: dict[Side, list[tuple[str, tuple]]] = {}
     for uid, side, ax in dumps_meta:
         by_side.setdefault(side, []).append((uid, ax))
     out: list[SupplyUnit] = []
     for side, lst in by_side.items():
-        pool = _dump_pool(side)
+        pool = pools[side]
         n = len(lst)
         for i, (uid, ax) in enumerate(lst):
             amt = {c: min(_share(pool.get(c, 0), n, i), _OTHER_CAP[c]) for c in _COMMODITIES}
