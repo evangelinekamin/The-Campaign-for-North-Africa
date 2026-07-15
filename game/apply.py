@@ -9,7 +9,7 @@ from dataclasses import replace
 
 from .events import Control, Event, EventKind, Phase, Side
 from .movement import edge
-from .state import GameState, StepRecord, SupplyUnit, VP
+from .state import GameState, Rommel, StepRecord, SupplyUnit, VP
 
 
 def apply(state: GameState, event: Event) -> GameState:
@@ -335,6 +335,13 @@ def apply(state: GameState, event: Event) -> GameState:
         # 7.11: the initiative side's per-stage choice of who moves first, from which the
         # 7.12 double-move emerges. Pure scalar fold.
         return replace(state, phasing_first=Side(p["phasing_first"]))
+
+    if k == EventKind.ROMMEL_ARRIVED:
+        # 64.2 / 31: General Rommel reaches Africa -- the entity is lifted onto the board at his
+        # arrival hex (rommel None -> the leader on `hex`). A conservation-invisible fold (no
+        # steps, no supply), so invariants.check is untouched; the hex rides the event so
+        # fold(initial, events) reconstructs him exactly.
+        return replace(state, rommel=Rommel(hex=tuple(p["hex"])))
 
     if k == EventKind.ROMMEL_ANCHORED:
         # 31.4: snapshot the companions Rommel starts this Operations Stage with, anchored to

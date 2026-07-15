@@ -258,8 +258,8 @@ class AirWing:
     so the two contests are separate. `fighters`/`strike`/`recon` are Air Points by role --
     fighters contest air superiority (40/45/46 abstracted into one roll), strike flies the
     41.31 bombing missions, recon the 42.2 fog-lift. The magnitudes are FLAGGED PROXY (the
-    34.6/59.3 Initial Air Strengths chart is untranscribed, like initiative_ratings and the
-    55.3 port caps). Default GameState.air=() means no air beat fires (byte-identical)."""
+    34.6/59.3 Initial Air Strengths chart is untranscribed, like the 55.3 port caps). Default
+    GameState.air=() means no air beat fires (byte-identical)."""
     id: str
     side: Side
     arena: str                     # "LAND" | "SEA" (41.63 keeps them separate)
@@ -387,6 +387,21 @@ class Rommel:
 
 
 @dataclass(frozen=True, slots=True)
+class RommelArrival:
+    """Rule 64.2 / 64.51: General Rommel and the Deutsches Afrika Korps reach Africa at a
+    scheduled moment -- the fourth week of March 1941, i.e. the 3rd OpStage of Game-Turn 26, in
+    the full campaign. The scenario schedules his entry the way an OOB schedules a reinforcement's
+    arrival_turn: game.engine._rommel_arrival lifts the Rommel entity onto `hex` when (turn, stage)
+    is reached, folding GameState.rommel from None to the leader on the board (ROMMEL_ARRIVED), so
+    that from the NEXT game-turn's 7.14 determination the Axis reads the [7.2] rating-6 row. Default
+    GameState.rommel_arrival=None schedules nothing, so the Desert Fox scenarios (which seed Rommel
+    on the board from t0) and every Rommel-less scenario are untouched."""
+    turn: int
+    stage: int
+    hex: Coord
+
+
+@dataclass(frozen=True, slots=True)
 class GameState:
     turn: int
     max_turns: int
@@ -465,15 +480,23 @@ class GameState:
     stage: int = 1
     initiative_side: Side | None = None
     phasing_first: Side | None = None
-    # Initiative determination (rule 7.14 / 7.15 / 61.5). While `initiative_fixed` is set and
-    # `turn <= initiative_fixed_until`, that side holds Initiative with NO die (the scenario-
-    # predetermined holder, 7.15; e.g. 61.5 Axis through GT27). Afterwards each game-turn rolls
-    # 1 die + the side's Initiative Rating (7.14). `initiative_ratings` are a representative
-    # {"AXIS": int, "ALLIED": int} PROXY for the untranscribed 7.2 chart. Defaults (None / 0 /
-    # empty) mean "roll every game-turn at rating 0" -- a fair coin the toy scenarios inherit.
+    # Initiative determination (rule 7.14 / 7.15 / 61.5 / 64.4). While `initiative_fixed` is set
+    # and `turn <= initiative_fixed_until`, that side holds Initiative with NO die (the scenario-
+    # predetermined holder, 7.15; e.g. 61.5 Axis through GT27, or 64.4->60.6 the Italians on GT1).
+    # Afterwards each game-turn rolls 1 die + the side's Initiative Rating (7.14). When
+    # `initiative_chart` is set the ratings come from the transcribed [7.2] chart (game.initiative:
+    # the Commonwealth rating by date, the Axis by Rommel/German-unit presence) -- this is the full
+    # campaign. Otherwise a scenario reads its fixed {"AXIS": int, "ALLIED": int}
+    # `initiative_ratings`, a flagged proxy the Desert Fox benchmarks use on their synthetic clock.
+    # Defaults (None / 0 / empty / False) mean "roll every game-turn at rating 0" -- a fair coin
+    # the toy scenarios inherit.
     initiative_fixed: Side | None = None
     initiative_fixed_until: int = 0
     initiative_ratings: dict = field(default_factory=dict)
+    initiative_chart: bool = False
+    # Rule 64.2: General Rommel's scheduled arrival (game.state.RommelArrival), or None for a
+    # scenario that seeds him on the board from t0 (the Desert Fox benchmarks) or fields no Rommel.
+    rommel_arrival: "RommelArrival | None" = None
     # General Rommel (rule 31): the Axis leader carried as a conservation-invisible ENTITY
     # (NOT a Unit), the exact idiom of siege_rules/convoys/ports/trucks. Default None keeps
     # every non-Rommel scenario byte-identical -- no morale +1 (17.28), no +5 CPA (31.4), no

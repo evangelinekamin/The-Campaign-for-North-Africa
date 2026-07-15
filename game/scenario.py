@@ -23,7 +23,7 @@ from .events import Phase, Side
 from .hexmap import distance, neighbors
 from .movement import TerrainMap, edge
 from .state import (AirMission, AirWing, Convoy, GameState, InterdictionOrder,
-                    Port, StepRecord, SupplyUnit, TruckFormation, Unit, VP)
+                    Port, RommelArrival, StepRecord, SupplyUnit, TruckFormation, Unit, VP)
 from .supply import COMMODITIES, TONS_PER_POINT, _UNLIMITED, tons_to_points
 from .terrain import Hexside, Mobility, Terrain
 
@@ -32,9 +32,12 @@ MAX_TURNS = 8
 
 # Initiative (rule 7.14 / 7.15 / 61.5) for the Race for Tobruk. 61.5 fixes Initiative to the
 # Axis through GT27 (the first two game-turns of the GT26-start scenario, until=2 on the
-# synthetic 1..12 clock), rolling from GT28. The 7.2 Initiative Ratings chart is untranscribed;
-# these are a REPRESENTATIVE PROXY (Rommel/DAK a slight edge over the Commonwealth), flagged --
-# not transcribed values. Only the ordering they bias is affected, never a rulebook magnitude.
+# synthetic 1..12 clock), rolling from GT28. The [7.2] chart IS transcribed (game.initiative), but
+# it keys on the real Game-Turn (the Commonwealth band) and on-map presence (the Axis row); the
+# Desert Fox benchmarks run a synthetic 1..12 clock, not the real GT26-37, so the date bands do not
+# describe them. They keep this REPRESENTATIVE PROXY (Rommel/DAK a slight edge over the
+# Commonwealth), flagged -- only the ordering it biases is affected, never a rulebook magnitude. The
+# full campaign, on the real clock, opts into the chart instead (initiative_chart=True).
 _AXIS_INITIATIVE_UNTIL = 2
 _INITIATIVE_RATINGS_PROXY = {"AXIS": 3, "ALLIED": 2}
 
@@ -1302,6 +1305,13 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     # Benghazi/Tobruk/Bardia/Derna/Cairo/Alexandria carries both a depot and a well.
     supplies = dumps + water_sources
 
+    # 64.2 / 64.51: General Rommel (the rule-31 entity) reaches Africa at the 3rd OpStage of
+    # Game-Turn 26 -- co-located with the DAK headquarters counter he lands beside, so the leader
+    # and his headquarters arrive together at the same entry hex rather than at an invented spot.
+    # Until then state.rommel is None; game.engine._rommel_arrival lifts him onto the board there,
+    # and from GT27's 7.14 determination the Axis reads the [7.2] rating-6 row.
+    rommel_entry = next(u.hex for u in units if u.formation == "GE DAK")
+
     return GameState(
         turn=1, max_turns=max_turns, phase=Phase.WEATHER, active_side=Side.SYSTEM,
         seed=seed, weather="normal", vp=VP(),
@@ -1342,6 +1352,9 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         rail_line=rail_line,                             # 24.6/24.67: the route west the NZRRC may build
         map_sections=frozenset("ABCDE"),
         season_offset=calendar.CAMPAIGN_SEASON_OFFSET,   # GT1 = September 1940 (fall)
+        initiative_fixed=Side.AXIS, initiative_fixed_until=1,   # 64.4->60.6: the Italians hold Game-Turn 1
+        initiative_chart=True,                                  # [7.2] date+presence ratings (game.initiative)
+        rommel_arrival=RommelArrival(turn=26, stage=3, hex=rommel_entry),   # 64.2: the Desert Fox lands
         victory=campaign_victory.CampaignVictory(),      # rule 64.7 (see game.campaign_victory)
         convoys=_campaign_convoys(dumps, target, max_turns, seed),      # C3: Axis Med + CW rail (56.4/60.7)
         ports=_campaign_ports(dumps, target),                           # C3: PORT-Benghazi + PORT-Matruh

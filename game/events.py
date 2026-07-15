@@ -259,11 +259,15 @@ class EventKind(str, Enum):
     # when the non-phasing policy opts into react_to, so every current scenario is byte-identical.
     REACTION_MOVED = "REACTION_MOVED"
     # General Rommel (rule 31), all folding PURELY onto GameState.rommel -- no steps, no
-    # supply, so invariants.check (conservation + stacking) is untouched. ROMMEL_ANCHORED
+    # supply, so invariants.check (conservation + stacking) is untouched. ROMMEL_ARRIVED {hex}
+    # is his 64.2 entry -- the Desert Fox reaching Africa (the 3rd OpStage of Game-Turn 26 in the
+    # full campaign) -- folding rommel from None to the leader on the board at his arrival hex.
+    # ROMMEL_ANCHORED
     # {hex, companions} snapshots the 31.4 'started-the-Operations-Stage-with-him' set at each
     # OpStage boundary (folds anchor_hex + companions); the +5 CPA holds only while he never
     # leaves it (hex == anchor_hex). All emit ONLY when a Rommel is on the board, so every non-
     # Rommel scenario stays byte-identical.
+    ROMMEL_ARRIVED = "ROMMEL_ARRIVED"
     ROMMEL_ANCHORED = "ROMMEL_ANCHORED"
     # ROMMEL_MOVED {from, to} is his 31.1 leader move (a 60-MP medium truck ignoring enemy ZOC
     # + stacking); it folds rommel.hex and thereby VOIDS the stage's 31.4 anchor (hex != anchor_

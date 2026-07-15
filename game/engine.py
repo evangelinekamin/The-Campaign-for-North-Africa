@@ -15,8 +15,8 @@ import math
 from dataclasses import dataclass, replace
 from typing import Protocol
 
-from . import (combat, combat_tables, construction, cp_costs, logistics_data, stacking, supply,
-               tactics, weather, wells)
+from . import (combat, combat_tables, construction, cp_costs, initiative, logistics_data, stacking,
+               supply, tactics, weather, wells)
 from .apply import apply
 from .dice import DiceBox
 from .events import Control, Event, EventKind, Phase, Side
@@ -162,6 +162,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
         _stores_setup(r)                                # 48 IV: Stores Expenditure + 6% base evaporation
         for stage in (1, 2, 3):
             r.ports_bombed_this_stage = set()            # 55.18: this stage's bomb ledger starts empty
+            _rommel_arrival(r, stage)                    # 64.2: the Desert Fox lands (GT26.3) -- BEFORE the anchor
             _rommel_anchor(r)                            # 31.4: snapshot who he starts THIS stage with
             first, second = _declare_ab(r, policies, stage)   # 5.2.III.A / 7.11: the A/B activation order
             r.go(Phase.WEATHER, Side.SYSTEM)
@@ -228,25 +229,36 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
 
 def _initiative(r: _Run, axis_recalled: bool = False) -> None:
     """Initiative Determination (rule 5.2 I / 7.14), once per GAME-TURN. While the scenario
-    fixes the holder (7.15 / 61.5: e.g. Axis through GT27) no die is rolled; otherwise each
-    side rolls 1 die + its Initiative Rating and the higher total wins, ties rerolled in the
-    seeded stream (7.14). Folds into GameState.initiative_side, held for all three Operations
-    Stages (7.12). The 7.2 Initiative Ratings are an untranscribed chart -- initiative_ratings
-    is a representative PROXY (flagged in scenario.py).
+    fixes the holder (7.15 / 61.5 / 64.4: e.g. Axis through GT27, or the Italians on GT1) no die
+    is rolled; otherwise each side rolls 1 die + its Initiative Rating and the higher total wins,
+    ties rerolled in the seeded stream (7.14). Folds into GameState.initiative_side, held for all
+    three Operations Stages (7.12).
+
+    The Initiative Ratings come from the transcribed [7.2] chart when the scenario opts in
+    (GameState.initiative_chart -- the full campaign): the Commonwealth rating by date and the
+    Axis rating by whether Rommel / German land combat units stand on the maps (game.initiative,
+    docs/rules/90:607-617). A scenario that sets no chart -- the Desert Fox benchmarks, on their
+    synthetic 1..12 clock -- reads its fixed initiative_ratings instead.
 
     `axis_recalled` fires on the game-turn General Rommel's Berlin recall sent him to Germany
     (31): the Axis Initiative Rating is clamped to min(rating, 3) AND the 7.15 predetermined
     hold is suspended so the determination is actually ROLLED -- so 'Axis Initiative falls to
-    3' genuinely bites even in the fixed window, and can only ever HURT the Axis."""
+    3' genuinely bites even in the fixed window, and can only ever HURT the Axis. (Under the
+    [7.2] chart the clamp is already implied -- a Rommel in Germany is not on the maps, so
+    axis_rating reads the rating-3 row -- but it is kept so the fixed-ratings path recalls too.)"""
     s = r.state
     if not axis_recalled and s.initiative_fixed is not None and s.turn <= s.initiative_fixed_until:
         r.emit(EventKind.INITIATIVE_DETERMINED, Side.SYSTEM, "SYSTEM",
                {"side": s.initiative_fixed.value, "fixed": True})     # 7.15: predetermined, no die
         return
-    ax_rating = s.initiative_ratings.get("AXIS", 0)
+    if s.initiative_chart:                               # [7.2], the transcribed chart (game.initiative)
+        ax_rating = initiative.axis_rating(s)
+        al_rating = initiative.commonwealth_rating(s.turn)
+    else:                                                # a scenario's fixed proxy ratings (benchmarks)
+        ax_rating = s.initiative_ratings.get("AXIS", 0)
+        al_rating = s.initiative_ratings.get("ALLIED", 0)
     if axis_recalled:
         ax_rating = min(ax_rating, 3)                    # 31 Berlin recall: Axis Initiative falls to 3
-    al_rating = s.initiative_ratings.get("ALLIED", 0)
     draws: list[int] = []
     while True:                                          # 7.14: ties reroll
         ad, ld = r.d6("initiative"), r.d6("initiative")
@@ -288,6 +300,22 @@ def _declare_ab(r: _Run, policies: dict, stage: int) -> tuple[Side, Side]:
 
 
 # --- Rommel (rule 31) --------------------------------------------------------
+
+def _rommel_arrival(r: _Run, stage: int) -> None:
+    """64.2 / 31: General Rommel reaches Africa at his scheduled moment -- the 3rd OpStage of
+    Game-Turn 26 in the full campaign (the fourth week of March 1941). Fires once: when a scenario
+    schedules an arrival (GameState.rommel_arrival), the entity is not yet on the board, and
+    (turn, stage) matches, lift him onto the map at the DAK's entry hex (ROMMEL_ARRIVED). From the
+    NEXT game-turn's 7.14 determination the Axis then reads the [7.2] rating-6 row -- the tempo
+    inverts the moment the Desert Fox lands. Self-guarded (no schedule, or already arrived, or the
+    moment not reached => no event), so every scenario without a scheduled arrival stays
+    byte-identical."""
+    a = r.state.rommel_arrival
+    if a is None or r.state.rommel is not None:
+        return
+    if r.state.turn == a.turn and stage == a.stage:
+        r.emit(EventKind.ROMMEL_ARRIVED, Side.AXIS, "SYSTEM", {"hex": list(a.hex)})
+
 
 def _rommel_anchor(r: _Run) -> None:
     """31.4: at each Operations-Stage boundary, snapshot the Axis COMBAT units stacked with
