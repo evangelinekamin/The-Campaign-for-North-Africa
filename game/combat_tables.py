@@ -320,12 +320,12 @@ def org_size_shift(attacker_sp: int, defender_sp: int) -> int:
     return shift if attacker_sp > defender_sp else -shift
 
 
-# Static fortification defense (rule 15.82): each fortification level shifts the
-# Close Assault this many columns toward the defender. Applied as a flat static
-# modifier; dynamic fort-reduction by successive assault (rule 25.14) is DEFERRED.
-# NOTE: 8.37 grades close-assault fort as L2/L3/L4 for levels 1/2/3, so level*this
-# over-shifts at levels 2-3 -- flagged for a close-assault slice (out of scope here).
-FORT_CA_SHIFT: int = -2
+# Static fortification defense (rule 15.82): the Close Assault column shift toward the
+# defender by fortification level. Chart 8.37 grades the close-assault fortification
+# benefit L2 / L3 / L4 for Levels 1 / 2 / 3 (RE-READ off PDF page 70) -- NOT level*(-2),
+# which over-shifts Level 2 by one column and Level 3 by two (T0-8). Dynamic fort-
+# reduction by successive assault (rule 25.14) is DEFERRED.
+FORT_CA_SHIFT_BY_LEVEL: dict[int, int] = {1: -2, 2: -3, 3: -4}
 
 # Defensive minefield belt: a flat column shift toward the defender when the
 # assault crosses into a mined hex. Rule 26.26 ("the defending Player adjusts all
@@ -455,10 +455,13 @@ def breakdown_result(bp: float, bar: int, weather_shift: int, roll: int) -> int:
 # number of TOE Strength Points; for a truck a number of Truck Points. Transcribed from
 # data/breakdown_rates.json (chart-of-record) and bound to it by test_breakdown. Die 0
 # is reachable only via the deferred TDS/Major-city modifiers; a bare d6 rolls 1..6.
+# The Tank 2/3/4 cells are 10 (the chart's "10%*"), RE-READ off PDF page 103: the OCR
+# bled "10%*" into "100%" (T0-1). The 10%* single-TOE exception is enforced by
+# _repaired_count (22.25), not encoded here.
 _FIELD_REPAIR: dict[str, dict[int, int]] = {
     "truck":    {0: 2, 1: 2, 2: 1, 3: 0, 4: 0, 5: 0, 6: 0},   # Truck Points
     "ac_recce": {0: 1, 1: 1, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0},   # TOE Strength Points
-    "tank":     {0: 25, 1: 25, 2: 100, 3: 100, 4: 100, 5: 0, 6: 0},  # percentage of the type
+    "tank":     {0: 25, 1: 25, 2: 10, 3: 10, 4: 10, 5: 0, 6: 0},  # percentage of the type (10%* = 10)
 }
 
 

@@ -361,11 +361,14 @@ def test_field_repair_table_matches_chart_of_record():
             continue                                            # 7/8 are 'na' for field
         assert ct.field_repair("truck", die) == int(row[0])
         assert ct.field_repair("ac_recce", die) == int(row[1])
-        assert ct.field_repair("tank", die) == int(row[2].rstrip("%"))
+        assert ct.field_repair("tank", die) == int(row[2].rstrip("%*"))   # "10%*" -> 10
 
 
 def test_field_repair_tank_schedule():
-    assert [ct.field_repair("tank", d) for d in range(1, 7)] == [25, 100, 100, 100, 0, 0]
+    # 22.8 Field/Tank column off the scan (PDF p103): 25% / 10%* / 10%* / 10%* / 0% / 0%
+    # for dice 1..6. The OCR bled the "10%*" of dice 2/3/4 into "100%" (T0-1); the 10%*
+    # single-TOE exception is enforced in _repaired_count, not in this schedule.
+    assert [ct.field_repair("tank", d) for d in range(1, 7)] == [25, 10, 10, 10, 0, 0]
 
 
 def _repair_run(tank, *, weather="clear", die=3, fuel=50):
@@ -386,8 +389,8 @@ def _repair_run(tank, *, weather="clear", die=3, fuel=50):
 
 
 def test_field_workshop_revives_a_fraction():
-    r = _repair_run(_tank(broken=8, strength=10), die=3)          # die 3 -> 100% of the broken pool
-    assert r.state.unit("T1").broken_down == 0                    # the counter-beat
+    r = _repair_run(_tank(broken=8, strength=10), die=3)          # die 3 -> 10% (22.8, T0-1)
+    assert r.state.unit("T1").broken_down == 7                    # 10% of 8 broken, rounded up = 1
     assert any(e.kind == EventKind.VEHICLE_REPAIRED for e in r.events)
 
 

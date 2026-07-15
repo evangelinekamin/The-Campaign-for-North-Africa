@@ -1506,10 +1506,11 @@ def _breakdown(r: _Run, side: Side) -> None:
                    {"unit_id": u.id, "amount": broken})
 
 
-# Field tank/SPA repair expends Fuel (22.15/22.26). Fork B charges it per repair
-# ATTEMPT (one unit's roll) rather than per TOE point -- the design's documented proxy;
-# armored-car / recce field repair is free (22.24).
-_REPAIR_FUEL: int = 1
+# Field tank/SPA repair expends Fuel before rolling (22.15/22.26): ONE Fuel Point per
+# tank TOE Strength Point undergoing repair -- "He may attempt to repair only those Tank
+# TOE Strength Points he has expended Fuel for" (22.26). Armored-car / recce field repair
+# is free (22.24).
+_REPAIR_FUEL_PER_TOE: int = 1
 
 
 def _field_repair_blocked(weather_label: str) -> bool:
@@ -1550,8 +1551,8 @@ def _repair(r: _Run, side: Side) -> None:
     for u in sorted(repairable, key=lambda u: u.id):
         cur = r.state.unit(u.id)
         vclass = "tank" if cur.is_tank else "ac_recce"
-        if vclass == "tank":                            # 22.26: expend Fuel before rolling
-            draws = supply.plan_draw(r.state, cur, supply.FUEL, _REPAIR_FUEL)
+        if vclass == "tank":                            # 22.26: one Fuel Point per broken TOE, before rolling
+            draws = supply.plan_draw(r.state, cur, supply.FUEL, _REPAIR_FUEL_PER_TOE * cur.broken_down)
             if draws is None:
                 continue                                # 22.13b: no supplies -> no repair
             for sid, qty in draws:

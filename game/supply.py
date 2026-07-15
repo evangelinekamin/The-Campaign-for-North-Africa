@@ -183,11 +183,13 @@ _STORES_RATE = logistics_data.stores_rates()   # 51.11/51.13, from the rulebook 
 
 
 def stores_cost(unit: Unit) -> int:
-    """Stores a unit needs per GAME-TURN (rule 51.11): 4 per TOE Strength Point, or 1
-    per TOE for HQ/engineer units (51.13). Non-combat pieces (bare HQs, trucks) proxy
-    the reduced rate; a dedicated engineer flag is deferred."""
-    rate = _STORES_RATE["combat"] if unit.is_combat else _STORES_RATE["noncombat"]
-    return rate * max(1, unit.strength)
+    """Stores a unit needs per GAME-TURN: 4 per TOE Strength Point (51.11), or a FLAT 1
+    per Game-Turn for HQ/engineer units (51.13 -- one Stores Point regardless of TOE, NOT
+    per point). Non-combat pieces (bare HQs, trucks) proxy the reduced rate; a dedicated
+    engineer flag is deferred."""
+    if unit.is_combat:
+        return _STORES_RATE["combat"] * max(1, unit.strength)   # 51.11
+    return _STORES_RATE["noncombat"]                            # 51.13: flat, not per TOE
 
 
 def water_cost(unit: Unit, *, hot: bool = False) -> int:

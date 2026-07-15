@@ -149,14 +149,17 @@ def test_org_size_shift():
 
 
 def test_fortification_shifts_columns_toward_defender():
-    # a static fortification shifts the assault toward the defender by
-    # FORT_CA_SHIFT per level (rule 15.82); level 0 (default) is unchanged.
+    # Chart 8.37 grades the close-assault fortification benefit L2 / L3 / L4 for Levels
+    # 1 / 2 / 3 (rule 15.82). The old level*(-2) gave -2/-4/-6, over-shifting Level 2 by
+    # one column and Level 3 by two (T0-8). Level 0 (default) is unchanged.
+    assert ct.FORT_CA_SHIFT_BY_LEVEL == {1: -2, 2: -3, 3: -4}
     kw = dict(attacker_raw=60, defender_raw=30, def_terrain=Terrain.CLEAR,
               attack_feature=None, atk_roll=11, def_roll=11)
     base = combat.resolve(**kw)
-    fort = combat.resolve(**kw, fortification_level=2)
-    assert fort.column == base.column + 2 * ct.FORT_CA_SHIFT
-    assert fort.column < base.column                       # measurably better defense
+    for level, expected in ct.FORT_CA_SHIFT_BY_LEVEL.items():
+        fort = combat.resolve(**kw, fortification_level=level)
+        assert fort.column == max(0, base.column + expected)   # exact per-level shift
+        assert fort.column < base.column                       # measurably better defense
     assert combat.resolve(**kw, fortification_level=0) == base   # default = today
 
 

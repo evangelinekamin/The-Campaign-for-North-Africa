@@ -63,19 +63,20 @@
   },
 
   "broken_down_vehicle_repair_22_8": {
-    "_comment": "[22.8] BROKEN DOWN VEHICLE REPAIR TABLE (docs/rules/90 lines 1208-1224; confirmed clean on PDF page 103). Roll one die (0-8; the die can exceed 6 via the Major-City modifiers below). Result by vehicle class and repair location. Truck cells: '2' = one Heavy Truck Point (or any Light/Medium combination equal to two) repaired; '1' = one Light or Medium Truck Point. AC/R cells = TOE Strength Points of armored car / recce repaired. Tank/SPA/TD and Facility cells = percentage of that vehicle type repaired (round fractions UP). 'na' = not allowed. '10%*' = if only a single TOE point is being repaired, treat as 0%.",
+    "_comment": "[22.8] BROKEN DOWN VEHICLE REPAIR TABLE (docs/rules/90 lines 1208-1224; RE-READ off PDF page 103 -- the Field Tank/SPA/TD 2/3/4 cells are 10%*, not 100%, see _ocr_correction_note). Roll one die (0-8; the die can exceed 6 via the Major-City modifiers below). Result by vehicle class and repair location. Truck cells: '2' = one Heavy Truck Point (or any Light/Medium combination equal to two) repaired; '1' = one Light or Medium Truck Point. AC/R cells = TOE Strength Points of armored car / recce repaired. Tank/SPA/TD and Facility cells = percentage of that vehicle type repaired (round fractions UP). 'na' = not allowed. '10%*' = if only a single TOE point is being repaired, treat as 0%.",
     "die_column_labels": ["field_truck", "field_ac_recce", "field_tank_spa_td", "facility_temporary", "facility_major"],
     "by_die": {
       "0": ["2", "1", "25%", "50%", "75%"],
       "1": ["2", "1", "25%", "50%", "75%"],
-      "2": ["1", "0", "100%", "33%", "50%"],
-      "3": ["0", "0", "100%", "25%", "50%"],
-      "4": ["0", "0", "100%", "25%", "50%"],
+      "2": ["1", "0", "10%*", "33%", "50%"],
+      "3": ["0", "0", "10%*", "25%", "50%"],
+      "4": ["0", "0", "10%*", "25%", "50%"],
       "5": ["0", "0", "0%", "10%*", "33%"],
       "6": ["0", "0", "0%", "10%*", "33%"],
       "7": ["na", "na", "na", "10%*", "25%"],
       "8": ["na", "na", "na", "10%*", "10%"]
     },
+    "_ocr_correction_note": "VERIFIED on PDF page 103: the Field Tank/SPA/TD column reads 25% / 10%* / 10%* / 10%* / 0% / 0% for dice (0,1)/2/3/4/5/6. The OCR (and this file's prior transcription) bled the '10%*' of dice 2/3/4 into '100%' -- the trailing '*' asterisk was mis-read as a third digit. Corrected 100% -> 10%* for dice 2/3/4 (T0-1). The neighbours confirm the reading: the Facility columns' '10%*' cells survived intact, and 10%* is exactly the value the note below the chart annotates ('if only a single TOE point is being repaired, treat as 0%'). At 100% the single-TOE 0% exception was unreachable.",
     "die_modifiers": {
       "tds_or_mobile_repair_in_hex": -1,
       "major_city_fort_level_2": 1,

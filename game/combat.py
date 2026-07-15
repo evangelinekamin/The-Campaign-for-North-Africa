@@ -81,7 +81,7 @@ def resolve(*, attacker_raw: int, defender_raw: int,
         shift -= 2
     shift += ct.org_size_shift(attacker_size, defender_size)    # 15.53 organization size
     shift += morale_shift + extra_shift                         # 15.62 morale column shift
-    shift += fortification_level * ct.FORT_CA_SHIFT             # 15.82 static fortification
+    shift += ct.FORT_CA_SHIFT_BY_LEVEL.get(fortification_level, 0)   # 15.82/8.37 static fortification
     if in_enemy_minefield:                                      # defensive minefield belt
         shift += ct.MINEFIELD_CA_SHIFT
 

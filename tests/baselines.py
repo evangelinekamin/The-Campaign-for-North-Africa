@@ -10,6 +10,23 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-14 -- CAUSE: the Phase-0.2 chart fixes (T0-1, T0-8, T0-19), the numbers we
+mis-read off the 1979 scan. T0-1: broken-tank FIELD repair is 10% on a die of 2/3/4, not 100% -- the
+OCR bled "10%*" into "100%" (combat_tables._FIELD_REPAIR + data/breakdown_rates.json; re-read off PDF
+p103). T0-8: the close-assault fortification shift is L2/L3/L4 for Levels 1/2/3 (chart 8.37), not
+level*(-2) = -2/-4/-6 (combat_tables.FORT_CA_SHIFT_BY_LEVEL; re-read off PDF p70). T0-19: field tank
+repair expends one Fuel Point per BROKEN TOE Strength Point undergoing repair (22.26), not a flat 1.
+
+All three change how armour breaks down, comes back, and how a Close Assault on a fortified hex
+resolves, so both benchmark logs move wholesale. rommels_arrival carries broken-tank repair and close
+assault; siege_of_tobruk adds the Tobruk (Level 2) wall. NO chart magnitude was bent -- these ARE the
+charted magnitudes, replacing OCR/reading errors. Determinism holds: each new hash reproduces
+byte-for-byte across two runs.
+
+    rommels_arrival   0a64c64bd50f -> 6f3f33484911
+    siege_of_tobruk   6ea7e495d772 -> 443e21f712cf
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-14 -- CAUSE: T0-5, rule 6.27 (Cohesion is AVERAGED over the largest units in a
 Close Assault, not read off the single strongest unit) plus the two fixes it travels with -- 6.24.2
 (a victorious assault that empties the defender's hex earns the attacker +3 Reorganization Points)
@@ -50,8 +67,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "0a64c64bd50f"
-SIEGE_OF_TOBRUK = "6ea7e495d772"
+ROMMELS_ARRIVAL = "6f3f33484911"
+SIEGE_OF_TOBRUK = "443e21f712cf"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

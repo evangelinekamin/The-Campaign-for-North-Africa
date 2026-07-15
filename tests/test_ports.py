@@ -277,12 +277,14 @@ def test_siege_still_crackable_through_the_throttle():
     # A genuine RULE change still moves them, and it is not the same bug: T0-5 (6.27 Cohesion / 15.63
     # Morale AVERAGED over the largest units in a Close Assault) changed which assaults surrender vs
     # reach the CRT, so units live/die on different hexes and the cascade reaches the 25.14 wall on
-    # different seeds -- inherent single-seed chaos, not a desync. Re-pinned (16, 162) -> (197, 214);
-    # MEASURED, siege_of_tobruk fires FORT_REDUCED on 6 of seeds 1..500 (197,214,220,232,293,405),
-    # still rare (2/220 under T0-0). The crack RATE is the owner's siege knob, NOT a magnitude to
-    # bend here. This test guards only that the path SURVIVES.
+    # different seeds -- inherent single-seed chaos, not a desync. Re-pinned (16, 162) -> (197, 214).
+    # The chart fixes T0-1 (broken-tank repair 100% -> 10%), T0-8 (fort close-assault L2/L3/L4) and
+    # T0-19 (repair fuel per broken TOE) moved the cascade again: MEASURED on the corrected engine,
+    # siege_of_tobruk fires FORT_REDUCED on 4 of seeds 1..500 (197, 220, 232, 405) -- still rare, and
+    # 214 dropped out. Re-pinned (197, 214) -> (197, 220), both of which fire. The crack RATE is the
+    # owner's siege knob, NOT a magnitude to bend here. This test guards only that the path SURVIVES.
     battered = False
-    for seed in (197, 214):
+    for seed in (197, 220):
         res = run(siege_of_tobruk(seed=seed),
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         if any(e.kind == EventKind.FORT_REDUCED and tuple(e.payload["hex"]) == TOBRUK

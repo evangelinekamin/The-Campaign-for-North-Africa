@@ -255,13 +255,15 @@ def test_siege_of_tobruk_machinery_intact():
     strongest) changed which assaults end in an instant Surrender and which reach the CRT, so units
     live, die and hold different hexes -- and the board those cascades produce reaches the 25.14
     wall-batter on different seeds. That is inherent single-seed chaos (a rule moves outcomes,
-    outcomes move later state), not a desync. Re-pinned (16, 162) -> (197, 214). MEASURED on the
-    current engine, siege_of_tobruk fires FORT_REDUCED on 6 of seeds 1..500 (197, 214, 220, 232,
-    293, 405) -- still the rare event it was (2/220 under T0-0, 3/60 under the shared stream). The
-    crack RATE is the owner's siege knob (BARRAGE_HITS_PER_FORT_LEVEL / the Axis ammo schedule), not
-    a magnitude to bend here. This guards only that the 25.14 path SURVIVES."""
+    outcomes move later state), not a desync. Re-pinned (16, 162) -> (197, 214). The chart fixes
+    T0-1 (broken-tank repair 100% -> 10%), T0-8 (fort close-assault L2/L3/L4) and T0-19 (repair fuel
+    per broken TOE) moved the cascade again: MEASURED on the corrected engine, siege_of_tobruk fires
+    FORT_REDUCED on 4 of seeds 1..500 (197, 220, 232, 405) -- still the rare event it was (6/500
+    before, 2/220 under T0-0), with 214 dropped out. Re-pinned (197, 214) -> (197, 220), both of
+    which fire. The crack RATE is the owner's siege knob (BARRAGE_HITS_PER_FORT_LEVEL / the Axis ammo
+    schedule), not a magnitude to bend here. This guards only that the 25.14 path SURVIVES."""
     battered = False
-    for seed in (197, 214):
+    for seed in (197, 220):
         res = run(siege_of_tobruk(seed=seed),
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         assert res.initial.siege_rules is True
