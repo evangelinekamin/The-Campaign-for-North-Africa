@@ -49,7 +49,12 @@ def load_sections(sections: str) -> tuple[TerrainMap, dict]:
             terrain[ax] = _TERRAIN.get(t, Terrain.CLEAR)
             index[label] = ax
     roads, tracks = _load_edges(sections, terrain, index)
-    return TerrainMap(terrain=terrain, roads=roads, tracks=tracks), index
+    # Invert the label->axial index into axial->section-letter (rule 29.7 geometry): every hex
+    # carries the section of the "S####" label it was transcribed under. Built after the edges so
+    # the coastal road hexes _load_edges promotes to land are sectioned too. The global axial is
+    # unique per hex (it stitches the sections with no seam), so no two labels collide on one hex.
+    hex_sections = {ax: label[0].upper() for label, ax in index.items()}
+    return TerrainMap(terrain=terrain, roads=roads, tracks=tracks, sections=hex_sections), index
 
 
 def _load_edges(sections: str, terrain: dict, index: dict):

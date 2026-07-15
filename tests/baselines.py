@@ -10,6 +10,25 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-15 -- CAUSE: T0-11, weather localisation (29.7) + truck-cargo evaporation (29.34).
+Foul weather no longer blankets the whole theatre: a Sandstorm/Rainstorm now lands on only the 2-3
+map-sections the 29.7 Foul Weather Location Table names (29.41 keeps a sandstorm off the delta), every
+section outside it reads Normal (29.1), and the WEATHER_ROLLED event carries the localised sections.
+BOTH benchmarks play sections A/B/C, so a storm confined to some of them changes what their
+movement/breakdown/repair do where before it blanketed all three. The same commit evaporates the
+Fuel/Water CARRIED BY TRUCKS (29.34: the hot 5% "includes water and fuel in dumps as well as in
+trucks"; 49.3: fuel evaporates "regardless of where it is kept", only convoys at sea exempt) -- both
+benchmarks field two truck formations that pick up cargo during the run, so their freight now
+evaporates too. Those two together move the whole log, and they move the rare 25.14 wall-batter onto
+different seeds (see test_convoys / test_ports, re-pinned 197,220 -> 37,57). (The 29.53 rainstorm
+well-refill is campaign-only -- the benchmarks seed no wells.) NO chart magnitude was bent -- 29.7's
+section table, 29.41's delta exclusion, 29.1's normal-elsewhere, 29.34's explicit inclusion of trucks.
+Determinism holds: each new hash reproduces byte-for-byte across two runs.
+
+    rommels_arrival   c95e597471fc -> b07f0230d4d3
+    siege_of_tobruk   14493e87b924 -> 27dd33318b00
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-15 -- CAUSE: the Tobruk-harbour block (T0-9 + 48 V.D + 55.18 + T0-10). The
 Naval Convoy Arrival Phase now runs EVERY Operations Stage (48 V.D: the Second and Third Operations
 Stages repeat all facets of the First, 48 VI/VII), so the turn's SURVIVED convoy manifest unloads
@@ -102,8 +121,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "c95e597471fc"
-SIEGE_OF_TOBRUK = "14493e87b924"
+ROMMELS_ARRIVAL = "b07f0230d4d3"
+SIEGE_OF_TOBRUK = "27dd33318b00"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

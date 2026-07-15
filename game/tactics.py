@@ -41,7 +41,7 @@ def rommel_reach(state: GameState) -> dict[Coord, float]:
     return zoc.reachable_with_zoc(
         state.terrain, r.hex, 60.0, Mobility.MOTORIZED,
         enemy_zoc=frozenset(), friendly_negators=frozenset(),
-        enemy_occupied=frozenset(), break_off=0.0, weather=state.weather)
+        enemy_occupied=frozenset(), break_off=0.0, weather=state.weather_at(r.hex))
 
 
 def _cp_ceiling(cpa: int, reserve_released: int = 0) -> float:
@@ -114,7 +114,7 @@ def reachable_for(state: GameState, unit: Unit, enemy_zoc: frozenset,
     return zoc.reachable_with_zoc(
         state.terrain, unit.hex, budget, unit.mobility,
         enemy_zoc=enemy_zoc, friendly_negators=negators, enemy_occupied=enemy_occupied,
-        break_off=_break_off_cost(unit), weather=state.weather)
+        break_off=_break_off_cost(unit), weather=state.weather_at(unit.hex))
 
 
 def reachable_for_prev(state: GameState, unit: Unit, enemy_zoc: frozenset,
@@ -129,7 +129,7 @@ def reachable_for_prev(state: GameState, unit: Unit, enemy_zoc: frozenset,
     return zoc.reachable_with_zoc_prev(
         state.terrain, unit.hex, budget, unit.mobility,
         enemy_zoc=enemy_zoc, friendly_negators=negators, enemy_occupied=enemy_occupied,
-        break_off=_break_off_cost(unit), weather=state.weather)
+        break_off=_break_off_cost(unit), weather=state.weather_at(unit.hex))
 
 
 def breakdown_points_over(state: GameState, unit: Unit, path: list[Coord]) -> float:
@@ -138,7 +138,8 @@ def breakdown_points_over(state: GameState, unit: Unit, path: list[Coord]) -> fl
     from the move event and non-vehicle scenarios stay byte-identical."""
     if not unit.breaks_down or len(path) < 2:
         return 0.0
-    return sum(movement.breakdown_points(state.terrain, a, b, unit.mobility, state.weather)
+    weather = state.weather_at(unit.hex)               # 29.7: the storm the mover set out under
+    return sum(movement.breakdown_points(state.terrain, a, b, unit.mobility, weather)
                for a, b in zip(path, path[1:]))
 
 

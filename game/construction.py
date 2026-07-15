@@ -75,8 +75,8 @@ DUMP_STORES = 20                 # 24.9: ...and 20 Store Points (Logistics Game)
 
 # [24.22] "No construction may occur in a hex affected by a sandstorm or a rainstorm. This does not
 # stop construction entirely; it only prohibits that Operations Stage from counting towards
-# construction time costs." Our weather is theatre-wide (rule 29.7 localisation is per map-section
-# and the campaign plays all five), so a foul stage simply banks no company-stages anywhere.
+# construction time costs." The storm is localised (29.7): construction halts in the 2-3 sections
+# the storm covers and proceeds elsewhere, so the test is on the BUILD HEX's section (weather_at).
 FOUL = ("sandstorm", "rainstorm")
 
 
@@ -125,7 +125,7 @@ def rail_buildable(state: GameState, side: Side, hx: Coord) -> bool:
     whole campaign turns on: the Eighth Army takes ground, the railhead comes up behind it, and the
     trains then feed the ground it took (54.35/engine._rail_stops). Neither half moves without the
     other, which is the desert war."""
-    if state.weather in FOUL:
+    if state.weather_at(hx) in FOUL:                    # 24.22 / 29.7: no construction in a storm hex
         return False
     enemy = Control.AXIS if side == Side.ALLIED else Control.ALLIED
     return (state.control_of(hx) != enemy

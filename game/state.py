@@ -186,6 +186,12 @@ class SupplyUnit:
     # founded reads exactly as it did (the relay was already refusing to lift from them by policy;
     # see campaign_policy._relay_source). game.scenario stamps the seeded depots True.
     constructed: bool = False
+    # [52.7]/[29.53] The FULL water level a finite well (a village or bir, game.wells) refills to
+    # when a rainstorm passes over its section (52.15: "all depleted wells on a map-section with a
+    # rainstorm are automatically replenished"). Zero on everything else -- ordinary dumps, and the
+    # unlimited major-city/oasis wells that may never deplete (52.13) -- so only a depletable well
+    # carries a refill ceiling, and every non-well scenario is byte-identical (game.engine._well_refill).
+    water_capacity: int = 0
 
     @property
     def empty(self) -> bool:
@@ -464,11 +470,18 @@ class GameState:
     # Default () fields no ship, so every naval-less scenario stays byte-identical -- the CW
     # Fleet-Assignment beat fires only when a side carries naval (game.engine._naval_bombardment).
     naval: tuple[NavalUnit, ...] = ()
-    # Map sections (A-E) this scenario is played on (rule 29.1 / 29.7). Foul weather
-    # from the 29.7 Foul Weather Location Table only reaches the theater when it lands
-    # on one of these sections; an empty set means "unlocalized" (a synthetic map), so
-    # foul weather is not filtered out. Purely informs weather determination.
+    # Map sections (A-E) this scenario is played on (rule 29.1 / 29.7). A Sandstorm or
+    # Rainstorm from the 29.7 Foul Weather Location Table lands on 2-3 of these sections and
+    # the rest read Normal (29.1); the covered ones are recorded in `storm_sections` below.
+    # An empty set means "unlocalized" (a synthetic map with no section geometry), so a foul
+    # result stays theatre-wide -- byte-identical to before localisation. See weather_at.
     map_sections: frozenset = frozenset()
+    # The map-sections a Sandstorm/Rainstorm actually covers THIS Operations Stage (rule 29.7,
+    # 29.41 delta-exclusion applied), the localised subset of `weather` -- set by the WEATHER_ROLLED
+    # fold and cleared to Normal weather. Empty whenever the weather is Normal/Hot (both theatre-
+    # wide, 29.31) or a foul result missed the theatre. weather_at reads it to answer the weather
+    # in a given hex; the whole-map hot couplings keep reading the scalar `weather`.
+    storm_sections: frozenset = frozenset()
     # --- The two-level turn clock (rules 5.1/5.2 + 7.0). `turn` above stays the
     # GAME-TURN (~1 week; every game-turn-keyed read -- on_map/arrival_turn,
     # season_for_turn, convoy arrival_turn, turns_without_stores -- keeps reading it).
@@ -667,6 +680,20 @@ class GameState:
 
     def trucks_at(self, coord: Coord) -> tuple["TruckFormation", ...]:
         return tuple(t for t in self.trucks if t.hex == coord)
+
+    def weather_at(self, hex: Coord) -> str:
+        """Rule 29.1: the weather in `hex`'s map-section. Normal and Hot are theatre-wide
+        (29.2 / 29.31, so hot couplings may read the scalar `weather` directly); a Sandstorm
+        or Rainstorm is confined to the 29.7 `storm_sections`, and every other section reads
+        Normal (29.41 / 29.51). Falls back to the theatre-wide label when the hex's section is
+        unknown -- a synthetic map with no section geometry -- so every geometry-less scenario
+        keeps the pre-localisation whole-map behaviour (byte-identical)."""
+        if self.weather not in ("sandstorm", "rainstorm") or not self.storm_sections:
+            return self.weather                    # 29.31: Normal/Hot fall on every section
+        section = self.terrain.sections.get(hex)
+        if section is None:
+            return self.weather                    # no geometry -> theatre-wide (byte-identical)
+        return self.weather if section in self.storm_sections else "normal"
 
     # --- functional updates (return new state) -------------------------------
     def with_unit(self, unit: Unit) -> "GameState":

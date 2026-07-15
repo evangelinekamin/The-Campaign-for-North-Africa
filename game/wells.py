@@ -34,10 +34,13 @@ side-neutral geography, not the geography itself; the seam to a true neutral sou
 active_supplies, and it is not worth widening for this.
 
 DEFERRED, and flagged so nothing is silently missing:
-  * [52.13]/[52.7] the CP expenditure and the draw die at a village/bir well, and with it
-    [52.14] depletion and [52.15] rain replenishment. Village/bir wells are seeded instead
-    as a finite pool sized from the chart (below). Deferring the depletion die and the rain
-    that undoes it together is self-consistent; the seeded pool is the conservative half.
+  * [52.13]/[52.7] the CP expenditure and the draw die at a village/bir well, and the [52.14]
+    depletion die. Village/bir wells are seeded instead as a finite pool sized from the chart
+    (below) that a draw simply draws down. [52.15]/[29.53] RAIN REPLENISHMENT IS NOW MODELLED
+    (game.engine._well_refill): a rainstorm over a well's section refills it to water_capacity --
+    the seeded pool. So the depletion die is deferred but the rain that undoes depletion is live;
+    a well drawn down by usage comes back with the rains, which is the [52.0] nuisance the rule asks
+    for. Poisoning/sweetening (52.16/52.17) stay deferred.
   * [52.16]/[52.17] poisoning and sweetening.
   * [52.21]/[52.24] player-CONSTRUCTED pipelines (10 Stores and a Construction Phase per
     hex) and [52.25] their destruction. Only the Commonwealth's standing RR-as-pipeline
@@ -87,10 +90,11 @@ def _table_yield(kind: str) -> int:
         village (Town row): mean 1600/6 = 266.7  x  1 / ((2/6) x (1/6)) = 18 draws  = 4800
         bir     (Bir row) : mean 1200/6 = 200.0  x  1 / ((3/6) x (1/6)) = 12 draws  = 2400
 
-    Conservative in two ways, both deliberate: it ignores [52.15] (a rainstorm replenishes
-    EVERY depleted well on the map-section, and a 111-turn campaign sees many), and it lets
-    a whole army camped on one village drink it dry. A well that can run dry is the [52.0]
-    nuisance the rule asks for; a well that cannot is a faucet."""
+    Sized as a between-rains lifetime yield, but the well no longer has to LAST the campaign on it:
+    [52.15]/[29.53] rain replenishment is now live (game.engine._well_refill refills it to this
+    capacity whenever a rainstorm crosses its section), so a village an army camps on may be drunk
+    dry and then come back with the rains. A well that can run dry is the [52.0] nuisance the rule
+    asks for; a well that cannot is a faucet."""
     row = _WATER_TABLE_52_7[kind]
     draws = row["draws"]
     mean = sum(draws) / len(draws)
@@ -134,11 +138,16 @@ def wells(data: dict | None = None) -> tuple[SupplyUnit, ...]:
     out: list[SupplyUnit] = []
     for w in data["wells"]:
         hexid = _ax(w["hex"])
-        water = _pool(w["kind"])
+        kind = w["kind"]
+        water = _pool(kind)
+        # 29.53/52.15: only a FINITE well (village/bir) carries a refill ceiling -- the unlimited
+        # major-city/oasis wells never deplete (52.13), so they get 0 (never refilled).
+        capacity = water if kind in ("village", "bir") else 0
         tag = w["name"].replace(" ", "")
         for side, prefix in _SIDE_PREFIX:
             out.append(SupplyUnit(f"{prefix}{WELL_ID_MARK}{tag}", side, hexid,
-                                  ammo=0, fuel=0, stores=0, water=water, base=True))
+                                  ammo=0, fuel=0, stores=0, water=water, base=True,
+                                  water_capacity=capacity))
     return tuple(out)
 
 

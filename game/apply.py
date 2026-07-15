@@ -45,6 +45,30 @@ def apply(state: GameState, event: Event) -> GameState:
         consumed[commodity] = consumed.get(commodity, 0) + p["qty"]
         return replace(state.with_supply(drained), consumed=consumed)
 
+    if k == EventKind.TRUCK_EVAPORATED:
+        # 29.34 / 49.3: Fuel/Water carried by a truck convoy evaporates exactly as in a dump.
+        # Folds like SUPPLY_EVAPORATED but off the truck -- drain the cargo, credit consumed[] --
+        # so on_hand+consumed==initial holds (invariants.check sums truck cargo alongside dumps).
+        tf = state.truck(p["truck_id"])
+        commodity = p["commodity"]
+        attr = commodity.lower()
+        drained = replace(tf, **{attr: getattr(tf, attr) - p["qty"]})
+        consumed = dict(state.consumed)
+        consumed[commodity] = consumed.get(commodity, 0) + p["qty"]
+        return replace(state.with_truck(drained), consumed=consumed)
+
+    if k == EventKind.WELL_REFILLED:
+        # 29.53 / 52.15: a rainstorm refills a depleted well. A FAUCET (rain introduces water),
+        # the dual of SUPPLY_ARRIVED -- top the finite well up AND raise initial_supply by the same
+        # qty, so on_hand+consumed==initial holds.
+        su = state.supply(p["supply_id"])
+        commodity = p["commodity"]
+        attr = commodity.lower()
+        filled = replace(su, **{attr: getattr(su, attr) + p["qty"]})
+        init = dict(state.initial_supply)
+        init[commodity] = init.get(commodity, 0) + p["qty"]
+        return replace(state.with_supply(filled), initial_supply=init)
+
     if k == EventKind.SUPPLY_DUMP_BLOWN:
         # 54.14 / 54.17: the owner burns his own dump rather than hand it to the enemy one hex away.
         # The engine baked the destroyed amounts (the 54.17 roll is a fact, not a re-derivation), so
@@ -72,7 +96,10 @@ def apply(state: GameState, event: Event) -> GameState:
         return replace(state.with_supply(su), initial_supply=init)
 
     if k == EventKind.WEATHER_ROLLED:
-        return replace(state, weather=p["weather"])
+        # 29.1 / 29.7: the theatre-wide TYPE plus the 2-3 sections a foul result covers (empty
+        # for Normal/Hot, both theatre-wide). weather_at reads both to localise the weather per hex.
+        return replace(state, weather=p["weather"],
+                       storm_sections=frozenset(p.get("sections", ())))
 
     if k == EventKind.UNIT_MOVED:
         u = state.unit(p["unit_id"])                   # 21.25: BP accrue into the move faucet

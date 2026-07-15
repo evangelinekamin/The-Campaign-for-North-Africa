@@ -84,6 +84,16 @@ class EventKind(str, Enum):
     # its pasta may not exceed its CPA that turn (a no-op in the CPA-bounded engine, so
     # the fold is identity; the cohesion collapse rides the existing COHESION_CHANGED).
     SUPPLY_EVAPORATED = "SUPPLY_EVAPORATED"
+    # [29.34]/[49.3]/[52.44] Truck-cargo evaporation. 49.3 evaporates Fuel "regardless of where it
+    # is kept" (only convoys AT SEA are exempt) and 29.34 spells it out -- "as well as in trucks" --
+    # so a truck's Fuel and Water lose the same 6%+5% as a dump. TRUCK_EVAPORATED {truck_id,
+    # commodity, qty} folds like SUPPLY_EVAPORATED but off the truck (cargo down, consumed[] up),
+    # so on_hand+consumed==initial holds.
+    TRUCK_EVAPORATED = "TRUCK_EVAPORATED"
+    # [29.53]/[52.15] Rain refills a depleted well. WELL_REFILLED {supply_id, commodity, qty} is a
+    # FAUCET (a rainstorm introduces water), the dual of SUPPLY_ARRIVED: it tops the finite well up
+    # AND raises initial_supply by the same qty, so on_hand+consumed==initial holds.
+    WELL_REFILLED = "WELL_REFILLED"
     PASTA_DENIED = "PASTA_DENIED"
     # Shortfall counters (51/52). A SHORTFALL increments the unit's consecutive counter
     # (STORES also +1 Disorganization, 51.21); a RESTORED resets it when supply resumes.

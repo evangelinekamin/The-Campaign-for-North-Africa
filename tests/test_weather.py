@@ -93,6 +93,61 @@ def test_is_foul_only_for_storms():
     assert not weather.is_foul("normal") and not weather.is_foul("hot")
 
 
+# --- 29.7 localisation: a storm falls on 2-3 sections, not the whole theatre --
+
+def test_affected_sections_localises_within_the_theatre():
+    # 29.7 names the sections; only those inside the theatre are hit, the rest read Normal (29.1).
+    assert weather.affected_sections("rainstorm", 1, frozenset("ABCDE")) == frozenset("AB")   # die 1 = AB
+    assert weather.affected_sections("rainstorm", 6, frozenset("ABCDE")) == frozenset("BCD")  # die 6 = BCD
+    assert weather.affected_sections("rainstorm", 2, frozenset("C")) == frozenset("C")        # CD, clipped to C
+    assert weather.affected_sections("rainstorm", 1, frozenset("C")) == frozenset()           # AB missed the theatre
+
+
+def test_sandstorm_never_falls_on_the_delta():
+    # 29.41: "regardless of where a sandstorm occurs, it never occurs over delta hexes (Map E)";
+    # 29.51 a rainstorm DOES reach the delta.
+    assert weather.affected_sections("sandstorm", 3, frozenset("ABCDE")) == frozenset("D")    # DE -> D
+    assert weather.affected_sections("rainstorm", 3, frozenset("ABCDE")) == frozenset("DE")   # rain keeps E
+
+
+def test_a_rainstorm_covers_two_or_three_of_the_five_sections():
+    # The 29.7 chart's own shape: a foul result lands on 2-3 of the five map-sections, never all.
+    theatre = frozenset("ABCDE")
+    sizes = [len(weather.affected_sections("rainstorm", die, theatre)) for die in range(1, 7)]
+    assert all(2 <= n <= 3 for n in sizes)               # mean 13/6 = 2.17, exactly the chart
+    assert theatre not in {weather.affected_sections("rainstorm", d, theatre) for d in range(1, 7)}
+
+
+def _sectioned_state(weather_label, storm, sections):
+    # a two-hex map: hex (0,0) in section A, hex (9,0) in section C, with a localised storm.
+    terr = TerrainMap(terrain={(0, 0): Terrain.CLEAR, (9, 0): Terrain.CLEAR},
+                      sections={(0, 0): "A", (9, 0): "C"})
+    return GameState(turn=1, max_turns=4, phase=Phase.WEATHER, active_side=Side.SYSTEM, seed=1,
+                     weather=weather_label, vp=VP(), terrain=terr, control={}, units=(),
+                     target_hex=(0, 0), supplies=(), consumed={}, initial_supply={},
+                     map_sections=frozenset(sections), storm_sections=frozenset(storm))
+
+
+def test_weather_at_localises_a_storm_to_its_sections():
+    st = _sectioned_state("sandstorm", storm="A", sections="AC")
+    assert st.weather_at((0, 0)) == "sandstorm"          # section A is under the storm
+    assert st.weather_at((9, 0)) == "normal"             # 29.1: section C reads Normal
+
+
+def test_weather_at_hot_is_theatre_wide():
+    st = _sectioned_state("hot", storm="", sections="AC")
+    assert st.weather_at((0, 0)) == "hot" and st.weather_at((9, 0)) == "hot"   # 29.31
+
+
+def test_weather_at_falls_back_theatre_wide_without_section_geometry():
+    # a synthetic map with no section index: a foul label stays theatre-wide (pre-localisation).
+    terr = TerrainMap(terrain={(0, 0): Terrain.CLEAR})
+    st = GameState(turn=1, max_turns=4, phase=Phase.WEATHER, active_side=Side.SYSTEM, seed=1,
+                   weather="sandstorm", vp=VP(), terrain=terr, control={}, units=(),
+                   target_hex=(0, 0), supplies=(), consumed={}, initial_supply={})
+    assert st.weather_at((0, 0)) == "sandstorm"          # no geometry -> whole-map, byte-identical
+
+
 # --- 29.56 rainstorm: road behaves as a track (CP and BP) --------------------
 
 def test_rainstorm_road_as_track_for_cp():

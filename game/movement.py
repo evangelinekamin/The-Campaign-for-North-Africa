@@ -36,6 +36,13 @@ class TerrainMap:
     fortifications: dict[Coord, int] = field(default_factory=dict)  # hex -> fort level (15.82)
     minefields: frozenset = frozenset()                 # of Coord: defensive minefield belt
     rails: frozenset = frozenset()                      # of edge(a, b): Commonwealth railroad (54.3)
+    # Hex -> its map-section letter (A-E, or M=Malta), from the "S####" label the map was
+    # transcribed under (game.cna_map). This is the geometry rule 29.7 needs: a foul-weather
+    # result lands on 2-3 named sections, so every coupling that reads the weather at a HEX
+    # (movement, breakdown, repair, construction, air, the supply trace) must know which
+    # section the hex is in. Empty for a synthetic map (no section geometry) -> weather stays
+    # theatre-wide there, byte-identical to before localisation (game.state.weather_at).
+    sections: dict[Coord, str] = field(default_factory=dict)
 
     def exists(self, coord: Coord) -> bool:
         return coord in self.terrain

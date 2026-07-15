@@ -249,3 +249,38 @@ def test_benchmark_scenarios_have_no_wells():
     # streams stay byte-identical (they are the byte-locked benchmark scenarios).
     for build in (rommels_arrival, siege_of_tobruk):
         assert not [s for s in build(seed=42).supplies if wells.is_water_source(s)]
+
+
+def test_rainstorm_refills_a_depleted_well_in_the_storm_section():
+    # 29.53 / 52.15: "all depleted wells on a game-map section with a rainstorm are automatically
+    # replenished." A finite village well (capacity 4800) drawn down to 1000 in section A, with a
+    # rainstorm on {A}: refilled to 4800. A well in the clear section C and an unlimited city well
+    # are untouched. The refill is a FAUCET (rain adds water), so conservation holds.
+    from game.engine import _well_refill, _Run
+    from game.events import Phase
+    from game.invariants import check
+    from game.movement import TerrainMap
+    from game.state import GameState, SupplyUnit, VP
+    a, c = (0, 0), (9, 0)
+    depleted = SupplyUnit("AX-Well-Vil", Side.AXIS, a, ammo=0, fuel=0, stores=0,
+                          water=1000, base=True, water_capacity=4800)
+    clear_sec = SupplyUnit("AX-Well-Far", Side.AXIS, c, ammo=0, fuel=0, stores=0,
+                           water=1000, base=True, water_capacity=4800)
+    unlimited = SupplyUnit("AX-Well-City", Side.AXIS, a, ammo=0, fuel=0, stores=0,
+                           water=500, base=True, water_capacity=0)      # 52.13 city well: never refills
+    terr = TerrainMap(terrain={a: Terrain.CLEAR, c: Terrain.CLEAR}, sections={a: "A", c: "C"})
+    supplies = (depleted, clear_sec, unlimited)
+    keys = ("AMMO", "FUEL", "STORES", "WATER")
+    initial = {k: sum(getattr(s, k.lower()) for s in supplies) for k in keys}
+    st = GameState(turn=1, max_turns=4, phase=Phase.WEATHER, active_side=Side.SYSTEM, seed=1,
+                   weather="rainstorm", vp=VP(), terrain=terr, control={}, units=(),
+                   target_hex=a, supplies=supplies, consumed={k: 0 for k in keys},
+                   initial_supply=initial, map_sections=frozenset("AC"), storm_sections=frozenset("A"))
+    r = _Run(st)
+    _well_refill(r)
+    refilled = [e.payload["supply_id"] for e in r.events if e.kind == EventKind.WELL_REFILLED]
+    assert refilled == ["AX-Well-Vil"]                          # only the depleted well under the storm
+    assert r.state.supply("AX-Well-Vil").water == 4800          # refilled to capacity
+    assert r.state.supply("AX-Well-Far").water == 1000          # 29.1: section C is clear -> untouched
+    assert r.state.supply("AX-Well-City").water == 500          # 52.13: unlimited city well never refills
+    check(r.state)                                              # faucet: initial rose 3800, conservation holds

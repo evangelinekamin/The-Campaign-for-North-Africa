@@ -167,6 +167,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             first, second = _declare_ab(r, policies, stage)   # 5.2.III.A / 7.11: the A/B activation order
             r.go(Phase.WEATHER, Side.SYSTEM)
             _weather(r)                                 # 29.0: weather is rolled per Operations Stage
+            _well_refill(r)                             # 29.53: a rainstorm refills depleted wells
             _water_body(r)                              # 48 V.C.1: water draw + the +5% hot-evap slice
             if stage == 1:                              # reinforcement UNITS arrive once, in the 1st stage
                 _reinforcements(r)
@@ -943,10 +944,14 @@ _EVAP = logistics_data.evaporation_percent()   # 49.3/52.44, from the rulebook
 
 
 def _evaporate(r: _Run, pct: int) -> None:
-    """49.3 / 52.44: on-map Fuel and Water lose `pct`% (rounded down) to evaporation & spillage.
-    A SINK into consumed[] (the 9% Sep40-Aug41 Commonwealth container rate is deferred). The
-    6% base (once per game-turn) and the +5% hot slice (per Operations Stage) are charged as
-    SEPARATE calls under the faithful clock. Deterministic: sorted dumps, fuel then water."""
+    """49.3 / 52.44 / 29.34: on-map Fuel and Water lose `pct`% (rounded down) to evaporation &
+    spillage -- in DUMPS and in TRUCK CONVOYS alike (29.34: the hot 5% "includes water and fuel in
+    dumps as well as in trucks"; 49.3: fuel evaporates "regardless of where it is kept", only
+    convoys AT SEA exempt, and those are state.convoys, not on-map trucks). A strategic city base
+    (57) and wells/pipelines (base=True) are exempt (52.44). A SINK into consumed[] (the 9%
+    Sep40-Aug41 Commonwealth container rate is deferred). The 6% base (once per game-turn) and the
+    +5% hot slice (per Operations Stage) are charged as SEPARATE calls under the faithful clock.
+    Deterministic: sorted dumps then sorted trucks, fuel then water."""
     if pct <= 0:
         return
     for sid in sorted(su.id for su in r.state.supplies):
@@ -958,6 +963,13 @@ def _evaporate(r: _Run, pct: int) -> None:
             if loss > 0:
                 r.emit(EventKind.SUPPLY_EVAPORATED, Side.SYSTEM, "SYSTEM",
                        {"supply_id": sid, "commodity": commodity, "qty": loss})
+    for tid in sorted(t.id for t in r.state.trucks):    # 29.34: "as well as in trucks"
+        for commodity in (supply.FUEL, supply.WATER):
+            amt = getattr(r.state.truck(tid), commodity.lower())
+            loss = amt * pct // 100
+            if loss > 0:
+                r.emit(EventKind.TRUCK_EVAPORATED, Side.SYSTEM, "SYSTEM",
+                       {"truck_id": tid, "commodity": commodity, "qty": loss})
 
 
 def _stores_expenditure(r: _Run, side: Side, hot: bool) -> None:
@@ -1052,28 +1064,54 @@ def _water_shortfall(r: _Run, side: Side, actor: str, u) -> None:
 
 
 def _weather(r: _Run) -> None:
-    """Weather Determination (rule 29.1): the season (from the Game-Turn) selects the
-    29.61 Weather Table row; a sequential 2d6 gives the weather type. A foul result
-    (sandstorm/rainstorm) rolls one more die on the 29.7 Foul Weather Location Table for
-    the affected map sections -- if none of the scenario's own sections are hit, the
-    theater stays Normal (29.1: unaffected sections have normal weather). Hot occurs on
-    every section (29.31), so it needs no location roll. The single emitted label is
-    what every downstream coupling (breakdown shift, evaporation, movement cost) reads."""
+    """Weather Determination (rule 29.1): the season (from the Game-Turn) selects the 29.61
+    Weather Table row; a sequential 2d6 gives the theatre-wide weather TYPE. Normal and Hot
+    fall on every section (29.2 / 29.31), so their couplings read the scalar `weather`. A foul
+    result (Sandstorm/Rainstorm) rolls one more die on the 29.7 Foul Weather Location Table and
+    lands on only 2-3 sections of the theatre (29.41 keeps a sandstorm off the delta); the rest
+    read Normal, and if the storm misses the theatre entirely the stage is Normal everywhere
+    (29.1). The covered sections ride GameState.storm_sections, which weather_at localises per
+    hex. A scenario with no section geometry (empty map_sections) keeps the pre-localisation
+    theatre-wide behaviour, byte-identical."""
     season = weather.season_for_turn(r.state.turn + r.state.season_offset)
     d1, d2 = r.d6("weather"), r.d6("weather")
     label = weather.weather_for_roll(season, d1 * 10 + d2)
     draws = (d1, d2)
-    sections: frozenset = frozenset()
+    storm: frozenset = frozenset()
     if weather.is_foul(label):
         d3 = r.d6("weather")
         draws = (d1, d2, d3)
-        sections = weather.foul_sections(d3)
         theater = r.state.map_sections
-        if theater and theater.isdisjoint(sections):        # 29.1: foul missed this theater
-            label = weather.NORMAL
+        if theater:
+            storm = weather.affected_sections(label, d3, theater)   # 29.7 within theatre, less delta
+            if not storm:                                           # 29.1: the storm missed the theatre
+                label = weather.NORMAL
+        else:                                                       # no section geometry -> theatre-wide
+            storm = weather.foul_sections(d3)
     r.emit(EventKind.WEATHER_ROLLED, Side.SYSTEM, "SYSTEM",
-           {"weather": label, "season": season, "sections": sorted(sections)},
+           {"weather": label, "season": season, "sections": sorted(storm)},
            rng_draws=draws)
+
+
+def _well_refill(r: _Run) -> None:
+    """29.53 / 52.15: a Rainstorm refills every DEPLETED well in the sections it covers -- "all
+    depleted wells on a game-map section with a rainstorm are automatically replenished at the
+    instant the rainstorm occurs." A well is finite (depletable) only at a village or bir
+    (game.wells sets water_capacity); the unlimited major-city/oasis wells never deplete (52.13),
+    so they carry no capacity and are skipped. The refill is a FAUCET -- rain introduces water --
+    so it rides WELL_REFILLED (the dual of SUPPLY_ARRIVED, raising initial_supply) and conservation
+    holds. Fires only on a Rainstorm, so every other OpStage is byte-identical. Deterministic:
+    sorted wells."""
+    if r.state.weather != weather.RAINSTORM:
+        return
+    for su in sorted(r.state.supplies, key=lambda s: s.id):
+        if su.water_capacity <= 0 or su.water >= su.water_capacity:    # not a finite well, or full
+            continue
+        if r.state.weather_at(su.hex) != weather.RAINSTORM:            # 52.15: only wells under the storm
+            continue
+        r.emit(EventKind.WELL_REFILLED, Side.SYSTEM, "SYSTEM",
+               {"supply_id": su.id, "commodity": supply.WATER,
+                "qty": su.water_capacity - su.water})
 
 
 def _air_grounded(weather_label: str) -> bool:
@@ -1095,8 +1133,10 @@ def _air_superiority(r: _Run) -> None:
     each arena a side fields air in, both sides add a die to their committed fighter Air Points
     and the higher total holds the sky for the stage (40.27/46 interception + flak collapsed into
     the one roll). The victor folds into air_superiority[arena]; the loser's strike/recon is scaled
-    down at mission time (AIR_SUPERIORITY_LOSER_SCALE). Fires ONLY when a side fields air and the
-    weather is flyable (29.43/29.52), so every air-less or grounded OpStage stays byte-identical."""
+    down at mission time (AIR_SUPERIORITY_LOSER_SCALE). The establishing contest is fought per ARENA
+    (34/40), which owns no hex, so it reads the theatre-wide 29.1 type -- a documented hexless proxy:
+    a storm anywhere disrupts the sky. The load-bearing per-hex 29.43/29.52 grounding is on the
+    MISSIONS (_air_support, per the 29.7 section each flies over). Air-less OpStage stays byte-identical."""
     if not r.state.air or _air_grounded(r.state.weather):
         return
     r.go(Phase.LOGISTICS, Side.SYSTEM)                   # a SYSTEM housekeeping beat, like convoys
@@ -1125,6 +1165,16 @@ def _air_points(state: GameState, side: Side, arena: str, role: str) -> int:
     return int(total * scale)
 
 
+def _mission_hex(state: GameState, m) -> "Coord | None":
+    """The map hex an air mission flies over, for the 29.43/29.52 per-section grounding check. A
+    strike/fort/recon mission carries a Coord target; a Port mission carries a port_id, so read the
+    harbour's hex. None when the port is unknown -- weather_at then falls back to theatre-wide."""
+    if m.kind == "port":
+        port = state.port(m.target)
+        return port.hex if port is not None else None
+    return tuple(m.target)
+
+
 def _air_support(r: _Run, side: Side, pinned: set[str]) -> None:
     """The LAND air-support sub-segment (rules 41.31/41.37/41.39B/42.2) at the TOP of the phasing
     side's Combat Segment, before _barrage_step. Flies `side`'s due LAND air missions in a fixed,
@@ -1132,12 +1182,15 @@ def _air_support(r: _Run, side: Side, pinned: set[str]) -> None:
     `pinned` set the barrage feeds) -- UN-STRIKABLE behind an intact Major-City wall (fort_level>1,
     41.31); FORT bombing batters a wall one level/OpStage (reusing FORT_REDUCED); PORT bombing knocks
     a harbour's Efficiency Level down one (reusing PORT_EFFICIENCY_CHANGED, 41.39B); RECON lifts the
-    fog over a hex (42.2). Fires ONLY when `side` fields air and the sky is flyable (29.43/29.52), so
-    every air-less or grounded segment stays byte-identical."""
-    if not r.state.air or _air_grounded(r.state.weather):
+    fog over a hex (42.2). Each mission is grounded when its OWN target hex lies under a Sandstorm/
+    Rainstorm (29.43/29.52, keyed on the 29.7 section it flies over), so a storm confined to 2-3
+    sections no longer grounds the whole air force; an air-less segment stays byte-identical."""
+    if not r.state.air:
         return
     due = [m for m in r.state.air_missions if m.side == side and m.turn == r.state.turn]
     for m in sorted(due, key=lambda m: (m.kind, str(m.target))):
+        if _air_grounded(r.state.weather_at(_mission_hex(r.state, m))):   # 29.43/29.52, per section
+            continue
         if m.kind == "strike":
             _air_strike(r, side, tuple(m.target), pinned)
         elif m.kind == "fort":
@@ -1611,10 +1664,12 @@ def _breakdown(r: _Run, side: Side) -> None:
     operational TOE breaks down (21.35 rounding), moving into Unit.broken_down. Inert on
     non-vehicle scenarios (no vehicle accrues BP -> no roll -> byte-identical)."""
     actor = f"{side.value}/Front"
-    wshift = combat_tables.weather_breakdown_shift(r.state.weather)          # 21.37
     for u in sorted(r.state.living(side), key=lambda u: u.id):
         if not u.breaks_down or u.bp_accumulated <= 3:                       # 21.11 / 21.27
             continue
+        # 21.37: +1 Breakdown column in Hot (theatre-wide, 29.31) or a Sandstorm -- per the unit's
+        # section (29.7), so only vehicles standing under the storm take the sandstorm shift.
+        wshift = combat_tables.weather_breakdown_shift(r.state.weather_at(u.hex))
         col = combat_tables.breakdown_column(u.bp_accumulated, u.bar, wshift)
         if col <= u.bp_checked_column:                                       # 21.26 gate
             continue
@@ -1637,8 +1692,9 @@ _REPAIR_FUEL_PER_TOE: int = 1
 
 
 def _field_repair_blocked(weather_label: str) -> bool:
-    """22.13d: no Field Repair while the Weather is Rainstorm or Sandstorm (keyed off the
-    single global 29.1 label -- the per-section coupling stays a documented Fork-B proxy)."""
+    """22.13d: no Field Repair while the Weather is Rainstorm or Sandstorm. Called with the
+    weather in the repairing unit's OWN section (state.weather_at), so a localised storm (29.7)
+    blocks repair only where it actually falls."""
     return weather_label in ("rainstorm", "sandstorm")
 
 
@@ -1661,12 +1717,11 @@ def _repair(r: _Run, side: Side) -> None:
     22.15 Fuel and rolls one die on the 22.8 Field column; the repaired TOE flows back to
     the operational pool (VEHICLE_REPAIRED). Fires only when the side actually has broken
     vehicles to repair, so every pre-breakdown scenario stays byte-identical."""
-    if _field_repair_blocked(r.state.weather):          # 22.13d: whole-map proxy, no field repair
-        return
     enemy_ctrl = CONTROL_OF[_other(side)]
     repairable = [u for u in r.state.living(side)
                   if u.broken_down > 0 and u.breaks_down
-                  and r.state.control_of(u.hex) != enemy_ctrl]     # 22.13a
+                  and r.state.control_of(u.hex) != enemy_ctrl                 # 22.13a
+                  and not _field_repair_blocked(r.state.weather_at(u.hex))]   # 22.13d, per section
     if not repairable:
         return
     r.go(Phase.REPAIR, side)

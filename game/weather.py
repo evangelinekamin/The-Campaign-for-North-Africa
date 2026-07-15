@@ -2,13 +2,18 @@
 type, and, for a foul result, the 29.7 Foul Weather Location Table -> the affected
 map sections.
 
-Pure. The engine (game.engine._weather) rolls the dice and folds a single weather
-LABEL into GameState.weather; every downstream coupling reads only that label:
+Pure. The engine (game.engine._weather) rolls the dice; the theatre-wide TYPE folds into
+GameState.weather and, for a foul result, the covered sections into GameState.storm_sections.
+Normal and Hot fall on EVERY section (29.2 / 29.31), so their couplings read the scalar
+`weather` directly; a Sandstorm/Rainstorm falls on only 2-3 sections (29.7), so its couplings
+ask GameState.weather_at(hex) for the weather in that hex's section:
   - hot / sandstorm  -> +1 Breakdown column (combat_tables.weather_breakdown_shift, 21.37)
   - hot              -> +5% Fuel/Water evaporation (engine._evaporate, 29.34 / 49.3 / 52.44)
   - sandstorm        -> doubled Movement Cost (movement.step_cost, 29.44)
   - rainstorm        -> Road treated as Track for CP and BP, wadi hexsides uncrossable
                         (movement.step_cost / movement.breakdown_points, 29.55 / 29.56)
+  - rainstorm        -> depleted wells refilled (engine._well_refill, 29.53 / 52.15)
+  - foul             -> no construction (24.22), no field repair (22.13d), no air (29.43/29.52)
 
 The four weather types are the rulebook's own: {normal, hot, sandstorm, rainstorm}
 (29.0). The tables below are transcribed from data/breakdown_rates.json (the chart-
@@ -79,6 +84,22 @@ def weather_for_roll(season: str, roll: int) -> str:
 def foul_sections(die: int) -> frozenset[str]:
     """Rule 29.7: the map sections a foul-weather result covers, from one die."""
     return _FOUL_LOCATION[die]
+
+
+# [29.41] A Sandstorm "never occurs over delta hexes (Game-Map E)" even when the 29.7 die names
+# them; a Rainstorm DOES reach the delta (29.51 / 29.58). Map E is the Nile delta section.
+DELTA = "E"
+
+
+def affected_sections(label: str, die: int, theater: frozenset) -> frozenset[str]:
+    """The sections a foul `label` (rolled `die` on the 29.7 table) actually covers within
+    `theater` -- the localised storm. Sections outside the theatre read Normal (29.1); a
+    Sandstorm is stripped of the delta (Map E, 29.41), a Rainstorm keeps it (29.51). An empty
+    result means the storm missed the theatre entirely, so the stage is Normal everywhere (29.1)."""
+    hit = _FOUL_LOCATION[die] & theater
+    if label == SANDSTORM:
+        hit = hit - {DELTA}                        # 29.41: sandstorms never fall on the delta
+    return hit
 
 
 def is_foul(label: str) -> bool:

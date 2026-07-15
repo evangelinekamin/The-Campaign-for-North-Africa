@@ -89,6 +89,24 @@ def test_hot_weather_evaporates_eleven_percent():
     assert _conserves(r.state)
 
 
+def test_truck_cargo_evaporates_too():
+    # 29.34 / 49.3: Fuel and Water in a truck convoy evaporate exactly as in a dump -- the hot 5%
+    # "includes water and fuel in dumps AS WELL AS IN TRUCKS", and 49.3 evaporates fuel "regardless
+    # of where it is kept". The drain is credited to consumed[], so conservation holds.
+    from game.state import TruckFormation
+    truck = TruckFormation("T", Side.AXIS, (0, 0), "medium", points=10, fuel=100, water=100)
+    initial = {c: getattr(truck, c.lower(), 0) for c in FOUR}
+    st = replace(_state([], []), trucks=(truck,), initial_supply=initial, weather="hot")
+    r = _Run(st)
+    _logistics(r)
+    evap = [e for e in r.events if e.kind == EventKind.TRUCK_EVAPORATED]
+    assert {e.payload["commodity"] for e in evap} == {"FUEL", "WATER"}   # ammo/stores don't evaporate
+    t = r.state.truck("T")
+    assert (t.fuel, t.water) == (89, 89)                # 6% + 5% hot = 11%, off the truck
+    assert r.state.consumed["FUEL"] == 11 and r.state.consumed["WATER"] == 11
+    check(r.state)                                       # conservation holds across the truck surface
+
+
 # --- the Italian Pasta Rule (52.6) -------------------------------------------
 
 def test_pasta_caps_unwatered_italian():

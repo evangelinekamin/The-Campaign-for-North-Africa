@@ -314,8 +314,13 @@ def test_siege_still_crackable_through_the_throttle():
     # siege_of_tobruk fires FORT_REDUCED on 4 of seeds 1..500 (197, 220, 232, 405) -- still rare, and
     # 214 dropped out. Re-pinned (197, 214) -> (197, 220), both of which fire. The crack RATE is the
     # owner's siege knob, NOT a magnitude to bend here. This test guards only that the path SURVIVES.
+    #
+    # T0-11 (weather localisation 29.7 + truck-cargo evaporation 29.34) moved the cascade once more --
+    # a storm now falls on some of A/B/C not all three, and the trucks' Fuel/Water evaporates (29.34
+    # includes trucks) -- so supply/combat land differently. MEASURED: FORT_REDUCED fires on 4 of seeds
+    # 1..239 (37, 57, 211, 227). Re-pinned (197, 220) -> (37, 57), both of which fire.
     battered = False
-    for seed in (197, 220):
+    for seed in (37, 57):
         res = run(siege_of_tobruk(seed=seed),
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         if any(e.kind == EventKind.FORT_REDUCED and tuple(e.payload["hex"]) == TOBRUK
