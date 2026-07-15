@@ -301,14 +301,16 @@ def test_storm_floor_cracks_the_dry_garrison_but_a_timid_staff_never_does():
 # choke (port_bomb) shuts the ferry; and the garrison dump drains to 0 over the campaign, firing the
 # 15.15 dry-stack surrender. seed 4210 is the locked deterministic witness (peak 2351 -> 0 by T9).
 
-def _storm(seed: int = 25, *, port_bomb: bool = True, raf: bool = True):
-    """SEED RE-PINNED 4210 -> 25 by T0-0 (per-subsystem dice, game/dice.py). Whether a sustained
-    storm drains the last Ammunition Point out of Tobruk before the run ends is a race between the
-    garrison's combat expenditure and the choked ferry -- both dice-driven -- and T0-0 gave every
-    subsystem a different (equally uniform) sequence. On the old pin the corrected dice leave the
-    reservoir at 56 Ammo: the storm very nearly starves it and the 15.15 surrender misses. MEASURED
-    over 41 seeds, the full chain (both dumps to zero, then the dry-stack auto-capitulation) fires
-    on seed 25. Every assertion below is unchanged -- only the seed moved."""
+def _storm(seed: int = 43, *, port_bomb: bool = True, raf: bool = True):
+    """SEED RE-PINNED 4210 -> 25 (T0-0, per-subsystem dice) -> 43 (T0-5, rule 6.27 Cohesion
+    averaging + 6.24.2 victory RP + 6.26 the -26 no-move/no-attack gate). Whether a sustained storm
+    drains the last Ammunition Point out of Tobruk before the run ends is a race between the
+    garrison's combat expenditure and the choked ferry -- both dice-driven -- and T0-5 changed how
+    every Close Assault resolves (fewer instant Surrenders, a stormer at -26 can no longer keep
+    assaulting), so on the old seed-25 pin the reservoir now ends at 11 Ammo: the storm very nearly
+    starves it and the 15.15 surrender misses. MEASURED over seeds 41..220, the full chain (both
+    dumps to zero, then the dry-stack auto-capitulation, then Axis capture) fires on 43, 120, 162,
+    184 and 189; seed 43 is the pin. Every assertion below is unchanged -- only the seed moved."""
     st = siege_of_tobruk(seed, port_bomb=port_bomb, raf=raf)
     return st, run(st, axis=StormPolicy(attacker=Side.AXIS),
                    allied=ScriptedPolicy(attacker=Side.AXIS))

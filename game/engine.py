@@ -1242,6 +1242,10 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
         if u is None or not u.alive or u.side != side:
             _reject(r, side, actor, order, "no such living unit under this command")
             continue
+        if u.cohesion <= -26:                           # 6.26: a unit at Cohesion -26 or worse may
+            _reject(r, side, actor, order,              # not move (nor attack, nor defend). The
+                    "Cohesion -26 or worse: may not move (6.26)")   # surrender-on-enemy-adjacency
+            continue                                    # half of 6.26 is deferred -- flagged.
         if eligible is not None and u.id not in eligible:
             _reject(r, side, actor, order,
                     "not eligible for continual movement (8.23 two-hex gate)")
@@ -2448,16 +2452,17 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     # resolution (conservation holds per event). Returns True if the assault RESOLVED
     # (so the caller locks the hex and commits the attackers), False if it was rejected.
     armed_atk = [u for u in attackers
-                 if u.id not in pinned and _charge_ammo(r, side, actor, u, phasing=True)]
+                 if u.id not in pinned and u.cohesion > -26          # 6.26: -26 or worse may not attack
+                 and _charge_ammo(r, side, actor, u, phasing=True)]
     if not armed_atk:
         r.emit(EventKind.ORDER_REJECTED, side, actor,
                {"order": "attack", "target": list(target),
-                "reason": "attackers out of ammo or pinned"})
+                "reason": "attackers out of ammo, pinned, or Cohesion -26 or worse (6.26)"})
         return False
     for u in armed_atk:                         # 6.3: the phasing Assault CP (5), once/segment
         _charge_combat_cp(r, side, u, charged)
     # 15.15 / 15.88: an assaulted stack that is entirely out of Close-Assault ammo,
-    # or whose (largest) unit's Cohesion has collapsed to -17 or worse, automatically
+    # or whose (6.27-averaged) Cohesion has collapsed to -17 or worse, automatically
     # Surrenders the instant it is assaulted -- BEFORE it rolls morale or spends a
     # round of ammunition. This is the fix that lets a besieged, cut-off garrison
     # (a dry Tobruk) finally be forced to capitulate instead of holding at zero
@@ -2465,6 +2470,7 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     if _defenders_capitulate(r, defenders):
         _resolve_surrender(r, side, actor, target, armed_atk, defenders,
                            atk_surr=False, def_surr=True, morale_shift=0, dice=())
+        _award_vacate_rp(r, side, actor, armed_atk, target)        # 6.24.2
         return True
     armed_def = [u for u in defenders
                  if u.id not in pinned and _charge_ammo(r, side, actor, u, phasing=False)]
@@ -2498,6 +2504,7 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     if atk_surr or def_surr:                                    # rule 17.25: the stack surrenders
         _resolve_surrender(r, side, actor, target, armed_atk, defenders,
                            atk_surr, def_surr, atk_m - def_m, (*atk_md, *def_md))
+        _award_vacate_rp(r, side, actor, armed_atk, target)     # 6.24.2 (self-guards if atk surrendered)
         return True
     ab, asm, db, dsm = (r.d6("close_assault"), r.d6("close_assault"),
                         r.d6("close_assault"), r.d6("close_assault"))
@@ -2535,8 +2542,8 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     for uid, amount in _absorb_losses(armed_atk, res.attacker_points_lost, lambda u: u.oca):
         r.emit(EventKind.STEP_LOST, side, actor,
                {"unit_id": uid, "amount": amount, "role": "attacker"})
-    # Cohesion: 30%+ losses disorganize the involved units (rule 15.87). Recovery
-    # (Reorganization Points, rule 20) is deferred, so Cohesion only falls -- flagged.
+    # Cohesion: 30%+ losses disorganize the involved units (6.21b/15.29b), -3 each. A
+    # winning attacker recovers this via the 6.24.2 award below (a costly victory nets 0).
     if res.attacker_loss_pct >= 30:
         for u in armed_atk:
             r.emit(EventKind.COHESION_CHANGED, side, actor, {"unit_id": u.id, "delta": -3})
@@ -2545,7 +2552,26 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
             r.emit(EventKind.COHESION_CHANGED, side, actor, {"unit_id": u.id, "delta": -3})
     if res.retreat_hexes > 0:                                   # rule 15.8 / 15.82
         _retreat(r, side, actor, [d.id for d in defenders], armed_atk[0].hex, res.retreat_hexes)
+    _award_vacate_rp(r, side, actor, armed_atk, target)        # 6.24.2: RP if the hex is now empty
     return True
+
+
+def _award_vacate_rp(r: _Run, side: Side, actor: str, attackers, target: Coord) -> None:
+    """6.24.2: each attacker whose Close Assault leaves the defender's hex COMPLETELY
+    vacated -- the defenders eliminated or retreated as a direct result of THIS assault
+    (Reaction and Retreat Before Assault, 8.5 / 13.0, never reach here) -- earns three
+    Reorganization Points, a Cohesion gain capped at the 6.23 +10 ceiling. This is the
+    counter-weight that lets a WINNING stack climb back out of Disorganization; without it
+    Cohesion was a one-way ratchet and only CP-idle units (6.24.1) ever recovered."""
+    if any(u.is_combat and u.alive for u in r.state.enemies_at(target, side)):
+        return                                          # the defender still holds -- hex not vacated
+    for u in attackers:
+        live = r.state.unit(u.id)
+        if live is None or not live.alive:
+            continue                                    # a destroyed attacker earns nothing
+        gain = min(3, 10 - live.cohesion)               # 6.23: Cohesion may never exceed +10
+        if gain > 0:
+            r.emit(EventKind.COHESION_CHANGED, side, actor, {"unit_id": u.id, "delta": gain})
 
 
 def _combined_arms_penalty(units) -> int:
@@ -2560,6 +2586,24 @@ def _combined_arms_penalty(units) -> int:
                   if u.is_combat and not u.is_tank and not u.is_armor and not u.is_gun)
     unsupported = max(0, tank_toe - support)
     return min(4, math.ceil(unsupported / 3))
+
+
+def _stack_cohesion(units) -> int:
+    """6.27 (invoked by 17.27): the Cohesion Level a Close-Assault stack fights at. The
+    Cohesion of the largest unit (most Stacking Points) prevails; but when several units
+    tie for largest -- and EVERY combat counter in CNA is one Stacking Point, so a
+    multi-unit stack is ALWAYS a tie -- their Cohesion Levels are summed and divided by
+    the number of contributing counters, rounded to the nearest whole number. Worked
+    example (6.27): three brigades at -4, -1, +3 -> (-4 -1 +3)/3 = -0.667 -> -1.
+
+    This replaces reading the single strongest unit's Cohesion, which let one shattered
+    counter drag an otherwise-steady stack past the 17.24 '-17 et seq' Surrender floor."""
+    live = [u for u in units if u.strength > 0]
+    if not live:
+        return 0
+    top = max(u.stacking_points for u in live)
+    largest = [u.cohesion for u in live if u.stacking_points == top]
+    return round(sum(largest) / len(largest))
 
 
 def _honors_surrender(morale: int, cohesion: int, enemy_overwhelms: bool) -> bool:
@@ -2587,11 +2631,12 @@ def _adjusted_morale(r: _Run, units, *,
     live = [u for u in units if u.strength > 0]
     if not live:
         return 0, (0, 0), False
-    largest = max(live, key=lambda u: (u.stacking_points, u.strength))
+    largest = max(live, key=lambda u: (u.stacking_points, u.strength))   # 17.32 Basic Morale
+    cohesion = _stack_cohesion(live)                     # 6.27/17.27: averaged over largest units
     d1, d2 = r.d6("morale"), r.d6("morale")
-    mod = combat_tables.morale_modifier(largest.cohesion, d1 * 10 + d2)
+    mod = combat_tables.morale_modifier(cohesion, d1 * 10 + d2)
     surrendered = mod == "SURR" and _honors_surrender(
-        largest.morale, largest.cohesion, enemy_overwhelms)
+        largest.morale, cohesion, enemy_overwhelms)
     if mod == "SURR":
         mod = -4
     m = max(-3, min(3, largest.morale + mod))          # 17.23: clamp the Adjusted Morale FIRST
@@ -2697,13 +2742,12 @@ def _defenders_capitulate(r: _Run, defenders) -> bool:
     roll (15.88 -- units so afflicted automatically Surrender). Returns True when:
       - 15.15: EVERY defender is out of Close-Assault ammunition, so a cut-off, dry
         garrison capitulates en masse rather than defend on at zero strength; or
-      - 15.88: the stack's largest unit's Cohesion has collapsed to -17 or worse
-        (17.24 '-17 et seq'; 17.27 Largest Unit Rule)."""
+      - 15.88: the stack's (6.27-averaged) Cohesion has collapsed to -17 or worse
+        (17.24 '-17 et seq'; 17.27 Largest Unit Rule -> 6.27)."""
     live = [u for u in defenders if u.strength > 0]
     if not live:
         return False
-    largest = max(live, key=lambda u: (u.stacking_points, u.strength))
-    if largest.cohesion <= -17:                                        # 15.88
+    if _stack_cohesion(live) <= -17:                      # 15.88 / 17.24 / 17.27 -> 6.27 averaged
         return True
     return all(not _has_ammo(r.state, u, phasing=False) for u in live)  # 15.15
 
