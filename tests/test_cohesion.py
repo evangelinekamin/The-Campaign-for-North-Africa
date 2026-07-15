@@ -74,6 +74,41 @@ def test_stack_cohesion_only_largest_units_contribute_6_27():
     assert _stack_cohesion(stack) == 0
 
 
+# ---- 15.63/15.64c: Basic Morale uses the SAME 6.27 largest-unit average -----------------
+
+def test_stack_morale_worked_example_15_64c():
+    from game.engine import _stack_morale
+    # 15.64c (scan p24): the 15th Panzer (+3) and the Ariete (+1), both divisions and so
+    # tied for largest, fight at their combined Morale (+3 +1)/2 = +2 -- Basic Morale is
+    # averaged over the largest units exactly as Cohesion is, not read off the strongest.
+    divisions = [_unit("15PZ", Side.AXIS, (0, 0), -4, sp=4, mor=3),
+                 _unit("ARIETE", Side.AXIS, (0, 0), -4, sp=4, mor=1)]
+    assert _stack_morale(divisions) == 2
+
+
+def test_stack_morale_single_largest_unit_prevails_15_64d():
+    from game.engine import _stack_morale
+    # 15.64d: the 2 NZ Division (+1) is the single largest unit; the attached 1st RNF
+    # battalion (+2), smaller, contributes nothing. The stack fights at the division's +1.
+    stack = [_unit("2NZ", Side.ALLIED, (0, 0), 2, sp=4, mor=1),
+             _unit("1RNF", Side.ALLIED, (0, 0), 0, sp=1, mor=2)]
+    assert _stack_morale(stack) == 1
+
+
+def test_stack_morale_single_unit_is_its_own_level():
+    from game.engine import _stack_morale
+    assert _stack_morale([_unit("A", Side.AXIS, (0, 0), 0, mor=-2)]) == -2
+
+
+def test_stack_morale_averages_over_tied_counters():
+    from game.engine import _stack_morale
+    # every CNA combat counter is one Stacking Point, so a multi-unit stack ties: a +2 and
+    # two 0-morale counters fight at (2 +0 +0)/3 = 0.667 -> 1, not the strongest unit's +2.
+    stack = [_unit("A", Side.AXIS, (0, 0), 0, mor=2), _unit("B", Side.AXIS, (0, 0), 0, mor=0),
+             _unit("C", Side.AXIS, (0, 0), 0, mor=0)]
+    assert _stack_morale(stack) == 1
+
+
 # ---- 6.27 feeds 15.88 capitulation and the 17.4 morale roll ----------------------------
 
 def test_averaged_cohesion_saves_stack_from_15_88_capitulation():

@@ -2484,10 +2484,10 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     # Morale is rolled FIRST (rule 15 order): each side's 17.4 roll adjusts its
     # Basic Morale by Cohesion, and the difference shifts the assault column (15.62).
     atk_m, atk_md, atk_surr = _adjusted_morale(r, armed_atk)
-    # 17.26(b): a defender whose largest unit has Basic Morale +1 or better may NOT
+    # 17.26(b): a defender whose (15.63-averaged) Basic Morale is +1 or better may NOT
     # shrug off a rolled SURR when the assaulting enemy fields at least three times
     # its strength (Enemy Raw Offensive Assault : Friendly Raw Defensive). The
-    # cohesion-based 17.26(a) reprieve-void is handled per-unit in _adjusted_morale.
+    # cohesion-based 17.26(a) reprieve-void is handled inside _adjusted_morale.
     overwhelms = (sum(u.raw_offense for u in armed_atk)
                   >= 3 * sum(u.raw_defense for u in armed_def))
     def_m, def_md, def_surr = _adjusted_morale(r, defenders, enemy_overwhelms=overwhelms)
@@ -2588,29 +2588,53 @@ def _combined_arms_penalty(units) -> int:
     return min(4, math.ceil(unsupported / 3))
 
 
-def _stack_cohesion(units) -> int:
-    """6.27 (invoked by 17.27): the Cohesion Level a Close-Assault stack fights at. The
-    Cohesion of the largest unit (most Stacking Points) prevails; but when several units
-    tie for largest -- and EVERY combat counter in CNA is one Stacking Point, so a
-    multi-unit stack is ALWAYS a tie -- their Cohesion Levels are summed and divided by
-    the number of contributing counters, rounded to the nearest whole number. Worked
-    example (6.27): three brigades at -4, -1, +3 -> (-4 -1 +3)/3 = -0.667 -> -1.
-
-    This replaces reading the single strongest unit's Cohesion, which let one shattered
-    counter drag an otherwise-steady stack past the 17.24 '-17 et seq' Surrender floor."""
+def _largest_units(units):
+    """6.27's 'largest unit rule': the largest units in a Close Assault -- those with the
+    most Stacking Points (organizational size: division, brigade, ...). BOTH the Cohesion
+    (6.27) and the Basic Morale (15.63) the stack fights at are read off exactly this set:
+    when one unit is largest it alone prevails, and when several tie for largest their
+    levels are averaged. Every CNA combat counter is one Stacking Point, so a multi-unit
+    stack is always a tie and every counter contributes."""
     live = [u for u in units if u.strength > 0]
     if not live:
-        return 0
+        return []
     top = max(u.stacking_points for u in live)
-    largest = [u.cohesion for u in live if u.stacking_points == top]
-    return round(sum(largest) / len(largest))
+    return [u for u in live if u.stacking_points == top]
+
+
+def _stack_cohesion(units) -> int:
+    """6.27 (invoked by 17.27): the Cohesion Level a Close-Assault stack fights at -- the
+    largest unit's level, or the average over the largest units when several tie, rounded
+    to the nearest whole number. Worked example (6.27): three brigades at -4, -1, +3 ->
+    (-4 -1 +3)/3 = -0.667 -> -1. Averaging replaces reading the single strongest unit's
+    Cohesion, which let one shattered counter drag an otherwise-steady stack past the
+    17.24 '-17 et seq' Surrender floor."""
+    largest = _largest_units(units)
+    if not largest:
+        return 0
+    return round(sum(u.cohesion for u in largest) / len(largest))
+
+
+def _stack_morale(units) -> int:
+    """15.63: the Basic Morale a Close-Assault stack fights at uses the SAME largest-unit
+    rule (6.27) as Cohesion -- the largest unit's Morale prevails, and when several tie for
+    largest their Morale Ratings are averaged, rounded to the nearest whole number. Worked
+    example (15.64c, read off the scan p24): the 15th Panzer (+3) and the Ariete (+1), both
+    divisions, fight at (+3 +1)/2 = +2; with a single largest unit (15.64d, the 2 NZ
+    Division) it lends its own Morale and an attached smaller battalion contributes nothing.
+    Reading only the single strongest unit's Morale was the un-ported half of 15.63/17.27."""
+    largest = _largest_units(units)
+    if not largest:
+        return 0
+    return round(sum(u.morale for u in largest) / len(largest))
 
 
 def _honors_surrender(morale: int, cohesion: int, enemy_overwhelms: bool) -> bool:
     """Does a rolled SURR (17.4 Surrender column) actually stick? By 17.25 the stack
-    Surrenders -- UNLESS its (largest) unit's Basic Morale is +1 or better, in which
-    case 17.26 lets it treat the SURR as a mere -4 adjustment and fight on. That
-    reprieve is voided, and the Surrender enforced, when either 17.26 exception holds:
+    Surrenders -- UNLESS its Basic Morale (17.26's '(individual or combined)', i.e. the
+    15.63-averaged Morale of the largest units) is +1 or better, in which case 17.26 lets
+    it treat the SURR as a mere -4 adjustment and fight on. That reprieve is voided, and
+    the Surrender enforced, when either 17.26 exception holds:
     (a) the unit's Cohesion has collapsed to -11 or worse, or (b) the assaulting enemy
     brings at least three times the strength (Enemy Raw Offensive : Friendly Raw
     Defensive), passed in as `enemy_overwhelms`."""
@@ -2621,25 +2645,26 @@ def _honors_surrender(morale: int, cohesion: int, enemy_overwhelms: bool) -> boo
 
 def _adjusted_morale(r: _Run, units, *,
                      enemy_overwhelms: bool = False) -> tuple[int, tuple[int, int], bool]:
-    """Adjusted Morale of a close-assault stack (rule 15.6): the LARGEST unit's Basic Morale
-    (17.32) plus the 17.4 modifier rolled at its Cohesion level, clamped to -3..+3 (17.23),
-    THEN General Rommel's +1 (17.28) added OUTSIDE that clamp -- the one explicit 17.23
-    exception, so a +3 unit stacked with Rommel reaches +4. Returns (morale, the two dice,
-    surrendered). A SURR result eliminates the stack (17.25); the 17.26 reprieve and its
-    (a) cohesion / (b) enemy-3x exceptions are decided by _honors_surrender. When SURR is
-    shrugged off it counts as the -4 penalty."""
+    """Adjusted Morale of a close-assault stack (rule 15.6): the stack's Basic Morale
+    (15.63/6.27 -- averaged over the largest units, NOT the single strongest) plus the 17.4
+    modifier rolled at its 6.27-averaged Cohesion, clamped to -3..+3 (17.23), THEN General
+    Rommel's +1 (17.28) added OUTSIDE that clamp -- the one explicit 17.23 exception, so a
+    +3 unit stacked with Rommel reaches +4. Returns (morale, the two dice, surrendered). A
+    SURR result eliminates the stack (17.25); the 17.26 reprieve and its (a) cohesion /
+    (b) enemy-3x exceptions are decided by _honors_surrender. When SURR is shrugged off it
+    counts as the -4 penalty."""
     live = [u for u in units if u.strength > 0]
     if not live:
         return 0, (0, 0), False
-    largest = max(live, key=lambda u: (u.stacking_points, u.strength))   # 17.32 Basic Morale
-    cohesion = _stack_cohesion(live)                     # 6.27/17.27: averaged over largest units
+    morale = _stack_morale(live)                         # 15.63/6.27: averaged over largest units
+    cohesion = _stack_cohesion(live)                     # 17.27/6.27: averaged over largest units
+    largest = max(live, key=lambda u: (u.stacking_points, u.strength))   # 17.28 Rommel-hex probe
     d1, d2 = r.d6("morale"), r.d6("morale")
     mod = combat_tables.morale_modifier(cohesion, d1 * 10 + d2)
-    surrendered = mod == "SURR" and _honors_surrender(
-        largest.morale, cohesion, enemy_overwhelms)
+    surrendered = mod == "SURR" and _honors_surrender(morale, cohesion, enemy_overwhelms)
     if mod == "SURR":
         mod = -4
-    m = max(-3, min(3, largest.morale + mod))          # 17.23: clamp the Adjusted Morale FIRST
+    m = max(-3, min(3, morale + mod))                  # 17.23: clamp the Adjusted Morale FIRST
     rom = r.state.rommel                               # 17.28: then add Rommel's +1 OUTSIDE the
     if (rom is not None and not rom.in_germany         # clamp, keyed on his ENTITY position (not
             and largest.side == Side.AXIS              # an is_combat-filtered Unit id-scan), so it

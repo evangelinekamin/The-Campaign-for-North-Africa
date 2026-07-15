@@ -244,23 +244,24 @@ def test_siege_of_tobruk_machinery_intact():
     wall is still battered down (FORT_REDUCED fires at the objective across seeds),
     which never happens with siege OFF.
 
-    SEED NOTE -- AND THIS IS THE LAST TIME IT SHOULD EVER NEED WRITING. The note that used to
-    stand here recorded the seeds being re-pinned THREE separate times: once when the two-level
-    clock added a weather roll per Operations Stage, once when Rommel's 31.4 +5 CPA widened an
-    Axis move, and once when "the SEA-TOBRUK air-interdiction schedule (41.6) drew its per-ferry
-    CRT dice into the shared stream". Every one of those was the SAME BUG -- one shared rng, so
-    any subsystem that drew a die re-indexed the barrage. That is T0-0, and it is fixed: the
-    barrage now has its own stream (game/dice.py) and an unrelated subsystem can no longer move
-    these seeds.
+    SEED NOTE. These seeds were re-pinned three times under the old shared rng -- once for the
+    two-level clock, once for Rommel's 31.4 +5 CPA, once for the SEA-TOBRUK interdiction schedule
+    -- and every one was the SAME instrument bug: any subsystem that drew a die re-indexed the
+    barrage. T0-0 (per-subsystem streams, game/dice.py) ended THAT class of re-pin -- an unrelated
+    subsystem can no longer move these seeds.
 
-    Re-pinned once more, by the fix itself: (4, 10, 14) -> (16, 162). MEASURED, siege_of_tobruk,
-    the 25.14 wall-batter is a RARE event in both engines -- it fires on 3/60 seeds under the old
-    shared stream (which is exactly why 4/10/14 were chosen) and on 2/220 under the new one. The
-    rate is small either way and the difference is not significant on these counts; the crack rate
-    is the owner's siege knob (BARRAGE_HITS_PER_FORT_LEVEL / the Axis ammo schedule), not a
-    magnitude to bend here. This guards only that the 25.14 path SURVIVES."""
+    A genuine RULE change still can, and it is not the same bug. T0-5 (rules 6.27 Cohesion and
+    15.63 Morale are AVERAGED over the largest units in a Close Assault, not read off the single
+    strongest) changed which assaults end in an instant Surrender and which reach the CRT, so units
+    live, die and hold different hexes -- and the board those cascades produce reaches the 25.14
+    wall-batter on different seeds. That is inherent single-seed chaos (a rule moves outcomes,
+    outcomes move later state), not a desync. Re-pinned (16, 162) -> (197, 214). MEASURED on the
+    current engine, siege_of_tobruk fires FORT_REDUCED on 6 of seeds 1..500 (197, 214, 220, 232,
+    293, 405) -- still the rare event it was (2/220 under T0-0, 3/60 under the shared stream). The
+    crack RATE is the owner's siege knob (BARRAGE_HITS_PER_FORT_LEVEL / the Axis ammo schedule), not
+    a magnitude to bend here. This guards only that the 25.14 path SURVIVES."""
     battered = False
-    for seed in (16, 162):
+    for seed in (197, 214):
         res = run(siege_of_tobruk(seed=seed),
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         assert res.initial.siege_rules is True

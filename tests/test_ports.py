@@ -271,16 +271,18 @@ def test_siege_still_crackable_through_the_throttle():
     # The Benghazi rear throttle must not starve the Axis barrage below the crack path: a strong
     # seed still batters the wall through it.
     #
-    # The seed note that stood here listed the THREE times these seeds had to be re-pinned because
-    # "the shared stream" was perturbed by the two-level clock, then by Rommel's +5 CPA, then by
-    # the SEA-TOBRUK interdiction schedule "drawing its per-ferry CRT dice into that same stream".
-    # All three were one bug -- the single shared rng -- and T0-0 fixed it: barrage has its own
-    # stream now (game/dice.py), so no unrelated subsystem can move these seeds again.
-    # Re-pinned by the fix: (4, 10, 14) -> (16, 162). MEASURED: the 25.14 crack is rare in both
-    # engines (3/60 seeds old, 2/220 new). The crack RATE is the owner's siege knob, NOT a
-    # magnitude to bend here. This test guards only that the path SURVIVES.
+    # These seeds were re-pinned three times under the old shared rng (the two-level clock, Rommel's
+    # +5 CPA, the SEA-TOBRUK interdiction schedule) -- all ONE instrument bug, a shared stream any
+    # subsystem re-indexed. T0-0 (per-subsystem streams, game/dice.py) ended that class of re-pin.
+    # A genuine RULE change still moves them, and it is not the same bug: T0-5 (6.27 Cohesion / 15.63
+    # Morale AVERAGED over the largest units in a Close Assault) changed which assaults surrender vs
+    # reach the CRT, so units live/die on different hexes and the cascade reaches the 25.14 wall on
+    # different seeds -- inherent single-seed chaos, not a desync. Re-pinned (16, 162) -> (197, 214);
+    # MEASURED, siege_of_tobruk fires FORT_REDUCED on 6 of seeds 1..500 (197,214,220,232,293,405),
+    # still rare (2/220 under T0-0). The crack RATE is the owner's siege knob, NOT a magnitude to
+    # bend here. This test guards only that the path SURVIVES.
     battered = False
-    for seed in (16, 162):
+    for seed in (197, 214):
         res = run(siege_of_tobruk(seed=seed),
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         if any(e.kind == EventKind.FORT_REDUCED and tuple(e.payload["hex"]) == TOBRUK
