@@ -535,11 +535,12 @@ def _axis_land_air(raf: bool, raf_fighters: int = _TOBRUK_DAF_FIGHTERS) -> tuple
 def _tobruk_port_bomb(max_turns: int, start: int = _TOBRUK_PORTBOMB_START,
                       cadence: int = _TOBRUK_PORTBOMB_CADENCE) -> tuple[AirMission, ...]:
     """The static Axis harbour-bombing schedule against PORT-Tobruk (rule 41.39B): one 'port'
-    LAND air mission per scheduled game-turn, each knocking the harbour's Efficiency Level down
-    one (engine._air_port) -- and because PORT-Tobruk is HARBOUR_BLOCKED (San Giorgio), it never
-    regenerates, so the schedule ratchets eff 7->0 and collapses the ~425-Ammo/OpStage landing
-    cap that is the garrison's lifeline. `start`/`cadence` are FLAGGED tuning proxies for the
-    siege TEMPO (how fast the throat closes against the 12-turn clock)."""
+    LAND air mission per scheduled game-turn, each ROLLING on the [41.5] Ports CRT (engine._air_port)
+    for the Efficiency Levels knocked off -- and the harbour regenerates (55.18) any OpStage it is not
+    bombed down, so the schedule must sustain the pressure to shut the ~425-Ammo/OpStage landing cap
+    that is the garrison's lifeline (the benchmark Tobruk is seeded 7/7 with no block, so the ceiling
+    is the full 7). `start`/`cadence` are FLAGGED tuning proxies for the siege TEMPO (how fast the
+    throat closes against the 12-turn clock)."""
     return tuple(AirMission(Side.AXIS, "port", "PORT-Tobruk", t)
                  for t in range(start, max_turns + 1, cadence))
 
@@ -575,8 +576,8 @@ def siege_of_tobruk(seed: int = 1941, *, port_bomb: bool = False, raf: bool = Fa
 
     The keyword knobs seed the SECOND throat of the lifeline -- the harbour, not just the
     ferry -- so the crack the ferry-cut only made latent can actually fire. `port_bomb` fields
-    the Axis Luftwaffe LAND wing and a per-turn PORT-Tobruk bombing schedule (eff 7->0, no regen
-    under HARBOUR_BLOCKED); `raf` adds a contesting Commonwealth fighter wing so winning the LAND
+    the Axis Luftwaffe LAND wing and a per-turn PORT-Tobruk bombing schedule ([41.5] rolls against a
+    harbour that regenerates 55.18 between the bombs); `raf` adds a contesting Commonwealth fighter wing so winning the LAND
     sky is a genuine contest (the air-superiority gate on _air_port); `ferry_bomb` sets the SEA
     ferry CRT weight. `portbomb_start`/`portbomb_cadence`/`raf_fighters` are the siege-TEMPO
     knobs (push the first bomb later, bomb every N-th turn, field a stronger contesting RAF) that
@@ -1002,11 +1003,13 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
     _CAMPAIGN_CONTROL: it was an Italian port and Italy supplied its army through it), which is what
     engine._air_port reads to decide whose harbour may be bombed.
 
-    Kept under the id PORT-Tobruk so the San Giorgio block already modelled in the engine
-    (HARBOUR_BLOCKED: no 55.18 regeneration, ever) keeps applying -- the scuttled cruiser does not
-    care who owns the quay. The 1700-t rating is the chart's; at eff 2/5 (55.25 San Giorgio) it
-    crosses (54.5) to a 680 t/Operations-Stage SHARED tonnage budget across all commodities, which is
-    the real gate on either side's Tobruk lifeline."""
+    Kept under the id PORT-Tobruk, seeded with blocked=3 -- the San Giorgio's three-level block
+    (55.25), which is not bomb damage and never regenerates (55.26), only holds the regeneration
+    CEILING at max_eff - blocked = 2. Bomb damage below 2 DOES recover (55.18), so the scuttled
+    cruiser does not care who owns the quay but neither does it make the harbour a one-way ratchet:
+    the besieger must keep bombing to hold it shut. The 1700-t rating is the chart's; at eff 2/5
+    (55.25) it crosses (54.5) to a 680 t/Operations-Stage SHARED tonnage budget across all
+    commodities, which is the real gate on either side's Tobruk lifeline."""
     ports = []
     rear = _axis_rear(supplies, target)
     if rear is not None:
@@ -1021,13 +1024,14 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
         ports.append(Port("PORT-Matruh", Side.ALLIED, railhead.hex, "major", max_eff=eff, eff=eff,
                           **_caps_tonnage(chart["tons"])))
     tob = _PORT_TONS["tobruk"]      # 55.3: Tobruk max Efficiency 5, 1700 t
-    # 55.25 / 30.17: the scuttled San Giorgio starts Tobruk THREE levels down, at 2 of max 5 --
-    # NOT the 55.12 maximum, and NOT the 60.7/61.6 printed "Efficiency Level 7" (an OCR/errata 5->7
-    # in this typeface; see the port plan section 8). HARBOUR_BLOCKED stops 55.18 regen, so it stays
-    # pinned at 2 for the whole campaign -- 1700 t at eff 2/5 crosses (54.5) to a 680 t/OpStage gate.
+    # 55.25 / 30.17: the scuttled San Giorgio BLOCKS Tobruk three levels (blocked=3) -- NOT the
+    # 55.12 maximum, and NOT the 60.7/61.6 printed "Efficiency Level 7" (an OCR/errata 5->7 in this
+    # typeface; see the port plan section 8). It starts at eff 2 = max_eff - blocked, and 55.18
+    # regenerates bomb damage only up to that ceiling of 2, never past the wreck (55.26). 1700 t at
+    # eff 2/5 crosses (54.5) to a 680 t/OpStage gate.
     ports.append(Port("PORT-Tobruk", Side.AXIS, coords.to_axial(coords.parse(_TOBRUK)), "major",
                       max_eff=tob["efficiency_level"], eff=tob["efficiency_level"] - 3,
-                      **_caps_tonnage(tob["tons"])))
+                      blocked=3, **_caps_tonnage(tob["tons"])))
     return tuple(ports)
 
 
@@ -1045,12 +1049,13 @@ _AIR_STRIKE = 6            # S: the strike points that batter a harbour (41.39B)
 def _campaign_air() -> tuple[AirWing, ...]:
     """A LAND-arena air wing for BOTH sides -- the Luftwaffe/Regia Aeronautica and the Desert Air
     Force. The campaign seeded NONE, and that single omission is why its Tobruk was invulnerable:
-    with state.air empty no air beat fires at all, engine._air_port is unreachable, no port can
-    ever lose Efficiency, and a HARBOUR_BLOCKED harbour therefore can never be shut. And interdiction
-    alone cannot cut the lane: the 41.66 CRT skims a PERCENTAGE off a cargo the 55.3 SHARED tonnage
-    budget has already clipped to the harbour's 680 t/OpStage (eff 2/5), so a cut that still leaves the
-    manifest over the budget lands the same tonnage -- arithmetically inert (see the Tobruk
-    interdiction tests). Only efficiency 0 -- a bombed-shut harbour -- actually cuts a sea lane."""
+    with state.air empty no air beat fires at all, engine._air_port is unreachable, and no port can
+    ever lose Efficiency. And interdiction alone cannot cut the lane: the 41.66 CRT skims a
+    PERCENTAGE off a cargo the 55.3 SHARED tonnage budget has already clipped to the harbour's
+    680 t/OpStage (eff 2/5), so a cut that still leaves the manifest over the budget lands the same
+    tonnage -- arithmetically inert (see the Tobruk interdiction tests). Only bombing the harbour's
+    Efficiency down ([41.5], _air_port) actually chokes a sea lane, and the harbour regenerates
+    (55.18) between the bombs, so it takes a sustained air campaign to keep it shut."""
     return (AirWing("LW-land", Side.AXIS, "LAND",
                     fighters=_AIR_FIGHTERS, strike=_AIR_STRIKE, recon=0),
             AirWing("DAF-land", Side.ALLIED, "LAND",
@@ -1068,10 +1073,13 @@ def _campaign_air_missions(max_turns: int) -> tuple[AirMission, ...]:
     automatically, in both directions, as many times as the fortress changes hands -- exactly as
     the 56.15 convoy lane already hands the sea route from one side to the other.
 
-    PORT-Tobruk is HARBOUR_BLOCKED (the scuttled San Giorgio, 55.26): it never regenerates, so a
-    bomb that lands STAYS landed and the 680 t/OpStage lifeline ratchets shut for good. That is
-    what makes Tobruk's 200 Victory Points something a side has to EARN and then keep fed, instead
-    of the free gift of whoever happened to be standing there on Game-Turn 1.
+    PORT-Tobruk carries the San Giorgio's three-level block (blocked=3, 55.25), which holds its
+    regeneration ceiling at 2 (max_eff - blocked) but is NOT a one-way ratchet: bomb damage below 2
+    regenerates +1 every OpStage the harbour is not bombed (55.18, _port_regen). So a besieger who
+    rolls a [41.5] level off the quay must keep rolling to hold it down -- one bomb no longer shuts
+    the lifeline for good. That is what makes Tobruk's 200 Victory Points something a side has to
+    EARN and then keep fed, instead of the free gift of whoever happened to be standing there on
+    Game-Turn 1.
 
     NO mission is flown at Mersa Matruh, and that is not an oversight. Its harbour is real (55.3:
     250 tons) but it is not what feeds the Eighth Army -- the RAILWAY is (54.3), and a railway is

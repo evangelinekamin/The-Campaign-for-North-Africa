@@ -55,14 +55,14 @@ AIR_STRIKE_STEP_SEVERITY: int = 0
 # hex beyond its own, firing there at HALF its Gun Rating; lighter ships bombard their own hex only.
 CAPITAL_SHIP_KINDS: frozenset = frozenset({"BB", "CA"})
 
-# 55.2 harbour BLOCKING (a scuttled ship) permanently cripples a port until Friendly
-# engineers clear the wreck (55.26) -- it is NOT bomb damage, so the 55.18 +1/OpStage
-# regeneration does NOT restore it. The San Giorgio scuttled in Tobruk (30.17 / 55.25,
-# -3 levels) is such a block: it stays pinned at its seeded Efficiency Level. (The Axis
-# rear harbour in the Desert Fox corridor is the WORKING PORT-Tripoli, not the scuttled
-# Benghazi -- Step 5 -- so no Axis port is blocked here.)
-# Bomb/mine reductions (41.3), which DO regenerate, arrive with the air subsystem (CHUNK 6).
-HARBOUR_BLOCKED: frozenset = frozenset({"PORT-Tobruk"})
+# 55.2 harbour BLOCKING (a scuttled ship / air-laid mine) permanently cripples a port
+# until Friendly engineers clear the wreck (55.26) -- it is NOT bomb damage, so the 55.18
+# +1/OpStage regeneration does NOT restore it. This used to be a module-level frozenset of
+# port ids that never regenerated at all, which conflated the scuttling with "the harbour
+# can never recover from anything". It is now a per-port count of blocked Efficiency Levels
+# (Port.blocked), so a blocked harbour still regenerates bomb damage up to its lowered
+# ceiling (max_eff - blocked) -- the San Giorgio holds Tobruk's ceiling at 2, but the Axis
+# air force must keep bombing to suppress it below that. supply.regen_eff reads the ceiling.
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,6 +99,18 @@ class _Run:
         # boundary, like the 15.81 Engaged marker -- and empty for every scenario that never builds,
         # which is what keeps them byte-identical.
         self.building: set[str] = set()
+        # [55.18] the ports that lost one or more Efficiency Levels to Enemy bombs THIS
+        # Operations Stage (populated by _air_port). A port in this set does not regenerate at
+        # the end of the stage; one that was left alone (or only rolled a [41.5] result of 0)
+        # does. Cleared at the OpStage boundary, so an unbombed stage always regenerates.
+        self.ports_bombed_this_stage: set[str] = set()
+        # [48 III / 48 V.D] each due convoy's SURVIVED manifest for the current Game-Turn:
+        # convoy id -> {"dest": dump id|None, "cargo": remaining points, "rail": bool}. The
+        # convoy is bombed at sea ONCE per turn (interdiction, strategic 39.13) and its 56.15
+        # sail/cancel decision is taken once, both at Stage 1; the survived cargo then unloads
+        # across the turn's three Operations Stages (48 V.D), each stage capped by the port's
+        # per-OpStage tonnage budget. Rebuilt every turn at Stage 1.
+        self.convoy_manifest: dict[str, dict] = {}
 
     def emit(self, kind: EventKind, side: Side, actor: str, payload: dict,
              rng_draws: tuple[int, ...] = ()) -> None:
@@ -149,14 +161,17 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
         _initiative(r, axis_recalled=recalled)          # 5.2 I / 7.14: who holds Initiative this game-turn
         _stores_setup(r)                                # 48 IV: Stores Expenditure + 6% base evaporation
         for stage in (1, 2, 3):
+            r.ports_bombed_this_stage = set()            # 55.18: this stage's bomb ledger starts empty
             _rommel_anchor(r)                            # 31.4: snapshot who he starts THIS stage with
             first, second = _declare_ab(r, policies, stage)   # 5.2.III.A / 7.11: the A/B activation order
             r.go(Phase.WEATHER, Side.SYSTEM)
             _weather(r)                                 # 29.0: weather is rolled per Operations Stage
             _water_body(r)                              # 48 V.C.1: water draw + the +5% hot-evap slice
-            if stage == 1:                              # 48 V.D: arrivals land once, in the turn's 1st stage
+            if stage == 1:                              # reinforcement UNITS arrive once, in the 1st stage
                 _reinforcements(r)
-                _naval_convoys(r, policies)             # V.C.7 + V.D: convoy arrival + port regen (SYSTEM)
+            _naval_convoys(r, policies)                  # 48 V.D: the Naval Convoy Arrival Phase runs
+                                                         # EVERY Operations Stage (VI/VII repeat all of V) --
+                                                         # the turn's manifest unloads across the stages
             _air_superiority(r)                          # 40/45/46: contest the sky this OpStage (per arena)
             for side in (first, second):                # 7.16: Player A (first) then Player B (last)
                 _debrief(side)                          # enemy portion + own last combat
@@ -185,6 +200,8 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                 _capture_dumps(r)                       # 32.13: and the exploitation pulse
             for side in (first, second):
                 _truck_convoys(r, policies[side], side)  # V.J: 2nd/3rd-line truck convoys (48)
+            _port_regen(r)                               # 55.18: end of OpStage -- every port that lost
+                                                         # NO Efficiency Levels to bombs this stage regains one
             r.go(Phase.RECORD, Side.SYSTEM)
             _record_control(r)
             victory = r.state.victory or _DEFAULT_VICTORY
@@ -395,6 +412,25 @@ def _convoy_loss_pct(bomb_points: int, d1: int, d2: int) -> int:
                 dlo, dhi = entry["die"]
                 if dlo <= code <= dhi:
                     return entry["pct_lost"]
+    return 0
+
+
+def _port_bomb_levels(bomb_points: int, d1: int, d2: int) -> int:
+    """[41.39B / 41.5] resolve one harbour-bombing attack on the Air Bombardment CRT's Ports
+    row: pick the Bomb-Point column, read the two dice SEQUENTIALLY as a two-digit code
+    (tens=d1, units=d2), and return the number of Efficiency Levels the port loses (0-4).
+    Bomb Points below the table's floor lose nothing (returns 0). At the campaign's proxy
+    six strike Air Points (column 1..20) the roll is a 0 on 32 of 36 codes and a 1 on 4 --
+    which is what lets the harbour regenerate (55.18) between the bombs and makes the siege a
+    duel rather than a one-way ratchet."""
+    code = d1 * 10 + d2
+    for col in logistics_data.air_port_bombing_crt_41_5():
+        lo, hi = col["bomb_points"]
+        if bomb_points >= lo and (hi is None or bomb_points <= hi):
+            for entry in col["results"]:
+                dlo, dhi = entry["die"]
+                if dlo <= code <= dhi:
+                    return entry["levels"]
     return 0
 
 
@@ -656,96 +692,60 @@ def _rail_station(r: _Run, convoy, stop):
 
 
 def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
-    """Naval Convoy Arrival (rule 48 V.C.7 Tactical Shipping + V.D Convoy Arrival): the
-    supply SOURCE lands each due convoy's cargo into its destination dump, capped at the
-    dump capacity (32.15 -- overflow is simply never credited, a miniature port throttle,
-    CHUNK 3 makes it the real 55.14 efficiency gauge). A convoy to an enemy-captured port
-    never sails (56.15) -- unless it runs on rails, which RETRACT rather than die (54.3/60.7,
-    see _convoy_dest). Fires ONLY when convoys are due this game-turn, so every convoy-
-    less scenario stays byte-identical (no Phase.LOGISTICS is emitted).
+    """Naval Convoy Arrival (rule 48 V.C.7 Tactical Shipping + V.D Convoy Arrival). Runs EVERY
+    Operations Stage: the sequence of play repeats all facets of the First Operations Stage in
+    the Second and Third (48 VI/VII), so the Naval Convoy Arrival Phase happens three times a
+    Game-Turn, and a harbour's per-OpStage tonnage capacity (55.16) is exercised each time.
 
-    `policies` (optional, backward-compatibly None for the scripted callers) hands the naval
-    seat its per-turn interdiction allocation (P5 Step 6): before the convoys run the gauntlet,
-    each side's Convoy officer commits the seeded schedule as a CONTINGENT command decision,
-    whose STAFF_* beats the engine drains just before the CONVOY_INTERDICTED markers they
-    explain. A policy without a naval seat (every scripted policy) stages nothing, so the
-    interdiction stays exactly as ambient as before -- byte-identical."""
+    The two halves are split by cadence, because they have different ones. A convoy is bombed at
+    sea and either sails or is cancelled (56.15) ONCE per Game-Turn -- interdiction is a Strategic
+    mission (39.13, flown once per turn) -- so _schedule_convoys builds each convoy's SURVIVED
+    manifest at Stage 1 only. That manifest then UNLOADS across the turn's three Operations Stages
+    (_unload_convoys), each stage capped by the harbour's current Efficiency Level: bombed down in
+    one stage, regenerated in the next, so what gets through depends on the siege. Fires only when
+    convoys are due this game-turn, so every convoy-less scenario stays byte-identical (no
+    Phase.LOGISTICS beat). Port regeneration (55.18) is NOT here any more -- it is an end-of-OpStage
+    step (engine.run calls _port_regen after both players' Combat Segments), because whether a port
+    regenerates depends on whether it lost levels to bombs DURING the stage."""
     due = [c for c in r.state.convoys if c.arrival_turn == r.state.turn]
-    regenable = [p for p in r.state.ports
-                 if p.id not in HARBOUR_BLOCKED and p.eff < p.max_eff]
-    if not due and not regenable:
-        return                                          # convoy-/port-less stays byte-identical
+    if not due:
+        return                                          # convoy-less stays byte-identical
     r.go(Phase.LOGISTICS, Side.SYSTEM)
+    if r.state.stage == 1:                              # the once-per-turn gauntlet + 56.15 decision
+        _schedule_convoys(r, due, policies)
+    _unload_convoys(r, due)                             # 48 V.D: the Arrival Phase, this Operations Stage
+
+
+def _schedule_convoys(r: _Run, due: list, policies: dict | None) -> None:
+    """[48 III / 56.13] The once-per-Game-Turn convoy gauntlet, run at Stage 1: stage the naval
+    seat's interdiction decision, run each convoy through the [41.66] bombing at sea (a Strategic
+    mission, 39.13 flown once per turn), take the 56.15 sail/cancel decision, and record the
+    SURVIVED manifest that _unload_convoys then lands across the turn's Operations Stages.
+
+    `policies` (optional, None for scripted callers) hands the naval seat its interdiction
+    allocation; a policy without a naval seat stages nothing, so the interdiction stays as ambient
+    as before -- byte-identical."""
+    r.convoy_manifest = {}
     if policies is not None:                            # the naval command loop (early-return-guarded)
         for side in (Side.AXIS, Side.ALLIED):
             pol = policies[side]
             if hasattr(pol, "naval_command"):
                 pol.naval_command(r.state, side)        # stages the officer's interdiction beats
                 _drain_staff(r, pol, side)              # emitted before the CONVOY_INTERDICTED below
-    port_landed: dict[tuple[str, str], int] = {}        # 55.14: per-commodity sub-cap, per-port-per-OpStage
-    port_tons: dict[str, float] = {}                    # 55.3: the ONE shared tonnage budget per port per OpStage
     for c in sorted(due, key=lambda c: c.id):           # deterministic arrival order
         dump = _convoy_dest(r.state, c)                 # 56.15, plus the 54.3/60.7 retracting railhead
         if dump is None:
             r.emit(EventKind.CONVOY_CANCELLED, c.side, "SYSTEM",
                    {"convoy_id": c.id, "lane": c.lane, "dest": c.dest, "reason": "port captured"})
+            r.convoy_manifest[c.id] = {"dest": None, "cargo": {}, "rail": False}
             continue
         # 41.6/32.66: skim the CRT loss at sea BEFORE landing (identity + no rng if unbombed)
         cargo, itd_order, pct_lost, tons_lost, itd_dice = _interdict(
             c, r.state, r.dice.stream("interdiction"))
-        if c.rail and r.state.terrain.rails:
-            # [54.3] THE RAILWAY UNLOADS ALONG ITS LINE, not all at the terminus (see _rail_stops).
-            # A ship has one quay; a train has a whole railway of hexes it may set freight down at
-            # (54.35), and 54.16 tells the player to use them. The haul is the same 54.32 tonnage --
-            # only its destinations change. Gated on a rails edge-set, which ONLY the campaign seeds,
-            # so every other scenario's convoy falls through to the verbatim single-dump landing.
-            _rail_deliver(r, c, dump, cargo)
-        else:
-            cap = supply.dump_capacity_at(r.state, dump.hex)   # 54.12, by dump terrain + village overlay
-            # 56.28: a port's built-in dump throttles what a SHIP lands over it (55.14). A RAILWAY
-            # delivery is not a ship (54.3): it has its own charted capacity (54.32, 1500 t/OpStage)
-            # and never touches the quay, so it bypasses the harbour gate. Convoy.rail defaults False,
-            # so every sea convoy in every scenario reads exactly as before.
-            port = None if c.rail else r.state.port_at(dump.hex)
-            # (a) what each commodity WANTS to land: 54.12 dump headroom, then the port's SECONDARY
-            # per-commodity sub-cap (_UNLIMITED for campaign ports; convoys sharing a port this
-            # OpStage subtract what earlier ones already landed).
-            want: dict = {}
-            for k, v in cargo.items():
-                onhand = getattr(dump, k.lower())
-                room = min(cap[k], onhand + v) - onhand     # 54.12 dump headroom
-                if port is not None:
-                    already = port_landed.get((port.id, k), 0)
-                    room = min(room, supply.port_landing_cap(port, k) - already)
-                if room > 0:
-                    want[k] = room
-            # (b) 55.3/55.14 THE SHARED TONNAGE THROTTLE. A port ships ONE total tonnage per OpStage
-            # across ALL commodities (55.3: "the TOTAL tonnage of supplies... in one Operations Stage"),
-            # NOT the whole allowance per commodity. When the manifest outweighs the remaining budget,
-            # every commodity lands the same fraction of what it wanted -- mix-preserving and order-
-            # independent (the rules let the player pick the split; proportional is the least-biased
-            # reading of a fixed cargo, and it avoids a commodity-ordering artefact that would starve
-            # one commodity to feed another). 54.5 crosses each Point to its tonnage.
-            if port is not None and want:
-                remaining = supply.port_tonnage_budget(port) - port_tons.get(port.id, 0.0)
-                want_tons = sum(q * supply.TONS_PER_POINT[k] for k, q in want.items())
-                if want_tons > remaining:
-                    frac = remaining / want_tons if want_tons > 0 else 0.0
-                    want = {k: math.floor(q * frac) for k, q in want.items()}
-                port_tons[port.id] = port_tons.get(port.id, 0.0) + sum(
-                    q * supply.TONS_PER_POINT[k] for k, q in want.items())
-            landed = {k: q for k, q in want.items() if q > 0}
-            if port is not None:
-                for k, q in landed.items():
-                    port_landed[(port.id, k)] = port_landed.get((port.id, k), 0) + q
-            if port is not None:                        # legible per-commodity landing beat
-                for k in sorted(landed):
-                    r.emit(EventKind.PORT_UNLOADED, c.side, "SYSTEM",
-                           {"port_id": port.id, "commodity": k, "qty": landed[k],
-                            "tons": supply.points_to_tons(landed[k], k), "eff": port.eff})
-            if landed:                                  # nothing to land into a full dump
-                r.emit(EventKind.SUPPLY_ARRIVED, c.side, "SYSTEM",   # dump.id == c.dest unless the railhead retracted
-                       {"supply_id": dump.id, "cargo": landed, "lane": c.lane, "convoy_id": c.id})
+        # [54.3] a RAILWAY delivery is not a ship: it lands its whole 54.32 haul along the line at
+        # once (_rail_deliver / _rail_stops), so it is flagged to unload only in the turn's 1st stage.
+        rail = bool(c.rail and r.state.terrain.rails)
+        r.convoy_manifest[c.id] = {"dest": dump.id, "cargo": dict(cargo), "rail": rail}
         if itd_order is not None:                       # 41.6/32.66: the bombing marker beside arrival
             interdictor = _other(c.side)
             r.emit(EventKind.CONVOY_INTERDICTED, interdictor, "SYSTEM",
@@ -759,17 +759,87 @@ def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
                 r.emit(EventKind.AIR_STRIKE_RESOLVED, interdictor, "SYSTEM",
                        {"arena": "SEA", "target": c.lane, "strength": itd_order.bomb_points,
                         "pinned": [], "loss": 0})
-    _port_regen(r)      # 55.18: the port worked this OpStage at its current eff, then recovers
+
+
+def _unload_convoys(r: _Run, due: list) -> None:
+    """[48 V.D] The Naval Convoy Arrival Phase, run each Operations Stage: unload each due convoy's
+    REMAINING manifest into its destination dump. A railway (54.3) lands its whole 54.32 haul along
+    the line at once, in the turn's first stage. A SEA convoy unloads over the harbour quay, capped
+    by the port's per-OpStage tonnage budget (55.16, ceil(cap_tons * eff/max_eff)); whatever will
+    not fit this stage stays on the manifest for the next one, at the Efficiency Level the port
+    then has -- bombed down or regenerated -- which is the whole siege duel. The un-landed remainder
+    is not annihilated (the old code silently dropped it): it simply waits for a later stage or, at
+    end of turn, expires unshipped (56.27, may not ship over capacity)."""
+    port_landed: dict[tuple[str, str], int] = {}        # 55.14: per-commodity sub-cap, per-port-per-OpStage
+    port_tons: dict[str, float] = {}                    # 55.3: the ONE shared tonnage budget per port per OpStage
+    for c in sorted(due, key=lambda c: c.id):           # deterministic arrival order
+        m = r.convoy_manifest.get(c.id)
+        if m is None or m["dest"] is None or not any(v > 0 for v in m["cargo"].values()):
+            continue                                    # cancelled, or manifest already exhausted
+        cargo = m["cargo"]
+        dump = r.state.supply(m["dest"])
+        if m["rail"]:
+            if r.state.stage == 1:                      # the railway lands its whole haul at once (54.3)
+                _rail_deliver(r, c, dump, cargo)
+                m["cargo"] = {k: 0 for k in cargo}      # delivered -- nothing carries to later stages
+            continue
+        cap = supply.dump_capacity_at(r.state, dump.hex)   # 54.12, by dump terrain + village overlay
+        port = r.state.port_at(dump.hex)               # 56.28: the built-in harbour dump throttles a ship
+        # (a) what each commodity WANTS to land this stage: 54.12 dump headroom, then the port's
+        # SECONDARY per-commodity sub-cap (_UNLIMITED for campaign ports; convoys sharing a port
+        # this OpStage subtract what earlier ones already landed).
+        want: dict = {}
+        for k, v in cargo.items():
+            if v <= 0:
+                continue
+            onhand = getattr(dump, k.lower())
+            room = min(cap[k], onhand + v) - onhand     # 54.12 dump headroom
+            if port is not None:
+                already = port_landed.get((port.id, k), 0)
+                room = min(room, supply.port_landing_cap(port, k) - already)
+            if room > 0:
+                want[k] = room
+        # (b) 55.3/55.14 THE SHARED TONNAGE THROTTLE. A port ships ONE total tonnage per OpStage
+        # across ALL commodities (55.3: "the TOTAL tonnage of supplies... in one Operations Stage"),
+        # NOT the whole allowance per commodity. When the manifest outweighs the remaining budget,
+        # every commodity lands the same fraction of what it wanted -- mix-preserving and order-
+        # independent (the rules let the player pick the split; proportional is the least-biased
+        # reading of a fixed cargo, and it avoids a commodity-ordering artefact that would starve
+        # one commodity to feed another). 54.5 crosses each Point to its tonnage.
+        if port is not None and want:
+            remaining = supply.port_tonnage_budget(port) - port_tons.get(port.id, 0.0)
+            want_tons = sum(q * supply.TONS_PER_POINT[k] for k, q in want.items())
+            if want_tons > remaining:
+                frac = remaining / want_tons if want_tons > 0 else 0.0
+                want = {k: math.floor(q * frac) for k, q in want.items()}
+            port_tons[port.id] = port_tons.get(port.id, 0.0) + sum(
+                q * supply.TONS_PER_POINT[k] for k, q in want.items())
+        landed = {k: q for k, q in want.items() if q > 0}
+        if port is not None:
+            for k, q in landed.items():
+                port_landed[(port.id, k)] = port_landed.get((port.id, k), 0) + q
+            for k in sorted(landed):                    # legible per-commodity landing beat
+                r.emit(EventKind.PORT_UNLOADED, c.side, "SYSTEM",
+                       {"port_id": port.id, "commodity": k, "qty": landed[k],
+                        "tons": supply.points_to_tons(landed[k], k), "eff": port.eff})
+        if landed:                                      # nothing to land into a full dump
+            r.emit(EventKind.SUPPLY_ARRIVED, c.side, "SYSTEM",   # dump.id == c.dest unless the railhead retracted
+                   {"supply_id": dump.id, "cargo": landed, "lane": c.lane, "convoy_id": c.id})
+            for k, q in landed.items():                 # 48 V.D: draw the manifest down as it lands
+                cargo[k] = cargo[k] - q
 
 
 def _port_regen(r: _Run) -> None:
-    """55.18: every port regains one Efficiency Level per OpStage (up to its assigned
-    maximum), emitted as PORT_EFFICIENCY_CHANGED -- except a permanent harbour BLOCK
-    (HARBOUR_BLOCKED: San Giorgio, scuttled Benghazi), which only engineers clear (55.26).
-    Deterministic (sorted by id). No bomb/mine reductions exist yet (CHUNK 6), so in the
-    current scenarios only bomb-free ports below max would climb -- the seeded blocks stay."""
+    """55.18: at the end of an Operations Stage, every port that did NOT lose any Efficiency Levels
+    to Enemy bombs this stage (r.ports_bombed_this_stage, populated by _air_port) regains one
+    Level, up to its regeneration ceiling (max_eff - blocked; supply.regen_eff). A permanent
+    harbour BLOCK (55.2 San Giorgio / 55.27 mine) holds the ceiling below max_eff -- it is not
+    bomb damage and never regenerates (55.26) -- but bomb damage below the ceiling DOES recover, so
+    the besieger must keep bombing to keep the harbour shut. Deterministic (sorted by id); fires no
+    event for a port at its ceiling or bombed this stage, so a port-less or unbombed-at-ceiling
+    scenario stays byte-identical."""
     for p in sorted(r.state.ports, key=lambda p: p.id):
-        if p.id in HARBOUR_BLOCKED:
+        if p.id in r.ports_bombed_this_stage:           # 55.18: lost levels to bombs this stage -- no regen
             continue
         level = supply.regen_eff(p)
         if level is not None:
@@ -1093,32 +1163,39 @@ def _air_fort(r: _Run, side: Side, tgt: Coord) -> None:
 
 
 def _air_port(r: _Run, side: Side, port_id: str) -> None:
-    """41.39B B-P: harbour bombing knocks a port's Efficiency Level down one (reusing
-    PORT_EFFICIENCY_CHANGED, which apply.py already anticipates as 'bomb/mine damage'). The 55.18
-    +1/OpStage regen contests it -- except a HARBOUR_BLOCKED port (PORT-Tobruk), which does not
-    regen, so a bombed harbour there stays down: THE lever that chokes the ~425-Ammo/OpStage cap.
-    Like _air_strike, it needs committed LAND strike Air Points (scaled by the superiority gate):
-    a side that fields no strike or has lost the sky to a scale of 0 cannot batter the harbour --
-    winning the LAND sky is the precondition. The committed strength rides the payload for legibility."""
+    """[41.39B / 41.5] B-P Bombing Ports: harbour bombing ROLLS on the [41.5] Air Bombardment CRT's
+    Ports row (logistics_data.air_port_bombing_crt_41_5) for the number of Efficiency Levels the port
+    loses (55.1). The committed strike Air Points pick the Bomb-Point column; 2d6 read sequentially
+    (41.22) give the result. At the campaign's six proxy strike points that is a 0 on 32 of 36 codes
+    and a 1 on 4 -- so most stages the quay takes no damage, and (because a 0 leaves the port unmarked)
+    55.18 lets it regenerate. The besieger must roll well, and keep rolling, to hold the harbour shut;
+    the holder is fed by sea between the bombs. That -- not a one-way ratchet where one bomb shuts the
+    quay for good -- is the siege duel.
+
+    Needs committed LAND strike Air Points scaled by the superiority gate: a side that fields no strike
+    or has lost the sky to a scale of 0 cannot bomb the harbour. And it never bombs its OWN harbour --
+    the Port serves whoever HOLDS the hex (56.15 gates the convoy lane the same way), so the game-turn
+    the fortress changes hands, besieger and besieged swap. Falls back to the seeded side on a hex
+    neither player has entered, so a scenario that records no control there reads as before."""
     strength = _air_points(r.state, side, "LAND", "strike")
     if strength <= 0:                                    # no committed strike / lost the sky
         return
     port = r.state.port(port_id)
     if port is None or port.eff <= 0:
         return
-    # A harbour belongs to whoever HOLDS the city, not to whoever held it at setup. There is one
-    # Tobruk in the 55.3 chart and one Port object on the hex (scenario._campaign_ports), serving
-    # each side in turn -- rule 56.15 already gates its convoy lane on CONTROL, and this is the
-    # matching read: the game-turn the fortress changes hands, besieger and besieged swap, and
-    # with them who may bomb the quay. That is the whole siege duel -- the holder is fed by sea,
-    # the besieger must bomb the harbour shut -- and it has to run in BOTH directions. Falls back
-    # to the seeded side on a hex neither player has entered, so a scenario that records no
-    # control there reads exactly as before.
     holder = r.state.control_of(port.hex)
     if holder == CONTROL_OF[side] or (holder == Control.NEUTRAL and port.side == side):
         return                                           # never bomb your OWN harbour
-    r.emit(EventKind.PORT_EFFICIENCY_CHANGED, side, f"{side.value}/Air",
-           {"port_id": port.id, "level": port.eff - 1, "strength": strength})
+    d1, d2 = r.d6("air_bombard"), r.d6("air_bombard")    # 41.22: two dice, read sequentially
+    levels = min(_port_bomb_levels(strength, d1, d2), port.eff)
+    new_eff = port.eff - levels
+    r.emit(EventKind.AIR_STRIKE_RESOLVED, side, f"{side.value}/Air",   # certify the [41.5] CRT dice
+           {"arena": "PORT", "target": port.id, "strength": strength,
+            "levels": levels, "eff": new_eff}, rng_draws=(d1, d2))
+    if levels > 0:                                        # a No-Effect (0) leaves the port free to regen
+        r.ports_bombed_this_stage.add(port.id)           # 55.18: lost levels to bombs this stage
+        r.emit(EventKind.PORT_EFFICIENCY_CHANGED, side, f"{side.value}/Air",
+               {"port_id": port.id, "level": new_eff, "strength": strength})
 
 
 def _air_recon(r: _Run, side: Side, tgt: Coord) -> None:

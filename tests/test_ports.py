@@ -18,7 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from game import coords, supply
-from game.engine import (HARBOUR_BLOCKED, _naval_convoys, _port_regen, _Run,
+from game.engine import (_naval_convoys, _port_regen, _Run,
                          determinism_signature, run)
 from game.events import Control, EventKind, Phase, Side
 from game.invariants import check
@@ -188,7 +188,7 @@ def test_efficiency_regens_one_per_opstage_up_to_max():
     # and stops at max_eff.
     p = Port("FREE", Side.AXIS, (0, 0), "major", max_eff=4, eff=1,
              cap_ammo=1, cap_fuel=1, cap_stores=1, cap_water=1, cap_tons=1)
-    assert "FREE" not in HARBOUR_BLOCKED
+    assert p.blocked == 0                                  # an unblocked harbour regenerates to max_eff
     dump = SupplyUnit("D", Side.AXIS, (0, 0), ammo=0, fuel=0)
     s = _port_state(p, dump)
     r = _Run(s)
@@ -200,18 +200,30 @@ def test_efficiency_regens_one_per_opstage_up_to_max():
     assert any(e.kind == EventKind.PORT_EFFICIENCY_CHANGED for e in r.events)
 
 
-def test_blocked_harbour_does_not_regen():
-    # 55.26 / 55.25: a scuttled-ship BLOCK (San Giorgio) is not bomb damage; the 55.18
-    # regen never restores it -- only engineers do (deferred). It stays pinned.
-    assert "PORT-Tobruk" in HARBOUR_BLOCKED
-    p = Port("PORT-Tobruk", Side.ALLIED, (0, 0), "major", max_eff=5, eff=2,
+def test_blocked_harbour_regens_only_up_to_the_scuttled_ceiling():
+    # 55.25 / 55.26: the San Giorgio's block (blocked=3) is not bomb damage; 55.18 regen never
+    # restores the block -- only engineers do (deferred) -- so the regeneration CEILING is
+    # max_eff - blocked = 2, not max_eff. A harbour AT its ceiling does not regen; a harbour bombed
+    # BELOW it recovers up to the ceiling, but never past the scuttled cruiser. (This replaces the
+    # old test that pinned PORT-Tobruk in a never-regenerates HARBOUR_BLOCKED set, which made a bomb
+    # permanent and killed the siege duel -- T0-9/48 V.D/55.18.)
+    from dataclasses import replace
+    p = Port("PORT-Tobruk", Side.ALLIED, (0, 0), "major", max_eff=5, eff=2, blocked=3,
              cap_ammo=1, cap_fuel=1, cap_stores=1, cap_water=1, cap_tons=1)
     dump = SupplyUnit("D", Side.ALLIED, (0, 0), ammo=0, fuel=0)
+    # (a) at the ceiling (eff 2 = 5 - 3): no regeneration, the San Giorgio holds it there.
     r = _Run(_port_state(p, dump))
     for _ in range(4):
         _port_regen(r)
-    assert r.state.port("PORT-Tobruk").eff == 2           # San Giorgio stays
+    assert r.state.port("PORT-Tobruk").eff == 2           # San Giorgio ceiling, stays
     assert not any(e.kind == EventKind.PORT_EFFICIENCY_CHANGED for e in r.events)
+    # (b) bombed below the ceiling: 55.18 recovers it UP TO 2, then stops -- never back to max_eff 5.
+    r2 = _Run(_port_state(replace(p, eff=0), dump))
+    levels = []
+    for _ in range(4):
+        _port_regen(r2)
+        levels.append(r2.state.port("PORT-Tobruk").eff)
+    assert levels == [1, 2, 2, 2]                         # climbs to the ceiling and holds, not to 5
 
 
 # --- San Giorgio seeds Tobruk at 2/5 -----------------------------------------
@@ -224,7 +236,7 @@ def test_tobruk_seeded_at_full_efficiency_per_61_6():
     # listed max of 5; San Giorgio penalty unaccounted -- transcribed, not reconciled).
     assert (tob.eff, tob.max_eff) == (7, 7)
     assert tob.cap_tons == 1700                           # [55.3] Tobruk supply tonnage
-    assert tob.id in HARBOUR_BLOCKED                      # San Giorgio block: no regen (moot at max)
+    assert tob.blocked == 0                               # 61.6 seeds 7/7 verbatim: San Giorgio unaccounted (no block)
     # the built-in dump lives at the port hex (56.28)
     assert s.supply("AL-Tobruk").hex == tob.hex == TOBRUK
 

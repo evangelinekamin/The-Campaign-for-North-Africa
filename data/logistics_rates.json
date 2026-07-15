@@ -305,6 +305,37 @@
     }
   },
 
+  "air_bombardment_41_5": {
+    "_comment": "[41.5] AIR BOMBARDMENT AND SECONDARY BARRAGE TARGETS TABLE, the PORTS row (shared with Airfields / Air Landing Strips), transcribed and eyes-verified cell-by-cell from the scanned foldout chart page 12 (PDF page 107) -- the dense grid that did NOT OCR into docs/rules/90 (only the row labels came through, lines ~1005/1025). Procedure (41.22 / 41.39B): the bombing Player totals his Bomb Points, selects the matching bomb_points column, rolls two dice reading them SEQUENTIALLY as a two-digit code (tens=first die, units=second die: 11,12..16,21..66), and reads the cross-indexed result -- the number of Efficiency LEVELS the port loses (55.1). A result of 0 is No Effect: the port lost no levels this OpStage, so 55.18 lets it regenerate. Each column's die entries partition all 36 sequential codes exactly (guarded by tests/test_air.py). hi=null on the final column is the open 471+ bracket. The Axis Naval Convoy row of this SAME chart lives in axis_naval_convoys_56.air_convoy_bombing_crt_41_66 (already transcribed and tested); the remaining land rows (Supply Dump, Fortification, Railroad, Road, Trucks/Combat Units) are the broader T0-10 job and are not transcribed here.",
+    "ports": {
+      "_row": "Airfields / Air Landing Strips / Ports -- Efficiency Levels lost (41.39B Bombing Ports)",
+      "columns": [
+        {"bomb_points": [1, 20], "results": [
+          {"die": [11, 62], "levels": 0}, {"die": [63, 66], "levels": 1}]},
+        {"bomb_points": [21, 40], "results": [
+          {"die": [11, 55], "levels": 0}, {"die": [56, 66], "levels": 1}]},
+        {"bomb_points": [41, 80], "results": [
+          {"die": [11, 51], "levels": 0}, {"die": [52, 66], "levels": 1}]},
+        {"bomb_points": [81, 120], "results": [
+          {"die": [11, 42], "levels": 0}, {"die": [43, 66], "levels": 1}]},
+        {"bomb_points": [121, 160], "results": [
+          {"die": [11, 36], "levels": 0}, {"die": [41, 62], "levels": 1}, {"die": [63, 66], "levels": 2}]},
+        {"bomb_points": [161, 200], "results": [
+          {"die": [11, 31], "levels": 0}, {"die": [32, 56], "levels": 1}, {"die": [61, 66], "levels": 2}]},
+        {"bomb_points": [201, 260], "results": [
+          {"die": [11, 15], "levels": 0}, {"die": [16, 55], "levels": 1}, {"die": [56, 65], "levels": 2}, {"die": [66, 66], "levels": 3}]},
+        {"bomb_points": [261, 320], "results": [
+          {"die": [11, 12], "levels": 0}, {"die": [13, 46], "levels": 1}, {"die": [51, 64], "levels": 2}, {"die": [65, 66], "levels": 3}]},
+        {"bomb_points": [321, 390], "results": [
+          {"die": [11, 43], "levels": 1}, {"die": [44, 63], "levels": 2}, {"die": [64, 65], "levels": 3}, {"die": [66, 66], "levels": 4}]},
+        {"bomb_points": [391, 470], "results": [
+          {"die": [11, 36], "levels": 1}, {"die": [41, 55], "levels": 2}, {"die": [56, 63], "levels": 3}, {"die": [64, 66], "levels": 4}]},
+        {"bomb_points": [471, null], "results": [
+          {"die": [11, 25], "levels": 1}, {"die": [26, 52], "levels": 2}, {"die": [53, 61], "levels": 3}, {"die": [62, 66], "levels": 4}]}
+      ]
+    }
+  },
+
   "scenario_61_desert_fox_initial_supply": {
     "_comment": "Initial supply placement and port states for the Desert Fox scenario group (docs/rules/61-scenario-group-two-the-desert-fox.md). DATA ONLY: the engine's game/scenario.py currently seeds proxy dumps/ports (see supply_dump_capacity_54_12.engine_proxy_dump_seeds and ports_55_3.engine_proxy). The percentage figures are PLACEMENT constraints on how the pool is split across dumps, not consumption rates. Line numbers cite the current markdown transcription.",
     "axis_dump_split_61_44": {

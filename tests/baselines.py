@@ -10,6 +10,24 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-15 -- CAUSE: the Tobruk-harbour block (T0-9 + 48 V.D + 55.18 + T0-10). The
+Naval Convoy Arrival Phase now runs EVERY Operations Stage (48 V.D: the Second and Third Operations
+Stages repeat all facets of the First, 48 VI/VII), so the turn's SURVIVED convoy manifest unloads
+across the three stages instead of once at Stage 1 -- both benchmarks land the SEA-TOBRUK ferry and
+the rear convoys through a harbour, so their delivery beats move wholesale. Port regeneration (55.18)
+became an end-of-OpStage step conditional on the port not losing levels to Enemy bombs that stage,
+where it was an unconditional once-per-turn step. And the San Giorgio block moved from a
+never-regenerates HARBOUR_BLOCKED frozenset to a per-port blocked-levels count (Port.blocked), so a
+bombed harbour recovers up to max_eff - blocked. (T0-10 -- _air_port rolling on the transcribed [41.5]
+Ports row -- does not touch these two signatures: the DEFAULT rommels_arrival/siege_of_tobruk seed no
+air, so no _air_port fires; it moves only the port_bomb=True variants and the campaign.) NO chart
+magnitude was bent -- these ARE the rules the 1979 book prints (48 V.D, 55.18, 55.25/55.26).
+Determinism holds: each new hash reproduces byte-for-byte across two runs.
+
+    rommels_arrival   885fe7721583 -> c95e597471fc
+    siege_of_tobruk   f1adc99b60b4 -> 14493e87b924
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-14 -- CAUSE: the Phase-0.3 supply-faucet block. Two of its six items move the
 benchmark logs. T0-3: the 55.3 port throttle is ONE shared tonnage budget across ALL commodities per
 Operations Stage (landed proportionally when the manifest outweighs it), not the whole tonnage spent
@@ -84,8 +102,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "885fe7721583"
-SIEGE_OF_TOBRUK = "f1adc99b60b4"
+ROMMELS_ARRIVAL = "c95e597471fc"
+SIEGE_OF_TOBRUK = "14493e87b924"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

@@ -163,12 +163,17 @@ def test_siege_ferry_cut_is_absorbed_by_the_shared_harbour_throttle():
     """THE CORRECTED MODEL (T0-3). The seeded siege_of_tobruk SEA-TOBRUK schedule still fires a CRT
     strike on every ferry (41.6/41.66), but the cut it skims at sea is ABSORBED by the 55.3 harbour
     throttle and total delivery is UNCHANGED -- the plan's own finding: because the 61.36 Supply-Unit
-    ferry over-ships the quay (~7229 t into a 1700 t harbour) and the CRT's maximum skim is 50%, even
-    a maximally-cut cargo still saturates the ONE shared tonnage budget, so the same tonnage lands
-    whether or not the ferry was struck. Malta's interdiction of an OVER-SHIPPED Tobruk lane is
-    arithmetically inert; the lever is the SEEDING (T0-17, applied to the campaign ferry -- not this
-    benchmark). Under the OLD per-commodity throttle the cut LOOKED like it bit, because Fuel/Stores/
-    Water escaped their (per-commodity) caps; 55.3's TOTAL-tonnage cap closes that escape."""
+    ferry over-ships the quay (~7229 t into a 1700 t harbour, now unloaded across the turn's three
+    Operations Stages per 48 V.D) and the CRT's maximum skim is 50%, even a maximally-cut cargo still
+    saturates the shared tonnage budget every stage, so the same tonnage lands whether or not the
+    ferry was struck. Malta's interdiction of an OVER-SHIPPED Tobruk lane is arithmetically inert; the
+    lever is the SEEDING (T0-17, applied to the campaign ferry -- not this benchmark). Under the OLD
+    per-commodity throttle the cut LOOKED like it bit, because Fuel/Stores/Water escaped their
+    (per-commodity) caps; 55.3's TOTAL-tonnage cap closes that escape.
+
+    48 V.D spreads the landing across three Operations Stages, each flooring its proportional tonnage
+    slice (55.3), so the cut and uncut arms may drift by a point or two of pure rounding -- the cut is
+    still absorbed by the shared budget (measured: one Point out of ~33,780)."""
     seed = 3
     cut = run(siege_of_tobruk(seed=seed), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
     uncut = run(replace(siege_of_tobruk(seed=seed), interdictions=()),
@@ -177,8 +182,8 @@ def test_siege_ferry_cut_is_absorbed_by_the_shared_harbour_throttle():
                and e.payload["lane"] == "SEA-TOBRUK"]
     assert strikes, "the seeded schedule must strike the ferry"
     assert all(e.payload["interdictor"] == Side.AXIS.value for e in strikes)
-    assert _ferry_delivered(cut) == _ferry_delivered(uncut), \
-        "the shared 55.3 tonnage budget absorbs the at-sea cut -- interdiction of the over-shipped ferry is inert"
+    assert abs(_ferry_delivered(cut) - _ferry_delivered(uncut)) <= 3, \
+        "the shared 55.3 tonnage budget absorbs the at-sea cut -- interdiction of the over-shipped ferry is inert (bar per-stage rounding)"
     # interdiction-free = byte-identical to the same siege with the schedule stripped
     uncut2 = run(replace(siege_of_tobruk(seed=seed), interdictions=()),
                  ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))

@@ -322,8 +322,15 @@ class Port:
     the 55.3 chart: the full campaign starts Tobruk at eff 2 of max 5 -- the San Giorgio
     scuttled in the harbour costing it three levels (30.17 / 55.25) -- while the Desert Fox
     benchmark uses 61.6's verbatim 7/7. `kind` is "major" (men + supplies) or "minor" (supplies only, 55.11).
-    Efficiency regenerates +1/OpStage up to max_eff (55.18), except a permanent harbour
-    BLOCK that only engineers clear (55.26; see game.engine.HARBOUR_BLOCKED)."""
+
+    `blocked` is the number of Efficiency Levels permanently removed by a harbour BLOCK
+    (55.2 scuttled ship / 55.27 air-laid mine) -- as opposed to bomb damage, which lowers
+    `eff` directly. The distinction is 55.18 vs 55.26: bomb damage REGENERATES (+1/OpStage
+    that the port loses no levels to bombs, up to its ceiling), but a block does NOT -- only
+    engineers clear it (55.26, deferred). So the regeneration ceiling is `max_eff - blocked`,
+    not `max_eff`: Tobruk (max_eff 5, blocked 3 for the San Giorgio) may be bombed below 2
+    and recover UP TO 2, but never past the scuttled cruiser. Default 0 = an unblocked
+    harbour, which regenerates all the way to its assigned maximum."""
     id: str
     side: Side
     hex: Coord
@@ -335,6 +342,7 @@ class Port:
     cap_stores: int
     cap_water: int
     cap_tons: int
+    blocked: int = 0
 
 
 @dataclass(frozen=True, slots=True)

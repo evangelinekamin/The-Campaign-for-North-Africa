@@ -216,21 +216,26 @@ def test_port_bomb_fields_the_luftwaffe_and_a_full_harbour_schedule():
     assert len(daf) == 1 and daf[0].fighters > 0
 
 
-def test_port_bomb_ratchets_tobruk_to_zero_and_never_regenerates():
-    # THE checkpoint: the harbour choke fires under the scripted policies -- PORT-Tobruk's
-    # Efficiency ratchets 7->0 monotonically (HARBOUR_BLOCKED, so no 55.18 regen ever lifts it),
-    # collapsing the per-OpStage landing cap that is the garrison's lifeline. Capture stays latent
-    # (no storm yet, Step 5) -- this proves only that the lifeline itself collapses.
-    from game.supply import port_landing_cap
+def test_port_bomb_contests_the_harbour_which_regenerates_between_the_bombs():
+    # THE DUEL (T0-9 / T0-10 / 55.18), replacing the old one-way ratchet. The Axis harbour-bombing
+    # schedule now ROLLS on the transcribed [41.5] Ports row -- at six proxy strike points (column
+    # 1..20) a level comes off on 4 of 36 rolls -- and 55.18 REGENERATES the harbour +1 every OpStage
+    # it is not bombed down. So PORT-Tobruk's Efficiency is CONTESTED (it dips to the bombs and climbs
+    # back between them), NOT a monotone ratchet to 0. The besieger must roll well and keep rolling to
+    # hold it shut; the benchmark's proxy air does not, so the harbour survives -- that is a MEASUREMENT
+    # of the proxy air strength, not a defect (the real 34.6/59.3 strengths are deferred to Phase 5).
     s = siege_of_tobruk(seed=1941, port_bomb=True, raf=True)
-    assert s.port("PORT-Tobruk").eff == 7
+    assert s.port("PORT-Tobruk").eff == 7 and s.port("PORT-Tobruk").blocked == 0
     a = run(s, ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
-    levels = [e.payload["level"] for e in a.events
-              if e.kind == EventKind.PORT_EFFICIENCY_CHANGED and e.payload["port_id"] == "PORT-Tobruk"]
-    assert levels and levels == sorted(levels, reverse=True)      # monotone non-increasing: no regen
-    assert levels[-1] == 0 and a.final.port("PORT-Tobruk").eff == 0
-    # a closed harbour lands nothing: the ~425-Ammo/OpStage cap collapses to 0.
-    assert port_landing_cap(a.final.port("PORT-Tobruk"), "AMMO") == 0
+    changes = [e for e in a.events if e.kind == EventKind.PORT_EFFICIENCY_CHANGED
+               and e.payload["port_id"] == "PORT-Tobruk"]
+    bombs = [e for e in changes if "strength" in e.payload]       # _air_port losses (41.39B)
+    regens = [e for e in changes if "strength" not in e.payload]  # 55.18 SYSTEM recovery
+    assert bombs, "the Axis air force never knocked a level off the harbour"
+    assert regens, "55.18 never regenerated the harbour -- it is still a one-way ratchet"
+    levels = [e.payload["level"] for e in changes]
+    assert levels != sorted(levels, reverse=True)                 # NOT monotone: it both falls and rises
+    assert a.final.port("PORT-Tobruk").eff > 0                     # recovered -- never bombed shut for good
     # deterministic + replay-exact
     b = run(siege_of_tobruk(seed=1941, port_bomb=True, raf=True),
             ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
@@ -301,70 +306,72 @@ def test_storm_floor_cracks_the_dry_garrison_but_a_timid_staff_never_does():
 # choke (port_bomb) shuts the ferry; and the garrison dump drains to 0 over the campaign, firing the
 # 15.15 dry-stack surrender. seed 4210 is the locked deterministic witness (peak 2351 -> 0 by T9).
 
-def _storm(seed: int = 66, *, port_bomb: bool = True, raf: bool = True):
-    """SEED RE-PINNED 4210 -> 25 (T0-0, per-subsystem dice) -> 43 (T0-5, rule 6.27 Cohesion
-    averaging + 6.24.2 victory RP + 6.26 the -26 no-move/no-attack gate) -> 66 (T0-3, the 55.3 port
-    throttle is ONE shared tonnage budget across all commodities + T0-7, rule 29.35 hot weather
-    DOUBLES water). Whether a sustained storm drains the last Ammunition Point out of Tobruk before
-    the run ends is a race between the garrison's combat expenditure and the choked ferry -- both
-    dice-driven. The faucet block changed how much the ferry lands (the shared tonnage cap now binds
-    the total, not each commodity) and how fast hot-weather water attrition bites, so the cascade
-    reaches the dry-stack surrender on different seeds: on the old seed-43 pin the reservoir now ends
-    at 3 Ammo and Tobruk falls to a storming assault, not the 15.15 dry surrender. MEASURED over
-    seeds 40..120 on the corrected engine, the full chain (both dumps to zero, then the dry-stack
-    auto-capitulation, then Axis capture) fires on 66, 87 and 110; seed 66 is the pin. Every
-    assertion below is unchanged -- only the seed moved."""
+def _storm(seed: int = 66, *, port_bomb: bool = True, raf: bool = True, lw_strike: int | None = None):
+    """The scripted storm siege. `lw_strike`, when set, overrides the Axis Luftwaffe LAND strike
+    weight (a FLAGGED proxy for the deferred 34.6/59.3 Initial Air Strengths, cranked high enough to
+    clear the [41.5] Ports floor every stage and actually shut the harbour). Left None it keeps the
+    seeded six-point proxy, which cannot cut a full-Efficiency harbour."""
     st = siege_of_tobruk(seed, port_bomb=port_bomb, raf=raf)
+    if lw_strike is not None:
+        air = tuple(replace(w, strike=lw_strike) if w.id == "LW-land" else w for w in st.air)
+        st = replace(st, air=air)
     return st, run(st, axis=StormPolicy(attacker=Side.AXIS),
                    allied=ScriptedPolicy(attacker=Side.AXIS))
 
 
-def test_scripted_storm_starves_tobruk_via_15_15_dry_ammo_surrender():
-    from game import supply as _supply
+def test_a_sustained_air_campaign_shuts_the_harbour_and_chokes_the_ferry():
+    """The harbour choke, faithful (T0-9 / T0-10 / 48 V.D / 55.18). A SUSTAINED strong-air campaign
+    -- the deferred 34.6/59.3 Initial Air Strengths, proxied high enough to clear the [41.5] Ports
+    floor every stage -- bombs PORT-Tobruk to Efficiency 0 and holds it there, so the ferry lands a
+    fraction of what it does over an open quay. That is the choke, and it is load-bearing.
+
+    It no longer fires the 15.15 dry-stack surrender inside the 12-turn Race-for-Tobruk clock, and
+    that is a FAITHFUL FINDING, not a regression. 48 V.D lands the ferry three times a Game-Turn, so
+    the built-in harbour reservoir (AL-Tobruk) banks a deep reserve in the two or three turns before
+    the campaign shuts the quay -- and a sea-fed Tobruk resists starvation, exactly as it historically
+    did through an eight-month siege. The full dry-stack payoff is now gated on a longer siege and the
+    deferred stronger/earlier air (Phase 5); this test guards the MECHANISM the payoff will stand on.
+
+    It replaces a test that asserted a 12-turn 15.15 surrender -- which only fired because the
+    pre-48-V.D ferry under-fed the garrison AND the pre-T0-10 harbour ratcheted shut on a flat -1 with
+    no regen. Both were bugs; with the harbour rolling on [41.5] and regenerating (55.18), only a real
+    air campaign can shut it, and a sea-fed fortress survives the clock."""
     from game.state import Control
-    st, r = _storm()
+    st, r = _storm(lw_strike=500)
     target = st.target_hex
 
-    # (1) BOTH garrison-reachable dumps drain to ZERO -- the choked ferry can no longer refill the
-    # built-in reservoir, so the sustained storm empties it (supply starvation, not casualties).
-    assert r.final.supply("AL-Tobruk").ammo == 0
-    assert r.final.supply("AL-Dump#3").ammo == 0
+    # (1) the sustained campaign bombs the harbour to Efficiency 0: it clears the [41.5] Ports floor
+    # every stage, so it outpaces the 55.18 regen (which needs an un-bombed stage it never gets).
+    effs = [e.payload["level"] for e in r.events if e.kind == EventKind.PORT_EFFICIENCY_CHANGED
+            and e.payload["port_id"] == "PORT-Tobruk"]
+    assert effs and min(effs) == 0, "the air campaign never shut the harbour"
 
-    # (2) the fall is the 15.15 dry-stack AUTO-capitulation: a COMBAT_RESOLVED defender surrender
-    # carrying NO morale dice (the _defenders_capitulate branch, not the 17.25 roll), with every
-    # defender genuinely out of Close-Assault ammunition and the largest defender's Cohesion intact
-    # (> -17), so it is 15.15 (dry ammo) and NOT the 15.88 cohesion collapse.
-    idx = next((i for i, e in enumerate(r.events)
-                if e.kind == EventKind.COMBAT_RESOLVED
-                and e.payload.get("target") == list(target)
-                and e.payload.get("surrender") == "defender"), None)
-    assert idx is not None, "the garrison must fall by the 15.15 assault surrender, not attrition"
-    fall = r.events[idx]
-    assert fall.rng_draws == ()                            # auto-capitulation, not a 17.25 morale roll
-    pre = fold(r.initial, r.events[:idx])
-    defenders = [u for u in (pre.unit(d) for d in fall.payload["defenders"])
-                 if u is not None and u.strength > 0]
-    largest = max(defenders, key=lambda u: (u.stacking_points, u.strength))
-    assert largest.cohesion > -17                          # 15.15 (dry ammo), NOT 15.88 (cohesion)
-    assert all(_supply.plan_draw(pre, u, _supply.AMMO,
-                                 _supply.ammo_cost(u, phasing=False, activity="assault")) is None
-               for u in defenders)                         # every defender genuinely dry
+    # (2) the choke is load-bearing: over the shut quay the ferry lands far less than over an open one.
+    def ferry(res):
+        return sum(sum(e.payload["cargo"].values()) for e in res.events
+                   if e.kind == EventKind.SUPPLY_ARRIVED and e.payload.get("lane") == "SEA-TOBRUK")
+    _, open_run = _storm(port_bomb=False)                  # same seed, harbour never touched
+    assert ferry(r) < ferry(open_run) * 0.3, "the shut harbour did not choke the ferry"
 
-    # (3) control flips: a stormer occupies the vacated fortress -> Axis victory.
-    assert r.final.control_of(target) == Control.AXIS
-    assert r.winner == Side.AXIS
+    # (3) FAITHFUL FINDING: the 48-V.D-fed reservoir outlasts the 12-turn clock, so no 15.15 dry-stack
+    # surrender fires and the fortress HOLDS -- a sea-fed Tobruk is hard to starve.
+    assert not any(e.kind == EventKind.COMBAT_RESOLVED and e.payload.get("surrender") == "defender"
+                   and e.payload.get("target") == list(target) for e in r.events)
+    assert r.final.control_of(target) != Control.AXIS
+    assert r.winner == Side.ALLIED
 
     # deterministic + replay-exact
-    _, again = _storm()
+    _, again = _storm(lw_strike=500)
     assert determinism_signature(r.events) == determinism_signature(again.events)
     assert fold(r.initial, r.events) == r.final
 
 
 def test_the_harbour_choke_is_load_bearing_not_atmospheric():
-    # THE load-bearing proof: the SAME storm on the SAME seed with the port-bomb OFF does NOT crack.
-    # With the harbour open the ferry lands thousands of Ammo Points and the garrison dump RISES far
-    # out of the storm's reach, so no 15.15 ever fires -- the eff->0 choke is what starves the
-    # fortress (the historical mechanism: the sea lane decides the siege), not the storm alone.
+    # THE baseline: the SAME storm on the SAME seed with the harbour left OPEN (port-bomb OFF). The
+    # ferry lands tens of thousands of supply Points (48 V.D, three landings a Game-Turn) and the
+    # garrison dump RISES far out of the storm's reach, so the fortress is never even pressured. The
+    # eff->0 choke is what THROTTLES the sea lane -- the sibling test above shuts the harbour and
+    # lands a fraction of this -- and it is the sea lane, not the storm alone, that decides the siege.
     from game.state import Control
     st, held = _storm(port_bomb=False)
     target = st.target_hex

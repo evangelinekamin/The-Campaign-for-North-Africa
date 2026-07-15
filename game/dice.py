@@ -52,6 +52,7 @@ SUBSYSTEMS: tuple[str, ...] = (
     "recon",              # [42.24] the +-2 TOE noise on an air recon
     "naval_bombardment",  # [30.2] the Commonwealth fleet's off-shore fire
     "interdiction",       # [41.66] convoy bombing at sea -- THE conditional drawer (Malta)
+    "air_bombard",        # [41.5] land air bombardment (41.39B harbour bombing rolls the Ports row)
     "breakdown",          # [21.38] the vehicle Breakdown Table
     "repair",             # [22.8] the field-repair columns
     "demolition",         # [54.17] blowing a supply dump

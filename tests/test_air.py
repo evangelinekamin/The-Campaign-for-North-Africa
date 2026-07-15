@@ -260,16 +260,38 @@ def test_fort_bombing_never_batters_your_own_works():
 
 # --- PORT bombing (41.39B): reuse PORT_EFFICIENCY_CHANGED --------------------
 
-def test_port_bombing_knocks_efficiency_down():
+def test_port_bombing_rolls_the_41_5_ports_row():
+    # 41.39B / 41.5: harbour bombing ROLLS on the [41.5] Ports row (T0-10) -- no more flat -1. The
+    # committed strike Air Points pick the Bomb-Point column, and 2d6 read sequentially (41.22) give
+    # the Efficiency Levels lost. This replaces the old test that pinned a flat -1 with no die.
     from game.state import Port
+    from game.engine import _port_bomb_levels
+    # (a) the pure lookup, transcribed and eyes-verified from PDF p107: at 6 bomb points (column
+    # 1..20) it is 0 on codes 11..62 and 1 on 63..66; a big raid (column 471+) always hurts.
+    assert _port_bomb_levels(6, 1, 1) == 0                       # code 11 -> 0
+    assert _port_bomb_levels(6, 6, 2) == 0                       # code 62 -> 0
+    assert _port_bomb_levels(6, 6, 3) == 1                       # code 63 -> 1
+    assert _port_bomb_levels(500, 1, 1) == 1 and _port_bomb_levels(500, 6, 6) == 4
+    assert _port_bomb_levels(0, 6, 6) == 0                       # below the table floor: nothing
+    # (b) integration: _air_port draws two air_bombard dice, certifies them on an AIR_STRIKE_RESOLVED
+    # marker, and drops the port's Efficiency by exactly the [41.5] result -- a 0 emits NO change.
     port = Port("PORT-X", Side.ALLIED, (2, 0), kind="major", max_eff=5, eff=4,
                 cap_ammo=400, cap_fuel=400, cap_stores=400, cap_water=400, cap_tons=1000)
     r = _Run(_strike_state(ports=(port,),
                            missions=(AirMission(Side.AXIS, "port", "PORT-X", 1),)))
     _air_support(r, Side.AXIS, set())
+    marker = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED
+              and e.payload.get("arena") == "PORT"]
+    assert len(marker) == 1                                      # the roll is always logged
+    d1, d2 = marker[0].rng_draws
+    levels = _port_bomb_levels(marker[0].payload["strength"], d1, d2)
+    assert marker[0].payload["levels"] == levels
     pe = [e for e in r.events if e.kind == EventKind.PORT_EFFICIENCY_CHANGED]
-    assert len(pe) == 1 and pe[0].payload["level"] == 3         # 41.39B: -1 absolute eff
-    assert r.state.port("PORT-X").eff == 3
+    if levels > 0:
+        assert len(pe) == 1 and pe[0].payload["level"] == 4 - levels
+        assert r.state.port("PORT-X").eff == 4 - levels
+    else:                                                        # No Effect: no change, free to regen (55.18)
+        assert not pe and r.state.port("PORT-X").eff == 4
 
 
 def test_port_bombing_never_bombs_your_own_harbour():
@@ -332,8 +354,12 @@ def test_fort_and_port_bombing_carry_committed_strength():
     r2 = _Run(_strike_state(air_strike=6, ports=(port,),
                             missions=(AirMission(Side.AXIS, "port", "PORT-X", 1),)))
     _air_support(r2, Side.AXIS, set())
-    pe = [e for e in r2.events if e.kind == EventKind.PORT_EFFICIENCY_CHANGED]
-    assert len(pe) == 1 and pe[0].payload["strength"] == 6
+    marker = [e for e in r2.events if e.kind == EventKind.AIR_STRIKE_RESOLVED
+              and e.payload.get("arena") == "PORT"]
+    assert len(marker) == 1 and marker[0].payload["strength"] == 6   # committed strike rides the marker
+    for pe in r2.events:                                             # and any efficiency drop carries it too
+        if pe.kind == EventKind.PORT_EFFICIENCY_CHANGED:
+            assert pe.payload["strength"] == 6
 
 
 # --- superiority scaling (the Step-3 gate read at mission time) --------------

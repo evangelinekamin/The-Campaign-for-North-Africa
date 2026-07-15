@@ -227,3 +227,13 @@ def convoy_bombing_crt_41_66() -> list:
     picks the column by total Bomb Points, then reads 2d6 SEQUENTIALLY as a two-digit
     code (tens=first die, units=second) and looks up the tens-of-percent cargo lost."""
     return _data()["axis_naval_convoys_56"]["air_convoy_bombing_crt_41_66"]["columns"]
+
+
+def air_port_bombing_crt_41_5() -> list:
+    """[41.39B] the PORTS row of the [41.5] Air Bombardment & Secondary Barrage Targets
+    Table (shared with Airfields / Air Landing Strips): the ordered Bomb-Point columns of
+    the harbour-bombing CRT. Each column carries its bomb_points bracket [lo, hi] (hi=None
+    on the open 471+ bracket) and a `results` list of {die: [lo, hi], levels}: the engine
+    picks the column by total Bomb Points, then reads 2d6 SEQUENTIALLY as a two-digit code
+    (tens=first die, units=second) and looks up the number of Efficiency Levels lost."""
+    return _data()["air_bombardment_41_5"]["ports"]["columns"]

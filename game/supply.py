@@ -109,9 +109,14 @@ def port_landing_cap(port: Port, commodity: str) -> int:
 
 
 def regen_eff(port: Port) -> int | None:
-    """55.18: a port regains one Efficiency Level per OpStage, up to its assigned maximum.
-    Returns the new level, or None if already at max_eff (nothing to regenerate)."""
-    return port.eff + 1 if port.eff < port.max_eff else None
+    """55.18: a port regains one Efficiency Level per OpStage, up to its regeneration
+    CEILING. The ceiling is max_eff MINUS any permanent block (55.2 scuttled ship /
+    55.27 mine, Port.blocked), because a block is not bomb damage and 55.18 never
+    restores it -- only engineers do (55.26). So a bombed harbour recovers up to
+    max_eff - blocked, never past the wreck. Returns the new level, or None if already
+    at (or above) the ceiling -- nothing to regenerate."""
+    ceiling = port.max_eff - port.blocked
+    return port.eff + 1 if port.eff < ceiling else None
 
 SUPPLY_CPA = 15                     # CPA of an MP-carried supply unit (rule 32.58A)
 SUPPLY_MOVE_FUEL = 1               # Fuel to relocate a real supply unit / OpStage (32.24)

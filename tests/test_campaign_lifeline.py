@@ -45,7 +45,7 @@ from game.campaign_policy import (CampaignAxisPolicy,                    # noqa:
                                   _CampaignAxisSupplyMixin, _without_staging,
                                   take_and_hold_moves, take_and_hold_supply)
 from game.campaign_staff import CampaignStaffPolicy                      # noqa: E402
-from game.engine import (HARBOUR_BLOCKED, _air_support, _convoy_dest,   # noqa: E402
+from game.engine import (_air_support, _convoy_dest,   # noqa: E402
                          _Run, determinism_signature, run)
 from game.events import Control, EventKind, Side                         # noqa: E402
 from game.policy import ScriptedPolicy                                   # noqa: E402
@@ -74,7 +74,7 @@ def test_tobruk_is_one_harbour_not_two():
     tob = at_tobruk[0]
     assert st.port_at(TOBRUK) is tob                      # ...so port_at is unambiguous
     assert tob.id == "PORT-Tobruk"                        # the id the San Giorgio block keys off
-    assert tob.id in HARBOUR_BLOCKED                      # 55.25/55.26: no 55.18 regen, ever
+    assert tob.blocked == 3                               # 55.25/55.26: the San Giorgio holds the regen ceiling at 2
     assert tob.cap_tons == 1700                           # [55.3] the chart, verbatim
     assert (tob.eff, tob.max_eff) == (2, 5)               # [55.3] max Efficiency 5; 55.25 San Giorgio starts it at 2
     # ...and it is flagged with the side that HOLDS Tobruk on Game-Turn 1 (rule 64.2): the Axis.
@@ -142,47 +142,50 @@ def test_the_commonwealth_can_fight_the_axis_tobruk_lane():
     assert cut and all(e.side == Side.ALLIED for e in cut)      # the interdictor is the Commonwealth
 
 
-def test_the_axis_tobruk_garrison_is_fed_by_sea_until_the_harbour_is_bombed_shut():
+def test_the_axis_tobruk_garrison_is_fed_by_sea_through_a_harbour_that_is_fought_over():
     """The point of the whole exercise, in BOTH halves. The Axis holding Tobruk is supplied FROM THE
     SEA -- not by a sixty-hex truck haul out of a Benghazi the Commonwealth can switch off -- and
-    that lifeline is CUTTABLE. Both halves, or it is not a siege: it is a freehold.
+    that lifeline is CONTESTABLE. Both halves, or it is not a siege: it is a freehold.
 
-    The lane lands into the staging dump under the fortress while the harbour works. Then the Desert
-    Air Force bombs the harbour (41.39B, engine._air_port), and because PORT-Tobruk is
-    HARBOUR_BLOCKED -- the scuttled San Giorgio, which only engineers clear (55.26) -- the
-    Efficiency it loses never comes back. The 425-Point/OpStage throat ratchets shut and the lane
-    stops sailing for the rest of the war.
+    The lane lands into the staging dump under the fortress while the harbour works. The Desert Air
+    Force bombs the harbour (41.39B, engine._air_port ROLLING on the transcribed [41.5] Ports row),
+    knocking Efficiency Levels off -- but the San Giorgio's block only holds the regeneration ceiling
+    at 2 (blocked=3); it is NOT a one-way ratchet. 55.18 recovers bomb damage +1 every OpStage the
+    quay is not bombed down, so the harbour is FOUGHT OVER: it dips to the bombs and climbs back, and
+    the lane keeps feeding between the cuts. At the proxy six strike Air Points the Commonwealth rolls
+    a level off on only 4 of 36 codes, so the harbour survives and the fortress stays fed -- that
+    balance is a MEASUREMENT of the deferred air strengths (34.6/59.3), not a magnitude to bend here.
 
-    UNTIL THIS SLICE THIS TEST ASSERTED THE LANE LANDED ON ALL TWELVE TURNS, and that was precisely
-    the bug. campaign() seeded air=(), so no AirWing existed, so engine._air_port could never fire,
-    so no harbour could ever fall below full efficiency and NO SEA LANE COULD EVER BE CUT. Measured:
-    the Axis lane landed 425 Ammunition Points a turn into a garrison drawing three and a half -- a
-    121x oversupply -- and the Commonwealth interdicted it on 111 turns out of 111 while denying it
-    exactly ZERO Ammunition, because the 41.66 CRT skims a percentage off a cargo the 55.14 port cap
-    has already clipped back to 425 anyway. Tobruk's 200 Victory Points belonged permanently to
-    whoever stood there on Game-Turn 1. Only efficiency 0 cuts a sea lifeline."""
+    THIS TEST REPLACES TWO SUCCESSIVE WRONG ONES: the faucet slice asserted the lane landed on all
+    twelve turns uncuttably (campaign() seeded no air, so _air_port never fired), then the harbour
+    slice asserted the OPPOSITE -- that one bomb shut the quay for the rest of the war (HARBOUR_BLOCKED
+    made bomb damage permanent). Both were bugs; T0-9 / 48 V.D / 55.18 make it the duel it should be."""
     res = run(campaign(seed=1941, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     landed = [e for e in res.events
               if e.kind == EventKind.SUPPLY_ARRIVED and e.payload["lane"] == AXIS_LANE]
 
-    # (1) THE LIFELINE IS REAL: it sails while the harbour works, into the dump under the fortress.
+    # (1) THE LIFELINE IS REAL: it sails, into the dump under the fortress, carrying ammunition.
     assert landed, "the Axis never got a single sea delivery into the Tobruk it holds"
     assert all(e.payload["supply_id"] == AX_DUMP for e in landed)
     assert sum(e.payload["cargo"].get("AMMO", 0) for e in landed) > 0
 
-    # (2) AND IT IS CUTTABLE: the Commonwealth bombs the harbour to nothing, and it STAYS there.
-    bombs = [e for e in res.events
-             if e.kind == EventKind.PORT_EFFICIENCY_CHANGED
-             and e.payload["port_id"] == "PORT-Tobruk" and e.side == Side.ALLIED]
+    # (2) AND IT IS CONTESTED: the Commonwealth bombs the harbour (Efficiency Levels come off)...
+    changes = [e for e in res.events if e.kind == EventKind.PORT_EFFICIENCY_CHANGED
+               and e.payload["port_id"] == "PORT-Tobruk"]
+    bombs = [e for e in changes if e.side == Side.ALLIED and "strength" in e.payload]
+    regens = [e for e in changes if "strength" not in e.payload]
     assert bombs, "the Desert Air Force never touched the harbour"
-    assert res.final.port("PORT-Tobruk").eff == 0, "the harbour was never actually shut"
-    assert "PORT-Tobruk" in HARBOUR_BLOCKED                      # 55.26: no 55.18 regen, ever
 
-    # (3) SO THE LANE STOPS. Nothing lands once the throat is closed -- that is the whole siege.
-    shut = min(e.turn for e in bombs if e.payload["level"] == 0)
-    assert not [e for e in landed if e.turn > shut], \
-        "the sea lane went on landing supply into a harbour that had been bombed shut"
-    assert len(landed) < 12, "the lane was never cut -- the fortress is still invulnerable"
+    # (3) ...BUT IT REGENERATES (55.18): bomb damage recovers up to the ceiling, so the harbour is NOT
+    # a one-way ratchet -- it ends the run open (eff > 0), never bombed shut for good.
+    assert regens, "55.18 never regenerated the harbour -- it is still a permanent ratchet"
+    assert res.final.port("PORT-Tobruk").eff > 0, "the harbour was bombed permanently shut (the old bug)"
+
+    # (4) SO THE LANE KEEPS FEEDING across the campaign -- the duel throttles the lifeline, it does not
+    # sever it. (With the weak proxy air the fortress stays fed; the real air strengths are the lever.)
+    turns_landed = {e.turn for e in landed}
+    assert len(turns_landed) >= 10, \
+        "the sea lane stopped feeding -- the harbour was treated as permanently cut, not fought over"
 
 
 # --- (A2) THE HARBOUR DUEL: WHOEVER BESIEGES, BOMBS ------------------------------------------------
@@ -207,10 +210,13 @@ def test_both_air_forces_exist_and_the_besieger_is_the_one_who_bombs():
     assert {m.side for m in missions} == {Side.AXIS, Side.ALLIED}, "the duel is one-sided"
 
     # the Axis HOLDS Tobruk at Game-Turn 1, so the Commonwealth is the besieger and bombs; the Axis
-    # mission is refused against its own harbour. The engine reads control, not the seeded flag.
+    # mission is refused against its own harbour. The engine reads control, not the seeded flag. Read
+    # the bomb RUN off the AIR_STRIKE_RESOLVED marker (emitted whenever _air_port passes its guards,
+    # even on a [41.5] result of 0) -- not the Efficiency change, which fires only on a nonzero roll
+    # AND is also emitted by the 55.18 regen under the harbour owner's side.
     res = run(campaign(seed=1941, max_turns=8), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
-    bombs = [e for e in res.events if e.kind == EventKind.PORT_EFFICIENCY_CHANGED
-             and e.payload["port_id"] == "PORT-Tobruk"]
+    bombs = [e for e in res.events if e.kind == EventKind.AIR_STRIKE_RESOLVED
+             and e.payload.get("target") == "PORT-Tobruk"]
     assert bombs, "nobody bombed the harbour"
     assert {e.side for e in bombs} == {Side.ALLIED}, \
         "the Axis bombed the harbour of the city it is standing in"
@@ -227,14 +233,16 @@ def test_a_side_never_bombs_the_harbour_of_a_city_it_holds():
     both = tuple(AirMission(s, "port", "PORT-Tobruk", 1) for s in (Side.AXIS, Side.ALLIED))
 
     def bombers(holder: Control) -> set:
-        """Who actually gets a bomb through, with `holder` standing in the city."""
+        """Who actually flies a bomb RUN at the harbour, with `holder` standing in the city. Read from
+        the AIR_STRIKE_RESOLVED marker (emitted whenever _air_port passes its guards, even on a [41.5]
+        result of 0), not the Efficiency change -- which fires only on a nonzero roll."""
         state = replace(st, control={**st.control, TOBRUK: holder}, air_missions=both)
         out = set()
         for side in (Side.AXIS, Side.ALLIED):
             r = _Run(state)
             _air_support(r, side, set())                  # the side flies its due LAND missions
-            if any(e.kind == EventKind.PORT_EFFICIENCY_CHANGED
-                   and e.payload["port_id"] == "PORT-Tobruk" for e in r.events):
+            if any(e.kind == EventKind.AIR_STRIKE_RESOLVED
+                   and e.payload.get("target") == "PORT-Tobruk" for e in r.events):
                 out.add(side)
         return out
 
