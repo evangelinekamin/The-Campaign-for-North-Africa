@@ -61,8 +61,9 @@ CAPITAL_SHIP_KINDS: frozenset = frozenset({"BB", "CA"})
 # port ids that never regenerated at all, which conflated the scuttling with "the harbour
 # can never recover from anything". It is now a per-port count of blocked Efficiency Levels
 # (Port.blocked), so a blocked harbour still regenerates bomb damage up to its lowered
-# ceiling (max_eff - blocked) -- the San Giorgio holds Tobruk's ceiling at 2, but the Axis
-# air force must keep bombing to suppress it below that. supply.regen_eff reads the ceiling.
+# ceiling (max_eff - blocked) -- the San Giorgio holds Tobruk's ceiling at 2 of the 55.3 listed
+# 5 (scenario._tobruk_port seeds it, campaign and benchmark alike), but the besieging air force
+# must keep bombing to suppress it below that. supply.regen_eff reads the ceiling.
 
 
 @dataclass(frozen=True, slots=True)

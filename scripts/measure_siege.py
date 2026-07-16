@@ -50,7 +50,10 @@ OUT = Path(__file__).resolve().parent.parent / "out"
 
 # FLAGGED scenario-schedule tuning proxies for the siege TEMPO (NOT rulebook magnitudes) --
 # push the first harbour bomb later, bomb every N-th turn, field a stronger contesting RAF so
-# the eff 7->0 cut lands ~turn 6-7 and the 12-turn clock is a genuine race, not a foregone cut.
+# the eff 2->0 cut lands ~turn 6-7 and the 12-turn clock is a genuine race, not a foregone cut.
+# (The quay starts at the charted 55.3 eff 2 of 5 -- the San Giorgio's block, scenario._tobruk_port
+# -- so there are two levels to knock off, not seven; these dials were last measured against the
+# old 7/7 seed and want re-measuring.)
 PORTBOMB_START = 1
 PORTBOMB_CADENCE = 1
 RAF_FIGHTERS = 3

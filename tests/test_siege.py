@@ -225,7 +225,12 @@ def test_port_bomb_contests_the_harbour_which_regenerates_between_the_bombs():
     # hold it shut; the benchmark's proxy air does not, so the harbour survives -- that is a MEASUREMENT
     # of the proxy air strength, not a defect (the real 34.6/59.3 strengths are deferred to Phase 5).
     s = siege_of_tobruk(seed=1941, port_bomb=True, raf=True)
-    assert s.port("PORT-Tobruk").eff == 7 and s.port("PORT-Tobruk").blocked == 0
+    # WAS eff 7 / blocked 0. The harbour now seeds at its charted [55.3] Efficiency 2 of a listed max
+    # 5 with the San Giorgio blocking three levels (55.25, scenario._tobruk_port) -- so the duel is
+    # fought over a SHORTER ladder (two levels above zero, and 55.18 climbs back only to the blocked
+    # ceiling of 2, never to 5). The thesis below is unchanged and still holds on it.
+    assert (s.port("PORT-Tobruk").eff, s.port("PORT-Tobruk").max_eff) == (2, 5)
+    assert s.port("PORT-Tobruk").blocked == 3
     a = run(s, ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
     changes = [e for e in a.events if e.kind == EventKind.PORT_EFFICIENCY_CHANGED
                and e.payload["port_id"] == "PORT-Tobruk"]
@@ -347,11 +352,22 @@ def test_a_sustained_air_campaign_shuts_the_harbour_and_chokes_the_ferry():
     assert effs and min(effs) == 0, "the air campaign never shut the harbour"
 
     # (2) the choke is load-bearing: over the shut quay the ferry lands far less than over an open one.
+    #
+    # THE BAR MOVED 0.3 -> 0.4 BECAUSE THE LADDER DID, not because the choke got weaker. Tobruk now
+    # seeds at its charted [55.3] Efficiency 2 of a listed max 5 (scenario._tobruk_port), so BOTH runs
+    # are throttled: the open quay lands 680 t/OpStage (2/5 of 1700), not 1700. The bombed harbour
+    # oscillates 0 <-> 1 (bombed to 0, 55.18 claws one level back on the next stage, bombed to 0
+    # again), and an eff-1 stage lands 340 t = EXACTLY HALF an eff-2 stage -- 1/5 against 2/5 of the
+    # same 1700 t rating. So 0.5 is the arithmetic CEILING this duel can approach and only the stages
+    # bombed clean to 0 push it below; measured 0.346 (4683 vs 13536 cargo points). Under the old 7/7
+    # seed the same 0 <-> 1 oscillation scored 1/7 of an open 7/7 quay, which is why 0.3 fit then and
+    # cannot now. 0.4 keeps real regression teeth: it still demands the bombs zero a large share of
+    # stages, and a choke that decayed to "harbour merely at eff 1" would score 0.5 and trip it.
     def ferry(res):
         return sum(sum(e.payload["cargo"].values()) for e in res.events
                    if e.kind == EventKind.SUPPLY_ARRIVED and e.payload.get("lane") == "SEA-TOBRUK")
     _, open_run = _storm(port_bomb=False)                  # same seed, harbour never touched
-    assert ferry(r) < ferry(open_run) * 0.3, "the shut harbour did not choke the ferry"
+    assert ferry(r) < ferry(open_run) * 0.4, "the shut harbour did not choke the ferry"
 
     # (3) FAITHFUL FINDING: the 48-V.D-fed reservoir outlasts the 12-turn clock, so no 15.15 dry-stack
     # surrender fires and the fortress HOLDS -- a sea-fed Tobruk is hard to starve.

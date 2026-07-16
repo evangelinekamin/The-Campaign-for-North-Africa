@@ -190,7 +190,7 @@
   },
 
   "ports_55_3": {
-    "_comment": "[55.3] PORT CAPACITY AND EFFICIENCY LEVEL CHART. Per Operations Stage a port ships 'in'/'out' that many STACKING POINTS. Efficiency Level = damage the port absorbs; losing one level cuts capacity by a fraction of 1/level. Stacking-points handled and tonnage handled are independent; Axis-convoy REPLACEMENT points off-load by the stacking-point schedule, not tonnage. Reinforcements are never gated by port capacity/efficiency. Special: Bizerta unusable by Axis before Game-Turn 35 (then roll to activate); Tobruk begins BELOW its listed efficiency 5 because the scuttled San Giorgio partially blocks the harbour; Bardia/Sollum in=0 but any one 0-stacking-point unit may still be shipped in. Port UNBLOCK costs (54.x demolition/repair table): Tobruk 25 Ammo + 10 Stores per level; Benghazi 100 Ammo + 50 Stores; other ports 50 Ammo + 25 Stores. ENGINE PROXY: game/scenario.py TOBRUK_PORT_CAP {ammo 300, fuel 100, stores 500, water 150} + eff 2/5, rear ports one Supply-Unit load -- the real chart is in STACKING POINTS not commodity points, so the engine's per-commodity port caps are a re-derivation, not the chart.",
+    "_comment": "[55.3] PORT CAPACITY AND EFFICIENCY LEVEL CHART. Per Operations Stage a port ships 'in'/'out' that many STACKING POINTS. Efficiency Level = damage the port absorbs; losing one level cuts capacity by a fraction of 1/level. Stacking-points handled and tonnage handled are independent; Axis-convoy REPLACEMENT points off-load by the stacking-point schedule, not tonnage. Reinforcements are never gated by port capacity/efficiency. Special: Bizerta unusable by Axis before Game-Turn 35 (then roll to activate); Tobruk begins BELOW its listed efficiency 5 because the scuttled San Giorgio partially blocks the harbour; Bardia/Sollum in=0 but any one 0-stacking-point unit may still be shipped in. Port UNBLOCK costs (54.x demolition/repair table): Tobruk 25 Ammo + 10 Stores per level; Benghazi 100 Ammo + 50 Stores; other ports 50 Ammo + 25 Stores. ENGINE: game/scenario.py _tobruk_port seeds Tobruk from the values here -- max_eff = this listed efficiency_level (5), eff = 5 - 3 = 2 and blocked = 3 for the San Giorgio (55.25) -- and _caps_tonnage seeds every port's per-commodity Point caps _UNLIMITED so the port_supply_tonnage_55_3 MAXIMUM TONNAGE column is the sole 55.14 gate (the STACKING POINT in/out schedule below is transcribed but NOT yet enforced -- nothing reads efficiency_and_stacking's stacking_in/stacking_out: the engine gates tonnage only, so 55.13's TOE-Strength-Point limit and the legend's rule that Axis-convoy replacement points off-load by the stacking schedule are a FLAGGED gap). The UNBLOCK costs are transcribed but unreachable until the 55.26 engineer-clearing action exists (deferred).",
     "efficiency_and_stacking": {
       "tripoli":      {"efficiency_level": 10, "stacking_in": 10, "stacking_out": 15},
       "bizerta":      {"efficiency_level": 10, "stacking_in": 10, "stacking_out": 15, "note": "Axis-unusable before Game-Turn 35"},
@@ -208,11 +208,13 @@
       "benghazi_per_level": {"ammo": 100, "stores": 50},
       "other_per_level":    {"ammo": 50, "stores": 25}
     },
-    "engine_proxy": {
-      "tobruk_port_cap_points": {"ammo": 300, "fuel": 100, "stores": 500, "water": 150},
-      "tobruk_tons": 1200,
-      "tobruk_eff": "2 of 5",
-      "location": "game/scenario.py TOBRUK_PORT_CAP / _rommel_ports()"
+    "engine_note": {
+      "_comment": "NOT a proxy any more -- every magnitude the engine seeds Tobruk with is charted and read from this file. Superseded the old TOBRUK_PORT_CAP {ammo 300, fuel 100, stores 500, water 150} + 1200 t re-derivation, which invented per-commodity Point caps the chart does not print; the caps are now _UNLIMITED and the charted MAXIMUM TONNAGE is the sole 55.14 gate.",
+      "tobruk_max_eff": "5 -- the listed efficiency_level, which is also the chart legend's damage denominator (one lost level = 1/5 of capacity)",
+      "tobruk_eff": "2 of 5 -- the dagger footnote ('below the listed five') + 55.25's three-level San Giorgio block",
+      "tobruk_blocked": "3 -- Port.blocked, so 55.18 regeneration stops at the ceiling of 2 (55.26 engineer clearing deferred)",
+      "tobruk_tons": 1700,
+      "location": "game/scenario.py _tobruk_port() -- the ONE seed, shared by campaign() and rommels_arrival(); it also records why the 60.7/61.6 printed Efficiency 7 is not followed"
     }
   },
 
@@ -368,7 +370,7 @@
       "fuel": 100, "ammo": 50, "stores": 150
     },
     "initial_port_states_61_6": {
-      "_comment": "[61.6] Construction on the map at start (line 210): all ports begin at their full (listed 55.3) Efficiency Level EXCEPT the two below -- Benghazi scuttled to zero, Tobruk at seven with the San Giorgio still blocking the harbour. FLAG: Tobruk's scenario start of 7 exceeds the 55.3 listed maximum of 5 (and the -3 San Giorgio penalty per 55.25 is unaccounted for); transcribed faithfully verbatim as the rulebook states it -- do not silently reconcile.",
+      "_comment": "[61.6] Construction on the map at start (line 210): all ports begin at their full (listed 55.3) Efficiency Level EXCEPT the two below -- Benghazi scuttled to zero, Tobruk at seven with the San Giorgio still blocking the harbour. Transcribed verbatim as the rulebook states it; NOT reconciled here. FLAG -- THE ENGINE DOES NOT FOLLOW tobruk_efficiency: the printed 7 (60.7 prints the digit, 61.6 the word 'seven'; both verified on the scan, PDF p79/p81, so it is the book's own contradiction and not an OCR artifact) exceeds the 55.3 listed maximum of 5, which 55.18 forbids ('can never go above its maximum assigned level'), and the chart legend defines capacity only as a reduction FROM the listed level -- so an Efficiency 7 on a listed-5 port has no defined capacity at all. game/scenario.py _tobruk_port seeds the charted 2 of 5 (55.3 dagger + 55.25's -3) instead and carries the full reasoning; this row stays as the faithful record of what the page prints.",
       "benghazi_efficiency": 0,
       "tobruk_efficiency": 7,
       "all_other_ports": "full listed 55.3 efficiency level"

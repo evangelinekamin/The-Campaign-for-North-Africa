@@ -253,7 +253,7 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
             if c.side == side and c.arrival_turn >= state.turn
         ][:REACH_LIMIT],
         # Own-side port efficiency (rules 55/56.28): the Quartermaster's harbour gauge --
-        # 'landing at 3/5 after a harbour bombing' -- so a throttled port (and the
+        # 'landing at 2/5, San Giorgio in the harbour' -- so a throttled port (and the
         # supply it is NOT bringing ashore) is a legible fact, not an invisible number.
         "your_ports": [
             {"id": p.id, "hex": list(p.hex), "eff": p.eff, "max_eff": p.max_eff,

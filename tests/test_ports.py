@@ -5,12 +5,14 @@ the effective per-OpStage receiving capacity is ceil(cap * eff / max_eff) (55.14
 so a harbour crippled by bombs or a scuttled ship lands only a fraction of a convoy.
 A permanent harbour BLOCK (55.2 scuttle / 55.27 mine) lowers the regen ceiling to
 max_eff - blocked and needs engineers to clear (55.26); bomb damage regenerates
-+1/OpStage up to that ceiling (55.18). The scenario setups seed Tobruk at the 60.7/
-61.6 Efficiency 7/7 (the San Giorgio is folded into that 7, not a separate block).
-Tonnage <-> points crosses the 54.5 Equivalent Weights at the port edge only. These
-tests pin the throttle, the regen (blocked and unblocked), the 61.6 full-Efficiency
-seed, the byte-identity of port-less scenarios, and the ACCEPTANCE that the ferry
-feeds the garrison through the 55.3 shared tonnage budget."""
++1/OpStage up to that ceiling (55.18). Every scenario seeds Tobruk from ONE place
+(scenario._tobruk_port): the [55.3] chart's Efficiency 2 of a listed max 5, with the
+San Giorgio blocking three levels (55.25) -- NOT the 60.7/61.6 printed "Efficiency 7",
+which exceeds the listed maximum 55.18 forbids exceeding (that function records the
+scan reading and the reasons). Tonnage <-> points crosses the 54.5 Equivalent Weights
+at the port edge only. These tests pin the throttle, the regen (blocked and unblocked),
+the charted Tobruk seed, the byte-identity of port-less scenarios, and the ACCEPTANCE
+that the ferry feeds the garrison through the 55.3 shared tonnage budget."""
 from __future__ import annotations
 
 import math
@@ -228,39 +230,61 @@ def test_blocked_harbour_regens_only_up_to_the_scuttled_ceiling():
     assert levels == [1, 2, 2, 2]                         # climbs to the ceiling and holds, not to 5
 
 
-# --- 61.6 seeds Tobruk at full Efficiency 7/7 --------------------------------
+# --- 55.3 seeds Tobruk at the charted Efficiency 2 of 5, San Giorgio blocking ------
 
-def test_tobruk_seeded_at_full_efficiency_per_61_6():
+def test_tobruk_seeded_at_the_charted_efficiency_with_the_san_giorgio_block():
     s = rommels_arrival()
     tob = s.port_at(TOBRUK)
     assert tob is not None, "Tobruk must have a built-in port (56.28)"
-    # [61.6] the rulebook seeds Tobruk at Efficiency 7 of 7 verbatim (above its 55.3
-    # listed max of 5; San Giorgio penalty unaccounted -- transcribed, not reconciled).
-    assert (tob.eff, tob.max_eff) == (7, 7)
+    # WAS (7, 7)/blocked 0, on 61.6's printed "at seven". RESTATED to the chart, which is what the
+    # engine now seeds (scenario._tobruk_port, campaign and benchmark from the same call): [55.3]
+    # lists Tobruk at Efficiency Level 5 / 1700 t, its dagger says the campaign "begins ... below the
+    # listed five due to the San Girogio partially blocking the harbor", and 55.25 makes that block
+    # three levels -> eff 2. The 60.7/61.6 "7" is really printed (scan p79 digit, p81 word) but is
+    # unrepresentable: 55.18 forbids a level above the 55.3 assigned maximum, and the chart legend
+    # denominates capacity loss on the LISTED level, so a 7 on a listed-5 port has no defined
+    # capacity. Not a weakened assertion -- a corrected one, and max_eff is now a charted magnitude.
+    assert (tob.eff, tob.max_eff) == (2, 5)
     assert tob.cap_tons == 1700                           # [55.3] Tobruk supply tonnage
-    assert tob.blocked == 0                               # 61.6 seeds 7/7 verbatim: San Giorgio unaccounted (no block)
+    assert tob.blocked == 3                               # [55.25] "reduces the efficiency level of Tobruk by three levels"
     # the built-in dump lives at the port hex (56.28)
     assert s.supply("AL-Tobruk").hex == tob.hex == TOBRUK
 
 
-def test_tobruk_ferry_feeds_the_garrison_at_full_efficiency():
-    # At 61.6 Efficiency 7/7 the ferry lands its manifest through the 55.3 SHARED tonnage budget
-    # (1700 t): the manifest outweighs it, so every commodity lands the same proportional slice.
-    # That throttled STORES delivery must still cover the garrison's ~176 Stores/turn peak draw.
+def test_tobruk_ferry_feeds_the_garrison_through_the_crippled_harbour():
+    # THE THESIS IS UNCHANGED -- the ferry must still feed the garrison -- but the harbour it feeds
+    # through is now the charted one (eff 2 of 5, San Giorgio; scenario._tobruk_port), so the 55.3
+    # SHARED tonnage budget is 680 t/OpStage, not 1700. The manifest outweighs it either way, so
+    # every commodity lands the same proportional slice.
+    #
+    # RESTATED, NOT WEAKENED: this asserted `d.stores >= 180` after ONE _naval_convoys call, which
+    # silently compared a single OPERATIONS STAGE's landing against the garrison's ~176 Stores per
+    # GAME-TURN draw. Those are different time units, and the old 7/7 seed hid the mismatch by
+    # landing 235 Stores in one stage. 48 V.D lands the survived manifest across the turn's THREE
+    # Operations Stages, so the honest comparison runs all three and holds them to the same ~176
+    # per-turn draw -- a STRICTER test of the same claim, and the crippled harbour still clears it.
     # Run the ACTUAL landing edge (engine._naval_convoys), don't recompute it, so the test tracks
     # the real shared-budget throttle rather than the per-commodity sub-cap.
+    from dataclasses import replace
     s = rommels_arrival()
     tob = s.port_at(TOBRUK)
     ferry = next(c for c in s.convoys if c.lane == "SEA-TOBRUK")
     dump = SupplyUnit("D", Side.ALLIED, tob.hex, ammo=0, fuel=0, stores=0, water=0)
     conv = Convoy("f", Side.ALLIED, 1, "SEA-TOBRUK", "D", dict(ferry.cargo))
     r = _Run(_port_state(tob, dump, [conv]))
-    _naval_convoys(r)
+    per_stage = []
+    for stage in (1, 2, 3):                                # 48 V.D: the Arrival Phase runs each stage
+        r.state = replace(r.state, stage=stage)
+        before = r.state.supply("D").stores
+        _naval_convoys(r)
+        per_stage.append(r.state.supply("D").stores - before)
+        landed_tons = sum(e.payload["tons"] for e in r.events
+                          if e.kind == EventKind.PORT_UNLOADED and e.stage == stage)
+        assert landed_tons <= supply.port_tonnage_budget(tob)   # 55.3 shared budget respected, EVERY stage
     d = r.state.supply("D")
     assert all(getattr(d, c.lower()) > 0 for c in supply.COMMODITIES)   # every commodity lands something
-    assert d.stores >= 180                                              # covers the ~176 Stores peak draw
-    landed_tons = sum(getattr(d, c.lower()) * supply.TONS_PER_POINT[c] for c in supply.COMMODITIES)
-    assert landed_tons <= supply.port_tonnage_budget(tob)              # 55.3 shared budget respected
+    assert min(per_stage) > 0                                          # and lands every stage, not just the first
+    assert d.stores >= 180                                             # the turn covers the ~176 Stores peak draw
 
 
 # --- port-less scenarios stay byte-identical ---------------------------------
@@ -288,10 +312,13 @@ def test_tobruk_holds_6_of_6_through_the_port():
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         assert res.final.control_of(TOBRUK) != Control.AXIS, f"Tobruk fell (seed {seed})"
         assert not _def_surrender_at_objective(res.events), f"garrison surrendered (seed {seed})"
-        # the ferry lands through PORT-Tobruk at its 61.6 Efficiency 7
+        # the ferry lands through PORT-Tobruk at its charted [55.3] Efficiency 2 of 5 (the San
+        # Giorgio's block, 55.25) -- WAS eff 7, the 61.6 printed seed the engine no longer follows
+        # (scenario._tobruk_port). rommels_arrival seeds no air, so nothing bombs the quay off 2 and
+        # the acceptance holds at the STRICTER 680 t/OpStage the chart allows: Tobruk still stands.
         beats = [e for e in res.events if e.kind == EventKind.PORT_UNLOADED
                  and e.payload["port_id"] == "PORT-Tobruk"]
-        assert beats and all(b.payload["eff"] == 7 for b in beats), f"ferry not landing at eff 7 (seed {seed})"
+        assert beats and all(b.payload["eff"] == 2 for b in beats), f"ferry not landing at eff 2 (seed {seed})"
 
 
 def test_determinism_preserved_with_ports():

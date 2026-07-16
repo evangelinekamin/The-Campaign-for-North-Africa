@@ -20,11 +20,12 @@ from dataclasses import replace
 from . import (calendar, campaign_victory, cna_map, coords, logistics_data, oob, villages,
                wells)
 from .events import Phase, Side
-from .hexmap import distance, neighbors
+from .hexmap import Coord, distance, neighbors
 from .movement import TerrainMap, edge
 from .state import (AirMission, AirWing, Convoy, GameState, InterdictionOrder,
                     Port, RommelArrival, StepRecord, SupplyUnit, TruckFormation, Unit, VP)
-from .supply import COMMODITIES, TONS_PER_POINT, _UNLIMITED, tons_to_points
+from .supply import (COMMODITIES, TONS_PER_POINT, _UNLIMITED, port_tonnage_budget,
+                     tons_to_points)
 from .terrain import Hexside, Mobility, Terrain
 
 LENGTH = 8
@@ -339,18 +340,18 @@ def _load_cargo() -> dict:
 
 
 def _campaign_tobruk_cargo() -> dict:
-    """The per-Game-Turn Tobruk lifeline cargo -- BOTH the Commonwealth ferry and the Axis lane 6 --
-    sized to what that harbour can actually land, so the lane no longer plans 3.5x its quay (T0-17).
-    55.3 rates Tobruk 1700 t; 64.3 -> 60.7 / 61.6 start the harbour at Efficiency 7/7 (see
-    _campaign_ports), so its full 1700 t/OpStage crosses (54.5) to the shared budget. The old
-    _load_cargo() shipped 7229 t -- over four times the quay -- and 56.27 forbids shipping over
-    capacity (the un-landable overflow was silently annihilated). FLAGGED PROXY: this keeps the
-    representative 61.36 MIX but scales its tonnage to the harbour, inventing no new ratio; the real
-    fix is the 56.21/56.22 convoy-planning decision (deferred, T1-9)."""
+    """The per-Game-Turn Tobruk lifeline cargo -- BOTH the Commonwealth ferry and the Axis lane 6
+    into the San-Giorgio-crippled harbour -- sized to what that harbour can actually land, so the
+    lane no longer plans 3.5x its quay (T0-17). Asks the SEEDED port for its budget (_tobruk_port,
+    which is the one place the 55.3-vs-60.7/61.6 Efficiency question is decided) rather than
+    restating the number here: 1700 t at eff 2/5 -> 680 t/OpStage. The old _load_cargo() shipped
+    7229 t -- 1500 Ammunition into a quay that lands ~170 -- and 56.27 forbids shipping over capacity
+    (the un-landable overflow was silently annihilated). FLAGGED PROXY: this keeps the representative
+    61.36 MIX but scales its tonnage to the harbour, inventing no new ratio; the real fix is the
+    56.21/56.22 convoy-planning decision (deferred, T1-9)."""
     base = _load_cargo()
     base_tons = sum(base[c] * TONS_PER_POINT[c] for c in base)
-    tob = _PORT_TONS["tobruk"]
-    budget = tob["tons"]                                          # 60.7/61.6: eff 7/7 -> the full 1700 t/OpStage
+    budget = port_tonnage_budget(_tobruk_port(Side.AXIS, coords.to_axial(coords.parse(_TOBRUK))))
     frac = budget / base_tons
     return {c: max(1, math.floor(base[c] * frac)) for c in base}
 
@@ -360,6 +361,73 @@ def _caps_tonnage(tons: int) -> dict:
     plus the 55.3 tonnage rating crossed to Points at the landing edge (54.5)."""
     return {"cap_ammo": _UNLIMITED, "cap_fuel": _UNLIMITED, "cap_stores": _UNLIMITED,
             "cap_water": _UNLIMITED, "cap_tons": tons}
+
+
+# 55.25, verbatim: "The San Giorgio reduces the efficiency level of Tobruk by three levels."
+_SAN_GIORGIO_BLOCK = 3
+
+
+def _tobruk_port(side: Side, hex_: Coord) -> Port:
+    """THE ONE Tobruk harbour -- seeded HERE for every scenario (campaign and benchmark alike),
+    because the book prints two irreconcilable starting Efficiencies for it and the choice between
+    them must be made once, in one place, with its reasons attached.
+
+    WHAT THE BOOK PRINTS (the three disputed sites -- the 55.3 chart, 60.7 and 61.6 -- were rendered
+    from the original scan and read by eye, page numbers below; the rest are docs/rules):
+
+      [55.12] -- "Every port in the game has an Efficiency Level, which is an abstract number
+          assigned to that port. For example, TOBRUK HAS AN EFFICIENCY LEVEL OF 5." (The rules
+          proper, naming this port's number outright -- and 55.12 is the rule Port.max_eff cites.)
+      [55.14] -- "a port with an assigned Efficiency Level of 5 that has had its Level reduced to 3
+          operates at 3/5 (or 60%) of its assigned capacity" -- i.e. supply.port_tonnage_budget's
+          eff/max_eff, worked on Tobruk's own 5.
+      [55.3] Port Capacity and Efficiency Level Chart (PDF p110 = play-aid booklet p15) --
+          "Tobruk†  Efficiency Level 5 | In 1 | Out 3 | Maximum Tonnage 1,700"
+      [55.3] legend -- "A loss of one level of efficiency decreases the port's capacity by a
+          fraction equal to one over the LISTED efficiency level."
+      [55.3] footnote † -- "Begins the campaign with an efficiency below the listed five due to
+          the San Girogio [sic] partially blocking the harbor."
+      [55.25] -- "The San Giorgio reduces the efficiency level of Tobruk by three levels."  => 5 - 3 = 2
+      [55.18] -- a port regains +1/OpStage but "can never go above its maximum assigned level
+          (see Case 55.3)."
+      [60.7]  (PDF p79) -- "Tobruk, which is at Efficiency Level 7 (the San Giorgio is partially
+          sunk, blocking the harbor)."
+      [61.6]  (PDF p81) -- "Tobruk (at seven-and San Giorgio is still there)."
+
+    THE CONTRADICTION IS THE BOOK'S OWN, not an OCR artifact: the scan shows the digit 7 in 60.7 and
+    the word "seven" in 61.6, on two different pages, so no single mis-read produces both (the port
+    plan's guess that 7 is a mis-scanned 2 is refuted -- but its conclusion, 2, is right). SEVEN
+    printed statements -- 55.12, 55.14, 55.18, the chart row, the legend, the dagger, 55.25 -- put
+    this harbour at a listed 5 starting at 2; two (60.7, 61.6) put it at 7 while stating in the same
+    breath that the San Giorgio is present.
+
+    JUDGEMENT CALL, FLAGGED -- WE FOLLOW THE CHART, and the campaign and benchmark agree on it:
+      1. A 7 is not representable in the chart's own machinery. 55.18 forbids a level above the 55.3
+         assigned maximum, 55.12 assigns this port 5 by name, and the legend defines capacity only as
+         a REDUCTION from the listed level -- an Efficiency 7 on a listed-5 port has no defined
+         capacity at all.
+      2. Seeding max_eff=7 to make the 7 fit would silently re-denominate the legend's charted
+         per-level damage fraction from 1/5 to 1/7 (each [41.5] harbour hit costing 243 t instead of
+         340 t) -- bending a printed chart magnitude to rescue a number, which is backwards.
+      3. It would also make 55.25/55.26 and the charted Tobruk unblock cost (25 Ammo + 10 Stores,
+         chart 90:1335) dead content: with no block there is nothing for engineers to clear.
+      4. 60.7's own parenthetical explains Tobruk as the EXCEPTION to "all ports at listed
+         Efficiency" BECAUSE the San Giorgio blocks it -- i.e. the exception is a reduction, which
+         only 2 is and 7 is not.
+    The 7 is transcribed as printed in data/logistics_rates.json initial_port_states_61_6 (flagged
+    there as not followed); it is not reconciled away, and it is not silently obeyed either.
+
+    So: max_eff = the chart's LISTED 5 (also the legend's damage denominator), blocked = the 55.25
+    three-level block, eff = 5 - 3 = 2 = the regeneration ceiling. Bomb damage below 2 still recovers
+    +1/OpStage (55.18) but never past the wreck (55.26, engineer clearing deferred), so the besieger
+    must keep bombing to hold the quay shut. The chart's 1,700 t at eff 2/5 crosses (54.5) to a
+    680 t/Operations-Stage SHARED budget across all commodities -- the real gate on either side's
+    Tobruk lifeline."""
+    tob = _PORT_TONS["tobruk"]
+    listed = tob["efficiency_level"]                     # [55.3] 5 -- the chart, not a literal here
+    return Port("PORT-Tobruk", side, hex_, "major",
+                max_eff=listed, eff=listed - _SAN_GIORGIO_BLOCK, blocked=_SAN_GIORGIO_BLOCK,
+                **_caps_tonnage(tob["tons"]))            # [55.3] 1700 t
 
 
 def _axis_rear(supplies, target):
@@ -386,11 +454,10 @@ def _cw_railhead(supplies, target):
 def _rommel_ports(supplies, target) -> tuple[Port, ...]:
     """The scenario's ports and their built-in dumps (56.28), seeded from the real 55.3
     tonnages + the 61.6 scenario Efficiency Levels. Tonnage is the sole 55.14 gate (the
-    per-commodity caps are _UNLIMITED). Per 61.6: Tobruk starts at Efficiency 7 of 7 -- "at seven
-    -- and San Giorgio is still there" (61.6, verbatim), above its 55.3 listed max of 5 and its
-    55.25 San-Giorgio -3 (which would give 2). That chart-vs-setup inconsistency is deliberate, not
-    an OCR error (60.7 prints the digit 7, 61.6 the word "seven"; scan PDF p110 chart / p79 / p81),
-    so the 7 is transcribed as printed, matching the full campaign (_campaign_ports).
+    per-commodity caps are _UNLIMITED). Tobruk comes from _tobruk_port -- the ONE place the
+    55.3-chart-vs-60.7/61.6-setup Efficiency contradiction is decided (chart: eff 2 of a listed 5,
+    San Giorgio blocking 3) -- so this benchmark and the full campaign cannot drift apart. 61.6's
+    printed "at seven" is NOT followed; see that function for the scan reading and the reasons.
 
     The rear Axis supply port is TRIPOLI (55.3 Efficiency 10, 15000 t/OpStage) -- the real
     main Axis harbour, working at full efficiency. STEP 5 repointed it here from the scuttled
@@ -399,8 +466,7 @@ def _rommel_ports(supplies, target) -> tuple[Port, ...]:
     (_rommel_trucks) must now bridge. The Commonwealth base proxies Alexandria (55.3 15000 t)
     at full efficiency. Tonnages are the real 55.3 chart; the port geography (rearmost Axis
     dump / easternmost CW dump) is the scenario proxy for off-corridor Tripoli/Alexandria."""
-    ports = [Port("PORT-Tobruk", Side.ALLIED, target, "major", max_eff=7, eff=7,
-                  **_caps_tonnage(_PORT_TONS["tobruk"]["tons"]))]        # 61.6 eff 7; 55.3 1700 t
+    ports = [_tobruk_port(Side.ALLIED, target)]          # 55.3: eff 2 of 5 (San Giorgio), 1700 t
     axis_rear = _axis_rear(supplies, target)
     if axis_rear is not None:
         ports.append(Port("PORT-Tripoli", Side.AXIS, axis_rear.hex, "major",
@@ -442,7 +508,8 @@ def _rommel_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy
     destination dump (clipped by the 54.12 dump cap then the 55.14 port throttle):
 
       - SEA-TOBRUK (56.3/30): the Tobruk ferry, every game-turn, feeding AL-Tobruk through
-        PORT-Tobruk (61.6 eff 7/7 = full) -- the load-bearing garrison lifeline.
+        PORT-Tobruk (55.3 eff 2/5, the San Giorgio blocking it) -- the load-bearing garrison
+        lifeline.
       - CW-RAILHEAD (rule 57): the abstract Commonwealth rail feed to the Egyptian railhead
         (easternmost CW dump), refilling it through the full-efficiency CW base every game-
         turn. The physical 54.3 rail HAUL driver is deferred (see rommels_arrival), so this
@@ -542,9 +609,10 @@ def _tobruk_port_bomb(max_turns: int, start: int = _TOBRUK_PORTBOMB_START,
     """The static Axis harbour-bombing schedule against PORT-Tobruk (rule 41.39B): one 'port'
     LAND air mission per scheduled game-turn, each ROLLING on the [41.5] Ports CRT (engine._air_port)
     for the Efficiency Levels knocked off -- and the harbour regenerates (55.18) any OpStage it is not
-    bombed down, so the schedule must sustain the pressure to shut the ~425-Ammo/OpStage landing cap
-    that is the garrison's lifeline (the benchmark Tobruk is seeded 7/7 with no block, so the ceiling
-    is the full 7). `start`/`cadence` are FLAGGED tuning proxies for the siege TEMPO (how fast the
+    bombed down, so the schedule must sustain the pressure to shut the ~141-Ammo/OpStage landing cap
+    that is the garrison's lifeline (Tobruk is seeded at the 55.3 eff 2 of 5 with the San Giorgio
+    blocking three levels, so 55.18 recovers a bombed quay only back up to that ceiling of 2 -- see
+    _tobruk_port). `start`/`cadence` are FLAGGED tuning proxies for the siege TEMPO (how fast the
     throat closes against the 12-turn clock)."""
     return tuple(AirMission(Side.AXIS, "port", "PORT-Tobruk", t)
                  for t in range(start, max_turns + 1, cadence))
@@ -991,7 +1059,7 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
     # It lands in AX-Stage-Tobruk, the 60.34 staging dump standing ON the city, so the garrison
     # traces to it at distance 0 -- the exact mirror of AL-Tobruk under the ferry. Neither lane is
     # a free faucet: engine._naval_convoys throttles both through the ONE 55.3 harbour (1700 t at
-    # eff 7/7 -> a 1700 t/OpStage SHARED tonnage budget; see _campaign_ports), and 56.15 cancels whichever of
+    # eff 2/5 -> a 680 t/OpStage SHARED tonnage budget; see _tobruk_port), and 56.15 cancels whichever of
     # them is sailing into a city the enemy now controls. They hand off automatically, in both
     # directions, for as many times as the fortress changes hands.
     convoys += [Convoy(f"tobruk-ferry-t{gt}", Side.ALLIED, gt, "SEA-TOBRUK", "AL-Tobruk",
@@ -1031,7 +1099,7 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
     rail lane feeds (rule 60.7). The bottomless Cairo/Alexandria MAJOR_CITY base needs no port.
 
     AND TOBRUK -- which is A HARBOUR, NOT A POSSESSION. There is ONE Tobruk in the 55.3 chart
-    (1700 t; charted max Efficiency 5, but seeded at the 60.7/61.6 scenario-start Efficiency 7) and
+    (1700 t, Efficiency Level 5, "starts below eff 5 -- San Giorgio partially blocks harbour") and
     ONE Port object here, because that is how the engine already reads a port: GameState.port_at is
     keyed by HEX, engine._naval_convoys throttles whatever lands there with no side test at all, and
     rule 56.15 gates the sailing on CONTROL of the destination hex. So the harbour serves whoever
@@ -1041,15 +1109,12 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
     _CAMPAIGN_CONTROL: it was an Italian port and Italy supplied its army through it), which is what
     engine._air_port reads to decide whose harbour may be bombed.
 
-    Kept under the id PORT-Tobruk, seeded at Efficiency 7/7. Rule 64.3 routes the campaign's setup
-    through Section 60 (Italian-Offensive start) or 61 (Rommel start), and BOTH 60.7 ("Efficiency
-    Level 7") and 61.6 ("at seven -- and San Giorgio is still there") place Tobruk at 7 at the start,
-    ABOVE the [55.3] chart's listed max of 5 and its San-Giorgio-reduced 2 (55.25). That is a genuine
-    chart-vs-scenario-setup inconsistency in the 1979 rules, transcribed as printed -- the specific
-    scenario setup governs the starting state -- NOT reconciled to 2, and matching the Desert Fox
-    benchmark (_rommel_ports). The 1700-t rating is the chart's; at eff 7/7 it crosses (54.5) to the
-    full 1700 t/Operations-Stage SHARED tonnage budget across all commodities, which is the real gate
-    on either side's Tobruk lifeline."""
+    Kept under the id PORT-Tobruk and seeded by _tobruk_port -- the ONE place the harbour's disputed
+    starting Efficiency is decided, shared with the Desert Fox benchmark (_rommel_ports) so the two
+    cannot drift apart. It reads the [55.3] chart: eff 2 of a listed max 5, the San Giorgio blocking
+    three levels (55.25), 1700 t crossing (54.5) to a 680 t/Operations-Stage SHARED tonnage budget
+    across all commodities -- the real gate on either side's Tobruk lifeline. 60.7's printed
+    "Efficiency Level 7" is NOT followed; the scan reading and the reasons live in _tobruk_port."""
     ports = []
     rear = _axis_rear(supplies, target)
     if rear is not None:
@@ -1063,20 +1128,7 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
         eff = chart["efficiency_level"]
         ports.append(Port("PORT-Matruh", Side.ALLIED, railhead.hex, "major", max_eff=eff, eff=eff,
                           **_caps_tonnage(chart["tons"])))
-    tob = _PORT_TONS["tobruk"]      # 55.3: Tobruk 1700 t (charted max Efficiency 5; seeded 7 -- below)
-    # 64.3 routes the campaign's start through Section 60 (Italian Offensive) or 61 (Rommel), and
-    # BOTH setups seed Tobruk at Efficiency 7: 60.7 prints "Efficiency Level 7" (digit), 61.6 prints
-    # "at seven -- and San Giorgio is still there" (word). That 7 is ABOVE the [55.3] chart's listed
-    # maximum of 5 (and above the footnote/55.25 San-Giorgio -3, which would give 2) -- a genuine
-    # chart-vs-scenario-setup inconsistency in the 1979 rules, NOT an OCR error (an original "5"
-    # cannot render as both the digit 7 in 60.7 AND the word "seven" in 61.6, on two different pages;
-    # verified on the scan, PDF p110 chart / p79 rule 60.7 / p81 rule 61.6). The specific scenario
-    # setup governs the STARTING state, so the faithful seed is 7/7 -- matching the Desert Fox
-    # benchmark (_rommel_ports). No blocked= term: 60.7/61.6 give the NET starting Efficiency with the
-    # San Giorgio already reflected, not a value to reduce again. At eff 7/7 the chart's 1700 t crosses
-    # (54.5) to the full 1700 t/OpStage shared budget.
-    ports.append(Port("PORT-Tobruk", Side.AXIS, coords.to_axial(coords.parse(_TOBRUK)), "major",
-                      max_eff=7, eff=7, **_caps_tonnage(tob["tons"])))
+    ports.append(_tobruk_port(Side.AXIS, coords.to_axial(coords.parse(_TOBRUK))))
     return tuple(ports)
 
 
@@ -1097,7 +1149,7 @@ def _campaign_air() -> tuple[AirWing, ...]:
     with state.air empty no air beat fires at all, engine._air_port is unreachable, and no port can
     ever lose Efficiency. And interdiction alone cannot cut the lane: the 41.66 CRT skims a
     PERCENTAGE off a cargo the 55.3 SHARED tonnage budget has already clipped to the harbour's
-    1700 t/OpStage (eff 7/7), so a cut that still leaves the manifest over the budget lands the same
+    680 t/OpStage (1700 t at eff 2/5), so a cut that still leaves the manifest over the budget lands the same
     tonnage -- arithmetically inert (see the Tobruk interdiction tests). Only bombing the harbour's
     Efficiency down ([41.5], _air_port) actually chokes a sea lane, and the harbour regenerates
     (55.18) between the bombs, so it takes a sustained air campaign to keep it shut."""
@@ -1118,10 +1170,11 @@ def _campaign_air_missions(max_turns: int) -> tuple[AirMission, ...]:
     automatically, in both directions, as many times as the fortress changes hands -- exactly as
     the 56.15 convoy lane already hands the sea route from one side to the other.
 
-    PORT-Tobruk starts at Efficiency 7/7 (64.3 -> 60.7 / 61.6; see _campaign_ports), and bomb damage
-    is NOT a one-way ratchet: a level knocked off the quay by [41.5] regenerates +1 every OpStage the
-    harbour is not bombed (55.18, _port_regen). So a besieger who rolls a [41.5] level off the quay
-    must keep rolling to hold it down -- one bomb no longer shuts the lifeline for good. That is what
+    PORT-Tobruk starts at the 55.3 Efficiency 2 of 5, the San Giorgio blocking three levels (55.25;
+    see _tobruk_port), and bomb damage is NOT a one-way ratchet: a level knocked off the quay by
+    [41.5] regenerates +1 every OpStage the harbour is not bombed, up to that blocked ceiling of 2
+    (55.18/55.26, _port_regen). So a besieger who rolls a [41.5] level off the quay must keep rolling
+    to hold it down -- one bomb no longer shuts the lifeline for good. That is what
     makes Tobruk's 200 Victory Points something a side has to
     EARN and then keep fed, instead of the free gift of whoever happened to be standing there on
     Game-Turn 1.

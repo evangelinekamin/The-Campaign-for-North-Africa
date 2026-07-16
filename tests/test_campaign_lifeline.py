@@ -14,8 +14,8 @@ Smashing in three seeds, Axis Decisive/Marginal in the other two.
 
 THE FIX IS THE RULEBOOK'S OWN. The 56.18 Convoy Air Distance chart names six Axis convoy lanes, and
 TWO OF THEM RUN TO TOBRUK (5 Greece->Tobruk, 6 Italy->Tobruk). So the Axis sails lane 6 into the
-harbour it holds, through the same ONE 55.3 Tobruk port (1700 t, seeded at the 60.7/61.6 start
-Efficiency 7) the ferry lands
+harbour it holds, through the same ONE 55.3 Tobruk port (1700 t, seeded at the charted Efficiency 2
+of 5 with the San Giorgio blocking three levels -- scenario._tobruk_port) the ferry lands
 through, and the 56.15 gate hands the harbour from one side to the other the Game-Turn the city
 changes hands. The siege of Tobruk becomes the duel it historically was: the holder is fed by sea,
 and the besieger must CUT THE SEA LANE (_campaign_tobruk_axis_interdiction -- the Mediterranean
@@ -75,17 +75,23 @@ def test_tobruk_is_one_harbour_not_two():
     tob = at_tobruk[0]
     assert st.port_at(TOBRUK) is tob                      # ...so port_at is unambiguous
     assert tob.id == "PORT-Tobruk"                        # the id the harbour keys off
-    assert tob.blocked == 0                               # 60.7/61.6 seed the NET Efficiency 7 (San Giorgio folded in), no separate block
+    # RESTATED to the chart (WAS 7/7, blocked 0, on 60.7's printed "Efficiency Level 7"): the engine
+    # seeds every Tobruk from scenario._tobruk_port, which reads [55.3] -- listed Efficiency 5, less
+    # the San Giorgio's three levels (55.25) = 2 -- because a 7 exceeds the listed maximum 55.18
+    # forbids exceeding, and reading 7 as the max would re-denominate the chart legend's own damage
+    # fraction from 1/5 to 1/7. Same call seeds the Desert Fox benchmark, so the two agree by
+    # construction. Corrected, not weakened: these are the charted magnitudes.
+    assert tob.blocked == 3                               # [55.25] the San Giorgio blocks three levels
     assert tob.cap_tons == 1700                           # [55.3] the chart, verbatim
-    assert (tob.eff, tob.max_eff) == (7, 7)               # 64.3 -> 60.7 "Efficiency Level 7"; matches the 61.6 benchmark 7/7
+    assert (tob.eff, tob.max_eff) == (2, 5)               # [55.3] listed 5, "begins ... below the listed five"
     # ...and it is flagged with the side that HOLDS Tobruk on Game-Turn 1 (rule 64.2): the Axis.
     assert tob.side == Side.AXIS
     assert st.control_of(TOBRUK) == Control.AXIS
     # 55.3 gates the lifeline by ONE shared tonnage budget across all commodities (not a per-commodity
-    # cap): 1700 t at eff 7/7 crosses (54.5) to the full 1700 t per Operations Stage -- the real gate on
+    # cap): 1700 t at eff 2/5 crosses (54.5) to 680 t per Operations Stage -- the real gate on
     # either side's Tobruk lifeline, which the besieger must cut (by bombing the harbour) to force a
     # 15.15 surrender.
-    assert port_tonnage_budget(tob) == 1700               # ceil(1700 * 7/7)
+    assert port_tonnage_budget(tob) == 680               # ceil(1700 * 2/5)
 
 
 def test_both_sides_have_a_tobruk_sea_lane():

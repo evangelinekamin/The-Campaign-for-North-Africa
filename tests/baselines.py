@@ -10,6 +10,34 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-16 -- CAUSE: the Tobruk port Efficiency, resolved to the [55.3] chart.
+
+The book prints two irreconcilable starting Efficiencies for Tobruk, and both were verified against
+the original scan (not the OCR): the [55.3] chart (PDF p110) lists "Tobruk† Efficiency Level 5 |
+Maximum Tonnage 1,700", its dagger says the campaign "begins ... with an efficiency below the listed
+five due to the San Girogio [sic] partially blocking the harbor", and 55.25 makes that block three
+levels -> eff 2. But 60.7 (PDF p79) prints "Tobruk, which is at Efficiency Level 7" and 61.6 (p81)
+"Tobruk (at seven-and San Giorgio is still there)" -- the digit on one page, the word on another, so
+it is the book contradicting itself, not a mis-read.
+
+THE ENGINE NOW FOLLOWS THE CHART, campaign and benchmark from one call (scenario._tobruk_port):
+eff 2, max_eff 5, blocked 3. The 7 is unrepresentable in the chart's own machinery -- 55.18 forbids a
+level above the 55.3 assigned maximum, and the legend defines capacity only as a reduction FROM the
+listed level, so a 7 on a listed-5 port has no defined capacity. This REVERSES the previous commit,
+which seeded 7/7 by raising max_eff to 7: that silently re-denominated the legend's charted per-level
+damage fraction from 1/5 to 1/7 (each [41.5] harbour hit costing 243 t instead of 340 t) and left
+55.25/55.26 and the charted Tobruk unblock cost as dead content. NO chart magnitude is bent now --
+max_eff IS the listed level, and both benchmarks' Tobruk drops from a 1700 t/OpStage shared budget to
+the charted 680 t (1700 at eff 2/5), so every ferry landing in both logs moves wholesale.
+
+The acceptance survives the stricter harbour: Tobruk still holds 6/6 in test_ports, and the garrison's
+~176 Stores/turn draw is still covered (94/OpStage x the 48 V.D three stages = 282). Determinism holds:
+each new hash reproduces byte-for-byte across two runs.
+
+    rommels_arrival   b07f0230d4d3 -> bfedbc714c50
+    siege_of_tobruk   27dd33318b00 -> e9ecbb40f2f8
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-15 -- CAUSE: T0-11, weather localisation (29.7) + truck-cargo evaporation (29.34).
 Foul weather no longer blankets the whole theatre: a Sandstorm/Rainstorm now lands on only the 2-3
 map-sections the 29.7 Foul Weather Location Table names (29.41 keeps a sandstorm off the delta), every
@@ -121,8 +149,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "b07f0230d4d3"
-SIEGE_OF_TOBRUK = "27dd33318b00"
+ROMMELS_ARRIVAL = "bfedbc714c50"
+SIEGE_OF_TOBRUK = "e9ecbb40f2f8"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 
