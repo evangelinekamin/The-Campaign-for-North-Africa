@@ -245,8 +245,8 @@ def test_campaign_is_deterministic():
 
 def test_runs_full_span_to_campaign_victory():
     # The headline: the engine runs the entire GT1..111 campaign and terminates through
-    # rule 64.7 (a graded 64.76 result or an auto-win/annihilation), not the built-in
-    # Race-for-Tobruk logic.
+    # rule 64.7 (a graded 64.76 result, or the 64.71 auto-win -- the only automatic end the
+    # rule defines), not the built-in Race-for-Tobruk logic.
     res = run(campaign(seed=CAMPAIGN_SEED), axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
     assert res.final.turn <= FINAL_GT                      # by December 1942 (earlier if 64.7 auto-win)
     assert res.winner in (Side.AXIS, Side.ALLIED, None)    # None = a 64.76 draw

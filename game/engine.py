@@ -112,6 +112,13 @@ class _Run:
         # across the turn's three Operations Stages (48 V.D), each stage capped by the port's
         # per-OpStage tonnage budget. Rebuilt every turn at Stage 1.
         self.convoy_manifest: dict[str, dict] = {}
+        # The VictorySpec's scratchpad, for a condition the board alone cannot answer: 64.71
+        # asks whether the Axis has held Alexandria and Cairo "for one full Game-Turn", which
+        # is a fact about the RUN, not about the state. It cannot live on the spec object -- a
+        # spec is built once per built state (game.scenario.campaign) and two runs of that one
+        # state must not share a clock -- so it lives here, with the rest of the per-run
+        # bookkeeping, and dies with the run. Empty for every spec that needs no memory.
+        self.victory_scratch: dict = {}
 
     def emit(self, kind: EventKind, side: Side, actor: str, payload: dict,
              rng_draws: tuple[int, ...] = ()) -> None:
@@ -3063,11 +3070,12 @@ def _final_decision(r: _Run) -> tuple[Side, str]:
 
 class VictorySpec(Protocol):
     """A scenario's victory conditions as a strategy (rules 61.8 / 64.7). `check` is
-    the per-turn test run every Record Phase (auto-win / annihilation; returns the
-    winning Side or None to play on); `decide` is the terminal tally at max_turns
-    (always names a winner). Both receive the live `_Run` so a spec may read the full
-    board and emit its own events. A scenario selects a spec via GameState.victory;
-    None routes to _DEFAULT_VICTORY below."""
+    the per-turn test run every Record Phase (the auto-win; returns the winning Side
+    or None to play on); `decide` is the terminal tally at max_turns (always names a
+    winner). Both receive the live `_Run` so a spec may read the full board, emit its
+    own events, and remember across checks in `_Run.victory_scratch` (64.71's hold
+    clock). A scenario selects a spec via GameState.victory; None routes to
+    _DEFAULT_VICTORY below."""
 
     def check(self, r: "_Run") -> tuple["Side | None", str]: ...
 
