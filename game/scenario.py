@@ -654,9 +654,14 @@ def _campaign_staging_dumps() -> list[SupplyUnit]:
     """The historical Axis coastal staging dumps (rule 60.34), Axis-held at Game-Turn 1 -- the
     intermediate depots that let the lean Benghazi truck pool relay its landed tonnage forward
     LEG BY LEG (each hop <= one 30-CP truck move, rule 53.22) instead of in one impossible ~75-
-    hex jump to the front. Three are pre-stocked from the 60.34 chart (Tobruk, Bardia, Derna); the
-    rest are empty waypoints spaced along the Via Balbia -- Benghazi -> W1 -> W2 -> Derna -> W3 ->
-    Tobruk -> Bardia -- each a forward dump campaign_truck_orders fills from the one behind it.
+    hex jump to the front. Three COASTAL dumps are pre-stocked from the 60.34 chart (Tobruk, Bardia,
+    Derna); the intervening waypoints are empty, spaced along the Via Balbia -- Benghazi -> W1 -> W2 ->
+    Derna -> W3 -> Tobruk -> Bardia -- each a forward dump campaign_truck_orders fills from the one
+    behind it. A FOURTH 60.34 dump, C0716 (100 Ammo / 50 Fuel / 50 Stores), is off the coast road
+    entirely: the deep-desert supply point the [60.31] Saharan Detachment (deployed within 3 hexes)
+    traces to. Transcribed here to COMPLETE the 60.34 Axis dump chart (its omission left the Axis 50
+    Fuel under the charted on-map total); a static outpost ~30 hexes from the nearest unit, NOT a relay
+    leg -- it never becomes _axis_rear (dist 79 to Alexandria vs Benghazi's 126, so the harbour holds).
 
     base=False deliberately: a field dump evaporates (49.3) and is NOT a rule-57 strategic base
     -- exempting it would both mislabel the chain and freeze its stock. Labelled hexes go through
@@ -670,6 +675,7 @@ def _campaign_staging_dumps() -> list[SupplyUnit]:
         SupplyUnit("AX-Stage-W2", Side.AXIS, (4, 45), ammo=0, fuel=0, stores=0, water=0),
         SupplyUnit("AX-Stage-Derna", Side.AXIS, ax("B5925"), ammo=0, fuel=250, stores=50, water=0),
         SupplyUnit("AX-Stage-W3", Side.AXIS, (15, 63), ammo=0, fuel=0, stores=0, water=0),
+        SupplyUnit("AX-Stage-C0716", Side.AXIS, ax("C0716"), ammo=100, fuel=50, stores=50, water=0),
     ]
 
 
@@ -714,11 +720,15 @@ _CW_RAIL_STATIONS = (("Matruh", _CW_RAILHEAD), ("ElDaba", "D3329"), ("ElHamman",
 # pool could carry. Keyed by the depot NAME on the spine above; the chart lists no stock for Sollum,
 # El Daba or El Hamman, so those stay empty (a Field Supply Depot is hauled into, not pre-filled).
 #
-# NOT seeded, and flagged: the chart's third row, "Dump I" (500 Ammo / 750 Fuel / 500 Stores), is a
-# FREE-PLACEMENT dump -- "may be placed anywhere in Egypt on map C or D" -- as are its dummy twin
-# and the Air Supply allotment (200/250/50, distributed among air facilities). The Axis 60.34 chart
-# carries the exact same unseeded remainder (its Dump 1, Dump 2, C0716 and airfield allotment), so
-# the two sides' free-placement dumps are left out TOGETHER rather than one side's being banked.
+# The chart's third row, "Dump I" (500 Ammo / 750 Fuel / 500 Stores), is the anonymous FREE-PLACEMENT
+# field dump -- it IS seeded, as the AL-Dump pool game.oob splits over the OOB field dumps
+# (CAMPAIGN_DUMP_POOLS -> cw_dump_pool_60_44), the mirror of the Axis Dump 1 + Dump 2 pool
+# (axis_dump_pool_60_34). What both charts leave unseeded, and flagged, is symmetric: the DUMMY dumps
+# (bluff counters carrying no supply) and the AIR SUPPLY allotments (CW 200/250/50; Axis
+# 1200/850/100/100), the latter gated off with the abstracted Air Game (59.61, see _air_facility_trucks).
+# The Axis Tripoli box (250/5000/250) is off-map -- Tripoli has no hex in sections A-E (see
+# _campaign_axis_trucks). Every stocked, on-map, fixed-hex dump on BOTH 60.34 and 60.44 is now seeded
+# (C0716 in _campaign_staging_dumps).
 _CW_DUMPS_60_44 = {
     "Matruh":  {"ammo": 1000, "fuel": 3000, "stores": 4000},    # Mersa Matruh (D3714)
     "Barrani": {"ammo":  250, "fuel":  500, "stores":  100},    # Sidi Barrani (C4131)
