@@ -74,13 +74,15 @@ def demolition_percent_54_17() -> dict:
     """[54.17] SUPPLY DUMP DEMOLITION TABLE: the percentage of EVERY commodity in a dump destroyed,
     keyed by the MODIFIED die roll (int), with the chart's "8 or more" row under the key 8.
 
-    TRANSCRIBED VERBATIM, AND IT IS NOT MONOTONE -- FLAGGED FOR OCR QA, NOT SILENTLY REPAIRED. The
-    chart as transcribed reads  -2:0  -1:33  0:0  1:10  2:20  3:33  4:50  5:75  6:100  7:33  8+:100,
-    so a modified -1 destroys a THIRD of the dump while a 0 destroys nothing, and a 7 undoes a 6.
-    Two cells (-1 and 7) are almost certainly a column slip in the scan of page 14: every other cell
-    climbs 0/10/20/33/50/75/100 exactly as a demolition table should. We do NOT "fix" them here --
-    data/logistics_rates.json is this project's transcription of the rulebook and correcting a
-    magnitude on our own judgement is precisely what we may not do. It is reported instead."""
+    ERRATA APPLIED (owner-approved) -- THE ONE PLACE THIS TRANSCRIPTION OVERRIDES THE BOOK. The 1979
+    printing is misprinted: it reads -2:0 -1:33 0:0 1:10 2:20 3:33 4:50 5:75 6:100 7:33 8+:100, so a
+    modified -1 destroys a THIRD while a 0 destroys nothing, and a 7 undoes a 6. Two auditors rendered
+    the original scan (PDF p109) at 400 and 600 dpi and both confirm the OCR is faithful -- the page
+    really is non-monotone. The correction is forced by the neighbours: strike -1 and 7 and every other
+    cell is a clean ladder 0/10/20/33/50/75/100, and those two cells are pinned on both sides (-1
+    between two 0s, 7 between two 100s) -- a duplicated '33' slug in the paste-up. Corrected -1:33->0,
+    7:33->100. The printed values, the corrected values and this reasoning are recorded under the
+    _errata key in data/logistics_rates.json; percent_by_modified_die there is the corrected table."""
     row = _data()["supply_dump_demolition_54_17"]["percent_by_modified_die"]
     return {(8 if k == "8+" else int(k)): v for k, v in row.items()}
 

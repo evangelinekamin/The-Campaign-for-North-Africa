@@ -280,12 +280,17 @@ def test_extra_thirds_are_bounded_by_the_cp_the_unit_actually_has():
     assert supply.affordable_thirds(replace(u, cp_used=7.0), 2) == 0  # 3 CP left: the bare attempt
 
 
-def test_the_54_17_table_is_the_rulebooks():
-    """[54.17] Supply Dump Demolition Table, transcribed. NOT MONOTONE at -1 and 7 -- an OCR column
-    slip we transcribe verbatim rather than "fix" (see logistics_data.demolition_percent_54_17)."""
+def test_the_54_17_table_is_a_monotone_ladder_after_the_errata():
+    """[54.17] Supply Dump Demolition Table. The 1979 printing is misprinted non-monotone at the -1
+    and 7 cells (a duplicated '33' slug -- see logistics_data.demolition_percent_54_17 and the
+    _errata block in data/logistics_rates.json). The owner-approved errata corrects -1:33->0 and
+    7:33->100, leaving the clean ladder 0/10/20/33/50/75/100 a demolition table must be. This
+    asserts the CORRECTED table -- the two errata cells included, to prove the override is live."""
     assert supply.demolition_percent(1) == 10
     assert supply.demolition_percent(4) == 50
     assert supply.demolition_percent(6) == 100
+    assert supply.demolition_percent(-1) == 0          # ERRATA: misprinted 33, forced to 0 (sits between two 0s)
+    assert supply.demolition_percent(7) == 100         # ERRATA: misprinted 33, forced to 100 (sits between two 100s)
     assert supply.demolition_percent(99) == 100        # clamped to the "8 or more" row
     assert supply.demolition_percent(-9) == 0          # clamped to the "-2" row
 

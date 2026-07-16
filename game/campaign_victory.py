@@ -15,8 +15,10 @@ DEFERRED to the faithfulness pass (they need the truck-MP supply trace, C1-5, an
 production economy, C3), documented so nothing is silently missing:
   - 64.71's "for one full Game-Turn" persistence and the <=90 truck-MP supply trace;
   - 64.72's Game-Turn-35 Commonwealth auto-win (no Axis unit can trace <=60 truck-MP);
-  - 64.73's occupation quality-tests (a holding unit needs a week of Stores/Water and
-    Fuel/Ammunition for three fires and 20 CP of movement);
+  - 64.73's Stores/Water week-test and the in-hex "do you HAVE it" form of the occupation
+    quality-test. The Fuel-for-20-CP and Ammunition-for-three-fires MAGNITUDES are now faithful
+    (CampaignVictory._supplied); the Stores/Water week and the in-hex form still need the
+    truck-MP supply trace, C1-5, so a holder is still tested by a reach-a-dump trace (32.16);
   - 64.74 unused-Replacement-Point VPs and 64.75 Commonwealth Withdrawal VPs.
 """
 from __future__ import annotations
@@ -71,11 +73,20 @@ class CampaignVictory:
 
     @staticmethod
     def _supplied(state, u) -> bool:
-        """Rule 64.73 quality-test: the unit can trace both Fuel (its per-model rate; foot
-        units need none) and Ammunition to a reachable dump (game.supply.plan_draw over the
-        cpa/2 trace, 32.16). A unit that cannot has outrun its logistics."""
-        return (supply.plan_draw(state, u, supply.FUEL, supply.fuel_rate(u)) is not None
-                and supply.plan_draw(state, u, supply.AMMO, supply.ammo_cost(u, phasing=True)) is not None)
+        """Rule 64.73 quality-test, FAITHFUL MAGNITUDES. At the end of the game a holder must have the
+        Fuel to MOVE 20 CP (supply.fuel_cost applies the 49.13 rate x ceil(CP/5) x TOE-strength law;
+        foot units need none) and the Ammunition to FIRE ITS WEAPONS THREE TIMES (3 x supply.ammo_cost,
+        50.14). Both are traced to a reachable dump over the cpa/2 trace (32.16). A unit that cannot
+        has outrun its logistics.
+
+        The magnitudes were wrong before this port: Fuel was tested at one turn's bare rate (not 20 CP
+        of movement) and Ammunition at a SINGLE fire (not three). STILL DEFERRED to T1-1 (the in-hex
+        supply model, 49.14 + 53.11): 64.73 also names a WEEK of Stores and Water first, which needs
+        the per-unit basic-load model to test; and the rule asks 'do you HAVE it in the hex?' where
+        this still asks 'can you REACH a dump that holds it?'. The MAGNITUDES are corrected here; the
+        Stores/Water week and the in-hex FORM wait on the truck-MP supply trace."""
+        return (supply.plan_draw(state, u, supply.FUEL, supply.fuel_cost(u, 20)) is not None
+                and supply.plan_draw(state, u, supply.AMMO, 3 * supply.ammo_cost(u, phasing=True)) is not None)
 
     def check(self, r: "_Run") -> tuple["Side | None", str]:
         s = r.state

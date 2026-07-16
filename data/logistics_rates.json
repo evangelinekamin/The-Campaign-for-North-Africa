@@ -142,8 +142,15 @@
   },
 
   "supply_dump_demolition_54_17": {
-    "_comment": "[54.17] SUPPLY DUMP DEMOLITION TABLE -- percentage of a dump's supplies destroyed by die (modified). Included for completeness; not a consumption rate. Modifiers are cumulative (see rulebook 54.17).",
-    "percent_by_modified_die": {"-2": 0, "-1": 33, "0": 0, "1": 10, "2": 20, "3": 33, "4": 50, "5": 75, "6": 100, "7": 33, "8+": 100}
+    "_comment": "[54.17] SUPPLY DUMP DEMOLITION TABLE -- percentage of a dump's supplies destroyed by die (modified). Included for completeness; not a consumption rate. Modifiers are cumulative (see rulebook 54.17). percent_by_modified_die is the CORRECTED table (see _errata below): we OVERRODE the 1979 printing at two cells.",
+    "_errata": {
+      "_ruling": "ERRATA APPLIED, owner-approved. percent_by_modified_die below is the CORRECTED table, NOT the 1979 printing. This is the ONE place in the transcription where we override the book: the 1979 book is misprinted here. Two auditors rendered the original scan (PDF p109) independently -- one at 400 dpi, one at 600 dpi -- and both confirm our OCR is faithful to the page, so the printed table really is non-monotone. We correct it rather than transcribe the misprint; anyone reading this file must see that we overrode the book, and why.",
+      "printed_1979": {"-2": 0, "-1": 33, "0": 0, "1": 10, "2": 20, "3": 33, "4": 50, "5": 75, "6": 100, "7": 33, "8+": 100},
+      "corrected": {"-2": 0, "-1": 0, "0": 0, "1": 10, "2": 20, "3": 33, "4": 50, "5": 75, "6": 100, "7": 100, "8+": 100},
+      "cells_changed": {"-1": "33 -> 0", "7": "33 -> 100"},
+      "reason": "The correction is FORCED by the neighbours. Strike the two anomalous cells and every other cell is a clean monotone ladder -- 0/10/20/33/50/75/100 -- exactly as a demolition table must be, and the two struck cells are precisely the two pinned on BOTH sides: modified -1 sits between two 0s (a -1 destroying a THIRD of the dump while a 0 destroys nothing is impossible), and modified 7 sits between two 100s (a 7 undoing a 6 is impossible). Almost certainly a duplicated '33' slug in the page-14 paste-up. As printed, the best possible outcome in the game -- a natural 6 modified to 7 -- was PUNISHED, destroying 33% where the ladder gives 100%."
+    },
+    "percent_by_modified_die": {"-2": 0, "-1": 0, "0": 0, "1": 10, "2": 20, "3": 33, "4": 50, "5": 75, "6": 100, "7": 100, "8+": 100}
   },
 
   "truck_characteristics_54_2": {

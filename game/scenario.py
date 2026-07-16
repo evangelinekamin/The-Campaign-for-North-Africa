@@ -839,6 +839,23 @@ _TRUCKS_60_43 = {                    # [60.43] Commonwealth Second-Third Line Tr
     "Any Air Facility":  {"light":  5, "medium": 30, "heavy": 20},
 }
 
+# [59.61] AIR-FACILITY TRUCKS ARE GATED, NOT DELETED. With the Air Game abstracted -- the campaign's
+# mode: game.state.AirWing is hexless and air plays at the 32.0/58.0 abstract grain -- 59.61 says to
+# "ignore all Trucks and supplies available at/for Air facilities in the initial set-ups." The
+# air-facility SUPPLY allotments are already dropped; the TRUCK rows ([60.33]'s 'Any Air Facility'
+# 10 L / 50 M = 60 TP for the Axis, [60.43]'s 5 L / 30 M / 20 H = 55 TP for the Commonwealth) were
+# being seeded anyway -- over-seeding Axis +60 TP and CW +55 TP. They are gated below on
+# _AIR_GAME_PLAYED, NOT removed from the chart: when the full Air Game lands (plan T1-9) they come
+# back, and the SGSUs need them. Promote this flag to a real game.state field at that point.
+_AIR_GAME_PLAYED = False
+
+
+def _air_facility_trucks(row: dict) -> tuple[dict, ...]:
+    """The 59.61 gate over one [60.33]/[60.43] 'Any Air Facility' truck row: it is seeded only when
+    the full Air Game is played, and ignored while air is abstract. The row stays on the
+    _TRUCKS_60_33 / _TRUCKS_60_43 charts -- this only decides whether it is placed on the board."""
+    return (row,) if _AIR_GAME_PLAYED else ()
+
 
 def _truck_park(prefix: str, side: Side, hexpos, *rows: dict) -> list[TruckFormation]:
     """One TruckFormation per 54.2 class, pooling the chart `rows` assigned to `hexpos`.
@@ -852,8 +869,9 @@ def _truck_park(prefix: str, side: Side, hexpos, *rows: dict) -> list[TruckForma
 
 
 def _campaign_cw_trucks(supplies) -> tuple[TruckFormation, ...]:
-    """The Commonwealth 2nd/3rd-line motor-transport pool: the [60.43] chart in full, 195 Truck
-    Points against the 16 the campaign used to seed. Without lorries the Commonwealth cannot project
+    """The Commonwealth 2nd/3rd-line motor-transport pool: the [60.43] chart's non-air rows, 140 Truck
+    Points against the 16 the campaign used to seed (the 55 at Air Facilities are gated off while air
+    is abstract, 59.61 -- see _air_facility_trucks). Without lorries the Commonwealth cannot project
     supply one hex west of its railhead -- a unit's own trace reaches ~6-12 -- so Operation Compass
     and Crusader strand every unit they send toward Benghazi. The Western Desert Force ran on
     lorries; this is the park that hauled it to El Agheila.
@@ -869,10 +887,11 @@ def _campaign_cw_trucks(supplies) -> tuple[TruckFormation, ...]:
         and the exact hex the pool binds at. Not the forward Field Supply Depots -- on Game-Turn 1
         Sollum and Sidi Barrani lie in the path of the advancing Italian 10th Army, and a staff does
         not park its lorry reserve in front of an oncoming army.
-      * "Any Air Facility" (5 L / 30 M / 20 H) -> the railhead as well. FLAGGED PROXY: game.state.
-        AirWing is HEXLESS -- the engine plays air at the 32.0/58.0 abstract grain and owns no
-        air-facility hex to park a lorry on -- so rather than drop the row silently it goes to the
-        supply hub of the forward airfield line, which Matruh, Fuka and Sidi Haneish all sit on."""
+      * "Any Air Facility" (5 L / 30 M / 20 H) -> GATED OFF while air is abstract (59.61 ignores
+        air-facility trucks in the set-up). The row stays on _TRUCKS_60_43 behind _air_facility_trucks
+        and returns when the Air Game lands (T1-9); it would otherwise have gone to the railhead as a
+        hexless-AirWing proxy (game.state.AirWing owns no air-facility hex), the supply hub of the
+        forward airfield line that Matruh, Fuka and Sidi Haneish all sit on."""
     railhead = _campaign_cw_railhead(supplies)
     if railhead is None:
         return ()
@@ -884,18 +903,21 @@ def _campaign_cw_trucks(supplies) -> tuple[TruckFormation, ...]:
         + _truck_park("AL-Truck-Alex", Side.ALLIED, ax(_CW_BASE_HEXES["Alexandria"]),
                       _TRUCKS_60_43["Alexandria"])
         + _truck_park("AL-Truck-Matruh", Side.ALLIED, railhead.hex,
-                      _TRUCKS_60_43["Anywhere, maps"], _TRUCKS_60_43["Any Air Facility"]))
+                      _TRUCKS_60_43["Anywhere, maps"],
+                      *_air_facility_trucks(_TRUCKS_60_43["Any Air Facility"])))
 
 
 def _campaign_axis_trucks(supplies, target) -> tuple[TruckFormation, ...]:
-    """The Axis 2nd/3rd-line motor-transport pool: the [60.33] chart's ON-MAP rows, 215 Truck Points,
+    """The Axis 2nd/3rd-line motor-transport pool: the [60.33] chart's ON-MAP non-air rows, 155 Truck
+    Points (the 60 at Air Facilities gated off while air is abstract, 59.61 -- see _air_facility_trucks),
     staged at the Benghazi port-of-arrival where the Mediterranean convoys land and where the coastal
     relay (campaign_policy.campaign_truck_orders) reloads.
 
     OUR ASSIGNMENT: "Anywhere in Libya" (30 L / 100 M / 25 H) -> Benghazi, which is in Libya and is
-    the single hex the entire Axis economy passes through. "Any Air Facility" (10 L / 50 M) -> Benghazi
-    too: a FLAGGED PROXY on the same grounds as the Commonwealth's (AirWing is hexless), and its
-    natural home regardless, since Benina and El Berca -- Benghazi's airfields -- are two hexes away.
+    the single hex the entire Axis economy passes through. "Any Air Facility" (10 L / 50 M) is GATED
+    OFF while air is abstract (59.61 ignores air-facility trucks in the set-up); the row stays on
+    _TRUCKS_60_33 behind _air_facility_trucks and returns with the Air Game (T1-9). Benghazi would be
+    its home regardless -- Benina and El Berca, its airfields, are two hexes away.
 
     *** THE TRIPOLI ROW IS NOT SEEDED, AND THAT IS NOT A CONCESSION -- IT IS THE AXIS'S WAR. *** The
     chart's largest row by a wide margin -- 25 Light / 140 Medium / 40 Heavy, 205 of the Italian
@@ -911,7 +933,8 @@ def _campaign_axis_trucks(supplies, target) -> tuple[TruckFormation, ...]:
     if rear is None:
         return ()
     return tuple(_truck_park("AX-Truck-Benghazi", Side.AXIS, rear.hex,
-                             _TRUCKS_60_33["Anywhere in Libya"], _TRUCKS_60_33["Any Air Facility"]))
+                             _TRUCKS_60_33["Anywhere in Libya"],
+                             *_air_facility_trucks(_TRUCKS_60_33["Any Air Facility"])))
 
 
 def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy, ...]:
