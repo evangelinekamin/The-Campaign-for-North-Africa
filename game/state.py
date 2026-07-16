@@ -324,19 +324,22 @@ class Port:
     commodity has a Point cap (cap_ammo..cap_water, proxy magnitudes for the untranscribed
     55.3 chart); cap_tons is the port's tonnage rating (55.13), crossed to Points at the
     landing edge via the 54.5 Equivalent Weights (game.supply). `eff` is the current
-    Efficiency Level, `max_eff` the assigned maximum (55.12), both seeded per scenario from
-    the 55.3 chart: the full campaign starts Tobruk at eff 2 of max 5 -- the San Giorgio
-    scuttled in the harbour costing it three levels (30.17 / 55.25) -- while the Desert Fox
-    benchmark uses 61.6's verbatim 7/7. `kind` is "major" (men + supplies) or "minor" (supplies only, 55.11).
+    Efficiency Level, `max_eff` the assigned maximum (55.12), both seeded per scenario: the
+    campaign starts Tobruk at eff 7 of max 7 (64.3 -> 60.7 "Efficiency Level 7"), matching the
+    Desert Fox benchmark's 61.6 verbatim 7/7 -- above the [55.3] chart max of 5 and its San-Giorgio
+    -3 (55.25), a chart-vs-setup inconsistency transcribed as the scenario setup prints it. `kind`
+    is "major" (men + supplies) or "minor" (supplies only, 55.11).
 
     `blocked` is the number of Efficiency Levels permanently removed by a harbour BLOCK
     (55.2 scuttled ship / 55.27 air-laid mine) -- as opposed to bomb damage, which lowers
     `eff` directly. The distinction is 55.18 vs 55.26: bomb damage REGENERATES (+1/OpStage
     that the port loses no levels to bombs, up to its ceiling), but a block does NOT -- only
     engineers clear it (55.26, deferred). So the regeneration ceiling is `max_eff - blocked`,
-    not `max_eff`: Tobruk (max_eff 5, blocked 3 for the San Giorgio) may be bombed below 2
-    and recover UP TO 2, but never past the scuttled cruiser. Default 0 = an unblocked
-    harbour, which regenerates all the way to its assigned maximum."""
+    not `max_eff`: a port with max_eff 5 and blocked 3 may be bombed below 2 and recover UP TO 2,
+    but never past the wreck. Default 0 = an unblocked harbour, which regenerates all the way to
+    its assigned maximum. No scenario currently SEEDS a block: the San Giorgio at Tobruk is folded
+    into the 60.7/61.6 scenario-start Efficiency of 7, and this field models an in-play block
+    (a player scuttling a ship in a port he holds, 55.21/55.22)."""
     id: str
     side: Side
     hex: Coord

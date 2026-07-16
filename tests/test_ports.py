@@ -2,13 +2,15 @@
 
 A port owns the built-in dump at its hex (56.28). A convoy lands THROUGH the port:
 the effective per-OpStage receiving capacity is ceil(cap * eff / max_eff) (55.14),
-so a harbour crippled by a scuttled ship lands only a fraction of a convoy. The
-San Giorgio blocks Tobruk to 2/5 = 40% (30.17 / 55.25). Efficiency regenerates
-+1/OpStage up to max_eff (55.18) -- except a permanent harbour BLOCK, which needs
-engineers (55.26). Tonnage <-> points crosses the 54.5 Equivalent Weights at the
-port edge only. These tests pin the throttle, the regen, the San Giorgio seed, the
-byte-identity of port-less scenarios, and the ACCEPTANCE that the throttled ferry
-still holds Tobruk (the ferry is sized so 40% of it feeds the garrison)."""
+so a harbour crippled by bombs or a scuttled ship lands only a fraction of a convoy.
+A permanent harbour BLOCK (55.2 scuttle / 55.27 mine) lowers the regen ceiling to
+max_eff - blocked and needs engineers to clear (55.26); bomb damage regenerates
++1/OpStage up to that ceiling (55.18). The scenario setups seed Tobruk at the 60.7/
+61.6 Efficiency 7/7 (the San Giorgio is folded into that 7, not a separate block).
+Tonnage <-> points crosses the 54.5 Equivalent Weights at the port edge only. These
+tests pin the throttle, the regen (blocked and unblocked), the 61.6 full-Efficiency
+seed, the byte-identity of port-less scenarios, and the ACCEPTANCE that the ferry
+feeds the garrison through the 55.3 shared tonnage budget."""
 from __future__ import annotations
 
 import math
@@ -226,7 +228,7 @@ def test_blocked_harbour_regens_only_up_to_the_scuttled_ceiling():
     assert levels == [1, 2, 2, 2]                         # climbs to the ceiling and holds, not to 5
 
 
-# --- San Giorgio seeds Tobruk at 2/5 -----------------------------------------
+# --- 61.6 seeds Tobruk at full Efficiency 7/7 --------------------------------
 
 def test_tobruk_seeded_at_full_efficiency_per_61_6():
     s = rommels_arrival()

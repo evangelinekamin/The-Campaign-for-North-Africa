@@ -14,7 +14,8 @@ Smashing in three seeds, Axis Decisive/Marginal in the other two.
 
 THE FIX IS THE RULEBOOK'S OWN. The 56.18 Convoy Air Distance chart names six Axis convoy lanes, and
 TWO OF THEM RUN TO TOBRUK (5 Greece->Tobruk, 6 Italy->Tobruk). So the Axis sails lane 6 into the
-harbour it holds, through the same ONE 55.3 Tobruk port (1700 t, Efficiency 5) the ferry lands
+harbour it holds, through the same ONE 55.3 Tobruk port (1700 t, seeded at the 60.7/61.6 start
+Efficiency 7) the ferry lands
 through, and the 56.15 gate hands the harbour from one side to the other the Game-Turn the city
 changes hands. The siege of Tobruk becomes the duel it historically was: the holder is fed by sea,
 and the besieger must CUT THE SEA LANE (_campaign_tobruk_axis_interdiction -- the Mediterranean
@@ -66,24 +67,25 @@ AL_DUMP, AX_DUMP = "AL-Tobruk", "AX-Stage-Tobruk"
 def test_tobruk_is_one_harbour_not_two():
     """A port is a PLACE. GameState.port_at is keyed by HEX, engine._naval_convoys throttles
     whatever lands there with no side test at all, and 56.15 gates the sailing on CONTROL -- so the
-    55.3 chart's ONE Tobruk (1700 t, Efficiency Level 5) is ONE Port object, serving whoever holds
+    55.3 chart's ONE Tobruk (1700 t) is ONE Port object, serving whoever holds
     the city. A second, duplicate Port on the same hex would only make port_at ambiguous."""
     st = campaign(max_turns=4)
     at_tobruk = [p for p in st.ports if p.hex == TOBRUK]
     assert len(at_tobruk) == 1                            # one harbour, not one per side
     tob = at_tobruk[0]
     assert st.port_at(TOBRUK) is tob                      # ...so port_at is unambiguous
-    assert tob.id == "PORT-Tobruk"                        # the id the San Giorgio block keys off
-    assert tob.blocked == 3                               # 55.25/55.26: the San Giorgio holds the regen ceiling at 2
+    assert tob.id == "PORT-Tobruk"                        # the id the harbour keys off
+    assert tob.blocked == 0                               # 60.7/61.6 seed the NET Efficiency 7 (San Giorgio folded in), no separate block
     assert tob.cap_tons == 1700                           # [55.3] the chart, verbatim
-    assert (tob.eff, tob.max_eff) == (2, 5)               # [55.3] max Efficiency 5; 55.25 San Giorgio starts it at 2
+    assert (tob.eff, tob.max_eff) == (7, 7)               # 64.3 -> 60.7 "Efficiency Level 7"; matches the 61.6 benchmark 7/7
     # ...and it is flagged with the side that HOLDS Tobruk on Game-Turn 1 (rule 64.2): the Axis.
     assert tob.side == Side.AXIS
     assert st.control_of(TOBRUK) == Control.AXIS
     # 55.3 gates the lifeline by ONE shared tonnage budget across all commodities (not a per-commodity
-    # cap): 1700 t at eff 2/5 crosses (54.5) to 680 t per Operations Stage -- the real gate on either
-    # side's Tobruk lifeline, which the besieger must cut to force a 15.15 surrender.
-    assert port_tonnage_budget(tob) == 680                # ceil(1700 * 2/5)
+    # cap): 1700 t at eff 7/7 crosses (54.5) to the full 1700 t per Operations Stage -- the real gate on
+    # either side's Tobruk lifeline, which the besieger must cut (by bombing the harbour) to force a
+    # 15.15 surrender.
+    assert port_tonnage_budget(tob) == 1700               # ceil(1700 * 7/7)
 
 
 def test_both_sides_have_a_tobruk_sea_lane():
@@ -149,10 +151,10 @@ def test_the_axis_tobruk_garrison_is_fed_by_sea_through_a_harbour_that_is_fought
 
     The lane lands into the staging dump under the fortress while the harbour works. The Desert Air
     Force bombs the harbour (41.39B, engine._air_port ROLLING on the transcribed [41.5] Ports row),
-    knocking Efficiency Levels off -- but the San Giorgio's block only holds the regeneration ceiling
-    at 2 (blocked=3); it is NOT a one-way ratchet. 55.18 recovers bomb damage +1 every OpStage the
-    quay is not bombed down, so the harbour is FOUGHT OVER: it dips to the bombs and climbs back, and
-    the lane keeps feeding between the cuts. At the proxy six strike Air Points the Commonwealth rolls
+    knocking Efficiency Levels off -- but 55.18 is NOT a one-way ratchet: it recovers bomb damage +1
+    every OpStage the quay is not bombed down, up to the 60.7/61.6 seed of 7, so the harbour is FOUGHT
+    OVER: it dips to the bombs and climbs back, and the lane keeps feeding between the cuts. At the
+    proxy six strike Air Points the Commonwealth rolls
     a level off on only 4 of 36 codes, so the harbour survives and the fortress stays fed -- that
     balance is a MEASUREMENT of the deferred air strengths (34.6/59.3), not a magnitude to bend here.
 
