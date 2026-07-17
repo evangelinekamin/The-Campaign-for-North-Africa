@@ -243,14 +243,42 @@ def _pool(su, commodity: str) -> int:
 
 
 def trace_blocked(state: GameState, side: Side) -> frozenset:
-    """THE 32.16 TRACE BLOCKING, in one place: the hexes no line of supply of `side` may run
-    through -- every hex an enemy unit stands on, plus every hex in an enemy combat unit's Zone of
-    Control that no friendly unit is standing on to negate.
+    """THE TRACE BLOCKING, in one place: the hexes no line of supply of `side` may run through --
+    every hex an enemy unit stands on, plus every hex in an enemy combat unit's Zone of Control
+    that no friendly unit is standing on to negate.
 
     Every trace in this module reads exactly this set and always did; it was written out three times
     (reachable_supplies, reachable_moves, reachable_truck_moves) and the 64.71 truck-MP line was
-    about to make a fourth and a fifth. One rule, one expression -- the sets and the order are
-    identical to the three copies it replaces, so no existing trace moves by a byte."""
+    about to make a fourth and a fifth. One expression -- the sets and the order are identical to
+    the three copies it replaces, so no existing trace moves by a byte.
+
+    TWO RULES SPECIFY THIS ONE SET, AND EACH CALLER CITES ITS OWN. That matters, because THE PORT
+    PLAN names the abstract game's load-bearing presence in the full game as the deepest bug in the
+    project, and a reader who follows one citation to chapter 32 would conclude every caller here is
+    infected. They are not:
+      * 32.16 (ABSTRACT logistics) -- "The supply line may not be traced thru impassable terrain or
+        enemy ZOC's unoccupied by Friendly units." This is reachable_supplies's authority, and
+        reachable_supplies is the abstract cpa/2 draw, so it is the right one there.
+      * 10.29 + 10.26 (ZONES OF CONTROL -- a CORE chapter, and the FULL game) -- "Truck Convoys may
+        not enter an Enemy ZOC unless such hex is already occupied by a Friendly combat unit", and
+        "the presence of a Friendly combat unit in a hex negates the effect of an Enemy ZOC". This
+        is the authority for every trace here that a LORRY drives: reachable_moves, the carry
+        (reachable_truck_moves), and the 64.71/64.72 convoy route (truck_trace_reach,
+        truck_supply_line). 64.71 glosses its own "line of supply" as "(i.e., convoy route)", and a
+        convoy route is the route a Truck Convoy takes; 10.29 says where one may not go. So the
+        blocking on the 64.71 line is the full game's own, not an abstract-game import.
+    The two texts pick out nearly the same hexes, which is why one expression serves. The
+    authorities are not the same and are not interchangeable.
+
+    FLAGGED, THE ONE PLACE THE TWO TEXTS DIVERGE, and this code follows 32.16: the NEGATOR. 32.16
+    negates a ZOC with "Friendly units" -- any of them -- and `friendly` below is state.living(side),
+    which is exactly that. 10.26 and 10.29 both say "Friendly COMBAT unit". So a bare HQ or a lorry
+    sitting in an enemy ZOC negates it here, where the full game says only a fighting unit can. The
+    divergence is PRE-EXISTING (all three original traces read this set), it is small (10.29's own
+    last sentence CAPTURES a lone non-combat unit in an enemy ZOC, so such a negator rarely survives
+    to negate anything), and it is NOT repaired here because narrowing it would move three traces
+    that are correctly on 32.16's authority and are not what this pass was opened to fix. Named so
+    it is not mistaken for the rulebook: splitting the negator by caller is the fix when it matters."""
     enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, side)
     friendly = frozenset(u.hex for u in state.living(side))
     return (enemy_zoc - friendly) | enemy_occupied
@@ -446,20 +474,62 @@ def reachable_truck_moves(state: GameState, truck: TruckFormation) -> dict:
 # Terrain Effects Chart charges Light/Medium/Heavy the same CP anyway (the classes differ in
 # Breakdown Points, 54.2, which a trace does not accrue) -- so the class is immaterial to the cost
 # and Medium is the engine's own denomination, not a choice made here.
+#
+# 🔴 FLAGGED -- THE ROAD NET DECIDES THIS RULE AND THE ROAD NET IS NOT TRANSCRIBED. The two
+# constants below are the book's, to the digit. The METRIC they are compared against is not yet the
+# book's, and on this rule that is the whole ball game, because a 90-MP line's cost is almost
+# entirely road entry (ROAD_ENTRY[motorized] = 0.5 against 2.0 for a clear hex off-road).
+# MEASURED on game.scenario.campaign():
+#   * the whole map carries 277 road edges across 6770 hexes;
+#   * the min-cost Tobruk -> Alexandria trace runs 90 steps: 32 on road, 8 on track, and 50 on
+#     NOTHING -- open desert at 4x the road rate (ROAD_ENTRY 0.5 against a clear hex's 2.0);
+#   * it therefore costs 122.5 truck-MP, where those same 90 steps on a continuous road would cost
+#     45. That counterfactual walks the engine's OWN coastal path and changes only the surface
+#     under it, which is the honest comparison. It is NOT the [37.42] Land Distance Chart's 78
+#     hexes for this stretch: 37.42 sits in chapter 37, FLIGHT, and its own footnote says its
+#     distances "include cutting across the Mediterranean (assuming an all-sea hex grid) where
+#     necessary" -- a crow-flies air distance no lorry can drive, and not a road length.
+# The book asserts road continuity along exactly this coast: 8.85 strings arriving Stacking Points
+# "on the Road in consecutive hexes (road) from the Tripolitania box; e.g., 5 points in hex 2802, 5
+# points in 2803, and 3 points in 2804", and 61.43C distributes dumps "in any of the road hexes
+# between El Agheila (A 1816) and Nofilia (A 2703) inclusive". Both name a CONTINUOUS road where
+# this map has a dotted line. (61.43C is a Desert Fox rule, not the campaign's -- cited only as the
+# book's evidence about the MAP, which every scenario shares.) So the Via Balbia is a road in the
+# book, and every truck-MP number this trace yields is roughly 2-3x too dear.
+# This is the SAME map-transcription defect game.campaign_victory flags for the Gulf of Sirte
+# coastline (A2802/A1816 colour-sampling as sea), applied to roads instead. NOT FIXED HERE, and for
+# the same reason: it is a map job, and bending a road into existence to make a victory rule fire is
+# the invention this port exists to stop. FIXED IN THE RECORD, though -- the first cut of this port
+# adopted the inflated number as design intent and shipped "MEASURED -- the rule bites" on the back
+# of it. It does not bite for the reason claimed; see game.campaign_victory.CampaignVictory.check.
 TRUCK_MP_64_71 = 90       # 64.71: the Axis Delta occupiers' line back to a Tobruk/Tripoli-fed dump
 TRUCK_MP_64_72 = 60       # 64.72: every Axis combat unit's line, from Game-Turn 35
 
 
 def truck_trace_reach(state: GameState, unit: Unit, budget: float) -> dict:
     """The hexes `unit` can trace a 64.71/64.72 line of supply to within `budget` TRUCK Movement
-    Points: medium-truck movement over the terrain, blocked by the 32.16 trace blocking.
+    Points: medium-truck movement over the terrain, blocked by the trace blocking -- here on
+    10.29's authority (a Truck Convoy may not enter an unnegated enemy ZOC), which is the FULL
+    game's own rule, not 32.16's abstract one. See trace_blocked.
 
     TRUCK movement for EVERY unit, foot battalions included, and that is the rule's own word. The
     32.16 tactical draw asks how far the UNIT can go (reachable_supplies walks leg infantry at
     Mobility.FOOT, since a marching battalion carries its own load); 64.71 asks how far the LORRIES
     can come, which is a question about the road, not about the boots. "A line of supply (i.e.,
     convoy route) ... 90 movement points by truck" measures the convoy, and the convoy is a convoy
-    whoever is waiting at the end of it."""
+    whoever is waiting at the end of it.
+
+    DEFERRED, WEATHER (29.44 / 29.56), AND NAMED HERE BECAUSE IT IS WORTH MORE ON THIS TRACE THAN
+    ON ANY OTHER. movement.reachable takes a `weather=` argument and no trace in this module passes
+    it, so all four take the default "normal". 29.44 DOUBLES every movement cost in a Sandstorm and
+    29.56 degrades a Road to a Track in a Rainstorm -- which on a 90-MP line, whose cost is almost
+    all road entry, is worth roughly half the ground. NOT coupled here, deliberately and for two
+    reasons: (1) the gap is the same in all four traces and coupling one of them alone would make
+    this module inconsistent with itself, so it is one job (a T0-11 follow-up: TerrainMap.sections
+    and state.weather_at already exist, which is why the note is a deferral and not a design); and
+    (2) 64.71 asks whether a line CAN be traced, which is a hypothetical about the road and names no
+    weather to evaluate it in -- so which weather a hypothetical convoy drives through is a real
+    open question of reading, not an oversight to be silently closed. It is flagged, not adopted."""
     return movement.reachable(state.terrain, unit.hex, budget, SUPPLY_MOBILITY,
                               blocked=trace_blocked(state, unit.side))
 
@@ -472,23 +542,50 @@ def truck_supply_line(state: GameState, side: Side, sources) -> frozenset:
 
     A SOURCE IN ENEMY HANDS SUPPLIES NOBODY, and the test is not invented here -- it is rule
     56.15's, verbatim, the one the engine's own convoy gate already reads (engine._convoy_dest):
-    a harbour whose hex the enemy controls receives no convoy, and a harbour that receives no
-    convoy fills no dump behind it. A source under an unnegated enemy Zone of Control is shut for
-    the same reason every other trace stops there (32.16). So the Commonwealth retaking Tobruk does
-    not merely lengthen the Axis road home: it switches the source off, and every dump behind it
-    stops being a dump the Axis can win the war through.
+    "a convoy scheduled to arrive at a port that is CAPTURED by the Commonwealth is cancelled. It
+    never sails." A harbour that receives no convoy fills no dump behind it. So the Commonwealth
+    RETAKING Tobruk does not merely lengthen the Axis road home: it switches the source off, and
+    every dump behind it stops being a dump the Axis can win the war through.
+
+    ADJACENCY IS NOT CAPTURE, AND THIS GATE USED TO SAY IT WAS. Until this repair the source was
+    ALSO shut by `src in trace_blocked(...)` -- i.e. by an unnegated enemy ZOC on the quay -- with
+    56.15 cited as the authority. 56.15's whole text is the sentence above; it says captured, and a
+    unit standing NEXT TO Tobruk has not captured Tobruk. No rule shuts a port for adjacency. The
+    invented gate was measured on the real GT1 campaign board and it was CATASTROPHIC: four
+    Commonwealth combat units on (16,66) -- one hex from Tobruk (15,66), not on it, with the quay
+    Axis-controlled and 56.15's own test therefore PASSING -- collapsed fed_dumps from 13 to 0 and
+    every one of the Axis's 96 combat units out of the 60-MP trace. The moment 64.72 is wired that
+    is a Commonwealth automatic win at Game-Turn 35 bought with one recce stack. It is now gone.
+
+    The live gates are the rulebook's, and nothing else:
+      * the hex is not on this map (Tripoli -- see game.campaign_victory's TRIPOLI HOLE); or
+      * the enemy has CAPTURED it (56.15), which is true two ways and both are capture: the enemy
+        CONTROLS the hex, or an enemy COMBAT unit is standing on the quay. The two agree on a real
+        board -- game.engine._record_control flips control to the side whose combat units hold a hex
+        and runs in the Record Phase immediately before the victory check -- but they are not one
+        test and neither implies the other. Control OUTLIVES the capturing column, which is what a
+        control marker is for: Tobruk does not revert to the Axis because the garrison that took it
+        marched on. And occupation PRECEDES the marker on any board the engine has not just
+        recorded. Only COMBAT units take ground -- _record_control's own rule ("only combat units
+        hold ground", engine.py), applied here so the two halves of this test agree: a lorry or a
+        bare HQ parked on the quay captures nothing and shuts nothing.
+    The flood OUT of an open source is still blocked normally -- 10.29 bars a Truck Convoy from
+    ENTERING an unnegated enemy ZOC, and `blocked` is applied to every hex the search enters. A
+    besieged-but-unfallen Tobruk therefore still feeds whatever road is still open out of it, which
+    is exactly the siege the campaign is about.
 
     FLAGGED READING: no test is made of the harbour's 55.3 Efficiency Level. A quay bombed to
     Efficiency 0 lands nothing THIS Operations Stage, but 55.18 regenerates it, and 64.71 refuses to
     enumerate the means ("in any way") -- gating the source on a number the rule does not name would
     be inventing a condition, so the rule's silence is kept."""
-    enemy = CONTROL_OF[Side.ALLIED if side == Side.AXIS else Side.AXIS]
+    enemy_side = Side.ALLIED if side == Side.AXIS else Side.AXIS
+    enemy = CONTROL_OF[enemy_side]
+    held = frozenset(u.hex for u in state.living(enemy_side) if u.is_combat)
     blocked = trace_blocked(state, side)
     line: set = set()
     for src in sources:
-        if (not state.terrain.exists(src) or src in blocked
-                or state.control_of(src) == enemy):
-            continue                                   # 56.15 / 32.16: a shut harbour feeds nothing
+        if not state.terrain.exists(src) or state.control_of(src) == enemy or src in held:
+            continue                                   # 56.15: a CAPTURED harbour feeds nothing
         line |= movement.reachable(state.terrain, src, math.inf, SUPPLY_MOBILITY,
                                    blocked=blocked).keys()
     return frozenset(line)

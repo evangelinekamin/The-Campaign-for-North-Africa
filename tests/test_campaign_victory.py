@@ -85,9 +85,9 @@ def _delta_board(*, turn: int, stage: int, hexes: tuple = ALEX + CAIRO,
     battalion on the source hex; `control` sets the 56.15 control of hexes.
 
     Two things this board is NOT, and both were true of the board it replaces. It no longer stands a
-    token Commonwealth unit on Tobruk -- that unit shut the 64.71 supply source (56.15/32.16), which
-    was harmless while the rule's supply clause was deferred and is the whole rule now. And its
-    hexes are no longer a disconnected scatter: 64.71 is a question about a ROAD."""
+    token Commonwealth unit on Tobruk -- that unit CAPTURES the 64.71 supply source and shuts it
+    (56.15), which was harmless while the rule's supply clause was deferred and is the whole rule
+    now. And its hexes are no longer a disconnected scatter: 64.71 is a question about a ROAD."""
     axis = [_unit(f"A{i}", Side.AXIS, h) for i, h in enumerate(hexes)]
     units = axis + ([_unit("C0", Side.ALLIED, TOBRUK)] if tobruk == Side.ALLIED else [])
     return _state(units, turn=turn, stage=stage, supplied=supplied, control=control,
@@ -341,6 +341,64 @@ def test_an_enemy_across_the_road_cuts_the_line():
                  terrain={_road_hex(i): Terrain.CLEAR for i in range(61)},
                  supplies=[SupplyUnit("AX-Dump", Side.AXIS, _road_hex(8), ammo=999, fuel=999)])
     assert cv.axis_traces_within(cut, cut.units[0], supply.TRUCK_MP_64_71) is False
+
+
+# --- 56.15: WHAT SHUTS THE SOURCE. Capture, and only capture. -------------------
+
+def _siege_board(*besiegers) -> GameState:
+    """The road board of _road_board(10, dump_at=8) -- an Axis battalion 10 hexes out, its dump at
+    8, both fed down the road from Tobruk -- with Commonwealth units added at `besiegers`.
+
+    _road_hex(-1) is adjacent to TOBRUK and NOT adjacent to _road_hex(1), so a stack there puts the
+    quay in an enemy ZOC without touching the road east of it. TWO battalions, because rule 10.11
+    exerts a ZOC only from more than one Stacking Point in the hex -- one lone battalion projects
+    nothing and would test nothing."""
+    cw = [_unit(f"C{i}", Side.ALLIED, h) for i, h in enumerate(besiegers)]
+    return _state([_unit("A1", Side.AXIS, _road_hex(10))] + cw,
+                  terrain={_road_hex(i): Terrain.CLEAR for i in range(-1, 61)},
+                  supplies=[SupplyUnit("AX-Dump", Side.AXIS, _road_hex(8), ammo=999, fuel=999)])
+
+
+def test_an_enemy_beside_the_source_does_not_shut_it():
+    # 🔴 THE REGRESSION, and it was a 64.72 catastrophe. The source gate used to shut Tobruk when
+    # the quay stood in an unnegated enemy ZOC, citing 56.15 -- whose whole text is "a convoy
+    # scheduled to arrive at a port that is CAPTURED by the Commonwealth is cancelled. It never
+    # sails." Standing NEXT TO a port does not capture it, and no rule in the book shuts a port for
+    # adjacency. MEASURED on the real GT1 campaign board, the invented gate took the Axis from 13
+    # fed dumps to 0 and all 96 of its combat units out of the 60-MP trace -- so the turn 64.72 is
+    # wired, one Commonwealth stack parked outside an Axis-held, empty Tobruk would have handed the
+    # Commonwealth the war at Game-Turn 35.
+    cv = CampaignVictory()
+    besieged = _siege_board(_road_hex(-1), _road_hex(-1))
+    assert _ax(TOBRUK) in supply.trace_blocked(besieged, Side.AXIS)     # the quay IS in enemy ZOC
+    assert besieged.control_of(_ax(TOBRUK)) is not Control.ALLIED       # and is NOT captured
+    assert cv.axis_traces_within(besieged, besieged.units[0], supply.TRUCK_MP_64_71) is True
+
+
+def test_an_enemy_standing_on_the_source_shuts_it():
+    # The other half of the same rule: a combat unit ON the quay HAS captured it (56.15), and a
+    # captured port cancels the convoy, so it fills no dump behind it and no dump behind it carries
+    # a 64.71 line. This is the campaign in one line -- the Panzerarmee can stand in Alexandria and
+    # Cairo for a full Game-Turn and win nothing, because the Eighth Army is sitting on its source
+    # four hundred miles back.
+    cv = CampaignVictory()
+    taken = _siege_board(_ax(TOBRUK))
+    assert cv.axis_traces_within(taken, taken.units[0], supply.TRUCK_MP_64_71) is False
+
+
+def test_enemy_control_of_the_source_shuts_it_with_no_one_standing_there():
+    # Capture OUTLIVES the capturing column, which is what a control marker is for: Tobruk does not
+    # revert to the Axis because the garrison that took it marched on. 56.15 asks whether the port
+    # is captured, not whether anyone is currently standing in it.
+    cv = CampaignVictory()
+    s = _road_board(10, dump_at=8)
+    assert cv.axis_traces_within(s, s.units[0], supply.TRUCK_MP_64_71) is True
+    flipped = _state([_unit("A1", Side.AXIS, _road_hex(10))],
+                     terrain={_road_hex(i): Terrain.CLEAR for i in range(61)},
+                     supplies=[SupplyUnit("AX-Dump", Side.AXIS, _road_hex(8), ammo=999, fuel=999)],
+                     control={_ax(TOBRUK): Control.ALLIED})
+    assert not flipped.units_at(_ax(TOBRUK))
+    assert cv.axis_traces_within(flipped, flipped.units[0], supply.TRUCK_MP_64_71) is False
 
 
 # --- 64.7 defines no annihilation clause ---------------------------------------

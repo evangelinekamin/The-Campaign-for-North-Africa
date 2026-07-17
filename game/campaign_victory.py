@@ -23,6 +23,13 @@ DEFERRED, documented so nothing is silently missing:
     The trace it needs is BUILT AND WIRED here (axis_traces_within at supply.TRUCK_MP_64_72);
     what stops it is the geography -- see THE TRIPOLI HOLE below, which must be closed FIRST or
     64.72 fires on a map artefact rather than on the rulebook.
+    A SECOND trigger of the same catastrophe lived IN THIS CODE and is now fixed: supply's source
+    gate shut Tobruk for enemy ADJACENCY (an unnegated ZOC on the quay) while citing 56.15, which
+    is a rule about CAPTURE. Four Commonwealth units parked one hex from an Axis-held, empty Tobruk
+    took fed_dumps from 13 to 0 and every Axis unit out of the trace. See supply.truck_supply_line.
+    The lesson generalises and is the reason this note stays after the fix: "the only thing stopping
+    64.72 is the geography" was FALSE when it was written, and the hole was not in the map that time
+    -- it was in the trace. Before wiring 64.72, audit BOTH.
   - 64.73's Stores/Water week-test and the in-hex "do you HAVE it" form of the occupation
     quality-test. The Fuel-for-20-CP and Ammunition-for-three-fires MAGNITUDES are faithful
     (CampaignVictory._supplied); the Stores/Water week and the in-hex form need the per-unit
@@ -263,15 +270,41 @@ class CampaignVictory:
         Movement Points back to a Supply Dump which can in turn be supplied from Tobruk or Tripoli
         in any way -- regardless of the turn or date.
 
-        Both halves are the rule's own, and each is the Commonwealth's answer to the other. The
-        HOLD gives it a full Game-Turn of activations to throw the spearhead back out of one Delta
-        hex, which denies the win rather than postponing it (_held_since -- a break restarts the
-        clock). The LINE gives it the whole desert: Alexandria stands 138 truck-MP from Tobruk on
-        this map, so the Axis cannot reach the Delta on its harbour's own trace -- it must push
-        depots up the Via Balbia to within 90 of the Delta and keep the road behind them open, and
-        one Commonwealth column across that road unwinds the win from four hundred miles away. That
-        is the campaign the designer wrote: "the Axis had to take Alexandria (and the Delta)", and
-        taking it is not the same as being able to stand in it.
+        Both halves are the rule's own. The HOLD gives the Commonwealth a full Game-Turn of
+        activations to throw the spearhead back out of one Delta hex, which denies the win rather
+        than postponing it (_held_since -- a break restarts the clock).
+
+        WHAT THE LINE IS WORTH IS NOT YET KNOWN, AND THE FIRST CUT OF THIS PORT SAID OTHERWISE. It
+        shipped "Alexandria stands 138 truck-MP from Tobruk on this map, so the Axis cannot reach
+        the Delta on its harbour's own trace -- it must push depots up the Via Balbia to within 90
+        of the Delta". Its NUMBER reproduces and almost nothing else about it does. Corrected here
+        rather than quietly deleted, because it was measured, published, and believed:
+
+          * IT MEASURES A LEG THE RULE DOES NOT MEASURE, so the "so" is a non-sequitur. 64.71 never
+            asks the unit's distance to the HARBOUR. It caps unit -> DUMP at 90 and then declines to
+            measure dump -> harbour at all ("in any way"). Tobruk -> Alexandria really is 138.5
+            truck-MP (with the GT1 trace blocking; 122.5 bare) -- it is simply not a distance 64.71
+            has an opinion about.
+          * THE DEPOTS ARE ALREADY THERE, so "it must push depots up the Via Balbia" is false where
+            it is checkable. MEASURED on game.scenario.campaign() at GT1: the Axis's forward setup
+            dump AX-Dump#4 (24,86) -- unmoved, Tobruk-fed, one of 13 -- stands 88.5 truck-MP from
+            Alexandria (27,133). INSIDE the 90 the rule prints. Nothing needs pushing up the road to
+            put Alexandria in supply; it was in supply on turn one.
+          * WHAT ACTUALLY DENIES THE WIN AT GT1 IS CAIRO: 124.5-125.0 truck-MP from that same dump,
+            some 35 MP outside the 90. 64.71 wants ALL SEVEN hexes of BOTH cities, so the rule does
+            not fire today -- but on the second objective, not the one that was published, and by a
+            margin nobody measured.
+          * AND THE NUMBERS THEMSELVES ARE ~2-3x TOO DEAR, because the map's road net is a fragment
+            of the book's (supply.TRUCK_MP_64_71 carries the measurement and the rule cites). On a
+            faithfully transcribed Via Balbia the Delta may well sit inside 90 of the setup dumps
+            outright, and 64.71's supply clause may cost the Axis nothing at all.
+
+        So: the 90 is the book's and the trace is wired, but WHETHER THIS CLAUSE BITES IS AN OPEN
+        QUESTION GATED ON THE ROAD NET, and no claim that it does should be made until that map job
+        lands. Today the hold is the clause with teeth. That the designer meant the supply line to
+        have them -- "the Axis had to take Alexandria (and the Delta)", and taking it is not the
+        same as being able to stand in it -- is a reason to transcribe the roads, not a licence to
+        report an untranscribed map's arithmetic as the rule's intent.
 
         Before this port the <=90 line was DEFERRED and the 64.73 quality-test (_occupier ->
         _supplied, the cpa/2 trace of 32.16) stood in its place. It no longer does: 64.73's test
