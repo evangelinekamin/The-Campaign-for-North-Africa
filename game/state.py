@@ -90,17 +90,28 @@ class Unit:
     bp_accumulated: float = 0.0    # Breakdown Points this OpStage (21.25)
     bp_checked_column: int = -1    # highest 21.38 column already checked (21.26 gate)
     broken_down: int = 0           # TOE Strength Points broken down / immobile (21.44)
+    # Derived TOE totals, cached at construction (rule 11.32 reads them ~38M times a run).
+    # steps + broken_down are the only inputs and change ONLY via replace(), which re-runs
+    # __post_init__ -- so the cache can never go stale. compare/repr=False keeps eq/hash/repr
+    # byte-identical to the un-cached class. Pinned field == recompute by test_state_cache.py.
+    _strength: int = field(init=False, repr=False, compare=False)
+    _effective_strength: int = field(init=False, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        total = sum(s.strength for s in self.steps)
+        object.__setattr__(self, "_strength", total)
+        object.__setattr__(self, "_effective_strength", total - self.broken_down)
 
     @property
     def strength(self) -> int:
-        return sum(s.strength for s in self.steps)
+        return self._strength
 
     @property
     def effective_strength(self) -> int:
         """Operational TOE: total strength less the broken-down vehicles, which may
         not move, defend, attack or barrage (rule 21.44). The single choke point every
         combat/ZOC read passes through, so a broken vehicle contributes nothing."""
-        return self.strength - self.broken_down
+        return self._effective_strength
 
     @property
     def alive(self) -> bool:
@@ -192,10 +203,17 @@ class SupplyUnit:
     # unlimited major-city/oasis wells that may never deplete (52.13) -- so only a depletable well
     # carries a refill ceiling, and every non-well scenario is byte-identical (game.engine._well_refill).
     water_capacity: int = 0
+    # Cached at construction from the four commodity pools, which change only via replace()
+    # (re-runs __post_init__, never stale). compare/repr=False keeps eq/hash/repr identical.
+    _empty: bool = field(init=False, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "_empty",
+                           self.ammo <= 0 and self.fuel <= 0 and self.stores <= 0 and self.water <= 0)
 
     @property
     def empty(self) -> bool:
-        return self.ammo <= 0 and self.fuel <= 0 and self.stores <= 0 and self.water <= 0
+        return self._empty
 
 
 @dataclass(frozen=True, slots=True)

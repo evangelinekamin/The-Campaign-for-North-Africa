@@ -3006,8 +3006,15 @@ def _absorb_losses(units, points: int, rating_of) -> list[tuple[str, int]]:
 
 
 def _record_control(r: _Run) -> None:
+    # Group combat units by hex ONCE (O(units)) instead of scanning every unit for every
+    # terrain hex (O(hexes x units)). The terrain dict is then iterated in its original order,
+    # skipping unoccupied hexes -- so HEX_CONTROL_CHANGED emission order is byte-for-byte as before.
+    by_hex: dict[Coord, list] = {}
+    for u in r.state.units:
+        if u.is_combat and r.state.on_map(u):                      # only combat units hold ground
+            by_hex.setdefault(u.hex, []).append(u)
     for coord in r.state.terrain.terrain:
-        occ = [u for u in r.state.units_at(coord) if u.is_combat]   # only combat units hold ground
+        occ = by_hex.get(coord)
         if not occ:
             continue
         sides = {u.side for u in occ}
