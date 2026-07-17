@@ -154,7 +154,9 @@ def main() -> int:
     model = next((a.split(":", 1)[1] for a in args if a.startswith("llm:")), None)
     positional = [a for a in args if not a.startswith("llm:")]
     which = next((a for a in positional if not a.isdigit()), "corridor")
-    factory = SCENARIOS.get(which, coastal_corridor)
+    if which not in SCENARIOS:
+        sys.exit(f"unknown scenario {which!r}; choose one of: {', '.join(SCENARIOS)}")
+    factory = SCENARIOS[which]
     # Fresh seed each run so the RNG is visibly alive; pass an explicit seed to
     # replay a specific game (seed + log -> identical state, brief §7).
     seed = next((int(a) for a in positional if a.isdigit()), random.randrange(1, 1_000_000))

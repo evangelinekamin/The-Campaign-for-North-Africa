@@ -197,7 +197,7 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
 
     supplies: list[SupplyUnit] = _place_dumps(dumps_meta, dump_pools or DESERT_FOX_DUMP_POOLS)
 
-    for rec in (_load(reinforcements_file).get("reinforcements", []) if reinforcements_file else []):
+    for rec in (_load(reinforcements_file)["reinforcements"] if reinforcements_file else []):
         side = Side.AXIS if rec["side"] == "AXIS" else Side.ALLIED
         role = rec.get("role") or classify(rec["counter"], rec["group"])
         if role is not None:

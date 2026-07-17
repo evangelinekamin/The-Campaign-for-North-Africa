@@ -7,6 +7,8 @@ now we guard step counts, legal positions, and stacking limits.
 """
 from __future__ import annotations
 
+from itertools import chain
+
 from . import adjudication, stacking, supply
 from .state import GameState
 
@@ -32,6 +34,12 @@ def check(state: GameState) -> None:
         if not 0 <= u.broken_down <= u.strength:
             raise InvariantViolation(
                 f"unit {u.id} broken_down={u.broken_down} out of [0, {u.strength}]")
+        # CP spent and Breakdown Points accrued this OpStage only ever rise from zero and
+        # reset to zero each turn (apply, TURN_ADVANCED) -- neither is ever a debt (21.25).
+        if u.cp_used < 0:
+            raise InvariantViolation(f"unit {u.id} has negative cp_used {u.cp_used}")
+        if u.bp_accumulated < 0:
+            raise InvariantViolation(f"unit {u.id} has negative bp_accumulated {u.bp_accumulated}")
 
     for su in state.supplies:                      # dumps relocate now (rule 32.3)
         if not state.terrain.exists(su.hex):
@@ -53,6 +61,30 @@ def check(state: GameState) -> None:
             if qty < 0:
                 raise InvariantViolation(
                     f"truck {t.id} has negative {commodity} cargo {qty}")
+
+    # No id may repeat across units, supplies, and trucks. apply() resolves an event's
+    # target by id to the FIRST match, so a duplicate silently corrupts the wrong entity --
+    # a re-founded rail dump did exactly this once (engine._rail_station), and the second
+    # Supply Unit with the same id double-counted its pool 299 points over initial.
+    seen_ids: set[str] = set()
+    for entity in chain(state.units, state.supplies, state.trucks):
+        if entity.id in seen_ids:
+            raise InvariantViolation(
+                f"duplicate entity id {entity.id!r} across units/supplies/trucks")
+        seen_ids.add(entity.id)
+
+    # A port's Efficiency Level is bounded by its assigned maximum (55.12): bomb damage
+    # (engine._air_port) floors it at 0, regeneration (55.18) ceils it at max_eff - blocked.
+    for p in state.ports:
+        if not 0 <= p.eff <= p.max_eff:
+            raise InvariantViolation(
+                f"port {p.id} eff={p.eff} out of [0, max_eff={p.max_eff}]")
+
+    # A fortification level is a physical wall height (15.82): siege artillery (25.14)
+    # batters it DOWN but never below razed ground.
+    for coord, level in state.fort_levels.items():
+        if level < 0:
+            raise InvariantViolation(f"fort level {level} at {coord} is negative")
 
     # Stacking limits, checked at rest (rule 9.31): no hex over its point limit.
     # The detection lives in adjudication.stacking_violations (single source of

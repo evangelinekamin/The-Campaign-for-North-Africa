@@ -202,16 +202,28 @@ _MORALE_TABLE: dict[int, list[str]] = {
     -17: ["", "", "", "", "", "", "", "", "", "11-66"],
 }
 
+# Every row must carry exactly one cell per modifier column: morale_modifier zips the
+# row against _MORALE_MODS, and zip() silently truncates a SHORT row -- a mis-transcribed
+# row would drop the surrender column unseen (the 54.17-misprint failure mode). Assert the
+# lengths at load so a bad transcription fails on import, not silently in play.
+assert all(len(cells) == len(_MORALE_MODS) for cells in _MORALE_TABLE.values()), \
+    "17.4 morale table: every row must have exactly len(_MORALE_MODS) cells"
+
 
 def morale_modifier(cohesion: int, roll: int) -> "int | str":
     """Rule 17.4: the modifier applied to Basic Morale for one combat, from the
     unit's Cohesion level and a sequential 2d6 roll. Returns an int, or 'SURR'
     (surrender). Cohesion is clamped to the table's [-17, +8]."""
-    cells = _MORALE_TABLE[max(-17, min(8, cohesion))]
-    for mod, cell in zip(_MORALE_MODS, cells):
+    coh = max(-17, min(8, cohesion))
+    for mod, cell in zip(_MORALE_MODS, _MORALE_TABLE[coh]):
         if roll in expand(cell):
             return mod
-    return 0
+    # Every row partitions the 36 legal 2d6 rolls (guarded by test_combat), so a
+    # fall-through is an illegal roll or a misprinted table -- fail loud, never return
+    # a plausible-wrong 0.
+    raise ValueError(
+        f"morale_modifier: roll {roll} matched no cell of cohesion row {coh}; "
+        f"the 17.4 rows partition the 36 legal 2d6 rolls (11..66)")
 
 
 # [14.6] ANTI-ARMOR FIRE CRT: rows = the 36 d66 outcomes paired (11,12 / 13,14 /

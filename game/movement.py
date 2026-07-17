@@ -110,7 +110,7 @@ def step_cost(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobility,
 
 
 def breakdown_points(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobility,
-                     weather: str = "clear") -> float:
+                     weather: str = "normal") -> float:
     """Breakdown Points accrued moving one step src->dst (rule 21.21 / 8.37), the
     pure dual of step_cost. Foot/camel accrue none (21.11). A Road contributes its
     own 1/2 value and NEGATES the hexside (note 6); a Track HALVES both the entered-

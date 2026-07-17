@@ -78,7 +78,12 @@ def weather_for_roll(season: str, roll: int) -> str:
     for wtype in _TYPES:
         if roll in expand(row[wtype]):
             return wtype
-    return NORMAL          # defensive: the row partitions all 36 rolls (test_weather)
+    # Every season row partitions all 36 legal rolls (guarded by test_weather), so a
+    # fall-through is an illegal roll or a misprinted table -- fail loud, never return a
+    # plausible-wrong NORMAL.
+    raise ValueError(
+        f"weather_for_roll: roll {roll} matched no cell of the {season!r} row; "
+        f"the 29.61 seasons partition the 36 legal 2d6 rolls (11..66)")
 
 
 def foul_sections(die: int) -> frozenset[str]:
