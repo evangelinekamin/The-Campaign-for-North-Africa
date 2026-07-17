@@ -1295,10 +1295,17 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     offensive agency and balance (C4) land next. The objective is Alexandria (E3613), far
     to the east -- the historical Axis goal.
 
-    Victory is the faithful campaign spec (rule 64.7): the Axis wins by taking Alexandria
-    and Cairo or by out-pointing the Commonwealth on the 64.73 geographic Victory-Point
-    table graded by 64.76, else annihilation. `max_turns` truncates the run (default the
-    full GT111) -- a shorter slice for fast tests or a single-season study."""
+    Victory is the faithful campaign spec (rule 64.7): the Axis auto-wins by occupying every
+    hex of Alexandria AND Cairo and HOLDING them for one full Game-Turn (64.71) -- the hold is
+    the rule's own clause, so a Delta hex retaken inside that turn denies the win outright
+    rather than postponing it. Failing that, the war runs its span and is counted on the 64.73
+    geographic Victory-Point table, graded by 64.76. Rule 64.7 defines NO annihilation clause
+    and this spec invents none: a side whose last counter dies does not lose on the instant,
+    the campaign is still settled on the tally. DEFERRED, not silently missing: the book's
+    other automatic end (64.72's Game-Turn-35 Commonwealth win) and 64.71's other half (the
+    <=90 truck-MP line of supply back to a Tobruk/Tripoli-fed dump) -- see game.campaign_victory
+    for the model and its full deferred list. `max_turns` truncates the run (default the full
+    GT111) -- a shorter slice for fast tests or a single-season study."""
     tmap, _ = cna_map.load_sections("ABCDE")
     target = coords.to_axial(coords.parse(_ALEXANDRIA))
     max_turns = max_turns or calendar.FINAL_GT

@@ -521,10 +521,12 @@ class GameState:
     # Berlin-recall roll, and zero Rommel events.
     rommel: "Rommel | None" = None
     # Victory conditions (rules 61.8 / 64.7): a pluggable strategy object exposing
-    # check(run) -> the per-turn auto-win/annihilation test, and decide(run) -> the
-    # max-turns point tally. Default None routes to the engine's built-in Race-for-
-    # Tobruk logic (engine._DEFAULT_VICTORY), so every scenario that does not name a
-    # spec stays byte-identical; the campaign supplies its own (game.campaign_victory).
+    # check(run) -> the per-turn auto-win test, and decide(run) -> the max-turns point
+    # tally. Annihilation is no part of this seam's contract -- it is one spec's own
+    # branch (engine._ScenarioVictory, under 61.8), not a rule the campaign shares.
+    # Default None routes to the engine's built-in Race-for-Tobruk logic
+    # (engine._DEFAULT_VICTORY), so every scenario that does not name a spec stays
+    # byte-identical; the campaign supplies its own (game.campaign_victory).
     victory: "object | None" = None
     # Weather-clock shift (rule 64.2 / 29.1). The weather season model anchors its own
     # turn 1 to spring; a scenario whose Game-Turn 1 is not spring (the campaign opens in
