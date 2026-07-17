@@ -26,6 +26,12 @@ class Control(str, Enum):
     NEUTRAL = "NEUTRAL"
 
 
+# Which Control a Side holds ground under. It lives here, beside the two enums it joins, because
+# more than the engine needs it: game.supply asks the rule-56.15 question ("is this harbour in
+# enemy hands?") of the 64.71 supply trace, and game.supply may not import game.engine.
+CONTROL_OF: dict[Side, Control] = {Side.AXIS: Control.AXIS, Side.ALLIED: Control.ALLIED}
+
+
 class Phase(str, Enum):
     WEATHER = "WEATHER"
     LOGISTICS = "LOGISTICS"        # naval-convoy arrival (rule 48 V.C.7/V.D); SYSTEM-owned

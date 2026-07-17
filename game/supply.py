@@ -25,6 +25,7 @@ from __future__ import annotations
 import math
 
 from . import logistics_data, movement, tactics
+from .events import CONTROL_OF
 from .hexmap import Coord
 from .state import GameState, Port, Side, SupplyUnit, TruckFormation, Unit
 from .terrain import Mobility, NON_MOT_CLASSES, Terrain
@@ -241,6 +242,20 @@ def _pool(su, commodity: str) -> int:
     return getattr(su, commodity.lower())          # one path for all four commodities
 
 
+def trace_blocked(state: GameState, side: Side) -> frozenset:
+    """THE 32.16 TRACE BLOCKING, in one place: the hexes no line of supply of `side` may run
+    through -- every hex an enemy unit stands on, plus every hex in an enemy combat unit's Zone of
+    Control that no friendly unit is standing on to negate.
+
+    Every trace in this module reads exactly this set and always did; it was written out three times
+    (reachable_supplies, reachable_moves, reachable_truck_moves) and the 64.71 truck-MP line was
+    about to make a fourth and a fifth. One rule, one expression -- the sets and the order are
+    identical to the three copies it replaces, so no existing trace moves by a byte."""
+    enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, side)
+    friendly = frozenset(u.hex for u in state.living(side))
+    return (enemy_zoc - friendly) | enemy_occupied
+
+
 def reachable_supplies(state: GameState, unit: Unit, commodity: str):
     """Friendly supply units holding `commodity`, within half the unit's CPA,
     nearest first (deterministic). Trace blocked by enemy ZOC / units (32.16).
@@ -265,10 +280,8 @@ def reachable_supplies(state: GameState, unit: Unit, commodity: str):
     What actually denies the enemy a well is standing on it. That is already modelled."""
     budget = unit.cpa / 2
     mob = Mobility.FOOT if unit.mobility in NON_MOT_CLASSES else Mobility.MOTORIZED
-    enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, unit.side)
-    friendly_occupied = frozenset(u.hex for u in state.living(unit.side))
-    blocked = (enemy_zoc - friendly_occupied) | enemy_occupied
-    reach = movement.reachable(state.terrain, unit.hex, budget, mob, blocked=blocked)
+    reach = movement.reachable(state.terrain, unit.hex, budget, mob,
+                               blocked=trace_blocked(state, unit.side))
     out = [su for su in state.active_supplies(unit.side)
            if su.hex in reach and _pool(su, commodity) > 0]
     out.sort(key=lambda su: (reach[su.hex], su.id))
@@ -279,11 +292,8 @@ def reachable_moves(state: GameState, dump: SupplyUnit) -> dict:
     """Hexes a carried supply unit can relocate to this OpStage: within CPA 15
     (rule 32.58A) as medium-truck movement, blocked by enemy ZOC not negated by a
     friendly unit (the 32.16 trace blocking, reused for the carry)."""
-    enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, dump.side)
-    friendly = frozenset(u.hex for u in state.living(dump.side))
-    blocked = (enemy_zoc - friendly) | enemy_occupied
     return movement.reachable(state.terrain, dump.hex, SUPPLY_CPA, SUPPLY_MOBILITY,
-                              blocked=blocked)
+                              blocked=trace_blocked(state, dump.side))
 
 
 # --- truck convoys (rules 53-54, the inland distribution layer) ---------------
@@ -407,13 +417,81 @@ def column_legs(state: GameState, side: Side, truck_ids: tuple) -> tuple:
 def reachable_truck_moves(state: GameState, truck: TruckFormation) -> dict:
     """Hexes a truck convoy can relocate to this Truck Convoy Phase: within its 53.22
     extended convoy CPA as medium-truck movement, blocked by enemy ZOC not negated by a
-    friendly unit (the identical 32.16 trace-blocking reused from reachable_moves)."""
-    enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, truck.side)
-    friendly = frozenset(u.hex for u in state.living(truck.side))
-    blocked = (enemy_zoc - friendly) | enemy_occupied
+    friendly unit (the identical 32.16 trace-blocking reused from reachable_moves).
+
+    NOT the 64.71 line of supply -- see truck_trace_reach below. This is one lorry's MOVE in one
+    Phase, budgeted at the formation's own convoy CPA (30 or 40); that is a trace of an army's
+    supply line, budgeted at the rulebook's 90 or 60."""
     return movement.reachable(state.terrain, truck.hex,
                               truck_convoy_cpa(truck.truck_class), SUPPLY_MOBILITY,
-                              blocked=blocked)
+                              blocked=trace_blocked(state, truck.side))
+
+
+# --- [64.71]/[64.72] THE LINE OF SUPPLY, IN TRUCK MOVEMENT POINTS ------------------------------
+# Rules 64.71 and 64.72 both turn on ONE trace, and it is not any of the three above. A combat unit
+# must "trace a line of supply (i.e., convoy route) back to a Supply Dump which in turn can be
+# supplied from Tobruk or Tripoli in any way, and that line is 90 movement points by truck or less"
+# (64.71); 64.72 asks the same question of every Axis combat unit at 60. So the trace has TWO legs
+# and the rulebook budgets them differently, which is the whole shape of the rule:
+#
+#   * UNIT -> DUMP is CAPPED, at 90 Truck Movement Points (64.71) or 60 (64.72). This is the leg
+#     that decides whether a spearhead is on the end of a supply line or on the end of a rope.
+#   * DUMP -> TOBRUK/TRIPOLI is NOT CAPPED. "In any way" is the magnitude: the book does not care
+#     how far back the harbour is, or by what means the depot is filled -- only that the road home
+#     is open. So that leg is pure truck-passable CONNECTIVITY, at any length (truck_supply_line).
+#
+# Denominated in MEDIUM truck movement (SUPPLY_MOBILITY), which is how this engine already carries
+# every supply point (32.51: a Motorization Point is "treated in all aspects as a Medium Truck
+# Point"). FLAGGED: 64.71 says "by truck" and 64.72 "(Truck)" without naming a class, and the 8.37
+# Terrain Effects Chart charges Light/Medium/Heavy the same CP anyway (the classes differ in
+# Breakdown Points, 54.2, which a trace does not accrue) -- so the class is immaterial to the cost
+# and Medium is the engine's own denomination, not a choice made here.
+TRUCK_MP_64_71 = 90       # 64.71: the Axis Delta occupiers' line back to a Tobruk/Tripoli-fed dump
+TRUCK_MP_64_72 = 60       # 64.72: every Axis combat unit's line, from Game-Turn 35
+
+
+def truck_trace_reach(state: GameState, unit: Unit, budget: float) -> dict:
+    """The hexes `unit` can trace a 64.71/64.72 line of supply to within `budget` TRUCK Movement
+    Points: medium-truck movement over the terrain, blocked by the 32.16 trace blocking.
+
+    TRUCK movement for EVERY unit, foot battalions included, and that is the rule's own word. The
+    32.16 tactical draw asks how far the UNIT can go (reachable_supplies walks leg infantry at
+    Mobility.FOOT, since a marching battalion carries its own load); 64.71 asks how far the LORRIES
+    can come, which is a question about the road, not about the boots. "A line of supply (i.e.,
+    convoy route) ... 90 movement points by truck" measures the convoy, and the convoy is a convoy
+    whoever is waiting at the end of it."""
+    return movement.reachable(state.terrain, unit.hex, budget, SUPPLY_MOBILITY,
+                              blocked=trace_blocked(state, unit.side))
+
+
+def truck_supply_line(state: GameState, side: Side, sources) -> frozenset:
+    """64.71's "which in turn can be supplied from Tobruk or Tripoli IN ANY WAY": every hex a lorry
+    of `side` could carry supplies to from any of `sources` -- the Tobruk and Tripoli harbours --
+    over ANY length of open road. Unbudgeted by construction: "in any way" is the rule declining to
+    measure this leg at all, where it measures the unit's own leg at 90 or 60.
+
+    A SOURCE IN ENEMY HANDS SUPPLIES NOBODY, and the test is not invented here -- it is rule
+    56.15's, verbatim, the one the engine's own convoy gate already reads (engine._convoy_dest):
+    a harbour whose hex the enemy controls receives no convoy, and a harbour that receives no
+    convoy fills no dump behind it. A source under an unnegated enemy Zone of Control is shut for
+    the same reason every other trace stops there (32.16). So the Commonwealth retaking Tobruk does
+    not merely lengthen the Axis road home: it switches the source off, and every dump behind it
+    stops being a dump the Axis can win the war through.
+
+    FLAGGED READING: no test is made of the harbour's 55.3 Efficiency Level. A quay bombed to
+    Efficiency 0 lands nothing THIS Operations Stage, but 55.18 regenerates it, and 64.71 refuses to
+    enumerate the means ("in any way") -- gating the source on a number the rule does not name would
+    be inventing a condition, so the rule's silence is kept."""
+    enemy = CONTROL_OF[Side.ALLIED if side == Side.AXIS else Side.AXIS]
+    blocked = trace_blocked(state, side)
+    line: set = set()
+    for src in sources:
+        if (not state.terrain.exists(src) or src in blocked
+                or state.control_of(src) == enemy):
+            continue                                   # 56.15 / 32.16: a shut harbour feeds nothing
+        line |= movement.reachable(state.terrain, src, math.inf, SUPPLY_MOBILITY,
+                                   blocked=blocked).keys()
+    return frozenset(line)
 
 
 # --- Commonwealth railroad (rule 54.3) ----------------------------------------

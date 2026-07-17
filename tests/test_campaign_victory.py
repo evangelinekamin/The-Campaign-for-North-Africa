@@ -1,6 +1,7 @@
 """C1-4: the campaign victory conditions (rule 64.7). Each clause tested in isolation --
-the 64.71 Alexandria+Cairo auto-win and its one-full-Game-Turn hold, the 64.73 geographic
-tally, and the 64.76 ratio grading -- on hand-built board states.
+the 64.71 Alexandria+Cairo auto-win, its one-full-Game-Turn hold and its <=90 TRUCK-Movement-Point
+line of supply back to a Tobruk/Tripoli-fed dump, the 64.73 geographic tally, and the 64.76 ratio
+grading -- on hand-built board states.
 
 64.7 defines no annihilation clause; the test that asserted the invented one now asserts
 its absence (test_no_annihilation_victory).
@@ -12,15 +13,20 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from game import coords
+from game import coords, supply
 from game.campaign_victory import CampaignVictory, grade
-from game.events import Phase, Side
+from game.events import Control, Phase, Side
+from game.hexmap import line
 from game.movement import TerrainMap
 from game.state import GameState, StepRecord, SupplyUnit, Unit, VP
 from game.terrain import Mobility, Terrain
 
 ALEX = ("E3613", "E3714")
 CAIRO = ("E1730", "E1829", "E1830", "E1930", "E1931")
+TOBRUK = "C4807"          # data/victory_cities.json supply_sources: the one 64.71 source ON THIS
+                          # MAP (Tripoli's 8.85 gateway A2802 is transcribed as sea -- see
+                          # game.campaign_victory's module docstring, THE TRIPOLI HOLE)
+CLEAR_TRUCK_CP = 2        # [8.37] Terrain Effects Chart: a truck pays 2 CP to enter a clear hex
 
 
 class _R:
@@ -36,33 +42,56 @@ def _ax(label: str):
     return coords.to_axial(coords.parse(label))
 
 
-def _unit(uid: str, side: Side, label: str, *, combat: bool = True, strength: int = 5) -> Unit:
-    return Unit(uid, side, _ax(label), (StepRecord("inf", strength),),
+def _unit(uid: str, side: Side, where, *, combat: bool = True, strength: int = 5) -> Unit:
+    return Unit(uid, side, _ax(where) if isinstance(where, str) else where,
+                (StepRecord("inf", strength),),
                 mobility=Mobility.FOOT, cpa=10, stacking_points=1, oca=3, dca=3,
                 is_combat=combat)
 
 
-def _state(units, *, supplied: bool = True, turn: int = 111, stage: int = 1) -> GameState:
+def _state(units, *, supplied: bool = True, turn: int = 111, stage: int = 1,
+           terrain: "dict | None" = None, supplies=None, control=None) -> GameState:
     # C3-3: a holder must trace supply (rule 64.73). By default co-locate a dump with each
     # combat unit so the tally / auto-win tests exercise OCCUPATION; supplied=False strands the
     # units (no dump) to test the supply gate itself. Terrain carries the unit hexes so the
     # cpa/2 trace (game.supply.reachable_supplies) can reach a co-located dump.
-    terrain = {u.hex: Terrain.CLEAR for u in units}
-    supplies = (tuple(SupplyUnit(f"D-{u.id}", u.side, u.hex, ammo=999, fuel=999)
-                      for u in units if u.is_combat) if supplied else ())
+    terrain = dict(terrain or {})
+    for u in units:
+        terrain.setdefault(u.hex, Terrain.CLEAR)
+    if supplies is None:
+        supplies = (tuple(SupplyUnit(f"D-{u.id}", u.side, u.hex, ammo=999, fuel=999)
+                          for u in units if u.is_combat) if supplied else ())
     return GameState(turn=turn, max_turns=111, phase=Phase.RECORD, active_side=Side.SYSTEM,
                      seed=1, weather="normal", vp=VP(), terrain=TerrainMap(terrain=terrain),
-                     control={}, units=tuple(units), target_hex=(0, 0), supplies=supplies,
-                     consumed={}, initial_supply={}, stage=stage)
+                     control=control or {}, units=tuple(units), target_hex=(0, 0),
+                     supplies=tuple(supplies), consumed={}, initial_supply={}, stage=stage)
+
+
+def _road_to_tobruk(*ends) -> dict:
+    """Clear hexes along the straight lines from Tobruk to each of `ends` -- the open truck road
+    64.71 needs behind a dump for it to be one "which in turn can be supplied from Tobruk ... in
+    any way". Without it a synthetic board is a scatter of disconnected hexes and no dump on it is
+    fed by anything."""
+    return {h: Terrain.CLEAR for e in ends for h in line(_ax(TOBRUK), e)}
 
 
 def _delta_board(*, turn: int, stage: int, hexes: tuple = ALEX + CAIRO,
-                 supplied: bool = True) -> GameState:
-    """The Axis standing on every hex of `hexes` (the whole 64.71 objective by default), plus
-    a token Commonwealth unit on Tobruk, at Game-Turn `turn` Operations Stage `stage`."""
+                 supplied: bool = True, tobruk: "Side | None" = None,
+                 control: "dict | None" = None) -> GameState:
+    """The whole 64.71 board: the Axis standing on every hex of `hexes` (the entire objective by
+    default) with a Supply Dump under each, and an open truck road running back from the Delta to
+    Tobruk -- so the occupiers trace 0 truck-MP to a dump the source can fill, and the rule's supply
+    clause is satisfied. `supplied=False` takes the dumps away; `tobruk=Side.ALLIED` puts an enemy
+    battalion on the source hex; `control` sets the 56.15 control of hexes.
+
+    Two things this board is NOT, and both were true of the board it replaces. It no longer stands a
+    token Commonwealth unit on Tobruk -- that unit shut the 64.71 supply source (56.15/32.16), which
+    was harmless while the rule's supply clause was deferred and is the whole rule now. And its
+    hexes are no longer a disconnected scatter: 64.71 is a question about a ROAD."""
     axis = [_unit(f"A{i}", Side.AXIS, h) for i, h in enumerate(hexes)]
-    return _state(axis + [_unit("C0", Side.ALLIED, "C4807")],
-                  turn=turn, stage=stage, supplied=supplied)
+    units = axis + ([_unit("C0", Side.ALLIED, TOBRUK)] if tobruk == Side.ALLIED else [])
+    return _state(units, turn=turn, stage=stage, supplied=supplied, control=control,
+                  terrain=_road_to_tobruk(*(u.hex for u in axis)))
 
 
 # --- 64.76 ratio grading -------------------------------------------------------
@@ -161,13 +190,157 @@ def test_a_break_in_the_occupation_restarts_the_hold():
 
 
 def test_an_unsupplied_holder_does_not_run_the_hold_clock():
-    # The hold is of OCCUPATION as 64.73 defines it (_occupier): a holder that cannot trace
-    # supply occupies nothing, so a stranded Delta garrison never starts the 64.71 clock.
+    # 64.71's OTHER half: the occupying units must trace a line of supply of <=90 truck Movement
+    # Points back to a Supply Dump the source can fill. A Delta garrison with no dump behind it
+    # traces nothing, so it never starts the hold clock -- it can sit in Alexandria for the rest of
+    # the war and win nothing. (This used to test the 64.73 cpa/2 quality-test, which stood in for
+    # the truck-MP line while that was deferred. Same thesis, the rule's own line.)
     cv, r = CampaignVictory(), _R(_delta_board(turn=5, stage=1, supplied=False))
     for turn, stage in ((5, 2), (5, 3), (6, 1)):
         assert cv.check(r)[0] is None
         r.state = _delta_board(turn=turn, stage=stage, supplied=False)
     assert cv.check(r)[0] is None                          # a full Game-Turn on: still nothing
+
+
+def test_a_delta_dump_that_tobruk_cannot_fill_wins_nothing():
+    # The dump under the spearhead is not enough. 64.71 wants "a Supply Dump WHICH IN TURN CAN BE
+    # SUPPLIED from Tobruk or Tripoli in any way" -- so a depot the Axis is standing on, with no
+    # road home, is a heap of supplies in the sand and not a line of supply. Same board as the
+    # winning one but with the road to Tobruk taken away.
+    axis = [_unit(f"A{i}", Side.AXIS, h) for i, h in enumerate(ALEX + CAIRO)]
+    cv, r = CampaignVictory(), _R(_state(axis, turn=5, stage=1))    # no _road_to_tobruk terrain
+    for turn, stage in ((5, 2), (5, 3), (6, 1)):
+        assert cv.check(r)[0] is None
+        r.state = _state(axis, turn=turn, stage=stage)
+    assert cv.check(r)[0] is None
+
+
+def test_the_commonwealth_holding_tobruk_denies_the_delta_auto_win():
+    # 56.15, and it is the campaign in one line: a harbour whose hex the enemy holds receives no
+    # convoy, so it fills no dump behind it, so no dump behind it is one the Axis can trace to for
+    # 64.71. The Panzerarmee can stand in Alexandria and Cairo for a full Game-Turn -- and win
+    # nothing at all, because the Eighth Army is sitting on its source four hundred miles back.
+    cv, r = CampaignVictory(), _R(_delta_board(turn=5, stage=1, tobruk=Side.ALLIED))
+    for turn, stage in ((5, 2), (5, 3), (6, 1), (6, 2), (6, 3)):
+        assert cv.check(r)[0] is None
+        r.state = _delta_board(turn=turn, stage=stage, tobruk=Side.ALLIED)
+    assert cv.check(r)[0] is None
+    # ...and the identical board with Tobruk free is the win, so it is the SOURCE that denied it.
+    cv2, r2 = CampaignVictory(), _R(_delta_board(turn=5, stage=1))
+    for turn, stage in ((5, 2), (5, 3), (6, 1)):
+        cv2.check(r2)
+        r2.state = _delta_board(turn=turn, stage=stage)
+    assert cv2.check(r2)[0] is Side.AXIS
+
+
+def test_an_enemy_controlled_tobruk_denies_the_delta_auto_win():
+    # The 56.15 test is of CONTROL, not of bodies: the Commonwealth takes Tobruk and marches on,
+    # leaving the hex empty behind it. The harbour is still theirs (engine._record_control), so it
+    # still supplies nobody -- the Axis road home ends at a quay it does not own.
+    control = {_ax(TOBRUK): Control.ALLIED}
+    cv, r = CampaignVictory(), _R(_delta_board(turn=5, stage=1, control=control))
+    for turn, stage in ((5, 2), (5, 3), (6, 1), (6, 2), (6, 3)):
+        assert cv.check(r)[0] is None
+        r.state = _delta_board(turn=turn, stage=stage, control=control)
+    assert cv.check(r)[0] is None
+
+
+# --- 64.71/64.72: the truck-MP line of supply itself ----------------------------
+
+def _road_hex(n: int):
+    """`n` hexes along the straight clear road east from Tobruk, the 64.71 supply source."""
+    q, r = _ax(TOBRUK)
+    return (q + n, r)
+
+
+def _road_board(unit_at: int, *, dump_at: int = 0, length: int = 60,
+                dump_id: str = "AX-Dump", **dump_kw) -> GameState:
+    """A straight clear road `length` hexes long running east out of Tobruk, and nothing else on
+    the map: an Axis battalion `unit_at` hexes along it, one Axis dump `dump_at` hexes along it.
+
+    A truck pays 2 CP to enter a clear hex ([8.37]), so the line of supply from the unit to the dump
+    is exactly 2 x |unit_at - dump_at| Truck Movement Points and the arithmetic in these tests is the
+    chart's, not a fit. The battalion is FOOT and traces by TRUCK anyway -- 64.71 measures the convoy
+    route, not the boots (supply.truck_trace_reach)."""
+    dump_kw.setdefault("ammo", 999)
+    dump_kw.setdefault("fuel", 999)
+    return _state([_unit("A1", Side.AXIS, _road_hex(unit_at))],
+                  terrain={_road_hex(i): Terrain.CLEAR for i in range(length + 1)},
+                  supplies=[SupplyUnit(dump_id, Side.AXIS, _road_hex(dump_at), **dump_kw)])
+
+
+def test_ninety_truck_movement_points_is_the_boundary():
+    # 64.71: "that line is 90 movement points by truck OR LESS". 45 clear hexes at the chart's 2 CP
+    # is exactly 90 and passes; one hex further is 92 and does not.
+    cv = CampaignVictory()
+    assert 45 * CLEAR_TRUCK_CP == supply.TRUCK_MP_64_71
+    s = _road_board(45)
+    assert cv.axis_traces_within(s, s.units[0], supply.TRUCK_MP_64_71) is True
+    s = _road_board(46)
+    assert cv.axis_traces_within(s, s.units[0], supply.TRUCK_MP_64_71) is False
+
+
+def test_sixty_truck_movement_points_is_the_boundary_for_64_72():
+    # The same trace at 64.72's tighter budget -- the Commonwealth's automatic win asks it of every
+    # Axis combat unit from Game-Turn 35. 30 clear hexes = 60 exactly; 31 = 62.
+    cv = CampaignVictory()
+    assert 30 * CLEAR_TRUCK_CP == supply.TRUCK_MP_64_72
+    s = _road_board(30)
+    assert cv.axis_traces_within(s, s.units[0], supply.TRUCK_MP_64_72) is True
+    s = _road_board(31)
+    assert cv.axis_traces_within(s, s.units[0], supply.TRUCK_MP_64_72) is False
+
+
+def test_the_dump_leg_home_carries_no_budget():
+    # The two legs are budgeted differently and that IS the rule. The unit's leg is capped at 90;
+    # the dump's leg back to the harbour is "in any way" -- uncapped. So a battalion 2 hexes from a
+    # dump that is itself 120 truck-MP down the road from Tobruk traces fine: 4 MP, not 124.
+    cv = CampaignVictory()
+    s = _road_board(62, dump_at=60, length=62)
+    assert cv.axis_traces_within(s, s.units[0], supply.TRUCK_MP_64_71) is True
+
+
+def test_an_empty_dump_still_carries_the_line():
+    # "a Supply Dump which in turn CAN BE SUPPLIED from Tobruk or Tripoli" is a question about the
+    # road, not about the stock in the depot today -- so an empty depot on an open road is exactly
+    # the supply line the rule means. (game.state.active_supplies, the 32.16 DRAW list, drops an
+    # empty dump; this trace must not read it.)
+    cv = CampaignVictory()
+    s = _road_board(10, ammo=0, fuel=0, stores=0, water=0)
+    assert s.supplies[0].empty and not s.active_supplies(Side.AXIS)
+    assert cv.axis_traces_within(s, s.units[0], supply.TRUCK_MP_64_71) is True
+
+
+def test_a_well_is_not_a_supply_dump():
+    # game.wells models a water source as a SupplyUnit and seeds one ON Alexandria and five ON
+    # Cairo. Read as 64.71 Supply Dumps they would hand every Delta occupier a 0-MP trace to a
+    # "dump" it is standing on and the rule's supply clause would be satisfied by the geography of
+    # the objective itself. A well is a hole in the ground (52.11): no lorry from Tobruk fills one.
+    cv = CampaignVictory()
+    s = _road_board(10, dump_at=10, dump_id="AX-Well-Alexandria", water=999)
+    assert cv.axis_traces_within(s, s.units[0], supply.TRUCK_MP_64_71) is False
+    s = _road_board(10, dump_at=10, dump_id="AX-Dump", water=999)      # the same counter, a dump
+    assert cv.axis_traces_within(s, s.units[0], supply.TRUCK_MP_64_71) is True
+
+
+def test_a_dummy_dump_is_not_a_supply_dump():
+    # 32.18: a dummy is a bluff counter with nothing in it and nothing behind it.
+    cv = CampaignVictory()
+    s = _road_board(10, is_dummy=True)
+    assert cv.axis_traces_within(s, s.units[0], supply.TRUCK_MP_64_71) is False
+
+
+def test_an_enemy_across_the_road_cuts_the_line():
+    # 32.16, the blocking every trace in game.supply reads: the line of supply may not run through
+    # a hex an enemy unit stands on. One Commonwealth battalion on the road between the spearhead
+    # and its dump, and the spearhead is on the end of a rope -- with the dump 4 MP away.
+    cv = CampaignVictory()
+    s = _road_board(10, dump_at=8)
+    assert cv.axis_traces_within(s, s.units[0], supply.TRUCK_MP_64_71) is True
+    cut = _state([_unit("A1", Side.AXIS, _road_hex(10)), _unit("C1", Side.ALLIED, _road_hex(9))],
+                 terrain={_road_hex(i): Terrain.CLEAR for i in range(61)},
+                 supplies=[SupplyUnit("AX-Dump", Side.AXIS, _road_hex(8), ammo=999, fuel=999)])
+    assert cv.axis_traces_within(cut, cut.units[0], supply.TRUCK_MP_64_71) is False
 
 
 # --- 64.7 defines no annihilation clause ---------------------------------------

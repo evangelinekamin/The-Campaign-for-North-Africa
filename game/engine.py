@@ -19,15 +19,13 @@ from . import (combat, combat_tables, construction, cp_costs, initiative, logist
                supply, tactics, weather, wells)
 from .apply import apply
 from .dice import DiceBox
-from .events import Control, Event, EventKind, Phase, Side
+from .events import CONTROL_OF, Control, Event, EventKind, Phase, Side
 from .hexmap import distance, is_adjacent, neighbors
 from .invariants import check
 from .policy import AttackOrder, MoveOrder, Policy
 from .staff_events import clean_staff_payload
 from .state import Coord, GameState
 from .terrain import Mobility, Terrain
-
-CONTROL_OF: dict[Side, Control] = {Side.AXIS: Control.AXIS, Side.ALLIED: Control.ALLIED}
 
 # Siege of Tobruk tuning knob (rule 25.14): how many effective barrages (a Pin or a
 # step loss) it takes to batter a fortification down one level. 1 = each effective
