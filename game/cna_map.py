@@ -29,6 +29,46 @@ _TERRAIN = {
 }
 _DATA = os.path.join(os.path.dirname(__file__), "..", "data")
 
+# HEXES THE RULEBOOK ITSELF NAMES AS LAND, against a colour sample that reads them as sea.
+#
+# data/terrain_<section>.json is not a transcription of a printed chart -- it is the output of
+# colour-sampling the background of a map scan (tools/vassal/extract_terrain.py), and along the
+# Gulf of Sirte that sample runs roughly one hex too far inland. Where the BOOK states outright
+# that land units stand on a hex, the book wins. That is not a new principle invented here; it is
+# the one this module and game.scenario already apply from two other evidence sources:
+#   * _load_edges below: "A road runs on land, so any endpoint that colour-sampled as sea (coastal
+#     road hexes) is added as coastal CLEAR" -- evidence from the roads data;
+#   * game.scenario._connect_pieces / rommels_arrival: "A hex where a land unit stands is land:
+#     coastal ports (El Agheila, Tobruk, ...) colour-sample as sea" -- evidence from the OOB.
+# This table is the same override taken from the RULEBOOK, which is the strongest of the three.
+#
+# [8.85], verbatim: "For a unit to be moved off the game map towards Tripolitania it must start
+# that Operations Stage in hex A2802. A unit entering the game-map from the off-map region is
+# simply placed in the Road hex closest to the Tripolitania box." A sea hex holds no Stacking
+# Points of land units and carries no road, so A2802 is land -- the book says so twice in one
+# breath, and it says it in a MOVEMENT rule, with no reference to any victory condition.
+#
+# WHY IT MATTERS: A2802 is the on-map gateway to Tripoli, and rules 64.71/64.72 name Tobruk and
+# Tripoli as the TWO harbours a Supply Dump must be feedable from. With A2802 sea, Tripoli had no
+# hex, the trace ran on Tobruk alone, and MEASURED on the real campaign board the Commonwealth
+# taking Tobruk collapsed the Axis from 13 fed dumps to 0 and all 177 of its combat units out of
+# the 60-MP trace -- a 64.72 Commonwealth automatic win at Game-Turn 35, off a sampling error, in
+# the exact historical situation (Tobruk falls, January 1941) where the Axis fought on out of
+# Tripoli for two more years. See game.campaign_victory.
+#
+# FLAGGED, and deliberately NOT widened. Promoted as CLEAR, not as a road hex: 8.85 calls it a Road
+# hex and a road is an EDGE in this pipeline (data/roads_<section>.json), so seeding the road here
+# would be inventing a road net the extraction does not carry. CLEAR is the conservative reading --
+# it makes the hex passable and no cheaper than open ground. STILL SEA, and still the open coastline
+# job: A2803/A2804 (8.85's own "e.g., 5 points in hex 2802, 5 points in 2803, and 3 points in 2804"
+# -- an illustration of stacking, where A2802 is the operative sentence) and A1816, El Agheila,
+# which 61.43C names as a road hex. So Tripoli enters this map through a ONE-hex gateway where the
+# book gives it a road; that understates the Axis's road home and can only make 64.72 fire more
+# readily than the book, never less.
+_RULEBOOK_LAND = {
+    "A2802": "clear",       # [8.85] -- the Tripolitania gateway; Tripoli's source hex (64.71/64.72)
+}
+
 
 def _read(section: str) -> dict:
     path = os.path.normpath(os.path.join(_DATA, f"terrain_{section}.json"))
@@ -43,6 +83,7 @@ def load_sections(sections: str) -> tuple[TerrainMap, dict]:
     index: dict = {}
     for section in sections:
         for label, t in _read(section).items():
+            t = _RULEBOOK_LAND.get(label, t)    # the book outranks the colour sample (see above)
             if t == "sea":
                 continue                # sea is off the land map -> impassable
             ax = coords.to_axial(coords.parse(label))

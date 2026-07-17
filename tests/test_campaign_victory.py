@@ -23,10 +23,13 @@ from game.terrain import Mobility, Terrain
 
 ALEX = ("E3613", "E3714")
 CAIRO = ("E1730", "E1829", "E1830", "E1930", "E1931")
-TOBRUK = "C4807"          # data/victory_cities.json supply_sources: the one 64.71 source ON THIS
-                          # MAP (Tripoli's 8.85 gateway A2802 is transcribed as sea -- see
-                          # game.campaign_victory's module docstring, THE TRIPOLI HOLE)
+TOBRUK = "C4807"          # data/victory_cities.json supply_sources: the FIRST of 64.71's two named
+TRIPOLI = "A2802"         # sources; the second is Tripoli's 8.85 on-map gateway, land since the
+                          # TRIPOLI HOLE was closed (game.cna_map._RULEBOOK_LAND). These synthetic
+                          # boards carry only the hexes they name, so Tripoli is simply absent from
+                          # their terrain and Tobruk is the only source that can feed them.
 CLEAR_TRUCK_CP = 2        # [8.37] Terrain Effects Chart: a truck pays 2 CP to enter a clear hex
+GT_64_72 = 35             # 64.72: "Starting with the first OpStage of Game-Turn 35"
 
 
 class _R:
@@ -343,6 +346,70 @@ def test_an_enemy_across_the_road_cuts_the_line():
     assert cv.axis_traces_within(cut, cut.units[0], supply.TRUCK_MP_64_71) is False
 
 
+# --- 64.72: the Commonwealth's automatic win from Game-Turn 35 ------------------
+
+def _cut_board(turn: int, *, tracing: tuple = (), stranded: tuple = (40, 45, 50),
+               stage: int = 1) -> GameState:
+    """The 64.72 board: one Axis Supply Dump on the Tobruk quay, fed by the source, and Axis combat
+    battalions strung out along the clear road east of it. `stranded` are hexes-along-the-road for
+    units OUTSIDE the 60-MP line (>30 hexes at the chart's 2 CP); `tracing` are units inside it.
+
+    So the whole board turns on one question and nothing else: is there an Axis combat unit within
+    60 truck Movement Points of a dump the Tobruk source can fill?"""
+    units = [_unit(f"A{n}", Side.AXIS, _road_hex(n)) for n in (*stranded, *tracing)]
+    return _state(units, turn=turn, stage=stage,
+                  terrain={_road_hex(i): Terrain.CLEAR for i in range(61)},
+                  supplies=[SupplyUnit("AX-Dump", Side.AXIS, _road_hex(0), ammo=999, fuel=999)])
+
+
+def test_64_72_fires_when_the_axis_line_is_cut():
+    # 🔴 THE HEADLINE: the Commonwealth's PRINCIPAL win condition, and the campaign was played
+    # without it. 64.72 -- "Starting with the first OpStage of Game-Turn 35, if there are no Axis
+    # Combat units that can trace a line of supply of 60 Movement Points (Truck) to a Supply Dump
+    # and thence to Tobruk or Tripoli ... the Commonwealth wins the game automatically."
+    # Three Axis battalions at 40/45/50 hexes out are 80/90/100 truck-MP from the only fed dump --
+    # every one of them outside the 60. Axis supply has collapsed and the war ends on the spot.
+    cv = CampaignVictory()
+    winner, reason = cv.check(_R(_cut_board(GT_64_72)))
+    assert winner is Side.ALLIED
+    assert "64.72" in reason and "Commonwealth" in reason
+
+
+def test_64_72_does_not_fire_while_one_axis_unit_still_traces():
+    # The companion, and it is the rule's own word: "there are NO Axis Combat units that can trace".
+    # ONE is enough to deny the Commonwealth the war. The identical cut board plus a single
+    # battalion 30 hexes out -- exactly 60 truck-MP, the boundary -- and the Panzerarmee fights on
+    # with three of its four battalions still stranded in the desert.
+    cv = CampaignVictory()
+    assert cv.check(_R(_cut_board(GT_64_72, tracing=(30,))))[0] is None
+    # ...and it is that one unit's line that is holding the war open: take it one hex further out
+    # (62 truck-MP, outside the 60) and the same board is a Commonwealth victory.
+    assert cv.check(_R(_cut_board(GT_64_72, tracing=(31,))))[0] is Side.ALLIED
+
+
+def test_64_72_is_gated_on_game_turn_35():
+    # "STARTING WITH THE FIRST OPSTAGE OF GAME-TURN 35". The Axis may be cut off for the first 34
+    # Game-Turns and lose nothing by it -- the rule is not live yet. It bites from the first check
+    # of GT35 (the engine tests victory in the Record Phase of every Operations Stage, so the first
+    # OpStage of GT35 is stage 1), and every stage thereafter.
+    cv = CampaignVictory()
+    assert cv.check(_R(_cut_board(GT_64_72 - 1, stage=3)))[0] is None      # GT34: not yet
+    assert cv.check(_R(_cut_board(GT_64_72, stage=1)))[0] is Side.ALLIED   # GT35.1: the first check
+    assert cv.check(_R(_cut_board(GT_64_72 + 20)))[0] is Side.ALLIED       # and it stays live
+
+
+def test_64_72_needs_a_dump_the_source_can_actually_fill():
+    # 64.72 traces "to a Supply Dump and thence to Tobruk or Tripoli AS PER CASE 64.71" -- so it
+    # inherits 64.71's far leg whole, and a dump with no road home is not a dump this rule counts.
+    # The units are parked ON their depot (0 truck-MP away) and it wins the Axis nothing, because
+    # the road back to Tobruk has been taken off the board.
+    cv = CampaignVictory()
+    stranded = _state([_unit("A1", Side.AXIS, _road_hex(40))], turn=GT_64_72,
+                      terrain={_road_hex(i): Terrain.CLEAR for i in range(40, 61)},
+                      supplies=[SupplyUnit("AX-Dump", Side.AXIS, _road_hex(40), ammo=999, fuel=999)])
+    assert cv.check(_R(stranded))[0] is Side.ALLIED
+
+
 # --- 56.15: WHAT SHUTS THE SOURCE. Capture, and only capture. -------------------
 
 def _siege_board(*besiegers) -> GameState:
@@ -401,6 +468,36 @@ def test_enemy_control_of_the_source_shuts_it_with_no_one_standing_there():
     assert cv.axis_traces_within(flipped, flipped.units[0], supply.TRUCK_MP_64_71) is False
 
 
+# --- THE TRIPOLI HOLE: 64.72's second source, on the real campaign board ---------
+
+def test_tripoli_is_a_supply_source_on_the_real_map():
+    # 64.71/64.72 name TWO harbours, "Tobruk or Tripoli", and this map used to carry only Tobruk:
+    # A2802 -- the hex 8.85 says a unit "must start that Operations Stage in", and the Road hex a
+    # unit entering from the Tripolitania box is placed on -- colour-sampled as SEA.
+    from game import cna_map
+    tmap, _ = cna_map.load_sections("A")
+    assert _ax(TRIPOLI) in tmap.terrain, "8.85's Tripolitania gateway must be land"
+    assert set(CampaignVictory().supply_sources) == {_ax(TOBRUK), _ax(TRIPOLI)}
+
+
+def test_losing_tobruk_does_not_hand_the_commonwealth_the_war():
+    # 🔴 THE REGRESSION THIS RULE EXISTS TO AVOID, on the real GT1 campaign board. With Tripoli
+    # missing, the Commonwealth CAPTURING Tobruk (56.15) was the whole Axis supply system: it took
+    # the Axis from 13 fed dumps to 0 and ALL 177 of its combat units out of the 60-MP trace, so
+    # 64.72 handed the Commonwealth an automatic win at Game-Turn 35 -- off a coastline sampling
+    # error, in the exact situation (Tobruk falls, January 1941) where the historical Axis fought on
+    # out of Tripoli for two more years and retook Cyrenaica. That is not 64.72; it is "the
+    # Commonwealth wins if it holds Tobruk", which the book does not contain.
+    from dataclasses import replace as _replace
+
+    from game import scenario
+    st = scenario.campaign()
+    cv = CampaignVictory()
+    fallen = _replace(st, control={**st.control, _ax(TOBRUK): Control.ALLIED})
+    assert cv.fed_dumps(fallen, Side.AXIS), "Tripoli must still feed the Axis with Tobruk gone"
+    assert not cv._line_is_cut(fallen), "losing Tobruk alone must not collapse the 64.72 trace"
+
+
 # --- 64.7 defines no annihilation clause ---------------------------------------
 
 def test_no_annihilation_victory():
@@ -408,9 +505,23 @@ def test_no_annihilation_victory():
     # which one side has no living unit left ends nothing -- the campaign runs its full span and
     # is settled on the 64.73 tally, which is where a wiped-out side loses anyway (it holds no
     # city). This test asserted the invention in both directions; it now asserts its absence.
+    #
+    # RESTATED when 64.72 landed, and the restatement is the point rather than a concession. The
+    # invention was SYMMETRIC -- either side losing its last counter ended the war, on any turn, on
+    # no rule at all. What the book actually gives is an ASYMMETRY, and the two halves are tested
+    # here on the two boards that used to be one assertion each:
+    #   * A wiped-out COMMONWEALTH ends nothing, ever. 64.71 is the Axis's only automatic win and
+    #     it demands Alexandria and Cairo held for a full Game-Turn; there is no mirror of 64.72,
+    #     so the Axis must still go and take the Delta. Turn 111 with the Commonwealth gone: None.
+    #   * A wiped-out AXIS at GT35+ IS a Commonwealth win -- but under 64.72's own words, not under
+    #     an annihilation clause. "There are no Axis Combat units that can trace" is satisfied
+    #     trivially when there are no Axis Combat units. See CampaignVictory._line_is_cut, which
+    #     flags the vacuous truth. Before GT35 the same board still ends nothing, and that is
+    #     exactly what separates the rule from the invention: 64.72 has a date on it.
     cv = CampaignVictory()
     assert cv.check(_R(_state([_unit("A1", Side.AXIS, "C4807")])))[0] is None
-    assert cv.check(_R(_state([_unit("C1", Side.ALLIED, "C4807")])))[0] is None
+    assert cv.check(_R(_state([_unit("C1", Side.ALLIED, "C4807")], turn=GT_64_72 - 1)))[0] is None
+    assert cv.check(_R(_state([_unit("C1", Side.ALLIED, "C4807")])))[0] is Side.ALLIED   # GT111
     # ...and the tally still names the survivor: the lone Axis unit holds Tobruk, 200-0.
     winner, reason = cv.decide(_R(_state([_unit("A1", Side.AXIS, "C4807")])))
     assert winner is Side.AXIS and "200-0" in reason
