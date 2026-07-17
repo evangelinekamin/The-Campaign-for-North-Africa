@@ -23,6 +23,7 @@ costs approximate per-battalion-equivalent rates via mobility class + stacking.
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 
 from . import logistics_data, movement, tactics
 from .events import CONTROL_OF
@@ -506,6 +507,53 @@ TRUCK_MP_64_71 = 90       # 64.71: the Axis Delta occupiers' line back to a Tobr
 TRUCK_MP_64_72 = 60       # 64.72: every Axis combat unit's line, from Game-Turn 35
 
 
+@dataclass(frozen=True, slots=True)
+class SupplySource:
+    """One of 64.71/64.72's two named supply sources -- "Tobruk or Tripoli" -- and WHICH KIND of
+    thing it is, because the book's two are not the same kind and 56.15 only reaches one of them.
+
+    `capturable` is the rulebook fact, not an engine dial:
+      * TOBRUK (C4807) is an on-map PORT. The Commonwealth can take it, and when it does 56.15
+        cancels the convoys -- "a convoy scheduled to arrive at a port that is captured by the
+        Commonwealth is cancelled. It never sails." So: capturable=True, and the gate is live.
+      * TRIPOLI is an off-map BOX (8.81 puts the Tripoli/Tunisia boxes on the western edge of Map A;
+        8.88 makes them Supply Dumps of unlimited capacity). 56.15 is not switched off for it -- its
+        ANTECEDENT IS UNSATISFIABLE. 8.82: "Only Axis units and Commonwealth airplanes may enter the
+        Tripoli/Tunisia region. NO COMMONWEALTH LAND OR SEA UNIT MAY EVER ENTER ANY OF THE BOXES."
+        A port no Commonwealth unit may ever enter is a port the Commonwealth may never capture, so
+        the convoy is never cancelled and the source never shuts. capturable=False.
+
+    AND HEX A2802 IS NOT TRIPOLI. It is the on-map GATEWAY the book names for the box (8.85), and
+    this engine has no off-map box, so the source is anchored there as a PROXY (flagged in
+    data/victory_cities.json and game.campaign_victory). A2802 is an ordinary desert road hex: the
+    Commonwealth may stand on it, and standing on it captures nothing. Gating the proxy hex on 56.15
+    made an UNCAPTURABLE source capturable and handed the Commonwealth a win 8.82 forbids -- see
+    truck_supply_line for what that measured.
+
+    THE COMMONWEALTH CAN STILL SHUT THE ROAD BY STANDING ON IT, and that is the rule that actually
+    governs a unit in a hex: 10.29 bars a Truck Convoy from entering an unnegated enemy ZOC, and
+    `blocked` is applied to every hex the flood ENTERS. MEASURED on the GT1 campaign board, with
+    Tobruk captured so the box is the only source left:
+      * ONE Commonwealth battalion on A2802 leaves the Axis all 13 fed dumps -- it exerts no ZOC at
+        all. That is 10.11's own gate ("more than one Stacking Point"), not a hole: one battalion is
+        1 Stacking Point.
+      * TWO put the gateway's three existing neighbours in ZOC and take the Axis to 0 fed dumps.
+    So the road CAN be cut at the gateway -- by a force, standing there, under the book's own
+    movement rule. That is categorically not what the capture gate did, and the difference is why
+    this distinction is worth a field: a ZOC needs a force to hold and the Axis can answer it (10.26
+    negates it with a combat unit of its own, or it can be driven off), where CAPTURE needs no force
+    at all -- a control marker outlives the column that set it and no Axis action lifts it.
+
+    FLAGGED, AND IT IS THE MAP, NOT THE RULE: two units shut Tripolitania here because the gateway is
+    ONE hex. The book gives it a road frontage -- 8.85 strings arriving Stacking Points "in
+    consecutive hexes (road) from the Tripolitania box; e.g., 5 points in hex 2802, 5 points in 2803,
+    and 3 points in 2804", and 61.43C names El Agheila (A1816) a road hex -- and A2803/A2804/A1816
+    all colour-sample as SEA on this map. So the chokepoint is ours, the block is the book's, and the
+    fix is the map job already flagged in game.campaign_victory, not a thumb on this scale."""
+    hex: Coord
+    capturable: bool
+
+
 def truck_trace_reach(state: GameState, unit: Unit, budget: float) -> dict:
     """The hexes `unit` can trace a 64.71/64.72 line of supply to within `budget` TRUCK Movement
     Points: medium-truck movement over the terrain, blocked by the trace blocking -- here on
@@ -534,13 +582,14 @@ def truck_trace_reach(state: GameState, unit: Unit, budget: float) -> dict:
                               blocked=trace_blocked(state, unit.side))
 
 
-def truck_supply_line(state: GameState, side: Side, sources) -> frozenset:
+def truck_supply_line(state: GameState, side: Side,
+                      sources: "tuple[SupplySource, ...]") -> frozenset:
     """64.71's "which in turn can be supplied from Tobruk or Tripoli IN ANY WAY": every hex a lorry
     of `side` could carry supplies to from any of `sources` -- the Tobruk and Tripoli harbours --
     over ANY length of open road. Unbudgeted by construction: "in any way" is the rule declining to
     measure this leg at all, where it measures the unit's own leg at 90 or 60.
 
-    A SOURCE IN ENEMY HANDS SUPPLIES NOBODY, and the test is not invented here -- it is rule
+    A CAPTURABLE SOURCE IN ENEMY HANDS SUPPLIES NOBODY, and the test is not invented here -- it is
     56.15's, verbatim, the one the engine's own convoy gate already reads (engine._convoy_dest):
     "a convoy scheduled to arrive at a port that is CAPTURED by the Commonwealth is cancelled. It
     never sails." A harbour that receives no convoy fills no dump behind it. So the Commonwealth
@@ -557,15 +606,31 @@ def truck_supply_line(state: GameState, side: Side, sources) -> frozenset:
     every one of the Axis's 96 combat units out of the 60-MP trace. The moment 64.72 is wired that
     is a Commonwealth automatic win at Game-Turn 35 bought with one recce stack. It is now gone.
 
+    AND IT REACHES ONLY A SOURCE THE COMMONWEALTH CAN ACTUALLY CAPTURE (SupplySource.capturable),
+    WHICH IS THE SECOND HALF OF THE SAME LESSON. Until this repair the gate ran over every source
+    alike, and the moment Tripoli was wired in that shut the OFF-MAP BOX -- a source 8.82 puts
+    permanently beyond Commonwealth reach ("No Commonwealth land or sea unit may ever enter any of
+    the boxes") -- because this engine anchors it at its on-map gateway PROXY hex, A2802, which is an
+    ordinary desert hex the Commonwealth may walk onto. MEASURED on the real GT1 campaign board:
+    Control.ALLIED on BOTH C4807 (Tobruk) and A2802 took fed_dumps from 13 to 0 and cut every one of
+    the Axis's 96 on-map combat units out of the 60-MP trace -- i.e. from Game-Turn 35 one
+    Commonwealth unit on one far-west desert hex, with Tobruk taken, ended the war outright with the
+    whole Panzerarmee alive and stocked. That is "the Commonwealth wins if it holds Tobruk" wearing a hat:
+    the same class of defect as the invented ADJACENCY gate two paragraphs down, reintroduced one hex
+    further west, and 56.15 was cited for it in both cases. A proxy may stand in for a hex. It may not
+    inherit a rule the thing it proxies is exempt from. Re-measured after the repair: the same board
+    with BOTH hexes Commonwealth-controlled keeps its 13 fed dumps and its line uncut.
+
     The live gates are the rulebook's, and nothing else:
-      * the hex is not on this map (Tripoli -- see game.campaign_victory's TRIPOLI HOLE); or
-      * the enemy has CAPTURED it (56.15), which is true two ways and both are capture: the enemy
-        CONTROLS the hex, or an enemy COMBAT unit is standing on the quay. The two agree on a real
-        board -- game.engine._record_control flips control to the side whose combat units hold a hex
-        and runs in the Record Phase immediately before the victory check -- but they are not one
-        test and neither implies the other. Control OUTLIVES the capturing column, which is what a
-        control marker is for: Tobruk does not revert to the Axis because the garrison that took it
-        marched on. And occupation PRECEDES the marker on any board the engine has not just
+      * the hex is not on this map; or
+      * the source is CAPTURABLE and the enemy has CAPTURED it (56.15). Capturable is the book's
+        fact about the source, not a dial -- see SupplySource. Capture is true two ways and both are
+        capture: the enemy CONTROLS the hex, or an enemy COMBAT unit is standing on the quay. The two
+        agree on a real board -- game.engine._record_control flips control to the side whose combat
+        units hold a hex and runs in the Record Phase immediately before the victory check -- but they
+        are not one test and neither implies the other. Control OUTLIVES the capturing column, which
+        is what a control marker is for: Tobruk does not revert to the Axis because the garrison that
+        took it marched on. And occupation PRECEDES the marker on any board the engine has not just
         recorded. Only COMBAT units take ground -- _record_control's own rule ("only combat units
         hold ground", engine.py), applied here so the two halves of this test agree: a lorry or a
         bare HQ parked on the quay captures nothing and shuts nothing.
@@ -584,9 +649,11 @@ def truck_supply_line(state: GameState, side: Side, sources) -> frozenset:
     blocked = trace_blocked(state, side)
     line: set = set()
     for src in sources:
-        if not state.terrain.exists(src) or state.control_of(src) == enemy or src in held:
+        if not state.terrain.exists(src.hex):
+            continue                                   # no hex on this map: absent from the trace
+        if src.capturable and (state.control_of(src.hex) == enemy or src.hex in held):
             continue                                   # 56.15: a CAPTURED harbour feeds nothing
-        line |= movement.reachable(state.terrain, src, math.inf, SUPPLY_MOBILITY,
+        line |= movement.reachable(state.terrain, src.hex, math.inf, SUPPLY_MOBILITY,
                                    blocked=blocked).keys()
     return frozenset(line)
 

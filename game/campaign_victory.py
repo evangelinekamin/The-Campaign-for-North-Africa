@@ -45,13 +45,18 @@ Gulf of Sirte coastline is sampled roughly one hex too far inland along that str
 
 WHAT THAT COST, MEASURED on the built campaign board, and it is why this had to be closed FIRST:
 with Tobruk the only source, the Commonwealth CAPTURING Tobruk (56.15) took the Axis from 13 fed
-dumps to 0 and all 177 of its combat units out of the 60-MP trace -- so wiring 64.72 would have
+dumps to 0 and every one of its combat units out of the 60-MP trace -- so wiring 64.72 would have
 handed the Commonwealth an automatic win at Game-Turn 35 off a sampling error, in the exact
 historical situation (Tobruk falls, January 1941) where the Axis fought on out of Tripoli for two
 more years and retook Cyrenaica. That is not 64.72; it is "the Commonwealth wins if it holds
 Tobruk", a rule the book does not contain. With the gateway restored the same board keeps its 13
-fed dumps and 94 of 177 tracing units when Tobruk falls, and 64.72 goes back to asking what it
+fed dumps and 94 of its 96 tracing units when Tobruk falls, and 64.72 goes back to asking what it
 actually asks: has Axis supply COLLAPSED?
+
+(THE UNIT COUNTS WERE RESTATED 2026-07-16, and the restatement is a bug's epitaph, not a re-measure.
+They read "all 177" and "94 of 177" because _axis_combat_units counted the FULL ROSTER -- including
+81 units at GT1 that had not yet entered play. 64.72's set under test is the units on the GAME-MAP,
+which at GT1 is 96. The fed-dump numbers are unaffected: they never depended on the unit set.)
 
 THE FIX IS THE BOOK'S, NOT A BEND TO MAKE A VICTORY RULE FIRE, and that distinction is the whole
 of it. 8.85 is a MOVEMENT rule that mentions no victory condition, and it states twice in one
@@ -63,6 +68,32 @@ coastal CLEAR") and game.scenario._connect_pieces from the OOB ("a hex where a l
 land"). The rulebook is the third and strongest such source. A2802 is adjacent to A2801/A2702/A2703,
 all already land, so the gateway joins the mainland with no bridging invented to reach it.
 
+AND THE PROXY CARRIED A THIRD CATASTROPHE OF THE SAME FAMILY, CAUGHT BY A VERIFIER AND FIXED
+2026-07-16. Hex A2802 stands proxy for the off-map boxes as a SOURCE -- and it was fed to the same
+56.15 capture gate as Tobruk, which made an UNCAPTURABLE source capturable. The book's Tripoli
+cannot be taken: it is off-map (8.81), and 8.82 says "No Commonwealth land or sea unit may ever
+enter any of the boxes". A2802 is not Tripoli -- it is an ordinary desert road hex the Commonwealth
+may walk onto, and walking onto it captures nothing. MEASURED on the built campaign board:
+Control.ALLIED on BOTH C4807 and A2802 took fed_dumps from 13 to 0 and _line_is_cut to True -- i.e.
+from GT35 one Commonwealth unit on one far-west hex, with Tobruk taken, ended the war outright with
+every Axis combat unit alive and stocked. Precisely the class of defect this module refused to
+ship as "the Commonwealth wins if it holds Tobruk", and precisely the class of the invented
+adjacency gate supply.truck_supply_line had just been repaired to remove -- reintroduced one hex
+west, with 56.15 cited for it a third time. The fix is the book's fact about the SOURCE
+(supply.SupplySource.capturable): 56.15 is not switched off for Tripoli, its antecedent is
+unsatisfiable. Re-measured after the repair, the same board keeps its 13 fed dumps and its line uncut.
+
+THE COMMONWEALTH CAN STILL SHUT THE ROAD BY STANDING ON IT, which is the point: MEASURED, one
+battalion on the gateway leaves all 13 dumps fed (10.11 exerts no ZOC below 2 Stacking Points) and
+TWO take the Axis to 0 (10.29). That is a force holding a road under the book's own movement rule --
+answerable by negation (10.26) or by driving it off -- where capture needed no force at all and no
+Axis action could lift it. On the book's map that block would have to cover a road FRONTAGE
+(8.85's 2802/2803/2804, plus El Agheila); the one-hex chokepoint is the map defect flagged below.
+
+THE LESSON, THIRD TIME OF ASKING: a proxy may stand in for a hex; it may not inherit a rule the
+thing it proxies is exempt from. The flag disclosed the geometry and stayed silent on the
+behaviour -- and the behaviour was the bug. Both now live in data/victory_cities.json.
+
 STILL OPEN, AND EVERY ONE OF THEM UNDERSTATES THE AXIS'S ROAD HOME rather than overstating it, so
 each can only make 64.72 fire MORE readily than the book, never less:
   * A2803/A2804 (8.85's own "e.g., 5 points in hex 2802, 5 points in 2803, and 3 points in 2804")
@@ -70,8 +101,6 @@ each can only make 64.72 fire MORE readily than the book, never less:
     map through a ONE-hex gateway where the book gives it a road -- a chokepoint of our making.
   * The gateway is CLEAR, not road: a road is an EDGE in this pipeline (data/roads_A.json), and
     seeding one would invent a road net the extraction does not carry.
-  * Hex A2802 stands PROXY for the off-map Tripoli/Tunisia boxes as a source; this engine has no
-    off-map box, so the source is anchored at the gateway the book names.
 
 A SECOND trigger of the same catastrophe lived IN THIS CODE and was fixed before it: supply's source
 gate shut Tobruk for enemy ADJACENCY (an unnegated ZOC on the quay) while citing 56.15, which is a
@@ -140,10 +169,13 @@ class CampaignVictory:
         self.objective = [_ax(h) for h in
                           data["auto_win"]["alexandria"] + data["auto_win"]["cairo"]]
         # 64.71/64.72's two named supply sources, "Tobruk or Tripoli" -- the harbours a Supply Dump
-        # must be feedable from for the truck-MP line to be worth anything. A null is a source with
-        # no hex on this map and is simply absent from the trace; today that is Tripoli, and the
-        # module docstring says what that costs and what it does not.
-        self.supply_sources = tuple(_ax(h) for h in data["supply_sources"].values() if h)
+        # must be feedable from for the truck-MP line to be worth anything. Each carries the book's
+        # fact about WHAT KIND of source it is (supply.SupplySource.capturable): Tobruk is an on-map
+        # port 56.15 can shut, Tripoli an off-map box 8.82 puts permanently beyond Commonwealth
+        # reach. A null hex is a source this map does not carry and is simply absent from the trace.
+        self.supply_sources = tuple(
+            supply.SupplySource(hex=_ax(src["hex"]), capturable=src["capturable"])
+            for src in data["supply_sources"].values() if src["hex"])
 
     def _occupier(self, state, ax) -> "Side | None":
         """The side holding a hex for victory purposes: a SUPPLIED combat unit of at least 1
@@ -280,6 +312,34 @@ class CampaignVictory:
     def _axis_combat_units(state) -> tuple:
         """64.72's set under test: "there are no Axis Combat units that can trace...".
 
+        ON THE GAME-MAP -- state.living, which is state.units filtered by state.on_map (alive AND
+        turn >= arrival_turn, rule 20). That is the rule's OWN qualifier, restored to the quote in
+        check(): 64.72 reads "...to Tobruk or Tripoli as per case 64.71, GAME-MAP, the Commonwealth
+        wins the game automatically". The word sits oddly and it is load-bearing -- it names WHICH
+        Axis combat units are under test, and the reading taken here is the natural one: those ON
+        the game-map, excluding the units that legitimately sit OFF it (8.81/8.83/8.84 -- the Axis
+        reinforcement pipeline runs through the off-map Tripoli/Tunisia boxes). FLAGGED as a reading.
+
+        THIS READ state.units -- THE FULL ROSTER -- AND IT DENIED THE COMMONWEALTH ITS WIN. The
+        `strength >= 1` filter satisfies on_map's `alive` half but NOT its reinforcement half, so
+        Axis units that had NOT YET ENTERED PLAY -- pre-placed at their scheduled entry hexes -- were
+        counted as "Axis Combat units that can trace", and supply has no arrival_turn awareness
+        anywhere, so truck_trace_reach traced happily from an unarrived unit's entry hex. MEASURED
+        end to end on game.scenario.campaign() at GT35, and it is 64.72's OWN scenario (the Axis
+        collapsed back onto Tripolitania): the board carries 31 Axis combat units with arrival_turn
+        > 35 parked at A1616/A1617, ~20 hexes from the A2802 Tripoli gateway. Put an Axis dump on the
+        gateway, take every ARRIVED Axis combat unit off the map, and the Axis has ZERO combat units
+        in play -- yet all 31 ghosts traced <=60 to the fed dump, _line_is_cut was False, and 64.72
+        did not fire. The off-map reinforcement queue was a permanent trace anchor precisely where
+        the rule is meant to bite: an Axis driven back onto Tripolitania keeps its dumps near the
+        gateway, which is where the unarrived units wait. With on_map applied the tracing count is 0
+        and the Commonwealth wins, as 64.72 requires.
+
+        THE FAILURE RAN THE UNSAFE WAY, which is why it outranked its size: every other open gap in
+        this block can only make 64.72 fire MORE readily than the book. This one made the
+        Commonwealth's PRINCIPAL win condition fire LESS readily -- a victory silently denied, the
+        exact failure the block was written to avoid.
+
         Combat units at Strength, which is the definition _delta_occupiers already settled on for
         64.71 and which 64.73 writes out longhand ("a combat unit of at least 1 TOE Strength"). It
         excludes the truck convoys and bare HQs (is_combat False) that 3.23's own list of combat
@@ -294,8 +354,7 @@ class CampaignVictory:
         qualify and a single airborne fighter could deny the Commonwealth its win. See
         axis_traces_within for the second reading of the same sentence and why the two are
         indistinguishable on this engine today."""
-        return tuple(u for u in state.units
-                     if u.side == Side.AXIS and u.is_combat and u.strength >= 1)
+        return tuple(u for u in state.living(Side.AXIS) if u.is_combat and u.strength >= 1)
 
     def _line_is_cut(self, state) -> bool:
         """64.72's condition: NO Axis combat unit can trace a line of supply of 60 truck Movement
@@ -314,7 +373,15 @@ class CampaignVictory:
         authority, where the invention fired on any turn on none. The two readings (plain, versus
         "the rule presumes an Axis army and asks about its supply") agree on the winner in every
         case but one: both sides annihilated, where the plain reading gives the Commonwealth the war
-        and the 64.73 tally would give a 0-0 Draw."""
+        and the 64.73 tally would give a 0-0 Draw.
+
+        AND THE VACUOUS CASE NOW REACHES ONE BOARD IT DID NOT: an Axis whose ON-MAP army is gone at
+        GT35+ with reinforcements still queued for a later turn loses, where before the unarrived
+        counters held the war open from their entry hexes. That is not the fix over-reaching -- it is
+        64.72's own "game-map" qualifier doing exactly what it says (_axis_combat_units), and the
+        alternative was a rule that could never fire while the Axis had a single counter left in the
+        box. FLAGGED because it is a reading of one oddly-placed word, and it is the reading that
+        makes the rule mean something."""
         fed = self.fed_dumps(state, Side.AXIS)
         return not any(self.axis_traces_within(state, u, supply.TRUCK_MP_64_72, fed)
                        for u in self._axis_combat_units(state))
@@ -386,8 +453,19 @@ class CampaignVictory:
         AND RULE 64.72, THE COMMONWEALTH'S OUTRIGHT WIN -- the mirror of it, and the Commonwealth's
         PRINCIPAL instrument: "Starting with the first OpStage of Game-Turn 35, if there are no Axis
         Combat units that can trace a line of supply of 60 Movement Points (Truck) to a Supply Dump
-        and thence to Tobruk or Tripoli as per case 64.71, the Commonwealth wins the game
-        automatically." The Axis wins by ARRIVING in the Delta on the end of a supply line; the
+        and thence to Tobruk or Tripoli as per case 64.71, game-map, the Commonwealth wins the game
+        automatically. This does not include air or coastal shipping units."
+
+        "GAME-MAP" IS THE BOOK'S WORD AND THIS QUOTE HAD DELETED IT -- under a label saying verbatim,
+        in the one docstring the next reader will trust. Caught by a verifier and checked against the
+        SCAN (PDF page 88 / printed page 37), which reads "...as per case 64.71, game-map, the Com-
+        monwealth wins the game automatically"; docs/rules/64's OCR carries it correctly, so the word
+        was lost here and nowhere else. Restored, with the reading flagged rather than the word
+        removed. It is load-bearing: it qualifies WHICH Axis combat units are under test, and
+        _axis_combat_units takes the natural reading -- the ones ON the game-map, not the ones
+        legitimately sitting in the off-map Tripoli/Tunisia boxes (8.81/8.83/8.84).
+
+        The Axis wins by ARRIVING in the Delta on the end of a supply line; the
         Commonwealth wins by CUTTING one. Until this landed, the Commonwealth had no outright win at
         all and the campaign was scored on the 64.73 geography table alone -- which is Axis-heavy by
         design (620 max against 370), because an Axis still holding Cyrenaica at the end is the

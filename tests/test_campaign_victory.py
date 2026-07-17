@@ -45,11 +45,15 @@ def _ax(label: str):
     return coords.to_axial(coords.parse(label))
 
 
-def _unit(uid: str, side: Side, where, *, combat: bool = True, strength: int = 5) -> Unit:
+def _unit(uid: str, side: Side, where, *, combat: bool = True, strength: int = 5,
+          arrival_turn: int = 0) -> Unit:
+    # arrival_turn defaults 0 -- every unit on these boards is ON THE MAP unless a test says
+    # otherwise. That default is why the 64.72 witnesses could not see the roster/on-map bug:
+    # see test_64_72_ignores_axis_reinforcements_that_have_not_arrived, which sets it.
     return Unit(uid, side, _ax(where) if isinstance(where, str) else where,
                 (StepRecord("inf", strength),),
                 mobility=Mobility.FOOT, cpa=10, stacking_points=1, oca=3, dca=3,
-                is_combat=combat)
+                is_combat=combat, arrival_turn=arrival_turn)
 
 
 def _state(units, *, supplied: bool = True, turn: int = 111, stage: int = 1,
@@ -410,6 +414,41 @@ def test_64_72_needs_a_dump_the_source_can_actually_fill():
     assert cv.check(_R(stranded))[0] is Side.ALLIED
 
 
+def test_64_72_ignores_axis_reinforcements_that_have_not_arrived():
+    # 🔴 THE REGRESSION, and it ran the UNSAFE way: it made the Commonwealth's PRINCIPAL win
+    # condition fire LESS readily than the book -- a victory silently DENIED. _axis_combat_units
+    # read state.units, the FULL ROSTER, so Axis units that had not yet entered play (rule 20
+    # reinforcements, pre-placed at their scheduled entry hexes) were counted as "Axis Combat units
+    # that can trace", and game.supply has no arrival_turn awareness anywhere -- truck_trace_reach
+    # traced happily from a unit that was not on the map.
+    #
+    # 64.72's own qualifier is the answer, and it is a word this port had dropped from the quote:
+    # "...to Tobruk or Tripoli as per case 64.71, GAME-MAP, the Commonwealth wins the game
+    # automatically" (scan, PDF page 88 / printed page 37). The units under test are the ones ON THE
+    # GAME-MAP -- state.living, which is state.on_map: alive AND turn >= arrival_turn.
+    #
+    # The board: the cut board, plus one Axis battalion sitting ON the fed dump -- 0 truck-MP away,
+    # as inside the 60 as a unit can be -- that does not arrive until GT40. The Axis has nothing on
+    # the map that can trace, so the Commonwealth wins; the ghost in the reinforcement queue must
+    # not hold the war open. MEASURED end to end on the real scenario.campaign() board before the
+    # fix, in 64.72's OWN scenario (the Axis collapsed onto Tripolitania at GT35): 31 unarrived
+    # units parked ~20 hexes from the A2802 gateway kept _line_is_cut False with ZERO Axis combat
+    # units in play.
+    cv = CampaignVictory()
+    board = _cut_board(GT_64_72)
+    ghost = _unit("A-Reinf", Side.AXIS, _road_hex(0), arrival_turn=GT_64_72 + 5)
+    with_ghost = _state([*board.units, ghost], turn=GT_64_72,
+                        terrain=dict(board.terrain.terrain), supplies=list(board.supplies))
+    assert not with_ghost.on_map(ghost), "the fixture must actually hold an unarrived unit"
+    assert ghost not in cv._axis_combat_units(with_ghost), "64.72 tests the game-map, not the roster"
+    assert cv.check(_R(with_ghost))[0] is Side.ALLIED
+    # ...and the SAME unit, once it has arrived, holds the war open from the same hex. That is the
+    # control: what is being tested is arrival, not the unit, the hex or the trace.
+    arrived = _state([*board.units, _unit("A-Reinf", Side.AXIS, _road_hex(0), arrival_turn=GT_64_72)],
+                     turn=GT_64_72, terrain=dict(board.terrain.terrain), supplies=list(board.supplies))
+    assert cv.check(_R(arrived))[0] is None
+
+
 # --- 56.15: WHAT SHUTS THE SOURCE. Capture, and only capture. -------------------
 
 def _siege_board(*besiegers) -> GameState:
@@ -477,13 +516,44 @@ def test_tripoli_is_a_supply_source_on_the_real_map():
     from game import cna_map
     tmap, _ = cna_map.load_sections("A")
     assert _ax(TRIPOLI) in tmap.terrain, "8.85's Tripolitania gateway must be land"
-    assert set(CampaignVictory().supply_sources) == {_ax(TOBRUK), _ax(TRIPOLI)}
+    assert {(s.hex, s.capturable) for s in CampaignVictory().supply_sources} == {
+        (_ax(TOBRUK), True),        # an on-map port the Commonwealth can take -- 56.15 is live
+        (_ax(TRIPOLI), False),      # the off-map box's gateway proxy -- 8.82 forbids its capture
+    }
+
+
+def test_the_commonwealth_cannot_capture_the_off_map_tripoli_box():
+    # 🔴 THE SECOND "COMMONWEALTH WINS IF IT HOLDS ONE HEX", caught by a verifier one hex west of
+    # the first. A2802 is a PROXY for the off-map Tripoli/Tunisia boxes, and it was fed to the same
+    # 56.15 capture gate as Tobruk -- which made an UNCAPTURABLE source capturable. The book's
+    # Tripoli cannot be taken: 8.81 puts the boxes off the western edge of Map A, and 8.82 says "No
+    # Commonwealth land or sea unit may ever enter any of the boxes". A2802 is not Tripoli; it is an
+    # ordinary desert road hex (8.85's gateway) the Commonwealth may walk onto, and walking onto it
+    # captures nothing.
+    #
+    # MEASURED on the real GT1 board before the fix: Control.ALLIED on BOTH Tobruk and the gateway
+    # took fed_dumps 13 -> 0 and _line_is_cut -> True, i.e. from GT35 one Commonwealth unit on one
+    # far-west hex, with Tobruk taken, ended the war with every Axis combat unit alive and stocked.
+    # A proxy may stand in for a hex; it may not inherit a rule the thing it proxies is exempt from.
+    #
+    # The Commonwealth can still SHUT the road by standing on it -- two battalions on the gateway
+    # exert a ZOC (10.11) and take the Axis to 0 fed dumps (10.29). That block is the book's: it
+    # needs a force, and the Axis can negate it (10.26) or drive it off. Capture needed neither.
+    from dataclasses import replace as _replace
+
+    from game import scenario
+    st = scenario.campaign()
+    cv = CampaignVictory()
+    taken = _replace(st, control={**st.control, _ax(TOBRUK): Control.ALLIED,
+                                  _ax(TRIPOLI): Control.ALLIED})
+    assert cv.fed_dumps(taken, Side.AXIS), "8.82: the off-map box cannot be captured, so it feeds on"
+    assert not cv._line_is_cut(taken), "holding the gateway hex is not a 64.72 Commonwealth win"
 
 
 def test_losing_tobruk_does_not_hand_the_commonwealth_the_war():
     # 🔴 THE REGRESSION THIS RULE EXISTS TO AVOID, on the real GT1 campaign board. With Tripoli
     # missing, the Commonwealth CAPTURING Tobruk (56.15) was the whole Axis supply system: it took
-    # the Axis from 13 fed dumps to 0 and ALL 177 of its combat units out of the 60-MP trace, so
+    # the Axis from 13 fed dumps to 0 and EVERY ONE of its combat units out of the 60-MP trace, so
     # 64.72 handed the Commonwealth an automatic win at Game-Turn 35 -- off a coastline sampling
     # error, in the exact situation (Tobruk falls, January 1941) where the historical Axis fought on
     # out of Tripoli for two more years and retook Cyrenaica. That is not 64.72; it is "the

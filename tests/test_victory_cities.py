@@ -28,7 +28,7 @@ def _index():
 def _all_hexes() -> list[str]:
     hexes = [c["hex"] for c in CITIES["cities"]]
     hexes += CITIES["auto_win"]["alexandria"] + CITIES["auto_win"]["cairo"]
-    hexes.append(CITIES["supply_sources"]["tobruk"])
+    hexes.append(CITIES["supply_sources"]["tobruk"]["hex"])
     return hexes
 
 
@@ -77,7 +77,7 @@ def test_tripoli_enters_the_map_at_its_rule_8_85_gateway():
     # overrides that from 8.85, as this engine already overrides it from the roads data and the OOB.
     #
     # WHAT THE NULL COST, measured on the real campaign board: with Tobruk the only source, the
-    # Commonwealth capturing Tobruk took the Axis from 13 fed dumps to 0 and all 177 of its combat
+    # Commonwealth capturing Tobruk took the Axis from 13 fed dumps to 0 and every one of its combat
     # units out of the 60-MP trace -- a 64.72 Commonwealth automatic win at Game-Turn 35, off a
     # sampling error, in the exact situation where the historical Axis fought on out of Tripoli for
     # two more years. See tests/test_campaign_victory.py::test_losing_tobruk_does_not_hand_the_
@@ -85,5 +85,21 @@ def test_tripoli_enters_the_map_at_its_rule_8_85_gateway():
     #
     # FLAGGED AS A PROXY, and the off-map premise is why: this engine has no off-map box, so the
     # source is anchored at the ON-MAP GATEWAY the book names for it. A2802 stands for Tripoli.
-    assert CITIES["supply_sources"]["tripoli"] == "A2802"
-    assert CITIES["supply_sources"]["tobruk"] == "C4807"
+    assert CITIES["supply_sources"]["tripoli"]["hex"] == "A2802"
+    assert CITIES["supply_sources"]["tobruk"]["hex"] == "C4807"
+
+
+def test_only_the_on_map_port_is_capturable():
+    # THE PROXY'S LIMIT, added 2026-07-16 after a verifier found the gateway had inherited a rule
+    # the thing it proxies is exempt from. 56.15 shuts a source the Commonwealth has CAPTURED ("a
+    # convoy scheduled to arrive at a port that is captured by the Commonwealth is cancelled. It
+    # never sails"). Tobruk is an on-map port and can be taken, so the gate is live. TRIPOLI CANNOT
+    # BE TAKEN AT ALL: 8.81 puts the boxes off the western edge of Map A and 8.82 says "No
+    # Commonwealth land or sea unit may ever enter any of the boxes", so 56.15's antecedent is
+    # unsatisfiable -- the rule is not switched off for Tripoli, it simply never fires. Its gateway
+    # hex A2802 is NOT Tripoli: it is an ordinary desert hex the Commonwealth may stand on, and
+    # standing on it captures no port. Gating the proxy on 56.15 handed the Commonwealth a 64.72
+    # automatic win that 8.82 forbids; see
+    # tests/test_campaign_victory.py::test_the_commonwealth_cannot_capture_the_off_map_tripoli_box.
+    assert CITIES["supply_sources"]["tobruk"]["capturable"] is True
+    assert CITIES["supply_sources"]["tripoli"]["capturable"] is False
