@@ -43,6 +43,14 @@ class TerrainMap:
     # section the hex is in. Empty for a synthetic map (no section geometry) -> weather stays
     # theatre-wide there, byte-identical to before localisation (game.state.weather_at).
     sections: dict[Coord, str] = field(default_factory=dict)
+    # Derived-value cache (perf only, NOT game state): per-(mobility, weather) adjacency rows
+    # {hex: [(neighbor, step_cost), ...]} in neighbors() order, populated lazily by _adjacency via
+    # step_cost so every stored float is bit-identical to the live chart. init=False + default_factory
+    # means every constructor AND every dataclasses.replace() starts EMPTY, so a rebuilt map (the rail
+    # construction in apply.py, the terrain replace in scenario.py) can never inherit a stale table.
+    # compare=False/repr=False keep it out of __eq__/__repr__ (frozen forbids reassigning the field,
+    # not mutating the dict it points to) so two states stay comparable and no signature can move.
+    _edge_cache: dict = field(default_factory=dict, init=False, repr=False, compare=False)
 
     def exists(self, coord: Coord) -> bool:
         return coord in self.terrain
@@ -192,8 +200,45 @@ def reachable_prev(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobi
                    passable=passable, start_cost=start_cost, weather=weather)
 
 
+def _adjacency(tmap: TerrainMap, mobility: Mobility,
+               weather: str) -> dict[Coord, list[tuple[Coord, float]]]:
+    """The precomputed edge-cost table for (mobility, weather): every hex mapped to its outgoing
+    [(neighbor, step_cost), ...] rows, in neighbors() order, keeping only existing neighbours with a
+    finite cost. step_cost is a pure function of the frozen map, so the immutable TerrainMap can
+    memoise this derived value; it is built once per (mobility, weather) and cached on the map.
+    Only "normal" and "rainstorm" are ever built -- a Sandstorm edge is exactly 2x a Normal edge
+    (29.44), applied at use in _search. Rows are populated BY CALLING step_cost, so every stored float
+    is bit-identical to the live chart and step_cost stays the single source of truth."""
+    key = (mobility, weather)
+    adj = tmap._edge_cache.get(key)
+    if adj is not None:
+        return adj
+    adj = {}
+    exists = tmap.exists
+    for here in tmap.terrain:
+        row = []
+        for nb in neighbors(here):
+            if not exists(nb):
+                continue
+            step = step_cost(tmap, here, nb, mobility, weather)
+            if step is None:
+                continue
+            row.append((nb, step))
+        adj[here] = row
+    tmap._edge_cache[key] = adj
+    return adj
+
+
 def _search(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
             *, blocked, terminal, passable, start_cost, weather="normal") -> tuple[dict, dict]:
+    # A Sandstorm reuses the Normal table doubled at use (29.44); a Rainstorm has its own table
+    # (29.55/29.56); every other label behaves as Normal, so it maps to the Normal table too.
+    if sandstorm(weather):
+        adj, scale = _adjacency(tmap, mobility, "normal"), 2
+    elif rainstorm(weather):
+        adj, scale = _adjacency(tmap, mobility, "rainstorm"), 1
+    else:
+        adj, scale = _adjacency(tmap, mobility, "normal"), 1
     best: dict[Coord, float] = {start: start_cost}
     prev: dict[Coord, Coord] = {}
     pq: list[tuple[float, Coord]] = [(start_cost, start)]
@@ -203,15 +248,12 @@ def _search(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
             continue
         if terminal is not None and here != start and terminal(here):
             continue
-        for nb in neighbors(here):
-            if nb in blocked or not tmap.exists(nb):
+        for nb, step in adj.get(here, ()):
+            if nb in blocked:
                 continue
             if passable is not None and not passable(here, nb):
                 continue
-            step = step_cost(tmap, here, nb, mobility, weather)
-            if step is None:
-                continue
-            nc = cost + step
+            nc = cost + step * scale
             if nc <= budget and nc < best.get(nb, float("inf")):
                 best[nb] = nc
                 prev[nb] = here
@@ -235,5 +277,4 @@ def reconstruct_path(prev: dict[Coord, Coord], start: Coord, dst: Coord) -> list
 
 
 def _mot(mobility: Mobility) -> bool:
-    from .terrain import is_motorized
     return is_motorized(mobility)

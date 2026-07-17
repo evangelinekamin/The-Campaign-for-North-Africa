@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from game import hexmap
-from game.movement import TerrainMap, edge, path_cost, reachable, step_cost
+from game.movement import TerrainMap, _adjacency, edge, path_cost, reachable, step_cost
 from game.terrain import Hexside, Mobility, Terrain
 
 LINE = [(0, 0), (1, 0), (2, 0), (3, 0)]
@@ -96,3 +96,58 @@ def test_reachable_respects_budget_and_blocking():
                         blocked=blocked)
     assert (1, 0) not in reach_b
     assert (2, 0) in reach_b           # reachable around the block
+
+
+def _rich_map() -> TerrainMap:
+    """A connected blob exercising every step_cost branch the shipped maps do not yet carry
+    (both transcribed maps have hexsides == {}): varied terrain, a road, a track, and up/down
+    escarpment, wadi (with and without a road), major/minor river, up-slope and ridge hexsides."""
+    coords = [(q, r) for q in range(-2, 3) for r in range(-2, 3)
+              if hexmap.distance((0, 0), (q, r)) <= 2]
+    terr = {c: Terrain.CLEAR for c in coords}
+    terr[(1, 0)] = Terrain.MOUNTAIN
+    terr[(0, 1)] = Terrain.ROUGH
+    terr[(-1, 0)] = Terrain.MAJOR_CITY
+    terr[(1, -1)] = Terrain.DESERT
+    hexsides = {
+        ((0, 0), (1, 0)): Hexside.UP_ESCARPMENT,     # no vehicle up (-> None)
+        ((1, 0), (0, 0)): Hexside.DOWN_ESCARPMENT,   # note-8 track exception (track edge below)
+        ((0, 0), (0, 1)): Hexside.WADI,              # road below keeps it open in a rainstorm
+        ((0, 0), (-1, 0)): Hexside.MAJOR_RIVER,      # motorized prohibited (-> None)
+        ((0, 0), (0, -1)): Hexside.MINOR_RIVER,
+        ((1, -1), (0, 0)): Hexside.WADI,             # road-less wadi (-> None in a rainstorm)
+        ((-1, 1), (0, 0)): Hexside.UP_SLOPE,
+        ((0, 1), (0, 0)): Hexside.RIDGE,
+    }
+    return TerrainMap(terrain=terr, hexsides=hexsides,
+                      roads=frozenset({edge((0, 0), (0, 1))}),
+                      tracks=frozenset({edge((1, 0), (0, 0))}))
+
+
+def test_edge_cost_table_locks_to_live_step_cost():
+    """THE BYTE-IDENTITY LOCK for the precomputed _search adjacency table. Over every directed edge x
+    mobility x weather the table must reproduce step_cost exactly -- membership (an edge is absent iff
+    step_cost is None) and value (normal/rainstorm straight from the table; a sandstorm edge = the
+    normal edge doubled, rule 29.44) -- reconstructed precisely as _search consumes it. Any divergence
+    would make a Dijkstra flood take a different edge and move the determinism signature."""
+    tmap = _rich_map()
+    for mob in Mobility:
+        normal_adj = _adjacency(tmap, mob, "normal")
+        rain_adj = _adjacency(tmap, mob, "rainstorm")
+        # every non-storm label ("normal", "hot", ...) is served by the normal table at scale 1;
+        # a sandstorm reuses the normal table at scale 2; a rainstorm has its own table.
+        for weather, (adj, scale) in {"normal": (normal_adj, 1), "hot": (normal_adj, 1),
+                                      "sandstorm": (normal_adj, 2),
+                                      "rainstorm": (rain_adj, 1)}.items():
+            for here in tmap.terrain:
+                row = dict(adj[here])
+                for nb in hexmap.neighbors(here):
+                    if not tmap.exists(nb):
+                        continue
+                    live = step_cost(tmap, here, nb, mob, weather)
+                    ctx = (here, nb, mob.name, weather)
+                    if live is None:
+                        assert nb not in row, ctx
+                    else:
+                        assert nb in row, ctx
+                        assert row[nb] * scale == live, (ctx, row[nb] * scale, live)
