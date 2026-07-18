@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from . import supply
 from .events import Control, Event, EventKind, Phase, Side
 from .movement import edge
 from .state import GameState, Rommel, StepRecord, SupplyUnit, VP
@@ -138,8 +139,28 @@ def apply(state: GameState, event: Event) -> GameState:
                                        bp_accumulated=u.bp_accumulated + p.get("bp", 0.0)))
 
     if k == EventKind.SUPPLY_MOVED:
+        # [54.12] A relocated dump stores no more at its DESTINATION than that hex's row allows: a
+        # base-filled depot hauled off an unlimited city onto Other Terrain sheds its overflow. The
+        # excess it cannot store forward STAYS AT THE ORIGIN as a dump ([54.11]: "Any hex can be used
+        # as a supply dump") -- it is never destroyed, because supply is destroyed only by the rules
+        # that say so (demolition [54.14], the capture tax [49.19]/[50.16]/[51.16]). So the clamp
+        # SPLITS the load, exactly as the FILL path clamps a delivery to the 54.12 headroom and leaves
+        # the overflow at its source (engine._naval_convoys / _truck_unload -- "overflow is never
+        # credited"). The forward dump keeps its id; the remainder is a fresh pile at the origin, under
+        # a per-move-unique id (the split marker is flat, so a remainder that is itself hauled on and
+        # sheds again does not nest). Conserves on-hand exactly, so the ledger identity is untouched.
         su = state.supply(p["supply_id"])
-        return state.with_supply(replace(su, hex=tuple(p["to"])))
+        cap = supply.dump_capacity_at(state, tuple(p["to"]))
+        fwd = {c: min(getattr(su, c.lower()), cap[c]) for c in supply.COMMODITIES}
+        left = {c: getattr(su, c.lower()) - fwd[c] for c in supply.COMMODITIES}
+        moved = state.with_supply(replace(su, hex=tuple(p["to"]), ammo=fwd["AMMO"],
+                                          fuel=fwd["FUEL"], stores=fwd["STORES"], water=fwd["WATER"]))
+        if not any(left.values()):
+            return moved
+        rem = SupplyUnit(f"{su.id.split('~')[0]}~{event.seq}", su.side, su.hex,
+                         ammo=left["AMMO"], fuel=left["FUEL"],
+                         stores=left["STORES"], water=left["WATER"])
+        return replace(moved, supplies=moved.supplies + (rem,))
 
     if k == EventKind.SUPPLY_DUMP_ESTABLISHED:
         # 54.11: "Any hex can be used as a supply dump." A pure APPEND of an EMPTY dump -- it
