@@ -243,6 +243,7 @@ def _pool(su, commodity: str) -> int:
     return getattr(su, commodity.lower())          # one path for all four commodities
 
 
+@tactics._PositionMemo
 def trace_blocked(state: GameState, side: Side) -> frozenset:
     """THE TRACE BLOCKING, in one place: the hexes no line of supply of `side` may run through --
     every hex an enemy unit stands on, plus every hex in an enemy combat unit's Zone of Control

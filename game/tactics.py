@@ -6,6 +6,9 @@ engine<->policy import cycle and guarantees decider and validator agree.
 """
 from __future__ import annotations
 
+import functools
+from collections import OrderedDict
+
 from . import cp_costs, movement, zoc
 from .events import Side
 from .hexmap import Coord
@@ -15,6 +18,54 @@ from .terrain import Mobility
 
 def other(side: Side) -> Side:
     return Side.ALLIED if side == Side.AXIS else Side.AXIS
+
+
+class _PositionMemo:
+    """Bounded LRU memo for a pure function of enemy/friendly UNIT POSITIONS.
+
+    The enemy-ZOC / trace-blocked sets are a pure function of `state.living(side)`
+    (each unit's hex, combat flag and on-map status) over the static terrain, so
+    they turn over ONLY when a unit moves, dies, or arrives -- and a supply/water/
+    stores phase moves no unit, so the same set is asked for thousands of times per
+    OpStage (measured ~99% redundant: 8,905 calls -> 58 distinct results in three
+    turns). Recomputing it rebuilds the whole enemy control map every time.
+
+    THE KEY is (id(state.units), state.turn, side). `dataclasses.replace` KEEPS the
+    `state.units` tuple reference when unrelated fields (turn, weather, consumed,
+    control, ...) change and REBUILDS it on any move / attrition, so id(state.units)
+    is an exact, self-invalidating fingerprint of unit positions. The one input it
+    misses is ARRIVAL -- a reinforcement is already in the tuple and merely becomes
+    on-map when `turn` reaches its arrival_turn (state.on_map reads turn >=
+    arrival_turn) -- so `turn` joins the key. Terrain is static within a run and
+    never shares a units-tuple identity across runs (see below), so it needs no key.
+
+    ID REUSE is the only failure mode of an id()-keyed cache, and it is closed by
+    holding a STRONG REFERENCE to every keyed tuple for its entry's lifetime: while
+    any entry for id X is live, its tuple is alive, so X cannot be reused by a
+    different tuple; once all X entries are evicted the ref is dropped and a later
+    tuple may take X, but then there is no X entry to hit -- so a stale hit is
+    impossible by construction. Bounded to the last `maxsize` boards.
+
+    Determinism: the value is a pure function of the key, returned by reference and
+    only ever READ (frozensets, used as sets) by callers -> byte-identical log."""
+
+    def __init__(self, compute, maxsize: int = 64) -> None:
+        self._compute = compute
+        self._maxsize = maxsize
+        self._cache: OrderedDict = OrderedDict()
+        functools.update_wrapper(self, compute)
+
+    def __call__(self, state: GameState, side: Side):
+        key = (id(state.units), state.turn, side)
+        entry = self._cache.get(key)
+        if entry is not None:
+            self._cache.move_to_end(key)
+            return entry[1]
+        value = self._compute(state, side)
+        self._cache[key] = (state.units, value)   # hold the tuple ref: pins its id()
+        if len(self._cache) > self._maxsize:
+            self._cache.popitem(last=False)
+        return value
 
 
 def effective_cpa(state: GameState, unit: Unit) -> int:
@@ -76,6 +127,7 @@ def _break_off_cost(unit: Unit) -> float:
     return float(cp_costs.disengage_cost() if unit.engaged else cp_costs.break_contact_cost())
 
 
+@_PositionMemo
 def enemy_zoc_and_occupied(state: GameState, mover_side: Side) -> tuple[frozenset, frozenset]:
     enemy = other(mover_side)
     by_hex: dict[Coord, list[Unit]] = {}
