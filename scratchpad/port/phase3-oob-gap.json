@@ -1,0 +1,86 @@
+{
+  "_note": "Phase 3 OOB gap: weapon-system models MISSING from data/unit_stats.json, transcribed VERBATIM from the 1979 scan ([4.47] CW = PDF p.138, [4.48] IT = p.139, [4.49] GE = p.140). Each entry gives the engine-consumed fields (oca/dca/anti_armor/armor_protection/is_tank/bar for tanks; anti_armor+vulnerability for AT; barrage+vulnerability[+anti_armor] for artillery) PLUS a _chart object with the full printed row (cpa, aa, barrage, anti_armor, vul, armor, ca_off_def, fuel, bar) for audit. BAR convention: chart 1R=+1, 2R=+2, 1L=-1, 0=0 (positive=more breakdown). 'aa' (anti-air rating) and 'fuel' and 'cpa' are NOT read by the engine today (T0-6: no AA field/role; CPA comes from role) -- carried for completeness. Companion prose: phase3-oob-transcription.md.",
+  "existing_models_verified": "All 24 models already in data/unit_stats.json were re-checked cell-by-cell against the scan and are CORRECT. No existing model needs a change. (Resolved OCR conflict: A9 Cruiser armor_protection = 1, per scan.)",
+
+  "commonwealth_missing": {
+    "a10":       {"is_tank": true,  "oca": 3, "dca": 3, "anti_armor": 3, "armor_protection": 2, "bar": 1,  "_chart": {"type": "A10 Cruiser",         "cpa": 15, "aa": 1, "barrage": "-", "anti_armor": 3,  "vul": "-", "armor": 2, "ca_off_def": "3/3", "fuel": 2, "bar": "1R"}},
+    "churchill": {"is_tank": true,  "oca": 5, "dca": 6, "anti_armor": 6, "armor_protection": 7, "bar": 0,  "_chart": {"type": "Churchill II",         "cpa": 15, "aa": 1, "barrage": "-", "anti_armor": 6,  "vul": "-", "armor": 7, "ca_off_def": "5/6", "fuel": 7, "bar": "0"}},
+    "crusader1": {"is_tank": true,  "oca": 3, "dca": 4, "anti_armor": 3, "armor_protection": 3, "bar": 1,  "_chart": {"type": "Crusader Mk.I",        "cpa": 25, "aa": 1, "barrage": "-", "anti_armor": 3,  "vul": "-", "armor": 3, "ca_off_def": "3/4", "fuel": 3, "bar": "1R"}},
+    "crusader3": {"is_tank": true,  "oca": 4, "dca": 5, "anti_armor": 6, "armor_protection": 4, "bar": 1,  "_chart": {"type": "Crusader Mk.III",      "cpa": 25, "aa": 1, "barrage": "-", "anti_armor": 6,  "vul": "-", "armor": 4, "ca_off_def": "4/5", "fuel": 3, "bar": "1R"}},
+    "sherman":   {"is_tank": true,  "oca": 5, "dca": 5, "anti_armor": 6, "armor_protection": 6, "bar": 0,  "_us_tank": true, "_max_toe": 9, "_release_gt": 89, "_chart": {"type": "Sherman", "cpa": 20, "aa": 1, "barrage": "-", "anti_armor": 6, "vul": "-", "armor": 6, "ca_off_def": "5/5", "fuel": 6, "bar": "0"}},
+    "valentine": {"is_tank": true,  "oca": 3, "dca": 4, "anti_armor": 3, "armor_protection": 5, "bar": 0,  "_release_gt": 39, "_chart": {"type": "Valentine Mk.II", "cpa": 15, "aa": 0, "barrage": "-", "anti_armor": 3, "vul": "-", "armor": 5, "ca_off_def": "3/4", "fuel": 3, "bar": "0"}},
+    "scorpion":  {"is_tank": true,  "oca": 0, "dca": 2, "anti_armor": 0, "armor_protection": 7, "bar": -1, "_engineer_mineclear": true, "_dca_parenthesized": true, "_chart": {"type": "Scorpion", "cpa": 25, "aa": 0, "barrage": "-", "anti_armor": 0, "vul": "-", "armor": 7, "ca_off_def": "0/(2)", "fuel": 3, "bar": "1L"}},
+
+    "18pdr":     {"barrage": 7,  "anti_armor": 2, "vulnerability": 4, "_anti_armor_parenthesized": true, "_chart": {"type": "18-pounder Gun",      "cpa": 15, "barrage": 7,  "anti_armor": "(2)", "vul": 4, "ca_off_def": "0/1", "fuel": 1}},
+    "18_25pdr":  {"barrage": 8,  "anti_armor": 2, "vulnerability": 5, "_chart": {"type": "18/25-pounder Gun",  "cpa": 15, "barrage": 8,  "anti_armor": 2, "vul": 5, "ca_off_def": "1/1", "fuel": 1}},
+    "4_5in_gun": {"barrage": 11, "anti_armor": 1, "vulnerability": 9, "_chart": {"type": "4.5in Gun",         "cpa": 15, "barrage": 11, "anti_armor": 1, "vul": 9, "ca_off_def": "1/0", "fuel": 1}},
+    "5_5in":     {"barrage": 15, "anti_armor": 1, "vulnerability": 7, "_chart": {"type": "5.5in Gun/Howitzer","cpa": 15, "barrage": 15, "anti_armor": 1, "vul": 7, "ca_off_def": "1/0", "fuel": 1}},
+    "60pdr":     {"barrage": 12, "anti_armor": 1, "vulnerability": 7, "_chart": {"type": "60-pounder Gun",    "cpa": 15, "barrage": 12, "anti_armor": 1, "vul": 7, "ca_off_def": "1/0", "fuel": 1}},
+    "bishop":    {"barrage": 8,  "anti_armor": 4, "vulnerability": 3, "armor_protection": 5, "oca": 2, "dca": 1, "bar": 2, "_sp_artillery": true, "_chart": {"type": "SP 25-pounder Gun (Bishop)", "cpa": 15, "barrage": 8, "anti_armor": 4, "vul": 3, "armor": 5, "ca_off_def": "2/1", "fuel": 3, "bar": "2R"}},
+    "3_7in_how": {"barrage": 7,  "anti_armor": 0, "vulnerability": 3, "_chart": {"type": "3.7in Howitzer",   "cpa": 15, "barrage": 7,  "anti_armor": 0, "vul": 3, "ca_off_def": "0/0", "fuel": 1}},
+    "4_5in_how": {"barrage": 9,  "anti_armor": 0, "vulnerability": 3, "_chart": {"type": "4.5in Howitzer",   "cpa": 15, "barrage": 9,  "anti_armor": 0, "vul": 3, "ca_off_def": "1/0", "fuel": 1}},
+    "6in_how":   {"barrage": 15, "anti_armor": 1, "vulnerability": 5, "_chart": {"type": "6in Howitzer",     "cpa": 15, "barrage": 15, "anti_armor": 1, "vul": 5, "ca_off_def": "1/0", "fuel": 1}},
+    "155mm_how": {"barrage": 15, "anti_armor": 1, "vulnerability": 6, "_chart": {"type": "155mm Howitzer",   "cpa": 15, "barrage": 15, "anti_armor": 1, "vul": 6, "ca_off_def": "1/0", "fuel": 1}},
+    "priest":    {"barrage": 9,  "anti_armor": 2, "vulnerability": 4, "armor_protection": 4, "oca": 2, "dca": 3, "bar": 0, "_sp_artillery": true, "_aa": 1, "_chart": {"type": "105mm SP Howitzer (Priest)", "cpa": 20, "aa": 1, "barrage": 9, "anti_armor": 2, "vul": 4, "armor": 4, "ca_off_def": "2/3", "fuel": 3, "bar": "0"}},
+
+    "17pdr":     {"anti_armor": 13, "vulnerability": 2, "_release_gt": 103, "_chart": {"type": "17-pounder", "cpa": 15, "anti_armor": 13, "vul": 2, "ca_off_def": "1/1", "fuel": 1}},
+    "deacon":    {"anti_armor": 7,  "vulnerability": 2, "armor_protection": 1, "oca": 2, "dca": 2, "bar": -1, "_sp_at": true, "_chart": {"type": "SP 6-pounder (Deacon)", "cpa": 20, "anti_armor": 7, "vul": 2, "armor": 1, "ca_off_def": "2/2", "fuel": 1, "bar": "1L"}},
+
+    "light_aa":  {"_needs_aa_role": true, "aa": 1, "anti_armor": 1, "vulnerability": 2, "_anti_armor_parenthesized": true, "_chart": {"type": "Light AA (Bofors 40mm)", "cpa": 15, "aa": 1, "anti_armor": "(1)", "vul": 2, "ca_off_def": "(1)/(1)", "fuel": 1}},
+    "heavy_aa":  {"_needs_aa_role": true, "aa": 4, "anti_armor": 7, "vulnerability": 2, "_anti_armor_parenthesized": true, "_chart": {"type": "Heavy AA (3.7in)",     "cpa": 15, "aa": 4, "anti_armor": "(7)", "vul": 2, "ca_off_def": "(1)/(1)", "fuel": 1}}
+  },
+
+  "italian_missing": {
+    "m14_41":         {"is_tank": true, "oca": 3, "dca": 3, "anti_armor": 3, "armor_protection": 3, "bar": 0, "_chart": {"type": "M 14/41", "cpa": 20, "aa": 1, "anti_armor": 3, "armor": 3, "ca_off_def": "3/3", "fuel": 2, "bar": "0"}},
+    "semovente_75_18":{"is_tank": true, "oca": 3, "dca": 3, "anti_armor": 6, "armor_protection": 3, "bar": 1, "barrage": 6, "_sp_gun_best_italian": true, "_chart": {"type": "75/18 Gun (Semovente SP)", "cpa": 20, "barrage": 6, "anti_armor": 6, "vul": 4, "armor": 3, "ca_off_def": "3/3", "fuel": 2, "bar": "1R"}},
+    "it_65_17":       {"barrage": 5,  "anti_armor": 0, "vulnerability": 3, "_chart": {"type": "65/17 Gun",        "cpa": 15, "barrage": 5,  "anti_armor": 0, "vul": 3, "ca_off_def": "1/1", "fuel": 1}},
+    "it_75_18_gh":    {"barrage": 6,  "anti_armor": 0, "vulnerability": 5, "_chart": {"type": "75/18 Gun-Howitzer","cpa": 15, "barrage": 6, "anti_armor": 0, "vul": 5, "ca_off_def": "1/0", "fuel": 1}},
+    "it_75_27":       {"barrage": 6,  "anti_armor": 2, "vulnerability": 4, "_anti_armor_zero_until_gt63": true, "_chart": {"type": "75/27 Gun", "cpa": 15, "barrage": 6, "anti_armor": "2**", "vul": 4, "ca_off_def": "1/1", "fuel": 1}},
+    "it_100_17":      {"barrage": 8,  "anti_armor": 0, "vulnerability": 5, "_chart": {"type": "100/17 Howitzer",  "cpa": 15, "barrage": 8,  "anti_armor": 0, "vul": 5, "ca_off_def": "1/0", "fuel": 1}},
+    "it_105_28":      {"barrage": 9,  "anti_armor": 1, "vulnerability": 7, "_chart": {"type": "105/28 Gun",       "cpa": 15, "barrage": 9,  "anti_armor": 1, "vul": 7, "ca_off_def": "1/1", "fuel": 1}},
+    "it_149_13":      {"barrage": 15, "anti_armor": 0, "vulnerability": 5, "_chart": {"type": "149/13 Howitzer",  "cpa": 15, "barrage": 15, "anti_armor": 0, "vul": 5, "ca_off_def": "1/0", "fuel": 1}},
+    "it_para_art":    {"barrage": 2,  "anti_armor": 2, "vulnerability": 1, "_airdroppable": true, "_chart": {"type": "ParaArt", "cpa": 15, "barrage": 2, "anti_armor": 2, "vul": 1, "ca_off_def": "1/1", "fuel": 1}},
+    "it_149_vichy":   {"barrage": 10, "anti_armor": 1, "vulnerability": 5, "_chart": {"type": "149mm Vichy French","cpa": 15, "barrage": 10, "anti_armor": 1, "vul": 5, "ca_off_def": "0/1", "fuel": 1}},
+    "it_155_rimhailo":{"barrage": 13, "anti_armor": 0, "vulnerability": 3, "_chart": {"type": "155mm Rimhailo(Fr.)","cpa": 15, "barrage": 13, "anti_armor": 0, "vul": 3, "ca_off_def": "0/0", "fuel": 1}},
+    "it_47_32":       {"anti_armor": 4, "vulnerability": 2, "_chart": {"type": "47/32 Mod.37 AT", "cpa": 15, "anti_armor": 4, "vul": 2, "ca_off_def": "1/1", "fuel": 1}},
+    "it_light_aa":    {"_needs_aa_role": true, "aa": 1, "anti_armor": 2, "vulnerability": 2, "_chart": {"type": "Light AA (20mm Breda)", "cpa": 15, "aa": 1, "anti_armor": 2, "vul": 2, "ca_off_def": "(1)/(1)", "fuel": 1}},
+    "it_light_aa_emplaced": {"_needs_aa_role": true, "_cpa": "0+", "aa": 1, "anti_armor": 2, "vulnerability": 2, "_emplaced_tobruk_benghazi_benina": true, "_chart": {"type": "'I' Light AA", "cpa": "0+", "aa": 1, "anti_armor": 2, "vul": 2, "ca_off_def": "(1)/(1)", "fuel": 1}},
+    "it_heavy_aa":    {"_needs_aa_role": true, "aa": 2, "anti_armor": 5, "vulnerability": 2, "_anti_armor_parenthesized": true, "_chart": {"type": "Heavy AA (75/46 Mod.34)", "cpa": 15, "aa": 2, "anti_armor": "(5)", "vul": 2, "ca_off_def": "(1)/(1)", "fuel": 1}},
+    "it_heavy_aa_emplaced": {"_needs_aa_role": true, "_cpa": "0+", "aa": 2, "anti_armor": 5, "vulnerability": 2, "_anti_armor_parenthesized": true, "_emplaced": true, "_chart": {"type": "'I' Heavy AA", "cpa": "0+", "aa": 2, "anti_armor": "(5)", "vul": 2, "ca_off_def": "(1)/(1)", "fuel": 0}},
+    "it_90_53":       {"_needs_aa_role": true, "aa": 3, "anti_armor": 9, "vulnerability": 2, "_the_italian_88": true, "_chart": {"type": "Heavy AA (90/53)", "cpa": 15, "aa": 3, "anti_armor": 9, "vul": 2, "ca_off_def": "(1)/(1)", "fuel": 1}}
+  },
+
+  "german_missing": {
+    "pz1":  {"is_tank": true, "oca": 2, "dca": 2, "anti_armor": 0, "armor_protection": 1, "bar": 0, "_chart": {"type": "Pz I",  "cpa": 24, "aa": 1, "anti_armor": 0, "armor": 1, "ca_off_def": "2/2", "fuel": 2, "bar": "0"}},
+    "pz3e": {"_UNVERIFIED_source_misprint": "Row typeset wrong in the 1979 book: duplicated 4/4 and shifted columns. Best inference below anchored on the adjacent clean Pz III H; requires a human ruling before seeding. Engine has no pz3e today so leaving it out regresses nothing.", "is_tank": true, "oca": 4, "dca": 4, "anti_armor": 4, "armor_protection": 4, "bar": 3, "_chart_raw": {"type": "Pz III E", "cpa": 25, "aa": 1, "printed_tail": "4  3  4/4  3  4/4  3"}},
+    "pz4e": {"is_tank": true, "oca": 5, "dca": 5, "anti_armor": 6, "armor_protection": 3, "bar": 0, "_chart": {"type": "Pz IV E", "cpa": 25, "aa": 1, "anti_armor": 6, "armor": 3, "ca_off_def": "5/5", "fuel": 4, "bar": "0"}},
+    "de_75_ig18":   {"barrage": 6,  "anti_armor": 3, "vulnerability": 2, "_anti_armor_zero_until_gt63": true, "_airdroppable": true, "_chart": {"type": "7.5cm IG18 Lt Inf Gun", "cpa": 15, "barrage": 6, "anti_armor": "3**", "vul": 2, "ca_off_def": "1/1", "fuel": 1}},
+    "de_105_k18":   {"barrage": 9,  "anti_armor": 1, "vulnerability": 9, "_chart": {"type": "10.5cm K18 Med Gun", "cpa": 15, "barrage": 9, "anti_armor": 1, "vul": 9, "ca_off_def": "1/1", "fuel": 1}},
+    "de_105_sp_k18":{"barrage": 9,  "anti_armor": 2, "vulnerability": 4, "armor_protection": 2, "oca": 2, "dca": 2, "bar": 0, "_sp": true, "_chart": {"type": "10.5cm SP K18 Gun", "cpa": 15, "barrage": 9, "anti_armor": 2, "vul": 4, "armor": 2, "ca_off_def": "2/2", "fuel": 2, "bar": "0"}},
+    "de_149_vichy": {"barrage": 10, "anti_armor": 1, "vulnerability": 5, "_chart": {"type": "149mm Vichy French", "cpa": 15, "barrage": 10, "anti_armor": 1, "vul": 5, "ca_off_def": "0/1", "fuel": 1}},
+    "de_150_sig33": {"barrage": 14, "anti_armor": 1, "vulnerability": 2, "_chart": {"type": "15cm sIG33 Med Inf Gun", "cpa": 15, "barrage": 14, "anti_armor": 1, "vul": 2, "ca_off_def": "1/1", "fuel": 1}},
+    "de_150_k18":   {"barrage": 15, "anti_armor": 1, "vulnerability": 11, "_chart": {"type": "15cm K18 Gun", "cpa": 15, "barrage": 15, "anti_armor": 1, "vul": 11, "ca_off_def": "1/1", "fuel": 1}},
+    "de_150_sp":    {"barrage": 14, "anti_armor": 1, "vulnerability": 2, "armor_protection": 2, "oca": 2, "dca": 2, "bar": 0, "_sp": true, "_chart": {"type": "15cm SP Gun", "cpa": 25, "barrage": 14, "anti_armor": 1, "vul": 2, "armor": 2, "ca_off_def": "2/2", "fuel": 2, "bar": "0"}},
+    "de_155_fr":    {"barrage": 13, "anti_armor": 0, "vulnerability": 5, "_chart": {"type": "155mm (french 1915)", "cpa": 15, "barrage": 13, "anti_armor": 0, "vul": 5, "ca_off_def": "1/1", "fuel": 1}},
+    "de_170_k18":   {"barrage": 15, "anti_armor": 0, "vulnerability": 13, "_chart": {"type": "17cm K18 Gun", "cpa": 15, "barrage": 15, "anti_armor": 0, "vul": 13, "ca_off_def": "1/0", "fuel": 1}},
+    "de_210_mrs18": {"barrage": 18, "anti_armor": 0, "vulnerability": 8, "_chart": {"type": "21cm mrs18 Howitzer", "cpa": 15, "barrage": 18, "anti_armor": 0, "vul": 8, "ca_off_def": "1/0", "fuel": 1}},
+    "de_28_pak":    {"anti_armor": 4, "vulnerability": 2, "_airdroppable": true, "_chart": {"type": "2.8cm sPzB.41 / 28-20 Pak", "cpa": 15, "anti_armor": 4, "vul": 2, "ca_off_def": "1/1", "fuel": 1}},
+    "de_762_pakr":  {"anti_armor": 9, "vulnerability": 2, "_captured_russian": true, "_chart": {"type": "7.62cm Pak(R)", "cpa": 15, "anti_armor": 9, "vul": 2, "ca_off_def": "1/1", "fuel": 1}},
+    "pzjg1":        {"anti_armor": 4, "vulnerability": 2, "armor_protection": 1, "oca": 2, "dca": 2, "bar": 0, "_sp_at": true, "_chart": {"type": "Pzjg 1 (SP)", "cpa": 30, "anti_armor": 4, "vul": 2, "armor": 1, "ca_off_def": "2/2", "fuel": 1, "bar": "0"}},
+    "marder3":      {"anti_armor": 9, "vulnerability": 2, "armor_protection": 2, "oca": 3, "dca": 2, "bar": 0, "_sp_at": true, "_chart": {"type": "Marder III (SP)", "cpa": 15, "anti_armor": 9, "vul": 2, "armor": 2, "ca_off_def": "3/2", "fuel": 2, "bar": "0"}},
+    "de_light_flak":{"_needs_aa_role": true, "aa": 1, "anti_armor": 1, "vulnerability": 1, "_anti_armor_parenthesized": true, "_vul_parenthesized": true, "_chart": {"type": "Light Flak (20mm & 37mm)", "cpa": 15, "aa": 1, "anti_armor": "(1)", "vul": "(1)", "ca_off_def": "(1)/(1)", "fuel": 1}}
+  },
+
+  "axis_garrison_hexes_60_31": {
+    "_source": "Read directly off scan PDF p.78; VP = rule 64.73.",
+    "Tobruk":   {"correct_hex": "C4807", "seeded_hex": "C4410/C4511/C4611/C4811", "vp_axis": 200, "action": "move garrison to C4807"},
+    "Bardia":   {"correct_hex": "C4321", "seeded_hex": "C4220 (oob_campaign_extra, labelled Barka)", "vp_axis": 100, "action": "move to C4321 and place in main OOB"},
+    "Benghazi": {"correct_hex_deployment_60_31": "B4827", "correct_hex_summary_p73": "A4827", "seeded_hex": "A4926", "vp_axis": 75, "action": "RULE ON ERRATA (A4827 vs B4827); seed garrison on the SAME hex victory_cities uses (A4827 today) so it is not empty for scoring"},
+    "Derna":    {"correct_hex": "B5925", "seeded_hex": "B5925", "vp_axis": 25, "action": "OK"},
+    "Benina":   {"correct_hex": "A4829", "seeded_hex": "A4829", "action": "OK"},
+    "Giarabub": {"correct_hex": "C1014", "seeded_hex": "C1014", "vp_axis": 15, "action": "OK"},
+    "Mechili":  {"correct_hex": "B4921", "seeded_hex": "B4921", "action": "OK"},
+    "BirScheferzen": {"correct_hex": "C3419", "seeded_hex": "C3419", "action": "OK"},
+    "Soluch":   {"correct_hex": "A4130", "seeded_hex": "A4130", "action": "OK"}
+  }
+}
