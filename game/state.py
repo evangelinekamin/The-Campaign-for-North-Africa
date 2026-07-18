@@ -90,6 +90,27 @@ class Unit:
     bp_accumulated: float = 0.0    # Breakdown Points this OpStage (21.25)
     bp_checked_column: int = -1    # highest 21.38 column already checked (21.26 gate)
     broken_down: int = 0           # TOE Strength Points broken down / immobile (21.44)
+    # --- PHASE 4 IN-HEX SUPPLY (Option B: the supply pools live ON the unit, per rule 53.11:
+    # first-line trucks are "attached directly to the parent combat unit... not represented by
+    # counters; the Player notes on his TOE Sheet the number and type"). `fl_light/medium/heavy`
+    # are the first-line Truck-Point CARRYING CEILING by 54.2 class -- the [60.31]/[60.41] (campaign,
+    # rule 64.3) / [61.43]/[61.31] (Desert Fox) allotment, freely divisible among a hex's units
+    # (59.42). `fuel/ammo/stores/water` are the current CONTENTS drawn in-hex (49.15/50.15/51.15):
+    # fuel is the 49.14 tank (cpa x 1/5 x fuel_rate x strength), the rest first-line-borne.
+    #
+    # THIS SLICE SEEDS ONLY fl_* (the truck allotment); contents stay 0. The 49.14 fuel-tank fill
+    # and the 59.66B basic load are a later slice (they need an owner ruling on the start-load
+    # convention + fuel-tank evaporation). Seeded BESIDE the abstract 32.16 trace and NOT YET
+    # CONSUMED -- no consumer, invariant or determinism-signature reads these, so every run stays
+    # byte-identical and conservation-exact until a consumer is switched (design sec 3, the
+    # parallel-run). Defaults 0 keep every unit inert.
+    fuel: int = 0                  # 49.14 tank contents (49.15 in-hex)
+    ammo: int = 0                  # first-line-borne ammunition on hand (50.15)
+    stores: int = 0                # first-line-borne stores on hand (51.15)
+    water: int = 0                 # first-line-borne water on hand (52.4)
+    fl_light: int = 0              # 53.11 first-line Truck Points by 54.2 class -- the 59.42
+    fl_medium: int = 0             #   allotment; the unit's carrying ceiling (supply.truck_capacity),
+    fl_heavy: int = 0              #   the way Port.cap_* is a port's.
     # Derived TOE totals, cached at construction (rule 11.32 reads them ~38M times a run).
     # steps + broken_down are the only inputs and change ONLY via replace(), which re-runs
     # __post_init__ -- so the cache can never go stale. compare/repr=False keeps eq/hash/repr

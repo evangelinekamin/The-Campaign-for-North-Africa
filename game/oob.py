@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import replace
 
 from . import coords, logistics_data
 from .events import Side
@@ -50,6 +51,26 @@ CAMPAIGN_DUMP_POOLS = {
     Side.ALLIED: logistics_data.cw_dump_pool_60_44(),      # [60.44] AMMO/FUEL/STORES -- 60.44 charts NO CW dump water
 }
 _OTHER_CAP = logistics_data.dump_other_terrain_cap()       # [54.12] Other-Terrain ceilings
+
+# --- [60.31]/[60.41] & [61.43]/[61.31] FIRST-LINE TRUCK ALLOTMENTS (rule 53.11) ----------------
+# The per-side first-line Truck-Point totals by 54.2 class, transcribed cell-by-cell off the 1979
+# scan (scratchpad/port/phase4-first-line-trucks.md: [60.31]/[60.41] PDF p.78, [61.43] p.81,
+# [61.31] p.80). Keyed by Side exactly like the dump pools, and dispatched the same way by rule
+# 64.3: the FULL campaign inherits Section 60, the Desert Fox benchmarks Section 61.
+#
+# 59.42 lists the allotment BY HEX and makes its division among that hex's units a FREE player
+# choice; the design (sec 3.2) makes only the per-side Sigma load-bearing. German first-line trucks
+# arrive attached via the Reinforcement Schedule ([4.43b]/[61.43], design sec 4.3) and are DEFERRED,
+# so the Axis allotment below is the ITALIAN first line and _seed_first_line places it on Italian
+# ('IT ') units only. See _seed_first_line for how the per-hex rows collapse to the per-side total.
+DESERT_FOX_FIRST_LINE = {
+    Side.AXIS:   {"light": 45, "medium": 220, "heavy": 50},   # [61.43] Italian first line -- 315 TP
+    Side.ALLIED: {"light": 15, "medium": 113, "heavy":  5},   # [61.31] Commonwealth -- 133 TP
+}
+CAMPAIGN_FIRST_LINE = {
+    Side.AXIS:   {"light": 55, "medium": 260, "heavy": 45},   # [60.31] Italian 10th Army -- 360 TP
+    Side.ALLIED: {"light": 30, "medium": 125, "heavy": 22},   # [60.41] Western Desert Force -- 177 TP
+}
 
 # [49.13]/[4.47-4.49] per-model Fuel Consumption Rate, keyed by model name.
 _FUEL_RATE_BY_MODEL = logistics_data.fuel_rate_by_model()
@@ -174,6 +195,7 @@ def classify(counter: str, group: str) -> str:
 def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
           reinforcements_file: str | None = "reinforcements_desert_fox.json",
           extra_file: str | None = None, dump_pools: dict | None = None,
+          first_line: dict | None = None,
           ) -> tuple[list[Unit], list[SupplyUnit]]:
     """Build engine units/supplies from an OOB file. If `sections` is given (e.g.
     "ABC"), only pieces whose hex is in those map sections are kept (rear units on
@@ -183,7 +205,10 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
     campaign gap-fill can layer onto a raw VASSAL extraction without editing it; an
     on-map record may carry an explicit `role` to override classify(). `dump_pools`
     (Side -> commodity->points) is the 64.3 start-line field-dump pool; it defaults to
-    the SECTION-61 Desert Fox pools, and game.scenario.campaign passes SECTION 60."""
+    the SECTION-61 Desert Fox pools, and game.scenario.campaign passes SECTION 60.
+    `first_line` (Side -> class->Truck Points) is the 53.11 first-line-truck allotment seeded
+    onto the units (Option B); it likewise defaults to Section 61 and the campaign passes
+    Section 60 (see _seed_first_line)."""
     stats = _load("unit_stats.json")
     units: list[Unit] = []
     dumps_meta: list[tuple[str, Side, tuple]] = []   # (uid, side, hex) placed after the loop
@@ -216,6 +241,7 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
         if role is not None:
             units.append(_make_unit(rec, side, tuple(rec["hex"]), role, stats, seen,
                                     rec["arrival_turn"]))
+    units = _seed_first_line(units, first_line or DESERT_FOX_FIRST_LINE)   # 53.11 / 64.3
     return units, supplies
 
 
@@ -265,6 +291,46 @@ def _place_dumps(dumps_meta: list[tuple[str, Side, tuple]], pools: dict) -> list
             amt = {c: min(_share(pool.get(c, 0), n, i), _OTHER_CAP[c]) for c in _COMMODITIES}
             out.append(SupplyUnit(uid, side, ax, ammo=amt["AMMO"], fuel=amt["FUEL"],
                                   stores=amt["STORES"], water=amt["WATER"]))
+    return out
+
+
+def _seed_first_line(units: list[Unit], first_line: dict) -> list[Unit]:
+    """Seed each side's transcribed first-line-truck allotment (rule 53.11 / 59.42) onto its units
+    as the Option-B fl_* carrying-ceiling fields (game.state.Unit).
+
+    59.42 lists first-line trucks BY HEX in the initial deployment, but the campaign OOB is a VASSAL
+    extraction whose Game-Turn-1 positions have DRIFTED from the [60.31]/[60.41] setup hexes -- and
+    several rulebook setup units (the 2nd New Zealand Division, 11th Hussars, 1 RTR, the French Motor
+    Marines) are modelled here as later rule-20 reinforcements, not as GT1 on-map pieces -- so a
+    faithful per-hex placement is not reconstructible against this order of battle. 59.42 makes the
+    division among a side's units a FREE player choice and the design (sec 3.2) makes only the
+    per-side Sigma load-bearing, so this is OUR ASSIGNMENT of that free choice, exactly as the
+    [60.33]/[60.43] second/third-line truck parks are placed: an even split (_share, remainder to the
+    earliest units) across the side's GT1 on-map FIELD combat units. Static garrisons (is_garrison_
+    home, 9.16a) are left with NO organic transport, faithful to the scan ("Garrisons ... start with
+    no organic transport"). The Axis line goes to Italian ('IT ') units only -- German first-line is
+    the deferred [4.43b] Reinforcement-Schedule attachment. The per-side Sigma is exact by
+    construction and asserted below (design S0's data lint)."""
+    seeded = {u.id: u for u in units}
+    for side, pool in first_line.items():
+        elig = [u for u in units if u.side == side and u.arrival_turn == 0
+                and u.is_combat and not u.is_garrison_home
+                and (side is not Side.AXIS or u.formation.startswith("IT "))]
+        n = len(elig)
+        if not n:
+            continue
+        for i, u in enumerate(elig):
+            seeded[u.id] = replace(seeded[u.id],
+                                   fl_light=_share(pool.get("light", 0), n, i),
+                                   fl_medium=_share(pool.get("medium", 0), n, i),
+                                   fl_heavy=_share(pool.get("heavy", 0), n, i))
+    out = [seeded[u.id] for u in units]
+    for side, pool in first_line.items():
+        got = sum(u.fl_light + u.fl_medium + u.fl_heavy for u in out if u.side == side)
+        want = sum(pool.get(c, 0) for c in ("light", "medium", "heavy"))
+        if got != want:
+            raise ValueError(
+                f"first-line seed for {side.name}: seeded {got} Truck Points, expected {want}")
     return out
 
 

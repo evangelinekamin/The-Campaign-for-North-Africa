@@ -1315,7 +1315,8 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     # 8th Army builds up from Cairo, across the whole GT1..111 span.
     units, oob_supplies = oob.build(oob_file="oob_italian.json", extra_file="oob_campaign_extra.json",
                                     sections="ABCDE", reinforcements_file="reinforcements_campaign.json",
-                                    dump_pools=oob.CAMPAIGN_DUMP_POOLS)   # 64.3: the full campaign uses Section 60
+                                    dump_pools=oob.CAMPAIGN_DUMP_POOLS,   # 64.3: the full campaign uses Section 60
+                                    first_line=oob.CAMPAIGN_FIRST_LINE)   # 53.11: [60.31]/[60.41] first-line trucks
     # C3: the supply economy -- the Commonwealth's inexhaustible Suez base (Cairo/Alexandria),
     # the Axis port-of-arrival dump (Benghazi) the Mediterranean convoys land at, and the
     # historical coastal staging dumps (60.34) the campaign truck relay hauls forward along.
