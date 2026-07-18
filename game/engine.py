@@ -21,7 +21,7 @@ from .apply import apply
 from .dice import DiceBox
 from .events import CONTROL_OF, Control, Event, EventKind, Phase, Side
 from .hexmap import distance, is_adjacent, neighbors
-from .invariants import check
+from .invariants import check_event
 from .policy import AttackOrder, MoveOrder, Policy
 from .staff_events import clean_staff_payload
 from .state import Coord, GameState
@@ -123,8 +123,9 @@ class _Run:
         e = Event(self._seq, self.state.turn, self.state.phase, side, actor,
                   kind, payload, rng_draws, self.state.stage)   # stamp the Operations Stage (5.1)
         self._seq += 1
-        self.state = apply(self.state, e)
-        check(self.state)
+        pre = self.state
+        self.state = apply(pre, e)
+        check_event(pre, self.state, e)            # delta-aware: touched slice + boundary full sweep
         self.events.append(e)
 
     def d6(self, subsystem: str) -> int:
