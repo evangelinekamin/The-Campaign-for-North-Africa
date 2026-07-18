@@ -147,8 +147,8 @@
       "sp_75_18": 1
     },
     "german_tank_4_49": {
-      "_comment": "[4.49] GERMAN TANK & GUN CHARACTERISTICS CHART (OCR'd cleanly, docs/rules/90 lines 3345-3380). All German tanks and SP guns = 0, BUT chart note *: every German tank has a BAR of +1R until the beginning of the 1/31 Game-Turn -- a TURN-GATE the reader must honor (not a flat value). Represented here as the post-1/31 steady value 0 with the gate recorded.",
-      "pz1": 0, "pz2": 0, "pz3e": 0, "pz3h": 0, "pz3j": 0, "pz4d": 0, "pz4e": 0, "pz4f2": 0,
+      "_comment": "[4.49] GERMAN TANK & GUN CHARACTERISTICS CHART (OCR'd cleanly, docs/rules/90 lines 3345-3380). All German tanks and SP guns = 0 EXCEPT the early, less-reliable Pz III E = 3 (its garbled [4.49] row was Eve-confirmed on scan p.140, 2026-07-18, resolving the VASSAL-remaster 0), BUT chart note *: every German tank has a BAR of +1R until the beginning of the 1/31 Game-Turn -- a TURN-GATE the reader must honor (not a flat value). Represented here as the post-1/31 steady value (0, or 3 for the Pz III E) with the gate recorded.",
+      "pz1": 0, "pz2": 0, "pz3e": 3, "pz3h": 0, "pz3j": 0, "pz4d": 0, "pz4e": 0, "pz4f2": 0,
       "sp_10_5cm_k18": 0, "sp_15cm": 0, "pzjg1": 0, "marder3": 0,
       "early_war_gate": {"bar_until_game_turn": "1/31", "bar_before_gate": 1, "bar_from_gate": 0}
     },
