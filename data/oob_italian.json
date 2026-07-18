@@ -1147,7 +1147,7 @@
   "stale_oldloc": "C4222"
  },
  {
-  "hex": "C4410",
+  "hex": "C4807",
   "side": "AXIS",
   "kind": "unit",
   "counter": "IT 3 - Marines",
@@ -1212,7 +1212,7 @@
   "stale_oldloc": "C4509"
  },
  {
-  "hex": "C4511",
+  "hex": "C4807",
   "side": "AXIS",
   "kind": "unit",
   "counter": "IT 2 - Marines",
@@ -1264,7 +1264,7 @@
   "stale_oldloc": "C4514"
  },
  {
-  "hex": "C4611",
+  "hex": "C4807",
   "side": "AXIS",
   "kind": "unit",
   "counter": "IT 1 - Marines",
@@ -1368,7 +1368,7 @@
   "stale_oldloc": "C4907"
  },
  {
-  "hex": "C4811",
+  "hex": "C4807",
   "side": "AXIS",
   "kind": "unit",
   "counter": "IT III - 32 GaF",
