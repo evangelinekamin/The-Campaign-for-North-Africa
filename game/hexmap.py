@@ -9,6 +9,8 @@ convention against the physical board (do not guess it here).
 """
 from __future__ import annotations
 
+from functools import lru_cache
+
 Coord = tuple[int, int]  # axial (q, r)
 
 # The six axial directions, in clockwise order from "east".
@@ -17,7 +19,12 @@ AXIAL_DIRECTIONS: tuple[Coord, ...] = (
 )
 
 
+@lru_cache(maxsize=None)
 def neighbors(coord: Coord) -> tuple[Coord, ...]:
+    # Coord is a hashable tuple and the six-tuple result is immutable and read-only
+    # at every call site, so the geometry can be memoised unboundedly (the coord domain
+    # is the finite map plus a one-hex ring). ~5.5M calls per campaign collapse to a
+    # dict lookup; byte-identical -- the same tuple is returned each time.
     q, r = coord
     return tuple((q + dq, r + dr) for dq, dr in AXIAL_DIRECTIONS)
 

@@ -732,7 +732,7 @@ def rail_reachable(tmap: movement.TerrainMap, start: Coord) -> frozenset:
         here = frontier.pop()
         for e in tmap.rails:
             if here in e:
-                other = next(iter(e - {here}))
+                other = e[0] if e[1] == here else e[1]
                 if other not in seen:
                     seen.add(other)
                     frontier.append(other)

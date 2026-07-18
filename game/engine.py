@@ -2231,7 +2231,7 @@ def _complete_rail(r: _Run, side: Side, actor: str, hx: Coord) -> None:
                {"item": construction.RAIL, "hex": list(hx), "unit_ids": [], "stages": 0,
                 "progress": 0})
         return
-    frm = next(iter(link - {hx}))
+    frm = link[0] if link[1] == hx else link[1]
     r.emit(EventKind.CONSTRUCTION_COMPLETED, side, actor,
            {"item": construction.RAIL, "hex": list(hx), "from": list(frm)})
 

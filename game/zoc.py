@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import Iterable, Mapping, Protocol
 
 from .hexmap import Coord, neighbors
-from .movement import TerrainMap, reachable, step_cost
+from .movement import TerrainMap, reachable, _step_cost_known_adjacent
 from .terrain import Hexside, Mobility
 
 # ZOC does not extend through these hexsides (§10.21a/b). Lake / all-sea hexsides
@@ -54,7 +54,9 @@ def hex_exerts_zoc(units: Iterable[ZocUnit]) -> bool:
 def zoc_extends(origin: Coord, nb: Coord, tmap: TerrainMap, mobility: Mobility) -> bool:
     if tmap.hexsides.get((origin, nb)) in ZOC_BLOCKING_HEXSIDES:   # §10.21a/b
         return False
-    return step_cost(tmap, origin, nb, mobility) is not None       # §10.21c
+    # controlled_from draws nb from neighbors(origin) and checks tmap.exists(nb) first,
+    # so dst is guaranteed on-map and adjacent -- skip step_cost's redundant gate (§10.21c).
+    return _step_cost_known_adjacent(tmap, origin, nb, mobility) is not None
 
 
 def controlled_from(units: Iterable[ZocUnit], origin: Coord,

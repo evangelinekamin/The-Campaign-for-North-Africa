@@ -20,11 +20,15 @@ from .terrain import (Hexside, Mobility, Terrain, TRACK_ENTRY, ROAD_ENTRY,
                       ROAD_BREAKDOWN, breakdown_value, hex_entry_cost, hexside_cost,
                       hexside_breakdown, is_motorized)
 
-Edge = frozenset
+Edge = tuple
 
 
-def edge(a: Coord, b: Coord) -> frozenset:
-    return frozenset((a, b))
+def edge(a: Coord, b: Coord) -> tuple:
+    """An undirected map edge as a normalized (lo, hi) coord pair, so edge(a, b) == edge(b, a).
+    A hashable tuple keyed this way is the elegant undirected-edge representation: road/track/rail
+    membership becomes a plain tuple lookup with none of the per-query frozenset allocation the hot
+    step_cost core paid 29.6M times, and every construction/query site stays symmetric."""
+    return (a, b) if a <= b else (b, a)
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,8 +82,17 @@ def step_cost(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobility,
     (29.44). Under Normal/Hot weather this is byte-identical to the dry chart."""
     if not tmap.exists(dst) or not is_adjacent(src, dst):
         return None
+    return _step_cost_known_adjacent(tmap, src, dst, mobility, weather)
 
-    e = edge(src, dst)
+
+def _step_cost_known_adjacent(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobility,
+                              weather: str = "normal") -> float | None:
+    """step_cost's core for callers that already guarantee dst exists and is adjacent to src
+    -- the _adjacency table build and zoc.zoc_extends, both of which draw dst from neighbors()
+    and check tmap.exists first. It skips the redundant exists/is_adjacent gate (29.6M distance
+    computations in the pre-table core) but is otherwise byte-identical to step_cost, which stays
+    the checked public entry point for external callers."""
+    e = (src, dst) if src <= dst else (dst, src)         # normalized undirected edge, no allocation churn
     on_road = e in tmap.roads
     on_track = e in tmap.tracks
     mot = mobility
@@ -127,7 +140,7 @@ def breakdown_points(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobilit
     one extra Breakdown Point per hex entered and per hexside crossed (54.2 note)."""
     if not is_motorized(mobility):
         return 0.0
-    e = edge(src, dst)
+    e = (src, dst) if src <= dst else (dst, src)         # normalized undirected edge, no allocation churn
     on_road = e in tmap.roads
     on_track = e in tmap.tracks
     rain = rainstorm(weather)
@@ -220,7 +233,7 @@ def _adjacency(tmap: TerrainMap, mobility: Mobility,
         for nb in neighbors(here):
             if not exists(nb):
                 continue
-            step = step_cost(tmap, here, nb, mobility, weather)
+            step = _step_cost_known_adjacent(tmap, here, nb, mobility, weather)
             if step is None:
                 continue
             row.append((nb, step))
