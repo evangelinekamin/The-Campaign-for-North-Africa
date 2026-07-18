@@ -2,8 +2,9 @@
 
 The measured defect: the Commonwealth army never concentrated forward, and therefore never fought.
 At Game-Turn 1 ten Commonwealth combat units stood within fifteen hexes of the Mersa Matruh
-railhead; its SEVENTY-FIVE combat reinforcements all arrived in the Nile Delta, sixty hexes behind
-the front, and SAT THERE FOR THE ENTIRE WAR. At GT12, GT40 and GT80 the count near the railhead was
+railhead; its combat reinforcements (141 counters after rule 20.11 gave every brigade its three
+battalions) all arrived in the Nile Delta, sixty hexes behind the front, and SAT THERE FOR THE
+ENTIRE WAR. At GT12, GT40 and GT80 the count near the railhead was
 zero, while the rail-fed depot on the railhead filled to its cap with nobody to drink it -- and the
 three offensive windows then ordered an attack on Benghazi from sixty hexes behind the start line.
 Not one Commonwealth unit was ever supplied forward of the railhead during Operation Compass.
@@ -155,7 +156,7 @@ def test_the_army_does_not_sit_out_the_war_in_the_delta(gt12):
             CW alive        25 -> 22       Axis surrender           158 -> 63
 
         Seven battalions are now pinned in the Delta (that is the 64.71 order, and it is cheap over
-        111 Game-Turns and 75 reinforcements). The other eight are not missing -- they are DEAD or
+        111 Game-Turns and 141 reinforcements). The other eight are not missing -- they are DEAD or
         strung out, because the Italian 10th Army still BEELINES to r=132 and, now that it can no
         longer walk into Alexandria, it sits down squarely ACROSS the Commonwealth's line of march
         from the Delta to Mersa Matruh and starves there. The rear echelon marching up walks into it
@@ -166,8 +167,12 @@ def test_the_army_does_not_sit_out_the_war_in_the_delta(gt12):
         lands this count stays depressed. Flagged, not papered over."""
     start, fin = gt12.initial, gt12.final
     assert _near_railhead(start) == 10                       # the Game-Turn 1 frontier screen
+    # RE-FIT 2026-07-17 (Phase 3.3): 75 -> 141. Rule 20.11 splits every Commonwealth infantry/motor
+    # brigade into an HQ + THREE battalions (34 brigades in reinforcements_campaign.json), so the
+    # seeded Delta stream grows by the two extra battalions each brigade always had. This is an exact
+    # COUNT of the built order of battle -- no dice in it -- not a slice fitted to green.
     assert sum(1 for u in start.units if u.side == Side.ALLIED and u.is_combat
-               and u.arrival_turn > 1 and distance(u.hex, CAIRO) <= 15) == 75   # the Delta stream
+               and u.arrival_turn > 1 and distance(u.hex, CAIRO) <= 15) == 141   # the Delta stream
 
     # The rear echelon MOVES -- the original defect was an army that never left the Delta AT ALL, and
     # that is what these two assertions guard. The absolute counts are FITTED and have moved THREE
