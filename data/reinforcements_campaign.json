@@ -3715,6 +3715,1274 @@
       "nationality": null,
       "morale": 1,
       "arrival_turn": 6
+    },
+    {
+      "counter": "XXV Corps Arty Regt",
+      "group": "IT XXV Corps Artillery",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 9,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "22 Bersaglieri Coy",
+      "group": "IT Unassigned Reconnaissance",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "recon",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 10,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "XXXIII Libyan Bn",
+      "group": "IT Unassigned Libyan Battalions",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -2,
+      "arrival_turn": 10,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "10 Bersaglieri Regt",
+      "group": "IT Unassigned Bersaglieri",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 11,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "XXXIV Libyan Bn",
+      "group": "IT Unassigned Libyan Battalions",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -2,
+      "arrival_turn": 12,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "140 CCNN Bn",
+      "group": "IT Unassigned Blackshirt Battalions",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 13,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "V(M) Tank Bn",
+      "group": "IT Unassigned Armoured Battalions",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "tank",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 13,
+      "arrival_stage": 3,
+      "model": "m13"
+    },
+    {
+      "counter": "II/87 Infantry Bn",
+      "group": "IT Unassigned Infantry Units",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 15,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "XXXV Libyan Bn",
+      "group": "IT Unassigned Libyan Battalions",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": -2,
+      "arrival_turn": 15,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "XXII(M) Tank Bn",
+      "group": "IT Unassigned Armoured Battalions",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "tank",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 17,
+      "arrival_stage": 3,
+      "model": "m13"
+    },
+    {
+      "counter": "I/33 Flak Bn",
+      "group": "GE 5th Light Division",
+      "hex": [
+        44,
+        -4
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 22,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "529 CD Arty Bn",
+      "group": "GE Non-Divisional Artillery",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 24,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "532 CD Arty Bn",
+      "group": "GE Non-Divisional Artillery",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 24,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "523 CD Arty Bn",
+      "group": "GE Non-Divisional Artillery",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 24,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "528 ArKo Arty Bn",
+      "group": "GE Non-Divisional Artillery",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 24,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "1 Oasis Koy",
+      "group": "GE 300th Oasis Battalion",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "oasis",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 25,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "2 Oasis Koy",
+      "group": "GE 300th Oasis Battalion",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "oasis",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 25,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "3 Oasis Koy",
+      "group": "GE 300th Oasis Battalion",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "oasis",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 25,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "I/2 Raggr Arty Bn",
+      "group": "IT 2nd Artillery Raggruppamento",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 26,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "II/2 Raggr Arty Bn",
+      "group": "IT 2nd Artillery Raggruppamento",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 26,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "III/2 Raggr Arty Bn",
+      "group": "IT 2nd Artillery Raggruppamento",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 26,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "IV/2 Raggr Arty Bn",
+      "group": "IT 2nd Artillery Raggruppamento",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 26,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "4 Oasis Koy",
+      "group": "GE 300th Oasis Battalion",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "oasis",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 27,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "5 Oasis Koy",
+      "group": "GE 300th Oasis Battalion",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "oasis",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 29,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "6 Oasis Koy",
+      "group": "GE 300th Oasis Battalion",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "oasis",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 30,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "7 Oasis Koy",
+      "group": "GE 300th Oasis Battalion",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "oasis",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 30,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "8 Oasis Koy",
+      "group": "GE 300th Oasis Battalion",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "oasis",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 31,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "9 Oasis Koy",
+      "group": "GE 300th Oasis Battalion",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "oasis",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 31,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "I/155 Arty Bn",
+      "group": "GE 155 Artillery Regt",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 32,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "10 Oasis Koy",
+      "group": "GE 300th Oasis Battalion",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "oasis",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 33,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "III/155 Arty Bn",
+      "group": "GE 155 Artillery Regt",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 34,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "11 Oasis Koy",
+      "group": "GE 300th Oasis Battalion",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "oasis",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 34,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "12 Oasis Koy",
+      "group": "GE 300th Oasis Battalion",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "oasis",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 35,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "557 Arty Bn",
+      "group": "GE Non-Divisional Artillery",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 36,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "13 Oasis Koy",
+      "group": "GE 300th Oasis Battalion",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "oasis",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 39,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "30 Flak Bty",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 39,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "1/902 Arty Bty",
+      "group": "GE Non-Divisional Artillery",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 40,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "149 CD Arty Bn",
+      "group": "GE Non-Divisional Artillery",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 45,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "RECAM Recon Group",
+      "group": "IT Unassigned Reconnaissance",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "recon",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 45,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "IV Genoa MG Bn",
+      "group": "IT Unassigned Machinegun Battalions",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "mg",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 51,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "I/18 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 52,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "I Articelere Regt",
+      "group": "IT Non-Divisional Artillery",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 55,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "II Articelere Regt",
+      "group": "IT Non-Divisional Artillery",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 55,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "III(M) Tank Bn",
+      "group": "IT Unassigned Armoured Battalions",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "tank",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 55,
+      "arrival_stage": 1,
+      "model": "m14_41"
+    },
+    {
+      "counter": "LII(M) Tank Bn",
+      "group": "IT Unassigned Armoured Battalions",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "tank",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 55,
+      "arrival_stage": 3,
+      "model": "m14_41"
+    },
+    {
+      "counter": "612 Army Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 58,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "I/53 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 59,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "II/25 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 59,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "VI Aosta MG Bn",
+      "group": "IT Unassigned Machinegun Battalions",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "mg",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 59,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "368 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 60,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "192 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 61,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "841 Lt Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 61,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "533 CD Arty Bn",
+      "group": "GE Non-Divisional Artillery",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 66,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "114 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 66,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "442 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 66,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "I/43 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 67,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "I/6 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 68,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "I/722 Arty Bty",
+      "group": "GE Non-Divisional Artillery",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 68,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "617 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 70,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "526 CD Arty Bn",
+      "group": "GE Non-Divisional Artillery",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 71,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "DLIV Arty Bn",
+      "group": "IT Non-Divisional Artillery",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 71,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "DLVI Arty Bn",
+      "group": "IT Non-Divisional Artillery",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 71,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "LI(M) Tank Bn",
+      "group": "IT Unassigned Armoured Battalions",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "tank",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 71,
+      "arrival_stage": 3,
+      "model": "m14_41"
+    },
+    {
+      "counter": "364 Arty Bty",
+      "group": "GE Non-Divisional Artillery",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "artillery",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 74,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "2/288 Gebergs Bn",
+      "group": "GE Sonderverband 288",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "GE",
+      "morale": 1,
+      "arrival_turn": 76,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "288 Panzerjaeger Bn",
+      "group": "GE Sonderverband 288",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "antitank",
+      "nationality": "GE",
+      "morale": 1,
+      "arrival_turn": 76,
+      "arrival_stage": 2,
+      "model": "pak38"
+    },
+    {
+      "counter": "288 Pioneer Coy",
+      "group": "GE Sonderverband 288",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "GE",
+      "morale": 1,
+      "arrival_turn": 76,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "288 Son HQ",
+      "group": "GE Sonderverband 288",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "hq",
+      "nationality": "GE",
+      "morale": 1,
+      "arrival_turn": 76,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "3/288 SchwInf Bn",
+      "group": "GE Sonderverband 288",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "GE",
+      "morale": 1,
+      "arrival_turn": 76,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "4/288 MG Bn",
+      "group": "GE Sonderverband 288",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "mg",
+      "nationality": "GE",
+      "morale": 1,
+      "arrival_turn": 76,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "HQ Ramcke Bde",
+      "group": "GE Ramcke Brigade",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "hq",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 86,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "V/Burchardt Bn",
+      "group": "GE Ramcke Brigade",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 86,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "IV/Schweiger Bn",
+      "group": "GE Ramcke Brigade",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 87,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "II/46 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 88,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "I/54 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 89,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "211 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 89,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "57 Bersaglieri Bn",
+      "group": "IT 16 Pistoia Division",
+      "hex": [
+        44,
+        -2
+      ],
+      "side": "AXIS",
+      "role": "motor_infantry",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 90,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "IV(M) Tank Bn",
+      "group": "IT Unassigned Armoured Battalions",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "tank",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 90,
+      "arrival_stage": 2,
+      "model": "m14_41"
+    },
+    {
+      "counter": "243 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 91,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "I/Kroh Bn",
+      "group": "GE Ramcke Brigade",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 91,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "329 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 91,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "II/Heydte Bn",
+      "group": "GE Ramcke Brigade",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 92,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "XIII(M) Tank Bn",
+      "group": "IT Unassigned Armoured Battalions",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "tank",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 92,
+      "arrival_stage": 1,
+      "model": "m14_41"
+    },
+    {
+      "counter": "358 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 92,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "II/12 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 92,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "860 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 92,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "III/Hubner Bn",
+      "group": "GE Ramcke Brigade",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 93,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "II/5 Flak Bn",
+      "group": "GE Non-Divisional Flak",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "aa",
+      "nationality": "GE",
+      "morale": 0,
+      "arrival_turn": 93,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "1/78 Infantry Bn",
+      "group": "IT Unassigned Infantry Units",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 94,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "III/133 Infantry Bn",
+      "group": "IT Unassigned Infantry Units",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "infantry",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 97,
+      "arrival_stage": 2
     }
   ]
 }
