@@ -8,14 +8,15 @@ its absence (test_no_annihilation_victory).
 """
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from game import coords, supply
+from game import coords, movement, supply
 from game.campaign_victory import CampaignVictory, grade
-from game.events import Control, Phase, Side
+from game.events import CONTROL_OF, Control, Phase, Side
 from game.hexmap import line
 from game.movement import TerrainMap
 from game.state import GameState, StepRecord, SupplyUnit, Unit, VP
@@ -595,3 +596,113 @@ def test_no_annihilation_victory():
     # ...and the tally still names the survivor: the lone Axis unit holds Tobruk, 200-0.
     winner, reason = cv.decide(_R(_state([_unit("A1", Side.AXIS, "C4807")])))
     assert winner is Side.AXIS and "200-0" in reason
+
+
+# --- PASS B: the multi-source reversed-edge trace is byte-for-byte the per-unit trace ------------
+# The 64.71/64.72 line-of-supply trace was INVERTED for speed: one reversed-edge Dijkstra seeded from
+# the fed dumps (supply.tracing_hexes / movement.reverse_reachable) in place of a 60-or-90-MP forward
+# Dijkstra per Axis combat unit, and truck_supply_line made a connectivity BFS (movement.connected).
+# The byte-identity harness catches a MOVED verdict (a wrong trace fires an auto-win differently and
+# shifts the event log), but it cannot see a verdict that only WOULD move on a board the panel never
+# reaches. This is that extra gate: an A/B predicate-equality check that the optimized path returns the
+# IDENTICAL result -- same tracing units, same _line_is_cut, same _delta_held -- as the original
+# per-unit functions, which are kept unchanged (axis_traces_within / truck_trace_reach) for exactly it.
+
+def _orig_truck_supply_line(cv, s, side):
+    """The pre-optimization truck_supply_line body: a math.inf forward Dijkstra per still-open source,
+    unioned. The reference the connectivity BFS (movement.connected) must reproduce as a set."""
+    enemy_side = Side.ALLIED if side == Side.AXIS else Side.AXIS
+    enemy = CONTROL_OF[enemy_side]
+    held = frozenset(u.hex for u in s.living(enemy_side) if u.is_combat)
+    blocked = supply.trace_blocked(s, side)
+    line_ = set()
+    for src in cv.supply_sources:
+        if not s.terrain.exists(src.hex):
+            continue
+        if src.capturable and (s.control_of(src.hex) == enemy or src.hex in held):
+            continue
+        line_ |= movement.reachable(s.terrain, src.hex, math.inf, supply.SUPPLY_MOBILITY,
+                                    blocked=blocked).keys()
+    return frozenset(line_)
+
+
+def _orig_line_is_cut(cv, s):
+    """64.72 the pre-inversion way: the per-unit forward trace, short-circuited by any()."""
+    fed = cv.fed_dumps(s, Side.AXIS)
+    return not any(cv.axis_traces_within(s, u, supply.TRUCK_MP_64_72, fed)
+                   for u in cv._axis_combat_units(s))
+
+
+def _orig_delta_held(cv, s):
+    """64.71's supply clause the pre-inversion way: per Delta hex, some occupier's forward trace."""
+    occ = [cv._delta_occupiers(s, ax) for ax in cv.objective]
+    if not all(occ):
+        return False
+    fed = cv.fed_dumps(s, Side.AXIS)
+    return all(any(cv.axis_traces_within(s, u, supply.TRUCK_MP_64_71, fed) for u in us) for us in occ)
+
+
+def _assert_trace_parity(cv, s):
+    """The optimized victory trace equals the per-unit original on state `s`, in every particular:
+    the connectivity set, the tracing verdict of every Axis combat unit at BOTH the 64.72 (60) and
+    64.71 (90) budgets, and the two auto-win verdicts the whole campaign turns on."""
+    for side in (Side.AXIS, Side.ALLIED):                       # (a) BFS == the math.inf Dijkstra union
+        assert supply.truck_supply_line(s, side, cv.supply_sources) == _orig_truck_supply_line(cv, s, side)
+    fed = cv.fed_dumps(s, Side.AXIS)
+    units = cv._axis_combat_units(s)
+    for budget in (supply.TRUCK_MP_64_72, supply.TRUCK_MP_64_71):   # (c) identical set of tracing units
+        opt = supply.tracing_hexes(s, Side.AXIS, {u.hex for u in units}, fed, budget)
+        for u in units:
+            assert (u.hex in opt) is bool(cv.axis_traces_within(s, u, budget, fed)), (u.id, budget)
+    assert cv._line_is_cut(s) == _orig_line_is_cut(cv, s)
+    assert cv._delta_held(s) == _orig_delta_held(cv, s)
+
+
+_PARITY_SEEDS = (1941, 4, 7, 2026, 99, 1)                       # >= 5 seeds, per the extra-gate spec
+
+
+def test_trace_inversion_matches_the_per_unit_trace_on_live_campaign_boards():
+    # (i) THE HEALTHY LIVE CAMPAIGN BOARD, on six seeds. This is where the START-HEX EXEMPTION bites
+    # and where a naive reverse flood would silently move a verdict: the GT1 setup stacks Axis
+    # battalions with the enemy they are fighting (the Maletti group on (24,76)), so their hexes are
+    # enemy-OCCUPIED and thus in the trace blocking -- yet the forward trace floods OUT of a unit's own
+    # start hex, so they trace, and the inverted path (which never ENTERS a blocked hex) must restore
+    # that by hand. Measured: with the exemption, all 96 units agree; without it, (24,76) flips.
+    cv = CampaignVictory()
+    from game import scenario
+    for seed in _PARITY_SEEDS:
+        _assert_trace_parity(cv, scenario.campaign(seed=seed))
+
+
+def test_trace_inversion_matches_the_per_unit_trace_on_a_cut_board():
+    # (ii) A CONSTRUCTED BOARD WHERE 64.72 FIRES (the Axis line is cut) and the boards on either side
+    # of it. The last is the exemption reproduced on a cut board and made LOAD-BEARING: an Axis unit
+    # stacked under a lone Commonwealth unit (1 Stacking Point -> no ZOC, 10.11) sits on a blocked hex,
+    # is the ONLY Axis unit that can still reach the dump behind it, and so is the single verdict the
+    # whole 64.72 check turns on -- a broken exemption would drop it and hand the Commonwealth the war.
+    cv = CampaignVictory()
+    cut = _cut_board(GT_64_72)
+    assert cv._line_is_cut(cut) is True                        # the headline: all units stranded > 60
+    _assert_trace_parity(cv, cut)
+    _assert_trace_parity(cv, _cut_board(GT_64_72, tracing=(20,)))   # one unit back inside 60: not cut
+    stacked = _state([_unit("A-strand", Side.AXIS, _road_hex(40)),
+                      _unit("A-stack", Side.AXIS, _road_hex(10)),
+                      _unit("C-on-top", Side.ALLIED, _road_hex(10))],
+                     turn=GT_64_72,
+                     terrain={_road_hex(i): Terrain.CLEAR for i in range(61)},
+                     supplies=[SupplyUnit("AX-Dump", Side.AXIS, _road_hex(0), ammo=999, fuel=999)])
+    assert _road_hex(10) in supply.trace_blocked(stacked, Side.AXIS)          # the stacked hex IS blocked
+    assert cv.axis_traces_within(stacked, stacked.units[1], supply.TRUCK_MP_64_72) is True  # yet it traces
+    assert cv._line_is_cut(stacked) is False                  # so the line is NOT cut -- on that one unit
+    _assert_trace_parity(cv, stacked)
+
+
+def test_trace_inversion_matches_the_per_unit_trace_on_the_delta_board():
+    # (iii) THE 64.71 BOARD -- the whole Delta occupied -- so _delta_held actually runs its <=90 trace
+    # (on the cut/live boards above the Delta is Commonwealth, so it returns before the trace). Both a
+    # fed board (the occupiers trace 0 MP to the dump under them) and one with Tobruk captured (56.15
+    # shuts the only source, so nothing is fed and the clause fails) -- the optimized and original
+    # paths must agree on each.
+    cv = CampaignVictory()
+    _assert_trace_parity(cv, _delta_board(turn=50, stage=1))
+    _assert_trace_parity(cv, _delta_board(turn=50, stage=1, tobruk=Side.ALLIED))
