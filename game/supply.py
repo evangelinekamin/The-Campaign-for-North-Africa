@@ -23,6 +23,7 @@ costs approximate per-battalion-equivalent rates via mobility class + stacking.
 from __future__ import annotations
 
 import math
+from collections import OrderedDict
 from dataclasses import dataclass
 
 from . import logistics_data, movement, tactics
@@ -286,6 +287,58 @@ def trace_blocked(state: GameState, side: Side) -> frozenset:
     return (enemy_zoc - friendly) | enemy_occupied
 
 
+class _ReachMemo:
+    """Bounded LRU memo for the movement.reachable FLOOD under a supply trace.
+
+    Every supply trace here (reachable_supplies / reachable_moves / reachable_truck_moves /
+    truck_trace_reach) floods the SAME terrain with NO terminal/passable predicate and a zero
+    start_cost, so each reach map is a pure function of (terrain, start, budget, mobility, blocked,
+    weather). The commodity NEVER entered the search -- reachable_supplies filters the dumps LIVE,
+    per commodity, AFTER the flood (dumps drain between draws, so that filter must stay live) -- so
+    the search half is shared across all four commodities and across the policy-plans / engine-emits
+    double evaluation. Measured 78% exact-key duplicates on the campaign; this memo removes them.
+
+    THE KEY is (id(tmap), start, budget, mobility, blocked, start_cost, weather) and pointedly NOT
+    any unit/truck id. The victory (64.71/64.72) and claims traces flood from
+    `dataclasses.replace(piece, hex=...)` SYNTHETIC pieces that KEEP THE ORIGINAL id, so an id key
+    would collapse two genuinely different start hexes onto one reach map and corrupt the event
+    stream (a prototype keyed on id went 2561 -> 2884 events). The start HEX is in the key; the id is
+    not. `blocked` is the frozenset ITSELF -- content-hashed and self-invalidating, because a unit
+    that moves rebuilds trace_blocked to a different set and so to a different key (and trace_blocked
+    already returns the SAME frozenset by reference within a phase, so the key hash is near-free).
+
+    ID REUSE of id(tmap) is closed exactly as tactics._PositionMemo closes it for id(state.units):
+    the entry holds a STRONG REFERENCE to tmap, so no live entry's id can be reused by another map.
+    Terrain is rebuilt only by rail construction / scenario setup, and a rebuilt map takes a fresh id
+    -> fresh entries; stale ones evict. maxsize bounds memory and never affects correctness -- an
+    evicted key simply recomputes the identical flood.
+
+    Determinism: the value is a pure function of the complete key, returned BY REFERENCE and only
+    ever READ by callers (membership / indexed lookup -- audited at every call site) -> the event log
+    is byte-identical to the un-memoized flood."""
+
+    def __init__(self, maxsize: int = 1024) -> None:
+        self._cache: OrderedDict = OrderedDict()
+        self._maxsize = maxsize
+
+    def reach(self, tmap: movement.TerrainMap, start: Coord, budget: float, mobility: Mobility,
+              blocked: frozenset, *, start_cost: float = 0.0, weather: str = "normal") -> dict:
+        key = (id(tmap), start, budget, mobility, blocked, start_cost, weather)
+        entry = self._cache.get(key)
+        if entry is not None:
+            self._cache.move_to_end(key)
+            return entry[1]
+        value = movement.reachable(tmap, start, budget, mobility, blocked=blocked,
+                                   start_cost=start_cost, weather=weather)
+        self._cache[key] = (tmap, value)          # hold the tmap ref: pins its id() against reuse
+        if len(self._cache) > self._maxsize:
+            self._cache.popitem(last=False)
+        return value
+
+
+_reach = _ReachMemo()
+
+
 def reachable_supplies(state: GameState, unit: Unit, commodity: str):
     """Friendly supply units holding `commodity`, within half the unit's CPA,
     nearest first (deterministic). Trace blocked by enemy ZOC / units (32.16).
@@ -310,8 +363,8 @@ def reachable_supplies(state: GameState, unit: Unit, commodity: str):
     What actually denies the enemy a well is standing on it. That is already modelled."""
     budget = unit.cpa / 2
     mob = Mobility.FOOT if unit.mobility in NON_MOT_CLASSES else Mobility.MOTORIZED
-    reach = movement.reachable(state.terrain, unit.hex, budget, mob,
-                               blocked=trace_blocked(state, unit.side))
+    reach = _reach.reach(state.terrain, unit.hex, budget, mob,
+                         trace_blocked(state, unit.side))
     out = [su for su in state.active_supplies(unit.side)
            if su.hex in reach and _pool(su, commodity) > 0]
     out.sort(key=lambda su: (reach[su.hex], su.id))
@@ -322,8 +375,8 @@ def reachable_moves(state: GameState, dump: SupplyUnit) -> dict:
     """Hexes a carried supply unit can relocate to this OpStage: within CPA 15
     (rule 32.58A) as medium-truck movement, blocked by enemy ZOC not negated by a
     friendly unit (the 32.16 trace blocking, reused for the carry)."""
-    return movement.reachable(state.terrain, dump.hex, SUPPLY_CPA, SUPPLY_MOBILITY,
-                              blocked=trace_blocked(state, dump.side))
+    return _reach.reach(state.terrain, dump.hex, SUPPLY_CPA, SUPPLY_MOBILITY,
+                        trace_blocked(state, dump.side))
 
 
 # --- truck convoys (rules 53-54, the inland distribution layer) ---------------
@@ -452,9 +505,9 @@ def reachable_truck_moves(state: GameState, truck: TruckFormation) -> dict:
     NOT the 64.71 line of supply -- see truck_trace_reach below. This is one lorry's MOVE in one
     Phase, budgeted at the formation's own convoy CPA (30 or 40); that is a trace of an army's
     supply line, budgeted at the rulebook's 90 or 60."""
-    return movement.reachable(state.terrain, truck.hex,
-                              truck_convoy_cpa(truck.truck_class), SUPPLY_MOBILITY,
-                              blocked=trace_blocked(state, truck.side))
+    return _reach.reach(state.terrain, truck.hex,
+                        truck_convoy_cpa(truck.truck_class), SUPPLY_MOBILITY,
+                        trace_blocked(state, truck.side))
 
 
 # --- [64.71]/[64.72] THE LINE OF SUPPLY, IN TRUCK MOVEMENT POINTS ------------------------------
@@ -579,8 +632,8 @@ def truck_trace_reach(state: GameState, unit: Unit, budget: float) -> dict:
     (2) 64.71 asks whether a line CAN be traced, which is a hypothetical about the road and names no
     weather to evaluate it in -- so which weather a hypothetical convoy drives through is a real
     open question of reading, not an oversight to be silently closed. It is flagged, not adopted."""
-    return movement.reachable(state.terrain, unit.hex, budget, SUPPLY_MOBILITY,
-                              blocked=trace_blocked(state, unit.side))
+    return _reach.reach(state.terrain, unit.hex, budget, SUPPLY_MOBILITY,
+                        trace_blocked(state, unit.side))
 
 
 def truck_supply_line(state: GameState, side: Side,
