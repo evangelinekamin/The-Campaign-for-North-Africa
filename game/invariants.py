@@ -17,6 +17,11 @@ class InvariantViolation(Exception):
     pass
 
 
+# The commodity field names are fixed (supply.COMMODITIES); precompute the lowercased
+# attribute names once rather than re-lowering the same four strings ~6.8M times a campaign.
+_COMMODITY_ATTRS = tuple((c, c.lower()) for c in supply.COMMODITIES)
+
+
 def check(state: GameState) -> None:
     # The Operations Stage is always one of the three within a game-turn (rule 5.1).
     if state.stage not in (1, 2, 3):
@@ -50,14 +55,14 @@ def check(state: GameState) -> None:
     # `consumed` rises by exactly what a pool sinks below zero, so the on-hand + consumed
     # identity still balances -- so guard the pools directly and fail loud.
     for su in state.supplies:
-        for commodity in supply.COMMODITIES:
-            qty = getattr(su, commodity.lower())
+        for commodity, attr in _COMMODITY_ATTRS:
+            qty = getattr(su, attr)
             if qty < 0:
                 raise InvariantViolation(
                     f"supply {su.id} has negative {commodity} pool {qty}")
     for t in state.trucks:
-        for commodity in supply.COMMODITIES:
-            qty = getattr(t, commodity.lower())
+        for commodity, attr in _COMMODITY_ATTRS:
+            qty = getattr(t, attr)
             if qty < 0:
                 raise InvariantViolation(
                     f"truck {t.id} has negative {commodity} cargo {qty}")

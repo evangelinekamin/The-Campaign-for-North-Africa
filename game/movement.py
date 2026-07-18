@@ -22,6 +22,8 @@ from .terrain import (Hexside, Mobility, Terrain, TRACK_ENTRY, ROAD_ENTRY,
 
 Edge = tuple
 
+_INF = float("inf")     # hoisted: _search relaxes ~1.6M edges/campaign, twice reaching for infinity each
+
 
 def edge(a: Coord, b: Coord) -> tuple:
     """An undirected map edge as a normalized (lo, hi) coord pair, so edge(a, b) == edge(b, a).
@@ -257,7 +259,7 @@ def _search(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
     pq: list[tuple[float, Coord]] = [(start_cost, start)]
     while pq:
         cost, here = heapq.heappop(pq)
-        if cost > best.get(here, float("inf")):
+        if cost > best.get(here, _INF):
             continue
         if terminal is not None and here != start and terminal(here):
             continue
@@ -267,7 +269,7 @@ def _search(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
             if passable is not None and not passable(here, nb):
                 continue
             nc = cost + step * scale
-            if nc <= budget and nc < best.get(nb, float("inf")):
+            if nc <= budget and nc < best.get(nb, _INF):
                 best[nb] = nc
                 prev[nb] = here
                 heapq.heappush(pq, (nc, nb))
