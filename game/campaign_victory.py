@@ -303,8 +303,10 @@ class CampaignVictory:
         if not all(occupiers):
             return False
         fed = self.fed_dumps(state, Side.AXIS)
-        return all(any(self.axis_traces_within(state, u, supply.TRUCK_MP_64_71, fed) for u in us)
-                   for us in occupiers)
+        tracing = supply.tracing_hexes(state, Side.AXIS,
+                                       {u.hex for us in occupiers for u in us},
+                                       fed, supply.TRUCK_MP_64_71)
+        return all(any(u.hex in tracing for u in us) for us in occupiers)
 
     # --- [64.72] THE COMMONWEALTH'S AUTOMATIC WIN ----------------------------------------------
 
@@ -360,11 +362,12 @@ class CampaignVictory:
         """64.72's condition: NO Axis combat unit can trace a line of supply of 60 truck Movement
         Points or less to a Supply Dump that can in turn be fed from Tobruk or Tripoli.
 
-        fed_dumps is computed ONCE and shared across every unit -- the dump-to-harbour flood does
-        not depend on which unit is asking. The any() short-circuits on the first unit that traces,
-        which on a healthy board is immediate; and when the Axis has no fed dump at all
-        axis_traces_within returns False without walking the map. So the check is cheap in both of
-        the cases it spends its life in.
+        fed_dumps is computed ONCE, and the per-unit trace is INVERTED into a single flood:
+        supply.tracing_hexes seeds one reversed-edge Dijkstra from the fed dumps and returns which of
+        the Axis combat units' hexes settled within 60 truck-MP, in place of a forward 60-MP Dijkstra
+        per unit (see there for the multi-source inversion and its blocked-start exemption). When the
+        Axis has no fed dump at all it returns the empty set without walking the map, and the line is
+        cut iff that set is empty. So the check is cheap in both of the cases it spends its life in.
 
         FLAGGED, A READING, AND IT IS VACUOUS TRUTH: with no Axis combat units left on the map at
         all, "there are no Axis Combat units that can trace" is satisfied trivially and the
@@ -383,8 +386,10 @@ class CampaignVictory:
         box. FLAGGED because it is a reading of one oddly-placed word, and it is the reading that
         makes the rule mean something."""
         fed = self.fed_dumps(state, Side.AXIS)
-        return not any(self.axis_traces_within(state, u, supply.TRUCK_MP_64_72, fed)
-                       for u in self._axis_combat_units(state))
+        tracing = supply.tracing_hexes(state, Side.AXIS,
+                                       {u.hex for u in self._axis_combat_units(state)},
+                                       fed, supply.TRUCK_MP_64_72)
+        return not tracing
 
     @staticmethod
     def _held_since(r: "_Run", held: bool) -> "int | None":

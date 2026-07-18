@@ -28,7 +28,7 @@ from dataclasses import dataclass
 
 from . import logistics_data, movement, tactics
 from .events import CONTROL_OF
-from .hexmap import Coord
+from .hexmap import Coord, neighbors
 from .state import GameState, Port, Side, SupplyUnit, TruckFormation, Unit
 from .terrain import Mobility, NON_MOT_CLASSES, Terrain
 
@@ -709,16 +709,70 @@ def truck_supply_line(state: GameState, side: Side,
     enemy_side = Side.ALLIED if side == Side.AXIS else Side.AXIS
     enemy = CONTROL_OF[enemy_side]
     held = frozenset(u.hex for u in state.living(enemy_side) if u.is_combat)
+    open_sources = [
+        src.hex for src in sources
+        if state.terrain.exists(src.hex)                    # no hex on this map: absent from the trace
+        and not (src.capturable                             # 56.15: a CAPTURED harbour feeds nothing
+                 and (state.control_of(src.hex) == enemy or src.hex in held))
+    ]
+    # "In any way" caps nothing, so this leg is pure CONNECTIVITY, not distance: one multi-source flood
+    # over the truck-passable edges from every still-open source returns the identical set that unioning
+    # a math.inf Dijkstra per source did (movement.connected), for a fraction of the work.
+    return movement.connected(state.terrain, open_sources, SUPPLY_MOBILITY,
+                              blocked=trace_blocked(state, side))
+
+
+def tracing_hexes(state: GameState, side: Side, hexes,
+                  fed: frozenset, budget: float) -> frozenset:
+    """Of `hexes` -- each a combat unit's position -- the ones that can trace a 64.71/64.72 line of
+    supply of <= `budget` TRUCK Movement Points back to one of the already-computed fed dumps `fed`.
+
+    THE INVERSION. truck_trace_reach floods forward FROM one unit and asks whether any fed dump lies
+    within budget; asked of every Axis combat unit that is 96 near-identical 60-MP Dijkstras, and most
+    expensive on exactly the collapsed endgame boards 64.72 exists to judge. The question is symmetric:
+    a unit at h traces iff h lies within budget of a fed dump. So ONE multi-source Dijkstra seeded from
+    the dumps over REVERSED edges (movement.reverse_reachable) settles every hex at its least-CP line
+    to the nearest dump at once, and a unit traces iff its hex settled -- 96 searches collapse to 1.
+
+    THE START-HEX EXEMPTION, restored per query hex and load-bearing on the real board. The forward
+    truck_trace_reach floods FROM the unit and never blocks its START hex, so a unit traces OUT of its
+    own hex even when that hex is in the trace blocking. On the GT1 setup that is not hypothetical:
+    wherever an Axis battalion is stacked with the enemy it is fighting the hex is enemy-OCCUPIED, and
+    10.29 enemy occupation (unlike an enemy ZOC, 10.26) is NOT negated by the friendly unit -- so the
+    hex is blocked though the battalion plainly traces from it (measured: the Maletti group on (24,76)
+    traces <=60, and a naive reverse flood, which never ENTERS a blocked hex, would wrongly drop it and
+    move the 64.72 verdict). The reverse flood is therefore corrected by hand for a blocked query hex:
+    the unit traces if its own hex is a fed dump, or if some non-blocked neighbour n is within budget
+    after paying the forward step into it (reach[n] + step_cost(h -> n) <= budget)."""
+    if not fed:
+        return frozenset()
     blocked = trace_blocked(state, side)
-    line: set = set()
-    for src in sources:
-        if not state.terrain.exists(src.hex):
-            continue                                   # no hex on this map: absent from the trace
-        if src.capturable and (state.control_of(src.hex) == enemy or src.hex in held):
-            continue                                   # 56.15: a CAPTURED harbour feeds nothing
-        line |= movement.reachable(state.terrain, src.hex, math.inf, SUPPLY_MOBILITY,
-                                   blocked=blocked).keys()
-    return frozenset(line)
+    reach = movement.reverse_reachable(state.terrain, fed, budget, SUPPLY_MOBILITY, blocked=blocked)
+    tmap = state.terrain
+    out = set()
+    for h in hexes:
+        if h in reach or (h in blocked and _blocked_start_traces(tmap, h, fed, reach, budget)):
+            out.add(h)
+    return frozenset(out)
+
+
+def _blocked_start_traces(tmap: movement.TerrainMap, h: Coord, fed: frozenset,
+                          reach: dict, budget: float) -> bool:
+    """The 64.71 start-hex exemption for a unit whose OWN hex `h` is in the trace blocking (it is
+    stacked with the enemy): it still traces OUT of `h`. True if `h` is itself a fed dump (the forward
+    search reaches its own 0-MP start), or if some non-blocked neighbour n -- one already settled by
+    the reverse flood, so n is not blocked -- is within `budget` of a fed dump after the forward step
+    into it: reach[n] + step_cost(h -> n) <= budget. Weather is left at the trace's default (Normal),
+    as truck_trace_reach leaves it, so the step cost here matches the flood's."""
+    if h in fed:
+        return True
+    for n in neighbors(h):
+        r = reach.get(n)
+        if r is not None:
+            c = movement.step_cost(tmap, h, n, SUPPLY_MOBILITY)
+            if c is not None and r + c <= budget:
+                return True
+    return False
 
 
 # --- Commonwealth railroad (rule 54.3) ----------------------------------------

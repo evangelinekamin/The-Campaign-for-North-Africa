@@ -57,6 +57,13 @@ class TerrainMap:
     # compare=False/repr=False keep it out of __eq__/__repr__ (frozen forbids reassigning the field,
     # not mutating the dict it points to) so two states stay comparable and no signature can move.
     _edge_cache: dict = field(default_factory=dict, init=False, repr=False, compare=False)
+    # The TRANSPOSE of _edge_cache under the same (mobility, weather) key: {hex: [(forward_predecessor,
+    # step_cost), ...]}, i.e. for every forward edge a->b of cost c the row of b carries (a, c). A
+    # multi-source Dijkstra over these reversed rows bills each step the cost the FORWARD walk paid to
+    # ENTER the hex it came from, so it inverts "can h reach a source?" into one flood. Same
+    # init=False / repr=False / compare=False discipline as _edge_cache: a dataclasses.replace() starts
+    # it EMPTY, so no rebuilt map inherits a stale transpose and no signature can move.
+    _redge_cache: dict = field(default_factory=dict, init=False, repr=False, compare=False)
 
     def exists(self, coord: Coord) -> bool:
         return coord in self.terrain
@@ -215,6 +222,76 @@ def reachable_prev(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobi
                    passable=passable, start_cost=start_cost, weather=weather)
 
 
+def connected(tmap: TerrainMap, sources, mobility: Mobility,
+              *, blocked: frozenset = frozenset(), weather: str = "normal") -> frozenset:
+    """Every hex reachable from ANY of `sources` over passable edges, IGNORING cost -- the pure
+    connectivity question a budget=math.inf `reachable` answers, done as one multi-source flood.
+
+    Each source is a flood START, so it is included even when it is itself in `blocked` (exactly as
+    reachable() always keeps its start hex); `blocked` hexes may not be ENTERED. The result is
+    identical, as a set, to unioning a per-source reachable(tmap, s, math.inf, ...).keys(): with an
+    unbounded budget the Dijkstra degenerates to reachability, and the union of the sources'
+    reachable sets is reachability from the joint frontier -- so this visits each hex once total
+    instead of once per source, and needs no priority queue (cost never decides membership)."""
+    adj = _adjacency(tmap, mobility, "rainstorm" if rainstorm(weather) else "normal")
+    seen: set = set()
+    frontier: list = []
+    for s in sources:
+        if tmap.exists(s) and s not in seen:
+            seen.add(s)
+            frontier.append(s)
+    while frontier:
+        here = frontier.pop()
+        for nb, _step in adj.get(here, ()):
+            if nb not in blocked and nb not in seen:
+                seen.add(nb)
+                frontier.append(nb)
+    return frozenset(seen)
+
+
+def reverse_reachable(tmap: TerrainMap, sources, budget: float, mobility: Mobility,
+                      *, blocked: frozenset = frozenset(),
+                      weather: str = "normal") -> dict[Coord, float]:
+    """Multi-source Dijkstra over the REVERSED edge table: for every hex h, the cost of the least-CP
+    FORWARD walk h -> ... -> s to the nearest source s in `sources`, capped at `budget` (h is absent
+    when that walk would exceed it). This inverts the per-start question "can h reach any source
+    within budget?" into ONE flood -- h reaches some source within budget iff h is a key of the result.
+
+    `blocked` applies to the hexes the FORWARD walk ENTERS, which is precisely what the forward
+    `reachable` blocks: a reversed step settles `prev` (a forward-predecessor -- a hex the forward
+    walk would enter), so `prev in blocked` is skipped exactly as the forward search skips a blocked
+    neighbour. A source that is ITSELF blocked is not seeded: the forward walk could never ENTER it,
+    so nothing traces TO it. (A hex STANDING on a blocked source is the forward search's own
+    start-hex exemption -- a property of the query hex, not of this flood; the caller restores it.)
+    Weather couples exactly as in _search: a Sandstorm doubles the Normal table at use, a Rainstorm
+    has its own table; every other label is Normal."""
+    if sandstorm(weather):
+        radj, scale = _reverse_adjacency(tmap, mobility, "normal"), 2
+    elif rainstorm(weather):
+        radj, scale = _reverse_adjacency(tmap, mobility, "rainstorm"), 1
+    else:
+        radj, scale = _reverse_adjacency(tmap, mobility, "normal"), 1
+    best: dict[Coord, float] = {}
+    pq: list[tuple[float, Coord]] = []
+    for s in sources:
+        if s in blocked or s in best or not tmap.exists(s):
+            continue
+        best[s] = 0.0
+        heapq.heappush(pq, (0.0, s))
+    while pq:
+        cost, here = heapq.heappop(pq)
+        if cost > best.get(here, _INF):
+            continue
+        for prev, step in radj.get(here, ()):
+            if prev in blocked:
+                continue
+            nc = cost + step * scale
+            if nc <= budget and nc < best.get(prev, _INF):
+                best[prev] = nc
+                heapq.heappush(pq, (nc, prev))
+    return best
+
+
 def _adjacency(tmap: TerrainMap, mobility: Mobility,
                weather: str) -> dict[Coord, list[tuple[Coord, float]]]:
     """The precomputed edge-cost table for (mobility, weather): every hex mapped to its outgoing
@@ -242,6 +319,28 @@ def _adjacency(tmap: TerrainMap, mobility: Mobility,
         adj[here] = row
     tmap._edge_cache[key] = adj
     return adj
+
+
+def _reverse_adjacency(tmap: TerrainMap, mobility: Mobility,
+                       weather: str) -> dict[Coord, list[tuple[Coord, float]]]:
+    """The TRANSPOSE of the _adjacency table for (mobility, weather): every hex mapped to its INCOMING
+    [(forward_predecessor, step_cost), ...] rows -- for each forward edge a->b of cost c, the row of b
+    carries (a, c). A reversed step out of b into a then bills step_cost(a->b), the cost the forward
+    walk paid to enter b, so a multi-source Dijkstra over these rows settles each hex at the least-CP
+    FORWARD walk to the nearest seed. Built from _adjacency (so every cost stays step_cost's) and
+    memoised on the frozen map exactly as _adjacency is. While hexsides are unpopulated every edge is
+    symmetric and this equals _adjacency; it is built as the true transpose so it stays correct the
+    day a directional hexside cost (an up/down escarpment) makes step_cost(a->b) != step_cost(b->a)."""
+    key = (mobility, weather)
+    radj = tmap._redge_cache.get(key)
+    if radj is not None:
+        return radj
+    radj = {}
+    for here, row in _adjacency(tmap, mobility, weather).items():
+        for nb, step in row:
+            radj.setdefault(nb, []).append((here, step))
+    tmap._redge_cache[key] = radj
+    return radj
 
 
 def _search(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
