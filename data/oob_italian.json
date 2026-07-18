@@ -1,10 +1,11 @@
 [
  {
   "hex": "B4922",
-  "side": "?",
+  "side": "AXIS",
   "kind": "unit",
   "counter": "Air Strip axis",
   "group": "AX Airstrip/",
+  "role": "air",
   "px": [
    4695,
    1005
@@ -13,10 +14,11 @@
  },
  {
   "hex": "B6024",
-  "side": "?",
+  "side": "AXIS",
   "kind": "unit",
   "counter": "Airboat Alighting axis",
   "group": "AX Alighting/",
+  "role": "air",
   "px": [
    4908,
    202
@@ -25,10 +27,11 @@
  },
  {
   "hex": "C1015",
-  "side": "?",
+  "side": "AXIS",
   "kind": "unit",
   "counter": "Air Strip axis",
   "group": "AX Airstrip/",
+  "role": "air",
   "px": [
    6957,
    3850
@@ -37,10 +40,11 @@
  },
  {
   "hex": "C4021",
-  "side": "?",
+  "side": "AXIS",
   "kind": "unit",
   "counter": "Air Strip axis",
   "group": "AX Airstrip/",
+  "role": "air",
   "px": [
    7468,
    1661
@@ -49,10 +53,11 @@
  },
  {
   "hex": "C4317",
-  "side": "?",
+  "side": "AXIS",
   "kind": "unit",
   "counter": "Air Strip axis",
   "group": "AX Airstrip/",
+  "role": "air",
   "px": [
    7085,
    1443
@@ -61,10 +66,11 @@
  },
  {
   "hex": "C4322",
-  "side": "?",
+  "side": "AXIS",
   "kind": "unit",
   "counter": "Air Strip axis",
   "group": "AX Airstrip/",
+  "role": "air",
   "px": [
    7512,
    1443
@@ -73,10 +79,11 @@
  },
  {
   "hex": "C4420",
-  "side": "?",
+  "side": "AXIS",
   "kind": "unit",
   "counter": "Air Strip axis",
   "group": "AX Airstrip/",
+  "role": "air",
   "px": [
    7383,
    1370
@@ -85,10 +92,11 @@
  },
  {
   "hex": "C4908",
-  "side": "?",
+  "side": "AXIS",
   "kind": "unit",
   "counter": "Air Strip axis",
   "group": "AX Airstrip/",
+  "role": "air",
   "px": [
    6318,
    1005
@@ -161,6 +169,7 @@
   "kind": "unit",
   "counter": "BR 1 RNF - none",
   "group": "BR Unassigned Infantry-Type Units",
+  "role": "mg",
   "px": [
    7426,
    1880
@@ -173,6 +182,7 @@
   "kind": "unit",
   "counter": "BR 3 RHA - 7Spt-7",
   "group": "BR 7th Armoured Division",
+  "role": "artillery",
   "px": [
    7426,
    1880
@@ -185,6 +195,7 @@
   "kind": "unit",
   "counter": "BR 3CldGds - none",
   "group": "BR Unassigned Infantry-Type Units",
+  "role": "infantry",
   "px": [
    7512,
    1734
@@ -197,6 +208,7 @@
   "kind": "unit",
   "counter": "BR 7 Med - none",
   "group": "BR Unassigned Artillery Units",
+  "role": "artillery",
   "px": [
    7512,
    1734
@@ -209,6 +221,7 @@
   "kind": "unit",
   "counter": "BR 1 KRRC - 7Spt-7",
   "group": "BR 7th Armoured Division",
+  "role": "motor_infantry",
   "px": [
    7512,
    1734
@@ -221,6 +234,7 @@
   "kind": "unit",
   "counter": "BR 4 RHA - 7Spt-7",
   "group": "BR 7th Armoured Division",
+  "role": "artillery",
   "px": [
    7512,
    1734
@@ -233,6 +247,7 @@
   "kind": "unit",
   "counter": "Air Strip allied",
   "group": "AL Airstrip/",
+  "role": "air",
   "px": [
    7512,
    1588
@@ -245,6 +260,7 @@
   "kind": "unit",
   "counter": "BR 2SctGds - none",
   "group": "BR Unassigned Infantry-Type Units",
+  "role": "infantry",
   "px": [
    8279,
    1588
@@ -257,6 +273,7 @@
   "kind": "unit",
   "counter": "IN 31 Fld - 4 In",
   "group": "IN 4th Indian Division",
+  "role": "motor_infantry",
   "px": [
    8279,
    1588
@@ -269,6 +286,7 @@
   "kind": "unit",
   "counter": "Air Strip allied",
   "group": "AL Airstrip/",
+  "role": "air",
   "px": [
    8236,
    1515
@@ -281,6 +299,7 @@
   "kind": "unit",
   "counter": "BR 4 Bord - 23-70",
   "group": "BR 70th Infantry Division",
+  "role": "infantry",
   "px": [
    9052,
    2610
@@ -293,6 +312,7 @@
   "kind": "unit",
   "counter": "BR 1 DurLt - 23-70",
   "group": "BR 70th Infantry Division",
+  "role": "infantry",
   "px": [
    9094,
    2537
@@ -305,6 +325,7 @@
   "kind": "unit",
   "counter": "BR 1 Essex - 23-70",
   "group": "BR 70th Infantry Division",
+  "role": "infantry",
   "px": [
    9137,
    2464
@@ -317,6 +338,7 @@
   "kind": "unit",
   "counter": "BR 1 A&S - 16-70",
   "group": "BR 70th Infantry Division",
+  "role": "infantry",
   "px": [
    8967,
    2318
@@ -329,6 +351,7 @@
   "kind": "unit",
   "counter": "BR 2Leicst - 16-70",
   "group": "BR 70th Infantry Division",
+  "role": "infantry",
   "px": [
    9009,
    2245
@@ -341,6 +364,7 @@
   "kind": "unit",
   "counter": "BR 2 Qns - 16-70",
   "group": "BR 70th Infantry Division",
+  "role": "infantry",
   "px": [
    9052,
    2172
@@ -353,6 +377,7 @@
   "kind": "unit",
   "counter": "BR 2BlkWa - 14-70",
   "group": "BR 70th Infantry Division",
+  "role": "infantry",
   "px": [
    9052,
    2026
@@ -365,6 +390,7 @@
   "kind": "unit",
   "counter": "BR 1 Y&L - 14-70",
   "group": "BR 70th Infantry Division",
+  "role": "infantry",
   "px": [
    9094,
    1953
@@ -377,6 +403,7 @@
   "kind": "unit",
   "counter": "BR 1 B&H - 14-70",
   "group": "BR 70th Infantry Division",
+  "role": "infantry",
   "px": [
    9137,
    1880
@@ -389,6 +416,7 @@
   "kind": "unit",
   "counter": "BR Selby - Matruh",
   "group": "BR Selby Force - The Matruh Garrison",
+  "role": "infantry",
   "px": [
    9649,
    1880
@@ -401,6 +429,7 @@
   "kind": "unit",
   "counter": "Air Strip allied",
   "group": "AL Airstrip/",
+  "role": "air",
   "px": [
    8796,
    1734
@@ -413,6 +442,7 @@
   "kind": "unit",
   "counter": "BR 8 Med - none",
   "group": "BR Unassigned Artillery Units",
+  "role": "artillery",
   "px": [
    11520,
    1937
@@ -425,6 +455,7 @@
   "kind": "unit",
   "counter": "BR 65 - none",
   "group": "BR Unassigned Anti-Tank Regiments",
+  "role": "antitank",
   "px": [
    11605,
    1937
@@ -437,6 +468,7 @@
   "kind": "unit",
   "counter": "BR 149 - none",
   "group": "BR Unassigned Anti-Tank Regiments",
+  "role": "antitank",
   "px": [
    11605,
    1937
@@ -449,6 +481,7 @@
   "kind": "unit",
   "counter": "BR 57 LAA - none",
   "group": "BR Unassigned Air units",
+  "role": "aa",
   "px": [
    11690,
    1937
@@ -461,6 +494,7 @@
   "kind": "unit",
   "counter": "BR 9 HAA - none",
   "group": "BR Unassigned Air units",
+  "role": "aa",
   "px": [
    11690,
    1937
@@ -473,6 +507,7 @@
   "kind": "unit",
   "counter": "BR 15 LAA - none",
   "group": "BR Unassigned Air units",
+  "role": "aa",
   "px": [
    11690,
    1937
@@ -485,6 +520,7 @@
   "kind": "unit",
   "counter": "IN 1 Wlch - none",
   "group": "IN Unassigned Indian Units",
+  "role": "motor_infantry",
   "px": [
    12581,
    1593
@@ -497,6 +533,7 @@
   "kind": "unit",
   "counter": "BR 1 Ches - none",
   "group": "BR Unassigned Infantry-Type Units",
+  "role": "infantry",
   "px": [
    12581,
    1593
@@ -509,6 +546,7 @@
   "kind": "unit",
   "counter": "BR 2 KOR - none",
   "group": "BR Unassigned Infantry-Type Units",
+  "role": "infantry",
   "px": [
    12581,
    1593
@@ -521,6 +559,7 @@
   "kind": "unit",
   "counter": "BR 8 Fld - none",
   "group": "BR Unassigned Artillery Units",
+  "role": "artillery",
   "px": [
    12667,
    1593
@@ -593,6 +632,7 @@
   "kind": "unit",
   "counter": "IT Soluch - Soluch (ART)",
   "group": "IT Minor Garrison Units",
+  "role": "artillery",
   "px": [
    2562,
    1586
@@ -605,6 +645,7 @@
   "kind": "unit",
   "counter": "IT X Cp - none",
   "group": "IT Unassigned Gun Units",
+  "role": "artillery",
   "px": [
    2562,
    1586
@@ -617,6 +658,7 @@
   "kind": "unit",
   "counter": "IT Soluch - Soluch (SPA)",
   "group": "IT Minor Garrison Units",
+  "role": "infantry",
   "px": [
    2562,
    1586
@@ -629,6 +671,7 @@
   "kind": "unit",
   "counter": "IT Benina - Benina",
   "group": "IT Minor Garrison Units",
+  "role": "infantry",
   "px": [
    2520,
    1076
@@ -641,6 +684,7 @@
   "kind": "unit",
   "counter": "IT IILibCD - Bnghzi",
   "group": "IT Benghazi Garrison",
+  "role": "infantry",
   "px": [
    2183,
    998
@@ -653,6 +697,7 @@
   "kind": "unit",
   "counter": "IT VIII-II - Bnghzi",
   "group": "IT Benghazi Garrison",
+  "role": "infantry",
   "px": [
    2183,
    998
@@ -665,6 +710,7 @@
   "kind": "unit",
   "counter": "IT Mechili - Mechili",
   "group": "IT Minor Garrison Units",
+  "role": "infantry",
   "px": [
    4610,
    1005
@@ -677,6 +723,7 @@
   "kind": "unit",
   "counter": "IT Libyan - none",
   "group": "IT Unassigned Infantry and Recon Units",
+  "role": "infantry",
   "px": [
    3161,
    567
@@ -689,6 +736,7 @@
   "kind": "unit",
   "counter": "IT Grbub - Grbub",
   "group": "IT Giariabub Oasis Complex Garrison",
+  "role": "infantry",
   "px": [
    6872,
    3850
@@ -701,6 +749,7 @@
   "kind": "unit",
   "counter": "IT Grbub - Grbub (ART)",
   "group": "IT Giariabub Oasis Complex Garrison",
+  "role": "artillery",
   "px": [
    6872,
    3850
@@ -713,6 +762,7 @@
   "kind": "unit",
   "counter": "IT Grbub - Grbub (AA)",
   "group": "IT Giariabub Oasis Complex Garrison",
+  "role": "aa",
   "px": [
    6872,
    3850
@@ -725,6 +775,7 @@
   "kind": "unit",
   "counter": "IT Grbub - Grbub (MMG)",
   "group": "IT Giariabub Oasis Complex Garrison",
+  "role": "mg",
   "px": [
    6872,
    3850
@@ -737,6 +788,7 @@
   "kind": "unit",
   "counter": "IT Grbub - Grbub (MG)",
   "group": "IT Giariabub Oasis Complex Garrison",
+  "role": "mg",
   "px": [
    6872,
    3850
@@ -749,6 +801,7 @@
   "kind": "unit",
   "counter": "IT Grbub - Grbub (SPA)",
   "group": "IT Giariabub Oasis Complex Garrison",
+  "role": "infantry",
   "px": [
    6872,
    3850
@@ -761,6 +814,7 @@
   "kind": "unit",
   "counter": "IT EGUG - el Grein",
   "group": "IT Minor Garrison Units",
+  "role": "infantry",
   "px": [
    6915,
    3339
@@ -773,6 +827,7 @@
   "kind": "unit",
   "counter": "IT FtMad - FtMad",
   "group": "IT Minor Garrison Units",
+  "role": "infantry",
   "px": [
    7298,
    2391
@@ -785,6 +840,7 @@
   "kind": "unit",
   "counter": "IT 64 - Cat (ENG)",
   "group": "IT 64th Catanzaro Division",
+  "role": "infantry",
   "px": [
    6830,
    1880
@@ -797,6 +853,7 @@
   "kind": "unit",
   "counter": "IT 204 - 4CCNN (ENG)",
   "group": "IT 4th CCNN (3 January) Division",
+  "role": "infantry",
   "px": [
    6872,
    1807
@@ -809,6 +866,7 @@
   "kind": "unit",
   "counter": "IT 203 - 64 Cat",
   "group": "IT 64th Catanzaro Division",
+  "role": "infantry",
   "px": [
    6872,
    1807
@@ -821,6 +879,7 @@
   "kind": "unit",
   "counter": "IT 2Maletti - Maletti",
   "group": "IT Gruppo Maletti",
+  "role": "artillery",
   "px": [
    7554,
    1807
@@ -833,6 +892,7 @@
   "kind": "unit",
   "counter": "IT 204 - 4CCNN (ART)",
   "group": "IT 4th CCNN (3 January) Division",
+  "role": "artillery",
   "px": [
    6830,
    1734
@@ -845,6 +905,7 @@
   "kind": "unit",
   "counter": "IT 64 - Cat (SPA)",
   "group": "IT 64th Catanzaro Division",
+  "role": "infantry",
   "px": [
    6830,
    1734
@@ -857,6 +918,7 @@
   "kind": "unit",
   "counter": "IT 1Maletti - Maletti",
   "group": "IT Gruppo Maletti",
+  "role": "artillery",
   "px": [
    7512,
    1734
@@ -869,6 +931,7 @@
   "kind": "unit",
   "counter": "IT 204 - 4CCNN (MG)",
   "group": "IT 4th CCNN (3 January) Division",
+  "role": "mg",
   "px": [
    6872,
    1661
@@ -881,6 +944,7 @@
   "kind": "unit",
   "counter": "IT 2 Libyan (ART)",
   "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "role": "artillery",
   "px": [
    6872,
    1661
@@ -893,6 +957,7 @@
   "kind": "unit",
   "counter": "IT 64 - Cat (MG)",
   "group": "IT 64th Catanzaro Division",
+  "role": "mg",
   "px": [
    6872,
    1661
@@ -905,6 +970,7 @@
   "kind": "unit",
   "counter": "IT 1 Libyan - none",
   "group": "IT 1st Libyan Infantry Division (Sibille)",
+  "role": "infantry",
   "px": [
    7383,
    1661
@@ -917,6 +983,7 @@
   "kind": "unit",
   "counter": "IT 3Sno-Sno - Maletti",
   "group": "IT Gruppo Maletti",
+  "role": "infantry",
   "px": [
    7554,
    1661
@@ -929,6 +996,7 @@
   "kind": "unit",
   "counter": "IT 170 - 240-4CN",
   "group": "IT 4th CCNN (3 January) Division",
+  "role": "infantry",
   "px": [
    6830,
    1588
@@ -941,6 +1009,7 @@
   "kind": "unit",
   "counter": "IT XVI-4L - 2 Libyan",
   "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "role": "infantry",
   "px": [
    6830,
    1588
@@ -953,6 +1022,7 @@
   "kind": "unit",
   "counter": "IT III-142 - 64 Cat",
   "group": "IT 64th Catanzaro Division",
+  "role": "infantry",
   "px": [
    6830,
    1588
@@ -965,6 +1035,7 @@
   "kind": "unit",
   "counter": "IT 2Sno-Sno - Maletti",
   "group": "IT Gruppo Maletti",
+  "role": "infantry",
   "px": [
    7597,
    1588
@@ -977,6 +1048,7 @@
   "kind": "unit",
   "counter": "IT 17 - 270-4CN",
   "group": "IT 4th CCNN (3 January) Division",
+  "role": "infantry",
   "px": [
    6872,
    1515
@@ -989,6 +1061,7 @@
   "kind": "unit",
   "counter": "IT XV-4L - 2 Libyan",
   "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "role": "infantry",
   "px": [
    6872,
    1515
@@ -1001,6 +1074,7 @@
   "kind": "unit",
   "counter": "IT II-142 - 64 Cat",
   "group": "IT 64th Catanzaro Division",
+  "role": "infantry",
   "px": [
    6872,
    1515
@@ -1013,6 +1087,7 @@
   "kind": "unit",
   "counter": "IT 1 CCNN - (1CN)",
   "group": "IT 1st CCNN (23 March) Division",
+  "role": "infantry",
   "px": [
    7213,
    1515
@@ -1025,6 +1100,7 @@
   "kind": "unit",
   "counter": "IT 3 - 270-4CN",
   "group": "IT 4th CCNN (3 January) Division",
+  "role": "infantry",
   "px": [
    6830,
    1443
@@ -1037,6 +1113,7 @@
   "kind": "unit",
   "counter": "IT XIV-4L - 2 Libyan",
   "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "role": "infantry",
   "px": [
    6830,
    1443
@@ -1049,6 +1126,7 @@
   "kind": "unit",
   "counter": "IT I-142 - 64 Cat",
   "group": "IT 64th Catanzaro Division",
+  "role": "infantry",
   "px": [
    6830,
    1443
@@ -1061,6 +1139,7 @@
   "kind": "unit",
   "counter": "IT Trvli - LTC",
   "group": "IT The Libyan Tank Command",
+  "role": "tank",
   "px": [
    7426,
    1443
@@ -1073,6 +1152,7 @@
   "kind": "unit",
   "counter": "IT 3 - Marines",
   "group": "IT Tobruk Garrison",
+  "role": "infantry",
   "px": [
    6531,
    1370
@@ -1085,6 +1165,7 @@
   "kind": "unit",
   "counter": "IT 270Lgn - 4 CCNN",
   "group": "IT 4th CCNN (3 January) Division",
+  "role": "infantry",
   "px": [
    6872,
    1370
@@ -1097,6 +1178,7 @@
   "kind": "unit",
   "counter": "IT 4 Libyan - 2 Libyan",
   "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "role": "infantry",
   "px": [
    6872,
    1370
@@ -1109,6 +1191,7 @@
   "kind": "unit",
   "counter": "IT 142 - 64 Cat",
   "group": "IT 64th Catanzaro Division",
+  "role": "infantry",
   "px": [
    6872,
    1370
@@ -1121,6 +1204,7 @@
   "kind": "unit",
   "counter": "IT 4 CCNN - (4CN)",
   "group": "IT 4th CCNN (3 January) Division",
+  "role": "infantry",
   "px": [
    6233,
    1297
@@ -1133,6 +1217,7 @@
   "kind": "unit",
   "counter": "IT 2 - Marines",
   "group": "IT Tobruk Garrison",
+  "role": "infantry",
   "px": [
    6574,
    1297
@@ -1145,6 +1230,7 @@
   "kind": "unit",
   "counter": "IT 176 - 240-4CN",
   "group": "IT 4th CCNN (3 January) Division",
+  "role": "infantry",
   "px": [
    6830,
    1297
@@ -1157,6 +1243,7 @@
   "kind": "unit",
   "counter": "IT VII-3L - 2 Libyan",
   "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "role": "infantry",
   "px": [
    6830,
    1297
@@ -1169,6 +1256,7 @@
   "kind": "unit",
   "counter": "IT III-141 - 64 Cat",
   "group": "IT 64th Catanzaro Division",
+  "role": "infantry",
   "px": [
    6830,
    1297
@@ -1181,6 +1269,7 @@
   "kind": "unit",
   "counter": "IT 1 - Marines",
   "group": "IT Tobruk Garrison",
+  "role": "infantry",
   "px": [
    6616,
    1224
@@ -1193,6 +1282,7 @@
   "kind": "unit",
   "counter": "IT 119 - 240-4CN",
   "group": "IT 4th CCNN (3 January) Division",
+  "role": "infantry",
   "px": [
    6872,
    1224
@@ -1205,6 +1295,7 @@
   "kind": "unit",
   "counter": "IT VI-3L - 2 Libyan",
   "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "role": "infantry",
   "px": [
    6872,
    1224
@@ -1217,6 +1308,7 @@
   "kind": "unit",
   "counter": "IT II-141 - 64 Cat",
   "group": "IT 64th Catanzaro Division",
+  "role": "infantry",
   "px": [
    6872,
    1224
@@ -1229,6 +1321,7 @@
   "kind": "unit",
   "counter": "IT II-3L - 2 Libyan",
   "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "role": "infantry",
   "px": [
    6830,
    1151
@@ -1241,6 +1334,7 @@
   "kind": "unit",
   "counter": "IT I-141 - 64 Cat",
   "group": "IT 64th Catanzaro Division",
+  "role": "infantry",
   "px": [
    6830,
    1151
@@ -1253,6 +1347,7 @@
   "kind": "unit",
   "counter": "IT 70 - 240-4CN",
   "group": "IT 4th CCNN (3 January) Division",
+  "role": "infantry",
   "px": [
    6915,
    1151
@@ -1265,6 +1360,7 @@
   "kind": "unit",
   "counter": "IT LTC - none",
   "group": "IT The Libyan Tank Command",
+  "role": "tank",
   "px": [
    6275,
    1078
@@ -1277,6 +1373,7 @@
   "kind": "unit",
   "counter": "IT III - 32 GaF",
   "group": "IT Tobruk Garrison",
+  "role": "infantry",
   "px": [
    6616,
    1078
@@ -1289,6 +1386,7 @@
   "kind": "unit",
   "counter": "IT 3 Libyan - 2 Libyan",
   "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+  "role": "infantry",
   "px": [
    6872,
    1078
@@ -1301,6 +1399,7 @@
   "kind": "unit",
   "counter": "IT 141 - 64 Cat",
   "group": "IT 64th Catanzaro Division",
+  "role": "infantry",
   "px": [
    6872,
    1078
@@ -1313,6 +1412,7 @@
   "kind": "unit",
   "counter": "IT 240Lgn - 4 CCNN",
   "group": "IT 4th CCNN (3 January) Division",
+  "role": "infantry",
   "px": [
    6957,
    1078

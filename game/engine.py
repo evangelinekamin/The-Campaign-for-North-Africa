@@ -981,6 +981,8 @@ def _evaporate(r: _Run, pct: int) -> None:
 def _stores_expenditure(r: _Run, side: Side, hot: bool) -> None:
     actor = f"{side.value}/Logistics"
     for u in sorted(r.state.living(side), key=lambda u: u.id):
+        if supply.is_air_facility(u):
+            continue                                    # 35.14: air pieces draw air supply, not land
         draws = supply.plan_draw(r.state, u, supply.STORES, supply.stores_cost(u))
         if draws is None:
             _stores_shortfall(r, side, actor, u)        # 51.21/51.22
@@ -1046,6 +1048,8 @@ def _pasta_point(r: _Run, side: Side, actor: str, u) -> None:
 def _water_distribution(r: _Run, side: Side, hot: bool) -> None:
     actor = f"{side.value}/Logistics"
     for u in sorted(r.state.living(side), key=lambda u: u.id):
+        if supply.is_air_facility(u):
+            continue                                    # 35.14: air pieces draw air supply, not land
         draws = supply.plan_draw(r.state, u, supply.WATER, supply.water_cost(u, hot=hot))
         if draws is None:
             _water_shortfall(r, side, actor, u)         # 52.53

@@ -113,48 +113,61 @@ def _morale_for(group: str, counter: str) -> int:
     return 0                                          # unknown formation -> neutral
 
 
-def classify(counter: str, group: str) -> str | None:
-    """Map a counter to a stat role, or None to skip (feature / air base)."""
-    c, g = counter, group
-    if ("Air Strip" in c or "Airstrip" in c or "SGSU" in c or "Alighting" in c
-            or "Airstrip" in g or "Alighting" in g):
-        return None                                  # airfields / landing strips / flying-boat basins
+def classify(counter: str, group: str) -> str:
+    """Best-effort role for an OOB counter that carries no explicit `role`.
 
-    if c.startswith("IT ") or g.startswith("IT "):   # 1940 Italian 10th Army (rule 60.31 / [4.44b])
+    DATA-DRIVEN FIRST: every shipped OOB record names its own `role` (build() reads
+    `rec["role"]` and only falls back to this function), so this is a safety net, not the
+    source of truth. It keys off the COUNTER's own type tokens -- the regiment/weapon
+    identity printed on the counter -- and NEVER off the organisational GROUP. A group name
+    describes the FORMATION, not the counter: "7th Armoured Division" contains that division's
+    Royal Horse Artillery, its motor battalion and its anti-tank regiment, and the "Unassigned
+    Anti-Tank Regiments" group contains the substring "Tank" -- so a group-substring guess read
+    five Commonwealth artillery/motor/anti-tank battalions as phantom tanks (the T0-6 bug). An
+    unrecognised counter defaults to infantry.
+
+    Two categories the old classifier lost are carried now: Anti-Aircraft-Type units (rule
+    3.23) map to the `aa` role (the Commonwealth had no AA arm), and Air Landing Strips /
+    flying-boat Alighting areas / Squadron Ground Support Units (rule 3.21) map to the inert
+    `air` role instead of being dropped -- they carry the facility hexes the Phase 5 Air Game
+    needs. `air` never returns None, so nothing the OOB ships is silently discarded here.
+    """
+    c = counter
+    # Air facilities + Squadron Ground Support Units (rule 3.21): inert non-combat pieces.
+    if ("Air Strip" in c or "Airstrip" in c or "Airboat" in c or "Alighting" in c
+            or "SGSU" in c):
+        return "air"
+    # Anti-Aircraft-Type (rule 3.23); the AA/Flak symbol on the counter -> Pure Flak (46.17).
+    if "LAA" in c or "HAA" in c or "(AA)" in c:
+        return "aa"
+
+    if c.startswith("IT "):                          # 1940 Italian 10th Army (rule 60.31 / [4.44b])
         if "(MG)" in c or "(MMG)" in c:
             return "mg"                              # machinegun battalions / companies
         if "(ART)" in c:
             return "artillery"
-        if "(AA)" in c:
-            return "antitank"                        # emplaced dual-purpose CD / flak (immobility deferred)
-        if "(ENG)" in c or "(SPA)" in c:
-            return "infantry"                        # engineers / garrison support fight as infantry
-        if "Gun Units" in g:
-            return "artillery"                       # X Corpo & unassigned artillery
         if "Sno" in c:
-            return "infantry"                        # Sahariano camel battalions (Maletti)
+            return "infantry"                        # Sahariano camel battalions (before Maletti)
         if "Maletti" in c:
             return "artillery"                       # 1st / 2nd Maletti artillery battalions
-        if "Tank Command" in g:
-            return "tank"                            # Libyan Tank Command (M11/39 + CV33)
-        return "infantry"                            # colonial / Blackshirt / garrison / marine line infantry
+        if "LTC" in c:
+            return "tank"                            # Libyan Tank Command tankettes (M11/39 + CV33)
+        return "infantry"                            # colonial / Blackshirt / garrison / marine line
 
     if "Rommel" in c or "DAK" in c or "SPt" in c or c.endswith(" Le - none"):
         return "hq"                                  # HQs (counter is authoritative)
-    if "RNF" in c:
-        return "mg"
+    if "RNF" in c or "(MG)" in c or "(MMG)" in c:
+        return "mg"                                  # Royal Northumberland Fusiliers = MG bn
     if "(ATG)" in c:
         return "antitank"
-    if "Artillery" in g or "ArKo" in c or "155" in c or " Med " in c:
-        return "artillery"
-    if "Oasis" in g:
+    if "RHA" in c or "(ART)" in c or " Med " in c or " Fld " in c or "ArKo" in c or "155" in c:
+        return "artillery"                           # Horse/Field/Medium regiments, ArKo, 155mm
+    if "OAS" in c or "Oasis" in c:
         return "oasis"
-    if "Australian" in g:
-        return "infantry"
-    if "Indian" in g or "FMtMr" in c or "Free French" in g:
-        return "motor_infantry"
-    if "Armoured" in g or "Tank" in g:
-        return "tank"
+    if "KRRC" in c or "FMtMr" in c:
+        return "motor_infantry"                      # King's Royal Rifle Corps = motor bn
+    if "RTR" in c or "LTC" in c:
+        return "tank"                                # Royal Tank Regiment / Libyan Tank Command
     return "infantry"                                # sensible default
 
 
@@ -301,6 +314,9 @@ def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
         # the OA charts, robust to formation-name spelling); else derive it from the group.
         morale=rec["morale"] if "morale" in rec else _morale_for(rec["group"], rec["counter"]),
         is_combat=s.get("is_combat", True),
+        # Rule 46.17 / 9.16b: a Pure Flak unit (only AA points) ignores the stacking limit in
+        # Major Cities. Set from the `aa` role stat; every other role leaves it False.
+        is_pure_aa=s.get("is_pure_aa", False),
         # [23.0]/[24.61] Engineer capability and what it may be used FOR: 'RAIL' for the two New
         # Zealand Railroad Construction companies (the only units that may build railroad, 24.61),
         # 'ROAD' for the 1 SA Road Construction Battalion (23.13). '' for everything else, which is

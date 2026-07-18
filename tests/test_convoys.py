@@ -268,9 +268,17 @@ def test_siege_of_tobruk_machinery_intact():
     three, and the Fuel/Water carried by the siege's trucks now evaporates (29.34 includes trucks), so
     supply, breakdown and combat land differently and the wall-batter reaches different seeds. MEASURED
     on the corrected engine, siege_of_tobruk fires FORT_REDUCED on 4 of seeds 1..239 (37, 57, 211, 227).
-    Re-pinned (197, 220) -> (37, 57), both of which fire."""
+    Re-pinned (197, 220) -> (37, 57), both of which fire.
+
+    Phase 3.1 (the T0-6 OOB reclassification) moved it once more, the same inherent chaos:
+    siege_of_tobruk builds oob_desert_fox, which now KEEPS four inert Allied air pieces (2 SGSU + 2 Air
+    Strips) that classify() used to discard. They fight, supply and hold nothing (is_combat False, sp 0,
+    supply-exempt per 35.14), but the barrage adjacent-hex target search reads every unit in a neighbouring
+    hex (state.enemies_at, as it already reads a bare HQ), so their presence reshuffles the cascade.
+    MEASURED on this engine, FORT_REDUCED fires on 16 of seeds 1..120. Re-pinned (37, 57) -> (8, 12),
+    both of which fire (seed 8 batters the wall twice)."""
     battered = False
-    for seed in (37, 57):
+    for seed in (8, 12):
         res = run(siege_of_tobruk(seed=seed),
                   ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
         assert res.initial.siege_rules is True

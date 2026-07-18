@@ -10,6 +10,28 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-17 -- CAUSE: Phase 3.1, the T0-6 Order-of-Battle reclassification (game/oob.py
+classify() + data/oob_*.json). Both benchmarks build oob_desert_fox.json, and the change that moves
+them is single and specific: the four Allied air-game counters that carried the OOB (two Squadron
+Ground Support Units, two Air Landing Strips) were being DISCARDED by classify() (it returned None
+for anything matching "Air Strip"/"SGSU"/"Alighting"); they are now KEPT as inert non-combat `air`
+pieces (rule 3.21: is_combat False, sp 0 -- no ZOC, no city, no stacking cost, and supply-EXEMPT:
+rule 35.14 draws an air piece's supply from the air game, never the land dumps, so engine._stores_
+expenditure/_water_distribution skip them). They hold no ground either (_record_control is combat-
+gated). But they ARE units in the built state, so (a) they change the initial-setup portion of the
+event log and (b) the barrage/combat adjacent-hex target search reads every unit in a neighbouring
+hex (state.enemies_at is not combat-filtered, exactly as it already reads a bare HQ), so on the
+chaotic 12-turn siege their presence shifts which seeds reach the 25.14 wall-batter -- the same
+single-seed chaos the two siege seed-pins in test_ports/test_convoys were re-pinned for. Both logs
+therefore move wholesale. desert_fox fields NO phantom-tank/AA correction (those counters are all in
+the campaign-only oob_italian.json), so nothing else in these two scenarios moved. NO chart magnitude
+was bent -- the counters were already in the OOB and are simply no longer thrown away. Determinism
+holds: each new hash reproduces byte-for-byte across two runs.
+
+    rommels_arrival   bfedbc714c50 -> 08ae216a5c78
+    siege_of_tobruk   e9ecbb40f2f8 -> 1b380c501dcf
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-16 -- CAUSE: the Tobruk port Efficiency, resolved to the [55.3] chart.
 
 The book prints two irreconcilable starting Efficiencies for Tobruk, and both were verified against
@@ -149,8 +171,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "bfedbc714c50"
-SIEGE_OF_TOBRUK = "e9ecbb40f2f8"
+ROMMELS_ARRIVAL = "08ae216a5c78"
+SIEGE_OF_TOBRUK = "1b380c501dcf"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

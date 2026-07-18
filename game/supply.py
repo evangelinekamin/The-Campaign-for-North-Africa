@@ -200,6 +200,15 @@ def is_infantry(unit: Unit) -> bool:
     return unit.is_combat and not _is_vehicle_type(unit)
 
 
+def is_air_facility(unit: Unit) -> bool:
+    """An air-game piece (Air Landing Strip / flying-boat basin / SGSU, rule 3.21), kept in the
+    built state to carry its hex/side/identity for the Phase 5 Air Game. It is NOT a land unit:
+    its supply comes from the air game (an SGSU's is the 35.14 air draw off its facility's dump,
+    36.17), never from the land dumps -- so it is exempt from the 51/52 Stores/Water land-supply
+    demand until the Air Game is wired. Keyed on the inert `air` role (game/oob.classify)."""
+    return bool(unit.steps) and unit.steps[0].label == "air"
+
+
 _STORES_RATE = logistics_data.stores_rates()   # 51.11/51.13, from the rulebook chart
 
 

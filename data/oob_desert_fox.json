@@ -101,6 +101,7 @@
   "kind": "unit",
   "counter": "BR 2SPt - 2",
   "group": "BR 2nd Armoured Division",
+  "role": "hq",
   "px": [
    1838,
    3118
@@ -113,6 +114,7 @@
   "kind": "unit",
   "counter": "BR 3 - 2",
   "group": "BR 2nd Armoured Division",
+  "role": "tank",
   "px": [
    1923,
    3118
@@ -125,6 +127,7 @@
   "kind": "unit",
   "counter": "AL SGSU 250RAF",
   "group": "AL SGSU",
+  "role": "air",
   "px": [
    2520,
    2681
@@ -137,6 +140,7 @@
   "kind": "unit",
   "counter": "AU 2-48 - 26-9Aus",
   "group": "AU 9th Australian Division",
+  "role": "infantry",
   "px": [
    2776,
    1076
@@ -149,6 +153,7 @@
   "kind": "unit",
   "counter": "AU 2-24Aus - 26-9Aus",
   "group": "AU 9th Australian Division",
+  "role": "infantry",
   "px": [
    2818,
    1003
@@ -161,6 +166,7 @@
   "kind": "unit",
   "counter": "AU 26Aus - 9 Aus",
   "group": "AU 9th Australian Division",
+  "role": "infantry",
   "px": [
    2776,
    930
@@ -173,6 +179,7 @@
   "kind": "unit",
   "counter": "AU 2-23Aus - 26-9Aus",
   "group": "AU 9th Australian Division",
+  "role": "infantry",
   "px": [
    2861,
    930
@@ -185,6 +192,7 @@
   "kind": "unit",
   "counter": "AU 2-43Aus - 24-9Aus",
   "group": "AU 9th Australian Division",
+  "role": "infantry",
   "px": [
    2861,
    784
@@ -197,6 +205,7 @@
   "kind": "unit",
   "counter": "AU 2-28Aus - 24-9Aus",
   "group": "AU 9th Australian Division",
+  "role": "infantry",
   "px": [
    2861,
    638
@@ -209,6 +218,7 @@
   "kind": "unit",
   "counter": "AU 2-17Aus - 20-9Aus",
   "group": "AU 9th Australian Division",
+  "role": "infantry",
   "px": [
    2861,
    492
@@ -221,6 +231,7 @@
   "kind": "unit",
   "counter": "AL 1FMtMr - none",
   "group": "AL Unasisgned Allied Units",
+  "role": "motor_infantry",
   "px": [
    3203,
    1661
@@ -233,6 +244,7 @@
   "kind": "unit",
   "counter": "Air Strip allied",
   "group": "AL Airstrip/",
+  "role": "air",
   "px": [
    3373,
    1661
@@ -245,6 +257,7 @@
   "kind": "unit",
   "counter": "AL SGSU 260RAF",
   "group": "AL SGSU",
+  "role": "air",
   "px": [
    3161,
    567
@@ -257,6 +270,7 @@
   "kind": "unit",
   "counter": "IN 3 In - none",
   "group": "IN 3rd Indian Motorized Brigade",
+  "role": "motor_infantry",
   "px": [
    6233,
    1297
@@ -269,6 +283,7 @@
   "kind": "unit",
   "counter": "Air Strip allied",
   "group": "AL Airstrip/",
+  "role": "air",
   "px": [
    6360,
    1078
@@ -281,6 +296,7 @@
   "kind": "unit",
   "counter": "BR 1 RNF - none",
   "group": "BR Unassigned Infantry-Type Units",
+  "role": "mg",
   "px": [
    9649,
    1880
@@ -293,6 +309,7 @@
   "kind": "unit",
   "counter": "BR 7 Med - none",
   "group": "BR Unassigned Artillery Units",
+  "role": "artillery",
   "px": [
    9649,
    1880
@@ -365,6 +382,7 @@
   "kind": "unit",
   "counter": "GE 2 - 300 OAS",
   "group": "GE 300th Oasis Battalion",
+  "role": "oasis",
   "px": [
    1497,
    3994
@@ -377,6 +395,7 @@
   "kind": "unit",
   "counter": "GE 1 - 300 OAS",
   "group": "GE 300th Oasis Battalion",
+  "role": "oasis",
   "px": [
    1539,
    3629
@@ -389,6 +408,7 @@
   "kind": "unit",
   "counter": "GE 3 - 300 OAS",
   "group": "GE 300th Oasis Battalion",
+  "role": "oasis",
   "px": [
    1400,
    3093
@@ -401,6 +421,7 @@
   "kind": "unit",
   "counter": "GE 5 Le - none",
   "group": "GE 5th Light Panzer Division",
+  "role": "hq",
   "px": [
    1400,
    3093
@@ -413,6 +434,7 @@
   "kind": "unit",
   "counter": "GE Rommel - DAK",
   "group": "GE Unassigned Infantry Units",
+  "role": "hq",
   "px": [
    1400,
    3093
@@ -425,6 +447,7 @@
   "kind": "unit",
   "counter": "GE 33 - 15 (ATG)",
   "group": "GE 15th Panzer Division",
+  "role": "antitank",
   "px": [
    1486,
    3093
@@ -437,6 +460,7 @@
   "kind": "unit",
   "counter": "GE II - 155 III",
   "group": "GE Non-Divisional Artillery Units",
+  "role": "artillery",
   "px": [
    1571,
    3093
@@ -449,6 +473,7 @@
   "kind": "unit",
   "counter": "GE 528 - ArKo",
   "group": "GE Non-Divisional Artillery Units",
+  "role": "artillery",
   "px": [
    1571,
    3093
@@ -461,6 +486,7 @@
   "kind": "unit",
   "counter": "GE 529 - none",
   "group": "GE Non-Divisional Artillery Units",
+  "role": "artillery",
   "px": [
    1571,
    3093
@@ -473,6 +499,7 @@
   "kind": "unit",
   "counter": "GE 523 - none",
   "group": "GE Non-Divisional Artillery Units",
+  "role": "artillery",
   "px": [
    1571,
    3093
@@ -485,6 +512,7 @@
   "kind": "unit",
   "counter": "GE 532 - none",
   "group": "GE Non-Divisional Artillery Units",
+  "role": "artillery",
   "px": [
    1571,
    3093

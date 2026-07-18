@@ -30,7 +30,10 @@ def test_oob_builds_both_sides_with_chart_stats():
     assert [u for u in units if u.side == Side.AXIS]
     assert [u for u in units if u.side == Side.ALLIED]
     assert supplies
-    assert all(u.cpa > 0 for u in units)              # CPA came from the charts
+    # CPA came from the charts for every mustered piece EXCEPT the inert `air` facilities
+    # (rule 3.21: Air Strips / SGSUs, kept for Phase 5, carry no unit-chart CPA).
+    assert all(u.cpa > 0 for u in units if u.steps[0].label != "air")
+    assert any(u.steps[0].label == "air" and u.cpa == 0 for u in units)  # air facilities kept
     assert any(not u.is_combat for u in units)        # HQs are non-combat
     assert any(u.oca > 0 for u in units)              # close-assault units exist
 
@@ -41,7 +44,7 @@ def test_oob_classify_prefers_counter_identity_over_group():
     assert oob.classify("GE 3 - 300 OAS", "GE 300th Oasis Battalion") == "oasis"
     assert oob.classify("AU 2-17Aus - 20-9Aus", "AU 9th Australian Division") == "infantry"
     assert oob.classify("GE 33 - 15 (ATG)", "GE 15th Panzer Division") == "antitank"
-    assert oob.classify("AL SGSU 250RAF", "AL SGSU") is None       # air base -> skip
+    assert oob.classify("AL SGSU 250RAF", "AL SGSU") == "air"      # SGSU kept, not dropped (Phase 5)
 
 
 def test_per_model_stats_override_role():
@@ -63,27 +66,33 @@ def test_oob_assigns_basic_morale_by_formation():
 # --- C2-1: the September-1940 Italian 10th Army (rule 60.31 / rule-90 [4.44b]/[4.46b]/[4.48]) ---
 
 def test_classify_italian_tenth_army_counters():
-    # Weapon-suffix markers beat the parent formation; the Libyan Tank Command's
-    # tankettes read as armour; the Sahariano camel battalions as infantry.
+    # Weapon-suffix markers on the COUNTER beat the parent formation; the Libyan Tank Command's
+    # tankettes (LTC) read as armour; the Sahariano camel battalions as infantry.
     assert oob.classify("IT 64 - Cat (MG)", "IT 64th Catanzaro Division") == "mg"
     assert oob.classify("IT 204 - 4CCNN (ART)", "IT 4th CCNN (3 January) Division") == "artillery"
-    assert oob.classify("IT Grbub - Grbub (AA)", "IT Giariabub Oasis Complex Garrison") == "antitank"
+    # The Giarabub "(AA)" emplaced flak is an Anti-Aircraft-Type unit (rule 3.23 / 46.17 Pure
+    # Flak) -> the `aa` role, NOT the old antitank proxy that stood in before the AA role existed.
+    assert oob.classify("IT Grbub - Grbub (AA)", "IT Giariabub Oasis Complex Garrison") == "aa"
     assert oob.classify("IT 64 - Cat (ENG)", "IT 64th Catanzaro Division") == "infantry"
-    assert oob.classify("IT X Cp - none", "IT Unassigned Gun Units") == "artillery"
+    # "IT X Cp" (X Corpo's guns) carries NO weapon marker on the counter, so the counter-only
+    # classifier cannot type it: it defaults to infantry, and data/oob_italian.json carries an
+    # explicit role:"artillery" for it (the data-driven path that replaces the old group guess).
+    assert oob.classify("IT X Cp - none", "IT Unassigned Gun Units") == "infantry"
     assert oob.classify("IT 1Maletti - Maletti", "IT Gruppo Maletti") == "artillery"
     assert oob.classify("IT 3Sno-Sno - Maletti", "IT Gruppo Maletti") == "infantry"
     assert oob.classify("IT Trvli - LTC", "IT The Libyan Tank Command") == "tank"
     assert oob.classify("IT 1 Libyan - none", "IT 1st Libyan Infantry Division (Sibille)") == "infantry"
-    # Flying-boat "Alighting" areas and air strips are skipped, never mustered.
-    assert oob.classify("Airboat Alighting axis", "AX Alighting/") is None
-    assert oob.classify("Air Strip axis", "AX Airstrip/") is None
+    # Flying-boat "Alighting" areas and air strips are KEPT as inert `air` pieces (rule 3.21),
+    # no longer discarded -- they carry the facility hexes the Phase 5 Air Game needs.
+    assert oob.classify("Airboat Alighting axis", "AX Alighting/") == "air"
+    assert oob.classify("Air Strip axis", "AX Airstrip/") == "air"
 
 
 def test_classify_italian_gate_leaves_desert_fox_untouched():
     # The 'IT ' gate must not disturb the German/Commonwealth classifications.
     assert oob.classify("GE 33 - 15 (ATG)", "GE 15th Panzer Division") == "antitank"
     assert oob.classify("GE 3 - 300 OAS", "GE 300th Oasis Battalion") == "oasis"
-    assert oob.classify("AL SGSU 250RAF", "AL SGSU") is None
+    assert oob.classify("AL SGSU 250RAF", "AL SGSU") == "air"
 
 
 def test_morale_italian_formations():
@@ -103,12 +112,18 @@ def test_italian_oob_builds_with_it_stats_and_roles():
     # the 'IT ' prefix: every counter musters with Italian stats (not the German fallback)
     # and a sensible role. Five weapon roles are represented across the 10th Army.
     units, _ = oob.build(oob_file="oob_italian.json", sections="ABCDE", reinforcements_file=None)
-    italians = [u for u in units if u.side == Side.AXIS]
-    assert len(italians) == 61
-    assert all(u.cpa > 0 for u in italians)
-    roles = {sr.label for u in italians for sr in u.steps}
-    assert {"infantry", "artillery", "mg", "tank", "antitank"} <= roles
-    infantry = [u for u in italians if u.steps[0].label == "infantry"]
+    axis = [u for u in units if u.side == Side.AXIS]
+    muster = [u for u in axis if u.steps[0].label != "air"]            # combat/support pieces
+    assert len(muster) == 61                                          # the Italian 10th Army muster
+    # The eight axis Air Landing Strips / flying-boat basins are now kept (were dropped), inert.
+    assert len([u for u in axis if u.steps[0].label == "air"]) == 8
+    assert all(u.cpa > 0 for u in muster)                             # Italian chart CPA, not the GE fallback
+    roles = {sr.label for u in muster for sr in u.steps}
+    # The 10th Army fields infantry / artillery / MG / tank (the Libyan Tank Command) and AA
+    # (the Giarabub emplaced flak) -- the "(AA)" gun that used to stand in as its only "antitank"
+    # is now correctly AA (rule 3.23); this Sept-1940 extraction carries no dedicated IT AT counter.
+    assert {"infantry", "artillery", "mg", "tank", "aa"} <= roles
+    infantry = [u for u in muster if u.steps[0].label == "infantry"]
     assert infantry and all(u.cpa == 10 for u in infantry)             # IT infantry CPA 10, not the GE 25
 
 
