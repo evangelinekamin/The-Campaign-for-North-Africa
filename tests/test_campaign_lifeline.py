@@ -284,17 +284,21 @@ def test_the_axis_depots_follow_the_take_and_hold():
 
 
 def test_the_axis_goes_and_gets_the_cities_it_never_garrisoned():
-    """THE MEASURED DEFECT. The Axis opens the campaign CONTROLLING Benghazi (75 VP -- its own port
-    of arrival, where every Mediterranean convoy lands) and Derna (25), and in a hundred and eleven
-    Game-Turns it never put a single battalion on either of them. It claims them now, and never
+    """THE MEASURED DEFECT, RESTATED for the Phase 3.2 [60.31] fix. The Axis opens the campaign
+    CONTROLLING Benghazi (75 VP -- its own port of arrival, where every Mediterranean convoy lands).
+    Under the old data its garrison stood one hex OFF Benghazi's victory hex, so the city was
+    controlled-but-empty and the take-and-hold had to go CLAIM it. The [60.31] fix moves that garrison
+    ONTO the victory hex (A4827 -- the hex victory_cities.json already uses), so the Axis now BANKS
+    Benghazi from Game-Turn 1, exactly as the setup chart deploys the Benghazi Garrison. The
+    take-and-hold still goes and gets the victory cities the army does not yet bank (Sollum), and never
     strips a city it is already banking to do it."""
     st = campaign(seed=1941)
     claimed = {c.name for c in campaign_claim.claims(st, Side.AXIS, escort=True)}
     banked = {name for ax, _a, _c, name in st.victory.cities
               if st.victory._occupier(st, ax) == Side.AXIS}
-    assert "Benghazi" in claimed
-    assert {"Tobruk", "Bardia"} <= banked          # the two it opens holding, supplied
-    assert not (claimed & banked)                  # never strip one city to garrison another
+    assert "Benghazi" in banked                    # [60.31]: the garrison stands on the victory hex A4827 -> banked at GT1
+    assert {"Tobruk", "Bardia"} <= banked          # the two it also opens holding, supplied
+    assert claimed and not (claimed & banked)      # still goes and gets an un-banked city (Sollum); never strip a banked one
 
 
 def test_the_axis_ends_the_war_holding_benghazi():
