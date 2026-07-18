@@ -171,8 +171,12 @@ def test_the_army_does_not_sit_out_the_war_in_the_delta(gt12):
     # brigade into an HQ + THREE battalions (34 brigades in reinforcements_campaign.json), so the
     # seeded Delta stream grows by the two extra battalions each brigade always had. This is an exact
     # COUNT of the built order of battle -- no dice in it -- not a slice fitted to green.
+    # RE-FIT 2026-07-18 (Phase 3 completion): 141 -> 296. The deferred [4.43a] Commonwealth muster is
+    # now seeded -- the artillery/AA/recon/AT park, solo infantry battalions, the two missing brigades,
+    # the 2nd Armoured Division and the [4.43a] returns -- so ~155 more ALLIED combat counters land in
+    # the Delta (all but the Alexandria "A" SpecSrvc are within 15 of Cairo). Still an exact count.
     assert sum(1 for u in start.units if u.side == Side.ALLIED and u.is_combat
-               and u.arrival_turn > 1 and distance(u.hex, CAIRO) <= 15) == 141   # the Delta stream
+               and u.arrival_turn > 1 and distance(u.hex, CAIRO) <= 15) == 296   # the Delta stream
 
     # The rear echelon MOVES -- the original defect was an army that never left the Delta AT ALL, and
     # that is what these two assertions guard. The absolute counts are FITTED and have moved THREE

@@ -3584,20 +3584,6 @@
       "model": "6pdr"
     },
     {
-      "counter": "57/58/65 Fld Arty [44]",
-      "group": "CW 44th Infantry Division",
-      "hex": [
-        48,
-        139
-      ],
-      "side": "ALLIED",
-      "role": "artillery",
-      "nationality": null,
-      "morale": 2,
-      "arrival_turn": 95,
-      "model": "25pdr"
-    },
-    {
       "counter": "220 Arty Regt",
       "group": "GE 164th Light Division",
       "hex": [
@@ -4983,6 +4969,2460 @@
       "morale": 0,
       "arrival_turn": 97,
       "arrival_stage": 2
+    },
+    {
+      "counter": "107th RHA",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 9,
+      "arrival_stage": 3,
+      "model": "25pdr"
+    },
+    {
+      "counter": "2/1 Aus Fld Arty [6 Aus]",
+      "group": "CW 6th Australian Division",
+      "hex": [
+        46,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 11,
+      "arrival_stage": 1,
+      "model": "25pdr"
+    },
+    {
+      "counter": "51 Fld Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 15,
+      "arrival_stage": 1,
+      "model": "25pdr"
+    },
+    {
+      "counter": "104th RHA",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 15,
+      "arrival_stage": 2,
+      "model": "25pdr"
+    },
+    {
+      "counter": "64th Medium Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 16,
+      "arrival_stage": 1,
+      "model": "25pdr"
+    },
+    {
+      "counter": "4th Fld Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 33,
+      "arrival_stage": 1,
+      "model": "25pdr"
+    },
+    {
+      "counter": "5 NZ Fld Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 35,
+      "arrival_stage": 1,
+      "model": "25pdr"
+    },
+    {
+      "counter": "18th Fld Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 38,
+      "arrival_stage": 3,
+      "model": "25pdr"
+    },
+    {
+      "counter": "28 Fld Arty [5 In]",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 43,
+      "arrival_stage": 2,
+      "model": "25pdr"
+    },
+    {
+      "counter": "1 SA Fld Arty [2 SA]",
+      "group": "CW 2nd South African Division",
+      "hex": [
+        47,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 44,
+      "arrival_stage": 2,
+      "model": "25pdr"
+    },
+    {
+      "counter": "5 SA Fld Arty [2 SA]",
+      "group": "CW 2nd South African Division",
+      "hex": [
+        47,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 44,
+      "arrival_stage": 2,
+      "model": "25pdr"
+    },
+    {
+      "counter": "27th Medium Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 44,
+      "arrival_stage": 2,
+      "model": "25pdr"
+    },
+    {
+      "counter": "68th Medium Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 44,
+      "arrival_stage": 2,
+      "model": "25pdr"
+    },
+    {
+      "counter": "60 Fld Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 48,
+      "arrival_stage": 2,
+      "model": "25pdr"
+    },
+    {
+      "counter": "3rd SA Fld Arty [1 SA]",
+      "group": "CW 1st South African Division",
+      "hex": [
+        46,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 51,
+      "arrival_stage": 1,
+      "model": "25pdr"
+    },
+    {
+      "counter": "7 SA Fld Arty [1 SA]",
+      "group": "CW 1st South African Division",
+      "hex": [
+        46,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 52,
+      "arrival_stage": 1,
+      "model": "25pdr"
+    },
+    {
+      "counter": "67th Medium Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 55,
+      "arrival_stage": 1,
+      "model": "25pdr"
+    },
+    {
+      "counter": "78th Fld Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 56,
+      "arrival_stage": 2,
+      "model": "25pdr"
+    },
+    {
+      "counter": "111th Fld Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 60,
+      "arrival_stage": 3,
+      "model": "25pdr"
+    },
+    {
+      "counter": "154th Fld Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 60,
+      "arrival_stage": 3,
+      "model": "25pdr"
+    },
+    {
+      "counter": "72nd Fld Arty [50]",
+      "group": "CW 50th Infantry Division",
+      "hex": [
+        48,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 69,
+      "arrival_stage": 2,
+      "model": "25pdr"
+    },
+    {
+      "counter": "124th Fld Arty [50]",
+      "group": "CW 50th Infantry Division",
+      "hex": [
+        48,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 69,
+      "arrival_stage": 2,
+      "model": "25pdr"
+    },
+    {
+      "counter": "3rd Fld Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 80,
+      "arrival_stage": 2,
+      "model": "25pdr"
+    },
+    {
+      "counter": "2nd In Fld Arty [3 In Mtr X]",
+      "group": "CW 3rd Indian Motor Brigade",
+      "hex": [
+        45,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 80,
+      "arrival_stage": 3,
+      "model": "25pdr"
+    },
+    {
+      "counter": "69th Medium Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 83,
+      "arrival_stage": 3,
+      "model": "25pdr"
+    },
+    {
+      "counter": "98th Fld Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 83,
+      "arrival_stage": 3,
+      "model": "25pdr"
+    },
+    {
+      "counter": "32nd Fld Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 85,
+      "arrival_stage": 1,
+      "model": "25pdr"
+    },
+    {
+      "counter": "121st Fld Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 85,
+      "arrival_stage": 1,
+      "model": "25pdr"
+    },
+    {
+      "counter": "11th Fld Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 86,
+      "arrival_stage": 1,
+      "model": "25pdr"
+    },
+    {
+      "counter": "53rd Fld Arty",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 89,
+      "arrival_stage": 3,
+      "model": "25pdr"
+    },
+    {
+      "counter": "5th RHA",
+      "group": "CW Corps Artillery",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 89,
+      "arrival_stage": 3,
+      "model": "25pdr"
+    },
+    {
+      "counter": "126th Fld Arty [51]",
+      "group": "CW 51st Infantry Division",
+      "hex": [
+        48,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 93,
+      "arrival_stage": 1,
+      "model": "25pdr"
+    },
+    {
+      "counter": "127th Fld Arty [51]",
+      "group": "CW 51st Infantry Division",
+      "hex": [
+        48,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 93,
+      "arrival_stage": 1,
+      "model": "25pdr"
+    },
+    {
+      "counter": "128th Fld Arty [51]",
+      "group": "CW 51st Infantry Division",
+      "hex": [
+        48,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 93,
+      "arrival_stage": 1,
+      "model": "25pdr"
+    },
+    {
+      "counter": "57th Fld Arty [44]",
+      "group": "CW 44th Infantry Division",
+      "hex": [
+        48,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 95,
+      "arrival_stage": 2,
+      "model": "25pdr"
+    },
+    {
+      "counter": "58th Fld Arty [44]",
+      "group": "CW 44th Infantry Division",
+      "hex": [
+        48,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 95,
+      "arrival_stage": 2,
+      "model": "25pdr"
+    },
+    {
+      "counter": "65th Fld Arty [44]",
+      "group": "CW 44th Infantry Division",
+      "hex": [
+        48,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 95,
+      "arrival_stage": 2,
+      "model": "25pdr"
+    },
+    {
+      "counter": "13th LAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 11,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "74th HAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 12,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "52nd LAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 12,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "2nd HAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 15,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "61st HAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 28,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "1st LAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 31,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "1st SA LAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 32,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "14 NZ LAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 35,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "14th LAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 41,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "87th HAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 41,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "88th HAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 42,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "57th HAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 43,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "16th LAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 43,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "94th HAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 43,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "2 SA LAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 45,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "2nd LAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 45,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "89th HAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 45,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "25th LAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 48,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "34th LAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 58,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "68th HAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 59,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "69th HAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 59,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "82nd LAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 66,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "53rd LAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 86,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "56th LAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 89,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "42nd LAA",
+      "group": "CW Anti-Aircraft",
+      "hex": [
+        44,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 98,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "40th LAA [51]",
+      "group": "CW 51st Infantry Division",
+      "hex": [
+        48,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "aa",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 93,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "\"A\" SpecSrvc Bn",
+      "group": "CW Independent Infantry",
+      "hex": [
+        27,
+        133
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 19,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "Capetown Highlanders Bn [2/1 SA]",
+      "group": "CW 2nd South African Division",
+      "hex": [
+        47,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 38,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "3/18 Royal Garhwals [10/5 In]",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 53,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "3/10 Baluch",
+      "group": "CW Independent Infantry",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 60,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "1/1 Punjab",
+      "group": "CW Independent Infantry",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 60,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "3rd Bn Legion Etrangere [1 FF]",
+      "group": "CW 1st Free French Brigade",
+      "hex": [
+        43,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 62,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "2nd Bn de Marche [1 FF]",
+      "group": "CW 1st Free French Brigade",
+      "hex": [
+        43,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 62,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "1st Bn de Fusiliers [1 FF]",
+      "group": "CW 1st Free French Brigade",
+      "hex": [
+        43,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 63,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "1st Sherwood Foresters",
+      "group": "CW Independent Infantry",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 65,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "1st Bn Infanterie de Marine [1 FF]",
+      "group": "CW 1st Free French Brigade",
+      "hex": [
+        43,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 65,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "Royal Yugoslav Guards",
+      "group": "CW Independent Infantry",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 70,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "1/4 Essex",
+      "group": "CW Independent Infantry",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 73,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "2/4 Gurkha",
+      "group": "CW Independent Infantry",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 75,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "3/9 Jat",
+      "group": "CW Independent Infantry",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 75,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "1/5 Mahratta LI",
+      "group": "CW Independent Infantry",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 75,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "1st South Wales Borderers",
+      "group": "CW Independent Infantry",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 79,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "2/8 Gurkha",
+      "group": "CW Independent Infantry",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 84,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "3/14 Punjab",
+      "group": "CW Independent Infantry",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 87,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "14th Sherwood Foresters",
+      "group": "CW Independent Infantry",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 89,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "Yorkshire Dragoons [I]",
+      "group": "CW Independent Infantry",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 94,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "1/2 Gurkha",
+      "group": "CW Independent Infantry",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 94,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "4th Borderers [23/70]",
+      "group": "CW 70th Infantry Division",
+      "hex": [
+        47,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 51,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "Special Air Service Bde [I]",
+      "group": "CW Independent Infantry",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 47,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "1st The Royal Dragoons [R]",
+      "group": "CW Corps Cavalry",
+      "hex": [
+        45,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "recon",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 31,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "1st DOY Cavalry [R]",
+      "group": "CW Corps Cavalry",
+      "hex": [
+        45,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "recon",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 40,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "4th SA Armored Car",
+      "group": "CW Corps Cavalry",
+      "hex": [
+        45,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "recon",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 44,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "3rd SA Armored Car Bn",
+      "group": "CW Corps Cavalry",
+      "hex": [
+        45,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "recon",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 47,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "6th SA Armored Car",
+      "group": "CW Corps Cavalry",
+      "hex": [
+        45,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "recon",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 47,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "50th Recce [50]",
+      "group": "CW 50th Infantry Division",
+      "hex": [
+        48,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "recon",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 58,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "12th Lancers [R]",
+      "group": "CW Corps Cavalry",
+      "hex": [
+        45,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "recon",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 58,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "10th QVOC Guides [R]",
+      "group": "CW Corps Cavalry",
+      "hex": [
+        45,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "recon",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 84,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "2nd Derbyshire Yeomanry [R, 8]",
+      "group": "CW 8th Armoured Division",
+      "hex": [
+        46,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "recon",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 87,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "1st Free French Flying Column [R]",
+      "group": "CW Corps Cavalry",
+      "hex": [
+        45,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "recon",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 95,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "106 RHA [AT]",
+      "group": "CW Corps Anti-Tank",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "antitank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 11,
+      "arrival_stage": 1,
+      "model": "2pdr"
+    },
+    {
+      "counter": "73rd AT",
+      "group": "CW Corps Anti-Tank",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "antitank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 27,
+      "arrival_stage": 1,
+      "model": "2pdr"
+    },
+    {
+      "counter": "102nd AT",
+      "group": "CW Corps Anti-Tank",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "antitank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 43,
+      "arrival_stage": 1,
+      "model": "2pdr"
+    },
+    {
+      "counter": "23 Bde AT Coy [23/70]",
+      "group": "CW 70th Infantry Division",
+      "hex": [
+        47,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "antitank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 50,
+      "arrival_stage": 2,
+      "model": "2pdr"
+    },
+    {
+      "counter": "95th AT",
+      "group": "CW Corps Anti-Tank",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "antitank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 60,
+      "arrival_stage": 3,
+      "model": "2pdr"
+    },
+    {
+      "counter": "2nd NA AT Coy [1 FF]",
+      "group": "CW 1st Free French Brigade",
+      "hex": [
+        43,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "antitank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 63,
+      "arrival_stage": 3,
+      "model": "2pdr"
+    },
+    {
+      "counter": "13 AT [51]",
+      "group": "CW 51st Infantry Division",
+      "hex": [
+        48,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "antitank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 92,
+      "arrival_stage": 2,
+      "model": "2pdr"
+    },
+    {
+      "counter": "61st AT [51]",
+      "group": "CW 51st Infantry Division",
+      "hex": [
+        48,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "antitank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 93,
+      "arrival_stage": 1,
+      "model": "2pdr"
+    },
+    {
+      "counter": "President Steyn MG [1 SA]",
+      "group": "CW 1st South African Division",
+      "hex": [
+        46,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "mg",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 38,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "Die Middelandse MG [2 SA]",
+      "group": "CW 2nd South African Division",
+      "hex": [
+        47,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "mg",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 41,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "2nd Cheshire MG [50]",
+      "group": "CW 50th Infantry Division",
+      "hex": [
+        48,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "mg",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 68,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "HQ 4 SA Bde",
+      "group": "CW 2nd South African Division",
+      "hex": [
+        47,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 44,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "4 SA Bde I",
+      "group": "CW 2nd South African Division",
+      "hex": [
+        47,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 44,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "4 SA Bde II",
+      "group": "CW 2nd South African Division",
+      "hex": [
+        47,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 44,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "4 SA Bde III",
+      "group": "CW 2nd South African Division",
+      "hex": [
+        47,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 0,
+      "arrival_turn": 44,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "HQ 18 In Bde",
+      "group": "CW 18th Indian Infantry Brigade",
+      "hex": [
+        44,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 86,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "18 In Bde I",
+      "group": "CW 18th Indian Infantry Brigade",
+      "hex": [
+        44,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 86,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "18 In Bde II",
+      "group": "CW 18th Indian Infantry Brigade",
+      "hex": [
+        44,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 86,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "18 In Bde III",
+      "group": "CW 18th Indian Infantry Brigade",
+      "hex": [
+        44,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 86,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "HQ 2 Armd Div",
+      "group": "CW 2nd Armoured Division",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 15,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "HQ Armd Bde [2 Armd]",
+      "group": "CW 2nd Armoured Division",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 15,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "2 Armd Div Cruiser Regt I",
+      "group": "CW 2nd Armoured Division",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 15,
+      "arrival_stage": 1,
+      "model": "a13"
+    },
+    {
+      "counter": "2 Armd Div Cruiser Regt II",
+      "group": "CW 2nd Armoured Division",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 15,
+      "arrival_stage": 1,
+      "model": "a13"
+    },
+    {
+      "counter": "2 Armd Div Cruiser Regt III",
+      "group": "CW 2nd Armoured Division",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 15,
+      "arrival_stage": 1,
+      "model": "a13"
+    },
+    {
+      "counter": "3rd Hussars [7]",
+      "group": "CW 7th Armoured Division",
+      "hex": [
+        45,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 4,
+      "arrival_stage": 3,
+      "model": "a13"
+    },
+    {
+      "counter": "HQ 22 Armd Bde",
+      "group": "CW Corps Armour",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 51,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "22 Armd Bde Regt I",
+      "group": "CW Corps Armour",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 51,
+      "arrival_stage": 2,
+      "model": "crusader1"
+    },
+    {
+      "counter": "22 Armd Bde Regt II",
+      "group": "CW Corps Armour",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 51,
+      "arrival_stage": 2,
+      "model": "crusader1"
+    },
+    {
+      "counter": "22 Armd Bde Regt III",
+      "group": "CW Corps Armour",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 51,
+      "arrival_stage": 2,
+      "model": "crusader1"
+    },
+    {
+      "counter": "HQ 2 Armd Bde [1]",
+      "group": "CW 1st Armoured Division",
+      "hex": [
+        43,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 58,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "2 Bays [1]",
+      "group": "CW 1st Armoured Division",
+      "hex": [
+        43,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 58,
+      "arrival_stage": 3,
+      "model": "crusader1"
+    },
+    {
+      "counter": "10 Hussars [1]",
+      "group": "CW 1st Armoured Division",
+      "hex": [
+        43,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 58,
+      "arrival_stage": 3,
+      "model": "crusader1"
+    },
+    {
+      "counter": "9 Lancers [1]",
+      "group": "CW 1st Armoured Division",
+      "hex": [
+        43,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 58,
+      "arrival_stage": 3,
+      "model": "stuart"
+    },
+    {
+      "counter": "HQ 1 Armd Div",
+      "group": "CW 1st Armoured Division",
+      "hex": [
+        43,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 56,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "HQ 23 Inf Bde [70]",
+      "group": "CW 70th Infantry Division",
+      "hex": [
+        47,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 51,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "HQ 7 In Bde (Rtn)",
+      "group": "CW 4th Indian Division",
+      "hex": [
+        44,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 30,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "7 In Bde (Rtn) I",
+      "group": "CW 4th Indian Division",
+      "hex": [
+        44,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 30,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "7 In Bde (Rtn) II",
+      "group": "CW 4th Indian Division",
+      "hex": [
+        44,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 30,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "7 In Bde (Rtn) III",
+      "group": "CW 4th Indian Division",
+      "hex": [
+        44,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 30,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "HQ 14 Inf Bde (Rtn)",
+      "group": "CW 70th Infantry Division",
+      "hex": [
+        47,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 54,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "14 Inf Bde (Rtn) I",
+      "group": "CW 70th Infantry Division",
+      "hex": [
+        47,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 54,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "14 Inf Bde (Rtn) II",
+      "group": "CW 70th Infantry Division",
+      "hex": [
+        47,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 54,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "14 Inf Bde (Rtn) III",
+      "group": "CW 70th Infantry Division",
+      "hex": [
+        47,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 54,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "HQ 150 Inf Bde (Rtn)",
+      "group": "CW 50th Infantry Division",
+      "hex": [
+        48,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 58,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "150 Inf Bde (Rtn) I",
+      "group": "CW 50th Infantry Division",
+      "hex": [
+        48,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 58,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "150 Inf Bde (Rtn) II",
+      "group": "CW 50th Infantry Division",
+      "hex": [
+        48,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 58,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "150 Inf Bde (Rtn) III",
+      "group": "CW 50th Infantry Division",
+      "hex": [
+        48,
+        138
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 58,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "6 NZ Bde (Rtn) I",
+      "group": "CW 2nd New Zealand Division",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 31,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "6 NZ Bde (Rtn) II",
+      "group": "CW 2nd New Zealand Division",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 31,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "6 NZ Bde (Rtn) III",
+      "group": "CW 2nd New Zealand Division",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 31,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "1 Armd Bde [2] (Rtn)",
+      "group": "CW 2nd Armoured Division",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 2,
+      "arrival_turn": 31,
+      "arrival_stage": 1,
+      "model": "a13"
+    },
+    {
+      "counter": "2 NZ Div (Rtn) Bn 1",
+      "group": "CW 2nd New Zealand Division",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 35,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "2 NZ Div (Rtn) Bn 2",
+      "group": "CW 2nd New Zealand Division",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 35,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "2 NZ Div (Rtn) Bn 3",
+      "group": "CW 2nd New Zealand Division",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 35,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "2 NZ Div (Rtn) Bn 4",
+      "group": "CW 2nd New Zealand Division",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 35,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "2 NZ Div (Rtn) Bn 5",
+      "group": "CW 2nd New Zealand Division",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 35,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "2 NZ Div (Rtn) Bn 6",
+      "group": "CW 2nd New Zealand Division",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 35,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "2 NZ Div (Rtn) Bn 7",
+      "group": "CW 2nd New Zealand Division",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 35,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "1st Essex [23/70] (Rtn)",
+      "group": "CW 70th Infantry Division",
+      "hex": [
+        47,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 51,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "1st Durham LI [23/70] (Rtn)",
+      "group": "CW 70th Infantry Division",
+      "hex": [
+        47,
+        141
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 51,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "HQ 10 In Bde (Rtn)",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 73,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "10 In Bde (Rtn) I",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 73,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "10 In Bde (Rtn) II",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 73,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "10 In Bde (Rtn) III",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 73,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "28th Fld Arty [5 In] (Rtn)",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 73,
+      "arrival_stage": 1,
+      "model": "25pdr"
+    },
+    {
+      "counter": "HQ 5 In Div (Rtn)",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 75,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "HQ 9 In Bde (Rtn)",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "hq",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 75,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "9 In Bde (Rtn) I",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 75,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "9 In Bde (Rtn) II",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 75,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "9 In Bde (Rtn) III",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 75,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "144 Fld Arty [5 In] (Rtn)",
+      "group": "CW 5th Indian Division",
+      "hex": [
+        44,
+        142
+      ],
+      "side": "ALLIED",
+      "role": "artillery",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 75,
+      "arrival_stage": 3,
+      "model": "25pdr"
+    },
+    {
+      "counter": "2 NZ Div core (Rtn)",
+      "group": "CW 2nd New Zealand Division",
+      "hex": [
+        47,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 85,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "9 Aus Div core (Rtn)",
+      "group": "CW 9th Australian Division",
+      "hex": [
+        47,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 86,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "42 RTR (Scorpion)",
+      "group": "CW Corps Armour",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 99,
+      "arrival_stage": 1,
+      "model": "scorpion"
+    },
+    {
+      "counter": "44 RTR (Scorpion)",
+      "group": "CW Corps Armour",
+      "hex": [
+        46,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "tank",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 99,
+      "arrival_stage": 1,
+      "model": "scorpion"
     }
   ]
 }
