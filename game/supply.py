@@ -900,3 +900,40 @@ def plan_draw(state: GameState, unit: Unit, commodity: str, need: int):
             draws.append((su.id, take))
             remaining -= take
     return draws if remaining <= 0 else None
+
+
+def in_hex_draw(state: GameState, unit: Unit, commodity: str, need: int):
+    """The FULL-GAME in-hex supply draw (49.15/50.15/51.15): satisfy `need` of `commodity` from
+    sources ON unit.hex ONLY, in the 49.16 priority order --
+
+        1. the unit's OWN pool  (FUEL: the 49.14 tank; AMMO/STORES/WATER: first-line-borne),
+        2. any co-located friendly supply dump on unit.hex (54.11/54.15 -- incl. a captured dump
+           and a well, both of which already sit as Supply Units on their hex),
+
+    -- and NOT a 2nd/3rd-line Truck Convoy sitting on the hex (49.16: "such fuel from convoying
+    trucks must be off-loaded first" -- a truck is not a source until it unloads into a dump).
+
+    Returns the draw list as TAGGED tuples ("unit"|"dump", ref_id, qty) so the caller emits
+    UNIT_SUPPLY_CONSUMED (own pool) / SUPPLY_CONSUMED (dump) respectively, or None if the hex
+    cannot cover `need`. This is the replacement for reachable_supplies/plan_draw: there is NO
+    supply RANGE in the full game (32.16's ½-CPA trace is the ABSTRACT game) -- supply is either in
+    the hex or it is not, so this is a pure dictionary filter, no trace, no flood, no _reach memo."""
+    if need <= 0:
+        return []
+    draws: list[tuple[str, str, int]] = []
+    remaining = need
+    own = _pool(unit, commodity)                       # 1. the unit's own in-hex pool, first (49.16)
+    if own > 0:
+        take = min(remaining, own)
+        draws.append(("unit", unit.id, take))
+        remaining -= take
+    if remaining > 0:                                  # 2. co-located dumps; same hex so distance is
+        for su in sorted((su for su in state.active_supplies(unit.side)   # moot -- order by id for
+                          if su.hex == unit.hex and _pool(su, commodity) > 0),  # determinism only
+                         key=lambda su: su.id):
+            if remaining <= 0:
+                break
+            take = min(remaining, _pool(su, commodity))
+            draws.append(("dump", su.id, take))
+            remaining -= take
+    return draws if remaining <= 0 else None

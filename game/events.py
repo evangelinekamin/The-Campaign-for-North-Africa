@@ -126,6 +126,19 @@ class EventKind(str, Enum):
     TRUCK_LOADED = "TRUCK_LOADED"
     TRUCK_MOVED = "TRUCK_MOVED"
     TRUCK_UNLOADED = "TRUCK_UNLOADED"
+    # [49.14]/[49.16]/[53.11] IN-HEX SUPPLY (Phase 4, Option B: supply pools live ON the unit).
+    # These are the unit-pool duals of the dump events above, for the full-game draw where supply
+    # must be IN THE HEX (49.15/50.15/51.15), not within a ½-CPA trace. Both are DORMANT until a
+    # consumer is switched onto in_hex_draw (design sec 3, the parallel-run):
+    #   UNIT_SUPPLY_CONSUMED {unit_id, commodity, qty} -- a unit burns its OWN pool (the 49.14 fuel
+    #     tank on a move, or first-line-borne ammo/stores/water). The dual of SUPPLY_CONSUMED: the
+    #     unit pool drops and consumed[] rises, so on_hand+consumed==initial holds once unit pools
+    #     are summed into on_hand.
+    #   UNIT_REFILLED {unit_id, supply_id, commodity, qty} -- the 48 V.C.6 Supply Distribution top-up:
+    #     a CONSERVING transfer from a co-located dump into the unit's pool (the dual of TRUCK_LOADED,
+    #     dump -> unit instead of dump -> truck). Mints nothing; initial/consumed untouched.
+    UNIT_SUPPLY_CONSUMED = "UNIT_SUPPLY_CONSUMED"
+    UNIT_REFILLED = "UNIT_REFILLED"
     # [54.11] "ANY HEX CAN BE USED AS A SUPPLY DUMP." SUPPLY_DUMP_ESTABLISHED {supply_id, side,
     # hex} appends a NEW, EMPTY dump to state.supplies -- the missing engine subsystem. Until it
     # existed the depot list was FROZEN AT CONSTRUCTION for all 111 Game-Turns: no EventKind

@@ -250,6 +250,31 @@ def apply(state: GameState, event: Event) -> GameState:
             su = replace(su, **{attr: getattr(su, attr) + qty})
         return state.with_supply(su).with_truck(tf)
 
+    if k == EventKind.UNIT_SUPPLY_CONSUMED:
+        # 49.16/50.14/51.11/52.4: a unit burns its OWN in-hex pool (the 49.14 fuel tank on a move,
+        # or first-line-borne ammo/stores/water). The exact dual of SUPPLY_CONSUMED off a unit
+        # rather than a dump: pool down, consumed[] up, so on_hand+consumed==initial holds once
+        # unit pools are summed into on_hand (Phase-4 seeding slice).
+        u = state.unit(p["unit_id"])
+        commodity = p["commodity"]
+        attr = commodity.lower()
+        drained = replace(u, **{attr: getattr(u, attr) - p["qty"]})
+        consumed = dict(state.consumed)
+        consumed[commodity] = consumed.get(commodity, 0) + p["qty"]
+        return replace(state.with_unit(drained), consumed=consumed)
+
+    if k == EventKind.UNIT_REFILLED:
+        # 48 V.C.6: the 0-CP Supply Distribution top-up -- a conserving transfer dump -> unit pool
+        # (both on the same hex), the exact dual of TRUCK_LOADED (dump -> truck). Grand total
+        # unchanged, initial/consumed untouched.
+        su = state.supply(p["supply_id"])
+        u = state.unit(p["unit_id"])
+        commodity = p["commodity"]
+        attr = commodity.lower()
+        su = replace(su, **{attr: getattr(su, attr) - p["qty"]})
+        u = replace(u, **{attr: getattr(u, attr) + p["qty"]})
+        return state.with_supply(su).with_unit(u)
+
     if k == EventKind.TRUCK_MOVED:
         # 53.21 / 49.18: relocate the formation, burning `fuel` of its OWN cargo fuel to
         # move -- folds like a consume (truck fuel down, consumed[FUEL] up) so conservation
