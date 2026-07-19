@@ -1430,23 +1430,29 @@ def _supply_distribution(r: _Run, side: Side) -> None:
     reading, so no policy order is needed (flagged as a policy simplification: a live staff could
     choose partial fills).
 
-    FUEL ONLY for now: the 49.14 tank is the only seeded contents (S1); ammo/stores/water are a later
-    slice (S6-S8, with the basic-load ruling), and topping them up before they are consumed would
-    merely shuffle dump stock into units. Until the fuel consumer is switched to the in-hex draw (S5)
-    every tank is full, so this beat finds no deficit and emits nothing -- the run stays byte-identical."""
+    FUEL and AMMO: the 49.14 tank (a full move) and the 50.0 basic load (one firing) are the two
+    intrinsic pools seeded and consumed so far (S5/S6); each refills to its own capacity from a
+    co-located dump. Stores/water (S7/S8) join when their consumers switch. First-line trucks (fl_*)
+    stay dormant here exactly as in the draw -- truck-borne headroom is a separate later slice -- so a
+    unit tops up only to its intrinsic capacity. Ordered FUEL-then-AMMO per unit for a deterministic
+    log; a unit whose pools are already full (the GT1 case -- every pool seeded to capacity) yields no
+    deficit and emits nothing."""
+    caps = ((supply.FUEL, supply.fuel_capacity), (supply.AMMO, supply.ammo_capacity))
     for u in r.state.living(side):
-        need = supply.fuel_capacity(u) - u.fuel
-        if need <= 0:
-            continue
-        dumps = sorted((s for s in r.state.active_supplies(side)
-                        if s.hex == u.hex and s.fuel > 0), key=lambda s: s.id)
-        for su in dumps:
+        for commodity, capacity in caps:
+            attr = commodity.lower()
+            need = capacity(u) - getattr(u, attr)
             if need <= 0:
-                break
-            take = min(need, su.fuel)
-            r.emit(EventKind.UNIT_REFILLED, side, f"{side.value}/QM",
-                   {"unit_id": u.id, "supply_id": su.id, "commodity": supply.FUEL, "qty": take})
-            need -= take
+                continue
+            dumps = sorted((s for s in r.state.active_supplies(side)
+                            if s.hex == u.hex and getattr(s, attr) > 0), key=lambda s: s.id)
+            for su in dumps:
+                if need <= 0:
+                    break
+                take = min(need, getattr(su, attr))
+                r.emit(EventKind.UNIT_REFILLED, side, f"{side.value}/QM",
+                       {"unit_id": u.id, "supply_id": su.id, "commodity": commodity, "qty": take})
+                need -= take
 
 
 def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = None) -> None:
@@ -2997,11 +3003,12 @@ def _retreat(r: _Run, atk_side: Side, actor: str, defender_ids: list[str],
 
 
 def _has_ammo(state: GameState, unit, *, phasing: bool) -> bool:
-    """Can this unit draw its Close-Assault ammunition right now (rule 32.21 / 50)?
+    """Can this unit draw its Close-Assault ammunition right now IN ITS HEX (rule 50.15)?
     A non-mutating mirror of the _charge_ammo supply gate, used to detect the 15.15
-    all-out-of-ammunition condition without expending anything."""
-    return supply.plan_draw(state, unit, supply.AMMO,
-                            supply.ammo_cost(unit, phasing=phasing, activity="assault")) is not None
+    all-out-of-ammunition condition without expending anything: True iff the unit's own
+    50.0 basic load plus any co-located dump can cover one assault (49.16)."""
+    return supply.in_hex_draw(state, unit, supply.AMMO,
+                              supply.ammo_cost(unit, phasing=phasing, activity="assault")) is not None
 
 
 def _defenders_capitulate(r: _Run, defenders) -> bool:
@@ -3021,13 +3028,22 @@ def _defenders_capitulate(r: _Run, defenders) -> bool:
 
 def _charge_ammo(r: _Run, side: Side, actor: str, unit, *, phasing: bool,
                  activity: str = "assault") -> bool:
-    draws = supply.plan_draw(r.state, unit, supply.AMMO,
-                             supply.ammo_cost(unit, phasing=phasing, activity=activity))
+    """Expend this unit's ammunition for `activity` (rule 50.14), drawn IN THE HEX (50.15: "consumed
+    only if present in the hex") -- its own 50.0 basic load first (49.16), then a co-located dump --
+    NOT the abstract 32.16 trace. There is no supply range: a unit whose hex cannot cover the cost
+    has fired out its load and cannot fire (50.12), and this returns False. Emits UNIT_SUPPLY_CONSUMED
+    off its own load / SUPPLY_CONSUMED off a co-located dump, exactly like _draw_move_fuel does fuel."""
+    draws = supply.in_hex_draw(r.state, unit, supply.AMMO,
+                               supply.ammo_cost(unit, phasing=phasing, activity=activity))
     if draws is None:
         return False
-    for sid, qty in draws:
-        r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
-               {"supply_id": sid, "commodity": supply.AMMO, "qty": qty, "unit_id": unit.id})
+    for tag, ref_id, qty in draws:
+        if tag == "unit":
+            r.emit(EventKind.UNIT_SUPPLY_CONSUMED, side, actor,
+                   {"unit_id": ref_id, "commodity": supply.AMMO, "qty": qty})
+        else:                                          # "dump" -- a co-located dump (54.11/54.15)
+            r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+                   {"supply_id": ref_id, "commodity": supply.AMMO, "qty": qty, "unit_id": unit.id})
     return True
 
 

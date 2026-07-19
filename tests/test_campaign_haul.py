@@ -120,20 +120,21 @@ def test_acceptance_haul_runs_unfrozen_and_reaches_the_front():
     assert moves_past_10 > 0, "the truck pool froze -- no truck moves past GT10"
     assert fuel_east and ammo_east, "no fuel/ammo landed east of Benghazi"
     assert deepest >= 40, f"relay only reached +{deepest} hexes east (base shuttle stalls at ~+7)"
-    # The deep chain is kept fed: the relay lands FUEL deep (>=40 east) and that dump still holds it at
-    # GT24 -- the chain persists to its reach, it does not deliver-then-evaporate. (The old check probed a
-    # FIXED dump, AX-Stage-Bardia, for BOTH commodities. Under S5 that no longer holds and SHOULDN'T: fuel
-    # is the in-hex commodity now, so a unit burns its own 49.14 tank and stops draining dumps for fuel --
-    # but AMMO is still on the ABSTRACT cpa/2 trace until S6, so a rear dump's ammo is trace-drained by the
-    # whole army faster than the relay refills it. And the competent Axis front now OUTRUNS its logistics
-    # past Bardia -- the culmination (iii) below already names -- leaving it beyond relay reach: Bardia ends
-    # fuel 113 (tank-fed army, undrained), ammo 0 (trace-drained). The both-commodities check on a fixed
-    # deep dump returns at S6, when ammo goes in-hex too.)
+    # The deep chain is kept fed: the relay lands FUEL deep (>=40 east) and the deep chain still HOLDS
+    # fuel at GT24 -- it persists to its reach, it does not deliver-then-evaporate. Asserted over the
+    # WHOLE deep chain, not a single tip dump: under the in-hex model (S5 fuel, and now S6 ammo) a
+    # forward combat unit DRAINS the co-located dump it stands on (49.16/50.15), so the single deepest
+    # dump can legitimately be drawn to 0 by the very front it feeds -- that is the relay working, not
+    # failing. What must hold is that SOME deep dump the relay stocked still carries fuel. (The old check
+    # probed a FIXED dump for BOTH commodities; ammo is in-hex now too, so a co-located unit draws a rear
+    # dump's ammo AND fuel down. The deepest tip evaporating is the front consuming forward stock, not the
+    # chain breaking -- so the assertion is the persistence of the chain, not the fill of its farthest hex.)
     deep_fuel = {sid: e for sid, e in fuel_dumps.items() if e >= 40}
     assert deep_fuel, "the relay landed no fuel deep (>=40 east) -- the deep chain is not reached"
-    deep_id = max(deep_fuel, key=deep_fuel.get)
-    fed = next(s for s in res.final.supplies if s.id == deep_id)
-    assert fed.fuel > 0, f"the relay's deep fuel dump ({deep_id}, +{deep_fuel[deep_id]}) evaporated by GT24"
+    deep_held = [s for s in res.final.supplies if s.id in deep_fuel and s.fuel > 0]
+    assert deep_held, (
+        f"every deep fuel dump the relay stocked ({sorted(deep_fuel)}) was empty by GT24 -- "
+        "the deep chain evaporated rather than persisting to its reach")
 
     # (iii) at least one Axis front combat unit is supplied near the chain in the opening, before
     # the greedy rush drives it out of trace range (the final-GT count is 0 -- the culmination).

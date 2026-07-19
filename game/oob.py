@@ -243,6 +243,7 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
                                     rec["arrival_turn"]))
     units = _seed_first_line(units, first_line or DESERT_FOX_FIRST_LINE)   # 53.11 / 64.3
     units = _seed_fuel_tanks(units)                                        # 49.14 fuel tanks
+    units = _seed_ammo_loads(units)                                        # 50.0 ammo basic loads
     return units, supplies
 
 
@@ -347,6 +348,23 @@ def _seed_fuel_tanks(units: list[Unit]) -> list[Unit]:
     only initial_supply rises."""
     from . import supply                                # lazy: supply is a heavier module
     return [replace(u, fuel=supply.fuel_capacity(u)) for u in units]
+
+
+def _seed_ammo_loads(units: list[Unit]) -> list[Unit]:
+    """[50.0] Fill every unit's intrinsic 'fire once' ammunition basic load (game.state.Unit.ammo =
+    supply.ammo_capacity(u)): "Each TOE Strength Point may carry (i.e., transport by itself without
+    trucks) only enough ammo to fire once" (rule 50.0 GENERAL RULE). The ammo dual of _seed_fuel_tanks
+    -- a unit deploys combat-ready, able to fire its most-demanding function once from organic ammo
+    before it must draw on a co-located dump (49.16). Non-combat units (no barrage/anti-armor/assault
+    strength) get a 0 load they never read. Applied to ALL units -- the GT1 muster AND rule-20
+    reinforcements -- because every unit sits in state.units from t0, so its load is counted in the t0
+    conservation base (scenario._initial_supply sums unit pools) and its arrival mints no ammo.
+    Parallel-run (design S6): the load is seeded but NOT yet drained -- no consumer reads Unit.ammo
+    until the ammo switch (engine._charge_ammo -> in_hex_draw) -- so the event log is byte-identical
+    and only initial_supply rises. First-line trucks (fl_*) stay dormant here exactly as they do for
+    fuel; truck-borne ammo headroom is a separate later slice."""
+    from . import supply                                # lazy: supply is a heavier module
+    return [replace(u, ammo=supply.ammo_capacity(u)) for u in units]
 
 
 def _fuel_role_default(mobility: Mobility) -> int:

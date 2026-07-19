@@ -98,6 +98,7 @@ def _overrun(dump_id: str):
     BURNS it. Measured over the full 111 turns: 0 captures in four seeds of five (4 in seed 2026, all
     after Game-Turn 40). Hanging the rule's test on a 30-turn slice of a campaign trajectory was
     always the fragile way to test it; this pins the RULE."""
+    from game.scenario import _initial_supply
     st = campaign(seed=1941)
     dump = st.supply(dump_id)
     foe = next(u for u in st.living(tactics.other(dump.side)) if u.is_combat)
@@ -105,7 +106,12 @@ def _overrun(dump_id: str):
     # still standing on (engine._capture_dumps). Clear the owner's garrison off it.
     others = tuple(u for u in st.units
                    if u.id != foe.id and not (u.hex == dump.hex and u.side == dump.side))
-    return replace(st, units=(replace(foe, hex=dump.hex),) + others), dump, foe
+    units = (replace(foe, hex=dump.hex),) + others
+    # Dropping the owner's garrison off the dump removes its seeded intrinsic pools (S6 ammo, S1 fuel)
+    # from the on-hand base, so re-derive the t0 conservation base for THIS constructed unit set --
+    # else the very first conservation sweep fires (on_hand no longer matches the full-campaign
+    # initial_supply the dropped units were counted into). Mirrors how scenario builds its own base.
+    return replace(st, units=units, initial_supply=_initial_supply(st.supplies, units)), dump, foe
 
 
 def test_a_field_dump_is_captured_when_the_enemy_enters_its_hex():
@@ -350,15 +356,19 @@ def test_a_garrison_that_can_hold_does_not_burn_its_own_dump():
 
 def test_blowing_a_dump_destroys_supply_and_never_moves_it():
     """A pure SINK, folded like 49.3 evaporation -- the supply is DESTROYED, not transferred, so
-    on_hand + consumed == initial still holds. That is what makes it denial and not a handover."""
+    on_hand + consumed == initial still holds. That is what makes it denial and not a handover.
+    Asserts the conserving-SINK property every blow must have, not a fixed dump's net fuel: WHICH dump
+    the combat drives to the wall -- and how much the rail lane tops a rear dump up the same turn -- are
+    trajectory details the S6 ammo economy can move, but the rule (destroy, never hand over) is exactly
+    what conservation proves: a handover would MINT the stock to the captor (on_hand unchanged while
+    consumed rose) and fire the invariant."""
     st, holder = _about_to_fall("AL-Stage-Matruh")
-    before = st.supply("AL-Stage-Matruh")
     res = run(replace(st, max_turns=1), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     blown = [e for e in res.events if e.kind == EventKind.SUPPLY_DUMP_BLOWN]
     assert blown, "a retreating army must be able to deny its stocks"
     for e in blown:
-        assert e.payload["destroyed"], "a blow that destroys nothing is not an event"
-        assert all(q > 0 for q in e.payload["destroyed"].values())
-    after = res.final.supply("AL-Stage-Matruh")
-    assert after.fuel < before.fuel, "the fuel must be GONE, not handed over"
-    check(res.final)                    # on_hand + consumed == initial: a sink, not a mint
+        destroyed = e.payload["destroyed"]
+        assert destroyed and all(q > 0 for q in destroyed.values()), "a blow must destroy real supply"
+    check(res.final)                    # on_hand + consumed == initial: a sink, not a mint -- the
+                                        # faithful proof of "never moves it", stronger than one dump's
+                                        # net fuel (which the rail lane can refill the same turn).

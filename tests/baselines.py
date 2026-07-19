@@ -10,6 +10,35 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-19 -- CAUSE: Phase 4 S6, in-hex AMMUNITION (rule 50.0's intrinsic basic load).
+
+Ammunition joined fuel in the full-game in-hex model. Rule 50.0 (GENERAL RULE, scan PDF p.67, verbatim)
+gives every unit an intrinsic pool -- "Each TOE Strength Point may carry (i.e., transport by itself
+WITHOUT trucks) only enough ammo to fire once" -- the exact dual of the 49.14 fuel tank. So:
+  (1) supply.ammo_capacity(u) = max applicable 50.2 rate (barrage 4 / anti_armor 3 / assault 2) x
+      strength -- one full firing -- is seeded onto every unit (oob._seed_ammo_loads) and credited to
+      initial_supply, exactly as _seed_fuel_tanks does the tank. (This alone is byte-identical -- the
+      abstract trace never reads unit.ammo.)
+  (2) the ammo CONSUMERS switch from the abstract 32.16 trace (supply.plan_draw) to supply.in_hex_draw
+      (engine._charge_ammo/_has_ammo + the policy/observation assault gates): a unit fires from its own
+      50.0 load first (49.16), then a co-located dump (50.15 "consumed only if present in the hex"),
+      never a traced dump. Firings now emit UNIT_SUPPLY_CONSUMED off the load / a co-located-dump
+      SUPPLY_CONSUMED where they emitted a traced-dump SUPPLY_CONSUMED, and the 48 V.C.6 refill beat
+      (engine._supply_distribution) tops AMMO as well as FUEL (new UNIT_REFILLED(AMMO) beats).
+Both logs move wholesale. NO chart magnitude was bent -- 50.0/50.14 and the 50.2 rates ARE the book's
+rules; the abstract 32.16 half-CPA trace (Section 32, which rule 3 of this port says DOES NOT APPLY)
+is replaced by the full-game in-hex draw (50.15/50.17). MEASURED (scratchpad/ab_rommel.py): the abstract
+trace was STARVING the advancing DAK -- forward German units beyond cpa/2 trace of a dump could not fire
+and surrendered en masse (16 Axis surrenders, survivors 45 hexes back). The faithful 50.0 load fixes it:
+the DAK fights forward to the Tobruk perimeter (closest 45 -> 6 hexes, combat units alive 12 -> 19,
+Axis surrenders 16 -> 6) and Tobruk still HOLDS -- more faithful AND more competent. First-line trucks
+(fl_*) stay dormant for ammo exactly as for fuel; truck-borne headroom is a separate later slice.
+Determinism holds -- each new hash reproduced byte-for-byte on the verification VM.
+
+    rommels_arrival   808baa7e75b3 -> 09047f3b3edd
+    siege_of_tobruk   7fce3d6ab80b -> 1432ddbe2e02
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-18 -- CAUSE: Phase 4 S5, in-hex fuel + the competent baseline it requires.
 
 The Logistics Game went in-hex, and the deterministic baseline was made competent under it:
@@ -194,8 +223,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "808baa7e75b3"
-SIEGE_OF_TOBRUK = "7fce3d6ab80b"
+ROMMELS_ARRIVAL = "09047f3b3edd"
+SIEGE_OF_TOBRUK = "1432ddbe2e02"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

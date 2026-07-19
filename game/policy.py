@@ -218,7 +218,7 @@ class ScriptedPolicy(Policy):
         for u in state.living(side):
             if u.id in anchors:
                 continue
-            if not u.is_combat or supply.plan_draw(
+            if not u.is_combat or supply.in_hex_draw(
                     state, u, supply.AMMO, supply.ammo_cost(u, phasing=True)) is None:
                 continue          # out of ammo -- can't assault (don't propose it)
             for nb in neighbors(u.hex):
@@ -480,15 +480,15 @@ class StormPolicy(ScriptedPolicy):
         target = state.target_hex
         armed = [u for u in state.living(side)
                  if u.is_combat and target in set(neighbors(u.hex))
-                 and supply.plan_draw(state, u, supply.AMMO,
-                                      supply.ammo_cost(u, phasing=True)) is not None]
+                 and supply.in_hex_draw(state, u, supply.AMMO,
+                                        supply.ammo_cost(u, phasing=True)) is not None]
         elsewhere = [a for a in ScriptedPolicy.combat(self, state, side) if a.target != target]
         if not armed:
             return elsewhere                               # no adjacent ammo-capable unit this stage
         defenders = [u for u in state.enemies_at(target, side) if u.strength > 0]
         dry = bool(defenders) and all(                     # the exact 15.15 condition (mirrors _has_ammo)
-            supply.plan_draw(state, u, supply.AMMO,
-                             supply.ammo_cost(u, phasing=False, activity="assault")) is None
+            supply.in_hex_draw(state, u, supply.AMMO,
+                               supply.ammo_cost(u, phasing=False, activity="assault")) is None
             for u in defenders)
         if dry:                                            # TRIGGER: throw the whole perimeter in (15.15)
             return [AttackOrder(tuple(u.id for u in armed), target)] + elsewhere

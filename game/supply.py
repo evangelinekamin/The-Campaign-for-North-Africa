@@ -187,6 +187,31 @@ def ammo_cost(unit: Unit, *, phasing: bool = True, activity: str = "assault") ->
     return AMMO_RATE.get(activity, 1) * max(1, unit.strength)
 
 
+def ammo_capacity(unit: Unit) -> int:
+    """[50.0] The intrinsic 'fire once' basic load a unit carries WITHOUT trucks -- rule 50.0 GENERAL
+    RULE, scan PDF p.67: "Each TOE Strength Point may carry (i.e., transport by itself without trucks)
+    only enough ammo to fire once." The exact dual of fuel_capacity (49.14, "a fuel capacity rating
+    exactly sufficient to allow all its CPA to be expended on movement"): fuel_capacity holds one full
+    MOVE, ammo_capacity one full FIRING. It is enough Ammo Points (50.14: rate x TOE Strength Points)
+    for the unit's most-demanding combat function, so a full pool always affords exactly one firing of
+    any function the unit has, and is empty after. First-line trucks and dumps hold MORE ammo (50.17)
+    but are NOT this innate carry -- the unit draws this pool first (49.16), then a co-located dump. A
+    non-combat unit (no barrage/anti-armor/assault strength) carries none. NOTE (flagged proxy): AA/flak
+    (50.12's "AA points", 50.2's anti_air rate) is deliberately NOT sampled -- the land engine charges
+    no flak ammo (no `anti_air` activity is ever drawn) and the 50.2 AA rate is per target group, not
+    per TOE point, so `x strength` would not apply. Harmless in this OOB: every is_pure_aa counter also
+    carries anti_armor/dca and so gets a nonzero pool here; a hypothetical PURE-flak unit (no other
+    combat function) would compute 0 and needs the AA firing model before it can be sampled."""
+    rates = []
+    if unit.barrage > 0:
+        rates.append(AMMO_RATE["barrage"])
+    if unit.anti_armor > 0:
+        rates.append(AMMO_RATE["anti_armor"])
+    if unit.oca > 0 or unit.dca > 0:
+        rates.append(AMMO_RATE["assault"])
+    return max(rates) * max(1, unit.strength) if rates else 0
+
+
 _ITALIAN_FORMATIONS = ("Ariete", "Pavia", "Bologna", "Brescia", "Savona", "Trento",
                        "Sabratha", "Trieste", "Italian")
 

@@ -145,7 +145,7 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
         # still takes losses). Surfacing this lets the agent avoid parking unarmed
         # units where they'll be sortied (32.21 / 15.15).
         if u.is_combat:
-            v["defensible"] = supply.plan_draw(
+            v["defensible"] = supply.in_hex_draw(
                 state, u, supply.AMMO, supply.ammo_cost(u, phasing=False)) is not None
             # Campaign hold-ground test (rule 64.73): can this unit trace BOTH fuel and
             # ammo, so it can HOLD a victory city for points? This is the exact predicate
@@ -216,7 +216,7 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
             # Only offer a unit as an attacker if it can draw ammunition -- an
             # out-of-ammo unit cannot assault (32.21), so listing it just invites a
             # rejected order.
-            if not u.is_combat or supply.plan_draw(
+            if not u.is_combat or supply.in_hex_draw(
                     state, u, supply.AMMO, supply.ammo_cost(u, phasing=True)) is None:
                 continue
             for nb in neighbors(u.hex):
