@@ -938,8 +938,8 @@ def _logistics(r: _Run) -> None:
 
 def _stores_stage(r: _Run, side: Side, hot: bool) -> None:
     """A side's Stores Expenditure (rule 48 IV / 51, faithfully once per GAME-TURN): draw
-    STORES from the traced dumps, with the 51.21 disorganization + 51.22 attrition on a
-    sustained shortfall, and the 52.6 Pasta Point."""
+    STORES IN THE HEX (51.15: "Stores must be present in the hex to be used"), with the 51.21
+    disorganization + 51.22 attrition on a sustained shortfall, and the 52.6 Pasta Point."""
     _stores_expenditure(r, side, hot)
 
 
@@ -982,17 +982,28 @@ def _evaporate(r: _Run, pct: int) -> None:
 
 
 def _stores_expenditure(r: _Run, side: Side, hot: bool) -> None:
+    """Each living unit draws its 51.11/51.13 Stores requirement IN THE HEX (51.15: "Stores must be
+    present in the hex to be used. Stores on truck convoys cannot be used until off-loaded"), NOT
+    through the abstract 32.16 ½-CPA trace. Stores have no organic per-unit reservoir (unlike the
+    49.14 fuel tank / 50.0 ammo load), so the draw comes wholly from a co-located dump -- in_hex_draw's
+    own-pool branch (unit.stores) is always 0 here; the "unit" tag is handled only for symmetry with
+    the fuel/ammo idiom and never fires until first-line trucks are activated to carry stores. A unit
+    with no stores in its hex goes short (51.2)."""
     actor = f"{side.value}/Logistics"
     for u in sorted(r.state.living(side), key=lambda u: u.id):
         if supply.is_air_facility(u):
             continue                                    # 35.14: air pieces draw air supply, not land
-        draws = supply.plan_draw(r.state, u, supply.STORES, supply.stores_cost(u))
+        draws = supply.in_hex_draw(r.state, u, supply.STORES, supply.stores_cost(u))
         if draws is None:
             _stores_shortfall(r, side, actor, u)        # 51.21/51.22
             continue
-        for sid, qty in draws:
-            r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
-                   {"supply_id": sid, "commodity": supply.STORES, "qty": qty, "unit_id": u.id})
+        for tag, ref_id, qty in draws:                  # 51.15: stores drawn from sources ON the hex
+            if tag == "unit":                           # (no organic stores pool -- always "dump")
+                r.emit(EventKind.UNIT_SUPPLY_CONSUMED, side, actor,
+                       {"unit_id": ref_id, "commodity": supply.STORES, "qty": qty})
+            else:                                       # a co-located dump (54.11/54.15)
+                r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+                       {"supply_id": ref_id, "commodity": supply.STORES, "qty": qty, "unit_id": u.id})
         if u.turns_without_stores > 0:                  # resupplied -> reset the consecutive count
             r.emit(EventKind.STORES_RESTORED, side, actor, {"unit_id": u.id})
         _pasta_point(r, side, actor, u)                 # 52.6: got stores -> needs its pasta water

@@ -10,6 +10,40 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-19 -- CAUSE: Phase 4 S7, in-hex STORES (rule 51.15; 51.0 gives NO organic pool).
+
+Stores joined fuel (S5) and ammunition (S6) in the full-game in-hex model -- but stores are NOT shaped
+like them, and getting that right was the whole slice. The 51.0 GENERAL RULE (verbatim): "Stores are
+different from other types of supply in that they are distributed at the beginning of the Game-Turn,
+rather than during each Operation Stage, and ... units may get along without them, albeit with limited
+effectiveness and with the possibility of attrition." There is NO 49.14/50.0-style organic reservoir:
+a unit carries zero stores of its own (51.15: "Stores must be present in the hex to be used. Stores on
+truck convoys cannot be used until off-loaded"), so its whole 51.11/51.13 upkeep -- 4 Stores per TOE
+Strength Point per Game-Turn, 1 flat for HQ/engineers -- is drawn wholly from a co-located dump. The
+one change: the stores CONSUMER (engine._stores_expenditure, the 48-IV once-per-game-turn Stores
+Expenditure Stage) switched from the abstract 32.16 half-CPA trace (supply.plan_draw) to
+supply.in_hex_draw. A unit with no stores in its hex goes short, and the ALREADY-BUILT 51.21
+disorganization + 51.22 progressive infantry-only attrition consequence bites -- that consequence code
+did not change. Water (incl. the 52.6 pasta water) stays on the abstract trace until S8; the 64.73
+victory-supply trace stays abstract (its own later slice); first-line trucks (fl_*) stay dormant for
+stores exactly as for fuel/ammo -- stores have no organic pool to refill, so they do not even join the
+48 V.C.6 refill beat; truck-borne stores headroom is the deferred last-mile slice.
+
+NO chart magnitude was bent -- 51.11/51.13/51.15 ARE the book's rules; the abstract 32.16 half-CPA
+trace (Section 32, which rule 3 of this port says DOES NOT APPLY) is replaced by the full-game in-hex
+draw. MEASURED (scratchpad/ab_stores.py), an A/B of the S6 tree (94941cb, abstract) vs this one: strict
+in-hex is SURVIVABLE and OUTCOME-NEUTRAL, not a starvation cliff. campaign(1941) lands the IDENTICAL
+Axis Smashing Victory 440-20 both ways; rommels_arrival(42) is identical in units-alive / Tobruk-holder
+/ surrenders. In-hex adds shortfall PRESSURE (+18% shortfall events on 1941, peak ~394 units short in a
+single turn) but the extra shortfalls are TRANSIENT -- a mobile force briefly outrunning its dumps,
+resupplied before the 51.22 two-consecutive-turn threshold -- so total attrition does NOT rise
+(1475 -> 1378 steps on 1941) and both armies stay fully intact. That is the faithful picture of desert
+logistics, not a front-wide melt. Determinism holds byte-for-byte.
+
+    rommels_arrival   09047f3b3edd -> 7a806c08679d
+    siege_of_tobruk   1432ddbe2e02 -> ed4f7d1661c9
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-19 -- CAUSE: Phase 4 S6, in-hex AMMUNITION (rule 50.0's intrinsic basic load).
 
 Ammunition joined fuel in the full-game in-hex model. Rule 50.0 (GENERAL RULE, scan PDF p.67, verbatim)
@@ -223,8 +257,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "09047f3b3edd"
-SIEGE_OF_TOBRUK = "1432ddbe2e02"
+ROMMELS_ARRIVAL = "7a806c08679d"
+SIEGE_OF_TOBRUK = "ed4f7d1661c9"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 
