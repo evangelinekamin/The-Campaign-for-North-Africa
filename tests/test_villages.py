@@ -147,7 +147,8 @@ def test_raising_the_ceiling_mints_no_supply():
     invariants.check(res.final)
     for commodity, initial in res.final.initial_supply.items():
         on_hand = (sum(getattr(s, commodity.lower()) for s in res.final.supplies)
-                   + sum(getattr(t, commodity.lower()) for t in res.final.trucks))
+                   + sum(getattr(t, commodity.lower()) for t in res.final.trucks)
+                   + sum(getattr(u, commodity.lower()) for u in res.final.units))   # 49.14 unit tanks
         assert on_hand + res.final.consumed.get(commodity, 0) == initial
 
 

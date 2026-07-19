@@ -158,6 +158,18 @@ def fuel_cost(unit: Unit, cp_spent: float) -> int:
     return fuel_rate(unit) * math.ceil(cp_spent / 5) * max(1, unit.strength)
 
 
+def fuel_capacity(unit: Unit) -> int:
+    """[49.14] A unit's Fuel Capacity rating -- the fuel its own vehicles carry (the 49.15 in-hex
+    tank). The rule prints "CPA x 1/5 x fuel-consumption-rate" per TOE Strength Point, and its Note
+    is the operative identity: "a TOE Strength Point always has a fuel capacity rating exactly
+    sufficient to allow all its CPA to be expended on movement." A full-CPA move costs exactly
+    fuel_cost(unit, unit.cpa) (49.13, rate x ceil(CPA/5) x strength), so the tank "exactly
+    sufficient" for it holds precisely that -- which also resolves the rule's fractional "CPA x 1/5"
+    for a CPA not divisible by 5 (the move charges the ceil, so the tank must match). Non-motorized
+    units walk and burn nothing (49.12, fuel_rate 0), so their capacity is 0."""
+    return fuel_cost(unit, unit.cpa)
+
+
 # [50.2] Ammunition Consumption Rates (Ammo Points per TOE Strength Point committed to
 # the function, rule 50.14), sourced from data/logistics_rates.json ('Logistics Game
 # Played' land rates). Now FAITHFUL to the chart: barrage 4, anti-armor 3, close-assault

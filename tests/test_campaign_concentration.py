@@ -307,7 +307,8 @@ def test_conservation_holds_over_the_concentration(gt12):
     assert fold(gt12.initial, gt12.events) == gt12.final
     for c, initial in gt12.final.initial_supply.items():
         on_hand = (sum(getattr(s, c.lower()) for s in gt12.final.supplies)
-                   + sum(getattr(t, c.lower()) for t in gt12.final.trucks))
+                   + sum(getattr(t, c.lower()) for t in gt12.final.trucks)
+                   + sum(getattr(u, c.lower()) for u in gt12.final.units))   # 49.14 unit tanks (Phase 4)
         assert on_hand + gt12.final.consumed.get(c, 0) == initial
 
 

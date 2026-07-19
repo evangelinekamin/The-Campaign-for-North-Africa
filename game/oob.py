@@ -242,6 +242,7 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
             units.append(_make_unit(rec, side, tuple(rec["hex"]), role, stats, seen,
                                     rec["arrival_turn"]))
     units = _seed_first_line(units, first_line or DESERT_FOX_FIRST_LINE)   # 53.11 / 64.3
+    units = _seed_fuel_tanks(units)                                        # 49.14 fuel tanks
     return units, supplies
 
 
@@ -332,6 +333,20 @@ def _seed_first_line(units: list[Unit], first_line: dict) -> list[Unit]:
             raise ValueError(
                 f"first-line seed for {side.name}: seeded {got} Truck Points, expected {want}")
     return out
+
+
+def _seed_fuel_tanks(units: list[Unit]) -> list[Unit]:
+    """[49.14] Fill every unit's Fuel Capacity tank (game.state.Unit.fuel = supply.fuel_capacity(u)):
+    the fuel its own vehicles carry, "exactly sufficient to allow all its CPA to be expended on
+    movement" (49.14 Note). Non-motorized units (49.12, fuel_rate 0) get a 0 tank they never read.
+    Applied to ALL units -- the GT1 muster AND rule-20 reinforcements -- because every unit sits in
+    state.units from t0 (on_map gates it live by arrival_turn), so a dormant reinforcement's full
+    tank is counted in the t0 conservation base (scenario._initial_supply / invariants) and its
+    arrival mints no fuel. Parallel-run (design S1): the tank is seeded but NOT yet drained -- no
+    consumer reads Unit.fuel until the fuel switch (S5) -- so the event log is byte-identical and
+    only initial_supply rises."""
+    from . import supply                                # lazy: supply is a heavier module
+    return [replace(u, fuel=supply.fuel_capacity(u)) for u in units]
 
 
 def _fuel_role_default(mobility: Mobility) -> int:

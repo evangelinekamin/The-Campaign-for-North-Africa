@@ -136,12 +136,15 @@ def _check_no_dup_ids(state: GameState) -> None:
 def _check_conservation_full(state: GameState) -> None:
     # Supply conservation (rule 32): per commodity, on-hand + consumed == initial. Nothing is
     # created except at sources; nothing vanishes except defined consumption. on-hand sums the
-    # dumps AND any cargo riding on truck convoys (rules 53-54) -- a TRUCK_LOADED merely moves
-    # supply from a dump onto a truck, so the truck's pools are the single new conservation surface.
+    # dumps, any cargo riding on truck convoys (rules 53-54), AND the units' own supply pools (the
+    # 49.14 fuel tanks + 53.11 first-line loads, Phase 4 Option B) -- a unit carries supply exactly
+    # as a truck does, so unit pools are the third on-hand surface, credited into initial at t0
+    # (scenario._initial_supply) and never minted at runtime.
     for commodity, initial in state.initial_supply.items():
         attr = commodity.lower()
         on_hand = (sum(getattr(su, attr) for su in state.supplies)
-                   + sum(getattr(t, attr) for t in state.trucks))
+                   + sum(getattr(t, attr) for t in state.trucks)
+                   + sum(getattr(u, attr) for u in state.units))
         if on_hand + state.consumed.get(commodity, 0) != initial:
             raise InvariantViolation(
                 f"{commodity} not conserved: on_hand={on_hand} + "

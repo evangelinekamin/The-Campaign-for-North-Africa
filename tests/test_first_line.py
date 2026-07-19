@@ -81,8 +81,9 @@ def test_seed_first_line_data_lint_fires_when_no_unit_can_hold_the_pool():
         oob._seed_first_line([], {Side.ALLIED: {"light": 5, "medium": 0, "heavy": 0}})
 
 
-def test_first_line_pools_are_inert_contents_stay_zero():
-    # This slice seeds only the fl_* CAPACITY; the 49.14 tank + 59.66B basic-load CONTENTS are a
-    # later slice, so every unit's fuel/ammo/stores/water pool is still 0 (conservation untouched).
+def test_ammo_stores_water_contents_stay_zero():
+    # RESTATED for slice S1 (49.14 fuel tank): the FUEL pool is now seeded to capacity (see
+    # test_fuel_tank.py), but the ammo/stores/water CONTENTS -- the 59.66B basic load -- are still
+    # a later slice (S2/S6-S8, pending the basic-load ruling), so those three pools stay 0.
     st = scenario.campaign(max_turns=1)
-    assert all(u.fuel == u.ammo == u.stores == u.water == 0 for u in st.units)
+    assert all(u.ammo == u.stores == u.water == 0 for u in st.units)

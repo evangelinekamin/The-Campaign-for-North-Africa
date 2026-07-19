@@ -47,11 +47,15 @@ def _zero_consumed() -> dict:
     return {c: 0 for c in COMMODITIES}
 
 
-def _initial_supply(supplies) -> dict:
-    """Total of each commodity ever introduced at t0 (54.5 conservation base). The
-    faucet (SUPPLY_ARRIVED) raises these at runtime; game.invariants checks
-    on_hand + consumed == initial per commodity."""
-    return {c: sum(getattr(s, c.lower()) for s in supplies) for c in COMMODITIES}
+def _initial_supply(supplies, units=()) -> dict:
+    """Total of each commodity ever introduced at t0 (54.5 conservation base): the dumps' pools PLUS
+    every unit's own supply pool (the 49.14 fuel tanks + 53.11 first-line loads). Units carry supply
+    from t0 -- dormant rule-20 reinforcements included, since they sit in state.units from the start
+    -- so their supply belongs in the base and their arrival mints nothing. The faucet
+    (SUPPLY_ARRIVED) raises these at runtime; game.invariants checks on_hand + consumed == initial
+    per commodity, where on_hand sums dumps + trucks + units."""
+    return {c: (sum(getattr(s, c.lower()) for s in supplies)
+                + sum(getattr(u, c.lower()) for u in units)) for c in COMMODITIES}
 
 # Fortified major cities of the corridor (rule 15.82): label -> fortification
 # level. A MAJOR_CITY hex both exempts its garrison from retreat/eviction and, at
@@ -108,7 +112,7 @@ def coastal_corridor(seed: int = 1941) -> GameState:
         SupplyUnit("UK-Dump1", Side.ALLIED, (6, 0), ammo=40, fuel=60),
         SupplyUnit("UK-Dump2", Side.ALLIED, target, ammo=40, fuel=60),
     )
-    initial = _initial_supply(supplies)
+    initial = _initial_supply(supplies, units)
 
     return GameState(
         turn=1, max_turns=MAX_TURNS, phase=Phase.WEATHER, active_side=Side.SYSTEM,
@@ -152,7 +156,7 @@ def battle_for_tobruk(seed: int = 1941) -> GameState:
         SupplyUnit("AX-Dump2", Side.AXIS, ax("C4607"), ammo=40, fuel=60),
         SupplyUnit("UK-Dump", Side.ALLIED, target, ammo=40, fuel=60),
     )
-    initial = _initial_supply(supplies)
+    initial = _initial_supply(supplies, units)
     return GameState(
         turn=1, max_turns=12, phase=Phase.WEATHER, active_side=Side.SYSTEM,
         seed=seed, weather="normal", vp=VP(),
@@ -311,7 +315,7 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
     convoys = _rommel_convoys(supplies, target, max_turns, seed)
     ports = _rommel_ports(supplies, target)
     trucks = _rommel_trucks(supplies, target)     # Step 5: the inland haulage, now live
-    initial = _initial_supply(supplies)
+    initial = _initial_supply(supplies, units)
     return GameState(
         turn=1, max_turns=max_turns, phase=Phase.WEATHER, active_side=Side.SYSTEM,
         seed=seed, weather="normal", vp=VP(),
@@ -1421,7 +1425,7 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         terrain=tmap, control=_campaign_initial_control(), units=tuple(units), target_hex=target,
         allied_objective=coords.to_axial(coords.parse(_CW_OBJECTIVE)),   # offensive CW drives west (Compass)
         supplies=supplies, consumed=_zero_consumed(),
-        initial_supply=_initial_supply(supplies),
+        initial_supply=_initial_supply(supplies, units),
         villages=village_hexes,                          # 54.12: the missing capacity row
         dump_capture=True,                               # 32.13/54.15: a dump entered is a dump taken
         # [32.32] THE DESERT COLUMN'S PRICE -- BUILT, TESTED, AND MEASURED OFF. This is not an

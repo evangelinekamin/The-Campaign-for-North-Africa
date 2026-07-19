@@ -242,7 +242,8 @@ def test_the_ledger_mints_nothing():
               ScriptedPolicy(Side.AXIS))
     for c, initial in res.final.initial_supply.items():
         on_hand = (sum(getattr(s, c.lower()) for s in res.final.supplies)
-                   + sum(getattr(t, c.lower()) for t in res.final.trucks))
+                   + sum(getattr(t, c.lower()) for t in res.final.trucks)
+                   + sum(getattr(u, c.lower()) for u in res.final.units))   # 49.14 unit tanks (Phase 4)
         assert on_hand + res.final.consumed.get(c, 0) == initial
     # the park is the same size it started -- a reservation is not a loss (32.55/32.56)
     assert {t.id: t.points for t in res.final.trucks} == {t.id: t.points for t in st.trucks}

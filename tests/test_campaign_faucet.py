@@ -479,7 +479,8 @@ def test_conservation_holds_over_the_faucet():
     assert fold(res.initial, res.events) == res.final
     for c, initial in res.final.initial_supply.items():
         on_hand = (sum(getattr(s, c.lower()) for s in res.final.supplies)
-                   + sum(getattr(t, c.lower()) for t in res.final.trucks))
+                   + sum(getattr(t, c.lower()) for t in res.final.trucks)
+                   + sum(getattr(u, c.lower()) for u in res.final.units))   # 49.14 unit tanks (Phase 4)
         assert on_hand + res.final.consumed.get(c, 0) == initial
 
 
