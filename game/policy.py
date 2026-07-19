@@ -177,10 +177,11 @@ class ScriptedPolicy(Policy):
         for u in state.living(side):
             if not u.is_combat:
                 continue
-            if supply.plan_draw(
+            if supply.in_hex_draw(
                     state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None:
                 continue          # out of fuel -- every move pays (49.13); don't propose a reject
-            reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
+            reach = supply.affordable_reach(                             # 49.15: only fundable hexes
+                state, u, tactics.reachable_for(state, u, enemy_zoc, enemy_occupied))
             here_dist = distance(u.hex, target)
             # Barrage/anti-armor units seek a firing position -- adjacent to an
             # enemy (their range is 1) without falling back -- so support arms
@@ -255,81 +256,28 @@ class ScriptedPolicy(Policy):
         return orders
 
     def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
-        """Shuttle the 2nd/3rd-line truck pool between the rear supply port and the front
-        (rule 48 V.J / 53.14). Each formation plies a two-beat run:
+        """Run the faithful multi-hop forward relay (rule 53.14 / 54.16, game.relay.campaign_truck_orders):
+        the competent baseline's logistics -- load at the rear port, bucket-brigade the tonnage forward
+        LEG BY LEG reloading at each intermediate dump, and FOUND dumps (54.11) on the spearhead's own
+        hexes so the supply network follows the advance. Doctrine, not an engine mandate (53.14 is
+        "recommended ... not a rule"), but the doctrine of any competent quartermaster (54.16: the dump
+        network is the logistics commander's "top priority") -- so the deterministic baseline owes it.
 
-          - AT the rear port dump: LOAD a run of AMMO and FUEL (splitting its 54.2 capacity
-            between the two -- the front needs both to press an assault, and the anchored
-            harbour is the only place they land) and deliver it in one hop to the nearest
-            friendly dump strictly closer to the objective, depositing everything bar a
-            return-trip reserve of its own cargo fuel (49.18 -- a truck burns cargo fuel to
-            move, so it must carry enough home to come back and reload).
-          - AWAY from the port: drive back to it (on the retained reserve) to reload.
+        Replaces the earlier single-hop shuttle: an abstract-era stand-in that could only reach one convoy
+        hop from the rear port and so stranded every army the instant it advanced past its start-line
+        dumps. The relay lives in game.relay, shared by every competent built-in policy (a lazy import
+        because relay reads this module's TruckOrder/BuildOrder dataclasses)."""
+        from . import relay
+        return relay.campaign_truck_orders(state, side)
 
-        Because a formation only ever spends fuel it is carrying and always keeps its return
-        reserve, it never strands empty in the desert; it idles AT the port when the front has
-        outrun its one-hop reach. Every hop burns cargo fuel, so the further Tobruk pulls
-        ahead of Tripoli the more of each run the trucks eat in transit and the less arrives --
-        the faithful Tripoli->front haulage bottleneck. The script only routes; it never bends
-        a magnitude (capacity 54.2, burn 49.18, reach 53.22 all come from game.supply)."""
-        base = self._truck_base(state, side)
-        if base is None:
-            return []
-        target = state.target_hex
-        orders: list[TruckOrder] = []
-        for t in state.trucks:
-            if t.side != side:
-                continue
-            reach = supply.reachable_truck_moves(state, t)
-            if t.hex != base.hex:                     # RETURN leg -- head home to reload
-                step = self._truck_step(reach, t.hex, base.hex)
-                if step is not None and t.fuel >= supply.truck_move_fuel(t, reach[step]):
-                    orders.append(TruckOrder(t.id, to=step))
-                continue
-            if base.fuel <= 0 and base.ammo <= 0:
-                continue                              # nothing at the port to lift
-            here = distance(t.hex, target)
-            forward = [s for s in state.supplies
-                       if s.side == side and not s.is_dummy and s.hex != t.hex
-                       and s.hex in reach and distance(s.hex, target) < here]
-            if not forward:
-                continue                              # front outran the pool -- idle at port
-            dest = min(forward, key=lambda s: (distance(s.hex, target), reach[s.hex], s.id))
-            out = supply.truck_move_fuel(t, reach[dest.hex])
-            cap = supply.truck_capacity(t.truck_class)
-            half = t.points / 2                       # split the load: half ammo, half fuel
-            # Size the FRESH load against the truck's RESIDUAL cargo (49.18 keeps a return
-            # reserve, so a truck home-from-a-run is not empty): loading a full half-capacity
-            # on top of the residual overruns the 53.12 Point ceiling and the engine rejects it.
-            ammo = min(base.ammo, max(0, int(half * cap["AMMO"]) - t.ammo))
-            fuel = min(base.fuel, max(0, int(half * cap["FUEL"]) - t.fuel))
-            fuel_deliver = fuel - 3 * out             # keep 2x the one-way burn to get home
-            if fuel_deliver <= 0:                     # not enough fuel to make the round trip
-                continue
-            load = {"FUEL": fuel}
-            unload = {"FUEL": fuel_deliver}
-            if ammo > 0:
-                load["AMMO"] = ammo
-                unload["AMMO"] = ammo
-            orders.append(TruckOrder(t.id, load_from=base.id, load=load,
-                                     to=dest.hex, unload_to=dest.id, unload=unload))
-        return orders
-
-    def _truck_base(self, state: GameState, side: Side):
-        """The rearmost WORKING supply port's built-in dump -- the truck pool's reload point
-        (where the naval convoy lands). None if the side fields no working port."""
-        ports = [p for p in state.ports if p.side == side and p.eff > 0]
-        if not ports:
-            return None
-        base = max(ports, key=lambda p: (distance(p.hex, state.target_hex), p.id))
-        return next((s for s in state.supplies if s.side == side and not s.is_dummy
-                     and s.hex == base.hex), None)
-
-    def _truck_step(self, reach: dict, here: Coord, dest: Coord) -> Coord | None:
-        """The reachable hex nearest `dest` (a single Truck Convoy Phase move toward it), or
-        None if the truck is already as close as it can get."""
-        step = min(reach, key=lambda c: (distance(c, dest), reach[c], c))
-        return step if step != here else None
+    def construction(self, state: GameState, side: Side) -> list[BuildOrder]:
+        """[24.9] Construct the forward dump at the head of the advance (game.relay.build_the_chain): turn
+        the heap the convoy dropped into a CONSTRUCTED dump the lorries can lift out of again, so the
+        bucket brigade grows one hop longer. The load-bearing companion to truck_orders -- the relay only
+        reloads from constructed/staging/port dumps, so without this the chain cannot extend past the port
+        and 54.16's viable dump network never forms."""
+        from . import relay
+        return relay.build_the_chain(state, side)
 
     def retreat_before_assault(self, state: GameState, side: Side,
                                pinned: frozenset[str]) -> list[MoveOrder]:
@@ -350,10 +298,11 @@ class ScriptedPolicy(Policy):
                 continue
             if not self._in_contact(state, side, u.hex):
                 continue                       # only units about to be assaulted bother to slip
-            if supply.plan_draw(
+            if supply.in_hex_draw(
                     state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None:
                 continue                       # no fuel -- every move pays (49.13); don't propose it
-            reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
+            reach = supply.affordable_reach(                             # 49.15: only fundable hexes
+                state, u, tactics.reachable_for(state, u, enemy_zoc, enemy_occupied))
             escapes = [c for c in reach
                        if c != u.hex and self._stacking_ok(state, u, c)
                        and not self._in_contact(state, side, c)]
@@ -423,10 +372,11 @@ class ScriptedPolicy(Policy):
         for u in state.living(side):
             if not u.is_combat or u.id in anchors:
                 continue
-            if supply.plan_draw(
+            if supply.in_hex_draw(
                     state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None:
                 continue          # out of fuel -- every move pays (49.13); don't propose a reject
-            reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
+            reach = supply.affordable_reach(                             # 49.15: only fundable hexes
+                state, u, tactics.reachable_for(state, u, enemy_zoc, enemy_occupied))
             best: tuple[tuple[int, float, Coord], Coord] | None = None
             for h in exposed:
                 for c in neighbors(h):
@@ -483,9 +433,10 @@ class StormPolicy(ScriptedPolicy):
         for u in state.living(side):
             if not u.is_combat:
                 continue
-            if supply.plan_draw(state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None:
+            if supply.in_hex_draw(state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None:
                 continue          # out of fuel -- every move pays (49.13); don't propose a reject
-            reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occupied)
+            reach = supply.affordable_reach(                             # 49.15: only fundable hexes
+                state, u, tactics.reachable_for(state, u, enemy_zoc, enemy_occupied))
             if (takeable and not claimed and target in reach
                     and self._stacking_ok(state, u, target)):
                 orders.append(MoveOrder(u.id, target))     # claim the vacated objective (control flip)
@@ -507,7 +458,7 @@ class StormPolicy(ScriptedPolicy):
         target = state.target_hex
         stranded = sorted(
             (u for u in state.living(side) if u.is_combat
-             and supply.plan_draw(state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None),
+             and supply.in_hex_draw(state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None),
             key=lambda u: distance(u.hex, target))         # bridge the nearest-to-front gap first
         orders: list[SupplyMoveOrder] = []
         claimed: set[Coord] = set()

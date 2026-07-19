@@ -181,7 +181,8 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
                     v["can_move_to"] = []
                     v["cannot_move"] = "out of fuel"
                 else:
-                    reach = tactics.reachable_for(state, u, enemy_zoc, enemy_occ, roster)
+                    reach = supply.affordable_reach(                     # 49.15: only fundable moves are
+                        state, u, tactics.reachable_for(state, u, enemy_zoc, enemy_occ, roster))  # actionable
                     dests = sorted((h for h in reach if h != u.hex), key=lambda h: distance(h, target))
                     support = u.barrage > 0 or u.anti_armor > 0
                     v["can_move_to"] = [_entry(h, support) for h in dests[:REACH_LIMIT]]

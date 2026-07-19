@@ -383,8 +383,8 @@ def claims(state: GameState, side: Side, *, escort: bool = True) -> tuple[Claim,
     held = garrison_units(state, side)              # never strip one city to garrison another
     free = sorted((u for u in state.living(side)
                    if u.is_combat and u.strength >= 1 and u.id not in held
-                   and supply.plan_draw(state, u, supply.FUEL,
-                                        supply.fuel_cost(u, 1)) is not None),
+                   and supply.in_hex_draw(state, u, supply.FUEL,
+                                          supply.fuel_cost(u, 1)) is not None),
                   key=lambda u: u.id)
     pinned = garrison_depots(state, side)
     spare = sorted((s for s in state.active_supplies(side)
@@ -564,7 +564,7 @@ def column_claims(state: GameState, side: Side, busy: set) -> tuple[Claim, ...]:
     held = garrison_units(state, side)
     free = [u for u in state.living(side)
             if u.is_combat and u.strength >= 1 and u.id not in held and u.id not in busy
-            and supply.plan_draw(state, u, supply.FUEL, supply.fuel_cost(u, 1)) is not None]
+            and supply.in_hex_draw(state, u, supply.FUEL, supply.fuel_cost(u, 1)) is not None]
     if not free:
         return ()
     hops: dict = {}

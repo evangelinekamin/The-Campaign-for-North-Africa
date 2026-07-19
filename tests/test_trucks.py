@@ -71,12 +71,16 @@ def test_trucks_default_empty():
 
 
 def test_rommels_arrival_seeds_the_axis_truck_pool():
-    # Step 5 activation: Rommel's Arrival now fields the representative Axis 2nd/3rd-line
-    # motor-transport pool at the rear supply port (where PORT-Tripoli lands its convoys).
+    # Rommel's Arrival fields the REAL [61.43] Axis 2nd/3rd-line motor-transport pool -- 95 Light /
+    # 280 Medium / 50 Heavy = 425 Truck Points -- at the rear supply port (where PORT-Tripoli lands its
+    # convoys), organized as many ~40-Point convoy formations so the relay runs parallel legs. (Was a
+    # flagged 14-Point placeholder before the competent in-hex baseline; the total is now the chart's.)
     trucks = rommels_arrival().trucks
-    assert {t.id for t in trucks} == {"AX-Truck-H", "AX-Truck-M"}
-    assert all(t.side == Side.AXIS for t in trucks)
-    assert {t.truck_class for t in trucks} == {"heavy", "medium"}
+    assert all(t.side == Side.AXIS and t.line == 3 for t in trucks)
+    by_class: dict = {}
+    for t in trucks:
+        by_class[t.truck_class] = by_class.get(t.truck_class, 0) + t.points
+    assert by_class == {"light": 95, "medium": 280, "heavy": 50}   # [61.43], Truck Points conserved
 
 
 def test_truck_formation_defaults():
@@ -279,17 +283,21 @@ def test_truckless_scenario_byte_identical():
 
 
 def test_rommels_arrival_runs_the_truck_relay():
-    # Step 5 activation: with the Axis pool seeded, the V.J phase now fires -- the trucks
-    # load at the rear supply port and haul fuel forward through the load/move/unload triple.
+    # With the real pool seeded, the V.J phase fires -- the trucks load at the rear supply port and
+    # haul supply forward through the load/move/unload triple (game.relay, now the base ScriptedPolicy).
     res = run(rommels_arrival(seed=3), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
     truck_kinds = {EventKind.TRUCK_LOADED, EventKind.TRUCK_MOVED, EventKind.TRUCK_UNLOADED}
     assert all(any(e.kind == k for e in res.events) for k in truck_kinds)
-    # every hauled Fuel Point is deposited into a friendly dump strictly forward of the port
     from game.hexmap import distance
     rear = max((s for s in res.final.supplies if s.side == Side.AXIS),
                key=lambda s: distance(s.hex, res.final.target_hex))
     delivered = [e for e in res.events if e.kind == EventKind.TRUCK_UNLOADED]
-    assert delivered and all(e.payload["cargo"].get("FUEL", 0) > 0 for e in delivered)
+    assert delivered, "the relay must unload supply forward"
+    # the relay hauls the [56.22] split (fuel + ammo + stores), so a delivery carries SOME commodity
+    # (not fuel alone, as the old single-hop shuttle did); fuel specifically is pushed forward.
+    assert all(sum(e.payload["cargo"].values()) > 0 for e in delivered)
+    assert any(e.payload["cargo"].get("FUEL", 0) > 0 for e in delivered)
+    # every delivery lands in a dump strictly forward of the rear port (the network follows the advance)
     for e in delivered:
         dump = res.final.supply(e.payload["supply_id"])
         assert distance(dump.hex, res.final.target_hex) < distance(rear.hex, res.final.target_hex)

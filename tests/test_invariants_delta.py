@@ -58,13 +58,17 @@ def _recorded_logs():
            run(rommels_arrival(seed=42), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.AXIS)))
     yield ("campaign:4/mt8",
            run(campaign(seed=4, max_turns=8), CampaignAxisPolicy(), CampaignCommonwealthPolicy()))
-    # Under the Phase-3 order of battle the seed-4 fold above no longer reaches a front-line
-    # combat retreat or a 32.13 dump overrun inside its 8-turn window, so it stopped exercising
-    # the incremental checker on UNIT_RETREATED / SUPPLY_CAPTURED. This shorter seed-1 fold does
-    # drive both -- a defender retreat and an enemy combat unit overrunning a non-empty enemy
-    # dump -- restoring that guard-family coverage. (It is the smaller of the two campaign folds.)
-    yield ("campaign:1/mt3",
-           run(campaign(seed=1, max_turns=3), CampaignAxisPolicy(), CampaignCommonwealthPolicy()))
+    # The seed-4 fold above does not reach a front-line combat retreat, a 32.13 dump overrun, or a
+    # 54.14 deny-demolition inside its 8-turn window, so it does not exercise the incremental checker
+    # on UNIT_RETREATED / SUPPLY_CAPTURED / SUPPLY_DUMP_BLOWN. A short campaign fold restores that
+    # guard-family coverage. The seed picked here moved once before (Phase-3 OOB) and again at the
+    # Phase-4 S5 in-hex switch, which reshaped the opening enough that the old seed-1 fold stopped
+    # overrunning and blowing a dump; seed-8/mt3 drives all three -- a defender retreat, an enemy
+    # combat unit overrunning a non-empty enemy dump (CAPTURED), and a friendly dump demolished ahead
+    # of capture (BLOWN). It is the smallest fold measured (scratchpad/find_coverage_seeds.py) that
+    # exercises both supply-loss families, so coverage is a property of the recorded run, not the seed.
+    yield ("campaign:8/mt3",
+           run(campaign(seed=8, max_turns=3), CampaignAxisPolicy(), CampaignCommonwealthPolicy()))
 
 
 def test_incremental_verdict_matches_full_sweep_at_every_event():

@@ -145,9 +145,13 @@ def test_pulses_are_gated_to_the_eight_two_three_zone():
 
 def test_each_pulse_charges_fuel_afresh():
     # A mover far enough that each pulse actually moves -> each pulse should draw fuel, so
-    # exploitation is NOT fuel-free after pulse 0 (the adopted fidelity fix).
+    # exploitation is NOT fuel-free after pulse 0 (the adopted fidelity fix). Under the in-hex model
+    # (S5) that fuel comes from the unit's OWN 49.14 tank -- the mover leaves its dump after segment 0,
+    # so the TANK must carry the exploitation (a dry-tank unit off a dump would be rejected, the 49.15
+    # stranding). Seed a full tank so each pulse has fuel to burn (UNIT_SUPPLY_CONSUMED afresh).
+    from dataclasses import replace
     from game.state import SupplyUnit
-    mover = _unit("A1", Side.AXIS, (2, 0), cpa=60)
+    mover = replace(_unit("A1", Side.AXIS, (2, 0), cpa=60), fuel=10_000)
     enemy = _unit("E", Side.ALLIED, (0, 0))
     dump = SupplyUnit("D", Side.AXIS, (2, 0), ammo=0, fuel=10_000)
     st = GameState(turn=1, max_turns=4, phase=Phase.MOVEMENT, active_side=Side.AXIS,

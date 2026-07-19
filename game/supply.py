@@ -914,6 +914,37 @@ def plan_draw(state: GameState, unit: Unit, commodity: str, need: int):
     return draws if remaining <= 0 else None
 
 
+def _colocated_dumps(state: GameState, unit: Unit):
+    """Friendly ACTIVE supply dumps on the unit's OWN hex -- the co-located 54.11/54.15 in-hex draw
+    sources (a well is one of these; a 2nd/3rd-line Truck Convoy is NOT, 49.16, until it unloads).
+    Sorted by id for determinism. THE single source enumeration shared by in_hex_draw and
+    in_hex_available, so an affordability check the movement AI runs can never drift from what the
+    engine's draw actually funds."""
+    return sorted((su for su in state.active_supplies(unit.side) if su.hex == unit.hex),
+                  key=lambda su: su.id)
+
+
+def in_hex_available(state: GameState, unit: Unit, commodity: str) -> int:
+    """Total of `commodity` a unit can draw IN ITS HEX (49.15/49.16): its own pool plus every
+    co-located friendly dump. in_hex_draw is MONOTONE in `need` (it succeeds iff need <= this), so
+    this integer is the affordability oracle a competent policy uses to propose only fundable moves --
+    fuel_cost(u, reach[c]) <= in_hex_available(state, u, FUEL) iff in_hex_draw would return a plan."""
+    return (_pool(unit, commodity)
+            + sum(_pool(su, commodity) for su in _colocated_dumps(state, unit)))
+
+
+def affordable_reach(state: GameState, unit: Unit, reach: dict) -> dict:
+    """The subset of a movement `reach` (hex -> CP path cost) whose FUEL a unit can actually draw IN
+    ITS HEX (49.15/49.16) -- so a competent policy proposes only moves the engine's _draw_move_fuel will
+    fund, never a rule-6.1 over-CPA dash it cannot fuel. tactics.reachable_for budgets by the 8.16
+    over-CPA allowance (1.5x/2x CPA); the 49.14 tank funds exactly 1x CPA, so the far end of `reach` is
+    unfundable unless a co-located dump covers the excess -- which is exactly what in_hex_available
+    measures. Affordability is monotone in CP (fuel_cost is non-decreasing), so this is one comparison
+    per hex against a single precomputed budget. The unit's own hex (cost 0) is always affordable."""
+    avail = in_hex_available(state, unit, FUEL)
+    return {c: cost for c, cost in reach.items() if fuel_cost(unit, cost) <= avail}
+
+
 def in_hex_draw(state: GameState, unit: Unit, commodity: str, need: int):
     """The FULL-GAME in-hex supply draw (49.15/50.15/51.15): satisfy `need` of `commodity` from
     sources ON unit.hex ONLY, in the 49.16 priority order --
@@ -939,13 +970,12 @@ def in_hex_draw(state: GameState, unit: Unit, commodity: str, need: int):
         take = min(remaining, own)
         draws.append(("unit", unit.id, take))
         remaining -= take
-    if remaining > 0:                                  # 2. co-located dumps; same hex so distance is
-        for su in sorted((su for su in state.active_supplies(unit.side)   # moot -- order by id for
-                          if su.hex == unit.hex and _pool(su, commodity) > 0),  # determinism only
-                         key=lambda su: su.id):
+    if remaining > 0:                                  # 2. co-located dumps (the shared enumeration);
+        for su in _colocated_dumps(state, unit):       # same hex so distance is moot
             if remaining <= 0:
                 break
             take = min(remaining, _pool(su, commodity))
-            draws.append(("dump", su.id, take))
-            remaining -= take
+            if take > 0:
+                draws.append(("dump", su.id, take))
+                remaining -= take
     return draws if remaining <= 0 else None

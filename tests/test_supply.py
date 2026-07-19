@@ -226,6 +226,10 @@ def test_supply_cannot_move_without_fuel():
 def test_run_conserves_each_commodity():
     final = _run().final
     for commodity in ("AMMO", "FUEL"):
-        on_hand = sum(getattr(su, commodity.lower()) for su in final.supplies)
+        # the three on-hand surfaces (rule 32 conservation): dumps + truck convoys + unit pools
+        # (the 49.14 tanks the in-hex model now fills and drains).
+        on_hand = (sum(getattr(su, commodity.lower()) for su in final.supplies)
+                   + sum(getattr(t, commodity.lower()) for t in final.trucks)
+                   + sum(getattr(u, commodity.lower()) for u in final.units))
         assert on_hand + final.consumed[commodity] == final.initial_supply[commodity]
     assert final.consumed["FUEL"] > 0                   # logistics actually engaged

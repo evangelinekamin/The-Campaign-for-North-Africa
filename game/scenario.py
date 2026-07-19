@@ -553,17 +553,32 @@ def _rommel_trucks(supplies, target) -> tuple[TruckFormation, ...]:
     trucks' OWN cargo fuel (49.18) -- so the further the front, the more of every load the
     convoy burns just moving it, the classic desert supply death-spiral.
 
-    FLAG -- REPRESENTATIVE strength, pending the real rule-61 truck OOB: one heavy and one
-    medium formation (54.2 rows), deliberately LEAN. The haulage bottleneck over the
-    Tripoli->front distance IS the scarcity; over-provisioning the pool would erase it.
-    Sizes here are a plausible-DAK placeholder, not a transcribed chart value."""
+    Transcribed off the 1979 [61.43] chart: 95 Light / 280 Medium / 50 Heavy Truck Points, "available
+    for any and all purposes" -- the book "firmly suggests" the Axis run these as its Second/Third Line
+    Trucks, "otherwise he will have a hard time moving his Supply around." (The chart's further 10 Medium
+    "at air facilities" are GATED OFF while the Air Game is abstract, 59.61, exactly as the campaign gates
+    its air-facility rows.) One TruckFormation per 54.2 class at the rear, the campaign idiom (_truck_park).
+
+    This REPLACES the earlier 14-Truck-Point placeholder (8 H + 6 M): the real pool is ~30x larger, and
+    the placeholder was why a competent Axis stranded 69 hexes short of Tobruk -- it had 3% of its lorries
+    and physically could not relay the port's tonnage forward (rule 53.0: "without a well-organized convoy
+    system your entire military effort will fall apart"). The haulage bottleneck over the Tripoli->front
+    distance is still the scarcity -- it is now the CHART'S scarcity, not a guessed one."""
     rear = _axis_rear(supplies, target)
     if rear is None:
         return ()
-    return (
-        TruckFormation("AX-Truck-H", Side.AXIS, rear.hex, "heavy", points=8, line=2),
-        TruckFormation("AX-Truck-M", Side.AXIS, rear.hex, "medium", points=6, line=3),
-    )
+    # Organized as MANY convoy formations (~40 Truck Points each) rather than one giant column per class,
+    # so the relay runs parallel bucket-brigade legs -- port, first dump, second dump all filling at once
+    # instead of one column serialising the whole haul. A competent quartermaster's organization of the
+    # SAME faithful 425-Truck-Point [61.43] total (points conserved exactly), not a magnitude change.
+    out: list[TruckFormation] = []
+    for cls, total in (("light", 95), ("medium", 280), ("heavy", 50)):
+        n = max(1, total // 40)
+        for i in range(n):
+            pts = total // n + (1 if i < total % n else 0)
+            out.append(TruckFormation(f"AX-Truck-{cls[0].upper()}{i + 1}", Side.AXIS, rear.hex,
+                                      cls, points=pts, line=3))
+    return tuple(out)
 
 
 # FLAGGED representative Air-Point weights + bombing cadence for the Tobruk air choke -- NOT

@@ -66,12 +66,13 @@ def test_gt1_campaign_relay_hauls_where_the_base_shuttle_strands():
                      for s in st.supplies)
     stranded = replace(st, supplies=supplies,
                        trucks=(TruckFormation("AX-Truck-H", Side.AXIS, w1, "heavy", points=8, line=3),))
-    # the base can only reload at the port and cannot afford to get there -> nothing.
-    assert ScriptedPolicy(Side.AXIS).truck_orders(stranded, Side.AXIS) == []
-    # the campaign relay reloads from the co-located W1 and hauls the stock deeper east.
-    camp = CampaignAxisPolicy().truck_orders(stranded, Side.AXIS)
-    assert len(camp) == 1 and camp[0].load_from == "AX-Stage-W1"
-    assert _hexes_east(camp[0].to) > _hexes_east(w1)
+    # THE SHARED RELAY (game.relay) is now the base ScriptedPolicy doctrine AND the campaign's, so both
+    # reload from the co-located forward dump W1 and haul the stock DEEPER east -- the multi-hop chain,
+    # where the deleted single-hop shuttle could only ever reload at the rear PORT and stranded here.
+    relay = ScriptedPolicy(Side.AXIS).truck_orders(stranded, Side.AXIS)
+    assert relay == CampaignAxisPolicy().truck_orders(stranded, Side.AXIS)   # one shared relay, both sides
+    assert len(relay) == 1 and relay[0].load_from == "AX-Stage-W1"
+    assert _hexes_east(relay[0].to) > _hexes_east(w1)
 
 
 def test_acceptance_haul_runs_unfrozen_and_reaches_the_front():
@@ -100,6 +101,7 @@ def test_acceptance_haul_runs_unfrozen_and_reaches_the_front():
 
     gt = moves_past_10 = deepest = 0
     fuel_east = ammo_east = False
+    fuel_dumps: dict[str, int] = {}          # relay-fed FUEL dumps: id -> hexes east of the port
     for e in res.events:
         if e.kind.name == "TURN_ADVANCED":
             gt = e.payload.get("turn", gt)
@@ -112,12 +114,26 @@ def test_acceptance_haul_runs_unfrozen_and_reaches_the_front():
                 fuel_east = fuel_east or cargo.get("FUEL", 0) > 0
                 ammo_east = ammo_east or cargo.get("AMMO", 0) > 0
                 deepest = max(deepest, east)
+                if cargo.get("FUEL", 0) > 0:
+                    fuel_dumps[e.payload["supply_id"]] = east
 
     assert moves_past_10 > 0, "the truck pool froze -- no truck moves past GT10"
     assert fuel_east and ammo_east, "no fuel/ammo landed east of Benghazi"
     assert deepest >= 40, f"relay only reached +{deepest} hexes east (base shuttle stalls at ~+7)"
-    bardia = next(s for s in res.final.supplies if s.id == "AX-Stage-Bardia")
-    assert bardia.fuel > 0 and bardia.ammo > 0, "the deep chain is not kept fed"
+    # The deep chain is kept fed: the relay lands FUEL deep (>=40 east) and that dump still holds it at
+    # GT24 -- the chain persists to its reach, it does not deliver-then-evaporate. (The old check probed a
+    # FIXED dump, AX-Stage-Bardia, for BOTH commodities. Under S5 that no longer holds and SHOULDN'T: fuel
+    # is the in-hex commodity now, so a unit burns its own 49.14 tank and stops draining dumps for fuel --
+    # but AMMO is still on the ABSTRACT cpa/2 trace until S6, so a rear dump's ammo is trace-drained by the
+    # whole army faster than the relay refills it. And the competent Axis front now OUTRUNS its logistics
+    # past Bardia -- the culmination (iii) below already names -- leaving it beyond relay reach: Bardia ends
+    # fuel 113 (tank-fed army, undrained), ammo 0 (trace-drained). The both-commodities check on a fixed
+    # deep dump returns at S6, when ammo goes in-hex too.)
+    deep_fuel = {sid: e for sid, e in fuel_dumps.items() if e >= 40}
+    assert deep_fuel, "the relay landed no fuel deep (>=40 east) -- the deep chain is not reached"
+    deep_id = max(deep_fuel, key=deep_fuel.get)
+    fed = next(s for s in res.final.supplies if s.id == deep_id)
+    assert fed.fuel > 0, f"the relay's deep fuel dump ({deep_id}, +{deep_fuel[deep_id]}) evaporated by GT24"
 
     # (iii) at least one Axis front combat unit is supplied near the chain in the opening, before
     # the greedy rush drives it out of trace range (the final-GT count is 0 -- the culmination).

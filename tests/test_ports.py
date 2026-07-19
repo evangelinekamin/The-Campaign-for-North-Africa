@@ -22,6 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from game import coords, supply
+from game.apply import apply
 from game.engine import (_naval_convoys, _port_regen, _Run,
                          determinism_signature, run)
 from game.events import Control, EventKind, Phase, Side
@@ -356,11 +357,25 @@ def test_siege_still_crackable_through_the_throttle():
     # neighbouring hex (state.enemies_at, exactly as it already reads a bare HQ), so their presence
     # reshuffles the cascade. MEASURED on this engine: FORT_REDUCED fires on 16 of seeds 1..120.
     # Re-pinned (37, 57) -> (8, 12), both of which fire (seed 8 batters the wall twice).
-    battered = False
-    for seed in (8, 12):
-        res = run(siege_of_tobruk(seed=seed),
-                  ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
-        if any(e.kind == EventKind.FORT_REDUCED and tuple(e.payload["hex"]) == TOBRUK
-               for e in res.events):
-            battered = True
-    assert battered, "siege artillery must still batter Tobruk's wall through the throttle"
+    # RESTATED (Phase 4 S5, the competent in-hex baseline): the old test pinned seeds where the Axis
+    # batters Tobruk within the full 12-turn fold "through the throttle". Under faithful in-hex fuel the
+    # supply-throttled artillery cannot mass on the perimeter in time, so Tobruk holds on the base
+    # benchmark (historically exact; the 25.14 batter MECHANISM is verified directly in test_siege.py).
+    # What this still guards is that the Benghazi-rear throttle does not silently GATE OFF 25.14: with
+    # siege_rules on and the hit dial at 1, every EFFECTIVE barrage (pin or loss) on Tobruk's STANDING
+    # wall must batter it. Seed-independent -- vacuous when the fold lands no effective barrage on the
+    # wall, loud if the throttle ever kills the mechanism itself.
+    res = run(siege_of_tobruk(seed=8), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
+    assert res.initial.siege_rules is True
+    st = res.initial
+    effective = reductions = 0
+    for e in res.events:
+        if e.kind == EventKind.FORT_REDUCED and tuple(e.payload["hex"]) == TOBRUK:
+            reductions += 1
+        if (e.kind == EventKind.BARRAGE_RESOLVED and tuple(e.payload["target"]) == TOBRUK
+                and (e.payload.get("pinned") or e.payload.get("loss", 0) > 0)
+                and st.fort_level(TOBRUK) > 0):
+            effective += 1
+        st = apply(st, e)
+    assert reductions == effective, (
+        f"25.14 gated by the throttle? {effective} effective barrages on the standing wall, {reductions} reductions")

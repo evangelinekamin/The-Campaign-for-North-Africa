@@ -10,6 +10,29 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-18 -- CAUSE: Phase 4 S5, in-hex fuel + the competent baseline it requires.
+
+The Logistics Game went in-hex, and the deterministic baseline was made competent under it:
+  (1) Movement fuel is drawn IN THE HEX (game.supply.in_hex_draw) -- the unit's own 49.14 tank first,
+      then a co-located dump -- not the abstract 32.16 half-CPA trace; every move now emits
+      UNIT_SUPPLY_CONSUMED off the tank (or a co-located-dump SUPPLY_CONSUMED) where it emitted a
+      traced-dump SUPPLY_CONSUMED.
+  (2) ScriptedPolicy was made competent under that faithful rule (rule 53.0: "without a well-organized
+      convoy system your entire military effort will fall apart"): its movement proposes only
+      FUEL-AFFORDABLE hexes (supply.affordable_reach, so a unit is never ordered past its own fuel);
+      its logistics run the shared multi-hop forward relay + 24.9 dump construction (game.relay,
+      extracted from campaign_policy now the byte-lock is dropped, and made the base ScriptedPolicy
+      doctrine) in place of the single-hop shuttle that could not follow an advance; and siege_of_tobruk
+      fields the real [61.43] Axis 2nd/3rd-line truck OOB (95 L / 280 M / 50 H = 425 Truck Points) in
+      place of a self-flagged 14-point placeholder.
+Both logs move wholesale. NO chart magnitude was bent -- 32.16 (abstract) is replaced by the full-game
+in-hex supply (49.15 / 53-54), and one placeholder is replaced by its transcribed [61.43] chart value.
+Determinism holds -- each new hash reproduced byte-for-byte on the verification VM.
+
+    rommels_arrival   08ae216a5c78 -> 808baa7e75b3
+    siege_of_tobruk   1b380c501dcf -> 7fce3d6ab80b
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-17 -- CAUSE: Phase 3.1, the T0-6 Order-of-Battle reclassification (game/oob.py
 classify() + data/oob_*.json). Both benchmarks build oob_desert_fox.json, and the change that moves
 them is single and specific: the four Allied air-game counters that carried the OOB (two Squadron
@@ -171,8 +194,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "08ae216a5c78"
-SIEGE_OF_TOBRUK = "1b380c501dcf"
+ROMMELS_ARRIVAL = "808baa7e75b3"
+SIEGE_OF_TOBRUK = "7fce3d6ab80b"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

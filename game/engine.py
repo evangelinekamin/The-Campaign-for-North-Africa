@@ -1397,15 +1397,26 @@ def _draw_move_fuel(r: _Run, side: Side, actor: str, u, cp_spent: float,
     cost -- in the hex it begins from. Per-move, NOT once-per-OpStage: a unit that moves again in
     the stage draws again (49.16), a unit already charged COMBAT CP still pays to move (6.3 CP
     folds into cp_used but is not movement, 49.13), and a one-hex hop no longer buys a free long
-    dash later. Emits the SUPPLY_CONSUMED draws and returns True; emits an ORDER_REJECTED and
-    returns False when no fuel source in the hex can cover the move."""
-    draws = supply.plan_draw(r.state, u, supply.FUEL, supply.fuel_cost(u, cp_spent))
+    dash later.
+
+    THE FUEL SWITCH (Phase 4, S5): fuel is drawn IN THE HEX (supply.in_hex_draw) -- the unit's own
+    49.14 tank first, then a co-located dump -- NOT via the abstract 32.16 half-CPA trace, which was
+    the ABSTRACT game running in the full game (distance cost nothing). There is no supply range now:
+    a unit that has spent its tank and stands on no dump has OUTRUN its fuel and cannot move (49.15),
+    which is the cost of distance. Emits UNIT_SUPPLY_CONSUMED off its own tank / SUPPLY_CONSUMED off a
+    co-located dump and returns True; emits ORDER_REJECTED and returns False when the hex cannot cover
+    the move."""
+    draws = supply.in_hex_draw(r.state, u, supply.FUEL, supply.fuel_cost(u, cp_spent))
     if draws is None:
         _reject(r, side, actor, order, reason, order_kind=order_kind)
         return False
-    for sid, qty in draws:
-        r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
-               {"supply_id": sid, "commodity": supply.FUEL, "qty": qty, "unit_id": u.id})
+    for tag, ref_id, qty in draws:
+        if tag == "unit":
+            r.emit(EventKind.UNIT_SUPPLY_CONSUMED, side, actor,
+                   {"unit_id": ref_id, "commodity": supply.FUEL, "qty": qty})
+        else:                                          # "dump" -- a co-located dump (54.11/54.15)
+            r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+                   {"supply_id": ref_id, "commodity": supply.FUEL, "qty": qty, "unit_id": u.id})
     return True
 
 
