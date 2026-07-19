@@ -189,6 +189,8 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                                                         # Construction Segment, which is inside it
                 _construction(r, policies[side], side)  # 48 V.C.4 / 24.11: the Construction Segment,
                                                         # BEFORE movement -- 24.12 pins whoever works
+                _supply_distribution(r, side)           # 48 V.C.6: 0-CP top-up of unit pools from a
+                                                        # co-located dump (the in-hex refill beat)
                 _reserve_designation(r, policies[side], side)   # 48 V.G / 18.11: hold units back (phasing)
                 r.go(Phase.MOVEMENT, side)
                 _blow_dumps(r, policies[side], side)    # 54.14: deny the enemy your stocks -- BEFORE
@@ -1405,6 +1407,35 @@ def _draw_move_fuel(r: _Run, side: Side, actor: str, u, cp_spent: float,
         r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
                {"supply_id": sid, "commodity": supply.FUEL, "qty": qty, "unit_id": u.id})
     return True
+
+
+def _supply_distribution(r: _Run, side: Side) -> None:
+    """The Supply Distribution Segment (48 V.C.6): before it moves, each of the side's on-map units
+    tops its own supply pools back up from a dump ON ITS HEX, at 0 CP (the 53.24 Organization-Phase
+    exception). A conserving dump->unit transfer (UNIT_REFILLED) -- the dual of loading a truck. It
+    draws ONLY from a co-located dump, so a unit that has outrun the dump network refills nothing:
+    that is how distance costs supply (49.15). An automatic quartermaster default -- 48 V.C.6 says
+    supplies "may" be redistributed, and "top every co-located unit to full" is the faithful greedy
+    reading, so no policy order is needed (flagged as a policy simplification: a live staff could
+    choose partial fills).
+
+    FUEL ONLY for now: the 49.14 tank is the only seeded contents (S1); ammo/stores/water are a later
+    slice (S6-S8, with the basic-load ruling), and topping them up before they are consumed would
+    merely shuffle dump stock into units. Until the fuel consumer is switched to the in-hex draw (S5)
+    every tank is full, so this beat finds no deficit and emits nothing -- the run stays byte-identical."""
+    for u in r.state.living(side):
+        need = supply.fuel_capacity(u) - u.fuel
+        if need <= 0:
+            continue
+        dumps = sorted((s for s in r.state.active_supplies(side)
+                        if s.hex == u.hex and s.fuel > 0), key=lambda s: s.id)
+        for su in dumps:
+            if need <= 0:
+                break
+            take = min(need, su.fuel)
+            r.emit(EventKind.UNIT_REFILLED, side, f"{side.value}/QM",
+                   {"unit_id": u.id, "supply_id": su.id, "commodity": supply.FUEL, "qty": take})
+            need -= take
 
 
 def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = None) -> None:

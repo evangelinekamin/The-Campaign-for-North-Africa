@@ -152,13 +152,14 @@ def _check_conservation_full(state: GameState) -> None:
 
 
 def _check_conservation_delta(pre: GameState, post: GameState, event: Event,
-                              dump_ids: tuple, truck_ids: tuple) -> None:
+                              dump_ids: tuple, truck_ids: tuple, unit_ids: tuple) -> None:
     """Incremental conservation: given the identity held BEFORE the event (the inductive base a
     prior check or the last boundary sweep established), it still holds AFTER iff the event's net
     change to (on_hand + consumed - initial) is zero, per commodity. on_hand's change is read from
-    the ACTUAL touched pools (post minus pre); consumed/initial's change from the accounting dicts
-    apply() maintains -- so a fold that drains the wrong amount, or credits the wrong ledger, makes
-    the two disagree and fails loud here, no O(state) re-sum needed."""
+    the ACTUAL touched pools (post minus pre) -- dumps, truck convoys, AND units (the 49.14/53.11
+    Phase-4 pools); consumed/initial's change from the accounting dicts apply() maintains -- so a
+    fold that drains the wrong amount, or credits the wrong ledger, makes the two disagree and fails
+    loud here, no O(state) re-sum needed."""
     for commodity, attr in _COMMODITY_ATTRS:
         d_on_hand = 0
         for sid in dump_ids:
@@ -167,6 +168,9 @@ def _check_conservation_delta(pre: GameState, post: GameState, event: Event,
         for tid in truck_ids:
             old = pre.truck(tid)
             d_on_hand += getattr(post.truck(tid), attr) - (getattr(old, attr) if old else 0)
+        for uid in unit_ids:
+            old = pre.unit(uid)
+            d_on_hand += getattr(post.unit(uid), attr) - (getattr(old, attr) if old else 0)
         d_consumed = post.consumed.get(commodity, 0) - pre.consumed.get(commodity, 0)
         d_initial = post.initial_supply.get(commodity, 0) - pre.initial_supply.get(commodity, 0)
         if d_on_hand + d_consumed - d_initial != 0:
@@ -221,14 +225,16 @@ _UNIT_KINDS = frozenset({
     EventKind.BREAKDOWN_CHECKED, EventKind.VEHICLE_BROKE_DOWN, EventKind.VEHICLE_REPAIRED,
     EventKind.STEP_LOST, EventKind.CP_EXPENDED, EventKind.COHESION_CHANGED,
     EventKind.STORES_SHORTFALL, EventKind.WATER_SHORTFALL, EventKind.STORES_RESTORED,
-    EventKind.WATER_RESTORED, EventKind.REINFORCEMENT_DELAYED})
+    EventKind.WATER_RESTORED, EventKind.REINFORCEMENT_DELAYED,
+    EventKind.UNIT_REFILLED, EventKind.UNIT_SUPPLY_CONSUMED})   # Phase 4 unit pools
 
 # Events that change a dump's pools or hex, resolved by p["supply_id"].
 _DUMP_ID_KINDS = frozenset({
     EventKind.SUPPLY_EVAPORATED, EventKind.WELL_REFILLED, EventKind.SUPPLY_DUMP_BLOWN,
     EventKind.SUPPLY_ARRIVED, EventKind.SUPPLY_CAPTURED, EventKind.SUPPLY_CONSUMED,
     EventKind.SUPPLY_DUMP_ESTABLISHED, EventKind.SUPPLY_DUMP_CONSTRUCTED, EventKind.SUPPLY_MOVED,
-    EventKind.TRUCK_LOADED, EventKind.TRUCK_UNLOADED})
+    EventKind.TRUCK_LOADED, EventKind.TRUCK_UNLOADED,
+    EventKind.UNIT_REFILLED})       # 48 V.C.6 dump->unit top-up drains a dump (Phase 4)
 
 # Events that change a truck's cargo, resolved by p["truck_id"].
 _TRUCK_ID_KINDS = frozenset({
@@ -240,7 +246,8 @@ _CONSERVATION_KINDS = frozenset({
     EventKind.SUPPLY_EVAPORATED, EventKind.TRUCK_EVAPORATED, EventKind.WELL_REFILLED,
     EventKind.SUPPLY_DUMP_BLOWN, EventKind.SUPPLY_ARRIVED, EventKind.SUPPLY_CAPTURED,
     EventKind.SUPPLY_CONSUMED, EventKind.TRUCK_LOADED, EventKind.TRUCK_UNLOADED,
-    EventKind.TRUCK_MOVED, EventKind.RAIL_HAULED, EventKind.SUPPLY_DUMP_ESTABLISHED})
+    EventKind.TRUCK_MOVED, EventKind.RAIL_HAULED, EventKind.SUPPLY_DUMP_ESTABLISHED,
+    EventKind.UNIT_REFILLED, EventKind.UNIT_SUPPLY_CONSUMED})    # Phase 4 unit-pool moves
 
 
 def _touched_dumps(event: Event) -> tuple:
@@ -254,6 +261,15 @@ def _touched_dumps(event: Event) -> tuple:
 def _touched_trucks(event: Event) -> tuple:
     if event.kind in _TRUCK_ID_KINDS:
         return (event.payload["truck_id"],)
+    return ()
+
+
+def _touched_units(event: Event) -> tuple:
+    # Phase 4: the unit is a conservation surface for the events that move supply into or out of its
+    # own pools (49.14 tank / 53.11 first-line load) -- UNIT_REFILLED (dump -> unit) and
+    # UNIT_SUPPLY_CONSUMED (unit -> consumed).
+    if event.kind in (EventKind.UNIT_REFILLED, EventKind.UNIT_SUPPLY_CONSUMED):
+        return (event.payload["unit_id"],)
     return ()
 
 
@@ -276,9 +292,10 @@ def check_event(pre: GameState, post: GameState, event: Event) -> None:
         _check_unit(post.unit(p["unit_id"]), post.terrain)
     # COMBAT_RESOLVED folds only the 15.81 Engaged marker (no guarded field), so nothing to check.
 
-    # --- supply / truck slice ---
+    # --- supply / truck / unit-pool slice ---
     dump_ids = _touched_dumps(event)
     truck_ids = _touched_trucks(event)
+    unit_ids = _touched_units(event)
     for sid in dump_ids:
         su = post.supply(sid)
         _check_supply_hex(su, post.terrain)
@@ -286,7 +303,7 @@ def check_event(pre: GameState, post: GameState, event: Event) -> None:
     for tid in truck_ids:
         _check_truck_pools(post.truck(tid))
     if kind in _CONSERVATION_KINDS:
-        _check_conservation_delta(pre, post, event, dump_ids, truck_ids)
+        _check_conservation_delta(pre, post, event, dump_ids, truck_ids, unit_ids)
     if kind == EventKind.SUPPLY_DUMP_ESTABLISHED:  # the one fold that mints a new entity id
         _check_no_dup_ids(post)
 
