@@ -2596,10 +2596,14 @@ def _barrage_class(u) -> str:
 
 
 def _barrage_target(enemies) -> "object | None":
-    """The firer bombards one target in the hex; blind, so a reasonable default is
-    the strongest combat unit present."""
+    """The firer bombards one target in the hex, chosen BLIND (12.24 / 3.6): the barraging Player
+    states only the target's CLASS, never its strength, so barrage may NOT concentrate on the
+    defender's strongest unit. The neutral, deterministic blind pick is the lowest unit-id present --
+    it favours neither side, where the old strongest-unit read maximally punished the defender's best
+    counters using a strength the firer cannot see. Shared by all four callers (artillery barrage, the
+    barrage step, and naval bombardment); inert on single-unit hexes."""
     combatants = [u for u in enemies if u.is_combat and u.alive]
-    return max(combatants, key=lambda u: u.strength, default=None)
+    return min(combatants, key=lambda u: u.id, default=None)
 
 
 def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],

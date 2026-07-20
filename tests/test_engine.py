@@ -500,6 +500,22 @@ def test_anti_armor_fire_damages_adjacent_armor():
     assert r.state.supply("D").ammo == 40 - 24
 
 
+def test_barrage_fires_blind_by_id_not_at_the_strongest():
+    # 12.24 / 3.6: barrage/air/naval fire BLIND -- the firer states only the target CLASS, never
+    # strength (3.6 hides it), so it may not concentrate on the defender's strongest unit. The neutral,
+    # deterministic blind pick is the lowest unit-id present (favouring neither side).
+    from game.engine import _barrage_target
+    from game.state import Unit
+    from game.terrain import Mobility
+    weak = Unit("A-weak", Side.ALLIED, (0, 0), (StepRecord("s", 2),), mobility=Mobility.FOOT,
+                cpa=10, stacking_points=1, oca=2, dca=2)
+    strong = Unit("B-strong", Side.ALLIED, (0, 0), (StepRecord("s", 10),), mobility=Mobility.FOOT,
+                  cpa=10, stacking_points=1, oca=2, dca=2)
+    assert _barrage_target([strong, weak]).id == "A-weak"      # lowest id, NOT the strongest
+    assert _barrage_target([weak, strong]).id == "A-weak"      # order-independent
+    assert _barrage_target([]) is None                         # empty hex -> None (unchanged)
+
+
 def _two_side_state(units, supplies):
     from game.events import Phase
     from game.movement import TerrainMap

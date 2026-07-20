@@ -10,6 +10,22 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-19 -- CAUSE: 12.24/3.6 -- barrage fires BLIND, no longer at the strongest unit.
+
+_barrage_target picked the defender's STRONGEST combat unit -- but the barraging Player fires "blind"
+(12.24: states only the target's CLASS; 12.23/3.6: never its strength), so concentrating fire on the
+best counter is a limited-intelligence violation. Owner-ruled (Eve) to a NEUTRAL, deterministic blind
+pick: the lowest unit-id present, favouring neither side. All four callers (artillery barrage, the
+barrage step, naval bombardment) inherit it; it is inert on single-unit hexes and only bites multi-
+unit stacks. NO magnitude invented (the CRT resolution on the picked unit's class is unchanged). Both
+benchmarks barrage multi-unit stacks, so both logs move; barrage is now markedly less punishing to a
+stack's top unit. Determinism holds byte-for-byte. (The two other flagged rulings -- 54.17 demolition
+modifiers and 51.23 half-rations -- were owner-ruled DEFER/SKIP, so they touch nothing.)
+
+    rommels_arrival   d5c4f2138b0b -> 098e6d9539c1
+    siege_of_tobruk   a38a2bd066e3 -> 99853cb45586
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-19 -- CAUSE: 15.21 -- an Anti-Armor firer may not also Close Assault.
 
 Rule 14.0/14.26/15.21: "Units assigned to Anti-Armor may not participate in Close Assault... he may
@@ -296,8 +312,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "d5c4f2138b0b"
-SIEGE_OF_TOBRUK = "a38a2bd066e3"
+ROMMELS_ARRIVAL = "098e6d9539c1"
+SIEGE_OF_TOBRUK = "99853cb45586"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 
