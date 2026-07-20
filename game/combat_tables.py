@@ -24,6 +24,9 @@ _COLUMNS = ("-11", "-8..-10", "-6..-7", "-4..-5", "-3", "-2", "-1", "0",
             "+1", "+2", "+3", "+4", "+5..+6", "+7..+8", "+9..+10",
             "+11..+13", "+14..+16", "+17")
 N_COLS = len(_COLUMNS)
+# [15.77] The +11..+17 columns (table indices 15, 16, 17) are the OVERRUN section of the CRT, where
+# "all Defender losses are rounded up" (15.83c: "in an overrun, 1.1 Defender Points would equal 2").
+OVERRUN_COL = 15
 
 
 def diff_to_column(diff: int) -> int:

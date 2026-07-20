@@ -39,7 +39,7 @@ class CombatResult:
     attacker_loss_pct: int
     defender_loss_pct: int
     attacker_points_lost: int            # raw assault points to absorb (15.83c, rounded up)
-    defender_points_lost: int            # raw assault points to absorb (15.83c, rounded down)
+    defender_points_lost: int            # raw assault points to absorb (15.83c down; 15.77 UP in an Overrun)
     attacker_captured: bool = False      # some attacker losses become prisoners (15.85)
     defender_captured: bool = False      # some defender losses become prisoners
     attacker_engaged: bool = False       # attacker locked in contact (15.81)
@@ -94,9 +94,10 @@ def resolve(*, attacker_raw: int, defender_raw: int,
     if retreat > 0:                                            # 15.74 retreat beats engaged
         a_eng = False
     # 15.83b/c: the loss percentage is taken of the TOTAL RAW assault points, not
-    # of TOE steps. Attacker rounds up, defender rounds down (overrun rounds the
-    # defender up under 15.77 -- deferred). Steps to absorb these are chosen per
-    # unit in the engine via each unit's close-assault rating (15.83d).
+    # of TOE steps. Attacker always rounds UP; the defender rounds DOWN -- EXCEPT in
+    # an Overrun (the +11..+17 columns), where 15.77 rounds the defender UP too (see
+    # defender_round below). Steps to absorb these are chosen per unit in the engine
+    # via each unit's close-assault rating (15.83d).
     #
     # 15.12/15.15/15.83c: the DEFENDER'S casualty pool is wider than defender_raw --
     # it adds the TOE (raw) of PINNED and withheld (out-of-ammo, retreated-in) units,
@@ -104,11 +105,12 @@ def resolve(*, attacker_raw: int, defender_raw: int,
     # passes that full pool as defender_loss_raw; it defaults to the armed defender_raw
     # when there are no withheld defenders (all resolve() unit tests, which pass none).
     defender_loss_pool = defender_raw if defender_loss_raw is None else defender_loss_raw
+    defender_round = math.ceil if col >= ct.OVERRUN_COL else math.floor   # 15.77 overrun rounds UP
     return CombatResult(
         differential=diff, column=col,
         attacker_loss_pct=a_pct, defender_loss_pct=d_pct,
         attacker_points_lost=math.ceil(a_pct / 100 * attacker_raw),
-        defender_points_lost=math.floor(d_pct / 100 * defender_loss_pool),
+        defender_points_lost=defender_round(d_pct / 100 * defender_loss_pool),
         attacker_captured=a_capt, defender_captured=d_capt,
         attacker_engaged=a_eng, retreat_hexes=retreat,
     )

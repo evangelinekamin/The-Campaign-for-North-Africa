@@ -131,6 +131,19 @@ def test_resolve_applies_the_hexside_shift():
     assert ridge.column == base.column - 2
 
 
+def test_15_77_overrun_rounds_the_defender_up():
+    # 15.77: in the Overrun columns (+11..+17 = table indices 15/16/17) "all Defender losses are
+    # rounded UP" (the book: "1.1 Defender Points would equal 2"). An overwhelming assault reaching
+    # col 17 yields a 0.5 defender product that used to FLOOR to zero -- a defender taking no loss at
+    # an overrun, the bug this fixes -- and now rounds up to 1. Everywhere else the defender still
+    # rounds DOWN (15.83c), guarded by the existing loss-rounding tests.
+    res = combat.resolve(attacker_raw=140, defender_raw=10, def_terrain=Terrain.CLEAR,
+                         hexside_shift=0, atk_roll=21, def_roll=66, defender_loss_raw=10)
+    assert res.column == 17                                        # an Overrun column
+    assert res.defender_loss_pct == 5                              # 5% of 10 = 0.5
+    assert res.defender_points_lost == 1                          # 15.77 rounds UP (was floor -> 0)
+
+
 def test_small_raw_uses_raw_as_actual():
     # both < 10 raw -> raw used directly: 8 - 6 = diff 2
     res = combat.resolve(attacker_raw=8, defender_raw=6,
