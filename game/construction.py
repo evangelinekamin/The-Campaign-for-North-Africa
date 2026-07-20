@@ -55,6 +55,7 @@ DELIBERATELY NOT BUILT (24 is a big rule and this is the smallest faithful slice
 """
 from __future__ import annotations
 
+from . import wells
 from .events import Control, Side
 from .hexmap import Coord
 from .movement import edge
@@ -145,7 +146,8 @@ def stores_at(state: GameState, side: Side, hx: Coord) -> int:
     Construction Segment in the given hex" -- construction is not fed down a supply trace, it is fed
     out of the pile the engineers are standing on."""
     return sum(s.stores for s in state.supplies
-               if s.side == side and s.hex == hx and not s.is_dummy)
+               if s.side == side and s.hex == hx and not s.is_dummy
+               and not wells.is_water_source(s))         # 52.3: an oasis funds upkeep, NOT construction
 
 
 def stores_draw(state: GameState, side: Side, hx: Coord, qty: int) -> list[tuple[str, int]]:
@@ -162,7 +164,8 @@ def stores_draw(state: GameState, side: Side, hx: Coord, qty: int) -> list[tuple
     the whole campaign down. The check counts the hex, so the charge must come out of the hex."""
     legs: list[tuple[str, int]] = []
     here = sorted((s for s in state.supplies
-                   if s.side == side and s.hex == hx and not s.is_dummy),
+                   if s.side == side and s.hex == hx and not s.is_dummy
+                   and not wells.is_water_source(s)),     # 52.3: an oasis funds upkeep, NOT construction
                   key=lambda s: (s.base, s.id))
     for s in here:
         take = min(qty, s.stores)

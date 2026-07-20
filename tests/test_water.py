@@ -45,17 +45,45 @@ def test_campaign_seeds_a_well_at_every_major_city_and_oasis():
         assert all(w.water >= wells.UNLIMITED_WELL for w in seeded)
 
 
-def test_wells_are_water_only_immobile_and_do_not_evaporate():
-    # [52.11] a well yields water and nothing else. base=True carries the other two properties
-    # the rules demand: [52.44] water in wells and pipelines is NOT subject to evaporation, and
-    # the engine refuses to relocate a base (rule 57) -- geography does not leapfrog.
+def test_wells_are_water_only_except_oases_which_also_yield_stores():
+    # [52.11] a well yields water and nothing else -- EXCEPT an OASIS, which [52.3]/[8.48] makes a
+    # natural, unlimited dump for STORES too ("units sitting in Oases have all the stores... to last
+    # them the entire game"). base=True carries the rest: [52.44] wells/pipelines do NOT evaporate,
+    # and the engine refuses to relocate a base (rule 57) -- geography does not leapfrog. (Restated
+    # from 'water-only for all' once the deferred 52.3 stores half was activated.)
     st = campaign(seed=1941)
+    oasis_hexes = {_ax(o) for o in OASES}
     ws = [s for s in st.supplies if wells.is_water_source(s)]
     assert ws
     for w in ws:
-        assert w.ammo == 0 and w.fuel == 0 and w.stores == 0 and w.water > 0
-        assert w.base is True
-        assert st.terrain.exists(w.hex)
+        assert w.ammo == 0 and w.fuel == 0 and w.water > 0
+        assert w.base is True and st.terrain.exists(w.hex)
+        if w.hex in oasis_hexes:
+            assert w.stores >= wells.UNLIMITED_WELL         # 52.3: unlimited stores at an oasis
+        else:
+            assert w.stores == 0                            # 52.11: a village/bir/city well is water-only
+
+
+def test_a_unit_on_an_oasis_draws_its_stores_in_hex():
+    # [52.3]: an oasis is a natural Stores dump; the Giarabub garrison standing on it draws its
+    # 51.11 upkeep IN THE HEX (the S7 in-hex stores machinery) from the oasis well.
+    st = campaign(seed=1941)
+    garrison = [u for u in st.units_at(_ax("C1014")) if u.is_combat]
+    assert garrison
+    for u in garrison:
+        draws = supply.in_hex_draw(st, u, supply.STORES, supply.stores_cost(u))
+        assert draws is not None                            # funded in-hex, not down a trace
+        assert any(tag == "dump" and "Giarabub" in ref for tag, ref, _ in draws)
+
+
+def test_oasis_stores_do_not_fund_construction():
+    # [52.3]: the oasis provides NON-construction stores only -- it funds 51.1 upkeep but is never
+    # feedstock for a 24.13 dump build, so construction.stores_at fences the oasis well out.
+    from game import construction
+    st = campaign(seed=1941)
+    giarabub = _ax("C1014")
+    side = next(u.side for u in st.units_at(giarabub) if u.is_combat)
+    assert construction.stores_at(st, side, giarabub) == 0   # the unlimited oasis stores don't build
 
 
 def test_village_wells_are_a_finite_52_7_pool():

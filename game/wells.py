@@ -13,8 +13,9 @@ THE MODEL. A well is a water-only Supply Unit standing on its hex:
     engine refuses to relocate a base (rule 57 / engine._supply_movement), so a well stays
     where the geography put it; and _evaporate skips it, which IS [52.44] ("Water -- except
     for water in wells and pipelines -- is subject to evaporation").
-  * ammo = fuel = stores = 0: a well yields water and nothing else [52.11]. (An oasis also
-    yields Stores under [52.3]/[8.48]; that half is DEFERRED and flagged below.)
+  * ammo = fuel = 0, and stores = 0 EXCEPT at an OASIS, which [52.3]/[8.48] makes an unlimited
+    STORES source too ("units sitting in Oases have all the stores... to last them the entire
+    game"); village / bir / major-city wells stay water-only [52.11].
   * MAJOR CITIES and OASES hold _UNLIMITED // 8 -- a reservoir no 111-turn draw can
     exhaust, the same idiom scenario._CW_BASE_SEED uses for the bottomless Suez base.
     [52.13]: their wells "have unlimited water; they may not be depleted and they may not
@@ -50,7 +51,6 @@ DEFERRED, and flagged so nothing is silently missing:
     open half of the supply side: a well waters what stands within its 32.16 trace (half
     the unit's CPA -- five CP, one or two hexes, for leg infantry), and hauling it further
     is the trucks' job. See the task report.
-  * [52.3] the oasis as a Stores source as well as a water source.
 """
 from __future__ import annotations
 
@@ -140,13 +140,15 @@ def wells(data: dict | None = None) -> tuple[SupplyUnit, ...]:
         hexid = _ax(w["hex"])
         kind = w["kind"]
         water = _pool(kind)
+        stores = UNLIMITED_WELL if kind == "oasis" else 0   # 52.3/8.48: an oasis is a natural, endless
+        #                                                     Stores dump too; every other well is water-only
         # 29.53/52.15: only a FINITE well (village/bir) carries a refill ceiling -- the unlimited
         # major-city/oasis wells never deplete (52.13), so they get 0 (never refilled).
         capacity = water if kind in ("village", "bir") else 0
         tag = w["name"].replace(" ", "")
         for side, prefix in _SIDE_PREFIX:
             out.append(SupplyUnit(f"{prefix}{WELL_ID_MARK}{tag}", side, hexid,
-                                  ammo=0, fuel=0, stores=0, water=water, base=True,
+                                  ammo=0, fuel=0, stores=stores, water=water, base=True,
                                   water_capacity=capacity))
     return tuple(out)
 

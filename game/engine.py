@@ -2168,8 +2168,9 @@ def _truck_order(r: _Run, side: Side, actor: str, order, moved: set) -> None:
 
 def _truck_load(r: _Run, side: Side, actor: str, order, truck) -> bool:
     dump = r.state.supply(order.load_from)
-    if dump is None or dump.side != side or dump.hex != truck.hex:
-        _reject_truck(r, side, actor, order, "no co-located friendly dump to load from")
+    if dump is None or dump.side != side or dump.hex != truck.hex or wells.is_water_source(dump):
+        _reject_truck(r, side, actor, order,            # 52.3/52.11: a well/oasis is geography, not a
+                      "no co-located friendly dump to load from")   # truck-loadable dump (no export)
         return False
     cargo = {c: q for c, q in order.load.items() if q > 0}
     if not set(cargo).issubset(supply.COMMODITIES):     # a live seat may name a bogus commodity
