@@ -1087,6 +1087,23 @@ def _water_shortfall(r: _Run, side: Side, actor: str, u) -> None:
                {"unit_id": u.id, "amount": min(1, cur.strength), "role": "attrition"})
 
 
+def _waterless(u) -> bool:
+    """A unit deprived of Water this Operations Stage (rule 52.5). The stage-start Water Distribution
+    (52.4, _water_body) increments stages_without_water on a shortfall and resets it on resupply, so a
+    positive count at movement/combat time -- both run AFTER the water beat -- means 'dry this stage',
+    the trigger for the 52.51/52.52 effects (immobilised vehicle / no offensive assault / half defence).
+    Zero for every ammo/fuel-only scenario (no water beat runs), so those stay byte-identical."""
+    return u.stages_without_water > 0
+
+
+def _def_raw(u) -> int:
+    """A defender's raw defensive close-assault strength for the 15.79 differential -- HALVED if it is
+    out of water this stage (52.51 vehicles "halve their total raw strength before determining actual
+    strength"; 52.52 infantry "defend at half strength"). The casualty pool (defender_loss_raw) keeps
+    the full TOE; only the defensive rating that sets the differential is halved."""
+    return u.raw_defense // 2 if _waterless(u) else u.raw_defense
+
+
 def _weather(r: _Run) -> None:
     """Weather Determination (rule 29.1): the season (from the Game-Turn) selects the 29.61
     Weather Table row; a sequential 2d6 gives the theatre-wide weather TYPE. Normal and Hot
@@ -1510,6 +1527,10 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
         if u.effective_strength == 0:                   # 21.44: all vehicles broken down
             _reject(r, side, actor, order, "all vehicles broken down, may not move (21.44)")
             continue
+        if supply._is_vehicle_type(u) and _waterless(u):   # 52.51: a vehicle out of water may not move
+            _reject(r, side, actor, order,
+                    "out of water this Operations Stage: vehicles may not move (52.51)")
+            continue
         if u.reserve == 1:                              # 18.22: Reserve I -- one hex, CP-free
             _reserve_shuffle(r, side, actor, order, u, enemy_zoc, enemy_occupied)
             continue
@@ -1587,6 +1608,11 @@ def _react(r: _Run, policies: dict, phasing: Side, mover_id: str) -> None:
         u = r.state.unit(order.unit_id)
         if u is None or not u.alive or u.side != reacting or u.id not in eligible_fs:
             _reject(r, reacting, actor, order, "not an eligible reactor (8.53)",
+                    order_kind="reaction")
+            continue
+        if supply._is_vehicle_type(u) and _waterless(u):    # 52.51: a dry vehicle may not move (8.5 too)
+            _reject(r, reacting, actor, order,
+                    "out of water this Operations Stage: vehicles may not move (52.51)",
                     order_kind="reaction")
             continue
         reach, prev = tactics.reachable_for_prev(r.state, u, enemy_zoc, enemy_occupied, roster)
@@ -2712,11 +2738,13 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     # (so the caller locks the hex and commits the attackers), False if it was rejected.
     armed_atk = [u for u in attackers
                  if u.id not in pinned and u.cohesion > -26          # 6.26: -26 or worse may not attack
+                 and not _waterless(u)                               # 52.51/52.52: no offensive assault when dry
                  and _charge_ammo(r, side, actor, u, phasing=True)]
     if not armed_atk:
         r.emit(EventKind.ORDER_REJECTED, side, actor,
                {"order": "attack", "target": list(target),
-                "reason": "attackers out of ammo, pinned, or Cohesion -26 or worse (6.26)"})
+                "reason": "attackers out of ammo, pinned, out of water (52.51/52.52), "
+                          "or Cohesion -26 or worse (6.26)"})
         return False
     for u in armed_atk:                         # 6.3: the phasing Assault CP (5), once/segment
         _charge_combat_cp(r, side, u, charged)
@@ -2748,7 +2776,7 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     # its strength (Enemy Raw Offensive Assault : Friendly Raw Defensive). The
     # cohesion-based 17.26(a) reprieve-void is handled inside _adjusted_morale.
     overwhelms = (sum(u.raw_offense for u in armed_atk)
-                  >= 3 * sum(u.raw_defense for u in armed_def))
+                  >= 3 * sum(_def_raw(u) for u in armed_def))       # 52.51/52.52: dry defenders at half
     def_m, def_md, def_surr = _adjusted_morale(r, defenders, enemy_overwhelms=overwhelms)
     if atk_surr and def_surr:                                   # 17.25: mutual surrender is IGNORED --
         r.emit(EventKind.COMBAT_RESOLVED, side, actor,          # no assault occurs, so NO ENG (8.63)
@@ -2769,7 +2797,7 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
                         r.d6("close_assault"), r.d6("close_assault"))
     res = combat.resolve(
         attacker_raw=sum(u.raw_offense for u in armed_atk),
-        defender_raw=sum(u.raw_defense for u in armed_def),     # unarmed defenders -> 0
+        defender_raw=sum(_def_raw(u) for u in armed_def),      # unarmed -> 0; dry -> half (52.51/52.52)
         # 15.12/15.15: pinned + out-of-ammo defenders add no Ratings to defender_raw
         # (the differential/15.51 shift) but their TOE strengths ARE in the casualty pool.
         defender_loss_raw=sum(u.raw_defense for u in defenders),

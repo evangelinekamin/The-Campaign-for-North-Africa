@@ -10,6 +10,27 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-19 -- CAUSE: the 52.51/52.52 effects of lack of water (movement + combat).
+
+A unit out of water this Operations Stage (52.5, stages_without_water>0) now suffers the immediate
+effects the rules give it, not just the 52.53 slow attrition: 52.51 a dry VEHICLE may not move (in
+_movement's phasing/continual path AND _react's 8.5 reaction); 52.51/52.52 a dry unit may not
+OFFENSIVELY close-assault (dropped from _resolve_combat's armed_atk before it charges ammo); and
+52.51/52.52 a dry DEFENDER defends at HALF strength (engine._def_raw halves its raw_defense in the
+15.79 differential + the 17.26 overwhelm test; the casualty pool keeps full TOE). Both benchmark
+scenarios carry water and field thirsty vehicles, so both logs move. NO chart magnitude was invented
+-- 52.51/52.52 ARE the book's rules. MEASURED (scratchpad/ab_water.py): campaign(1941) and campaign(7)
+keep the SAME winner + 64.76 grade (Axis Smashing), with VP shifting CONSISTENTLY toward the
+Commonwealth (the advancing DAK is thirstier than the coastal Eighth Army, so the desert hampers the
+overextended attacker) at the faithful 12% campaign thirst. The benchmarks are hit harder by their
+KNOWN 70% over-dryness (phase4-s8-water-finding: water's ½-CPA proxy is too dry at the Desert Fox
+point) -- rommel's DAK closest-to-Tobruk 6 -> 32 hexes -- which amplifies a documented water-model gap,
+not this rule. Determinism holds byte-for-byte.
+
+    rommels_arrival   7a806c08679d -> a2c8223bcdd8
+    siege_of_tobruk   ed4f7d1661c9 -> 1a3948403add
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-19 -- CAUSE: Phase 4 S7, in-hex STORES (rule 51.15; 51.0 gives NO organic pool).
 
 Stores joined fuel (S5) and ammunition (S6) in the full-game in-hex model -- but stores are NOT shaped
@@ -257,8 +278,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "7a806c08679d"
-SIEGE_OF_TOBRUK = "ed4f7d1661c9"
+ROMMELS_ARRIVAL = "a2c8223bcdd8"
+SIEGE_OF_TOBRUK = "1a3948403add"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

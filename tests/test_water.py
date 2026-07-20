@@ -14,10 +14,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from game import coords, supply, wells
 from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy
-from game.engine import run
-from game.events import EventKind, Side
+from game.engine import _Run, _movement, _resolve_combat, run
+from game.events import EventKind, Phase, Side
+from game.movement import TerrainMap
+from game.policy import MoveOrder
 from game.scenario import campaign, rommels_arrival, siege_of_tobruk
-from game.terrain import Terrain
+from game.state import GameState, StepRecord, Unit, VP
+from game.terrain import Mobility, Terrain
 
 MAJOR_CITIES = ("C4807", "C4321", "A4827", "E1730", "E3613")   # Tobruk, Bardia, Benghazi, Cairo, Alexandria
 OASES = ("C0127", "B0513", "C1014")                            # Siwa, Jalo, Giarabub
@@ -284,3 +287,81 @@ def test_rainstorm_refills_a_depleted_well_in_the_storm_section():
     assert r.state.supply("AX-Well-Far").water == 1000          # 29.1: section C is clear -> untouched
     assert r.state.supply("AX-Well-City").water == 500          # 52.13: unlimited city well never refills
     check(r.state)                                              # faucet: initial rose 3800, conservation holds
+
+
+# --- 52.5 EFFECTS OF LACK OF WATER: movement & combat (52.51 / 52.52) ---------------------------
+# A unit deprived of water THIS Operations Stage (stages_without_water > 0, set at the stage-start
+# Water Distribution) is more than a slow-attrition case (52.53): 52.51 immobilises vehicles and
+# 52.51/52.52 forbid offensive close assault and halve defensive strength. These drive the unit
+# directly, so the water beat is not run -- the deprivation is set on the counter the beat would set.
+
+def _thirsty(uid, side, hex_, *, oca=2, dca=2, strength=6, mob=Mobility.FOOT,
+            thirsty=False, ammo=0, fuel=0, morale=3):
+    return Unit(uid, side, hex_, (StepRecord("s", strength),), mobility=mob, cpa=10,
+                stacking_points=1, oca=oca, dca=dca, ammo=ammo, fuel=fuel, cohesion=0,
+                morale=morale, stages_without_water=(1 if thirsty else 0))
+
+
+def _combat_run(units, target, *, seed=1):
+    hexes = {u.hex for u in units} | {target}
+    st = GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS, seed=seed,
+                   weather="clear", vp=VP(), terrain=TerrainMap(terrain={h: Terrain.CLEAR for h in hexes}),
+                   control={}, units=tuple(units), target_hex=target, supplies=(),
+                   consumed={"AMMO": 0, "FUEL": 0, "STORES": 0, "WATER": 0},
+                   initial_supply={"AMMO": sum(u.ammo for u in units), "FUEL": sum(u.fuel for u in units),
+                                   "STORES": 0, "WATER": 0})
+    return _Run(st)
+
+
+def test_52_51_a_waterless_vehicle_may_not_move():
+    # 52.51: "Vehicles without water may not move." Infantry (52.52) is unaffected here -- only the
+    # vehicle is immobilised; a watered vehicle in the same beat moves normally.
+    terr = {(q, 0): Terrain.CLEAR for q in range(5)}
+    dry = _thirsty("DRY", Side.AXIS, (0, 0), mob=Mobility.VEHICLE, thirsty=True, fuel=1000)
+    wet = _thirsty("WET", Side.AXIS, (2, 0), mob=Mobility.VEHICLE, thirsty=False, fuel=1000)
+    st = GameState(turn=1, max_turns=4, phase=Phase.MOVEMENT, active_side=Side.AXIS, seed=1,
+                   weather="clear", vp=VP(), terrain=TerrainMap(terrain=terr), control={},
+                   units=(dry, wet), target_hex=(4, 0), supplies=(),
+                   consumed={"FUEL": 0}, initial_supply={"FUEL": 2000})
+
+    class _P:
+        def movement(self, state, side):
+            return [MoveOrder("DRY", (1, 0)), MoveOrder("WET", (3, 0))]
+
+    r = _Run(st)
+    _movement(r, {Side.AXIS: _P(), Side.ALLIED: _P()}, Side.AXIS)
+    assert r.state.unit("DRY").hex == (0, 0)                     # 52.51: immobilised by thirst
+    assert any(e.kind == EventKind.ORDER_REJECTED and "52.51" in str(e.payload.get("reason", ""))
+               for e in r.events)
+    assert r.state.unit("WET").hex == (3, 0)                     # a watered vehicle moves normally
+
+
+def test_52_51_52_a_waterless_unit_may_not_offensively_close_assault():
+    # 52.51/52.52: a unit deprived of water "may not engage in offensive close assault." A sole dry
+    # attacker leaves no armed attacker, so the assault is rejected (spending no ammo); the same
+    # attacker watered resolves it.
+    dfn = _thirsty("D", Side.ALLIED, (0, 0), dca=2, ammo=100)
+    dry_atk = _thirsty("A", Side.AXIS, (1, 0), oca=4, thirsty=True, ammo=100)
+    r = _combat_run([dry_atk, dfn], (0, 0))
+    assert _resolve_combat(r, Side.AXIS, "AXIS/Front", [dry_atk], [dfn], (0, 0), set(), set()) is False
+    assert any(e.kind == EventKind.ORDER_REJECTED for e in r.events)
+    assert dry_atk.ammo == 100                                   # a dry unit does not even spend its load
+    wet_atk = _thirsty("A", Side.AXIS, (1, 0), oca=4, thirsty=False, ammo=100)
+    r2 = _combat_run([wet_atk, dfn], (0, 0))
+    assert _resolve_combat(r2, Side.AXIS, "AXIS/Front", [wet_atk], [dfn], (0, 0), set(), set()) is True
+
+
+def test_52_51_52_a_waterless_defender_defends_at_half_strength():
+    # 52.51/52.52: a defender out of water "defends at half strength" -- its raw defensive strength
+    # is halved before the differential, so an identical seeded assault lands harder on it.
+    def differential(def_thirsty):
+        atk = _thirsty("A", Side.AXIS, (1, 0), oca=4, strength=6, ammo=100)      # raw_offense 24
+        dfn = _thirsty("D", Side.ALLIED, (0, 0), dca=4, strength=6, ammo=100,    # raw_defense 24 / 12
+                       thirsty=def_thirsty)
+        r = _combat_run([atk, dfn], (0, 0), seed=1)
+        _resolve_combat(r, Side.AXIS, "AXIS/Front", [atk], [dfn], (0, 0), set(), set())
+        cr = [e for e in r.events if e.kind == EventKind.COMBAT_RESOLVED]
+        assert cr and "surrender" not in cr[0].payload            # a real resolution, not a surrender
+        return cr[0].payload["differential"]
+
+    assert differential(True) > differential(False)               # half-strength -> attacker advantage rises
