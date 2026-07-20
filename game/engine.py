@@ -2729,6 +2729,21 @@ def _apply_armor_losses(r: _Run, firing: Side, actor: str, target: Coord, damage
             remaining -= steps * u.armor_protection
 
 
+def _assault_hexside_shift(tmap, atk_hexes, target) -> int:
+    """[15.33/15.35/15.36] The close-assault Differential shift for the hexsides the attack crosses.
+    15.33: a hexside benefit applies if ANY attacking hex crosses it ("if any units are attacking
+    through a given hexside, the Differential is adjusted as if all units were attacking through that
+    hexside") -- so it is read over EVERY distinct attacking hex, not the one the policy listed first.
+    15.35: the defender benefits from at most ONE hexside type (our terrain carries one Hexside per
+    edge, so the rare two-terrains-on-one-edge case does not arise) -- the single best-for-defender
+    (most negative). 15.36: a down-slope / down-escarpment benefits the ATTACKER and OFFSETS -- add the
+    single best-for-attacker (most positive); verbatim example: down-slope +1 with up-escarpment -3 ->
+    -2. atk_hexes is a SET, so the shift is independent of the order the attackers were listed (which
+    is the bug this replaces: the old read took armed_atk[0]'s hexside alone)."""
+    shifts = [combat_tables.HEXSIDE_CA_SHIFT.get(tmap.hexsides.get((h, target)), 0) for h in atk_hexes]
+    return min((s for s in shifts if s < 0), default=0) + max((s for s in shifts if s > 0), default=0)
+
+
 def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
                     target: Coord, pinned: set[str], charged: set[str]) -> bool:
     # Ammo gates participation (rule 32.21 / 15.15) and Pin suppresses it (12.44):
@@ -2765,7 +2780,7 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
         _charge_combat_cp(r, side, u, charged)
 
     # Close Assault via the real differential engine (rule 15 / §15.79 CRT).
-    feature = r.state.terrain.hexsides.get((armed_atk[0].hex, target))  # §15.33
+    hexside_shift = _assault_hexside_shift(r.state.terrain, {u.hex for u in armed_atk}, target)  # 15.33/35/36
     fort = r.state.fort_level(target)          # §15.82 current level (25.14 may have reduced it)
     mined = target in r.state.terrain.minefields                # defensive minefield belt
     # Morale is rolled FIRST (rule 15 order): each side's 17.4 roll adjusts its
@@ -2801,7 +2816,7 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
         # 15.12/15.15: pinned + out-of-ammo defenders add no Ratings to defender_raw
         # (the differential/15.51 shift) but their TOE strengths ARE in the casualty pool.
         defender_loss_raw=sum(u.raw_defense for u in defenders),
-        def_terrain=r.state.terrain.terrain[target], attack_feature=feature,
+        def_terrain=r.state.terrain.terrain[target], hexside_shift=hexside_shift,
         atk_roll=ab * 10 + asm, def_roll=db * 10 + dsm,
         morale_shift=atk_m - def_m,
         attacker_ca_penalty=_combined_arms_penalty(armed_atk),      # rule 15.4

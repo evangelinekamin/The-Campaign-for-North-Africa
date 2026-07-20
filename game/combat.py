@@ -29,7 +29,7 @@ import math
 from dataclasses import dataclass
 
 from . import combat_tables as ct
-from .terrain import Hexside, Terrain
+from .terrain import Terrain
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,7 +59,7 @@ def actual_points(raw: int, both_small: bool) -> int:
 
 
 def resolve(*, attacker_raw: int, defender_raw: int,
-            def_terrain: Terrain, attack_feature: Hexside | None,
+            def_terrain: Terrain, hexside_shift: int = 0,
             atk_roll: int, def_roll: int,
             extra_shift: int = 0, morale_shift: int = 0,
             attacker_ca_penalty: int = 0, defender_ca_penalty: int = 0,
@@ -73,8 +73,7 @@ def resolve(*, attacker_raw: int, defender_raw: int,
     diff = a_actual - d_actual
 
     shift = ct.HEX_CA_SHIFT.get(def_terrain, 0)                 # 15.3 terrain
-    if attack_feature is not None:
-        shift += ct.HEXSIDE_CA_SHIFT.get(attack_feature, 0)
+    shift += hexside_shift                                      # 15.33/15.35/15.36 (computed by the caller)
     if defender_raw > 0 and attacker_raw >= 2 * defender_raw:   # 15.51 two-to-one
         shift += 2
     elif attacker_raw > 0 and defender_raw >= 2 * attacker_raw:

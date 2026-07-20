@@ -77,7 +77,7 @@ def test_diff_to_column_grouping():
 def test_two_to_one_raw_shifts_two_columns_right():
     # 60 vs 30 raw -> actual 6 vs 3 (diff +3, base col 10); 2:1 raw adds +2 -> col 12
     res = combat.resolve(attacker_raw=60, defender_raw=30,
-                         def_terrain=Terrain.CLEAR, attack_feature=None,
+                         def_terrain=Terrain.CLEAR, hexside_shift=0,
                          atk_roll=11, def_roll=11)
     assert res.differential == 3 and res.column == 12
 
@@ -85,15 +85,56 @@ def test_two_to_one_raw_shifts_two_columns_right():
 def test_terrain_shift_favours_defender():
     # diff +2 (base col 9); 2:1 raw (+2) cancelled by Rough terrain (-2) -> col 9
     res = combat.resolve(attacker_raw=40, defender_raw=20,
-                         def_terrain=Terrain.ROUGH, attack_feature=None,
+                         def_terrain=Terrain.ROUGH, hexside_shift=0,
                          atk_roll=11, def_roll=11)
     assert res.column == 9
+
+
+def test_hexside_shift_reads_every_attacking_hex_15_33():
+    # 15.33: "if any units are attacking through a given hexside, the Differential is adjusted as if
+    # all units were attacking through that hexside." So the shift is read over EVERY attacking hex,
+    # not the one the policy happens to list first (the old armed_atk[0] order-dependence). One attacker
+    # crosses a Ridge (-2), the other clear -> the full -2. The helper takes a SET, so it is order-free.
+    from game.engine import _assault_hexside_shift
+    from game.movement import TerrainMap
+    tmap = TerrainMap(terrain={(0, 0): Terrain.CLEAR, (0, 1): Terrain.CLEAR, (1, 0): Terrain.CLEAR},
+                      hexsides={((0, 1), (0, 0)): Hexside.RIDGE})
+    assert _assault_hexside_shift(tmap, {(0, 1), (1, 0)}, (0, 0)) == -2
+
+
+def test_hexside_defender_benefits_from_one_type_15_35():
+    # 15.35: the defender benefits from only ONE hexside type. WADI(-1) + RIDGE(-2) across two
+    # attacking hexes -> the single best-for-defender (-2), NOT the sum (-3).
+    from game.engine import _assault_hexside_shift
+    from game.movement import TerrainMap
+    tmap = TerrainMap(terrain={(0, 0): Terrain.CLEAR, (0, 1): Terrain.CLEAR, (1, 0): Terrain.CLEAR},
+                      hexsides={((0, 1), (0, 0)): Hexside.WADI, ((1, 0), (0, 0)): Hexside.RIDGE})
+    assert _assault_hexside_shift(tmap, {(0, 1), (1, 0)}, (0, 0)) == -2
+
+
+def test_hexside_downslope_offsets_the_defender_15_36():
+    # 15.36 (verbatim example): a down-slope (+1) attacker benefit OFFSETS an up-escarpment (-3) -> -2.
+    from game.engine import _assault_hexside_shift
+    from game.movement import TerrainMap
+    tmap = TerrainMap(terrain={(0, 0): Terrain.CLEAR, (0, 1): Terrain.CLEAR, (1, 0): Terrain.CLEAR},
+                      hexsides={((0, 1), (0, 0)): Hexside.DOWN_SLOPE,
+                                ((1, 0), (0, 0)): Hexside.UP_ESCARPMENT})
+    assert _assault_hexside_shift(tmap, {(0, 1), (1, 0)}, (0, 0)) == -2
+
+
+def test_resolve_applies_the_hexside_shift():
+    # The pure resolver now takes the final integer shift: -2 moves two columns toward the defender.
+    base = combat.resolve(attacker_raw=40, defender_raw=20, def_terrain=Terrain.CLEAR,
+                          hexside_shift=0, atk_roll=11, def_roll=11)
+    ridge = combat.resolve(attacker_raw=40, defender_raw=20, def_terrain=Terrain.CLEAR,
+                           hexside_shift=-2, atk_roll=11, def_roll=11)
+    assert ridge.column == base.column - 2
 
 
 def test_small_raw_uses_raw_as_actual():
     # both < 10 raw -> raw used directly: 8 - 6 = diff 2
     res = combat.resolve(attacker_raw=8, defender_raw=6,
-                         def_terrain=Terrain.CLEAR, attack_feature=None,
+                         def_terrain=Terrain.CLEAR, hexside_shift=0,
                          atk_roll=11, def_roll=11)
     assert res.differential == 2
 
@@ -112,7 +153,7 @@ def test_retreat_takes_priority_over_engaged():
     # +3 column: defender sum 5 -> retreat 1; attacker sum 8 -> eng, but the
     # retreat drops the eng (rule 15.74).
     res = combat.resolve(attacker_raw=45, defender_raw=24,
-                         def_terrain=Terrain.CLEAR, attack_feature=None,
+                         def_terrain=Terrain.CLEAR, hexside_shift=0,
                          atk_roll=26, def_roll=14)          # sums: atk 8, def 5
     assert res.column == 10
     assert res.retreat_hexes == 1 and res.attacker_engaged is False
@@ -132,10 +173,10 @@ def test_combat_example_captured_and_retreat_together():
 def test_morale_shift_moves_the_column():
     # +2 morale (e.g. 15th Panzer +3 vs +1) shifts the assault two columns right.
     base = combat.resolve(attacker_raw=30, defender_raw=30,
-                          def_terrain=Terrain.CLEAR, attack_feature=None,
+                          def_terrain=Terrain.CLEAR, hexside_shift=0,
                           atk_roll=11, def_roll=11)
     up = combat.resolve(attacker_raw=30, defender_raw=30,
-                        def_terrain=Terrain.CLEAR, attack_feature=None,
+                        def_terrain=Terrain.CLEAR, hexside_shift=0,
                         atk_roll=11, def_roll=11, morale_shift=2)
     assert up.column == base.column + 2
 
@@ -154,7 +195,7 @@ def test_fortification_shifts_columns_toward_defender():
     # one column and Level 3 by two (T0-8). Level 0 (default) is unchanged.
     assert ct.FORT_CA_SHIFT_BY_LEVEL == {1: -2, 2: -3, 3: -4}
     kw = dict(attacker_raw=60, defender_raw=30, def_terrain=Terrain.CLEAR,
-              attack_feature=None, atk_roll=11, def_roll=11)
+              hexside_shift=0, atk_roll=11, def_roll=11)
     base = combat.resolve(**kw)
     for level, expected in ct.FORT_CA_SHIFT_BY_LEVEL.items():
         fort = combat.resolve(**kw, fortification_level=level)
@@ -167,7 +208,7 @@ def test_minefield_shifts_column_toward_defender():
     # a defensive minefield belt shifts the assault toward the defender
     # (MINEFIELD_CA_SHIFT); default False is unchanged.
     kw = dict(attacker_raw=60, defender_raw=30, def_terrain=Terrain.CLEAR,
-              attack_feature=None, atk_roll=11, def_roll=11)
+              hexside_shift=0, atk_roll=11, def_roll=11)
     base = combat.resolve(**kw)
     mined = combat.resolve(**kw, in_enemy_minefield=True)
     assert mined.column == base.column + ct.MINEFIELD_CA_SHIFT
@@ -258,7 +299,7 @@ def test_combined_arms_reduces_actual_points():
     # penalty); CW 38 raw -> 4 Actual, tanks (7) exceed inf (5) by 2 -> -1 Actual
     # -> 3. Basic differential +3.
     res = combat.resolve(attacker_raw=63, defender_raw=38,
-                         def_terrain=Terrain.CLEAR, attack_feature=None,
+                         def_terrain=Terrain.CLEAR, hexside_shift=0,
                          atk_roll=11, def_roll=11,
                          attacker_ca_penalty=0, defender_ca_penalty=1)
     assert res.differential == 3               # 6 - (4-1)
@@ -269,7 +310,7 @@ def test_loss_rounding_attacker_up_defender_down():
     # the attacker rounds the raw points lost UP while the defender rounds DOWN.
     # col 7, both 10% of 60 raw = 6.0 -> 6 points each (exact, no rounding gap).
     res = combat.resolve(attacker_raw=60, defender_raw=60,
-                         def_terrain=Terrain.CLEAR, attack_feature=None,
+                         def_terrain=Terrain.CLEAR, hexside_shift=0,
                          atk_roll=25, def_roll=24)   # col 7: atk 25->10%, def 24->10%
     assert res.column == 7
     assert res.attacker_loss_pct == 10 and res.defender_loss_pct == 10
@@ -281,7 +322,7 @@ def test_15_83c_loss_pct_applies_to_raw_points_rounding_directions():
     # to 6. Proves the percentage is taken of RAW assault points (not TOE steps) and
     # that the two players round opposite directions on the same fractional loss.
     res = combat.resolve(attacker_raw=43, defender_raw=43,
-                         def_terrain=Terrain.CLEAR, attack_feature=None,
+                         def_terrain=Terrain.CLEAR, hexside_shift=0,
                          atk_roll=21, def_roll=21)   # col 7: 21 -> 15% both sides
     assert res.attacker_loss_pct == 15 and res.defender_loss_pct == 15
     assert res.attacker_points_lost == 7      # ceil(6.45)
@@ -294,7 +335,7 @@ def test_15_12_pinned_defenders_widen_the_casualty_pool():
     # -- yet their TOE strengths ARE in the casualty pool. Here 38 armed raw plus a
     # pinned battalion's 32 raw make a 70-point loss pool (the rulebook's own worked
     # example: 15% of 70 = 10.5 -> floor 10).
-    kw = dict(attacker_raw=63, def_terrain=Terrain.CLEAR, attack_feature=None,
+    kw = dict(attacker_raw=63, def_terrain=Terrain.CLEAR, hexside_shift=0,
               atk_roll=21, def_roll=21, defender_ca_penalty=1)
     armed = combat.resolve(defender_raw=38, **kw)
     pooled = combat.resolve(defender_raw=38, defender_loss_raw=70, **kw)
@@ -311,7 +352,7 @@ def test_15_12_all_pinned_garrison_still_bleeds():
     # WITHOUT a separate pool it would take ZERO losses at any column/roll. With its TOE
     # in the pool it must still bleed when the CRT calls for a loss.
     res = combat.resolve(attacker_raw=60, defender_raw=0, defender_loss_raw=40,
-                         def_terrain=Terrain.CLEAR, attack_feature=None,
+                         def_terrain=Terrain.CLEAR, hexside_shift=0,
                          atk_roll=21, def_roll=21)
     assert res.defender_loss_pct > 0
     assert res.defender_points_lost > 0
