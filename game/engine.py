@@ -2481,11 +2481,12 @@ def _combat(r: _Run, policies: dict, side: Side) -> None:
     enemy = _other(side)
     pinned: set[str] = set()          # units Pinned by barrage this segment (12.44)
     charged: set[str] = set()         # 6.3 per-segment CP ledger (one combat charge/unit)
+    fired_anti_armor: set[str] = set()   # 14.26/15.21: phasing units that fired anti-armor this segment
     _air_support(r, side, pinned)     # 41.31: air strikes pin BEFORE barrage, joining the 12.44 set
     _naval_bombardment(r, side, pinned)   # 30.2: off-shore gunfire, another pre-barrage 12.44 pin
     _barrage_step(r, side, enemy, pinned, charged)
     _retreat_before_assault(r, policies[enemy], enemy, side, pinned)
-    _anti_armor_step(r, side, enemy, pinned, charged)
+    _anti_armor_step(r, side, enemy, pinned, charged, fired_anti_armor)
     actor = f"{side.value}/Front"
     assaulted: set = set()            # 15.23: each hex is close-assaulted at most once/segment
     committed: set = set()            # 15.24: each unit joins at most one assault/segment
@@ -2514,7 +2515,8 @@ def _combat(r: _Run, policies: dict, side: Side) -> None:
         # 15.23/15.24: only a resolved assault locks the hex and commits its attackers.
         # A REJECTED assault (every attacker out of ammo or Pinned) spent no round, so
         # it must not burn the hex or tie down units that could still assault elsewhere.
-        if _resolve_combat(r, side, actor, attackers, defenders, target, pinned, charged):
+        if _resolve_combat(r, side, actor, attackers, defenders, target, pinned, charged,
+                           fired_anti_armor):
             assaulted.add(target)
             committed.update(u.id for u in attackers)
 
@@ -2669,7 +2671,7 @@ def _batter_fort(r: _Run, firing: Side, actor: str, tgt: Coord, *, effective: bo
 
 
 def _anti_armor_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
-                     charged: set[str]) -> None:
+                     charged: set[str], fired_anti_armor: set[str]) -> None:
     """Anti-Armor Fire (rule 14): both sides fire at each other's adjacent armor,
     simultaneously (target strengths are read before any loss lands), and all armor
     losses precede Close Assault. Each unit with an Anti-Armor rating fires at one
@@ -2706,6 +2708,8 @@ def _anti_armor_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
                                                    terrain_shift=shift)
             plan.append((firing, actor, tgt, [u.id for u in armed], raw, (d1, d2), dmg))
     for firing, actor, tgt, firer_ids, raw, dice, dmg in plan:
+        if firing == phasing:                       # 14.26/15.21: a phasing anti-armor firer may not
+            fired_anti_armor.update(firer_ids)      # also close-assault this Combat Segment
         r.emit(EventKind.ANTI_ARMOR_RESOLVED, firing, actor,
                {"target": list(tgt), "firers": firer_ids, "raw": raw,
                 "actual": combat.actual_points(raw, False), "damage": dmg},
@@ -2746,7 +2750,8 @@ def _assault_hexside_shift(tmap, atk_hexes, target) -> int:
 
 
 def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
-                    target: Coord, pinned: set[str], charged: set[str]) -> bool:
+                    target: Coord, pinned: set[str], charged: set[str],
+                    fired_anti_armor: set[str] = frozenset()) -> bool:
     # Ammo gates participation (rule 32.21 / 15.15) and Pin suppresses it (12.44):
     # a unit that cannot draw ammo or is Pinned cannot assault; a Pinned or unarmed
     # defender adds no defensive strength but still suffers losses. Charged before
@@ -2755,12 +2760,13 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     armed_atk = [u for u in attackers
                  if u.id not in pinned and u.cohesion > -26          # 6.26: -26 or worse may not attack
                  and not _waterless(u)                               # 52.51/52.52: no offensive assault when dry
+                 and u.id not in fired_anti_armor                    # 14.26/15.21: not if it fired anti-armor
                  and _charge_ammo(r, side, actor, u, phasing=True)]
     if not armed_atk:
         r.emit(EventKind.ORDER_REJECTED, side, actor,
                {"order": "attack", "target": list(target),
-                "reason": "attackers out of ammo, pinned, out of water (52.51/52.52), "
-                          "or Cohesion -26 or worse (6.26)"})
+                "reason": "attackers out of ammo, pinned, out of water (52.51/52.52), assigned to "
+                          "anti-armor (15.21), or Cohesion -26 or worse (6.26)"})
         return False
     for u in armed_atk:                         # 6.3: the phasing Assault CP (5), once/segment
         _charge_combat_cp(r, side, u, charged)

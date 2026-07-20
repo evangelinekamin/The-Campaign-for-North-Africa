@@ -10,6 +10,24 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-19 -- CAUSE: 15.21 -- an Anti-Armor firer may not also Close Assault.
+
+Rule 14.0/14.26/15.21: "Units assigned to Anti-Armor may not participate in Close Assault... he may
+not use a given TOE Strength Point for both in the same Segment." The engine fired anti-armor
+(_anti_armor_step) and then let the SAME phasing units join the close assault (_resolve_combat's
+armed_atk), double-counting their TOE and drawing their ammo twice. Now _combat threads a per-segment
+`fired_anti_armor` set: _anti_armor_step records every PHASING firer, and _resolve_combat excludes
+them from armed_atk (before the ammo draw). A stack whose only attackers fired anti-armor has its
+assault rejected (15.29). The 15.84/12.11 defender-side symmetry (auto-firing armored defenders) is
+deferred and flagged -- 15.21 names "Phasing units", and the engine gives the defender no assignment
+agency. NO magnitude was invented. Both benchmarks field armored clashes, so both logs move; the
+change nudges armored-assault balance toward the defender (the attacker's tanks no longer fire AND
+assault). Determinism holds byte-for-byte.
+
+    rommels_arrival   a2c8223bcdd8 -> d5c4f2138b0b
+    siege_of_tobruk   1a3948403add -> a38a2bd066e3
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-19 -- CAUSE: the 52.51/52.52 effects of lack of water (movement + combat).
 
 A unit out of water this Operations Stage (52.5, stages_without_water>0) now suffers the immediate
@@ -278,8 +296,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "a2c8223bcdd8"
-SIEGE_OF_TOBRUK = "1a3948403add"
+ROMMELS_ARRIVAL = "d5c4f2138b0b"
+SIEGE_OF_TOBRUK = "a38a2bd066e3"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

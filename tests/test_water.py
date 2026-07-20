@@ -393,3 +393,33 @@ def test_52_51_52_a_waterless_defender_defends_at_half_strength():
         return cr[0].payload["differential"]
 
     assert differential(True) > differential(False)               # half-strength -> attacker advantage rises
+
+
+# --- 14.0 / 14.26 / 15.21: a unit may not fire Anti-Armor AND Close Assault the same segment -------
+
+def test_15_21_anti_armor_firer_may_not_also_close_assault():
+    # A phasing unit assigned to Anti-Armor may not also Close Assault the same Combat Segment (its
+    # TOE would be counted twice, and its ammo drawn twice). _resolve_combat drops units in
+    # `fired_anti_armor` from the offensive assault -- here the tank fired, so only the infantry assaults.
+    tank = Unit("T", Side.AXIS, (1, 0), (StepRecord("s", 6),), mobility=Mobility.VEHICLE, cpa=10,
+                stacking_points=1, oca=4, dca=4, anti_armor=3, armor_protection=5, ammo=100, morale=3)
+    inf = _thirsty("I", Side.AXIS, (1, 0), oca=4, ammo=100)
+    dfn = _thirsty("D", Side.ALLIED, (0, 0), dca=2, ammo=100)
+    r = _combat_run([tank, inf, dfn], (0, 0))
+    assert _resolve_combat(r, Side.AXIS, "AXIS/Front", [tank, inf], [dfn], (0, 0),
+                           set(), set(), {"T"}) is True
+    cr = [e for e in r.events if e.kind == EventKind.COMBAT_RESOLVED]
+    assert cr and "T" not in cr[0].payload["attackers"] and "I" in cr[0].payload["attackers"]
+
+
+def test_15_21_a_lone_anti_armor_firer_leaves_no_assault():
+    # 15.29 / 15.21: if the only attacker fired anti-armor, no unit is left to close-assault -> the
+    # assault is rejected (and the firer never spends a second, close-assault, round of ammo).
+    tank = Unit("T", Side.AXIS, (1, 0), (StepRecord("s", 6),), mobility=Mobility.VEHICLE, cpa=10,
+                stacking_points=1, oca=4, dca=4, anti_armor=3, armor_protection=5, ammo=100, morale=3)
+    dfn = _thirsty("D", Side.ALLIED, (0, 0), dca=2, ammo=100)
+    r = _combat_run([tank, dfn], (0, 0))
+    assert _resolve_combat(r, Side.AXIS, "AXIS/Front", [tank], [dfn], (0, 0),
+                           set(), set(), {"T"}) is False
+    assert tank.ammo == 100                                       # not a second ammo draw
+    assert any(e.kind == EventKind.ORDER_REJECTED for e in r.events)
