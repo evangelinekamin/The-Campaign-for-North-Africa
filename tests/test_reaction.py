@@ -80,6 +80,28 @@ def test_a_motorized_reactor_slides_aside():
     assert r.state.unit("B1").cp_used > 0                # 8.52: reaction expends CP
 
 
+def test_a_vehicle_reactor_slides_aside():
+    # 8.53a: reaction is open to EVERY motorized-class unit, not just truck-borne infantry -- a tank
+    # (VEHICLE) adjacent to a driving-by enemy may slide to react. The old `== MOTORIZED` gate wrongly
+    # locked out every real tank / recce / motorcycle.
+    mover = _unit("A1", Side.AXIS, (2, 0))
+    reactor = _unit("B1", Side.ALLIED, (3, 0), mob=Mobility.VEHICLE)     # a panzer -- is_motorized
+    r = _Run(_state([mover, reactor]))
+    _react(r, _policies(_Reactor("B1", (5, 0))), Side.AXIS, "A1")
+    assert any(e.kind == EventKind.REACTION_MOVED for e in r.events)
+    assert r.state.unit("B1").hex == (5, 0)
+
+
+def test_a_recce_reactor_slides_aside():
+    # 8.53a / the rulebook's own 8.53b example is a recce unit: a RECCE reactor is eligible too.
+    mover = _unit("A1", Side.AXIS, (2, 0))
+    reactor = _unit("B1", Side.ALLIED, (3, 0), mob=Mobility.RECCE)
+    r = _Run(_state([mover, reactor]))
+    _react(r, _policies(_Reactor("B1", (5, 0))), Side.AXIS, "A1")
+    assert any(e.kind == EventKind.REACTION_MOVED for e in r.events)
+    assert r.state.unit("B1").hex == (5, 0)
+
+
 def test_base_policy_never_reacts():
     mover = _unit("A1", Side.AXIS, (2, 0))
     reactor = _unit("B1", Side.ALLIED, (3, 0))

@@ -25,7 +25,7 @@ from .invariants import check_event
 from .policy import AttackOrder, MoveOrder, Policy
 from .staff_events import clean_staff_payload
 from .state import Coord, GameState
-from .terrain import Mobility, Terrain
+from .terrain import Terrain, is_motorized
 
 # Siege of Tobruk tuning knob (rule 25.14): how many effective barrages (a Pin or a
 # step loss) it takes to batter a fortification down one level. 1 = each effective
@@ -1585,7 +1585,7 @@ def _react(r: _Run, policies: dict, phasing: Side, mover_id: str) -> None:
     if mover is None or not mover.alive:
         return
     adj = [u for u in r.state.living(reacting)          # cheap adjacency pre-filter (8.51 + 8.53a/d)
-           if u.is_combat and u.mobility == Mobility.MOTORIZED and not u.engaged
+           if u.is_combat and is_motorized(u.mobility) and not u.engaged   # 8.53a: EVERY motorized class
            and is_adjacent(u.hex, mover.hex)]
     if not adj:
         return                                          # the common case -- no reaction possible
