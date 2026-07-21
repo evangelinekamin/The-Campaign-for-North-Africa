@@ -411,6 +411,14 @@
   "commonwealth_field_dump_pool_60_44": {
       "_comment": "[60.44] (docs/rules/60 line 229): Dump I (500 ammo/750 fuel/500 stores), the one anonymous field dump placed in Egypt on map C or D. One additional Dummy dump carries no supply. 60.44 charts NO dump Water for the Commonwealth -- forward CW water is the 52.7 wells / 54.3 rail (both deferred); Cairo and Alexandria hold unlimited supply, water included (60.44 note).",
       "ammo": 500, "fuel": 750, "stores": 500
-    }
+    },
+  "italian_sgsu_available_60_32": {
+   "_comment": "[60.32] Italian Air Strengths (docs/rules/60 line 108), verbatim final line: \"Italian SGSU Available: 39.\" A COUNTER COUNT, not a supply magnitude -- how many Squadron Ground Support Unit counters the Italian Player has to place. [60.42] states the placement rule for both sides: \"the following planes, SGSU's and pilots may be placed at any ... air facility, WITHIN THE CAPACITY OF THAT FACILITY\" (36.12 six per airfield, 36.2 one per landing strip, 36.3 three per flying boat basin, 36.4 one per alighting area). Cited to [60.32] and NOT to [60.31], which is the Italian Initial Deployment -- a different chart. game.oob.seed_sgsus reads it as a CEILING: the map takes what its facilities can hold and no more.",
+   "sgsu": 39
+  },
+  "commonwealth_sgsu_available_60_42": {
+   "_comment": "[60.42] Commonwealth North African Air Force (docs/rules/60 line 209), verbatim: \"SGSU Available: 14.\" Same placement rule and the same ceiling reading as the Italian row above.",
+   "sgsu": 14
+  }
   }
 }

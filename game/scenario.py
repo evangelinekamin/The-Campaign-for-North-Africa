@@ -239,7 +239,9 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
     # Stores; Axis 50/50); rule 59.61 suppressed it while the Air Game was abstract and it is in
     # force now. An air dump feeds only the SGSUs standing on it (35.14), never the land army.
     facilities = oob.air_facilities(sections="ABC")
-    supplies += oob.air_dumps(facilities, oob.DESERT_FOX_AIR_POOLS)
+    # `placed` is [59.52]: the air allotment is not stacked on a hex where that side's own field
+    # dump already stands, because "the totals are combined and it becomes one dump".
+    supplies += oob.air_dumps(facilities, oob.DESERT_FOX_AIR_POOLS, placed=supplies)
     rommel = oob.rommel_entity(sections="ABC")    # rule 31: the leader as an entity, off units[]
 
     # The rear Axis HARBOUR (Tripoli): a dedicated built-in port dump (56.28) seeded with the
@@ -556,6 +558,13 @@ def _rommel_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy
 
 # [61.43] "Additional second/third line trucks: 10 Medium Trucks at air facilities." The Desert Fox
 # twin of [60.33]/[60.43]'s "Any Air Facility" rows, and gated by the same 59.61 switch.
+#
+# ⚠ FLAGGED, ONCE, FOR THE WHOLE SECOND/THIRD-LINE TRUCK CHART: these magnitudes are CODE LITERALS,
+# where the project's rule is that chart magnitudes come from data/ (the four air-supply pools of
+# these very same charts are in data/logistics_rates.json behind accessors). It is pre-existing --
+# [61.43]'s 95/280/50 is inline in _rommel_trucks and [60.33]/[60.43] are the two dicts below -- and
+# this row is placed beside its siblings rather than split off alone, because half a chart in data
+# and half in code is worse than either. Moving the whole 53/54 truck chart into data is its own job.
 _TRUCKS_61_43_AIR = {"light": 0, "medium": 10, "heavy": 0}
 
 
@@ -988,10 +997,18 @@ def _air_facility_park(facilities, side: Side, near) -> "Coord | None":
 
     The rows say "Any Air Facility", so which one is the Player's free choice; this is OUR ASSIGNMENT
     of it, and it is the ordinary quartermaster's answer (the field the freight can actually reach).
-    It matters that the row lands ON a facility and not on the hub itself: 36.17 makes the facility
-    its squadron's larder, so these are the lorries that keep the larder full (35.15) -- and a park
-    parked on the railhead instead would simply be more freight lorries competing for the trains'
-    tonnage, which is not what the chart allotted them for. None when the side holds no facility."""
+    It matters that the row lands ON a facility and not on the hub itself: the chart put these lorries
+    at an airfield, and a park parked on the railhead instead would simply be more freight lorries
+    competing for the trains' tonnage, which is not what the chart allotted them for. None when the
+    side holds no facility.
+
+    ⚠ WHAT THEY DO NOT DO YET, said plainly because the placement invites the opposite reading: they
+    do NOT restock the 36.17 larder they are standing on. That is 35.15's job (first-line trucks
+    attached to an SGSU) and 36.3's ("they can bring supplies to a flying boat basin simply by
+    bringing trucks into the hex"), and neither is built -- game.relay strips air dumps out of the
+    relay's view of state.supplies, so no truck order can select one as a delivery target at all. For
+    now these are ordinary 3rd-line Truck Points that happen to start at an airfield. See
+    engine._sgsu_upkeep's flag: the air-supply pot has no refill path in this block."""
     own = [f for f in facilities if f.side == side]
     return min(own, key=lambda f: (distance(f.hex, near), f.id)).hex if own else None
 
@@ -1061,8 +1078,8 @@ def _campaign_axis_trucks(supplies, target, facilities) -> tuple[TruckFormation,
     the single hex the entire Axis economy passes through. "Any Air Facility" (10 L / 50 M) -> the
     Axis air facility nearest Benghazi (_air_facility_park): 59.61 kept that row off the board only
     while the Air Game was abstract, Phase 5.1 plays it, and rule 36 now gives it a facility hex to
-    stand on -- these lorries keep a squadron's 36.17 larder full (35.15), they are not extra freight
-    capacity for the Panzerarmee.
+    stand on -- the chart allotted these lorries to an airfield, not to the Panzerarmee's freight run.
+    (They do not yet RESUPPLY the 36.17 larder they stand on; see _air_facility_park's flag.)
 
     *** THE TRIPOLI ROW IS NOT SEEDED, AND THAT IS NOT A CONCESSION -- IT IS THE AXIS'S WAR. *** The
     chart's largest row by a wide margin -- 25 Light / 140 Medium / 40 Heavy, 205 of the Italian
@@ -1404,9 +1421,12 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     # SGSUs standing on it may eat it (35.14): it is the air force's larder, not the army's.
     facilities = oob.air_facilities(oob_file="oob_italian.json",
                                     extra_file="oob_campaign_extra.json", sections="ABCDE")
-    air_supply = tuple(oob.air_dumps(facilities, oob.CAMPAIGN_AIR_POOLS))
-    # [35.11]/[60.31]/[60.42] ...and the SQUADRON BASES that stand on them. The campaign order of
-    # battle ships no SGSU counter at all, while [60.31] charts 39 Italian and [60.42] 14
+    # `placed` is [59.52]: an even split would stack the Commonwealth's Sollum share on the hex its
+    # charted Sollum Field Supply Depot already occupies -- "the totals are combined and it becomes
+    # one dump" -- so that facility is skipped and its share goes to the other three.
+    air_supply = tuple(oob.air_dumps(facilities, oob.CAMPAIGN_AIR_POOLS, placed=dumps))
+    # [35.11]/[60.32]/[60.42] ...and the SQUADRON BASES that stand on them. The campaign order of
+    # battle ships no SGSU counter at all, while [60.32] charts 39 Italian and [60.42] 14
     # Commonwealth "available" for placement "at any air facility, within the capacity of that
     # facility" -- so without this the whole of rule 35 would be inert in the campaign and the air
     # supply above would have no one to feed. Each facility takes SGSUs up to its Capacity Level.

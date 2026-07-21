@@ -85,12 +85,17 @@ def test_classify_italian_tenth_army_counters():
     assert oob.classify("IT 3Sno-Sno - Maletti", "IT Gruppo Maletti") == "infantry"
     assert oob.classify("IT Trvli - LTC", "IT The Libyan Tank Command") == "tank"
     assert oob.classify("IT 1 Libyan - none", "IT 1st Libyan Infantry Division (Sibille)") == "infantry"
-    # RESTATED at Phase 5.1: flying-boat Alighting areas and Air Landing Strips are not UNITS and
-    # so are not classified at all -- their OOB records carry kind "air_facility" and build() never
-    # reaches classify() for them (rule 36; see tests/test_air_facilities.py). classify() answers
-    # only for counters that muster, and an unrecognised one defaults to infantry.
-    assert oob.classify("Airboat Alighting axis", "AX Alighting/") == "infantry"
-    assert oob.classify("Air Strip axis", "AX Airstrip/") == "infantry"
+    # RESTATED at Phase 5.1, AND AGAIN IN ITS REPAIR PASS. Flying-boat Alighting areas and Air
+    # Landing Strips are not UNITS (rule 36): their OOB records carry kind "air_facility", build()
+    # filters on kind and never reaches classify() for them. The first restatement asserted what the
+    # code then did -- fall through to the sensible-default-to-infantry -- which PINNED A HAZARD as
+    # if it were the requirement: a re-extraction that emitted a landing strip under kind "unit"
+    # would have mustered AN AIRFIELD AS AN INFANTRY COMBAT UNIT, with a TOE, a close-assault value
+    # and a stacking cost. classify() now names them and returns None, build()'s "not a unit", so
+    # the failure mode is a dropped counter instead of a phantom battalion. That is what is asserted.
+    assert oob.classify("Airboat Alighting axis", "AX Alighting/") is None
+    assert oob.classify("Air Strip axis", "AX Airstrip/") is None
+    assert oob.classify("Air Strip allied", "AL Airstrip/") is None
 
 
 def test_classify_italian_gate_leaves_desert_fox_untouched():

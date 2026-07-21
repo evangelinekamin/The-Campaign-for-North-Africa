@@ -237,9 +237,15 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
         "stack_limit": stacking.DEFAULT_HEX_LIMIT,
         "objective": {"hex": list(target), "controlled_by": state.control_of(target).value},
         "your_units": [unit_view(u) for u in state.living(side)],
+        # air_dump is [36.17] on the face of the counter: the pile IS an air facility, so it feeds
+        # only the SGSUs standing on it and no land unit may draw from it ("land units may not use
+        # airfield supply dumps unless it is an emergency"). It is the Player's own supply and so it
+        # is shown -- hiding it would be its own falsehood -- but a staff that reads this list as its
+        # army's depots would plan marches to a larder it cannot eat and supply moves the engine
+        # rejects (an airfield's dump does not travel), so the flag is on the record.
         "your_supplies": [
             {"id": s.id, "hex": list(s.hex), "ammo": s.ammo, "fuel": s.fuel,
-             "stores": s.stores, "water": s.water}
+             "stores": s.stores, "water": s.water, "air_dump": s.air_dump}
             for s in state.active_supplies(side)
         ],
         "enemy_sightings": sorted(sightings.values(), key=lambda s: s["hex"]),
@@ -272,7 +278,11 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
         # supply_on_hex: a friendly dump holding BOTH fuel and ammunition stands ON this city, so a
         # combat unit garrisoning it traces at distance 0 and is SUPPLIED by definition -- it banks
         # the city's points. These are the cities you can hold for free: the supply is already there.
-        stocked = {s.hex for s in state.active_supplies(side) if s.fuel > 0 and s.ammo > 0}
+        # NOT an air-facility dump (36.17): a garrison standing on an airfield may not draw a Point
+        # from it, so "the supply is already there" would be false where it most matters -- this
+        # field is the staff's reason to garrison a city at all.
+        stocked = {s.hex for s in state.active_supplies(side)
+                   if not s.air_dump and s.fuel > 0 and s.ammo > 0}
         out["victory_cities"] = [
             {
                 "hex": list(ax),

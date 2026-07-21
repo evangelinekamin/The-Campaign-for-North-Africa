@@ -40,10 +40,11 @@
  },
  {
   "hex": "C4021",
-  "side": "AXIS",
+  "side": "ALLIED",
+  "_side_note": "[60.5] OWNERSHIP CORRECTED OFF THE CHART (was AXIS in the VASSAL extraction). 60.5 states the rule flatly -- 'All facilities in Egypt belong to the Commonwealth; all those in Libya belong to the Italians at the start of the game' -- and C4021 is Sollum, which is in EGYPT: the chart lists its Libyan twin across the wire, Ft. Capuzzo C4020, as a separate Air Landing Strip. This is the ONE of the eleven extracted campaign facilities that stands on a hex [60.5] actually prints, so it is the one place the chart can speak; the other ten sit on uncharted hexes and their sides are the extraction's (see game.oob.air_facilities). Corroborated by the engine's own set-up: the Commonwealth's charted Sollum Field Supply Depot stands on this hex.",
   "kind": "air_facility",
-  "counter": "Air Strip axis",
-  "group": "AX Airstrip/",
+  "counter": "Air Strip allied",
+  "group": "AL Airstrip/",
   "px": [
    7468,
    1661

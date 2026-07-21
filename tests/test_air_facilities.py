@@ -400,3 +400,159 @@ def test_a_benchmark_run_is_replayable_and_holds_its_invariants():
     assert [e for e in result.events
             if e.kind in (EventKind.SGSU_SUPPLIED, EventKind.SGSU_UNSUPPLIED)], \
         "the 35.14 upkeep beat fires in the benchmark"
+
+
+# --- THE REPAIR PASS: the four places 36.17 was written down and one place it was not ---------
+#
+# 36.17 is not one rule with one implementation; it is a property an air dump has to carry past
+# every scan in the engine that enumerates supply. Each test below is a scan that got it wrong.
+
+def test_36_17_the_supply_distribution_top_up_skips_an_air_dump():
+    """[36.17] / 48 V.C.6. The Supply Distribution Segment tops every unit's 49.14 tank and 50.0
+    ammo load up from a dump ON ITS HEX -- and it used to enumerate active_supplies itself, filtered
+    on the hex alone, so a tank battalion parked on an airfield refilled off the squadron's larder.
+    (Measured on the pre-repair tree, campaign seed 4 over twelve Game-Turns: 314 Fuel and 108 Ammo
+    Points moved out of Axis air dumps into land combat units.) It now asks the same enumeration the
+    in-hex draw asks, which is the only way the exclusion cannot drift apart from it."""
+    from game.engine import _supply_distribution
+    dump = _air_dump(fuel=500, ammo=500)
+    inf = replace(_land_unit(), fuel=0, ammo=0)
+    sg = _sgsu("SG1", fuel=0)
+    st = _mini(facilities=[_strip()], supplies=[dump], units=[inf, sg])
+    r = _Run(st)
+    _supply_distribution(r, Side.ALLIED)
+    refills = [e.payload for e in r.events if e.kind == EventKind.UNIT_REFILLED]
+    assert not [p for p in refills if p["unit_id"] == "INF"], \
+        f"a land unit refilled from an air dump (36.17): {refills}"
+    # ...and the squadron standing on the same pile still may (36.17's second sentence)
+    assert [p for p in refills if p["unit_id"] == "SG1"]
+
+
+def test_36_17_an_air_facilitys_dump_may_not_be_marched_off_its_field():
+    """[36.17] "An AIRFIELD IS a supply dump for supplies to be used by the SGSU's on that
+    airfield" -- the pile is a property of the installation, and nothing in rule 36 or in the
+    [60.34]/[60.44] charts gives it wheels. The 32.3 leapfrog used to carry it away: measured on the
+    pre-repair tree, all eleven campaign air dumps left their facility within six Game-Turns, four of
+    them ending stacked on one desert hex, and the entire air force went permanently unsupplied
+    beside its own empty airfields. The rejection lives at the ENGINE boundary so it binds every
+    policy, scripted or live."""
+    from game.engine import _supply_movement
+    from game.policy import Policy, SupplyMoveOrder
+
+    dump = _air_dump("AF-Sup", side=Side.ALLIED, hex_=(0, 0), fuel=500, ammo=500)
+    st = _mini(facilities=[_strip()], supplies=[dump], units=[_land_unit(hex_=(1, 0))])
+
+    class _Mover(Policy):
+        def supply_orders(self, state, side):
+            return [SupplyMoveOrder("AF-Sup", (1, 0))]
+
+    r = _Run(st)
+    _supply_movement(r, _Mover(), Side.ALLIED)
+    assert not [e for e in r.events if e.kind == EventKind.SUPPLY_MOVED]
+    rejects = [e.payload for e in r.events if e.kind == EventKind.ORDER_REJECTED]
+    assert rejects and "36.17" in rejects[0]["reason"]
+    assert r.state.supply("AF-Sup").hex == (0, 0)
+
+
+def test_the_scripted_leapfrog_never_proposes_an_air_dump():
+    """The other half of the same law: a policy should not propose what the engine must reject.
+    Both campaign policies inherit this leapfrog, and it is where the air dumps escaped."""
+    dump = _air_dump("AF-Sup", side=Side.ALLIED, hex_=(0, 0), fuel=500, ammo=500)
+    field = SupplyUnit("D1", Side.ALLIED, (0, 0), ammo=10, fuel=10, stores=10, water=10)
+    st = _mini(facilities=[_strip()], supplies=[dump, field], units=[_land_unit(hex_=(1, 0))])
+    orders = ScriptedPolicy(Side.ALLIED).supply_orders(st, Side.ALLIED)
+    assert "AF-Sup" not in {o.supply_id for o in orders}
+
+
+def test_64_71_does_not_count_an_air_dump_as_a_supply_dump():
+    """[64.71]/[64.72] ask whether an ARMY has a line of supply -- "within 90 Truck Movement Points
+    of a supply dump which can in turn be supplied from Tobruk or Tripoli in any way". 36.17 forbids
+    the army a single Point from an airfield's pile, so no air dump is the Supply Dump this rule is
+    asking for: the same argument that excludes a well. Rule 64.71 is the Axis auto-win and 64.72 the
+    Commonwealth instant-win, so a widened predicate is a widened victory condition."""
+    from game.campaign_victory import CampaignVictory
+    assert not CampaignVictory._is_supply_dump(_air_dump("AF-Sup", fuel=500))
+    assert CampaignVictory._is_supply_dump(
+        SupplyUnit("D1", Side.ALLIED, (0, 0), ammo=10, fuel=10, stores=10, water=10))
+
+
+def test_35_14_water_rides_the_same_abstract_trace_as_the_armys():
+    """[35.14] water, and the ONE flagged inconsistency the repair pass removed. Every land unit's
+    rule-52 water is drawn on the abstract half-CPA trace (supply.plan_draw), because the S8
+    investigation measured the naive in-hex water draw unfaithful until 52.45's water trucks exist.
+    The SGSU was being held to the stricter standard -- and [60.44] charts the Commonwealth air
+    facilities NO WATER AT ALL, so an in-hex draw denied every RAF squadron its water on Game-Turn 1
+    of the campaign and every turn after, out of a chart's silence. Water asks the trace; Stores and
+    Fuel stay in hex on the 36.17 pile."""
+    # a bone-dry facility, with water one hex away on an ordinary dump inside the SGSU's trace
+    near = SupplyUnit("WELL", Side.ALLIED, (1, 0), ammo=0, fuel=0, stores=0, water=50)
+    r = _upkeep(2, _air_dump(fuel=9))
+    assert [e.payload["commodity"] for e in r.events if e.kind == EventKind.SGSU_UNSUPPLIED] \
+        == [supply.WATER]                                  # nothing in reach -> still a shortfall
+
+    st = _mini(facilities=[_strip()], supplies=[_air_dump(fuel=9), near],
+               units=[_sgsu("SG1")], stage=2)
+    r2 = _Run(st)
+    _sgsu_upkeep(r2, Side.ALLIED)
+    assert not [e for e in r2.events if e.kind == EventKind.SGSU_UNSUPPLIED]
+    assert r2.state.supply("WELL").water == 49
+    assert r2.state.supply("AF-Sup").fuel == 8             # 36.17: fuel still off its own pile
+
+
+def test_59_52_the_air_allotment_is_never_stacked_on_a_field_dump():
+    """[59.52] "Air facilities automatically possess a supply dump. If a Player places supplies
+    available at a supply dump in the same location as those available at an air facility, THE
+    TOTALS ARE COMBINED AND IT BECOMES ONE DUMP." Two Supply Units on one hex is what the engine's
+    one-dump-per-hex law forbids, so the free placement does not create the case. The campaign walks
+    right into it: the Commonwealth's charted Sollum Field Supply Depot stands on the Sollum landing
+    strip's hex. The share is not lost -- it goes to that side's other facilities."""
+    strips = [_strip("F1", Side.ALLIED, (0, 0)), _strip("F2", Side.ALLIED, (1, 0))]
+    field = SupplyUnit("D1", Side.ALLIED, (0, 0), ammo=0, fuel=0, stores=0, water=0)
+    dumps = oob.air_dumps(strips, {Side.ALLIED: {"AMMO": 100, "FUEL": 0, "STORES": 0, "WATER": 0}},
+                          placed=[field])
+    assert [d.hex for d in dumps] == [(1, 0)]
+    assert sum(d.ammo for d in dumps) == 100               # the whole allotment still lands
+    # and with no field dump in the way, the ordinary even split
+    both = oob.air_dumps(strips, {Side.ALLIED: {"AMMO": 100, "FUEL": 0, "STORES": 0, "WATER": 0}})
+    assert sorted(d.ammo for d in both) == [50, 50]
+
+
+def test_the_campaign_air_allotment_is_conserved_exactly():
+    """[60.34] 1200 Ammo / 850 Fuel / 100 Stores / 100 Water + [60.44] 200 / 250 / 50 -- and the
+    59.52 placement above must not lose a Point of either."""
+    st = campaign(seed=4)
+    axis = [s for s in st.supplies if s.air_dump and s.side == Side.AXIS]
+    cw = [s for s in st.supplies if s.air_dump and s.side == Side.ALLIED]
+    assert (sum(s.ammo for s in axis), sum(s.fuel for s in axis),
+            sum(s.stores for s in axis), sum(s.water for s in axis)) == (1200, 850, 100, 100)
+    assert (sum(s.ammo for s in cw), sum(s.fuel for s in cw),
+            sum(s.stores for s in cw), sum(s.water for s in cw)) == (200, 250, 50, 0)
+
+
+def test_60_5_sollum_belongs_to_the_commonwealth():
+    """[60.5] "All facilities in Egypt belong to the Commonwealth; all those in Libya belong to the
+    Italians at the start of the game." C4021 is Sollum, in EGYPT -- the chart lists its Libyan twin
+    across the wire, Ft. Capuzzo C4020, as a separate strip. It is the ONE of the eleven extracted
+    campaign facilities standing on a hex [60.5] actually prints, so it is the one place the chart
+    can settle ownership; the extraction had it Axis."""
+    from game import coords
+    facs = oob.air_facilities(oob_file="oob_italian.json",
+                             extra_file="oob_campaign_extra.json", sections="ABCDE")
+    sollum = coords.to_axial(coords.parse("C4021"))
+    at = [f for f in facs if f.hex == sollum]
+    assert len(at) == 1 and at[0].side == Side.ALLIED
+
+
+def test_36_17_the_observation_does_not_offer_an_air_dump_as_the_armys_supply():
+    """[36.17] in the read-only projection the staff plans against (game.observation). The
+    victory_cities "supply_on_hex" field exists to tell a staff which cities it can garrison for
+    free -- "a friendly dump holding both fuel and ammunition stands on this hex, so the garrison is
+    supplied by definition" -- and that is FALSE of an airfield's pile, which no land unit may draw
+    from. The dump is still listed under your_supplies (it IS the Player's supply; hiding it would be
+    its own falsehood) and now carries the 36.17 flag that says what it is."""
+    from game import observation
+    dump = _air_dump("AF-Sup", side=Side.ALLIED, hex_=(0, 0), fuel=500, ammo=500)
+    st = _mini(facilities=[_strip()], supplies=[dump], units=[_land_unit()])
+    obs = observation.observe(st, Side.ALLIED)
+    listed = {s["id"]: s for s in obs["your_supplies"]}
+    assert listed["AF-Sup"]["air_dump"] is True

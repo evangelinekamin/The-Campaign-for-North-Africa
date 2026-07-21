@@ -10,6 +10,47 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-21 (second time this day) -- CAUSE: the 5.1 REPAIR PASS. 36.17 held in one scan
+and leaked in three others, and 35.14's water was held to a stricter standard than the whole army's.
+
+Three of the repairs move these logs, and each is a rule, not a tuning:
+
+  * 36.17 -- "LAND UNITS MAY NOT USE AIRFIELD SUPPLY DUMPS." The 48 V.C.6 Supply Distribution top-up
+    (engine._supply_distribution) enumerated active_supplies itself, filtered on the hex alone, so a
+    land unit standing on an air facility refilled its 49.14 tank and 50.0 load off the squadron's
+    larder. Measured on the previous tree, campaign seed 4 x 12 Game-Turns: 314 Fuel + 108 Ammo Points
+    walked out of Axis air dumps into land combat units. It now asks supply.colocated_dumps -- the
+    same enumeration in_hex_draw asks -- so the exclusion cannot drift apart from the draw again.
+  * 36.17 -- "an AIRFIELD IS a supply dump for supplies to be used by the SGSU's ON THAT AIRFIELD."
+    The rule-32.3 leapfrog drove the pile away: measured, all eleven campaign air dumps left their
+    facility within six Game-Turns (four stacked on one desert hex) and the air force went
+    permanently unsupplied beside its own empty fields; in the benchmark, Air-Strip-allied#2-Supply
+    walked off its strip on rommels_arrival(42). The rejection now lives at the engine's acceptance
+    boundary (_supply_movement), so it binds every policy, with the scripted/storm leapfrogs no
+    longer proposing what must be rejected.
+  * 35.14 water -- switched from supply.in_hex_draw to supply.plan_draw, the abstract half-CPA trace
+    EVERY land unit's rule-52 water already rides, because the S8 investigation measured the naive
+    in-hex water draw unfaithful until 52.45's water trucks are built. Holding an SGSU stricter than
+    the infantry it services was that same unfaithfulness twice over: [60.44] charts the Commonwealth
+    air facilities no water at all, so the in-hex rule denied every RAF squadron its 35.14 water on
+    Game-Turn 1 of the campaign and permanently after, out of a chart's silence. Stores and Fuel stay
+    IN HEX on the 36.17 pile; reachable_supplies is air-aware for an SGSU so the trace still sees the
+    facility's own dump first.
+
+(Also in the pass and NOT moving these two logs, because they are campaign-only or inert here: the
+64.71/64.72 victory predicate no longer counts an air dump as a Supply Dump; [60.5]'s ownership rule
+moved Sollum C4021 -- in Egypt -- to the Commonwealth; [59.52] one-hex-one-dump now constrains where
+the air allotment is placed; the campaign stranded-column rescue no longer marches at an air dump.)
+
+MEASURED, campaign seed 4 x 12 Game-Turns after the repairs: SUPPLY_MOVED on an air dump 0 (was 69),
+UNIT_REFILLED from an air dump into a LAND unit 0 (was 332 events / 422 Points), SGSU_UNSUPPLIED 7
+(was 318), SGSU_SUPPLIED 3 (was 0). Every air dump ends the run on its own facility hex. Determinism
+holds byte-for-byte, each signature reproduced twice.
+
+    rommels_arrival   9f5c4befd42b -> b805053d4d26
+    siege_of_tobruk   81344040fade -> 5c02a1f22398
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-21 -- CAUSE: rules 36 + 35 -- air facilities and SGSUs became real (Phase 5.1).
 
 The Air Landing Strips and flying-boat Alighting areas the order of battle has carried since Phase
@@ -338,8 +379,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "9f5c4befd42b"
-SIEGE_OF_TOBRUK = "81344040fade"
+ROMMELS_ARRIVAL = "b805053d4d26"
+SIEGE_OF_TOBRUK = "5c02a1f22398"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

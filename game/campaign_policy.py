@@ -512,8 +512,13 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
         if not rear:
             return []
         enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, side)
-        wet = [s for s in state.supplies if s.side == side and s.water > 0]
-        fuelled = [s for s in state.supplies if s.side == side and not s.is_dummy and s.fuel > 0]
+        # 36.17: an air-facility dump is no spring for a land column -- it may not draw a point from
+        # it when it arrives, so marching at one is marching at nothing (the same exclusion _bridge,
+        # the leapfrog and keep_in_trace make).
+        wet = [s for s in state.supplies
+               if s.side == side and not s.air_dump and s.water > 0]
+        fuelled = [s for s in state.supplies
+                   if s.side == side and not s.is_dummy and not s.air_dump and s.fuel > 0]
         orders: list[MoveOrder] = []
         for u in rear:
             if supply.in_hex_draw(state, u, supply.FUEL, supply.fuel_cost(u, 1)) is None:

@@ -216,7 +216,18 @@ class CampaignVictory:
     @staticmethod
     def _is_supply_dump(su) -> bool:
         """Is this counter a rule-64.71 SUPPLY DUMP? Every dump on the map is, except a 32.18
-        DUMMY (a bluff counter with nothing in it) and a 52.1 well or pipeline.
+        DUMMY (a bluff counter with nothing in it), a 52.1 well or pipeline, and a 36.17 air-facility
+        dump.
+
+        THE AIR DUMP IS EXCLUDED BY THE SAME ARGUMENT AS THE WELL, word for word. 64.71 asks whether
+        an ARMY has a line of supply -- "within 90 Truck Movement Points of a supply dump which can in
+        turn be supplied from Tobruk or Tripoli in any way". 36.17 forbids the army to draw a single
+        Point from an airfield's pile ("LAND UNITS MAY NOT USE AIRFIELD SUPPLY DUMPS"), so no air dump
+        is the Supply Dump this rule is asking for: a division that traced 90 Truck Movement Points to
+        a landing strip's larder would arrive at supplies it may not touch. Phase 5.1 put eleven such
+        piles on the campaign map -- measured at seed 4's set-up, 8 of the 21 Axis fed_dumps hexes and
+        2 of the 12 Commonwealth ones were air-facility dumps -- so leaving them in would have quietly
+        widened 64.71 (the Axis auto-win) and 64.72 (the Commonwealth instant-win) on both sides.
 
         THE WELLS ARE THE LOAD-BEARING EXCLUSION, and they are not hypothetical. game.wells models
         a water source as a SupplyUnit -- a flagged proxy for geography -- and it seeds
@@ -227,7 +238,7 @@ class CampaignVictory:
         Tobruk ever filled one, so no well can "be supplied from Tobruk or Tripoli in any way", so no
         well is the Supply Dump this rule is asking for. The id-prefix idiom is game.wells's own, and
         game.campaign_claim.is_field_dump already draws the same line."""
-        return not su.is_dummy and not wells.is_water_source(su)
+        return not su.is_dummy and not su.air_dump and not wells.is_water_source(su)
 
     def fed_dumps(self, state, side: Side) -> frozenset:
         """The hexes of `side`'s Supply Dumps that "can in turn be supplied from Tobruk or Tripoli

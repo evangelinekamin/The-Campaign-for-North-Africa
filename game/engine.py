@@ -668,7 +668,19 @@ def _dump_on(state: GameState, side: Side, hex_):
     but our dump IS the hex's capacity, not a counter, so it must not be minted twice. A well or a
     pipeline hex is geography, never a freight depot, so it is skipped (game.wells.is_water_source).
     An air-facility dump (36.17) is skipped for the same reason from the other end: the army may not
-    eat from it, so a train that unloaded into it would be shipping its freight out of the war."""
+    eat from it, so a train that unloaded into it would be shipping its freight out of the war.
+
+    ⚠ AND THAT SKIP IS HALF OF [59.52], WHICH SAYS THE OTHER HALF: "Air facilities automatically
+    possess a supply dump. If a Player places supplies available at a supply dump IN THE SAME LOCATION
+    as those available at an air facility, THE TOTALS ARE COMBINED AND IT BECOMES ONE DUMP (see Case
+    36.17)." At the SET-UP that is honoured by placement -- oob.air_dumps never stacks an air
+    allotment on a hex that already carries that side's field dump. AT RUN TIME IT IS NOT: a lorry
+    unloading (or a 24.9 construction) on an air-facility hex with no ordinary dump on it will mint
+    one beside the air dump, where 59.52 says there should be one combined pile. The consequence is
+    nominal rather than exploitable -- the 54.12 ceiling that is "doubled" is doubled between two
+    piles NEITHER of which the other's owner may draw from (the army cannot touch the air dump, and
+    an SGSU's own upkeep is one Point a stage) -- so it is disclosed here rather than papered over
+    with machinery, and it is the natural home for the run-time half of 59.52 when a rule needs it."""
     return next((s for s in sorted(state.supplies, key=lambda s: s.id)
                  if s.hex == hex_ and s.side == side and not s.is_dummy
                  and not s.air_dump and not wells.is_water_source(s)), None)
@@ -1107,11 +1119,23 @@ def _sgsu_upkeep(r: _Run, side: Side) -> None:
     Operations Stage (from _water_stage): Fuel and Water are charged every stage, Stores only in the
     game-turn's FIRST stage, so a Game-Turn costs exactly 1 Stores + 3 Fuel + 3 Water per SGSU.
 
-    THE SOURCE IS 36.17. The draw is an IN-HEX draw (supply.in_hex_draw), so an SGSU eats what is
-    standing on its own hex -- its facility's air dump first and foremost, "any SGSU at an airfield
-    may make use of the supplies there to maintain and ready its planes" -- and starves the moment
-    that pile is empty, bombed out or captured. An SGSU is the ONE counter class for which an air
-    dump is visible at all (game.supply._colocated_dumps).
+    THE SOURCE IS 36.17 FOR STORES AND FUEL. Those two are an IN-HEX draw (supply.in_hex_draw), so an
+    SGSU eats what is standing on its own hex -- its facility's air dump first and foremost, "any SGSU
+    at an airfield may make use of the supplies there to maintain and ready its planes" -- and starves
+    the moment that pile is empty, bombed out or captured. An SGSU is the ONE counter class for which
+    an air dump is visible at all (game.supply.colocated_dumps).
+
+    WATER RIDES THE SAME ABSTRACT TRACE AS THE WHOLE ARMY'S, AND THAT IS DELIBERATE (FLAGGED). Every
+    land unit's rule-52 water is drawn with supply.plan_draw -- the abstract half-CPA trace -- because
+    the S8 investigation measured the naive in-hex water draw UNFAITHFUL: 52.0 says water "rarely runs
+    out", and until 52.45's water trucks are built the trace is the faithful proxy for their reach (in
+    hex, campaign thirst went 12% -> 60% and the Eighth Army melted). An SGSU held to a stricter
+    standard than the infantry it services would be that same unfaithfulness, and worse: [60.44]
+    charts the Commonwealth air facilities NO WATER AT ALL, so an in-hex draw denied every RAF
+    squadron its 35.14 water on Game-Turn 1 of the campaign and every turn after, permanently, out of
+    a chart's silence. So water asks the trace, and the trace sees the facility's own dump first
+    (supply.reachable_supplies is air-aware for an SGSU, 36.17). It switches to in-hex WITH the army's,
+    when 52.45 lands.
 
     THE CONSEQUENCE IS DEFERRED BY ONE BLOCK, DELIBERATELY. A shortfall sets the SGSU's
     stages_without_air_supply counter, which game.air.may_refit reads and Phase 5.3's Refit Table
@@ -1119,7 +1143,17 @@ def _sgsu_upkeep(r: _Run, side: Side) -> None:
     forbid. Charging the supplies now is not premature -- it is the drain the Axis air force has
     never paid (the port plan's "the Axis air force is fed on air") -- and the counter is the seam
     5.3 plugs into. NOT modelled: 35.15's first-line trucks attached to an SGSU, and the
-    "additional supplies of Fuel and Ammunition" for the PLANES (34.17/38.21/38.24 -- Phase 5.2)."""
+    "additional supplies of Fuel and Ammunition" for the PLANES (34.17/38.21/38.24 -- Phase 5.2).
+
+    ⚠ FLAGGED, AND IT IS AN OWNER RULING: THIS DRAIN HAS NO CHARTED REFILL BUILT YET. The Stores and
+    Fuel legs come out of a finite [60.34]/[60.44] pot that nothing on the map replenishes -- the
+    rulebook DOES provide the refill (36.3 "they can bring supplies to a flying boat basin simply by
+    bringing trucks into the hex", 35.15's first-line trucks attached to an SGSU, and the [60.33]/
+    [60.43] "Any Air Facility" lorry rows), and none of the three is built, while every delivery route
+    the engine has is 36.17-excluded from air dumps by design. Measured, campaign seed 4: an Axis
+    squadron's ~12 charted Stores Points run out around Game-Turn 13 of 111 and it is unsupplied for
+    good. It reads on nothing today (may_refit has no consumer until 5.3) -- but 5.3 must not hang the
+    Refit Table on this gate until the refill side of it exists."""
     needs = [(supply.FUEL, air.SGSU_FUEL_PER_STAGE), (supply.WATER, air.SGSU_WATER_PER_STAGE)]
     if r.state.stage == 1:                              # 35.14: Stores are a per-GAME-TURN charge
         needs.insert(0, (supply.STORES, air.SGSU_STORES_PER_TURN))
@@ -1133,7 +1167,11 @@ def _sgsu_upkeep(r: _Run, side: Side) -> None:
         short = ""
         for commodity, qty in needs:
             cur = r.state.unit(u.id)                    # re-read: an earlier leg may have drained a pool
-            draws = supply.in_hex_draw(r.state, cur, commodity, qty)
+            if commodity == supply.WATER:               # the abstract 52.4 trace, as the army's is
+                plan = supply.plan_draw(r.state, cur, commodity, qty)
+                draws = None if plan is None else [("dump", sid, got) for sid, got in plan]
+            else:                                       # 36.17: Stores and Fuel off the hex's own pile
+                draws = supply.in_hex_draw(r.state, cur, commodity, qty)
             if draws is None:
                 short = short or commodity              # the FIRST unmet requirement names the shortfall
                 continue                                # 35.14 is a list of requirements, not a package:
@@ -1573,20 +1611,30 @@ def _supply_distribution(r: _Run, side: Side) -> None:
     stay dormant here exactly as in the draw -- truck-borne headroom is a separate later slice -- so a
     unit tops up only to its intrinsic capacity. Ordered FUEL-then-AMMO per unit for a deterministic
     log; a unit whose pools are already full (the GT1 case -- every pool seeded to capacity) yields no
-    deficit and emits nothing."""
+    deficit and emits nothing.
+
+    THE SOURCE LIST IS supply.colocated_dumps, NOT A SCAN OF ITS OWN, and that is the whole of
+    [36.17] here: "LAND UNITS MAY NOT USE AIRFIELD SUPPLY DUMPS unless it is an emergency." This beat
+    used to enumerate active_supplies itself, filtered on hex alone -- so a panzer battalion parked on
+    an air landing strip refilled its 49.14 tank off the squadron's larder (measured, campaign seed 4
+    over twelve Game-Turns: 314 Fuel and 108 Ammunition Points walked out of the Axis air dumps into
+    land combat units, a third of the whole [60.34] air allotment). Asking the shared enumeration is
+    what makes the exclusion structural instead of remembered."""
     caps = ((supply.FUEL, supply.fuel_capacity), (supply.AMMO, supply.ammo_capacity))
     for u in r.state.living(side):
+        sources = supply.colocated_dumps(r.state, u)        # 36.17 / 54.11 -- the shared enumeration
         for commodity, capacity in caps:
             attr = commodity.lower()
             need = capacity(u) - getattr(u, attr)
             if need <= 0:
                 continue
-            dumps = sorted((s for s in r.state.active_supplies(side)
-                            if s.hex == u.hex and getattr(s, attr) > 0), key=lambda s: s.id)
-            for su in dumps:
+            for s in sources:
                 if need <= 0:
                     break
+                su = r.state.supply(s.id)               # re-read: an earlier draw may have drained it
                 take = min(need, getattr(su, attr))
+                if take <= 0:
+                    continue
                 r.emit(EventKind.UNIT_REFILLED, side, f"{side.value}/QM",
                        {"unit_id": u.id, "supply_id": su.id, "commodity": commodity, "qty": take})
                 need -= take
@@ -2047,7 +2095,17 @@ def _supply_movement(r: _Run, policy: Policy, side: Side) -> None:
     freight. The escorting combat unit still pays NOTHING extra, and that is correct -- 32.58C, the
     attached points "are not required to expend CP's if stacked with combat units participating in
     combat", and 32.33 asks only that the dump begin and remain stacked with one. The column's whole
-    price is the thirty Truck Points and the one Fuel Point, and both are now charged."""
+    price is the thirty Truck Points and the one Fuel Point, and both are now charged.
+
+    AND AN AIRFIELD'S DUMP DOES NOT MARCH (36.17). "An AIRFIELD IS a supply dump for supplies to be
+    used by the SGSU's on that airfield" -- the pile is a property of the installation, not a field
+    depot the army carries forward, and nothing in rule 36 or in [60.34]/[60.44] hands it wheels. The
+    rejection lives HERE, at the acceptance boundary, and not only in the policies that propose: it is
+    the law, so it must hold for every policy, the scripted baseline and a live LLM staff alike. (The
+    two campaign policies inherit the base 32.3 leapfrog, which had the exclusion in one branch and
+    not the other -- measured, campaign seed 4: every one of the eleven air dumps walked off its
+    facility within six Game-Turns, four of them ending stacked on one desert hex, and the whole air
+    force went permanently SGSU_UNSUPPLIED beside empty airfields.)"""
     actor = f"{side.value}/Logistics"
     moved: set = set()               # a dump relocates at most once per OpStage (32.58A)
     for order in policy.supply_orders(r.state, side):
@@ -2057,6 +2115,10 @@ def _supply_movement(r: _Run, policy: Policy, side: Side) -> None:
             continue
         if su.base:
             _reject_supply(r, side, actor, order, "a strategic rear base is immobile (rule 57)")
+            continue
+        if su.air_dump:
+            _reject_supply(r, side, actor, order,
+                           "an air facility's dump is part of the installation (36.17)")
             continue
         if r.state.motorized_supply and not supply.motorized(r.state, su.id):
             _reject_supply(r, side, actor, order,

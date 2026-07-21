@@ -221,6 +221,16 @@ def cw_air_pool_60_44() -> dict:
     return {"AMMO": p["ammo"], "FUEL": p["fuel"], "STORES": p["stores"]}
 
 
+def italian_sgsu_available_60_32() -> int:
+    """[60.32] "Italian SGSU Available: 39" -- the last line of the Italian Air Strengths chart."""
+    return _scenario_60()["italian_sgsu_available_60_32"]["sgsu"]
+
+
+def cw_sgsu_available_60_42() -> int:
+    """[60.42] "SGSU Available: 14" -- Commonwealth North African Air Force."""
+    return _scenario_60()["commonwealth_sgsu_available_60_42"]["sgsu"]
+
+
 def tobruk_builtin_61_36() -> dict:
     """[61.36] Tobruk's built-in supply (fuel/ammo/stores); Tobruk is itself a dump."""
     p = _scenario_61()["commonwealth_tobruk_builtin_61_36"]

@@ -238,12 +238,17 @@ class SupplyUnit:
     # unless it is an emergency (exactly what constitutes an emergency is left to the Player). Any
     # SGSU at an airfield may make use of the supplies there to maintain and ready its planes."
     #
-    # So an air-facility dump is an ordinary SupplyUnit in every mechanical respect -- it evaporates
-    # (49.3), it is capped by 54.12, a lorry may unload into it, an enemy may capture or blow it --
-    # and differs in exactly one: the LAND army may not eat from it. game.supply hides it from the
-    # land trace (reachable_supplies) and from the land in-hex draw (_colocated_dumps), and shows it
-    # to an SGSU's 35.14 draw. The 36.17 "emergency" exception is the PLAYER'S call by the rule's own
-    # words and is deliberately not modelled -- there is no non-arbitrary trigger for it.
+    # So an air-facility dump is an ordinary SupplyUnit in most mechanical respects -- it evaporates
+    # (49.3), it is capped by 54.12, an enemy may capture or blow it -- and differs in TWO. The LAND
+    # army may not eat from it: game.supply hides it from the land trace (reachable_supplies) and
+    # from the land in-hex draw (colocated_dumps), and shows both to an SGSU's 35.14 draw. And IT
+    # DOES NOT MOVE: 36.17's subject is the AIRFIELD ("an airfield IS a supply dump"), so the pile
+    # belongs to the installation and the rule-32.3 leapfrog may not carry it away -- rejected at the
+    # engine's own acceptance boundary (engine._supply_movement), not merely skipped by the policies.
+    # The 36.17 "emergency" exception is the PLAYER'S call by the rule's own words and is deliberately
+    # not modelled -- there is no non-arbitrary trigger for it. (A lorry ordered to unload into one
+    # still may -- 36.3's "bring supplies... simply by bringing trucks into the hex" -- but no built
+    # policy issues that order; see engine._sgsu_upkeep's flag on the missing refill path.)
     #
     # Default False = every dump the game has ever had, so nothing existing moves.
     air_dump: bool = False

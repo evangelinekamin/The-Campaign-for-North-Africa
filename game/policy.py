@@ -239,6 +239,10 @@ class ScriptedPolicy(Policy):
             if su.base:
                 continue                              # a strategic rear base (rule 57) is immobile
                                                       # -- the front hauls FROM it, it never advances
+            if su.air_dump:
+                continue                              # 36.17: an AIRFIELD IS a supply dump -- the pile
+                                                      # belongs to the installation and stays on it
+                                                      # (the engine rejects it either way)
             if su.fuel < supply.SUPPLY_MOVE_FUEL:
                 continue                              # no fuel to move (rule 32.24)
             if state.port_at(su.hex) is not None:
@@ -463,8 +467,11 @@ class StormPolicy(ScriptedPolicy):
         orders: list[SupplyMoveOrder] = []
         claimed: set[Coord] = set()
         for su in state.active_supplies(side):
-            if su.fuel < supply.SUPPLY_MOVE_FUEL or state.port_at(su.hex) is not None:
-                continue                                   # no fuel to move, or a harbour dump stays put
+            if (su.air_dump or su.fuel < supply.SUPPLY_MOVE_FUEL
+                    or state.port_at(su.hex) is not None):
+                continue                                   # an airfield's larder stays on its airfield
+                                                           # (36.17); no fuel to move; a harbour dump
+                                                           # stays where the convoys land
             reach = supply.reachable_moves(state, su)
             pick = next((u for u in stranded if u.hex in reach
                          and u.hex != su.hex and u.hex not in claimed), None)

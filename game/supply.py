@@ -390,6 +390,12 @@ def reachable_supplies(state: GameState, unit: Unit, commodity: str):
     """Friendly supply units holding `commodity`, within half the unit's CPA,
     nearest first (deterministic). Trace blocked by enemy ZOC / units (32.16).
 
+    [36.17] AIR DUMPS ARE INVISIBLE HERE TO EVERY LAND UNIT, and visible to an SGSU -- the identical
+    `air_ok` split colocated_dumps makes, for the identical reason ("land units may not use airfield
+    supply dumps... any SGSU at an airfield may make use of the supplies there"). The SGSU half is
+    load-bearing for the one commodity its 35.14 upkeep still draws down this trace (WATER -- see
+    engine._sgsu_upkeep): without it a squadron could not drink from the dump it is standing on.
+
     THE WELL-CONTROL GATE, MEASURED AND REJECTED (kept as a note so it is not re-invented). game.wells
     models a well as one Supply Unit PER SIDE -- a flagged proxy for side-neutral geography -- which
     hands an invader a private, bottomless, Axis-owned well on every hex of the defender's homeland
@@ -412,8 +418,9 @@ def reachable_supplies(state: GameState, unit: Unit, commodity: str):
     mob = Mobility.FOOT if unit.mobility in NON_MOT_CLASSES else Mobility.MOTORIZED
     reach = _reach.reach(state.terrain, unit.hex, budget, mob,
                          trace_blocked(state, unit.side))
+    air_ok = air.is_sgsu(unit)                                       # 36.17, see the docstring
     out = [su for su in state.active_supplies(unit.side)
-           if su.hex in reach and _pool(su, commodity) > 0 and not su.air_dump]
+           if su.hex in reach and _pool(su, commodity) > 0 and (air_ok or not su.air_dump)]
     out.sort(key=lambda su: (reach[su.hex], su.id))
     return out
 
@@ -940,12 +947,14 @@ def plan_draw(state: GameState, unit: Unit, commodity: str, need: int):
     return draws if remaining <= 0 else None
 
 
-def _colocated_dumps(state: GameState, unit: Unit):
+def colocated_dumps(state: GameState, unit: Unit):
     """Friendly ACTIVE supply dumps on the unit's OWN hex -- the co-located 54.11/54.15 in-hex draw
     sources (a well is one of these; a 2nd/3rd-line Truck Convoy is NOT, 49.16, until it unloads).
-    Sorted by id for determinism. THE single source enumeration shared by in_hex_draw and
-    in_hex_available, so an affordability check the movement AI runs can never drift from what the
-    engine's draw actually funds.
+    Sorted by id for determinism. THE single source enumeration shared by in_hex_draw,
+    in_hex_available and the 48 V.C.6 Supply Distribution top-up (engine._supply_distribution), so an
+    affordability check the movement AI runs can never drift from what the engine's draw actually
+    funds -- and so the 36.17 exclusion below cannot be honoured in one of the three and forgotten in
+    another, which is exactly how the airfield's fuel ended up in the Panzerarmee's tanks once.
 
     [36.17] EXCEPT THE AIRFIELD'S OWN PILE. "An airfield is a supply dump for supplies to be used by
     the SGSU's on that airfield... LAND UNITS MAY NOT USE AIRFIELD SUPPLY DUMPS unless it is an
@@ -966,7 +975,7 @@ def in_hex_available(state: GameState, unit: Unit, commodity: str) -> int:
     this integer is the affordability oracle a competent policy uses to propose only fundable moves --
     fuel_cost(u, reach[c]) <= in_hex_available(state, u, FUEL) iff in_hex_draw would return a plan."""
     return (_pool(unit, commodity)
-            + sum(_pool(su, commodity) for su in _colocated_dumps(state, unit)))
+            + sum(_pool(su, commodity) for su in colocated_dumps(state, unit)))
 
 
 def affordable_reach(state: GameState, unit: Unit, reach: dict) -> dict:
@@ -1007,7 +1016,7 @@ def in_hex_draw(state: GameState, unit: Unit, commodity: str, need: int):
         draws.append(("unit", unit.id, take))
         remaining -= take
     if remaining > 0:                                  # 2. co-located dumps (the shared enumeration);
-        for su in _colocated_dumps(state, unit):       # same hex so distance is moot
+        for su in colocated_dumps(state, unit):        # same hex so distance is moot
             if remaining <= 0:
                 break
             take = min(remaining, _pool(su, commodity))

@@ -15,7 +15,7 @@ import json
 import os
 from dataclasses import replace
 
-from . import air, coords, logistics_data
+from . import air, coords, logistics_data, wells
 from .events import Side
 from .state import AirFacility, Rommel, StepRecord, SupplyUnit, Unit
 from .terrain import Mobility, NON_MOT_CLASSES
@@ -149,7 +149,7 @@ def _morale_for(group: str, counter: str) -> int:
     return 0                                          # unknown formation -> neutral
 
 
-def classify(counter: str, group: str) -> str:
+def classify(counter: str, group: str) -> "str | None":
     """Best-effort role for an OOB counter that carries no explicit `role`.
 
     DATA-DRIVEN FIRST: every shipped OOB record names its own `role` (build() reads
@@ -168,13 +168,23 @@ def classify(counter: str, group: str) -> str:
     FACILITIES that used to share that role -- Air Landing Strips, flying-boat Alighting areas --
     are not units at all: Phase 5.1 made them game.state.AirFacility installations, carried in
     their own OOB records (kind "air_facility", see air_facilities below), so a counter reaching
-    this function is never one of them.
+    this function should never be one of them -- and the guard below is what makes "should never"
+    safe rather than hopeful.
     """
     c = counter
     # Squadron Ground Support Units (rules 3.21 / 35.0): non-combat squadron bases, no combat
     # values (35.12). Their upkeep is 35.14's, drawn from their facility's 36.17 dump.
     if "SGSU" in c:
         return "sgsu"
+    # [36.0] AIR FACILITIES ARE NOT UNITS -- and an air-facility counter that reaches this function
+    # is a DATA fault, not a piece to muster. They are read from their own kind ("air_facility",
+    # air_facilities below), so build() never routes one here; but the tail of this classifier is a
+    # sensible-default-to-infantry, and a re-extraction that emitted a landing strip under kind
+    # "unit" would fall all the way through it and put AN AIR LANDING STRIP ON THE MAP AS AN
+    # INFANTRY COMBAT UNIT with a TOE, a close-assault value and a stacking cost. Dropped instead:
+    # None is build()'s "this counter is not a unit", the same answer it gives a supply-dump record.
+    if "Airstrip" in group or "Alighting" in group or "Air Strip" in c or "Airboat" in c:
+        return None
     # Anti-Aircraft-Type (rule 3.23); the AA/Flak symbol on the counter -> Pure Flak (46.17).
     if "LAA" in c or "HAA" in c or "(AA)" in c:
         return "aa"
@@ -280,16 +290,29 @@ def air_facilities(oob_file: str = "oob_desert_fox.json", sections: str | None =
     is an intact one -- 36.14's reductions are what BOMBING does to it. `sections` and `extra_file`
     filter exactly as build()'s do.
 
-    ⚠ FLAGGED, AND IT IS THE NEXT DATA JOB. This reads the VASSAL extraction, which ships the
-    campaign 10 Air Landing Strips + 1 Alighting Area and NO AIRFIELD AT ALL -- while [60.5]
-    (docs/rules/60, lines 288-362) charts the campaign's real set:
-    20 Airfields, 31 Air Landing Strips, 3 Flying Boat
-    Basins and 1 Alighting Area, each with its printed hex. So the campaign currently has no
-    capacity-6 facility anywhere, and several extraction hexes have drifted off the chart's (the
-    Derna alighting area is charted B5925 and extracted B6024). Transcribing [60.5] needs one
-    decision the extraction makes for us here: the chart assigns ownership by GEOGRAPHY -- "all
-    facilities in Egypt belong to the Commonwealth; all those in Libya belong to the Italians" --
-    and the Libya/Egypt frontier is not in any data file we hold."""
+    ⚠ FLAGGED, AND IT IS THE NEXT DATA JOB -- SAY THE SIZE OF IT PLAINLY. This reads the VASSAL
+    extraction, and the extraction is NOT the book's map. [60.5] (docs/rules/60, lines 288-362; scan
+    p.79) charts the campaign's real set -- 20 Airfields, 31 Air Landing Strips, 3 Flying Boat Basins
+    and 1 Alighting Area, each with its printed hex -- and the extraction ships 10 Air Landing Strips
+    and 1 Alighting Area, NO AIRFIELD AT ALL. Compared hex by hex against the chart:
+
+        C4021 (Sollum) is the ONLY ONE OF THE ELEVEN that stands where [60.5] prints it.
+        B4922 / C1015 / C4322 / C4420 / D3904 are one row off the charted Mechili B4921, Giarabub
+          C1014, Bardia C4321, Menastir C4419 and the blank strip D3903;
+        B6024, the Alighting Area, is one hex off the only one [60.5] charts, Derna B5925;
+        C4317, C4908, C4122 and C4230 DO NOT APPEAR IN [60.5] AT ALL.
+
+    So: ten of the eleven facilities on the campaign map stand on hexes the book does not print, and
+    everything Phase 5.1 hangs on them -- 60 Axis and 55 Commonwealth charted Truck Points, the whole
+    [60.34]/[60.44] air allotment, and every seeded SGSU -- hangs there with them. Nothing here is
+    load-bearing for the FAITHFULNESS of rules 35 and 36 (the capacity levels, the 36.17 dump and the
+    35.14 upkeep are the book's), but the MAP is a placeholder and must not be read as the book's.
+
+    Transcribing [60.5] needs one decision this extraction makes for us: the chart assigns ownership
+    by GEOGRAPHY -- "All facilities in Egypt belong to the Commonwealth; all those in Libya belong to
+    the Italians at the start of the game" -- and the Libya/Egypt frontier is in no data file we hold.
+    It is not a map-section line either: Sollum C4021 (Egypt) and Ft. Capuzzo C4020 (Libya) are
+    adjacent hexes of map C, and so are Bardia C4321 (Libya) and Sidi Barrani C4131 (Egypt)."""
     out: list[AirFacility] = []
     seen: dict[str, int] = {}
     for rec in (_load(oob_file) + (_load(extra_file) if extra_file else [])):
@@ -307,7 +330,7 @@ def air_facilities(oob_file: str = "oob_desert_fox.json", sections: str | None =
     return out
 
 
-def air_dumps(facilities: list[AirFacility], pools: dict) -> list[SupplyUnit]:
+def air_dumps(facilities: list[AirFacility], pools: dict, placed=()) -> list[SupplyUnit]:
     """[36.17] Give each side's air facilities the supply dump the rule says they ARE: "an airfield
     is a supply dump for supplies to be used by the SGSU's on that airfield. Fuel, ammunition,
     stores, etc., may be stored at an airfield AS IF IT WERE A DUMP."
@@ -322,13 +345,41 @@ def air_dumps(facilities: list[AirFacility], pools: dict) -> list[SupplyUnit]:
 
     These dumps carry air_dump=True, which is the whole point: game.supply hides them from the land
     army's trace and in-hex draw and shows them only to an SGSU's 35.14 upkeep. Without the flag the
-    Axis's 850 charted air Fuel Points would simply be 850 more Fuel Points for the Panzerarmee."""
+    Axis's 850 charted air Fuel Points would simply be 850 more Fuel Points for the Panzerarmee.
+
+    [59.52] IS WHY `placed` EXISTS, AND IT IS THE ONE CONSTRAINT THE FREE CHOICE HAS. "Air facilities
+    automatically possess a supply dump. IF A PLAYER PLACES SUPPLIES AVAILABLE AT A SUPPLY DUMP IN THE
+    SAME LOCATION AS THOSE AVAILABLE AT AN AIR FACILITY, THE TOTALS ARE COMBINED AND IT BECOMES ONE
+    DUMP (see Case 36.17)." Two Supply Units on one hex is exactly what the engine's one-dump-per-hex
+    law forbids (engine._dump_on: our dump IS that hex's 54.12 Supply Dump Capacity, not a counter),
+    so the placement must not create the case -- and a quartermaster would not create it anyway. The
+    campaign walks straight into it: the Commonwealth's charted Sollum Field Supply Depot stands on
+    the Sollum landing strip's hex, in the path of the September-1940 Italian advance, so an even
+    split would stack the RAF's larder on a depot that is overrun on Game-Turn 1. `placed` is the
+    dumps already on the board; a facility sharing a hex with its OWN side's real dump is skipped, and
+    its share goes to that side's other facilities (the squadron there is not starved by the skip --
+    36.17 restricts LAND units from an airfield's pile, it does not restrict an SGSU from an ordinary
+    dump under its feet, so the depot it stands on feeds it: supply.colocated_dumps). If skipping
+    would leave a side no facility at all, nothing is skipped -- charted supply is never dropped to
+    honour a placement convention.
+
+    ⚠ A SIDE WITH NO FACILITY GETS NO DUMP, AND ITS CHARTED POOL IS DROPPED. The split is over the
+    facilities passed in, so a pool keyed to a side that holds none simply does not land -- and the
+    Desert Fox benchmarks are exactly that case: their extraction carries only the two Commonwealth
+    landing strips (B4006, C4808), so [61.44]'s Axis 50 Fuel / 50 Ammo air allotment is not on the
+    board in either of them. It is the supply twin of the flagged truck case (_rommel_trucks): 61.42
+    gives the Axis a free "one airfield and one air landing strip in any hex west of El Agheila" that
+    we do not model, so there is no Axis facility hex on maps A-C for the chart to name. Stated here
+    rather than silent, because charted supply that does not appear is a fact about the scenario."""
+    taken = {(s.side, s.hex) for s in placed
+             if not (s.is_dummy or s.air_dump or wells.is_water_source(s))}
     out: list[SupplyUnit] = []
     by_side: dict[Side, list[AirFacility]] = {}
     for f in sorted(facilities, key=lambda f: f.id):
         by_side.setdefault(f.side, []).append(f)
-    for side, lst in by_side.items():
+    for side, all_of_them in by_side.items():
         pool = pools.get(side, {})
+        lst = [f for f in all_of_them if (side, f.hex) not in taken] or all_of_them   # 59.52
         n = len(lst)
         for i, f in enumerate(lst):
             amt = {c: min(_share(pool.get(c, 0), n, i), _OTHER_CAP[c]) for c in _COMMODITIES}
@@ -338,15 +389,22 @@ def air_dumps(facilities: list[AirFacility], pools: dict) -> list[SupplyUnit]:
     return out
 
 
-# [60.31]/[60.42] SGSU AVAILABILITY for the full campaign: "Italian SGSU Available: 39" and, for
-# the Commonwealth North African Air Force, "SGSU Available: 14" -- and 60.42 states the placement
-# rule for both: "the following planes, SGSU's and pilots may be placed at any... air facility,
-# WITHIN THE CAPACITY OF THAT FACILITY."
-CAMPAIGN_SGSU_AVAILABLE = {Side.AXIS: 39, Side.ALLIED: 14}
+def _sgsu_available() -> dict:
+    """[60.32]/[60.42] SGSU AVAILABILITY for the full campaign, off the charts: "Italian SGSU
+    Available: 39" (the last line of [60.32] Italian Air Strengths -- NOT [60.31], which is the
+    Italian Initial Deployment) and "SGSU Available: 14" ([60.42], the Commonwealth North African Air
+    Force). 60.42 states the placement rule for both: "the following planes, SGSU's and pilots may be
+    placed at any... air facility, WITHIN THE CAPACITY OF THAT FACILITY." Read from data with every
+    other charted magnitude, not carried as a literal."""
+    return {Side.AXIS: logistics_data.italian_sgsu_available_60_32(),
+            Side.ALLIED: logistics_data.cw_sgsu_available_60_42()}
+
+
+CAMPAIGN_SGSU_AVAILABLE = _sgsu_available()
 
 
 def seed_sgsus(facilities: list[AirFacility], available: dict) -> list[Unit]:
-    """[35.11]/[60.31]/[60.42] Base each side's Squadron Ground Support Units at its air facilities.
+    """[35.11]/[60.32]/[60.42] Base each side's Squadron Ground Support Units at its air facilities.
 
     35.11: "Each SGSU counter is placed on the game-map to indicate where that squadron is located.
     They are usually placed at air facilities." 60.42 gives the constraint that decides HOW MANY go
@@ -372,7 +430,11 @@ def seed_sgsus(facilities: list[AirFacility], available: dict) -> list[Unit]:
     out: list[Unit] = []
     for f in sorted(facilities, key=lambda f: f.id):
         nat = "IT" if f.side == Side.AXIS else "CW"
-        for _ in range(f.level):
+        # [36.12] "There may never be more than SIX SGSU's in a given airfield hex" -- the STACKING
+        # ceiling, a different number from the Capacity Level (36.14 lets six stand at a battered
+        # field, only `level` of them functioning). It binds nothing today (no charted facility has a
+        # capacity above six) and it is the law all the same, so the placement asks for both.
+        for _ in range(min(f.level, air.SGSU_HEX_LIMIT)):
             if left.get(f.side, 0) <= 0:
                 break
             left[f.side] -= 1

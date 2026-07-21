@@ -43,6 +43,27 @@ WHAT IS DELIBERATELY NOT HERE (5.1 is the ground floor, not the building): 35.17
 refit die, 35.2 squadron composition/capacities, 24.7 air-facility CONSTRUCTION (the rebuild LAW is
 here; no order routes to it yet), 36.5 off-map facilities, 36.18's intrinsic 1 AA point, and the
 44.5 Malta construction table. Each is named in the port plan under 5.2-5.5.
+
+AND THREE MORE, NAMED HERE BECAUSE THEY ARE EASY TO MISTAKE FOR BUILT:
+
+  * **THE ARTILLERY HALF OF 36.14 IS UNBUILT.** The rule reads "the capacity of an airfield (its
+    levels) may be reduced by enemy bombardment (AIR OR ARTILLERY)", and 36.4 gives the alighting
+    area an immunity that only means something once guns can hit a field ("they are immune to
+    artillery barrage"). 12.51/12.54 are the procedure -- an Air Facility is an explicit barrage
+    target and "he uses his Raw Barrage Points... to correspond to the Bombload column", i.e. the
+    SAME [41.5] column set the bombing path already reads. Nothing in game/ implements 12.5 against a
+    facility, so only the AIR half of 36.14 exists. Note what this does and does not need from the
+    data: [41.5] is printed on THREE index scales side by side (Torpedo Points, Barrage Points, Bomb
+    Points) and data/logistics_rates.json transcribes only bomb_points -- but 12.54 sends the barrage
+    at a facility to the Bombload column, so the facility path needs no new transcription. The
+    Barrage-Points scale is owed to the OTHER target rows of that table.
+  * **NO SCENARIO OR POLICY GENERATES AN 'airfield' AIR MISSION.** engine._air_facility_bomb is the
+    41.36 resolver and it is real and tested, but the only caller in the tree is the test. It is
+    5.4's foundation (44.21's suppression of Malta is what will fly these), not a live channel.
+  * **THE 35.14 UPKEEP HAS NO REFILL PATH.** See engine._sgsu_upkeep's own flag: 36.3, 35.15 and the
+    [60.33]/[60.43] air-facility lorry rows are the rulebook's three ways to restock an airfield and
+    none is built, so the charted allotment is a pot that only shrinks. OWNER RULING before 5.3
+    hangs the Refit Table on may_refit.
 """
 from __future__ import annotations
 
