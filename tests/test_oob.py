@@ -30,10 +30,13 @@ def test_oob_builds_both_sides_with_chart_stats():
     assert [u for u in units if u.side == Side.AXIS]
     assert [u for u in units if u.side == Side.ALLIED]
     assert supplies
-    # CPA came from the charts for every mustered piece EXCEPT the inert `air` facilities
-    # (rule 3.21: Air Strips / SGSUs, kept for Phase 5, carry no unit-chart CPA).
-    assert all(u.cpa > 0 for u in units if u.steps[0].label != "air")
-    assert any(u.steps[0].label == "air" and u.cpa == 0 for u in units)  # air facilities kept
+    # CPA came from the charts for every mustered piece. RESTATED at Phase 5.1: this used to carve
+    # out the inert `air` role at CPA 0. Air facilities are no longer units (rule 36 -- see
+    # oob.air_facilities), and the SGSU counters that remain are vehicles with a real CPA (35.12:
+    # "SGSU's have their Capability Point Allowance printed on the counter; they are vehicles"), so
+    # there is no CPA-0 piece left to carve out.
+    assert all(u.cpa > 0 for u in units)
+    assert [u for u in units if u.steps[0].label == "sgsu"]              # the SGSU counters muster
     assert any(not u.is_combat for u in units)        # HQs are non-combat
     assert any(u.oca > 0 for u in units)              # close-assault units exist
 
@@ -44,7 +47,7 @@ def test_oob_classify_prefers_counter_identity_over_group():
     assert oob.classify("GE 3 - 300 OAS", "GE 300th Oasis Battalion") == "oasis"
     assert oob.classify("AU 2-17Aus - 20-9Aus", "AU 9th Australian Division") == "infantry"
     assert oob.classify("GE 33 - 15 (ATG)", "GE 15th Panzer Division") == "antitank"
-    assert oob.classify("AL SGSU 250RAF", "AL SGSU") == "air"      # SGSU kept, not dropped (Phase 5)
+    assert oob.classify("AL SGSU 250RAF", "AL SGSU") == "sgsu"     # rules 3.21/35.0, not a combat piece
 
 
 def test_per_model_stats_override_role():
@@ -82,17 +85,19 @@ def test_classify_italian_tenth_army_counters():
     assert oob.classify("IT 3Sno-Sno - Maletti", "IT Gruppo Maletti") == "infantry"
     assert oob.classify("IT Trvli - LTC", "IT The Libyan Tank Command") == "tank"
     assert oob.classify("IT 1 Libyan - none", "IT 1st Libyan Infantry Division (Sibille)") == "infantry"
-    # Flying-boat "Alighting" areas and air strips are KEPT as inert `air` pieces (rule 3.21),
-    # no longer discarded -- they carry the facility hexes the Phase 5 Air Game needs.
-    assert oob.classify("Airboat Alighting axis", "AX Alighting/") == "air"
-    assert oob.classify("Air Strip axis", "AX Airstrip/") == "air"
+    # RESTATED at Phase 5.1: flying-boat Alighting areas and Air Landing Strips are not UNITS and
+    # so are not classified at all -- their OOB records carry kind "air_facility" and build() never
+    # reaches classify() for them (rule 36; see tests/test_air_facilities.py). classify() answers
+    # only for counters that muster, and an unrecognised one defaults to infantry.
+    assert oob.classify("Airboat Alighting axis", "AX Alighting/") == "infantry"
+    assert oob.classify("Air Strip axis", "AX Airstrip/") == "infantry"
 
 
 def test_classify_italian_gate_leaves_desert_fox_untouched():
     # The 'IT ' gate must not disturb the German/Commonwealth classifications.
     assert oob.classify("GE 33 - 15 (ATG)", "GE 15th Panzer Division") == "antitank"
     assert oob.classify("GE 3 - 300 OAS", "GE 300th Oasis Battalion") == "oasis"
-    assert oob.classify("AL SGSU 250RAF", "AL SGSU") == "air"
+    assert oob.classify("AL SGSU 250RAF", "AL SGSU") == "sgsu"
 
 
 def test_morale_italian_formations():
@@ -112,11 +117,18 @@ def test_italian_oob_builds_with_it_stats_and_roles():
     # the 'IT ' prefix: every counter musters with Italian stats (not the German fallback)
     # and a sensible role. Five weapon roles are represented across the 10th Army.
     units, _ = oob.build(oob_file="oob_italian.json", sections="ABCDE", reinforcements_file=None)
-    axis = [u for u in units if u.side == Side.AXIS]
-    muster = [u for u in axis if u.steps[0].label != "air"]            # combat/support pieces
+    muster = [u for u in units if u.side == Side.AXIS]
     assert len(muster) == 61                                          # the Italian 10th Army muster
-    # The eight axis Air Landing Strips / flying-boat basins are now kept (were dropped), inert.
-    assert len([u for u in axis if u.steps[0].label == "air"]) == 8
+    # RESTATED at Phase 5.1 (rules 35/36). This used to assert that the eight Axis Air Landing
+    # Strips and the flying-boat Alighting area musters as inert `air`-role UNITS -- which was
+    # Phase 3.1 rescuing them from being DISCARDED, and was still the wrong model: rule 36 makes an
+    # air facility an INSTALLATION with a Capacity Level (game.state.AirFacility), not a counter
+    # that stacks, traces and starves. They are now lifted out of units[] by oob.air_facilities, so
+    # the muster is the 10th Army and nothing else. The count that matters moved to
+    # tests/test_air_facilities.py; what is asserted here is that they are GONE FROM THE MUSTER,
+    # not that they are gone from the game.
+    assert not [u for u in muster if u.steps[0].label in ("air", "sgsu")]
+    assert len(oob.air_facilities("oob_italian.json", sections="ABCDE")) == 11   # 8 Axis + 3 CW
     assert all(u.cpa > 0 for u in muster)                             # Italian chart CPA, not the GE fallback
     roles = {sr.label for u in muster for sr in u.steps}
     # The 10th Army fields infantry / artillery / MG / tank (the Libyan Tank Command) and AA

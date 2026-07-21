@@ -127,7 +127,7 @@
   "kind": "unit",
   "counter": "AL SGSU 250RAF",
   "group": "AL SGSU",
-  "role": "air",
+  "role": "sgsu",
   "px": [
    2520,
    2681
@@ -241,15 +241,15 @@
  {
   "hex": "B4006",
   "side": "ALLIED",
-  "kind": "unit",
+  "kind": "air_facility",
   "counter": "Air Strip allied",
   "group": "AL Airstrip/",
-  "role": "air",
   "px": [
    3373,
    1661
   ],
-  "stale_oldloc": "B4006"
+  "stale_oldloc": "B4006",
+  "facility": "strip"
  },
  {
   "hex": "B5504",
@@ -257,7 +257,7 @@
   "kind": "unit",
   "counter": "AL SGSU 260RAF",
   "group": "AL SGSU",
-  "role": "air",
+  "role": "sgsu",
   "px": [
    3161,
    567
@@ -280,15 +280,15 @@
  {
   "hex": "C4808",
   "side": "ALLIED",
-  "kind": "unit",
+  "kind": "air_facility",
   "counter": "Air Strip allied",
   "group": "AL Airstrip/",
-  "role": "air",
   "px": [
    6360,
    1078
   ],
-  "stale_oldloc": "C4808"
+  "stale_oldloc": "C4808",
+  "facility": "strip"
  },
  {
   "hex": "D3714",

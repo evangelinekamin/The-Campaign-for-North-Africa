@@ -327,6 +327,37 @@ class EventKind(str, Enum):
     # (rng_draws = the per-unit noise) for the camera. Both emit ONLY when a side fields air.
     AIR_STRIKE_RESOLVED = "AIR_STRIKE_RESOLVED"
     AIR_RECON_RESOLVED = "AIR_RECON_RESOLVED"
+    # [36.0] AIR FACILITIES -- the base an air force flies from, and the thing bombs take away.
+    #
+    # AIR_FACILITY_LEVEL_CHANGED {facility_id, level, ...} sets a facility's current Capacity Level
+    # -- the exact twin of PORT_EFFICIENCY_CHANGED, and for the same reason: 36.14 ("if bombing has
+    # reduced the capacity of an airfield from six to three, that airfield may handle only three
+    # squadrons at a time, until it is built back up to six") and 24.76's level-by-level rebuild are
+    # one scalar moving both ways. 41.36's bombing result IS this number: "the result is the number
+    # of capacity levels that facility is reduced."
+    #
+    # AIR_FACILITY_DESTROYED {facility_id, kind} takes the counter OFF the map -- 36.2 for a landing
+    # strip ("if that capacity level is destroyed, the strip is eliminated and removed from the
+    # game-map") and 24.76 for the flying-boat pair, both of which "must be built from scratch if
+    # destroyed". An AIRFIELD at zero is NOT removed: it is "considered destroyed for all purposes"
+    # (36.14) and stays on the map to be rebuilt a level at a time, so it never emits this.
+    #
+    # Both fold onto GameState.air_facilities alone -- no TOE, no supply pool -- so conservation and
+    # the stacking checks are untouched. 41.36's second clause ("for every level destroyed, remove
+    # 10% of the planes on the ground") is DEFERRED with the per-plane ledger it needs (Phase 5.3/5.4).
+    AIR_FACILITY_LEVEL_CHANGED = "AIR_FACILITY_LEVEL_CHANGED"
+    AIR_FACILITY_DESTROYED = "AIR_FACILITY_DESTROYED"
+    # [35.14] SQUADRON GROUND SUPPORT UNIT UPKEEP -- "each SGSU must expend one Stores Point per
+    # Game-Turn. In addition, each SGSU requires one Fuel Point and one Water Point per Operations
+    # Stage. SGSUs without the required supplies (for themselves) MAY NOT REPAIR THEIR PLANES."
+    # SGSU_UNSUPPLIED {unit_id, commodity} increments the unit's stages_without_air_supply counter
+    # (the sibling of stages_without_water) and SGSU_SUPPLIED {unit_id} resets it when the upkeep is
+    # drawn again -- exactly the WATER_SHORTFALL/WATER_RESTORED pair, on the one counter class with
+    # its own supply rule. The supplies themselves ride the existing SUPPLY_CONSUMED (off the 36.17
+    # air-facility dump) / UNIT_SUPPLY_CONSUMED (off the SGSU's own pool), so conservation is
+    # untouched. game.air.may_refit reads the counter; Phase 5.3's Refit Table reads may_refit.
+    SGSU_SUPPLIED = "SGSU_SUPPLIED"
+    SGSU_UNSUPPLIED = "SGSU_UNSUPPLIED"
     # Commonwealth off-shore naval bombardment (rule 30.2). NAVAL_BOMBARDMENT {ship_id, target,
     # actual, target_class, target_unit, pinned, loss, half} (rng_draws=(d1,d2)) feeds a ship's
     # Gun Rating as Actual Barrage Points into the 12.6 CRT with NO ammo draw (30.22): the Pin

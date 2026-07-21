@@ -100,9 +100,11 @@ def is_field_dump(su) -> bool:
     strategic base (immobile), not a well (52.11 geography, not a depot), and not one of the seeded
     staging depots -- a railhead, a railway station or a Field Supply Depot is a place ON the supply
     line, not a dump that follows the army (the distinction campaign_policy._without_staging already
-    draws for the leapfrog bridge)."""
+    draws for the leapfrog bridge). And not a [36.17] AIR-FACILITY dump: that pile belongs to the
+    squadron based on the field ("land units may not use airfield supply dumps"), it does not follow
+    the army anywhere, and read as a field dump it masks whatever it shares a hex with."""
     return (not su.base and not su.is_dummy and not su.id.startswith(STAGING)
-            and not wells.is_water_source(su))
+            and not su.air_dump and not wells.is_water_source(su))
 
 
 # --- HOLD: the standing orders on a city already banked ------------------------------------------

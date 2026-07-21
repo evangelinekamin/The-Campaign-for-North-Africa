@@ -80,7 +80,14 @@ def test_rommels_arrival_seeds_the_axis_truck_pool():
     by_class: dict = {}
     for t in trucks:
         by_class[t.truck_class] = by_class.get(t.truck_class, 0) + t.points
-    assert by_class == {"light": 95, "medium": 280, "heavy": 50}   # [61.43], Truck Points conserved
+    # RESTATED at Phase 5.1: the chart has a FOURTH row -- "Additional second/third line trucks: 10
+    # Medium Trucks at air facilities" -- which rule 59.61 kept off the board only for a game played
+    # WITHOUT the Air Game. We play it now, so the 10 are on the board and the Medium total is 290.
+    # (They sit at the rear with the rest: the extracted Desert Fox order of battle carries no Axis
+    # air facility on maps A-C -- 61.42's free "one airfield and one air landing strip west of El
+    # Agheila" is unmodelled -- so there is no facility hex for the restriction to name. Flagged in
+    # scenario._rommel_trucks.)
+    assert by_class == {"light": 95, "medium": 290, "heavy": 50}   # [61.43], Truck Points conserved
 
 
 def test_truck_formation_defaults():

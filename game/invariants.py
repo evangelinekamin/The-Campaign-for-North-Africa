@@ -100,6 +100,16 @@ def _check_port(p) -> None:
         raise InvariantViolation(f"port {p.id} eff={p.eff} out of [0, max_eff={p.max_eff}]")
 
 
+def _check_air_facility(f) -> None:
+    # [36.14] A facility's Capacity Level is bounded by its charted maximum (36.12 six / 36.2 one /
+    # 36.3 three / 36.4 one): bombing floors it at 0 ("reduced to zero capacity... considered
+    # destroyed for all purposes") and 24.76's level-by-level rebuild ceils it at the maximum. The
+    # exact twin of the Port Efficiency-Level guard above.
+    if not 0 <= f.level <= f.max_level:
+        raise InvariantViolation(
+            f"air facility {f.id} level={f.level} out of [0, max_level={f.max_level}]")
+
+
 def _check_fort(coord, level: int) -> None:
     # A fortification level is a physical wall height (15.82): siege artillery (25.14) batters it
     # DOWN but never below razed ground.
@@ -197,6 +207,8 @@ def check(state: GameState) -> None:
     _check_no_dup_ids(state)
     for p in state.ports:
         _check_port(p)
+    for f in state.air_facilities:
+        _check_air_facility(f)
     for coord, level in state.fort_levels.items():
         _check_fort(coord, level)
     for c in adjudication.stacking_violations(state):
@@ -226,6 +238,7 @@ _UNIT_KINDS = frozenset({
     EventKind.STEP_LOST, EventKind.CP_EXPENDED, EventKind.COHESION_CHANGED,
     EventKind.STORES_SHORTFALL, EventKind.WATER_SHORTFALL, EventKind.STORES_RESTORED,
     EventKind.WATER_RESTORED, EventKind.REINFORCEMENT_DELAYED,
+    EventKind.SGSU_SUPPLIED, EventKind.SGSU_UNSUPPLIED,         # 35.14 the SGSU upkeep counter
     EventKind.UNIT_REFILLED, EventKind.UNIT_SUPPLY_CONSUMED})   # Phase 4 unit pools
 
 # Events that change a dump's pools or hex, resolved by p["supply_id"].
@@ -310,5 +323,7 @@ def check_event(pre: GameState, post: GameState, event: Event) -> None:
     # --- port / fort slice ---
     if kind == EventKind.PORT_EFFICIENCY_CHANGED:
         _check_port(post.port(p["port_id"]))
+    elif kind == EventKind.AIR_FACILITY_LEVEL_CHANGED:      # 36.14: 0 <= level <= the charted max
+        _check_air_facility(post.air_facility(p["facility_id"]))
     elif kind == EventKind.FORT_REDUCED:
         _check_fort(tuple(p["hex"]), p["level"])

@@ -358,7 +358,18 @@
       "_comment": "[61.44] (line 198): Tripoli box built-in supplies, in addition to the dump split above.",
       "fuel": 3000, "ammo": 1500, "stores": 500
     },
-    "commonwealth_dump_split_61_36": {
+    "axis_air_facility_pool_61_44": {
+   "_comment": "[61.44] (docs/rules/61 line 200), verbatim: \"For distribution to Air Facilities (remember, Tripoli/Tunisia air facilities have unlimited Fuel and Ammo) there are 50 Fuel Points and 50 Ammo Points.\" No Stores and no Water are charted for the Desert Fox Axis air facilities. The 36.5 unlimited-supply Tripoli/Tunisia boxes are off-map and unseeded (Tripoli has no hex in sections A-E).",
+   "fuel": 50,
+   "ammo": 50
+  },
+  "commonwealth_air_facility_pool_61_36": {
+   "_comment": "[61.36] (docs/rules/61 lines 118-120), verbatim: \"Air Supply -- The Commonwealth Player has 180 Fuel Points, 250 Ammo Points, and 50 Stores for distribution amongst Air Facilities.\" No air Water is charted.",
+   "fuel": 180,
+   "ammo": 250,
+   "stores": 50
+  },
+  "commonwealth_dump_split_61_36": {
       "_comment": "[61.36] Supply (line 112): the Commonwealth Player divides this pool among his NINE Dumps (he receives nine Dumps plus three Dummy Dumps -- line 104); no more than 25% of each item at any one dump, and every ACTUAL dump must hold at least 50 of each item.",
       "fuel": 2550, "ammo": 1700, "stores": 1600,
       "dumps": 9, "max_percent_per_dump": 25, "min_per_item_per_actual_dump": 50
@@ -379,12 +390,25 @@
     }
   },
   "scenario_60_campaign_initial_supply": {
-    "_comment": "[60.34]/[60.44] initial supply pools for the FULL CAMPAIGN (Scenario Group One, docs/rules/60-scenario-group-one-the-italians.md). Rule 64.3 mandates SECTION 60 for the entire campaign's initial placement; the engine previously mis-seeded the SECTION-61 Desert Fox pools above (game/oob.py), handing the Axis 9600 Fuel where 60.34 charts 3000. These are the ANONYMOUS FIELD-DUMP pools only (the 'Dump 1/2/I' counters the player places on the map); the NAMED-location dumps (Tobruk, Bardia, Benghazi, Derna, Mersa Matruh, Sidi Barrani) are seeded elsewhere in game/scenario.py. The airfield-distributed pools (Axis 1200 ammo/850 fuel/100 stores/100 water; CW 200/250/50) belong to the Air Game and are not seeded here.",
+    "_comment": "[60.34]/[60.44] initial supply pools for the FULL CAMPAIGN (Scenario Group One, docs/rules/60-scenario-group-one-the-italians.md). Rule 64.3 mandates SECTION 60 for the entire campaign's initial placement; the engine previously mis-seeded the SECTION-61 Desert Fox pools above (game/oob.py), handing the Axis 9600 Fuel where 60.34 charts 3000. These are the ANONYMOUS FIELD-DUMP pools only (the 'Dump 1/2/I' counters the player places on the map); the NAMED-location dumps (Tobruk, Bardia, Benghazi, Derna, Mersa Matruh, Sidi Barrani) are seeded elsewhere in game/scenario.py. The airfield-distributed pools belong to the AIR GAME and are seeded separately, from axis_air_facility_pool_60_34 / commonwealth_air_facility_pool_60_44 below (Phase 5.1 -- until the Air Game was played, rule 59.61 said to ignore them).",
     "axis_field_dump_pool_60_34": {
       "_comment": "[60.34] (docs/rules/60 lines 133-134): the sum of the two anonymous field dumps -- Dump 1 (1000 ammo/1500 fuel/1500 stores/200 water) + Dump 2 (1000/1500/1000/200), placed on map section C in Libya. Two additional Dummy dumps carry no supply.",
       "ammo": 2000, "fuel": 3000, "stores": 2500, "water": 400
     },
-    "commonwealth_field_dump_pool_60_44": {
+    "axis_air_facility_pool_60_34": {
+   "_comment": "[60.34] (docs/rules/60 line 139), verbatim: \"In addition the Axis Player receives a total of 1200 Ammo, 850 Fuel, 100 Stores and 100 Water Points which may be FREELY DISTRIBUTED AMONG HIS AIRFIELDS.\" A separate pool from the field dumps above: it lands in the rule-36.17 air-facility dumps (SupplyUnit.air_dump), which only an SGSU may draw from (35.14) and the land army may not. 59.61 -- \"ignore all Trucks and supplies available at/for Air facilities in the initial set-ups\" -- suppressed this row while the Air Game was abstract; it is in force from Phase 5.1. Free placement among the facilities is the Player's; game.oob.air_dumps splits it evenly (remainder to the earliest facility by id), the same authored convention as the field-dump split.",
+   "ammo": 1200,
+   "fuel": 850,
+   "stores": 100,
+   "water": 100
+  },
+  "commonwealth_air_facility_pool_60_44": {
+   "_comment": "[60.44] (docs/rules/60 lines 233-239), verbatim: \"Air Supply (Distribute amongst Air Facilities as desired) Ammo: 200 Fuel: 250 Stores: 50\". The chart lists NO air Water for the Commonwealth (as 60.44 lists no dump Water either -- CW water is the 52.7 wells and the 54.3 pipeline).",
+   "ammo": 200,
+   "fuel": 250,
+   "stores": 50
+  },
+  "commonwealth_field_dump_pool_60_44": {
       "_comment": "[60.44] (docs/rules/60 line 229): Dump I (500 ammo/750 fuel/500 stores), the one anonymous field dump placed in Egypt on map C or D. One additional Dummy dump carries no supply. 60.44 charts NO dump Water for the Commonwealth -- forward CW water is the 52.7 wells / 54.3 rail (both deferred); Cairo and Alexandria hold unlimited supply, water included (60.44 note).",
       "ammo": 500, "fuel": 750, "stores": 500
     }

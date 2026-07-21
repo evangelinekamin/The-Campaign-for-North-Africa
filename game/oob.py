@@ -15,9 +15,9 @@ import json
 import os
 from dataclasses import replace
 
-from . import coords, logistics_data
+from . import air, coords, logistics_data
 from .events import Side
-from .state import Rommel, StepRecord, SupplyUnit, Unit
+from .state import AirFacility, Rommel, StepRecord, SupplyUnit, Unit
 from .terrain import Mobility, NON_MOT_CLASSES
 
 _DATA = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -51,6 +51,21 @@ CAMPAIGN_DUMP_POOLS = {
     Side.ALLIED: logistics_data.cw_dump_pool_60_44(),      # [60.44] AMMO/FUEL/STORES -- 60.44 charts NO CW dump water
 }
 _OTHER_CAP = logistics_data.dump_other_terrain_cap()       # [54.12] Other-Terrain ceilings
+
+# --- [36.17] THE AIR-FACILITY SUPPLY ALLOTMENTS (rule 35.14's larder) --------------------------
+# The pool each scenario charts for distribution among a side's AIR FACILITIES, keyed by Side and
+# dispatched by rule 64.3 exactly as the dump pools and the first-line trucks are: Section 61 for
+# the Desert Fox benchmarks, Section 60 for the full campaign. Rule 59.61 -- "ignore all Trucks and
+# supplies available at/for Air facilities in the initial set-ups" -- kept these off the board while
+# the Air Game was abstract; the full Air Game is played from Phase 5.1, so they are in force.
+DESERT_FOX_AIR_POOLS = {
+    Side.AXIS:   logistics_data.axis_air_pool_61_44(),     # [61.44] 50 Ammo / 50 Fuel
+    Side.ALLIED: logistics_data.cw_air_pool_61_36(),       # [61.36] 250 Ammo / 180 Fuel / 50 Stores
+}
+CAMPAIGN_AIR_POOLS = {
+    Side.AXIS:   logistics_data.axis_air_pool_60_34(),     # [60.34] 1200/850/100/100
+    Side.ALLIED: logistics_data.cw_air_pool_60_44(),       # [60.44] 200 Ammo / 250 Fuel / 50 Stores
+}
 
 # --- [60.31]/[60.41] & [61.43]/[61.31] FIRST-LINE TRUCK ALLOTMENTS (rule 53.11) ----------------
 # The per-side first-line Truck-Point totals by 54.2 class, transcribed cell-by-cell off the 1979
@@ -148,16 +163,18 @@ def classify(counter: str, group: str) -> str:
     unrecognised counter defaults to infantry.
 
     Two categories the old classifier lost are carried now: Anti-Aircraft-Type units (rule
-    3.23) map to the `aa` role (the Commonwealth had no AA arm), and Air Landing Strips /
-    flying-boat Alighting areas / Squadron Ground Support Units (rule 3.21) map to the inert
-    `air` role instead of being dropped -- they carry the facility hexes the Phase 5 Air Game
-    needs. `air` never returns None, so nothing the OOB ships is silently discarded here.
+    3.23) map to the `aa` role (the Commonwealth had no AA arm), and Squadron Ground Support
+    Units (rules 3.21 / 35.0) map to the `sgsu` role instead of being dropped. The AIR
+    FACILITIES that used to share that role -- Air Landing Strips, flying-boat Alighting areas --
+    are not units at all: Phase 5.1 made them game.state.AirFacility installations, carried in
+    their own OOB records (kind "air_facility", see air_facilities below), so a counter reaching
+    this function is never one of them.
     """
     c = counter
-    # Air facilities + Squadron Ground Support Units (rule 3.21): inert non-combat pieces.
-    if ("Air Strip" in c or "Airstrip" in c or "Airboat" in c or "Alighting" in c
-            or "SGSU" in c):
-        return "air"
+    # Squadron Ground Support Units (rules 3.21 / 35.0): non-combat squadron bases, no combat
+    # values (35.12). Their upkeep is 35.14's, drawn from their facility's 36.17 dump.
+    if "SGSU" in c:
+        return "sgsu"
     # Anti-Aircraft-Type (rule 3.23); the AA/Flak symbol on the counter -> Pure Flak (46.17).
     if "LAA" in c or "HAA" in c or "(AA)" in c:
         return "aa"
@@ -245,6 +262,127 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
     units = _seed_fuel_tanks(units)                                        # 49.14 fuel tanks
     units = _seed_ammo_loads(units)                                        # 50.0 ammo basic loads
     return units, supplies
+
+
+def air_facilities(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
+                   extra_file: str | None = None) -> list[AirFacility]:
+    """[36.0] Lift the OOB's air-facility records onto the map as AirFacility installations.
+
+    An air facility is NOT a unit and this is the seam that says so. It has no TOE, no supply
+    ledger, no CPA and no combat values -- it is an installation the Air Game flies from, exactly
+    as a Port is one the sea game lands at -- so it is diverted out of build()'s units[] into its
+    own tuple, the same way rommel_entity() diverts the leader counter. (It used to be built as an
+    inert `air`-role Unit with cpa 0, which gave the map a counter that could be stacked with,
+    traced through and starved by the land logistics beat, and still carried no capacity level.)
+
+    Each record names its `facility` kind; the Capacity Level opens at that kind's charted maximum
+    (36.12 six / 36.2 one / 36.3 three / 36.4 one) because a facility in a scenario's initial set-up
+    is an intact one -- 36.14's reductions are what BOMBING does to it. `sections` and `extra_file`
+    filter exactly as build()'s do.
+
+    ⚠ FLAGGED, AND IT IS THE NEXT DATA JOB. This reads the VASSAL extraction, which ships the
+    campaign 10 Air Landing Strips + 1 Alighting Area and NO AIRFIELD AT ALL -- while [60.5]
+    (docs/rules/60, lines 288-362) charts the campaign's real set:
+    20 Airfields, 31 Air Landing Strips, 3 Flying Boat
+    Basins and 1 Alighting Area, each with its printed hex. So the campaign currently has no
+    capacity-6 facility anywhere, and several extraction hexes have drifted off the chart's (the
+    Derna alighting area is charted B5925 and extracted B6024). Transcribing [60.5] needs one
+    decision the extraction makes for us here: the chart assigns ownership by GEOGRAPHY -- "all
+    facilities in Egypt belong to the Commonwealth; all those in Libya belong to the Italians" --
+    and the Libya/Egypt frontier is not in any data file we hold."""
+    out: list[AirFacility] = []
+    seen: dict[str, int] = {}
+    for rec in (_load(oob_file) + (_load(extra_file) if extra_file else [])):
+        if rec.get("kind") != "air_facility":
+            continue
+        hexlbl = rec["hex"]
+        if sections is not None and hexlbl[0] not in sections:
+            continue
+        kind = rec["facility"]
+        level = air.max_capacity(kind)
+        out.append(AirFacility(_uid(seen, rec["counter"]),
+                               Side.AXIS if rec["side"] == "AXIS" else Side.ALLIED,
+                               coords.to_axial(coords.parse(hexlbl)),
+                               kind=kind, level=level, max_level=level))
+    return out
+
+
+def air_dumps(facilities: list[AirFacility], pools: dict) -> list[SupplyUnit]:
+    """[36.17] Give each side's air facilities the supply dump the rule says they ARE: "an airfield
+    is a supply dump for supplies to be used by the SGSU's on that airfield. Fuel, ammunition,
+    stores, etc., may be stored at an airfield AS IF IT WERE A DUMP."
+
+    `pools` is the scenario's charted air-supply allotment keyed by Side ([60.34] 1200 Ammo / 850
+    Fuel / 100 Stores / 100 Water for the campaign Axis, [60.44] 200/250/50 for the Commonwealth;
+    [61.44] 50/50 and [61.36] 250/180/50 for the Desert Fox). Every one of those charts grants FREE
+    PLACEMENT -- "freely distributed among his airfields", "distribute amongst Air Facilities as
+    desired" -- so the even split below (remainder to the earliest facility by id, clipped to the
+    54.12 Other-Terrain ceilings) is OUR ASSIGNMENT of that free choice, the identical convention
+    _place_dumps uses for the field dumps.
+
+    These dumps carry air_dump=True, which is the whole point: game.supply hides them from the land
+    army's trace and in-hex draw and shows them only to an SGSU's 35.14 upkeep. Without the flag the
+    Axis's 850 charted air Fuel Points would simply be 850 more Fuel Points for the Panzerarmee."""
+    out: list[SupplyUnit] = []
+    by_side: dict[Side, list[AirFacility]] = {}
+    for f in sorted(facilities, key=lambda f: f.id):
+        by_side.setdefault(f.side, []).append(f)
+    for side, lst in by_side.items():
+        pool = pools.get(side, {})
+        n = len(lst)
+        for i, f in enumerate(lst):
+            amt = {c: min(_share(pool.get(c, 0), n, i), _OTHER_CAP[c]) for c in _COMMODITIES}
+            out.append(SupplyUnit(f"{f.id}-Supply", side, f.hex, ammo=amt["AMMO"],
+                                  fuel=amt["FUEL"], stores=amt["STORES"], water=amt["WATER"],
+                                  air_dump=True))
+    return out
+
+
+# [60.31]/[60.42] SGSU AVAILABILITY for the full campaign: "Italian SGSU Available: 39" and, for
+# the Commonwealth North African Air Force, "SGSU Available: 14" -- and 60.42 states the placement
+# rule for both: "the following planes, SGSU's and pilots may be placed at any... air facility,
+# WITHIN THE CAPACITY OF THAT FACILITY."
+CAMPAIGN_SGSU_AVAILABLE = {Side.AXIS: 39, Side.ALLIED: 14}
+
+
+def seed_sgsus(facilities: list[AirFacility], available: dict) -> list[Unit]:
+    """[35.11]/[60.31]/[60.42] Base each side's Squadron Ground Support Units at its air facilities.
+
+    35.11: "Each SGSU counter is placed on the game-map to indicate where that squadron is located.
+    They are usually placed at air facilities." 60.42 gives the constraint that decides HOW MANY go
+    where: they "may be placed at any... air facility, WITHIN THE CAPACITY OF THAT FACILITY" -- and
+    36.12/36.2 set that capacity (an airfield six squadrons, a landing strip one). So a facility
+    takes SGSUs up to its Capacity Level, in facility-id order, until the side's charted pool runs
+    out. Free placement inside a stated restriction: OUR ASSIGNMENT of it, the identical convention
+    the [60.31] first-line trucks and the [60.34] dump pools are placed under.
+
+    ⚠ FLAGGED, AND IT IS THE SAME FLAG air_facilities CARRIES. The extraction gives the campaign 11
+    landing strips of capacity 1 and no airfield, so 11 of the charted 53 SGSUs find a base and the
+    rest have nowhere to stand. Transcribe [60.5]'s twenty Airfields (six squadrons each) and the
+    number rises to the charts'. The pool is a CEILING here, never a target -- we place what the map
+    can hold and no more, which is exactly what 60.42's sentence says to do.
+
+    Used by the full campaign, whose order of battle ships no SGSU counter at all. The Desert Fox
+    scenarios are NOT seeded this way: their extraction ships real SGSU counters at their own
+    (drifted) hexes, and inventing more beside them would double the squadron bases the scenario
+    charts."""
+    stats = _load("unit_stats.json")
+    seen: dict[str, int] = {}
+    left = dict(available)
+    out: list[Unit] = []
+    for f in sorted(facilities, key=lambda f: f.id):
+        nat = "IT" if f.side == Side.AXIS else "CW"
+        for _ in range(f.level):
+            if left.get(f.side, 0) <= 0:
+                break
+            left[f.side] -= 1
+            rec = {"counter": f"{nat} SGSU", "group": f"{nat} SGSU", "side": f.side.value,
+                   "nationality": nat, "morale": 0}
+            out.append(_make_unit(rec, f.side, f.hex, air.SGSU_ROLE, stats, seen, 0))
+    # The same two per-unit pools build() seeds, for the same conservation reason: every unit sits in
+    # state.units from t0, so its organic supply belongs in the initial base (scenario._initial_supply).
+    out = _seed_fuel_tanks(out)                        # 49.14 (an SGSU is a vehicle, 35.12)
+    return _seed_ammo_loads(out)                       # 50.0 -> 0: an SGSU has no combat function
 
 
 def rommel_entity(oob_file: str = "oob_desert_fox.json",

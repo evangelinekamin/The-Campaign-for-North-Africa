@@ -147,6 +147,7 @@ def stores_at(state: GameState, side: Side, hx: Coord) -> int:
     out of the pile the engineers are standing on."""
     return sum(s.stores for s in state.supplies
                if s.side == side and s.hex == hx and not s.is_dummy
+               and not s.air_dump                        # 36.17: an airfield's pile is the SGSUs', not the army's
                and not wells.is_water_source(s))         # 52.3: an oasis funds upkeep, NOT construction
 
 
@@ -165,6 +166,7 @@ def stores_draw(state: GameState, side: Side, hx: Coord, qty: int) -> list[tuple
     legs: list[tuple[str, int]] = []
     here = sorted((s for s in state.supplies
                    if s.side == side and s.hex == hx and not s.is_dummy
+                   and not s.air_dump                     # 36.17: land units may not use an airfield's dump
                    and not wells.is_water_source(s)),     # 52.3: an oasis funds upkeep, NOT construction
                   key=lambda s: (s.base, s.id))
     for s in here:
@@ -184,7 +186,8 @@ def dump_at(state: GameState, side: Side, hx: Coord):
     the engine's one-dump-per-hex rule (engine._dump_on) would then have to arbitrate between it and
     the next lorry's unload."""
     return next((s for s in sorted(state.supplies, key=lambda s: s.id)
-                 if s.side == side and s.hex == hx and not s.is_dummy and not s.base), None)
+                 if s.side == side and s.hex == hx and not s.is_dummy and not s.base
+                 and not s.air_dump), None)         # 36.17: the airfield's own pile is not the army's
 
 
 def can_construct_dump(state: GameState, side: Side, u: Unit, dump) -> bool:

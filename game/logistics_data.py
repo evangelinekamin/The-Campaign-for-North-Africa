@@ -192,6 +192,35 @@ def cw_dump_pool_60_44() -> dict:
     return {"AMMO": p["ammo"], "FUEL": p["fuel"], "STORES": p["stores"]}
 
 
+def axis_air_pool_61_44() -> dict:
+    """[61.44] the Desert Fox Axis AIR-FACILITY supply allotment -- "for distribution to Air
+    Facilities... there are 50 Fuel Points and 50 Ammo Points" (no Stores, no Water charted). It
+    lands in the rule-36.17 air-facility dumps, which only an SGSU may draw from (35.14)."""
+    p = _scenario_61()["axis_air_facility_pool_61_44"]
+    return {"AMMO": p["ammo"], "FUEL": p["fuel"]}
+
+
+def cw_air_pool_61_36() -> dict:
+    """[61.36] the Desert Fox Commonwealth AIR-FACILITY supply allotment -- "180 Fuel Points, 250
+    Ammo Points, and 50 Stores for distribution amongst Air Facilities" (no Water charted)."""
+    p = _scenario_61()["commonwealth_air_facility_pool_61_36"]
+    return {"AMMO": p["ammo"], "FUEL": p["fuel"], "STORES": p["stores"]}
+
+
+def axis_air_pool_60_34() -> dict:
+    """[60.34] the FULL-CAMPAIGN Axis AIR-FACILITY supply allotment -- "a total of 1200 Ammo, 850
+    Fuel, 100 Stores and 100 Water Points which may be freely distributed among his airfields"."""
+    p = _scenario_60()["axis_air_facility_pool_60_34"]
+    return {"AMMO": p["ammo"], "FUEL": p["fuel"], "STORES": p["stores"], "WATER": p["water"]}
+
+
+def cw_air_pool_60_44() -> dict:
+    """[60.44] the FULL-CAMPAIGN Commonwealth AIR-FACILITY supply allotment -- "Air Supply
+    (Distribute amongst Air Facilities as desired): Ammo 200, Fuel 250, Stores 50" (no Water)."""
+    p = _scenario_60()["commonwealth_air_facility_pool_60_44"]
+    return {"AMMO": p["ammo"], "FUEL": p["fuel"], "STORES": p["stores"]}
+
+
 def tobruk_builtin_61_36() -> dict:
     """[61.36] Tobruk's built-in supply (fuel/ammo/stores); Tobruk is itself a dump."""
     p = _scenario_61()["commonwealth_tobruk_builtin_61_36"]

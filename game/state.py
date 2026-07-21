@@ -81,6 +81,14 @@ class Unit:
     turns_without_stores: int = 0  # consecutive game-turns without Stores (51.22)
     stages_without_water: int = 0  # consecutive Operations Stages without Water (52.53)
     disorganization: int = 0       # accumulated Disorganization Points (51.21)
+    # [35.14] The SGSU's own shortfall counter -- consecutive Operations Stages in which a Squadron
+    # Ground Support Unit could not draw its own upkeep (1 Stores/Game-Turn + 1 Fuel + 1 Water per
+    # Operations Stage) from the dumps on its hex. "SGSUs without the required supplies (for
+    # themselves) may not repair their planes", so a positive count is what grounds a squadron:
+    # game.air.may_refit is the gate, and Phase 5.3's Refit Table is what reads it. The exact
+    # sibling of stages_without_water, on the one counter class that has its own supply rule.
+    # Zero on every non-SGSU counter and in every scenario that fields none (byte-identical).
+    stages_without_air_supply: int = 0
     # --- Vehicle breakdown (rules 21/22). bar is a static column shift on the 21.38
     # table (+ = Right/more breakdown, - = Left); the three counters below fold via
     # replace. bp_accumulated + bp_checked_column reset each OpStage (TURN_ADVANCED);
@@ -224,6 +232,21 @@ class SupplyUnit:
     # unlimited major-city/oasis wells that may never deplete (52.13) -- so only a depletable well
     # carries a refill ceiling, and every non-well scenario is byte-identical (game.engine._well_refill).
     water_capacity: int = 0
+    # [36.17] AN AIRFIELD IS A SUPPLY DUMP -- but not the army's. "An airfield is a supply dump for
+    # supplies to be used by the SGSU's on that airfield. Fuel, ammunition, stores, etc., may be
+    # stored at an airfield as if it were a dump. LAND UNITS MAY NOT USE AIRFIELD SUPPLY DUMPS
+    # unless it is an emergency (exactly what constitutes an emergency is left to the Player). Any
+    # SGSU at an airfield may make use of the supplies there to maintain and ready its planes."
+    #
+    # So an air-facility dump is an ordinary SupplyUnit in every mechanical respect -- it evaporates
+    # (49.3), it is capped by 54.12, a lorry may unload into it, an enemy may capture or blow it --
+    # and differs in exactly one: the LAND army may not eat from it. game.supply hides it from the
+    # land trace (reachable_supplies) and from the land in-hex draw (_colocated_dumps), and shows it
+    # to an SGSU's 35.14 draw. The 36.17 "emergency" exception is the PLAYER'S call by the rule's own
+    # words and is deliberately not modelled -- there is no non-arbitrary trigger for it.
+    #
+    # Default False = every dump the game has ever had, so nothing existing moves.
+    air_dump: bool = False
     # Cached at construction from the four commodity pools, which change only via replace()
     # (re-runs __post_init__, never stale). compare/repr=False keeps eq/hash/repr identical.
     _empty: bool = field(init=False, repr=False, compare=False)
@@ -314,12 +337,45 @@ class AirWing:
 
 
 @dataclass(frozen=True, slots=True)
+class AirFacility:
+    """[36.0] An air facility on the map -- an airfield, an air landing strip, a flying boat basin
+    or a flying boat alighting area. A conservation-invisible INSTALLATION, carried in its own
+    tuple exactly as a Port is: it holds no TOE and no supply ledger of its own, so it never
+    touches invariants' strength/stacking/supply checks, and being off units[] it needs no ZOC,
+    stacking, combat or targeting special-casing. (Its SUPPLY is a separate SupplyUnit standing on
+    the same hex with air_dump=True -- rule 36.17; see that field.)
+
+    `kind` is one of game.air's four (AIRFIELD/STRIP/BASIN/ALIGHTING); `max_level` is that kind's
+    charted ceiling (36.12 six / 36.2 one / 36.3 three / 36.4 one) and `level` its CURRENT Capacity
+    Level, "the number of SGSU's and airplanes which can use an air facility" (36.0). Bombing takes
+    the level down (36.14 / 41.36 -- "the result is the number of capacity levels that facility is
+    reduced"); 24.76 builds an airfield back up one level at a time, while a strip or flying-boat
+    facility at zero is removed from the map and must be built from scratch.
+
+    `side` is the SEEDED owner ONLY. 36.15 makes ownership a fact about the ground rather than about
+    the counter -- "airfields are, in essence, non-denominational; they may be used by anyone... Land
+    combat units may capture or destroy (entirely) an airfield by occupying its hex" -- and 60.5
+    agrees ("air facilities may be used by anyone who controls them"), so the CURRENT holder is
+    derived from the hex's control by game.air.holder and this field is only the fallback for a hex
+    neither player has entered. That is exactly how a Port already serves whoever holds its hex.
+    Default GameState.air_facilities=() fields none, so every scenario without a seeded facility is
+    byte-identical."""
+    id: str
+    side: Side
+    hex: Coord
+    kind: str                      # game.air: "airfield" | "strip" | "basin" | "alighting"
+    level: int                     # current Capacity Level (36.14), 0 = destroyed
+    max_level: int                 # the kind's charted maximum (36.12/36.2/36.3/36.4)
+
+
+@dataclass(frozen=True, slots=True)
 class AirMission:
-    """A scheduled LAND-arena air TASKING (rules 41.31/41.37/41.39B/42.2): the convoys/
+    """A scheduled LAND-arena air TASKING (rules 41.31/41.36/41.37/41.39B/42.2): the convoys/
     interdictions idiom carried to air support. `kind` is "strike" (41.31 pin a stack),
     "fort" (41.37 batter a fortification one level/OpStage), "port" (41.39B knock a harbour's
-    Efficiency Level down) or "recon" (42.2 fog-lift). `target` is the hex (q, r) for
-    strike/fort/recon, or the port id for "port". On game-turn `turn`, side `side`'s LAND air
+    Efficiency Level down), "airfield" (41.36 knock an air facility's Capacity Level down) or
+    "recon" (42.2 fog-lift). `target` is the hex (q, r) for strike/fort/airfield/recon, or the
+    port id for "port". On game-turn `turn`, side `side`'s LAND air
     flies it in that side's Combat Segment (game.engine._air_support) -- the committed strike/
     recon Air Points come from its AirWings, scaled by the superiority gate. A static schedule
     now, replaced by the Air Marshal seat's live orders later (P5 Step 6); default
@@ -510,6 +566,11 @@ class GameState:
     # air_sighted=frozenset()) fly nothing and lift no fog, so every scenario stays byte-identical.
     air_missions: tuple[AirMission, ...] = ()
     air_sighted: frozenset = frozenset()
+    # [36.0] Air facilities on the map (game.state.AirFacility): the airfields, landing strips,
+    # flying boat basins and alighting areas the Air Game flies from, is maintained at and bombs.
+    # Default () fields none, so every scenario that seeds no facility is byte-identical -- the
+    # 35.14 SGSU upkeep beat and the 41.36 facility-bombing mission both fire only when one exists.
+    air_facilities: tuple[AirFacility, ...] = ()
     # Commonwealth Mediterranean Fleet (rule 30): the off-shore naval-bombardment fire support.
     # Default () fields no ship, so every naval-less scenario stays byte-identical -- the CW
     # Fleet-Assignment beat fires only when a side carries naval (game.engine._naval_bombardment).
@@ -718,6 +779,12 @@ class GameState:
                 return t
         return None
 
+    def air_facility(self, fid: str) -> "AirFacility | None":
+        for f in self.air_facilities:
+            if f.id == fid:
+                return f
+        return None
+
     def naval_of(self, nid: str) -> "NavalUnit | None":
         for n in self.naval:
             if n.id == nid:
@@ -776,6 +843,15 @@ class GameState:
     def with_truck(self, tf: "TruckFormation") -> "GameState":
         trucks = tuple(tf if t.id == tf.id else t for t in self.trucks)
         return replace(self, trucks=trucks)
+
+    def with_air_facility(self, af: "AirFacility") -> "GameState":
+        facilities = tuple(af if f.id == af.id else f for f in self.air_facilities)
+        return replace(self, air_facilities=facilities)
+
+    def without_air_facility(self, fid: str) -> "GameState":
+        """[36.2]/[24.76]: a destroyed landing strip or flying-boat facility is "eliminated and
+        removed from the game-map" -- the counter comes off and must be built from scratch."""
+        return replace(self, air_facilities=tuple(f for f in self.air_facilities if f.id != fid))
 
     def with_naval(self, nu: "NavalUnit") -> "GameState":
         naval = tuple(nu if n.id == nu.id else n for n in self.naval)

@@ -380,6 +380,30 @@ def apply(state: GameState, event: Event) -> GameState:
         # the typed detail rides in the payload for the camera. Cleared at the OpStage boundary.
         return state.with_air_sighted(event.side.value, tuple(p["hex"]))
 
+    if k == EventKind.AIR_FACILITY_LEVEL_CHANGED:
+        # 36.14 / 24.76 / 41.36: set an air facility's current Capacity Level -- bombs take it down,
+        # construction builds it back up one level at a time. The exact twin of
+        # PORT_EFFICIENCY_CHANGED: one scalar, both directions, no supply surface touched.
+        af = state.air_facility(p["facility_id"])
+        return state.with_air_facility(replace(af, level=p["level"]))
+
+    if k == EventKind.AIR_FACILITY_DESTROYED:
+        # 36.2 / 24.76: a landing strip or flying-boat facility reduced to zero is "eliminated and
+        # removed from the game-map" and must be built from scratch. (An AIRFIELD at zero stays on
+        # the map to be rebuilt level by level, so it never emits this.)
+        return state.without_air_facility(p["facility_id"])
+
+    if k == EventKind.SGSU_UNSUPPLIED:
+        # 35.14: the SGSU could not draw its own upkeep this Operations Stage, so it "may not repair
+        # its planes" -- +1 consecutive stage short. The sibling fold of WATER_SHORTFALL.
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, stages_without_air_supply=u.stages_without_air_supply + 1))
+
+    if k == EventKind.SGSU_SUPPLIED:
+        # 35.14: the upkeep was drawn again -- the consecutive count resets and the squadron may refit.
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, stages_without_air_supply=0))
+
     if k == EventKind.NAVAL_BOMBARDMENT:
         # 30.2 off-shore bombardment: the Pin/step-loss ride the transient combat pinned set +
         # STEP_LOST(role='naval') exactly like a land barrage, so the ONLY GameState fold here is

@@ -26,7 +26,7 @@ import math
 from collections import OrderedDict
 from dataclasses import dataclass
 
-from . import logistics_data, movement, tactics
+from . import air, logistics_data, movement, tactics
 from .events import CONTROL_OF
 from .hexmap import Coord, neighbors
 from .state import GameState, Port, Side, SupplyUnit, TruckFormation, Unit
@@ -237,13 +237,14 @@ def is_infantry(unit: Unit) -> bool:
     return unit.is_combat and not _is_vehicle_type(unit)
 
 
-def is_air_facility(unit: Unit) -> bool:
-    """An air-game piece (Air Landing Strip / flying-boat basin / SGSU, rule 3.21), kept in the
-    built state to carry its hex/side/identity for the Phase 5 Air Game. It is NOT a land unit:
-    its supply comes from the air game (an SGSU's is the 35.14 air draw off its facility's dump,
-    36.17), never from the land dumps -- so it is exempt from the 51/52 Stores/Water land-supply
-    demand until the Air Game is wired. Keyed on the inert `air` role (game/oob.classify)."""
-    return bool(unit.steps) and unit.steps[0].label == "air"
+def is_sgsu(unit: Unit) -> bool:
+    """[35.11] A Squadron Ground Support Unit. One definition, in game.air beside the rest of rules
+    35/36; re-exported here so a logistics caller can ask the logistics question in logistics terms.
+    An SGSU is NOT a land unit for supply purposes: its
+    upkeep is 35.14's own (1 Stores/Game-Turn + 1 Fuel + 1 Water/Operations Stage, drawn from its
+    facility's 36.17 dump), so it is exempt from the rule-51/52 land Stores/Water demand and is
+    charged separately by engine._sgsu_upkeep."""
+    return air.is_sgsu(unit)
 
 
 _STORES_RATE = logistics_data.stores_rates()   # 51.11/51.13, from the rulebook chart
@@ -412,7 +413,7 @@ def reachable_supplies(state: GameState, unit: Unit, commodity: str):
     reach = _reach.reach(state.terrain, unit.hex, budget, mob,
                          trace_blocked(state, unit.side))
     out = [su for su in state.active_supplies(unit.side)
-           if su.hex in reach and _pool(su, commodity) > 0]
+           if su.hex in reach and _pool(su, commodity) > 0 and not su.air_dump]
     out.sort(key=lambda su: (reach[su.hex], su.id))
     return out
 
@@ -944,8 +945,18 @@ def _colocated_dumps(state: GameState, unit: Unit):
     sources (a well is one of these; a 2nd/3rd-line Truck Convoy is NOT, 49.16, until it unloads).
     Sorted by id for determinism. THE single source enumeration shared by in_hex_draw and
     in_hex_available, so an affordability check the movement AI runs can never drift from what the
-    engine's draw actually funds."""
-    return sorted((su for su in state.active_supplies(unit.side) if su.hex == unit.hex),
+    engine's draw actually funds.
+
+    [36.17] EXCEPT THE AIRFIELD'S OWN PILE. "An airfield is a supply dump for supplies to be used by
+    the SGSU's on that airfield... LAND UNITS MAY NOT USE AIRFIELD SUPPLY DUMPS unless it is an
+    emergency. Any SGSU at an airfield may make use of the supplies there." So an air_dump is a
+    source for an SGSU standing on it and for nobody else -- which is what keeps the 60.34/60.44 air
+    allotment (1200 Ammo / 850 Fuel for the Axis alone) out of the land army's fuel tanks. The rule's
+    "emergency" escape is explicitly the Player's judgement ("exactly what constitutes an emergency
+    is left to the Player") and is deliberately unmodelled: there is no non-arbitrary trigger."""
+    air_ok = air.is_sgsu(unit)
+    return sorted((su for su in state.active_supplies(unit.side)
+                   if su.hex == unit.hex and (air_ok or not su.air_dump)),
                   key=lambda su: su.id)
 
 

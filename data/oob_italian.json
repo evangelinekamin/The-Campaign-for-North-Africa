@@ -2,106 +2,106 @@
  {
   "hex": "B4922",
   "side": "AXIS",
-  "kind": "unit",
+  "kind": "air_facility",
   "counter": "Air Strip axis",
   "group": "AX Airstrip/",
-  "role": "air",
   "px": [
    4695,
    1005
   ],
-  "stale_oldloc": "B4922"
+  "stale_oldloc": "B4922",
+  "facility": "strip"
  },
  {
   "hex": "B6024",
   "side": "AXIS",
-  "kind": "unit",
+  "kind": "air_facility",
   "counter": "Airboat Alighting axis",
   "group": "AX Alighting/",
-  "role": "air",
   "px": [
    4908,
    202
   ],
-  "stale_oldloc": "B6024"
+  "stale_oldloc": "B6024",
+  "facility": "alighting"
  },
  {
   "hex": "C1015",
   "side": "AXIS",
-  "kind": "unit",
+  "kind": "air_facility",
   "counter": "Air Strip axis",
   "group": "AX Airstrip/",
-  "role": "air",
   "px": [
    6957,
    3850
   ],
-  "stale_oldloc": "C1015"
+  "stale_oldloc": "C1015",
+  "facility": "strip"
  },
  {
   "hex": "C4021",
   "side": "AXIS",
-  "kind": "unit",
+  "kind": "air_facility",
   "counter": "Air Strip axis",
   "group": "AX Airstrip/",
-  "role": "air",
   "px": [
    7468,
    1661
   ],
-  "stale_oldloc": "C4021"
+  "stale_oldloc": "C4021",
+  "facility": "strip"
  },
  {
   "hex": "C4317",
   "side": "AXIS",
-  "kind": "unit",
+  "kind": "air_facility",
   "counter": "Air Strip axis",
   "group": "AX Airstrip/",
-  "role": "air",
   "px": [
    7085,
    1443
   ],
-  "stale_oldloc": "C4317"
+  "stale_oldloc": "C4317",
+  "facility": "strip"
  },
  {
   "hex": "C4322",
   "side": "AXIS",
-  "kind": "unit",
+  "kind": "air_facility",
   "counter": "Air Strip axis",
   "group": "AX Airstrip/",
-  "role": "air",
   "px": [
    7512,
    1443
   ],
-  "stale_oldloc": "C4322"
+  "stale_oldloc": "C4322",
+  "facility": "strip"
  },
  {
   "hex": "C4420",
   "side": "AXIS",
-  "kind": "unit",
+  "kind": "air_facility",
   "counter": "Air Strip axis",
   "group": "AX Airstrip/",
-  "role": "air",
   "px": [
    7383,
    1370
   ],
-  "stale_oldloc": "C4420"
+  "stale_oldloc": "C4420",
+  "facility": "strip"
  },
  {
   "hex": "C4908",
   "side": "AXIS",
-  "kind": "unit",
+  "kind": "air_facility",
   "counter": "Air Strip axis",
   "group": "AX Airstrip/",
-  "role": "air",
   "px": [
    6318,
    1005
   ],
-  "stale_oldloc": "C4908"
+  "stale_oldloc": "C4908",
+  "facility": "strip"
  },
  {
   "hex": "D3715",
@@ -244,15 +244,15 @@
  {
   "hex": "C4122",
   "side": "ALLIED",
-  "kind": "unit",
+  "kind": "air_facility",
   "counter": "Air Strip allied",
   "group": "AL Airstrip/",
-  "role": "air",
   "px": [
    7512,
    1588
   ],
-  "stale_oldloc": "C4122"
+  "stale_oldloc": "C4122",
+  "facility": "strip"
  },
  {
   "hex": "C4131",
@@ -283,15 +283,15 @@
  {
   "hex": "C4230",
   "side": "ALLIED",
-  "kind": "unit",
+  "kind": "air_facility",
   "counter": "Air Strip allied",
   "group": "AL Airstrip/",
-  "role": "air",
   "px": [
    8236,
    1515
   ],
-  "stale_oldloc": "C4230"
+  "stale_oldloc": "C4230",
+  "facility": "strip"
  },
  {
   "hex": "D2707",
@@ -426,15 +426,15 @@
  {
   "hex": "D3904",
   "side": "ALLIED",
-  "kind": "unit",
+  "kind": "air_facility",
   "counter": "Air Strip allied",
   "group": "AL Airstrip/",
-  "role": "air",
   "px": [
    8796,
    1734
   ],
-  "stale_oldloc": "D3904"
+  "stale_oldloc": "D3904",
+  "facility": "strip"
  },
  {
   "hex": "E3602",

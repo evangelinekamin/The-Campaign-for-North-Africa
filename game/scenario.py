@@ -234,6 +234,12 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
     tmap, _ = cna_map.load_sections("ABC")
     target = coords.to_axial(coords.parse("C4807"))               # Tobruk
     units, supplies = oob.build(sections="ABC")   # corridor only (drops rear Map-D units)
+    # [36.0]/[36.17] The AIR FACILITIES the OOB carries on this corridor, and the supply dumps they
+    # ARE. [61.36]/[61.44] chart the Desert Fox air-supply allotment (CW 250 Ammo / 180 Fuel / 50
+    # Stores; Axis 50/50); rule 59.61 suppressed it while the Air Game was abstract and it is in
+    # force now. An air dump feeds only the SGSUs standing on it (35.14), never the land army.
+    facilities = oob.air_facilities(sections="ABC")
+    supplies += oob.air_dumps(facilities, oob.DESERT_FOX_AIR_POOLS)
     rommel = oob.rommel_entity(sections="ABC")    # rule 31: the leader as an entity, off units[]
 
     # The rear Axis HARBOUR (Tripoli): a dedicated built-in port dump (56.28) seeded with the
@@ -326,6 +332,7 @@ def rommels_arrival(seed: int = 1941, *, blanket_supply: bool = False) -> GameSt
         initiative_fixed=Side.AXIS, initiative_fixed_until=_AXIS_INITIATIVE_UNTIL,
         initiative_ratings=dict(_INITIATIVE_RATINGS_PROXY),   # 7.14/61.5 (proxy ratings)
         rommel=rommel,                                        # rule 31: the Axis leader entity
+        air_facilities=tuple(facilities),                     # rule 36: the squadron bases on the map
     )
 
 
@@ -435,7 +442,9 @@ def _tobruk_port(side: Side, hex_: Coord) -> Port:
 
 
 def _axis_rear(supplies, target):
-    axis = [s for s in supplies if s.side == Side.AXIS]
+    # An air-facility dump (36.17) is skipped for the same reason a well is: it is the SGSUs'
+    # larder, not a freight depot, so no convoy lands in it and no lorry park stages on it.
+    axis = [s for s in supplies if s.side == Side.AXIS and not s.air_dump]
     return max(axis, key=lambda s: (distance(s.hex, target), s.id)) if axis else None
 
 
@@ -451,7 +460,8 @@ def _axis_harbour_hex(supplies, target):
 
 
 def _cw_railhead(supplies, target):
-    cw = [s for s in supplies if s.side == Side.ALLIED and s.id != "AL-Tobruk"]
+    cw = [s for s in supplies if s.side == Side.ALLIED and s.id != "AL-Tobruk"
+          and not s.air_dump]                    # 36.17: an airfield's pile is no railhead
     return max(cw, key=lambda s: (distance(s.hex, target), s.id)) if cw else None
 
 
@@ -544,6 +554,11 @@ def _rommel_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy
     return tuple(convoys)
 
 
+# [61.43] "Additional second/third line trucks: 10 Medium Trucks at air facilities." The Desert Fox
+# twin of [60.33]/[60.43]'s "Any Air Facility" rows, and gated by the same 59.61 switch.
+_TRUCKS_61_43_AIR = {"light": 0, "medium": 10, "heavy": 0}
+
+
 def _rommel_trucks(supplies, target) -> tuple[TruckFormation, ...]:
     """The Axis 2nd/3rd-line motor-transport pool (rules 53 / 54.2), staged at the rear
     supply port (the AX rear dump, where PORT-Tripoli lands its convoys). This is the
@@ -555,9 +570,14 @@ def _rommel_trucks(supplies, target) -> tuple[TruckFormation, ...]:
 
     Transcribed off the 1979 [61.43] chart: 95 Light / 280 Medium / 50 Heavy Truck Points, "available
     for any and all purposes" -- the book "firmly suggests" the Axis run these as its Second/Third Line
-    Trucks, "otherwise he will have a hard time moving his Supply around." (The chart's further 10 Medium
-    "at air facilities" are GATED OFF while the Air Game is abstract, 59.61, exactly as the campaign gates
-    its air-facility rows.) One TruckFormation per 54.2 class at the rear, the campaign idiom (_truck_park).
+    Trucks, "otherwise he will have a hard time moving his Supply around." The chart's further row --
+    "Additional second/third line trucks: 10 Medium Trucks at air facilities" -- was GATED OFF while the
+    Air Game was abstract (59.61); Phase 5.1 plays the Air Game, so it is seeded (_air_facility_trucks).
+    It goes to the rear with the rest, and that is a FLAGGED placement: the extracted Desert Fox order of
+    battle carries no AXIS air facility on maps A-C at all (61.42 gives the Axis a free "one airfield and
+    one air landing strip in any hex west of El Agheila" that we do not model), so there is no facility
+    hex for the chart's restriction to name.
+    One TruckFormation per 54.2 class at the rear, the campaign idiom (_truck_park).
 
     This REPLACES the earlier 14-Truck-Point placeholder (8 H + 6 M): the real pool is ~30x larger, and
     the placeholder was why a competent Axis stranded 69 hexes short of Tobruk -- it had 3% of its lorries
@@ -572,7 +592,8 @@ def _rommel_trucks(supplies, target) -> tuple[TruckFormation, ...]:
     # instead of one column serialising the whole haul. A competent quartermaster's organization of the
     # SAME faithful 425-Truck-Point [61.43] total (points conserved exactly), not a magnitude change.
     out: list[TruckFormation] = []
-    for cls, total in (("light", 95), ("medium", 280), ("heavy", 50)):
+    air_medium = sum(row["medium"] for row in _air_facility_trucks(_TRUCKS_61_43_AIR))
+    for cls, total in (("light", 95), ("medium", 280 + air_medium), ("heavy", 50)):
         n = max(1, total // 40)
         for i in range(n):
             pts = total // n + (1 if i < total % n else 0)
@@ -850,7 +871,8 @@ def _campaign_cw_railhead(supplies):
     pool all key off the one railhead, instead of off whichever field dump happened to lie nearest
     it (which is how a passing Italian truck came to switch the Commonwealth's faucet off)."""
     rh = coords.to_axial(coords.parse(_CW_RAILHEAD))
-    fwd = [s for s in supplies if s.side == Side.ALLIED and not s.base and not s.is_dummy]
+    fwd = [s for s in supplies if s.side == Side.ALLIED and not s.base and not s.is_dummy
+           and not s.air_dump]                   # 36.17: an airfield's pile is no railhead
     return min(fwd, key=lambda s: (distance(s.hex, rh), s.id)) if fwd else None
 
 
@@ -938,22 +960,40 @@ _TRUCKS_60_43 = {                    # [60.43] Commonwealth Second-Third Line Tr
     "Any Air Facility":  {"light":  5, "medium": 30, "heavy": 20},
 }
 
-# [59.61] AIR-FACILITY TRUCKS ARE GATED, NOT DELETED. With the Air Game abstracted -- the campaign's
-# mode: game.state.AirWing is hexless and air plays at the 32.0/58.0 abstract grain -- 59.61 says to
-# "ignore all Trucks and supplies available at/for Air facilities in the initial set-ups." The
-# air-facility SUPPLY allotments are already dropped; the TRUCK rows ([60.33]'s 'Any Air Facility'
-# 10 L / 50 M = 60 TP for the Axis, [60.43]'s 5 L / 30 M / 20 H = 55 TP for the Commonwealth) were
-# being seeded anyway -- over-seeding Axis +60 TP and CW +55 TP. They are gated below on
-# _AIR_GAME_PLAYED, NOT removed from the chart: when the full Air Game lands (plan T1-9) they come
-# back, and the SGSUs need them. Promote this flag to a real game.state field at that point.
-_AIR_GAME_PLAYED = False
+# [59.61] AIR-FACILITY TRUCKS: THE GATE IS NOW OPEN. 59.61 says to "ignore all Trucks and supplies
+# available at/for Air facilities in the initial set-ups" -- and it says it under the heading of
+# playing this game WITHOUT the Air Game. That was our mode, and the engine obeyed the rule for the
+# air SUPPLIES and disobeyed it for the air TRUCKS ([60.33]'s 'Any Air Facility' 10 L / 50 M = 60 TP
+# for the Axis, [60.43]'s 5 L / 30 M / 20 H = 55 TP for the Commonwealth), over-seeding both parks --
+# the T0-18 bug. The port plan's instruction was to GATE the rows, not delete them, "because when
+# the Air Game lands these come back, and the SGSUs need them."
+#
+# Phase 5.1 is that landing. Rule 36 air facilities are on the map, rule 35 SGSUs are eating off
+# them, and the [60.34]/[60.44] air-supply allotments 59.61 also suppressed are seeded beside them
+# (game.oob.air_dumps). So both truck rows come back on, and the flag stays as the ONE named place
+# the exclusion is expressed rather than being scattered back through the chart.
+_AIR_GAME_PLAYED = True
 
 
 def _air_facility_trucks(row: dict) -> tuple[dict, ...]:
-    """The 59.61 gate over one [60.33]/[60.43] 'Any Air Facility' truck row: it is seeded only when
-    the full Air Game is played, and ignored while air is abstract. The row stays on the
-    _TRUCKS_60_33 / _TRUCKS_60_43 charts -- this only decides whether it is placed on the board."""
+    """The 59.61 switch over one [60.33]/[60.43]/[61.43] 'Any Air Facility' truck row: seeded when
+    the full Air Game is played (it is, from Phase 5.1), ignored when air is abstract. The row lives
+    on the charts either way -- this only decides whether it is placed on the board."""
     return (row,) if _AIR_GAME_PLAYED else ()
+
+
+def _air_facility_park(facilities, side: Side, near) -> "Coord | None":
+    """WHERE a chart's "Any Air Facility" truck row is placed: the side's own air facility nearest
+    `near` -- its main supply hub -- with ties broken by facility id.
+
+    The rows say "Any Air Facility", so which one is the Player's free choice; this is OUR ASSIGNMENT
+    of it, and it is the ordinary quartermaster's answer (the field the freight can actually reach).
+    It matters that the row lands ON a facility and not on the hub itself: 36.17 makes the facility
+    its squadron's larder, so these are the lorries that keep the larder full (35.15) -- and a park
+    parked on the railhead instead would simply be more freight lorries competing for the trains'
+    tonnage, which is not what the chart allotted them for. None when the side holds no facility."""
+    own = [f for f in facilities if f.side == side]
+    return min(own, key=lambda f: (distance(f.hex, near), f.id)).hex if own else None
 
 
 def _truck_park(prefix: str, side: Side, hexpos, *rows: dict) -> list[TruckFormation]:
@@ -967,11 +1007,12 @@ def _truck_park(prefix: str, side: Side, hexpos, *rows: dict) -> list[TruckForma
             for cls, pts in pool.items() if pts > 0]
 
 
-def _campaign_cw_trucks(supplies) -> tuple[TruckFormation, ...]:
-    """The Commonwealth 2nd/3rd-line motor-transport pool: the [60.43] chart's non-air rows, 140 Truck
-    Points against the 16 the campaign used to seed (the 55 at Air Facilities are gated off while air
-    is abstract, 59.61 -- see _air_facility_trucks). Without lorries the Commonwealth cannot project
-    supply one hex west of its railhead -- a unit's own trace reaches ~6-12 -- so Operation Compass
+def _campaign_cw_trucks(supplies, facilities) -> tuple[TruckFormation, ...]:
+    """The Commonwealth 2nd/3rd-line motor-transport pool: the WHOLE [60.43] chart, 195 Truck Points
+    against the 16 the campaign used to seed (140 on the non-air rows plus the 55 at Air Facilities,
+    which 59.61 kept off the board only while the Air Game was abstract -- see _air_facility_trucks).
+    Without lorries the Commonwealth cannot project supply one hex west of its railhead -- a unit's
+    own trace reaches ~6-12 hexes -- so Operation Compass
     and Crusader strand every unit they send toward Benghazi. The Western Desert Force ran on
     lorries; this is the park that hauled it to El Agheila.
 
@@ -986,37 +1027,42 @@ def _campaign_cw_trucks(supplies) -> tuple[TruckFormation, ...]:
         and the exact hex the pool binds at. Not the forward Field Supply Depots -- on Game-Turn 1
         Sollum and Sidi Barrani lie in the path of the advancing Italian 10th Army, and a staff does
         not park its lorry reserve in front of an oncoming army.
-      * "Any Air Facility" (5 L / 30 M / 20 H) -> GATED OFF while air is abstract (59.61 ignores
-        air-facility trucks in the set-up). The row stays on _TRUCKS_60_43 behind _air_facility_trucks
-        and returns when the Air Game lands (T1-9); it would otherwise have gone to the railhead as a
-        hexless-AirWing proxy (game.state.AirWing owns no air-facility hex), the supply hub of the
-        forward airfield line that Matruh, Fuka and Sidi Haneish all sit on."""
+      * "Any Air Facility" (5 L / 30 M / 20 H) -> the Commonwealth air facility nearest the railhead
+        (_air_facility_park). 59.61 suppressed this row while the Air Game was abstract; Phase 5.1
+        plays it, so it is on the board -- and it goes where the chart puts it, ON a facility, now
+        that rule 36 gives facilities hexes. These are not more freight lorries for the front: they
+        are the transport that keeps a squadron's 36.17 larder full (35.15), and pooling them at the
+        railhead instead measurably drained the transit node the garrison eats from."""
     railhead = _campaign_cw_railhead(supplies)
     if railhead is None:
         return ()
     def ax(lbl: str):
         return coords.to_axial(coords.parse(lbl))
-    return tuple(
+    airfield = _air_facility_park(facilities, Side.ALLIED, railhead.hex)
+    park = tuple(
         _truck_park("AL-Truck-Cairo", Side.ALLIED, ax(_CW_BASE_HEXES["Cairo"]),
                     _TRUCKS_60_43["Any hex in Cairo"])
         + _truck_park("AL-Truck-Alex", Side.ALLIED, ax(_CW_BASE_HEXES["Alexandria"]),
                       _TRUCKS_60_43["Alexandria"])
         + _truck_park("AL-Truck-Matruh", Side.ALLIED, railhead.hex,
-                      _TRUCKS_60_43["Anywhere, maps"],
-                      *_air_facility_trucks(_TRUCKS_60_43["Any Air Facility"])))
+                      _TRUCKS_60_43["Anywhere, maps"]))
+    if airfield is None:
+        return park
+    return park + tuple(_truck_park("AL-Truck-Airfield", Side.ALLIED, airfield,
+                                    *_air_facility_trucks(_TRUCKS_60_43["Any Air Facility"])))
 
 
-def _campaign_axis_trucks(supplies, target) -> tuple[TruckFormation, ...]:
-    """The Axis 2nd/3rd-line motor-transport pool: the [60.33] chart's ON-MAP non-air rows, 155 Truck
-    Points (the 60 at Air Facilities gated off while air is abstract, 59.61 -- see _air_facility_trucks),
+def _campaign_axis_trucks(supplies, target, facilities) -> tuple[TruckFormation, ...]:
+    """The Axis 2nd/3rd-line motor-transport pool: the [60.33] chart's ON-MAP rows, 215 Truck Points,
     staged at the Benghazi port-of-arrival where the Mediterranean convoys land and where the coastal
     relay (campaign_policy.campaign_truck_orders) reloads.
 
     OUR ASSIGNMENT: "Anywhere in Libya" (30 L / 100 M / 25 H) -> Benghazi, which is in Libya and is
-    the single hex the entire Axis economy passes through. "Any Air Facility" (10 L / 50 M) is GATED
-    OFF while air is abstract (59.61 ignores air-facility trucks in the set-up); the row stays on
-    _TRUCKS_60_33 behind _air_facility_trucks and returns with the Air Game (T1-9). Benghazi would be
-    its home regardless -- Benina and El Berca, its airfields, are two hexes away.
+    the single hex the entire Axis economy passes through. "Any Air Facility" (10 L / 50 M) -> the
+    Axis air facility nearest Benghazi (_air_facility_park): 59.61 kept that row off the board only
+    while the Air Game was abstract, Phase 5.1 plays it, and rule 36 now gives it a facility hex to
+    stand on -- these lorries keep a squadron's 36.17 larder full (35.15), they are not extra freight
+    capacity for the Panzerarmee.
 
     *** THE TRIPOLI ROW IS NOT SEEDED, AND THAT IS NOT A CONCESSION -- IT IS THE AXIS'S WAR. *** The
     chart's largest row by a wide margin -- 25 Light / 140 Medium / 40 Heavy, 205 of the Italian
@@ -1031,9 +1077,13 @@ def _campaign_axis_trucks(supplies, target) -> tuple[TruckFormation, ...]:
     rear = _axis_rear(supplies, target)
     if rear is None:
         return ()
-    return tuple(_truck_park("AX-Truck-Benghazi", Side.AXIS, rear.hex,
-                             _TRUCKS_60_33["Anywhere in Libya"],
-                             *_air_facility_trucks(_TRUCKS_60_33["Any Air Facility"])))
+    park = tuple(_truck_park("AX-Truck-Benghazi", Side.AXIS, rear.hex,
+                             _TRUCKS_60_33["Anywhere in Libya"]))
+    airfield = _air_facility_park(facilities, Side.AXIS, rear.hex)
+    if airfield is None:
+        return park
+    return park + tuple(_truck_park("AX-Truck-Airfield", Side.AXIS, airfield,
+                                    *_air_facility_trucks(_TRUCKS_60_33["Any Air Facility"])))
 
 
 def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy, ...]:
@@ -1345,6 +1395,22 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     dumps = (tuple(oob_supplies) + tuple(_campaign_cw_base())
              + (_campaign_axis_base(), _campaign_tobruk_dump())
              + tuple(_campaign_staging_dumps()) + tuple(_campaign_cw_depots()))
+    # C6 / [36.0] THE AIR FACILITIES, and the dumps rule 36.17 says they ARE. The OOB has carried
+    # these counters since Phase 3.1 and discarded their meaning; they are now installations with a
+    # Capacity Level (36.12/36.2/36.3/36.4) that bombing takes down (36.14/41.36) and that gates how
+    # many SGSUs can function (36.13). Their supply is the [60.34]/[60.44] air allotment -- 1200
+    # Ammo / 850 Fuel / 100 Stores / 100 Water for the Axis, 200/250/50 for the Commonwealth -- which
+    # 59.61 kept off the board while the Air Game was abstract. It is flagged air_dump, so ONLY the
+    # SGSUs standing on it may eat it (35.14): it is the air force's larder, not the army's.
+    facilities = oob.air_facilities(oob_file="oob_italian.json",
+                                    extra_file="oob_campaign_extra.json", sections="ABCDE")
+    air_supply = tuple(oob.air_dumps(facilities, oob.CAMPAIGN_AIR_POOLS))
+    # [35.11]/[60.31]/[60.42] ...and the SQUADRON BASES that stand on them. The campaign order of
+    # battle ships no SGSU counter at all, while [60.31] charts 39 Italian and [60.42] 14
+    # Commonwealth "available" for placement "at any air facility, within the capacity of that
+    # facility" -- so without this the whole of rule 35 would be inert in the campaign and the air
+    # supply above would have no one to feed. Each facility takes SGSUs up to its Capacity Level.
+    units += oob.seed_sgsus(facilities, oob.CAMPAIGN_SGSU_AVAILABLE)
     # C5: THE WELLS (rules 52.1-52.3) -- the water SOURCES. Water is found in wells and only
     # wells (52.11), so without these the armies drink from nothing: the demand side (52.4) and
     # the 52.53 attrition were both live while total Axis water income across the whole campaign
@@ -1356,9 +1422,9 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     # A hex a piece stands on is land (coastal ports colour-sample as sea); add + connect,
     # exactly as the corridor scenarios do.
     terrain = dict(tmap.terrain)
-    for piece in (*units, *dumps, *water_sources):
+    for piece in (*units, *dumps, *water_sources, *air_supply):
         terrain.setdefault(piece.hex, Terrain.CLEAR)
-    _connect_pieces(terrain, [p.hex for p in (*units, *dumps, *water_sources)])
+    _connect_pieces(terrain, [p.hex for p in (*units, *dumps, *water_sources, *air_supply)])
     forts = _apply_major_cities(terrain)
     for h in delta_hexes():                          # rule 57 + 25.12: the Delta, at Level 3
         terrain[h] = Terrain.MAJOR_CITY
@@ -1425,7 +1491,12 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     # Mediterranean convoy lands at -- to the well out at Jalo oasis. Order matters for the same
     # reason: the policies' co-located-dump scans take the FIRST dump on a hex, and every one of
     # Benghazi/Tobruk/Bardia/Derna/Cairo/Alexandria carries both a depot and a well.
-    supplies = dumps + water_sources
+    #
+    # The air-facility dumps (36.17) go in for exactly the same reason and with the same care: they
+    # are supply the SGSUs eat, so they belong in `supplies` and in the conservation base, but they
+    # are not depots on the freight line, so they are kept out of `dumps` and out of every geography
+    # derived from it.
+    supplies = dumps + water_sources + air_supply
 
     # 64.2 / 64.51: General Rommel (the rule-31 entity) reaches Africa at the 3rd OpStage of
     # Game-Turn 26 -- co-located with the DAK headquarters counter he lands beside, so the leader
@@ -1480,11 +1551,12 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         victory=campaign_victory.CampaignVictory(),      # rule 64.7 (see game.campaign_victory)
         convoys=_campaign_convoys(dumps, target, max_turns, seed),      # C3: Axis Med + CW rail (56.4/60.7)
         ports=_campaign_ports(dumps, target),                           # C3: PORT-Benghazi + PORT-Matruh
-        trucks=(_campaign_axis_trucks(dumps, target)                    # C3-2: the Benghazi->front haul (53/60.33)
-                + _campaign_cw_trucks(dumps)),                          # and the CW railhead->west haul (60.33)
+        trucks=(_campaign_axis_trucks(dumps, target, facilities)        # C3-2: the Benghazi->front haul (53/60.33)
+                + _campaign_cw_trucks(dumps, facilities)),              # and the CW railhead->west haul (60.33)
         interdictions=(_campaign_malta_interdiction(max_turns)             # C4: Malta throttles the Axis Med convoy (rule 44)
                        + _campaign_tobruk_ferry_interdiction(max_turns)    # + BOTH halves of the Tobruk sea duel
                        + _campaign_tobruk_axis_interdiction(max_turns)),   #   (30/41.6): each side can fight the other's lane
         air=_campaign_air(),                                # C4: BOTH air forces (34/40-46) -- without
         air_missions=_campaign_air_missions(max_turns),     # them no harbour can ever be cut (41.39B)
+        air_facilities=tuple(facilities),                   # C6/36: the squadron bases on the map
     )

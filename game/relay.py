@@ -290,8 +290,16 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
     # an Axis truck becomes the well standing on ALEXANDRIA and the whole pool marches at it.
     # (Hauling water FROM a well is rule 52.45 and the 54.2 Water column -- deferred, see
     # game.wells.)
+    #
+    # [36.17] THE AIR-FACILITY DUMPS GO WITH THEM, and for a sharper version of the same reason. An
+    # airfield's pile is "a supply dump for supplies to be used by the SGSU's on that airfield", and
+    # "land units may not use airfield supply dumps"; it is the squadron's larder, filled by the
+    # [60.33]/[60.43] "Any Air Facility" lorries that sit on it (35.15). Left visible, the relay
+    # would read it as an ordinary forward depot -- pouring the army's freight into a pile no unit
+    # of the army may eat from, and (once constructed) lifting the squadron's own stores back out.
+    # Measured: a Commonwealth air dump landed on a railway station and MASKED it from the lorries.
     state = replace(state, supplies=tuple(s for s in state.supplies
-                                          if not wells.is_water_source(s)))
+                                          if not wells.is_water_source(s) and not s.air_dump))
     # THE RELOAD ANCHOR: the side's rearmost PORT OF ARRIVAL (55.3) -- the dump its convoys
     # actually land in. Every return leg heads for it, and every delivery retains enough fuel to
     # get back to it from where it drops, so a truck that chains deep still carries its own way

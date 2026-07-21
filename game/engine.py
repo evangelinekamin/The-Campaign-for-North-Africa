@@ -15,8 +15,8 @@ import math
 from dataclasses import dataclass, replace
 from typing import Protocol
 
-from . import (combat, combat_tables, construction, cp_costs, initiative, logistics_data, stacking,
-               supply, tactics, weather, wells)
+from . import (air, combat, combat_tables, construction, cp_costs, initiative, logistics_data,
+               stacking, supply, tactics, weather, wells)
 from .apply import apply
 from .dice import DiceBox
 from .events import CONTROL_OF, Control, Event, EventKind, Phase, Side
@@ -666,10 +666,12 @@ def _dump_on(state: GameState, side: Side, hex_):
     beside the first would hand that hex a SECOND 54.12 Supply Dump Capacity, silently doubling the
     ceiling the whole logistics chain is throttled by. 32.14 permits several Supply Units to stack,
     but our dump IS the hex's capacity, not a counter, so it must not be minted twice. A well or a
-    pipeline hex is geography, never a freight depot, so it is skipped (game.wells.is_water_source)."""
+    pipeline hex is geography, never a freight depot, so it is skipped (game.wells.is_water_source).
+    An air-facility dump (36.17) is skipped for the same reason from the other end: the army may not
+    eat from it, so a train that unloaded into it would be shipping its freight out of the war."""
     return next((s for s in sorted(state.supplies, key=lambda s: s.id)
                  if s.hex == hex_ and s.side == side and not s.is_dummy
-                 and not wells.is_water_source(s)), None)
+                 and not s.air_dump and not wells.is_water_source(s)), None)
 
 
 def _rail_deliver(r: _Run, convoy, terminus, cargo: dict) -> None:
@@ -945,8 +947,13 @@ def _stores_stage(r: _Run, side: Side, hot: bool) -> None:
 
 def _water_stage(r: _Run, side: Side, hot: bool) -> None:
     """A side's Water Distribution (rule 48 V.C.1 / 52, faithfully per OPERATIONS STAGE): draw
-    WATER from the traced dumps, with the 52.53 shortfall attrition. The dual of _stores_stage."""
+    WATER from the traced dumps, with the 52.53 shortfall attrition. The dual of _stores_stage.
+
+    The 35.14 SGSU upkeep rides here because it is the per-OPERATIONS-STAGE beat: an SGSU owes 1
+    Fuel + 1 Water every stage and 1 Stores per Game-Turn, so one call per stage settles all three
+    (the Stores leg is charged in the game-turn's FIRST stage; see _sgsu_upkeep)."""
     _water_distribution(r, side, hot)
+    _sgsu_upkeep(r, side)                               # 35.14: the squadron bases feed themselves
 
 
 _EVAP = logistics_data.evaporation_percent()   # 49.3/52.44, from the rulebook
@@ -991,8 +998,8 @@ def _stores_expenditure(r: _Run, side: Side, hot: bool) -> None:
     with no stores in its hex goes short (51.2)."""
     actor = f"{side.value}/Logistics"
     for u in sorted(r.state.living(side), key=lambda u: u.id):
-        if supply.is_air_facility(u):
-            continue                                    # 35.14: air pieces draw air supply, not land
+        if supply.is_sgsu(u):
+            continue                                    # 35.14: an SGSU's upkeep is its own (_sgsu_upkeep)
         draws = supply.in_hex_draw(r.state, u, supply.STORES, supply.stores_cost(u))
         if draws is None:
             _stores_shortfall(r, side, actor, u)        # 51.21/51.22
@@ -1062,8 +1069,8 @@ def _pasta_point(r: _Run, side: Side, actor: str, u) -> None:
 def _water_distribution(r: _Run, side: Side, hot: bool) -> None:
     actor = f"{side.value}/Logistics"
     for u in sorted(r.state.living(side), key=lambda u: u.id):
-        if supply.is_air_facility(u):
-            continue                                    # 35.14: air pieces draw air supply, not land
+        if supply.is_sgsu(u):
+            continue                                    # 35.14: an SGSU's upkeep is its own (_sgsu_upkeep)
         draws = supply.plan_draw(r.state, u, supply.WATER, supply.water_cost(u, hot=hot))
         if draws is None:
             _water_shortfall(r, side, actor, u)         # 52.53
@@ -1085,6 +1092,62 @@ def _water_shortfall(r: _Run, side: Side, actor: str, u) -> None:
     if supply.is_infantry(cur) and cur.stages_without_water >= 2:    # after the first stage
         r.emit(EventKind.STEP_LOST, side, actor,
                {"unit_id": u.id, "amount": min(1, cur.strength), "role": "attrition"})
+
+
+def _sgsu_upkeep(r: _Run, side: Side) -> None:
+    """[35.14] THE SQUADRON GROUND SUPPORT UNIT'S OWN UPKEEP -- and the rule that grounds an air force.
+
+        "SGSU's require a certain amount of supplies THEMSELVES to function. Each SGSU must expend
+         ONE STORES POINT PER GAME-TURN. In addition, each SGSU requires ONE FUEL POINT and ONE WATER
+         POINT PER OPERATIONS STAGE. SGSUs without the required supplies (for themselves) MAY NOT
+         REPAIR THEIR PLANES. (Maintaining the planes will, of course, require additional supplies of
+         Fuel and Ammunition)."
+
+    THE CADENCE IS THE RULE'S OWN, and it is two clocks in one sentence. This beat runs once per
+    Operations Stage (from _water_stage): Fuel and Water are charged every stage, Stores only in the
+    game-turn's FIRST stage, so a Game-Turn costs exactly 1 Stores + 3 Fuel + 3 Water per SGSU.
+
+    THE SOURCE IS 36.17. The draw is an IN-HEX draw (supply.in_hex_draw), so an SGSU eats what is
+    standing on its own hex -- its facility's air dump first and foremost, "any SGSU at an airfield
+    may make use of the supplies there to maintain and ready its planes" -- and starves the moment
+    that pile is empty, bombed out or captured. An SGSU is the ONE counter class for which an air
+    dump is visible at all (game.supply._colocated_dumps).
+
+    THE CONSEQUENCE IS DEFERRED BY ONE BLOCK, DELIBERATELY. A shortfall sets the SGSU's
+    stages_without_air_supply counter, which game.air.may_refit reads and Phase 5.3's Refit Table
+    consumes; the rule's own words are "may not repair their planes", and there is no repair yet to
+    forbid. Charging the supplies now is not premature -- it is the drain the Axis air force has
+    never paid (the port plan's "the Axis air force is fed on air") -- and the counter is the seam
+    5.3 plugs into. NOT modelled: 35.15's first-line trucks attached to an SGSU, and the
+    "additional supplies of Fuel and Ammunition" for the PLANES (34.17/38.21/38.24 -- Phase 5.2)."""
+    needs = [(supply.FUEL, air.SGSU_FUEL_PER_STAGE), (supply.WATER, air.SGSU_WATER_PER_STAGE)]
+    if r.state.stage == 1:                              # 35.14: Stores are a per-GAME-TURN charge
+        needs.insert(0, (supply.STORES, air.SGSU_STORES_PER_TURN))
+    # /Logistics, not /Air: this is a SUPPLY beat riding the rule-48 logistics cadence beside the
+    # 51/52 land draws, not an air MISSION. (The distinction is load-bearing for the staff layer,
+    # whose resource seats are keyed on the /Air and /Naval actor tags.)
+    actor = f"{side.value}/Logistics"
+    for u in sorted(r.state.living(side), key=lambda u: u.id):
+        if not supply.is_sgsu(u):
+            continue
+        short = ""
+        for commodity, qty in needs:
+            cur = r.state.unit(u.id)                    # re-read: an earlier leg may have drained a pool
+            draws = supply.in_hex_draw(r.state, cur, commodity, qty)
+            if draws is None:
+                short = short or commodity              # the FIRST unmet requirement names the shortfall
+                continue                                # 35.14 is a list of requirements, not a package:
+            for tag, ref_id, got in draws:              # what IS there is still expended
+                if tag == "unit":
+                    r.emit(EventKind.UNIT_SUPPLY_CONSUMED, side, actor,
+                           {"unit_id": ref_id, "commodity": commodity, "qty": got})
+                else:                                   # the 36.17 air-facility dump (or any dump here)
+                    r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+                           {"supply_id": ref_id, "commodity": commodity, "qty": got, "unit_id": u.id})
+        if short:
+            r.emit(EventKind.SGSU_UNSUPPLIED, side, actor, {"unit_id": u.id, "commodity": short})
+        elif r.state.unit(u.id).stages_without_air_supply > 0:
+            r.emit(EventKind.SGSU_SUPPLIED, side, actor, {"unit_id": u.id})
 
 
 def _waterless(u) -> bool:
@@ -1222,8 +1285,8 @@ def _air_support(r: _Run, side: Side, pinned: set[str]) -> None:
     deterministic order. STRIKE pins the strongest enemy in the target hex (12.44, joining the same
     `pinned` set the barrage feeds) -- UN-STRIKABLE behind an intact Major-City wall (fort_level>1,
     41.31); FORT bombing batters a wall one level/OpStage (reusing FORT_REDUCED); PORT bombing knocks
-    a harbour's Efficiency Level down one (reusing PORT_EFFICIENCY_CHANGED, 41.39B); RECON lifts the
-    fog over a hex (42.2). Each mission is grounded when its OWN target hex lies under a Sandstorm/
+    a harbour's Efficiency Level down one (reusing PORT_EFFICIENCY_CHANGED, 41.39B); AIRFIELD bombing
+    takes an air facility's Capacity Level down (41.36/36.14); RECON lifts the fog over a hex (42.2). Each mission is grounded when its OWN target hex lies under a Sandstorm/
     Rainstorm (29.43/29.52, keyed on the 29.7 section it flies over), so a storm confined to 2-3
     sections no longer grounds the whole air force; an air-less segment stays byte-identical."""
     if not r.state.air:
@@ -1238,6 +1301,8 @@ def _air_support(r: _Run, side: Side, pinned: set[str]) -> None:
             _air_fort(r, side, tuple(m.target))
         elif m.kind == "port":
             _air_port(r, side, m.target)
+        elif m.kind == "airfield":
+            _air_facility_bomb(r, side, tuple(m.target))
         elif m.kind == "recon":
             _air_recon(r, side, tuple(m.target))
 
@@ -1318,6 +1383,50 @@ def _air_port(r: _Run, side: Side, port_id: str) -> None:
         r.ports_bombed_this_stage.add(port.id)           # 55.18: lost levels to bombs this stage
         r.emit(EventKind.PORT_EFFICIENCY_CHANGED, side, f"{side.value}/Air",
                {"port_id": port.id, "level": new_eff, "strength": strength})
+
+
+def _air_facility_bomb(r: _Run, side: Side, tgt: Coord) -> None:
+    """[41.36] / [36.14] / [41.5] B-AF Bombing Air Facilities: "The result is the NUMBER OF CAPACITY
+    LEVELS that facility is reduced."
+
+    THE SAME CHART AS THE HARBOUR, AND THAT IS THE BOOK'S OWN DOING. The [41.5] Air Bombardment and
+    Secondary Barrage Targets Table prints ONE row for "Airfields / Air Landing Strips / Ports" and
+    denominates it in levels lost -- so this reads logistics_data.air_port_bombing_crt_41_5, the row
+    already transcribed and eyes-verified off the foldout (PDF p.107), by the identical procedure
+    _air_port uses: total the committed Bomb Points to pick the column, roll 2d6 read SEQUENTIALLY
+    as a two-digit code (41.22), cross-index.
+
+    36.14 then says what the number means: "if bombing has reduced the capacity of an airfield from
+    six to three, that airfield may handle only three squadrons at a time, until it is built back up
+    to six... If an airfield is reduced to zero capacity, it is considered destroyed for all
+    purposes." An airfield at zero STAYS on the map (24.76 rebuilds it a level at a time); a landing
+    strip or flying-boat facility at zero is "eliminated and removed from the game-map" (36.2/24.76).
+
+    Needs committed LAND strike Air Points scaled by the superiority gate, exactly as the harbour
+    does, and never bombs a facility its OWN side holds (36.15 makes a facility the property of
+    whoever occupies its hex). NOT modelled, and flagged: 41.36's second clause, "for every level
+    destroyed, remove 10% of the planes on the ground" -- there is no per-plane ledger to remove
+    from until Phase 5.3."""
+    facility = air.facility_at(r.state, tgt)
+    if facility is None or air.holder(r.state, facility) == side or air.destroyed(facility):
+        return
+    strength = _air_points(r.state, side, "LAND", "strike")
+    if strength <= 0:                                    # no committed strike / lost the sky
+        return
+    d1, d2 = r.d6("air_bombard"), r.d6("air_bombard")    # 41.22: two dice, read sequentially
+    levels = min(_port_bomb_levels(strength, d1, d2), facility.level)
+    new_level = facility.level - levels
+    actor = f"{side.value}/Air"
+    r.emit(EventKind.AIR_STRIKE_RESOLVED, side, actor,   # certify the [41.5] CRT dice
+           {"arena": "AIRFIELD", "target": facility.id, "strength": strength,
+            "levels": levels, "level": new_level}, rng_draws=(d1, d2))
+    if levels <= 0:                                      # a No-Effect leaves the field as it stood
+        return
+    r.emit(EventKind.AIR_FACILITY_LEVEL_CHANGED, side, actor,
+           {"facility_id": facility.id, "level": new_level, "strength": strength})
+    if new_level <= 0 and air.removed_when_destroyed(facility.kind):
+        r.emit(EventKind.AIR_FACILITY_DESTROYED, side, actor,
+               {"facility_id": facility.id, "kind": facility.kind})
 
 
 def _air_recon(r: _Run, side: Side, tgt: Coord) -> None:

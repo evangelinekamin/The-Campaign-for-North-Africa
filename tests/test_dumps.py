@@ -188,9 +188,20 @@ def test_an_empty_dump_is_not_a_prize(gt30):
     keeps them dry is CONTROL, not distance (campaign_claim.spine_awaits_control). Capturing them on
     GT1 loots nothing and severs the Commonwealth's supply spine before the war starts -- measured,
     the take-and-hold then claimed NO CITY AT ALL for the whole campaign, in every seed. Nobody
-    "enters" a dump that was under their feet at the setup."""
-    early = [e for e in gt30.events if e.kind == EventKind.SUPPLY_CAPTURED and e.turn == 1]
-    assert not early, f"an empty dump was captured at the setup: {[e.payload for e in early]}"
+    "enters" a dump that was under their feet at the setup.
+
+    RESTATED at Phase 5.1 (rules 35/36). The Game-Turn-1 clause used to be "nothing is captured on
+    Game-Turn 1 at all", which was a proxy for its real thesis and stopped being one the moment air
+    facilities became real: the campaign now seeds a stocked 36.17 air-facility dump on each air
+    facility, one of the Commonwealth's stands in the path of the September-1940 Italian advance, and
+    an Italian column that MARCHES ONTO IT on Game-Turn 1 has captured a genuinely full dump -- which
+    is 32.13 and 36.15 working, not the pathology this test exists to catch. So the clause now asks
+    the thesis directly: none of the SPINE depots the setup parks under an enemy garrison changes
+    hands, and nothing empty is ever captured (the general assertion below, unchanged)."""
+    spine = {"AL-Stage-Sollum", "AL-Stage-Barrani", "AL-Tobruk"}
+    early = [e for e in gt30.events if e.kind == EventKind.SUPPLY_CAPTURED and e.turn == 1
+             and e.payload["supply_id"] in spine]
+    assert not early, f"a spine depot was captured at the setup: {[e.payload for e in early]}"
     for e in (e for e in gt30.events if e.kind == EventKind.SUPPLY_CAPTURED):
         p = e.payload
         assert p["ammo"] + p["fuel"] + p["stores"] + p["water"] > 0, \

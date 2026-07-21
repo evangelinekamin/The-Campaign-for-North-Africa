@@ -61,14 +61,21 @@ def _recorded_logs():
     # The seed-4 fold above does not reach a front-line combat retreat, a 32.13 dump overrun, or a
     # 54.14 deny-demolition inside its 8-turn window, so it does not exercise the incremental checker
     # on UNIT_RETREATED / SUPPLY_CAPTURED / SUPPLY_DUMP_BLOWN. A short campaign fold restores that
-    # guard-family coverage. The seed picked here moved once before (Phase-3 OOB) and again at the
-    # Phase-4 S5 in-hex switch, which reshaped the opening enough that the old seed-1 fold stopped
-    # overrunning and blowing a dump; seed-8/mt3 drives all three -- a defender retreat, an enemy
-    # combat unit overrunning a non-empty enemy dump (CAPTURED), and a friendly dump demolished ahead
-    # of capture (BLOWN). It is the smallest fold measured (scratchpad/find_coverage_seeds.py) that
-    # exercises both supply-loss families, so coverage is a property of the recorded run, not the seed.
-    yield ("campaign:8/mt3",
-           run(campaign(seed=8, max_turns=3), CampaignAxisPolicy(), CampaignCommonwealthPolicy()))
+    # guard-family coverage, and it drives all three -- a defender retreat, an enemy combat unit
+    # overrunning a non-empty enemy dump (CAPTURED), and a friendly dump demolished ahead of capture
+    # (BLOWN). It is the smallest fold measured that does so, so coverage is a property of the
+    # recorded run rather than of the seed.
+    #
+    # THE SEED HAS MOVED THREE TIMES, AND EACH TIME FOR THE SAME REASON: a rule landed that reshaped
+    # the campaign's opening, and the previous fold stopped producing one of the three. Phase-3 (the
+    # Commonwealth order of battle) retired seed 1; Phase-4 S5 (in-hex fuel) retired it again; and
+    # Phase 5.1 (rules 35/36 -- the air facilities left units[], the SGSUs joined it, and the charted
+    # air-facility trucks came on) left seed-8/mt3 without a front-line retreat. seed-14/mt3 is the
+    # current smallest (scratchpad/find_coverage_seeds_p51.py; 3,911 events). What is asserted is the
+    # COVERAGE, so re-measuring the seed when the opening moves is the maintenance this test is for --
+    # never dropping the requirement.
+    yield ("campaign:14/mt3",
+           run(campaign(seed=14, max_turns=3), CampaignAxisPolicy(), CampaignCommonwealthPolicy()))
 
 
 def test_incremental_verdict_matches_full_sweep_at_every_event():

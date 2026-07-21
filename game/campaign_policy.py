@@ -613,9 +613,11 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
         orders: list[SupplyMoveOrder] = []
         claimed: set = set()
         for su in state.active_supplies(side):
-            if su.base or su.fuel < supply.SUPPLY_MOVE_FUEL or state.port_at(su.hex) is not None:
-                continue          # a rule-57 base is immobile; a dry dump cannot move (32.24); a
-                                  # harbour dump stays where the convoys land (55)
+            if (su.base or su.air_dump or su.fuel < supply.SUPPLY_MOVE_FUEL
+                    or state.port_at(su.hex) is not None):
+                continue          # a rule-57 base is immobile; an airfield's larder stays on its
+                                  # airfield (36.17); a dry dump cannot move (32.24); a harbour dump
+                                  # stays where the convoys land (55)
             reach = supply.reachable_moves(state, su)
             pick = next((u for u in stranded if u.hex in reach and u.hex != su.hex
                          and u.hex not in claimed), None)
@@ -830,6 +832,7 @@ def keep_in_trace(orders: list, state: GameState, side: Side) -> list:
     # depot feeds it nothing). Wells are geography and hold water only, so they are never "supply".
     depots = [s.hex for s in state.supplies
               if s.side == side and not s.is_dummy and s.ammo > 0
+              and not s.air_dump                     # 36.17: the squadron's larder, not the army's
               and not wells.is_water_source(s)]
     if not depots:
         return orders                          # no depot anywhere: never freeze the army

@@ -10,6 +10,32 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-21 -- CAUSE: rules 36 + 35 -- air facilities and SGSUs became real (Phase 5.1).
+
+The Air Landing Strips and flying-boat Alighting areas the order of battle has carried since Phase
+3.1 were built as inert `air`-role UNITS with CPA 0. They are not units: rule 36 makes an air
+facility an INSTALLATION with a Capacity Level bombs take down (36.14/41.36), and rule 35 makes the
+Squadron Ground Support Unit the separate counter that works it. So the facilities left units[] for
+GameState.air_facilities, the SGSU counters kept their place under a new `sgsu` role, and three
+rules came on with them:
+
+  * 36.17 -- an airfield IS a supply dump for its SGSUs. The [61.36]/[61.44] air-supply allotment
+    (CW 250 Ammo / 180 Fuel / 50 Stores; Axis 50/50) is seeded into air_dump SupplyUnits on the
+    facility hexes. Rule 59.61 suppressed that row only "without the Air Game"; we play it now.
+    A land unit may not draw from an air dump, so the army's own ledger is untouched by the seeding.
+  * 35.14 -- each SGSU expends 1 Stores per Game-Turn and 1 Fuel + 1 Water per Operations Stage,
+    drawn IN HEX. Both benchmark SGSUs stand away from both strips (the extraction's hexes: A2629
+    and B5504 against strips at B4006 and C4808), so they go short and carry the counter rule 35.14
+    grounds a squadron on -- a faithful consequence of the OOB, not a tuning choice.
+  * 59.61 T0-18 -- the [61.43] "10 Medium Trucks at air facilities" row is no longer gated off.
+
+Two units left the board and one truck formation grew, so both logs move from their first event.
+Determinism holds byte-for-byte (each signature reproduced twice, on the final tree).
+
+    rommels_arrival   098e6d9539c1 -> 9f5c4befd42b
+    siege_of_tobruk   99853cb45586 -> 81344040fade
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-19 -- CAUSE: 12.24/3.6 -- barrage fires BLIND, no longer at the strongest unit.
 
 _barrage_target picked the defender's STRONGEST combat unit -- but the barraging Player fires "blind"
@@ -312,8 +338,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "098e6d9539c1"
-SIEGE_OF_TOBRUK = "99853cb45586"
+ROMMELS_ARRIVAL = "9f5c4befd42b"
+SIEGE_OF_TOBRUK = "81344040fade"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 
