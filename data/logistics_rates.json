@@ -347,6 +347,18 @@
     }
   },
 
+  "aircraft_characteristics_4_44": {
+    "_comment": "[4.44A/b/c] AIRCRAFT CHARACTERISTICS CHARTS -- the per-plane ratings rules 34.13/34.14/34.17 name, and the only place the book prints them. TRANSCRIBED HERE: only the four types the engine's abstract Air Points are expressed in (see game/air.REPRESENTATIVE_AIRCRAFT); the rest of the three charts is a per-plane roster job that belongs with the Squadron Composition Sheet (34.72) in Phase 5.3/5.4, and inventing rows we do not use would be transcription for its own sake. EVERY row below was read WITH EYES off the 1979 scan at 300 dpi -- Commonwealth PDF p.112 (fighters) and p.113 (bombers), Axis PDF p.144 (Italian + German fighters) and p.145 (German bombers) -- because the OCR in docs/rules/90-charts is column-shifted in the Commonwealth fighter table (it drops a cell on the Gladiator row and reads the drop-tank variants' Fuel as the Bomb column). CHART DEFINITIONS, verbatim: 'TacAir = Tactical Air Combat Rating. A parenthesized rating indicates that the plane may never be flown on a mission permitting it to initiate air-to-air combat.' (34.13); 'Bomb = Bombload Capacity... in points' (34.14); 'Fuel = Fuel Consumption Rating in the number of Fuel Points the plane requires before it may be flown' (34.17/38.21). A bombload of 0 is the chart's '-' (may not carry bombs). NOTE the book itself prints '-' in the Fuel column of the Gladiator Mk. II -- a misprint we do not need and therefore do not rule on.",
+    "aircraft": {
+      "Bf. 109E": {"nation": "german", "class": "fighter", "range": 41, "tacair": 6, "tacair_parenthesized": false, "maneuver": 34, "bombload": 0, "fuel": 1},
+      "Ju. 87B": {"nation": "german", "class": "dive_bomber", "range": 36, "tacair": 3, "tacair_parenthesized": true, "maneuver": 25, "bombload": 5, "fuel": 1},
+      "Hs. 126": {"nation": "german", "class": "reconnaissance", "range": 45, "tacair": 2, "tacair_parenthesized": true, "maneuver": 14, "bombload": 2, "fuel": 1},
+      "Lysander Mk. I": {"nation": "commonwealth", "class": "reconnaissance", "range": 60, "tacair": 2, "tacair_parenthesized": true, "maneuver": 20, "bombload": 0, "fuel": 1},
+      "Hurricane Mk. I": {"nation": "commonwealth", "class": "fighter", "range": 52, "tacair": 4, "tacair_parenthesized": false, "maneuver": 32, "bombload": 0, "fuel": 1},
+      "Blenheim Mk. I": {"nation": "commonwealth", "class": "bomber", "range": 101, "tacair": 1, "tacair_parenthesized": true, "maneuver": 22, "bombload": 5, "fuel": 2}
+    }
+  },
+
   "scenario_61_desert_fox_initial_supply": {
     "_comment": "Initial supply placement and port states for the Desert Fox scenario group (docs/rules/61-scenario-group-two-the-desert-fox.md). DATA ONLY: the engine's game/scenario.py currently seeds proxy dumps/ports (see supply_dump_capacity_54_12.engine_proxy_dump_seeds and ports_55_3.engine_proxy). The percentage figures are PLACEMENT constraints on how the pool is split across dumps, not consumption rates. Line numbers cite the current markdown transcription.",
     "axis_dump_split_61_44": {

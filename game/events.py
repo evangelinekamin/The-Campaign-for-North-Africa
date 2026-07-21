@@ -327,6 +327,20 @@ class EventKind(str, Enum):
     # (rng_draws = the per-unit noise) for the camera. Both emit ONLY when a side fields air.
     AIR_STRIKE_RESOLVED = "AIR_STRIKE_RESOLVED"
     AIR_RECON_RESOLVED = "AIR_RECON_RESOLVED"
+    # [34.17]/[38.21]/[38.24] AIRCRAFT BURN FUEL. "This is the number of Fuel Points a plane requires
+    # to perform any mission... all Fuel Points are consumed during a mission, regardless of the type
+    # or distance" (34.17); "the fuel is subtracted from the total supply in the air facility"
+    # (38.24). The Points themselves ride the existing SUPPLY_CONSUMED off a 36.17 air dump (actor
+    # SIDE/Air), so conservation is untouched and no new fold exists for the DRAW.
+    #
+    # AIR_MISSION_GROUNDED {arena, kind, target, role, points, need, available} is the other half:
+    # "planes must have fuel to fly" (38.21) and the Sequence of Play lets only "all planes that are
+    # fueled" be assigned missions (33 IV.F.1), so a mission whose bill the side's air-facility dumps
+    # cannot cover is NOT FLOWN -- nothing is drawn, no CRT die is rolled, the target is untouched.
+    # A marker: it folds to identity and records what the sortie would have cost against what was in
+    # the larder. Emitted for a CAP (the per-OpStage air-superiority commitment) as well as for a
+    # tasked mission; a side that cannot fuel its fighters commits none and concedes the sky.
+    AIR_MISSION_GROUNDED = "AIR_MISSION_GROUNDED"
     # [36.0] AIR FACILITIES -- the base an air force flies from, and the thing bombs take away.
     #
     # AIR_FACILITY_LEVEL_CHANGED {facility_id, level, ...} sets a facility's current Capacity Level

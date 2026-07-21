@@ -278,3 +278,12 @@ def air_port_bombing_crt_41_5() -> list:
     picks the column by total Bomb Points, then reads 2d6 SEQUENTIALLY as a two-digit code
     (tens=first die, units=second) and looks up the number of Efficiency Levels lost."""
     return _data()["air_bombardment_41_5"]["ports"]["columns"]
+
+
+def aircraft_characteristics_4_44() -> dict:
+    """[4.44A/b/c] AIRCRAFT CHARACTERISTICS CHARTS, by aircraft name: the charted `tacair`
+    (34.13), `bombload` (34.14) and `fuel` Consumption Rating (34.17/38.21 -- "the number of
+    Fuel Points the plane requires before it may be flown") of each transcribed type. Only the
+    four types game.air expresses an Air Point in are transcribed; see the data file's own note
+    (every row eyes-verified off the scan, the Commonwealth OCR being column-shifted)."""
+    return _data()["aircraft_characteristics_4_44"]["aircraft"]

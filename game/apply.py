@@ -23,6 +23,7 @@ def apply(state: GameState, event: Event) -> GameState:
              EventKind.CONVOY_CANCELLED, EventKind.CONVOY_INTERDICTED,
              EventKind.PASTA_DENIED, EventKind.PORT_UNLOADED,
              EventKind.SEGMENT_ADVANCED, EventKind.AIR_STRIKE_RESOLVED,
+             EventKind.AIR_MISSION_GROUNDED,
              EventKind.STAFF_INTENT, EventKind.STAFF_PROPOSAL, EventKind.STAFF_CONSTRAINT,
              EventKind.STAFF_ADJUDICATION, EventKind.STAFF_DISSENT):
         # markers / audit records. SEGMENT_ADVANCED (8.2) opens a Continual-Movement pulse but
