@@ -465,12 +465,20 @@ def test_the_campaign_air_force_now_eats_and_the_ledger_holds():
     (on_hand + consumed == initial) still holds, because the draw rides the ordinary
     SUPPLY_CONSUMED."""
     res = run(campaign(seed=4, max_turns=2), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
-    air_fuel = [e for e in res.events
-                if e.kind == EventKind.SUPPLY_CONSUMED and e.actor.endswith("/Air")]
-    assert air_fuel and all(e.payload["commodity"] == supply.FUEL for e in air_fuel)
-    # every Point comes out of an air-facility dump and nothing else (36.17)
+    air_drawn = [e for e in res.events
+                 if e.kind == EventKind.SUPPLY_CONSUMED and e.actor.endswith("/Air")]
+    # RESTATED for Phase 5.3, and not weakened: the /Air actor now draws a SECOND commodity, because
+    # 38.36 makes every refit attempt "have present and actually expend one Stores Point". So the
+    # assertion is no longer "all Fuel" but the two rules named apart -- 34.17/38.21/38.24 fuel for
+    # the sorties, 38.36 Stores for the maintenance, and nothing else off an /Air actor.
+    air_fuel = [e for e in air_drawn if e.payload["commodity"] == supply.FUEL]
+    refit_stores = [e for e in air_drawn if e.payload["commodity"] == supply.STORES]
+    assert air_fuel
+    assert len(air_fuel) + len(refit_stores) == len(air_drawn)
+    assert all(e.payload["qty"] == 1 for e in refit_stores)            # 38.36: one Point, per attempt
+    # every Point of either commodity comes out of an air-facility dump and nothing else (36.17)
     air_dumps = {su.id for su in res.initial.supplies if su.air_dump}
-    assert {e.payload["supply_id"] for e in air_fuel} <= air_dumps
+    assert {e.payload["supply_id"] for e in air_drawn} <= air_dumps
     # ONLY the Commonwealth pays over these two turns, and that is the schedule, not a bug: in
     # September 1940 the Axis HOLDS Tobruk, so _air_port refuses its half of the symmetric duel
     # ("never bomb your own harbour") and it flies nothing to be billed for. It starts paying the

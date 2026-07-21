@@ -23,12 +23,13 @@ def apply(state: GameState, event: Event) -> GameState:
              EventKind.CONVOY_CANCELLED, EventKind.CONVOY_INTERDICTED,
              EventKind.PASTA_DENIED, EventKind.PORT_UNLOADED,
              EventKind.SEGMENT_ADVANCED, EventKind.AIR_STRIKE_RESOLVED,
-             EventKind.AIR_MISSION_GROUNDED,
+             EventKind.AIR_MISSION_GROUNDED, EventKind.AIR_REFIT_DENIED,
              EventKind.STAFF_INTENT, EventKind.STAFF_PROPOSAL, EventKind.STAFF_CONSTRAINT,
              EventKind.STAFF_ADJUDICATION, EventKind.STAFF_DISSENT):
         # markers / audit records. SEGMENT_ADVANCED (8.2) opens a Continual-Movement pulse but
         # the CP/BP accumulators PERSIST across it (only STAGE/TURN_ADVANCED reset them), so it
-        # folds to identity -- PORT_UNLOADED's top-up likewise rides SUPPLY_ARRIVED.
+        # folds to identity -- PORT_UNLOADED's top-up likewise rides SUPPLY_ARRIVED, and
+        # AIR_REFIT_DENIED (35.14/38.36) leaves a squadron exactly as unfit as it already was.
         return state
 
     if k == EventKind.PORT_EFFICIENCY_CHANGED:
@@ -393,6 +394,16 @@ def apply(state: GameState, event: Event) -> GameState:
         # removed from the game-map" and must be built from scratch. (An AIRFIELD at zero stays on
         # the map to be rebuilt level by level, so it never emits this.)
         return state.without_air_facility(p["facility_id"])
+
+    if k in (EventKind.AIR_SQUADRON_UNFIT, EventKind.AIR_REFIT_RESOLVED):
+        # 38.31 / 38.34: the two directions of ONE scalar -- how many of a squadron's aeroplanes
+        # stand unrefitted. Flying spends readiness ("as soon as a plane flies any mission other
+        # than transfer, it must be refitted again") and a [38.37] Refit Table roll returns a
+        # percentage of it. The generator has already baked the resulting count into `unfit`, so
+        # apply stays pure and neither event needs the table. A pure scalar fold onto air_unfit --
+        # no unit, no supply surface -- and, unlike air_superiority, NOT cleared at the OpStage
+        # boundary: an unfit plane stays unfit until somebody refits it.
+        return state.with_air_unfit(p["squadron"], p["unfit"])
 
     if k == EventKind.SGSU_UNSUPPLIED:
         # 35.14: the SGSU could not draw its own upkeep this Operations Stage, so it "may not repair

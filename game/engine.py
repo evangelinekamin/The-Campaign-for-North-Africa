@@ -15,8 +15,8 @@ import math
 from dataclasses import dataclass, replace
 from typing import Protocol
 
-from . import (air, combat, combat_tables, construction, cp_costs, initiative, logistics_data,
-               stacking, supply, tactics, weather, wells)
+from . import (air, calendar, combat, combat_tables, construction, cp_costs, initiative,
+               logistics_data, stacking, supply, tactics, weather, wells)
 from .apply import apply
 from .dice import DiceBox
 from .events import CONTROL_OF, Control, Event, EventKind, Phase, Side
@@ -182,6 +182,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                                                          # EVERY Operations Stage (VI/VII repeat all of V) --
                                                          # the turn's manifest unloads across the stages
             _air_superiority(r)                          # 40/45/46: contest the sky this OpStage (per arena)
+            _air_maintenance(r)                          # 33 IV.F.7 / 38.3: ready the planes that flew
             for side in (first, second):                # 7.16: Player A (first) then Player B (last)
                 _debrief(side)                          # enemy portion + own last combat
                 _organization(r, policies[side], side)  # 32.32: the ONE beat MP may be attached to
@@ -1327,8 +1328,10 @@ def _air_fuel(r: _Run, side: Side, role: str, points: int, mission: dict) -> int
     NOT MODELLED, each named where it lands: 39.19's "a plane may fly only one mission per
     Operations Stage" (two tasked missions in one stage are charged as two sets of planes, which is
     what the rule requires of the PLAYER -- but nothing here stops a policy tasking more sorties
-    than it has aeroplanes; 5.5 owns 39.19); 38.4's Ammunition Points for the bombs (38.43/38.44);
-    and 38.3's Refit, the OTHER half of readiness, which is 5.3's Refit Table."""
+    than it has aeroplanes; 5.5 owns 39.19); and 38.4's Ammunition Points for the bombs
+    (38.43/38.44). 38.3's REFIT -- the other half of readiness -- is built: _air_points caps the
+    commitment at the squadron's refitted planes BEFORE this bill is drawn, and _air_unfit spends
+    that readiness right after it."""
     if points <= 0:                                     # no planes committed -> no fuel, no event
         return 0
     if not air.based_on_map(r.state, side):             # 36.5/61.42 unbuilt -- see air.based_on_map
@@ -1397,14 +1400,163 @@ def _air_superiority(r: _Run) -> None:
                 "victor": victor, "margin": margin}, rng_draws=(ad, ld))
 
 
+# [38.31] The roles whose readiness rule 38.3 governs here: the ones a Player ORDERS on a mission.
+# Fighters are deliberately absent, and it is the same line engine._air_superiority already draws
+# for the fuel bill. Our air-superiority contest is an always-on abstraction that fires once per
+# arena per Operations Stage with a side's whole fighter pool -- no order routes to it and nothing
+# can decline it -- whereas the book's Combat Air Patrol is a mission the Player writes in his
+# mission column (40.21) and may decline precisely to conserve his force (38.25 / 40.3's Scramble).
+# Un-refitting a fighter arm for a patrol nobody ordered would make the Refit Table the governor of
+# our abstraction rather than of sorties, which is the error the 5.2 repair pass measured and
+# reversed. Fighters join the ledger when CAP becomes a real assignable mission (39.1/40.21).
+_REFITTABLE_ROLES: tuple[str, ...] = ("recon", "strike")
+
+
 def _air_points(state: GameState, side: Side, arena: str, role: str) -> int:
     """Committed Air Points of `role` ("strike"|"recon") `side` can put over `arena` this OpStage,
-    after the superiority gate scales the LOSER down (AIR_SUPERIORITY_LOSER_SCALE) -- the winner
-    (or a contested sky) flies at full strength. The mission-time read of the Step-3 gate."""
+    after TWO gates: the 40/45/46 superiority contest scales the LOSER down
+    (AIR_SUPERIORITY_LOSER_SCALE), and 38.31's REFIT ledger caps whatever is left at what the
+    squadron's refitted aeroplanes can carry -- "a plane that is not refitted may fly no mission
+    other than transfer, even if it is refueled". The winner of a contested sky still flies only the
+    machines its mechanics got back into the air.
+
+    Both gates are read at MISSION time and neither draws anything; the fuel bill (38.24) comes
+    after, on whatever survives them."""
     victor = state.air_superiority.get(arena)
     scale = 1.0 if victor is None or victor == side.value else AIR_SUPERIORITY_LOSER_SCALE
     total = sum(getattr(w, role) for w in state.air if w.side == side and w.arena == arena)
-    return int(total * scale)
+    points = int(total * scale)
+    if role not in _REFITTABLE_ROLES:                    # the fighter arm is outside the ledger
+        return points
+    return air.ready_points(state, side, arena, role, points)
+
+
+def _air_unfit(r: _Run, side: Side, arena: str, role: str, points: int) -> None:
+    """[38.31] The planes that just flew are no longer refitted: "AS SOON AS A PLANE FLIES ANY
+    MISSION other than transfer, IT MUST BE REFITTED AGAIN." Emitted the moment a tasked mission
+    actually flies (the fuel callback in _air_support), never for a mission that was refused,
+    grounded or never ordered."""
+    if points <= 0 or role not in _REFITTABLE_ROLES or not air.refit_modelled(r.state, side):
+        return
+    planes = air.flying_planes(r.state, side, arena, role, points)
+    if planes <= 0:
+        return
+    unfit = air.unfit_planes(r.state, side, arena, role) + planes
+    r.emit(EventKind.AIR_SQUADRON_UNFIT, side, f"{side.value}/Air",
+           {"squadron": air.squadron(side, arena, role), "arena": arena, "role": role,
+            "planes": planes, "unfit": unfit})
+
+
+def _refit_stores_dump(state: GameState, side: Side):
+    """[38.36]/[36.17] The air-facility dump the Stores Point for a refit attempt comes out of: the
+    first of this side's, in id order, that holds one. Pooled across the side's fields for the same
+    reason air.refuel's larder is, and flagged in the same place."""
+    return next((su for su in air.facility_dumps(state, side) if su.stores >= 1), None)
+
+
+def _air_maintenance(r: _Run) -> None:
+    """[38.3] THE TACTICAL MAINTENANCE SEGMENT (33 IV.F.7) -- THE SORTIE-RATE GOVERNOR, once per
+    Operations Stage, for both sides.
+
+    This is the beat that answers "why can one AirWing fly the same six strike points every
+    Operations Stage for a hundred and eleven Game-Turns?" -- it could, because nothing wore out.
+
+        38.3  "Refitting aircraft is repairing and maintaining them so that they CAN FLY ANOTHER
+               MISSION. In order to fly any mission other than a transfer, a plane must be refitted."
+        38.34 "Refitting is NOT A GUARANTEED PROCESS, like refueling. Players must roll FOR EACH
+               SQUADRON undergoing refit... and throws one die... The table gives him the PERCENTAGE
+               OF PLANES SUCCESSFULLY REFITTED. (Round all fractions up.)"
+        38.36 "For every squadron undergoing an attempted refit -- WHETHER SUCCESSFUL OR NOT -- the
+               Player must have present and actually EXPEND ONE STORES POINT."
+        35.14 "SGSUs WITHOUT THE REQUIRED SUPPLIES (for themselves) MAY NOT REPAIR THEIR PLANES."
+
+    THE DIE IS A d6 AND THE CHART PROVES IT: the printed columns run 1..9, and 6 + 2 (an Italian
+    SGSU) + 1 (a foreign squadron) is exactly 9. 38.35's serviceability modifiers -- +2 Italian,
+    +1 German -- ride game.air.refit_drm off the refitting SGSU's nationality, and a higher roll is
+    a worse row, so those two printed numbers ARE the rulebook's model of Axis unserviceability. We
+    had been handing it away for nothing.
+
+    WHERE IT SITS. The Sequence of Play refits AFTER the missions, "for the next OpStage" (33
+    IV.F.7); this fires at the TOP of the Operations Stage instead, readying for the missions about
+    to be flown. It is the same one attempt per squadron per stage, one beat earlier -- the identical
+    displacement, for the identical reason, that _air_fuel already documents for the refuelling half:
+    there is no per-plane readiness ledger to carry between the two halves of a stage. It also honours
+    59.36 ("maintenance may not be performed on planes during the first OpStage of a Scenario") for
+    free: on the first stage nothing has flown, 38.31 says every plane is already refitted, and a
+    squadron with nothing undergoing refit attempts nothing and spends no Stores.
+
+    NOT gated on weather: 29.43/29.52 ground FLIGHT into or out of a storm, and this is work done on
+    the ground. 38.37's own sandstorm clause -- "twenty percent of all refitted planes in a hex on
+    the ground in which there is a sandstorm must be refitted again" -- is the weather rule for this
+    beat and it is NOT built: it needs planes to be IN a hex, and our Air Points are hexless. Flagged
+    here rather than approximated.
+
+    NOT modelled, each named where it lands: 38.34's SEPARATE roll for planes refitting at another
+    squadron's SGSU, and the +1 that goes with it (38.33/38.35) -- there is no plane-to-SGSU
+    assignment to test until 34.72, so every refit here is a squadron's own, which is the permissive
+    reading and the one 38.0 calls maximum efficiency; 38.4's arming, a different commodity and a
+    different block; and 38.37's optional per-plane method (38.39), transcribed in the data file and
+    deliberately unused. 38.33's plane ALLOWANCE, by contrast, IS modelled -- see `left` below."""
+    if not r.state.air:
+        return
+    # gather first, emit second: a stage in which no squadron has anything to refit must emit
+    # nothing at all, not even a phase marker (so every scenario that never flies stays identical)
+    work: list[tuple[Side, str, str, int]] = []
+    for side in (Side.AXIS, Side.ALLIED):
+        if not air.refit_modelled(r.state, side):        # 36.5/61.42 unbuilt -- see refit_modelled
+            continue
+        arenas = sorted({w.arena for w in r.state.air if w.side == side})
+        for arena in arenas:
+            for role in _REFITTABLE_ROLES:
+                undergoing = air.unfit_planes(r.state, side, arena, role)
+                if undergoing > 0:
+                    work.append((side, arena, role, undergoing))
+    if not work:
+        return
+    r.go(Phase.LOGISTICS, Side.SYSTEM)                    # a SYSTEM housekeeping beat, like convoys
+    year, _month = calendar.gt_to_month(r.state.turn)     # [35.23]: the CW squadron grows in 1942
+    # 38.33/38.23: each SGSU's work is capped IN PLANES for the whole Operations Stage -- "each SGSU
+    # can refit up to the maximum planes the SGSU can contain (Ready plus Reserve)", and 38.23 says
+    # the same allowance is spent "regardless of squadron assignment". So it is one shared budget per
+    # counter, not a per-squadron allowance: `left` below is what each still has this stage.
+    left: dict[str, int] = {}
+    for side, arena, role, undergoing in work:
+        actor = f"{side.value}/Air"
+        payload = {"squadron": air.squadron(side, arena, role), "arena": arena, "role": role,
+                   "undergoing": undergoing}
+        # 35.14/35.17/36.13: only an SGSU refits, only a FED one, and only inside its field's
+        # Capacity Level. Which of a side's able SGSUs does the work is the owner's free choice;
+        # id order is OUR deterministic assignment of it, as everywhere else in this module -- the
+        # first with allowance left takes the squadron.
+        able = air.able_sgsus(r.state, side)
+        sgsu = next((u for u in able
+                     if left.setdefault(u.id, air.squadron_capacity(u.nationality, year)) > 0), None)
+        if sgsu is None:
+            # no mechanics at all, or every one of them has already spent his stage (38.23/38.33)
+            reason = "no_sgsu" if not able else "sgsu_capacity"
+            r.emit(EventKind.AIR_REFIT_DENIED, side, actor, {**payload, "reason": reason})
+            continue
+        # The [35.23] allowance does not bind at the proxy Air-Point establishments the scenarios
+        # seed (a squadron here is 1-2 aeroplanes against a charted 12-24); it is the law all the
+        # same, and it binds the moment 34.6/59.3's real Initial Air Strengths land.
+        attempting = min(undergoing, left[sgsu.id])
+        dump = _refit_stores_dump(r.state, side)
+        if dump is None:
+            r.emit(EventKind.AIR_REFIT_DENIED, side, actor, {**payload, "reason": "no_stores"})
+            continue
+        # 38.36: the Point is spent BEFORE the die, and whether the roll succeeds or not
+        r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+               {"supply_id": dump.id, "commodity": supply.STORES, "qty": 1})
+        left[sgsu.id] -= attempting                       # 38.23/38.33: the mechanics' stage is spent
+        die = r.d6("air_refit")
+        drm = air.refit_drm(sgsu.nationality)             # 38.35: +2 Italian, +1 German
+        roll = die + drm
+        refitted = air.refitted_planes(attempting, roll)  # 38.34: the table's %, rounded up
+        r.emit(EventKind.AIR_REFIT_RESOLVED, side, actor,
+               {**payload, "sgsu_id": sgsu.id, "nationality": sgsu.nationality, "die": die,
+                "drm": drm, "roll": roll, "percent": air.refit_percent(roll),
+                "attempting": attempting, "refitted": refitted,
+                "unfit": undergoing - refitted}, rng_draws=(die,))
 
 
 def _mission_hex(state: GameState, m) -> "Coord | None":
@@ -1454,9 +1606,15 @@ def _air_support(r: _Run, side: Side, pinned: set[str]) -> None:
         role = "recon" if m.kind == "recon" else "strike"
 
         def fuel(points: int, role=role, m=m) -> int:
-            return _air_fuel(r, side, role, points,
-                             {"arena": "LAND", "kind": m.kind,
-                              "target": _payload_target(m.target)})
+            # 38.24 pays for the sortie; 38.31 un-refits the planes that flew it. Both hang off
+            # this ONE callback because it is invoked exactly when a mission is really flown --
+            # after every resolver's structural refusal (bombing your own harbour, no siege rules)
+            # and never for a mission that was only tasked.
+            flown = _air_fuel(r, side, role, points,
+                              {"arena": "LAND", "kind": m.kind,
+                               "target": _payload_target(m.target)})
+            _air_unfit(r, side, "LAND", role, flown)
+            return flown
 
         if m.kind == "strike":
             _air_strike(r, side, tuple(m.target), pinned, fuel)

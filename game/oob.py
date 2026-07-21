@@ -623,6 +623,9 @@ def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
         engineer=s.get("engineer", ""),
         arrival_turn=arrival_turn,
         formation=rec["group"],
+        # The nationality the stats were selected under, carried onto the counter: [38.37] prints
+        # its refit modifiers and [35.23] its squadron capacity per nationality of the SGSU.
+        nationality=nat,
         # Rule 9.16a: a garrison in its assigned home hex is free of the stacking limit
         # (the Giarabub "Oasis Complex" and the city garrisons deploy concentrated on one
         # hex). They are static defenders; home-hex tracking is deferred, so the exemption

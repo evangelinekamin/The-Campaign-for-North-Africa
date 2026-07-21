@@ -26,8 +26,8 @@ from __future__ import annotations
 
 from itertools import chain
 
-from . import adjudication, stacking, supply
-from .events import Event, EventKind
+from . import adjudication, air, stacking, supply
+from .events import Event, EventKind, Side
 from .state import GameState
 
 
@@ -108,6 +108,17 @@ def _check_air_facility(f) -> None:
     if not 0 <= f.level <= f.max_level:
         raise InvariantViolation(
             f"air facility {f.id} level={f.level} out of [0, max_level={f.max_level}]")
+
+
+def _check_squadron_unfit(state: GameState, squadron: str, unfit: int) -> None:
+    # [38.31] A squadron's unrefitted planes are a count of REAL AEROPLANES out of its own
+    # establishment: never negative, never more machines than the squadron has. The exact twin of
+    # the Port Efficiency and Capacity-Level guards -- a stock with two hard ends.
+    side_value, arena, role = squadron.split("/")
+    total = air.squadron_planes(state, Side(side_value), arena, role)
+    if not 0 <= unfit <= total:
+        raise InvariantViolation(
+            f"squadron {squadron} unfit={unfit} out of [0, planes={total}]")
 
 
 def _check_fort(coord, level: int) -> None:
@@ -209,6 +220,8 @@ def check(state: GameState) -> None:
         _check_port(p)
     for f in state.air_facilities:
         _check_air_facility(f)
+    for squadron, unfit in state.air_unfit.items():
+        _check_squadron_unfit(state, squadron, unfit)
     for coord, level in state.fort_levels.items():
         _check_fort(coord, level)
     for c in adjudication.stacking_violations(state):
@@ -325,5 +338,7 @@ def check_event(pre: GameState, post: GameState, event: Event) -> None:
         _check_port(post.port(p["port_id"]))
     elif kind == EventKind.AIR_FACILITY_LEVEL_CHANGED:      # 36.14: 0 <= level <= the charted max
         _check_air_facility(post.air_facility(p["facility_id"]))
+    elif kind in (EventKind.AIR_SQUADRON_UNFIT, EventKind.AIR_REFIT_RESOLVED):
+        _check_squadron_unfit(post, p["squadron"], post.air_unfit.get(p["squadron"], 0))
     elif kind == EventKind.FORT_REDUCED:
         _check_fort(tuple(p["hex"]), p["level"])

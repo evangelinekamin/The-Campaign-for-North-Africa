@@ -376,6 +376,33 @@ class EventKind(str, Enum):
     # untouched. game.air.may_refit reads the counter; Phase 5.3's Refit Table reads may_refit.
     SGSU_SUPPLIED = "SGSU_SUPPLIED"
     SGSU_UNSUPPLIED = "SGSU_UNSUPPLIED"
+    # [38.3] AIRCRAFT MAINTENANCE -- THE SORTIE-RATE GOVERNOR. Readiness is a stock: flying spends
+    # it (38.31 "as soon as a plane flies any mission other than transfer, it must be refitted
+    # again") and a [38.37] Refit Table roll returns a percentage of it (38.34). Both halves fold
+    # onto GameState.air_unfit, the squadron -> unrefitted-planes ledger, and NOTHING else -- no
+    # TOE, no supply pool -- so conservation and stacking are untouched.
+    #
+    # AIR_SQUADRON_UNFIT {squadron, arena, role, planes, unfit} is the spend, emitted the moment a
+    # tasked mission actually flies (engine._air_support, beside the 38.24 fuel draw).
+    #
+    # AIR_REFIT_RESOLVED {squadron, arena, role, sgsu_id, nationality, die, drm, roll, percent,
+    # undergoing, refitted, unfit} (rng_draws=(die,)) is the return: one d6 per squadron per
+    # Operations Stage, modified by 38.35's serviceability DRMs (+2 Italian, +1 German), read on the
+    # transcribed table as the PERCENTAGE of the planes undergoing refit that came back (round up).
+    # The 38.36 Stores Point it costs -- "whether successful or not" -- rides the existing
+    # SUPPLY_CONSUMED off the 36.17 air-facility dump, so no new conservation path exists.
+    #
+    # AIR_REFIT_DENIED {squadron, arena, role, undergoing, reason} is the refusal, a marker folding
+    # to identity: 'no_sgsu' when no Squadron Ground Support Unit may work ("SGSUs without the
+    # required supplies may not repair their planes", 35.14; only an SGSU can, 35.17; and only
+    # within its field's Capacity Level, 36.13), 'sgsu_capacity' when every one that may has already
+    # spent its [35.23] Ready-plus-Reserve allowance this Operations Stage (38.23/38.33), and
+    # 'no_stores' when 38.36's Point is not there.
+    # All three emit only for a side the scenario BASED ON THE MAP (game.air.refit_modelled), so an
+    # air-less -- or unbased -- scenario stays byte-identical.
+    AIR_SQUADRON_UNFIT = "AIR_SQUADRON_UNFIT"
+    AIR_REFIT_RESOLVED = "AIR_REFIT_RESOLVED"
+    AIR_REFIT_DENIED = "AIR_REFIT_DENIED"
     # Commonwealth off-shore naval bombardment (rule 30.2). NAVAL_BOMBARDMENT {ship_id, target,
     # actual, target_class, target_unit, pinned, loss, half} (rng_draws=(d1,d2)) feeds a ship's
     # Gun Rating as Actual Barrage Points into the 12.6 CRT with NO ammo draw (30.22): the Pin

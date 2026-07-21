@@ -40,9 +40,11 @@ THE THREE LOAD-BEARING FACTS, and each one is a lever the campaign has never had
     and `may_refit` below is the gate it reads.
 
 WHAT IS DELIBERATELY NOT HERE (5.1 is the ground floor, not the building): 35.17's +1 foreign-base
-refit die, 35.2 squadron composition/capacities, 24.7 air-facility CONSTRUCTION (the rebuild LAW is
-here; no order routes to it yet), 36.5 off-map facilities, 36.18's intrinsic 1 AA point, and the
-44.5 Malta construction table. Each is named in the port plan under 5.2-5.5.
+refit die, 24.7 air-facility CONSTRUCTION (the rebuild LAW is here; no order routes to it yet), 36.5
+off-map facilities, 36.18's intrinsic 1 AA point, and the 44.5 Malta construction table. Each is
+named in the port plan under 5.2-5.5. (35.2's squadron CAPACITIES arrived with 5.3 -- the [35.23]
+chart is transcribed and squadron_capacity reads it for 38.33; the squadron COMPOSITION SHEET, 34.72,
+is still 5.4's.)
 
 AND THREE MORE, NAMED HERE BECAUSE THEY ARE EASY TO MISTAKE FOR BUILT:
 
@@ -60,10 +62,19 @@ AND THREE MORE, NAMED HERE BECAUSE THEY ARE EASY TO MISTAKE FOR BUILT:
   * **NO SCENARIO OR POLICY GENERATES AN 'airfield' AIR MISSION.** engine._air_facility_bomb is the
     41.36 resolver and it is real and tested, but the only caller in the tree is the test. It is
     5.4's foundation (44.21's suppression of Malta is what will fly these), not a live channel.
-  * **THE 35.14 UPKEEP HAS NO REFILL PATH.** See engine._sgsu_upkeep's own flag: 36.3, 35.15 and the
-    [60.33]/[60.43] air-facility lorry rows are the rulebook's three ways to restock an airfield and
-    none is built, so the charted allotment is a pot that only shrinks. OWNER RULING before 5.3
-    hangs the Refit Table on may_refit.
+  * **THE 35.14 UPKEEP HAS NO REFILL PATH, AND 5.3 HAS NOW HUNG THE REFIT TABLE ON IT.** See
+    engine._sgsu_upkeep's own flag: 36.3, 35.15 and the [60.33]/[60.43] air-facility lorry rows are
+    the rulebook's three ways to restock an airfield and none is built, so the charted allotment is a
+    pot that only shrinks. 5.1 raised this as an OWNER RULING to make BEFORE 5.3, and 5.3 landed
+    without it, deliberately: the faithful thing is to implement rule 38 as printed and let the
+    consequence be visible rather than to invent a faucet. THE CONSEQUENCE, MEASURED over the full
+    campaign (seeds 4/1941/7): the air-facility pot empties, every SGSU then reads unfed, and from
+    roughly Game-Turn 13-33 every refit attempt is DENIED for want of an SGSU that may work --
+    AIR_REFIT_DENIED(reason='no_sgsu') 280/299/65 times, after which that side's squadrons are
+    permanently unfit and its air war is over. That is rule 35.14 doing exactly what it says to an
+    air force nobody resupplies; the missing piece is the resupply, not the rule. **It is the
+    binding constraint on Phase 5.4: Malta cannot be a lever pulled by an air force that stops
+    flying in 1941.**
 """
 from __future__ import annotations
 
@@ -208,7 +219,9 @@ def functioning_sgsus(state: GameState, facility: AirFacility) -> tuple[Unit, ..
 
 
 def may_refit(state: GameState, sgsu: Unit) -> bool:
-    """[35.14] / [35.17] / [36.13] THE REFIT GATE -- the one Phase 5.3's Refit Table reads.
+    """[35.14] / [35.17] / [36.13] THE REFIT GATE -- the one the [38.37] Refit Table reads (5.3's
+    able_sgsus is the side-wide scan built on it, and engine._air_maintenance denies the attempt
+    outright when it comes back empty).
 
     Three conditions, each a rule:
       * 35.14 -- the SGSU drew its own upkeep. "SGSUs without the required supplies (for themselves)
@@ -218,8 +231,9 @@ def may_refit(state: GameState, sgsu: Unit) -> bool:
         refitted beyond the capacity of the air facility (see Case 36.12, 36.2, 36.3 and 36.4)."
       * 36.13/36.14 -- and only within that facility's current Capacity Level.
 
-    NOT modelled here (5.3's job, flagged): 35.17's +1 to the refit die when a plane refits at an
-    SGSU other than its own squadron's."""
+    STILL NOT modelled, and now flagged in refit_drm as well: 35.17/38.33's +1 to the refit die when
+    a plane refits at an SGSU other than its own squadron's. There is no plane-to-SGSU assignment to
+    test until 34.72's Squadron Composition Sheet, so every refit here is a squadron's own."""
     if sgsu.stages_without_air_supply > 0:
         return False
     facility = facility_at(state, sgsu.hex)
@@ -462,3 +476,172 @@ def refuel(state: GameState, side: Side, role: str, points: int) -> Sortie:
     # planes' share of them (never more than was committed)
     flown = points if planes == committed else min(points, planes * points_per_plane(side, role))
     return Sortie(flown, planes, committed, tuple(draws), need, available)
+
+
+# --- [38.3] REFITTING AIRCRAFT -- THE SORTIE-RATE GOVERNOR --------------------------------------
+#
+# This block is the answer to "why can one AirWing fly the same six strike points every Operations
+# Stage for a hundred and eleven Game-Turns?" It could, because nothing wore out. Rule 38.3, whole:
+#
+#   38.3  "Refitting aircraft is repairing and maintaining them so that they can fly ANOTHER
+#          MISSION. In order to fly any mission other than a transfer, a plane MUST BE REFITTED."
+#   38.31 "At the start of a Scenario, all planes are considered refitted... AS SOON AS A PLANE
+#          FLIES ANY MISSION other than transfer, IT MUST BE REFITTED AGAIN. A plane that is not
+#          refitted MAY FLY NO MISSION other than transfer, even if it is refueled."
+#   38.34 "Refitting is NOT A GUARANTEED PROCESS, like refueling. Players must roll for each
+#          squadron undergoing refit... throws one die, making any adjustments (see Case 38.35) and
+#          consulting the Aircraft Refit Table. The table gives him THE PERCENTAGE OF PLANES
+#          SUCCESSFULLY REFITTED. (Round all fractions up.)"
+#   38.35 "...If the planes attempting refit are ITALIAN, the Player (be he Axis or Commonwealth)
+#          ADDS TWO to the dieroll. If the planes are GERMAN, ADD ONE."
+#   38.36 "For every squadron undergoing an attempted refit -- WHETHER SUCCESSFUL OR NOT -- the
+#          Player must have present and actually EXPEND ONE STORES POINT."
+#
+# So readiness is a STOCK that flying spends and a die roll returns a fraction of, and the fraction
+# is worse for the Axis by two printed modifiers. That asymmetry is the rulebook's model of Axis
+# unserviceability, and until this block the engine handed it away for nothing.
+#
+# WHAT A "SQUADRON" IS AT THIS GRAIN, AND IT IS FLAGGED. game.state.AirWing is Air Points by ARENA
+# and ROLE, not a roster of squadrons -- and engine._air_points already POOLS every wing a side
+# fields in an arena before anything reads them. So the smallest honest unit here is the pool
+# itself: one squadron per (side, arena, role), which is exactly what the campaign and the siege
+# each field. A scenario that seeded two wings of the same role in one arena would get ONE refit
+# roll where the book would give it two. It dissolves with 34.72's Squadron Composition Sheet,
+# which is the same thing air.refuel's pooled larder waits on.
+REFIT_TABLE = logistics_data.aircraft_refit_table_38_37()
+SQUADRON_CAPACITY = logistics_data.squadron_capacity_35_23()
+
+# [38.37] "German Squadron Ground Support Unit add 1. Italian Ground Support Unit add 2." Keyed on
+# the nationality game.oob built the SGSU counter under. A counter that states no nationality (every
+# hand-built test unit) takes no modifier -- the Commonwealth's own row, which the chart prints no
+# modifier for at all.
+_REFIT_DRM_KEY: dict[str, str] = {"IT": "italian_sgsu", "GE": "german_sgsu"}
+
+# [35.23] the Commonwealth squadron grows mid-war; the other two rows do not.
+_CW_LARGER_SQUADRON_FROM_YEAR = 1942
+_CAPACITY_KEY: dict[str, str] = {"IT": "italian", "GE": "german"}
+
+
+def refit_drm(nationality: str) -> int:
+    """[38.35]/[38.37] The serviceability modifier the refitting SGSU's nationality adds to the
+    refit die: +2 Italian, +1 German, none Commonwealth. A HIGHER modified roll is a WORSE result
+    on the table, so these two numbers ARE the Axis's chronic unserviceability.
+
+    ⚠ THE CHART AND THE CASE NAME DIFFERENT SUBJECTS, and the data file records it at length: the
+    chart modifies for the SGSU's nationality, 38.35's prose for the PLANES'. They coincide whenever
+    a squadron is worked by its own SGSU -- the book's normal case (38.0) and the only case this
+    engine has, since no roster bases planes away from their own SGSU until 34.72. We read the SGSU,
+    because that is a transcribed counter ([60.32] "Italian SGSU Available: 39") while the plane TYPE
+    is game.air's own flagged representative-aircraft proxy, and a proxy must not decide a rule.
+
+    NOT modelled, and the same flag air.may_refit already carries: the chart's third modifier, +1 for
+    "planes attempting refit not assigned to [the] Squadron Ground Support Unit attempting refit".
+    There is no plane-to-SGSU assignment to test, so every refit here is a squadron's own -- the
+    permissive reading, and the one 38.0 calls maximum efficiency."""
+    key = _REFIT_DRM_KEY.get(nationality)
+    return 0 if key is None else REFIT_TABLE["modifiers"][key]
+
+
+def refit_percent(roll: int) -> int:
+    """[38.37B] The percentage of the planes undergoing refit that a MODIFIED die roll refits:
+    1->100, 2->80, 3->70, 4->60, 5->50, 6,7->40, 8,9->33. Read off the transcribed columns.
+
+    One d6 plus the chart's own modifiers spans exactly the printed 1..9 (6 + 2 Italian + 1 foreign
+    = 9), so no roll can fall outside the table; a roll that somehow did is clamped to the nearest
+    printed end rather than inventing a column."""
+    columns = REFIT_TABLE["columns"]
+    for col in columns:
+        lo, hi = col["die"]
+        if lo <= roll <= hi:
+            return col["pct_refitted"]
+    return columns[0]["pct_refitted"] if roll < columns[0]["die"][0] else columns[-1]["pct_refitted"]
+
+
+def refitted_planes(undergoing: int, roll: int) -> int:
+    """[38.34] How many of `undergoing` planes a modified `roll` refits -- the table's percentage,
+    "round all fractions up"."""
+    if undergoing <= 0:
+        return 0
+    return -(-undergoing * refit_percent(roll) // 100)      # ceil, in integers
+
+
+def squadron_capacity(nationality: str, year: int) -> int:
+    """[35.23]/[38.33] The most planes ONE Squadron Ground Support Unit may refit: its squadron's
+    charted Ready plus Reserve -- "each SGSU can refit up to the maximum planes the SGSU can contain
+    (Ready plus Reserve)". Italian 12, German 16, Commonwealth 16 in 1940-41 and 24 from 1942."""
+    key = _CAPACITY_KEY.get(nationality)
+    if key is None:
+        key = ("commonwealth_1942_43" if year >= _CW_LARGER_SQUADRON_FROM_YEAR
+               else "commonwealth_1940_41")
+    return SQUADRON_CAPACITY[key]["total"]
+
+
+def squadron(side: Side, arena: str, role: str) -> str:
+    """The key one squadron's readiness is carried under in GameState.air_unfit (see the block
+    comment: at this grain a squadron IS the (side, arena, role) pool)."""
+    return f"{side.value}/{arena}/{role}"
+
+
+def refit_modelled(state: GameState, side: Side) -> bool:
+    """Is `side`'s readiness governed by rule 38.3 in this scenario at all? THE SAME ESCAPE HATCH,
+    FOR THE SAME REASON, AS air.based_on_map -- and it must stay the same one. A side the scenario
+    never based on the map has no air facility for an SGSU to work at and no 36.17 pile to spend
+    38.36's Stores Point out of, so 38.3 has nothing to bite on; grounding its air force for good
+    because a COUNTER was never transcribed ([61.42]'s free Axis field west of El Agheila, [36.5]'s
+    off-map bases) would enshrine a data gap as a rule. In the full campaign both sides are based on
+    the map, so the governor binds where it matters."""
+    return based_on_map(state, side)
+
+
+def able_sgsus(state: GameState, side: Side) -> tuple[Unit, ...]:
+    """[35.14]/[35.17]/[36.13] `side`'s SGSUs that may work on planes this Operations Stage, id
+    ordered -- fed, at a facility their side holds, and inside its Capacity Level (see may_refit)."""
+    return tuple(u for u in sorted(state.units, key=lambda u: u.id)
+                 if u.side == side and is_sgsu(u) and may_refit(state, u))
+
+
+def squadron_points(state: GameState, side: Side, arena: str, role: str) -> int:
+    """The Air Points of `role` `side` has in `arena` -- the whole pool, BEFORE the 40/45/46
+    superiority gate scales a commitment down. This is the squadron's establishment, not its
+    tasking, so it is what a plane count is taken over."""
+    return sum(getattr(w, role) for w in state.air if w.side == side and w.arena == arena)
+
+
+def squadron_planes(state: GameState, side: Side, arena: str, role: str) -> int:
+    """How many aeroplanes that establishment IS (34.13/34.14; see planes_flying)."""
+    return planes_flying(side, role, squadron_points(state, side, arena, role))
+
+
+def unfit_planes(state: GameState, side: Side, arena: str, role: str) -> int:
+    """[38.31] The squadron's planes that have flown and not yet been refitted. Absent from the
+    ledger means NONE -- "at the start of a Scenario, all planes are considered refitted" -- which
+    is also why an air-less (or refit-less) scenario stays byte-identical."""
+    return state.air_unfit.get(squadron(side, arena, role), 0)
+
+
+def ready_planes(state: GameState, side: Side, arena: str, role: str) -> int:
+    """[38.31] The squadron's planes that MAY fly a mission: its establishment less its unfit."""
+    return max(0, squadron_planes(state, side, arena, role)
+               - unfit_planes(state, side, arena, role))
+
+
+def ready_points(state: GameState, side: Side, arena: str, role: str, points: int) -> int:
+    """[38.31] `points` capped by what the squadron's REFITTED planes can carry: "a plane that is
+    not refitted may fly no mission other than transfer, EVEN IF IT IS REFUELED."
+
+    The cap is taken in planes and read back out in the rating those Air Points are denominated in
+    (34.13 TacAir / 34.14 Bombload), never above what was asked for -- the identical arithmetic
+    air.refuel uses when a larder fuels only part of a force, because it is the identical question
+    asked of a different shortage."""
+    if points <= 0 or not refit_modelled(state, side):
+        return points
+    total = squadron_planes(state, side, arena, role)
+    if total <= 0:
+        return points                                   # no establishment to be unfit
+    return min(points, ready_planes(state, side, arena, role) * points_per_plane(side, role))
+
+
+def flying_planes(state: GameState, side: Side, arena: str, role: str, points: int) -> int:
+    """[38.31] The planes `points` of a flown mission put in the air, never more than the squadron
+    had refitted -- the count that goes UNFIT the moment the mission is flown."""
+    return min(planes_flying(side, role, points), ready_planes(state, side, arena, role))

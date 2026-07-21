@@ -361,6 +361,42 @@
     }
   },
 
+  "squadron_capacity_35_23": {
+    "_comment": "[35.23] SQUADRON CAPACITY CHART, eyes-verified off the 1979 scan (Charts and Tables page 10, PDF page 105 -- the same rendered page that carries the [24.18] Demolition Chart, the [38.37] Aircraft Refit Table and the [45.6] Pilot and Plane Recovery Table). 'Ready plus Reserve' is the number BOTH 38.23 and 38.33 cap an SGSU's work at: 'an Italian SGSU can handle refueling chores for a total of 12 planes, regardless of squadron assignment, in a given Operations Stage' (38.23), and 'each SGSU can refit up to the maximum planes the SGSU can contain (Ready plus Reserve)' (38.33). The Commonwealth squadron grows mid-war, so its row is dated and the engine reads the calendar year off the Game-Turn.",
+    "nationalities": {
+      "italian":              {"_row": "Italian Squadriglia",              "ready":  9, "reserve": 3, "total": 12},
+      "german":               {"_row": "German Staffel",                   "ready": 12, "reserve": 4, "total": 16},
+      "commonwealth_1940_41": {"_row": "Commonwealth Squadron (1940-41)",  "ready": 12, "reserve": 4, "total": 16},
+      "commonwealth_1942_43": {"_row": "Commonwealth Squadron (1942-43)",  "ready": 18, "reserve": 6, "total": 24}
+    }
+  },
+
+  "aircraft_refit_38_37": {
+    "_comment": "[38.37] AIRCRAFT REFIT TABLE, transcribed and eyes-verified cell by cell off the 1979 scan (Charts and Tables page 10, PDF page 105). The rulebook's Case 38.3 calls it 38.38 in prose and the chart itself is headed [38.37]; they are the one table. PROCEDURE (38.34), verbatim: 'Players must roll for each squadron undergoing refit... The Player simply determines the number of aircraft in the squadron undergoing refit and throws ONE DIE, making any adjustments (see Case 38.35) and consulting the Aircraft Refit Table. The table gives him the PERCENTAGE OF PLANES SUCCESSFULLY REFITTED. (Round all fractions up.)' That one die is a d6, and the table's own span proves it: 6 + 2 (Italian SGSU) + 1 (foreign squadron) = 9, which is exactly where the printed columns stop.",
+    "by_squadron": {
+      "_row": "B. By Squadron -- Dice Roll -> % of Planes Refitted",
+      "columns": [
+        {"die": [1, 1], "pct_refitted": 100}, {"die": [2, 2], "pct_refitted": 80},
+        {"die": [3, 3], "pct_refitted": 70}, {"die": [4, 4], "pct_refitted": 60},
+        {"die": [5, 5], "pct_refitted": 50}, {"die": [6, 7], "pct_refitted": 40},
+        {"die": [8, 9], "pct_refitted": 33}
+      ],
+      "modifiers": {
+        "_printed": "Modifiers: German Squadron Ground Support Unit add 1. Italian Ground Support Unit add 2. Planes attempting refit not assigned to Squadron Ground Suport Unit attempting refit add 1.",
+        "_comment_subject": "THE CHART AND CASE 38.35 NAME DIFFERENT SUBJECTS FOR THE SAME TWO MODIFIERS, AND THAT IS RECORDED HERE RATHER THAN PAPERED OVER. The chart keys them on the SGSU ('German Squadron Ground Support Unit add 1'); 38.35 keys them on the PLANES ('if the planes attempting refit are Italian, the Player -- be he Axis or Commonwealth -- adds two to the dieroll. If the planes are German, add one'). The two coincide whenever a squadron is refitted by its own SGSU, which is the book's normal case (38.0: 'refitting is performed with maximum efficiency by the squadron's own SGSU') and the only case this engine can have, since there is no per-squadron roster to base planes away from their own SGSU until 34.72. The engine therefore reads the SGSU COUNTER's nationality: it is the chart's own subject, and it is a TRANSCRIBED fact ([60.32] 'Italian SGSU Available: 39') rather than game.air's flagged representative-aircraft proxy for the plane TYPE.",
+        "german_sgsu": 1,
+        "italian_sgsu": 2,
+        "foreign_squadron": 1
+      }
+    },
+    "by_plane_optional_38_39": {
+      "_row": "A. By Plane -- Dice Roll to Refit (two dice), per plane",
+      "_comment": "The chart's section A is Case 38.39's OPTIONAL per-plane method -- 'Players wishing to use a more painstaking if (slightly) more accurate method of refitting planes may roll for each plane individually' -- and NOT the rule. 38.34's by-squadron table above is the rule, and it is what the engine rolls. Transcribed because it is the same printed chart box and the scan has been read; nothing in game/ reads it.",
+      "refit_on": {"commonwealth": [2, 8], "german": [2, 7], "italian": [2, 6]},
+      "modifiers": {"foreign_squadron": 2}
+    }
+  },
+
   "scenario_61_desert_fox_initial_supply": {
     "_comment": "Initial supply placement and port states for the Desert Fox scenario group (docs/rules/61-scenario-group-two-the-desert-fox.md). DATA ONLY: the engine's game/scenario.py currently seeds proxy dumps/ports (see supply_dump_capacity_54_12.engine_proxy_dump_seeds and ports_55_3.engine_proxy). The percentage figures are PLACEMENT constraints on how the pool is split across dumps, not consumption rates. Line numbers cite the current markdown transcription.",
     "axis_dump_split_61_44": {

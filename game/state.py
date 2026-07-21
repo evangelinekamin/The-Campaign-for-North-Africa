@@ -75,6 +75,14 @@ class Unit:
     # keeps every scenario without engineers byte-identical.
     engineer: str = ''             # '' | 'RAIL' (NZRRC, 24.61) | 'ROAD' (1 SA RC Bn, 23.13)
     formation: str = ''            # OOB organisational group; the staff layer addresses by it
+    # The counter's NATIONALITY as the order of battle built it ('IT' Italian, 'GE' German, 'CW'
+    # Commonwealth; game.oob._nat). Nationality is already what selects a counter's stats at build
+    # time; it is carried onto the counter because rules read it at PLAY time too -- [38.37]'s refit
+    # modifiers are printed per nationality of the Squadron Ground Support Unit ("German Squadron
+    # Ground Support Unit add 1. Italian Ground Support Unit add 2"), and [35.23] caps how many
+    # planes one may work by the same key. Default '' is "unstated", which every hand-built test
+    # counter and every scenario that never asks is; game.air.refit_drm reads '' as no modifier.
+    nationality: str = ''
     fuel_rate: int = 0             # 49.19 Fuel Consumption Rate; 0 -> supply.fuel_rate proxy
     # Consecutive-shortfall counters (rules 51/52), folded via replace. Reset when the
     # unit is resupplied; drive 51.21 disorganization + 51.22/52.53 attrition.
@@ -564,6 +572,14 @@ class GameState:
     # (air=(), air_superiority={}) fire no air beat, so every air-less scenario stays byte-identical.
     air: tuple[AirWing, ...] = ()
     air_superiority: dict = field(default_factory=dict)
+    # [38.31] THE REFIT LEDGER -- squadron key (game.air.squadron: "<side>/<arena>/<role>") -> the
+    # number of that squadron's aeroplanes that have flown and are NOT YET REFITTED. Unlike
+    # air_superiority this is a STOCK and is NOT cleared at the OpStage boundary: "as soon as a
+    # plane flies any mission other than transfer, it must be refitted again", and it stays unfit
+    # until a [38.37] Refit Table roll brings it back. An ABSENT key means none unfit, which is the
+    # rule's own opening state ("at the start of a Scenario, all planes are considered refitted"),
+    # so the default {} is byte-identical for every scenario that never flies.
+    air_unfit: dict = field(default_factory=dict)
     # Air missions (rules 41/42) + the recon fog-lift. `air_missions` is the per-side LAND
     # tasking schedule (game.engine._air_support). `air_sighted` is the per-OpStage recon lift:
     # a set of (recon_side_value, hex) pairs observation.py reads ALONGSIDE _sighted_hexes (42.2),
@@ -869,6 +885,18 @@ class GameState:
         sup = dict(self.air_superiority)
         sup[arena] = victor
         return replace(self, air_superiority=sup)
+
+    def with_air_unfit(self, squadron: str, planes: int) -> "GameState":
+        """[38.31] Set how many of `squadron`'s aeroplanes stand UNREFITTED (mirrors
+        with_air_superiority). A squadron back to zero is dropped from the ledger rather than
+        recorded as a zero, so "no key" keeps its one meaning -- nothing unfit -- however the
+        squadron got there."""
+        unfit = dict(self.air_unfit)
+        if planes > 0:
+            unfit[squadron] = planes
+        else:
+            unfit.pop(squadron, None)
+        return replace(self, air_unfit=unfit)
 
     def air_superiority_of(self, arena: str) -> "str | None":
         """The Side value that holds the sky in `arena` this OpStage, or None (contested /

@@ -290,3 +290,20 @@ def aircraft_characteristics_4_44() -> dict:
     eyes-verified off the scan, the Commonwealth OCR being column-shifted, and the D-vs-B reading
     of the Mission Capability column recorded as a flagged judgement call)."""
     return _data()["aircraft_characteristics_4_44"]["aircraft"]
+
+
+def aircraft_refit_table_38_37() -> dict:
+    """[38.37] AIRCRAFT REFIT TABLE, section B (by squadron) -- the ordered die columns of 38.34's
+    roll, each carrying its modified-die bracket `die` [lo, hi] and the `pct_refitted` that column
+    prints, plus the chart's own `modifiers`. One d6 plus modifiers spans exactly the printed 1..9.
+    Section A (the 38.39 OPTIONAL per-plane method) is transcribed beside it in the data file and
+    is deliberately not returned here: nothing rolls it."""
+    return _data()["aircraft_refit_38_37"]["by_squadron"]
+
+
+def squadron_capacity_35_23() -> dict:
+    """[35.23] SQUADRON CAPACITY CHART, by nationality key ("italian", "german",
+    "commonwealth_1940_41", "commonwealth_1942_43"): the charted `ready` + `reserve` = `total`.
+    The total is the cap 38.23 puts on an SGSU's refuelling and 38.33 on its refitting -- "each
+    SGSU can refit up to the maximum planes the SGSU can contain (Ready plus Reserve)"."""
+    return _data()["squadron_capacity_35_23"]["nationalities"]

@@ -38,11 +38,16 @@ AXIS_LANE = "1"          # rommels_arrival's Axis Mediterranean convoy lane (sce
 # --- the derivation ----------------------------------------------------------------------------
 
 def test_every_subsystem_gets_its_own_distinct_stream():
-    """15 subsystems, 15 different sequences. If two shared a seed they would roll in lockstep
-    and a 'correlated' engine is only marginally better than a desynchronised one."""
+    """16 subsystems, 16 different sequences. If two shared a seed they would roll in lockstep
+    and a 'correlated' engine is only marginally better than a desynchronised one.
+
+    The count moved from 15 to 16 when the [38.37] Aircraft Refit Table got its own `air_refit`
+    stream (Phase 5.3): 38.34 rolls one die per squadron per Operations Stage, CONDITIONALLY -- only
+    for a squadron with planes to refit -- which is exactly the drawing pattern this module exists
+    to isolate."""
     box = DiceBox(1941)
     draws = {sub: [box.d6(sub) for _ in range(40)] for sub in SUBSYSTEMS}
-    assert len(SUBSYSTEMS) == 15                                      # + air_bombard ([41.5] harbour bombing)
+    assert len(SUBSYSTEMS) == 16                                      # + air_refit ([38.37] the Refit Table)
     assert len({tuple(v) for v in draws.values()}) == len(SUBSYSTEMS)
 
 
