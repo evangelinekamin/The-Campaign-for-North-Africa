@@ -67,6 +67,8 @@ AND THREE MORE, NAMED HERE BECAUSE THEY ARE EASY TO MISTAKE FOR BUILT:
 """
 from __future__ import annotations
 
+from typing import NamedTuple
+
 from . import logistics_data
 from .events import Control, Side
 from .state import AirFacility, GameState, SupplyUnit, Unit
@@ -264,13 +266,15 @@ def may_refit(state: GameState, sgsu: Unit) -> bool:
 AIRCRAFT = logistics_data.aircraft_characteristics_4_44()
 
 # The type each side's abstract wing is expressed in. Every row is transcribed in
-# data/logistics_rates.json and eyes-verified off the 1979 scan:
-#   Bf. 109E        (PDF p.144) TacAir 6, Fuel 1  -- the Luftwaffe's fighter over the desert
-#   Ju. 87B         (PDF p.145) Bomb 5,   Fuel 1  -- the Stuka, the Axis tactical bomber
-#   Hs. 126         (PDF p.145) Fuel 1            -- the German army-cooperation recon plane
-#   Hurricane Mk. I (PDF p.112) TacAir 4, Fuel 1  -- the Desert Air Force's fighter
-#   Blenheim Mk. I  (PDF p.113) Bomb 5,   Fuel 2  -- its light bomber
-#   Lysander Mk. I  (PDF p.113) Fuel 1            -- its army-cooperation recon plane
+# data/logistics_rates.json and eyes-verified off the 1979 scan -- ratings AND the Mission
+# Capability cells ("the types of missions the plane may be assigned"), which is the chart's own
+# statement of what a type may be ORDERED to do:
+#   Bf. 109E        (PDF p.144) TacAir 6, Fuel 1, F=! S=! R=- D=!  -- the Luftwaffe's fighter
+#   Ju. 87B         (PDF p.145) Bomb 5,   Fuel 1, D=! R=- B=- T=-  -- the Stuka, the Axis bomber
+#   Hs. 126         (PDF p.145) Fuel 1,           D=! R=! B=- T=-  -- German army-cooperation recon
+#   Hurricane Mk. I (PDF p.112) TacAir 4, Fuel 1, F=! S=! R=- D=-  -- the Desert Air Force's fighter
+#   Blenheim Mk. I  (PDF p.113) Bomb 5,   Fuel 2, D=- R=- B=! T=-  -- its light bomber
+#   Lysander Mk. I  (PDF p.113) Fuel 1,           D=S R=! B=- T=-  -- its army-cooperation recon
 REPRESENTATIVE_AIRCRAFT: dict[tuple[Side, str], str] = {
     (Side.AXIS, "fighters"): "Bf. 109E",
     (Side.AXIS, "strike"): "Ju. 87B",
@@ -281,8 +285,60 @@ REPRESENTATIVE_AIRCRAFT: dict[tuple[Side, str], str] = {
 }
 
 # Which charted rating an Air Point of each role is denominated in (see the block comment):
-# fighters -> 34.13 TacAir, strike -> 34.14 Bombload, recon -> one point is one plane.
-_POINTS_PER_PLANE_RATING = {"fighters": "tacair", "strike": "bombload"}
+# fighters -> 34.13 TacAir, strike -> 34.14 Bombload, recon -> None, one point is one plane.
+# EXPLICIT IN ALL THREE ROLES and read with [], never .get(): an unknown role is a KeyError, not a
+# silent one-plane mission at rating 1.
+_POINTS_PER_PLANE_RATING: dict[str, "str | None"] = {
+    "fighters": "tacair", "strike": "bombload", "recon": None}
+
+# [4.44A/b/c] MISSION CAPABILITY -- which printed cell each role's missions need. The chart prints
+# F S R D beside every fighter and D R B Transport beside every bomber, and defines the block as
+# "the types of missions the plane may be assigned":
+#   F  "Offensive or Defensive Combat Air Patrol (CAP) or Strafing missions"   -> our fighters
+#   R  "Reconnaissance (naval and/or land) missions"                           -> our recon
+#   D  "Strafe and/or any type of bombing missions (see B below)"     \  either one is a bombing
+#   B  "Axis Naval Convoy [Maltese, on the Axis chart] and Land Support Bombing missions"  /  order
+# The D-vs-B split is a flagged JUDGEMENT CALL, argued at length in the data file's
+# _comment_mission_capability_ruling: we read D as a superset of B (41.16 makes D the
+# strafe-AND-bomb marker, and the alternative would leave the Luftwaffe bombing Malta and the
+# Eighth Army with Ar. 196 flying boats, the only German airframe on the chart carrying B). Both
+# our strike representatives pass either way for the missions the engine actually flies them on:
+# the Ju. 87B carries D, the Blenheim Mk. I carries B, and 41.21 puts ports and airfields inside
+# "Land Support". NOTHING GATES ON THIS YET -- it is transcribed for the 5.3/5.4 roster, and
+# mission_capable is the read a test asserts the six representatives against.
+_MISSION_CAPABILITY_FOR_ROLE: dict[str, tuple[str, ...]] = {
+    "fighters": ("F",), "strike": ("D", "B"), "recon": ("R",)}
+
+# The cells that mean "does not possess this capability": '-' as printed on the Axis charts, and
+# 'S' which the Commonwealth key defines as "May only Strafe, MAY NOT BE ASSIGNED ANY BOMBING
+# MISSIONS" (the Lysander's D cell -- it is a strafe permission, not a bombing one).
+_NO_CAPABILITY = {"-", "S"}
+
+
+def mission_capable(side: Side, role: str) -> bool:
+    """[4.44A/b/c] Does the type `side` flies its `role` Air Points as possess the charted Mission
+    Capability that role's missions need? Read off the transcribed cells, and true of all six
+    representatives (tests/test_air_fuel.py asserts it). A pure data check: no engine path gates on
+    it, because our Air Points are not a roster -- when 5.3/5.4 build the Squadron Composition
+    Sheet, THAT is where a plane is refused a mission its chart row does not permit."""
+    cells = AIRCRAFT[REPRESENTATIVE_AIRCRAFT[(side, role)]].get("mission_capability", {})
+    return any(cells.get(c, "-") not in _NO_CAPABILITY
+               for c in _MISSION_CAPABILITY_FOR_ROLE[role])
+
+
+def points_per_plane(side: Side, role: str) -> int:
+    """The charted rating one aeroplane of `side`'s `role` type carries an Air Point in: 34.13
+    TacAir for a fighter, 34.14 Bombload for a strike, and 1 for recon (flagged -- no rating on the
+    chart is denominated in "recon points", so one Air Point is one aeroplane)."""
+    key = _POINTS_PER_PLANE_RATING[role]
+    return 1 if key is None else AIRCRAFT[REPRESENTATIVE_AIRCRAFT[(side, role)]][key]
+
+
+def fuel_per_plane(side: Side, role: str) -> int:
+    """[34.17] One aeroplane's Fuel Consumption Rating -- "the number of Fuel Points required to
+    enable ONE PLANE of that type to fly any one mission" (38.21). The unit the 38.24 draw is
+    quantised in, because 38.24 refuels ONE PLANE AT A TIME."""
+    return AIRCRAFT[REPRESENTATIVE_AIRCRAFT[(side, role)]]["fuel"]
 
 
 def planes_flying(side: Side, role: str, points: int) -> int:
@@ -293,18 +349,14 @@ def planes_flying(side: Side, role: str, points: int) -> int:
     nothing in the air and therefore burns nothing."""
     if points <= 0:
         return 0
-    plane = AIRCRAFT[REPRESENTATIVE_AIRCRAFT[(side, role)]]
-    rating_key = _POINTS_PER_PLANE_RATING.get(role)
-    rating = plane[rating_key] if rating_key else 1     # recon: one Air Point is one aeroplane
-    return -(-points // rating)                        # ceil, in integers
+    return -(-points // points_per_plane(side, role))   # ceil, in integers
 
 
 def mission_fuel(side: Side, role: str, points: int) -> int:
     """[34.17]/[38.21] The Fuel Points ONE mission by `points` Air Points of `role` costs `side`:
     the number of planes flying times that plane's Fuel Consumption Rating. Distance is not in it
     -- "all Fuel Points are consumed during a mission, regardless of the type or distance"."""
-    plane = AIRCRAFT[REPRESENTATIVE_AIRCRAFT[(side, role)]]
-    return planes_flying(side, role, points) * plane["fuel"]
+    return planes_flying(side, role, points) * fuel_per_plane(side, role)
 
 
 def facility_dumps(state: GameState, side: Side) -> tuple[SupplyUnit, ...]:
@@ -337,30 +389,76 @@ def based_on_map(state: GameState, side: Side) -> bool:
     return any(f.side == side for f in state.air_facilities)
 
 
-def refuel(state: GameState, side: Side, need: int) -> "list[tuple[str, int]] | None":
-    """[38.24] Draw `need` Fuel Points out of `side`'s air-facility dumps, or None if they cannot
-    cover it -- in which case NOTHING is drawn and the planes do not fly (38.21: "planes must have
-    fuel to fly"; 33 IV.F.1: "all planes THAT ARE FUELED may be assigned Missions").
+class Sortie(NamedTuple):
+    """What [38.24] funded of one mission: `points` Air Points fly (0 = grounded), being `planes`
+    of the `committed` aeroplanes the side wanted in the air, paid for by `draws` [(dump id, qty)]
+    against a full bill of `need` out of `available` in the larder."""
+    points: int
+    planes: int
+    committed: int
+    draws: tuple[tuple[str, int], ...]
+    need: int
+    available: int
 
-    Returns [(supply_id, qty)] in facility-dump id order, so the draw is replay-stable. All or
-    nothing: our Air Points are one indivisible commitment per mission, and part-funding a mission
-    (fewer planes, fewer Bomb Points) needs the per-plane ledger of 34.72 -- deferred with it.
 
-    NOT modelled here, and each is named where it will land: 38.22/38.23's requirement that an SGSU
-    do the refuelling and its per-squadron cap (12 planes an Operations Stage for an Italian
+def refuel(state: GameState, side: Side, role: str, points: int) -> Sortie:
+    """[38.24] Refuel as many of the aeroplanes `points` commits as `side`'s air-facility dumps can
+    pay for, ONE PLANE AT A TIME, and report what flies.
+
+        38.24 "To refuel a plane the necessary fuel must be in the hex containing the air facility
+               ... the fuel is subtracted from the total supply in the air facility, and the plane
+               is marked as refueled on the Squadron Composition Sheet. THIS IS DONE FOR EACH PLANE
+               THAT A PLAYER WISHES TO REFUEL."
+        38.21 "...the number of Fuel Points required to enable ONE PLANE of that type to fly ANY ONE
+               MISSION."
+
+    PER PLANE, NOT ALL-OR-NOTHING, and that is the rule's own last sentence. A larder holding one
+    Fuel Point against a two-Stuka mission fuels ONE Stuka: the sortie flies at that plane's share
+    of the committed Air Points (and, since strike Air Points ARE Bomb Points on this engine's
+    bridge, delivers that share of the Bomb Points into the [41.5] column). Only a larder that
+    cannot fuel a single plane grounds the mission outright (38.21: "planes must have fuel to fly";
+    33 IV.F.1: "all planes THAT ARE FUELED may be assigned Missions"). This block previously
+    refused any mission it could not fund in full, which is why a thinning air force read as a dead
+    one; the rounding is the book's, not ours.
+
+    Draws walk the dumps in id order, so the log is replay-stable.
+
+    ⚠ FLAGGED, AND IT IS THE ONE PLACE THIS BLOCK IS WEAKER THAN THE RULE IT PORTS. 38.24's whole
+    content is LOCALITY -- "the necessary fuel must be in THE HEX CONTAINING THE AIR FACILITY",
+    singular, the field the plane stands on -- and we pool every air-facility dump the side holds
+    anywhere on the map into one national larder. The proxy is forced, not chosen: game.state.AirWing
+    is Air Points by ARENA, not a squadron based at a field, so there is no hex to be the plane's
+    own. It is visible and it is not free: in campaign(seed=4) the Axis air-dump walk reaches the
+    strip at (53,55) first, so a Stuka bombing Tobruk at (15,66) is fuelled 38 hexes away -- past its
+    own charted Range of 36 (34.11) -- while the field one hex from the target sits untouched. It
+    dissolves exactly when 34.72's Squadron Composition Sheet gives a squadron a base (5.3/5.4),
+    which is also what 34.11 range-checking waits on. Until then this is one larder, and the number
+    it reports is a national total.
+
+    NOT modelled here either, and each is named where it will land: 38.22/38.23's requirement that
+    an SGSU do the refuelling and its per-squadron cap (12 planes an Operations Stage for an Italian
     Squadriglia) -- that is the Refit Table's own bookkeeping in 5.3; 36.5's OFF-MAP air facilities,
     which is why a strategic mission flown from Malta or Egypt (the 41.6 convoy interdiction) draws
     from no on-map pile; and 38.4's Ammunition Points for bombs (38.44), which is a separate
     commodity and a separate block."""
-    if need <= 0:
-        return []
+    committed = planes_flying(side, role, points)
+    dumps = facility_dumps(state, side)
+    available = sum(su.fuel for su in dumps)
+    per = fuel_per_plane(side, role)
+    need = committed * per
+    planes = min(committed, available // per) if committed > 0 else 0
+    if planes <= 0:
+        return Sortie(0, 0, committed, (), need, available)
     draws: list[tuple[str, int]] = []
-    remaining = need
-    for su in facility_dumps(state, side):
+    remaining = planes * per
+    for su in dumps:
         if remaining <= 0:
             break
         take = min(remaining, su.fuel)
         if take > 0:
             draws.append((su.id, take))
             remaining -= take
-    return draws if remaining <= 0 else None
+    # the whole force flies at the points it was committed with; a part-funded one flies at its
+    # planes' share of them (never more than was committed)
+    flown = points if planes == committed else min(points, planes * points_per_plane(side, role))
+    return Sortie(flown, planes, committed, tuple(draws), need, available)

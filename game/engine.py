@@ -1153,7 +1153,16 @@ def _sgsu_upkeep(r: _Run, side: Side) -> None:
     the engine has is 36.17-excluded from air dumps by design. Measured, campaign seed 4: an Axis
     squadron's ~12 charted Stores Points run out around Game-Turn 13 of 111 and it is unsupplied for
     good. It reads on nothing today (may_refit has no consumer until 5.3) -- but 5.3 must not hang the
-    Refit Table on this gate until the refill side of it exists."""
+    Refit Table on this gate until the refill side of it exists.
+
+    AND IT IS THE BIGGEST SINGLE DRAW ON THE AIR LARDER, WHICH IS EASY TO MISS. Measured over the
+    full campaign (seeds 4/1941/7): this upkeep takes 325-370 of the Axis's [60.34] 850 air Fuel
+    Points -- against 467-484 lost to 49.3 evaporation and 0-58 burnt by the aeroplanes themselves
+    (34.17/38.24). But the FUEL leg does not show up as a SUPPLY_CONSUMED against an air dump at
+    all: an SGSU is a vehicle with a 49.14 tank, so in_hex_draw takes the stage's Point out of the
+    tank (UNIT_SUPPLY_CONSUMED) and the 48 V.C.6 Supply Distribution top-up refills that tank from
+    the co-located air dump (UNIT_REFILLED, actor /QM). An instrument counting only SUPPLY_CONSUMED
+    reads this drain as ZERO. It is not zero; it is most of the larder."""
     needs = [(supply.FUEL, air.SGSU_FUEL_PER_STAGE), (supply.WATER, air.SGSU_WATER_PER_STAGE)]
     if r.state.stage == 1:                              # 35.14: Stores are a per-GAME-TURN charge
         needs.insert(0, (supply.STORES, air.SGSU_STORES_PER_TURN))
@@ -1270,18 +1279,11 @@ def _air_arena_fighters(state: GameState, arena: str) -> tuple[int, int]:
     return axis, allied
 
 
-def _always_fuelled() -> bool:
-    """The `fuel` callback a mission resolver falls back on when it is called OUTSIDE the air
-    support segment -- i.e. only from a unit test exercising one resolver's own rule. The live
-    caller (_air_support) always passes the real 38.24 draw; this default exists so a test of
-    41.36's Capacity-Level arithmetic need not seed a larder to say something about bombing."""
-    return True
-
-
-def _air_fuel(r: _Run, side: Side, role: str, points: int, mission: dict) -> bool:
-    """[34.17] / [38.21] / [38.24] REFUEL THE PLANES, OR THEY DO NOT FLY. Returns True when the
-    sortie is fuelled (and the Fuel Points have left the 36.17 air-facility dumps), False when it
-    is grounded for want of fuel (and nothing has been drawn).
+def _air_fuel(r: _Run, side: Side, role: str, points: int, mission: dict) -> int:
+    """[34.17] / [38.21] / [38.24] REFUEL THE PLANES, OR THEY DO NOT FLY. Returns the Air Points
+    that actually FLY: `points` when the whole force is fuelled, fewer when the larder could fuel
+    only some of its aeroplanes (38.24 refuels one plane at a time), and 0 when it could not fuel
+    one -- in which case nothing has been drawn and the mission is grounded.
 
         34.17 "This is the number of Fuel Points a plane requires to perform ANY mission... all
                Fuel Points are consumed during a mission, REGARDLESS OF THE TYPE OR DISTANCE."
@@ -1298,38 +1300,52 @@ def _air_fuel(r: _Run, side: Side, role: str, points: int, mission: dict) -> boo
     WHERE IT COMES FROM is game.air.refuel: the air-facility dumps this side HOLDS, and nothing
     else. Not the army's field dumps -- 36.17 runs both ways ("land units may not use airfield
     supply dumps"; the airfield's pile is "for supplies to be used by the SGSU's on that
-    airfield"), and the Panzerarmee's Benghazi fuel is not in the hex of an airfield.
+    airfield"), and the Panzerarmee's Benghazi fuel is not in the hex of an airfield. ⚠ But those
+    dumps are POOLED, and 38.24's own condition is that the fuel be in the hex of the field the
+    plane flies from -- the one place this block is weaker than the rule it ports. The proxy, why it
+    is forced (an AirWing has no base), and what it costs (a Stuka fuelled 38 hexes past its own
+    charted Range) are set out in full in air.refuel's docstring. It dissolves with 34.72.
 
-    WHEN IT IS PAID. The Sequence of Play refuels in the Tactical Maintenance Segment for the NEXT
-    OpStage (33 IV.F.7) and then lets only "all planes THAT ARE FUELED" be assigned missions (33
-    IV.F.1). We charge at the moment the sortie flies, which is the same bookkeeping one beat
-    later: there is no per-plane readiness ledger to keep between the two (34.72's Squadron
-    Composition Sheet is 5.3/5.4's), and 38.25 -- "planes do not have to be refueled (if the Player
-    does not wish to use them)" -- makes paying only for what flies the FAITHFUL minimum rather
-    than a discount. What it defers is 38.25's second half, the plane that sits fuelled without
-    flying; that is a stock, and we have no roster to hold it on.
+    WHEN IT IS PAID, AND THE BOOK GIVES THE FIRST STAGE AWAY. The Sequence of Play refuels in the
+    Tactical Maintenance Segment for the NEXT OpStage (33 IV.F.7) and then lets only "all planes
+    THAT ARE FUELED" be assigned missions (33 IV.F.1). We charge at the moment the sortie flies,
+    which is the same bookkeeping one beat later: there is no per-plane readiness ledger to keep
+    between the two (34.72's Squadron Composition Sheet is 5.3/5.4's), and 38.25 -- "planes do not
+    have to be refueled (if the Player does not wish to use them)" -- makes paying only for what
+    flies the FAITHFUL minimum rather than a discount. What it defers is 38.25's second half, the
+    plane that sits fuelled without flying; that is a stock, and we have no roster to hold it on.
+
+    THE ONE EXEMPTION IS PRINTED: [59.32] "All planes (refitted or not) are considered to BEGIN A
+    SCENARIO FUELED AND ARMED (AT NO COST TO THE SUPPLIES AVAILABLE)" -- and 59.36 agrees from the
+    other side ("Maintenance may not be performed on planes during the first OpStage of a
+    Scenario"). Charging at flight time would bill the scenario's opening Operations Stage for tanks
+    the book has already filled for free, so that one stage draws nothing. It is the closest the
+    roster-less model can come: the book's free tank is a PER-PLANE stock that a squadron may hold
+    unspent for as long as it likes (38.25), and we can only forgive the stage in which it would
+    have been spent. It errs in the book's own direction, and it dissolves with 34.72.
 
     NOT MODELLED, each named where it lands: 39.19's "a plane may fly only one mission per
     Operations Stage" (two tasked missions in one stage are charged as two sets of planes, which is
     what the rule requires of the PLAYER -- but nothing here stops a policy tasking more sorties
     than it has aeroplanes; 5.5 owns 39.19); 38.4's Ammunition Points for the bombs (38.43/38.44);
     and 38.3's Refit, the OTHER half of readiness, which is 5.3's Refit Table."""
-    need = air.mission_fuel(side, role, points)
-    if need <= 0:                                       # no planes committed -> no fuel, no event
-        return True
+    if points <= 0:                                     # no planes committed -> no fuel, no event
+        return 0
     if not air.based_on_map(r.state, side):             # 36.5/61.42 unbuilt -- see air.based_on_map
-        return True
-    draws = air.refuel(r.state, side, need)
+        return points
+    if r.state.turn == r.initial.turn and r.state.stage == 1:
+        return points                                   # 59.32: fuelled and armed, at no cost
+    sortie = air.refuel(r.state, side, role, points)
     actor = f"{side.value}/Air"
-    if draws is None:                                   # 38.21: no fuel, no flight
+    if sortie.planes <= 0:                              # 38.21: no fuel, no flight
         r.emit(EventKind.AIR_MISSION_GROUNDED, side, actor,
-               {**mission, "role": role, "points": points, "need": need,
-                "available": sum(su.fuel for su in air.facility_dumps(r.state, side))})
-        return False
-    for sid, qty in draws:                              # 38.24: out of the air facility's own pile
+               {**mission, "role": role, "points": points, "need": sortie.need,
+                "available": sortie.available})
+        return 0
+    for sid, qty in sortie.draws:                       # 38.24: out of the air facility's own pile
         r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
                {"supply_id": sid, "commodity": supply.FUEL, "qty": qty})
-    return True
+    return sortie.points                                # 38.24: however many planes were refuelled
 
 
 def _air_superiority(r: _Run) -> None:
@@ -1340,20 +1356,34 @@ def _air_superiority(r: _Run) -> None:
     down at mission time (AIR_SUPERIORITY_LOSER_SCALE). The establishing contest is fought per ARENA
     (34/40), which owns no hex, so it reads the theatre-wide 29.1 type -- a documented hexless proxy:
     a storm anywhere disrupts the sky. The load-bearing per-hex 29.43/29.52 grounding is on the
-    MISSIONS (_air_support, per the 29.7 section each flies over). Air-less OpStage stays byte-identical."""
+    MISSIONS (_air_support, per the 29.7 section each flies over). Air-less OpStage stays byte-identical.
+
+    ⚠ AND IT DRAWS NO FUEL, WHICH IS A DELIBERATE UNDER-CHARGE, FLAGGED. 34.17/38.21 price a
+    Combat Air Patrol like any other mission and this beat is where a CAP would be billed -- but in
+    the book a CAP is a mission the Player ASSIGNS ("write CAP and the target hex in his mission
+    column", 40.21) and may decline: 38.25 "planes do not have to be refueled (IF THE PLAYER DOES
+    NOT WISH TO USE THEM), nor do refueled planes have to fly", and 40.3 opens by naming the reason
+    a Player declines -- "There may be a time when a Player wishes to either CONSERVE FUEL or,
+    perhaps, retain some flexibility with his fighter force. Scramble gives him the ability to do
+    that." This beat, by contrast, fires unconditionally once per arena per Operations Stage; no
+    order routes to it and nothing can decline it, because air missions are scenario-scheduled
+    (game.scenario) and no Policy seat has an air hook at all.
+
+    Billing it was measured and it was NOT a rounding error: over the full campaign the automatic
+    patrol took 84 of 84 Axis air Fuel Points on seeds 7 and 1941 and 72 of 128 on seed 4 -- so on
+    two seeds in three the Axis air force burned its ENTIRE war's fuel on patrols nobody ordered,
+    flew not one bombing mission in 111 Game-Turns, and was grounded from GT18. That is an artifact
+    of our always-on abstraction, not an air operation a commander ordered, and charging the
+    book's price for it made the abstraction the campaign's largest single fuel consumer. So the
+    contest stays free until CAP is a real assignable mission with a mission column behind it
+    (39.1/40.21, Phase 5.5) -- at which point it pays exactly like every other sortie, and 40.3's
+    Scramble becomes the alternative the book actually offers. The under-charge is the smaller,
+    reversible error; the over-charge decided the air war."""
     if not r.state.air or _air_grounded(r.state.weather):
         return
     r.go(Phase.LOGISTICS, Side.SYSTEM)                   # a SYSTEM housekeeping beat, like convoys
     for arena in sorted({w.arena for w in r.state.air}):
         axis_f, allied_f = _air_arena_fighters(r.state, arena)
-        # 40.21/34.17: a Combat Air Patrol is a MISSION, and a mission is flown on fuel. A side
-        # whose fields cannot fuel its fighters commits none and concedes the sky -- the dice are
-        # still thrown (both streams draw unconditionally, game.dice), so the contest resolves as
-        # it always did, against a force of zero.
-        if not _air_fuel(r, Side.AXIS, "fighters", axis_f, {"arena": arena, "kind": "cap"}):
-            axis_f = 0
-        if not _air_fuel(r, Side.ALLIED, "fighters", allied_f, {"arena": arena, "kind": "cap"}):
-            allied_f = 0
         ad, ld = r.d6("air_superiority"), r.d6("air_superiority")
         axis_total, allied_total = axis_f + ad, allied_f + ld
         if axis_total > allied_total:
@@ -1411,15 +1441,20 @@ def _air_support(r: _Run, side: Side, pinned: set[str]) -> None:
             continue
         # 34.17/38.21/38.24: the sortie is fuelled out of the air-facility dumps, and an unfuelled
         # one is not flown at all (no CRT die, no effect). The draw is handed to the RESOLVER as a
-        # callback rather than taken here, because each resolver owns the structural refusals -- a
-        # harbour or airfield your OWN side holds, a fort with no siege, recon over a Major City --
-        # and a mission that is never flown must not burn fuel (the campaign tasks Tobruk from both
-        # sides every turn, and the holder's is refused). Recon flies on recon Air Points; every
-        # other kind is a bombing mission and flies on strike (41.31/41.36/41.37/41.39B).
+        # callback -- committed Air Points in, FUELLED Air Points out (38.24 refuels plane by plane,
+        # so a half-funded larder flies half the force) -- rather than taken here, because each
+        # resolver owns the structural refusals: a harbour or airfield your OWN side holds, a fort
+        # you hold, recon over a Major City. Those are refusals to ORDER the mission, and a mission
+        # that is never ordered must not burn fuel (the campaign tasks Tobruk from both sides every
+        # turn, and the holder's is refused). What is NOT a refusal is finding the target empty --
+        # 39.0 says missions are assigned "blindly", "and only find out what target are present when
+        # the planes arrive", so an empty hex and an unfortified hex are both billed. Recon flies on
+        # recon Air Points; every other kind is a bombing mission and flies on strike
+        # (41.31/41.36/41.37/41.39B).
         role = "recon" if m.kind == "recon" else "strike"
 
-        def fuel(role=role, m=m) -> bool:
-            return _air_fuel(r, side, role, _air_points(r.state, side, "LAND", role),
+        def fuel(points: int, role=role, m=m) -> int:
+            return _air_fuel(r, side, role, points,
                              {"arena": "LAND", "kind": m.kind,
                               "target": _payload_target(m.target)})
 
@@ -1435,7 +1470,7 @@ def _air_support(r: _Run, side: Side, pinned: set[str]) -> None:
             _air_recon(r, side, tuple(m.target), fuel)
 
 
-def _air_strike(r: _Run, side: Side, tgt: Coord, pinned: set[str], fuel=_always_fuelled) -> None:
+def _air_strike(r: _Run, side: Side, tgt: Coord, pinned: set[str], fuel) -> None:
     """41.31 B-CU: the committed strike Air Points pin the strongest enemy combat unit in the hex
     (blind assignment, 39.11) -- but a Major-City garrison is UN-STRIKABLE behind an intact wall
     (fort_level>1), the exact siege mirror, so air alone cannot crack Tobruk. Any step-loss rides
@@ -1444,9 +1479,10 @@ def _air_strike(r: _Run, side: Side, tgt: Coord, pinned: set[str], fuel=_always_
     A strike over an empty (or walled) hex is still a mission FLOWN -- 39.0's own note is that
     missions are assigned blindly, "and only find out what target are present when the planes
     arrive" -- so it is fuelled like any other."""
-    if not fuel():                                       # 38.21: no fuel, no flight
+    committed = _air_points(r.state, side, "LAND", "strike")
+    strength = fuel(committed)                           # 38.24: however many planes were fuelled
+    if committed > 0 and strength <= 0:                  # 38.21: no fuel, no flight
         return
-    strength = _air_points(r.state, side, "LAND", "strike")
     walled = r.state.fort_level(tgt) > 1                 # 41.31: intact Major-City wall shields it
     victim = None if walled else _barrage_target(r.state.enemies_at(tgt, side))
     actor = f"{side.value}/Air"
@@ -1465,27 +1501,37 @@ def _air_strike(r: _Run, side: Side, tgt: Coord, pinned: set[str], fuel=_always_
         pinned.add(uid)
 
 
-def _air_fort(r: _Run, side: Side, tgt: Coord, fuel=_always_fuelled) -> None:
+def _air_fort(r: _Run, side: Side, tgt: Coord, fuel) -> None:
     """41.37 B-F/C: air batters a fortification one level per Operations Stage -- the air twin of
     engine._batter_fort, gated behind siege_rules (inert in the canonical benchmark). Reuses
     FORT_REDUCED, so no new fold; air + barrage together open the works faster. Like _air_strike,
     it needs committed LAND strike Air Points (scaled by the superiority gate): a side that fields
     no strike or has lost the sky to a scale of 0 cannot batter the works -- winning the LAND sky
-    is the precondition. The committed strength rides the payload for legibility."""
+    is the precondition. The committed strength rides the payload for legibility.
+
+    THE EMPTY TARGET IS BILLED, and the line is drawn where 39.11 draws it. Bombing your own works,
+    or bombing at all in a scenario with no siege rules, are refusals to ORDER the mission and cost
+    nothing. Arriving over a hex that turns out to hold no fortification is the SAME blind sortie
+    39.0 describes ("only find out what target are present when the planes arrive") as arriving
+    over a hex that turns out to hold no enemy unit, which _air_strike bills -- so the fort check
+    sits AFTER the fuel draw, and the two resolvers now draw the line in the same place."""
     strength = _air_points(r.state, side, "LAND", "strike")
     if strength <= 0:                                    # no committed strike / lost the sky
         return
-    if not r.state.siege_rules or r.state.fort_level(tgt) <= 0:
+    if not r.state.siege_rules:
         return
     if r.state.control_of(tgt) == CONTROL_OF[side]:      # never batter your OWN works
         return
-    if not fuel():                                       # 38.21: no fuel, no flight
+    strength = fuel(strength)                            # 38.24: however many planes were fuelled
+    if strength <= 0:                                    # 38.21: no fuel, no flight
+        return
+    if r.state.fort_level(tgt) <= 0:                     # 39.11: flown blind, and nothing there
         return
     r.emit(EventKind.FORT_REDUCED, side, f"{side.value}/Air",
            {"hex": list(tgt), "level": r.state.fort_level(tgt) - 1, "strength": strength})
 
 
-def _air_port(r: _Run, side: Side, port_id: str, fuel=_always_fuelled) -> None:
+def _air_port(r: _Run, side: Side, port_id: str, fuel) -> None:
     """[41.39B / 41.5] B-P Bombing Ports: harbour bombing ROLLS on the [41.5] Air Bombardment CRT's
     Ports row (logistics_data.air_port_bombing_crt_41_5) for the number of Efficiency Levels the port
     loses (55.1). The committed strike Air Points pick the Bomb-Point column; 2d6 read sequentially
@@ -1509,7 +1555,8 @@ def _air_port(r: _Run, side: Side, port_id: str, fuel=_always_fuelled) -> None:
     holder = r.state.control_of(port.hex)
     if holder == CONTROL_OF[side] or (holder == Control.NEUTRAL and port.side == side):
         return                                           # never bomb your OWN harbour
-    if not fuel():                                       # 38.21: no fuel, no flight -- and no die
+    strength = fuel(strength)                            # 38.24: however many planes were fuelled
+    if strength <= 0:                                    # 38.21: no fuel, no flight -- and no die
         return
     d1, d2 = r.d6("air_bombard"), r.d6("air_bombard")    # 41.22: two dice, read sequentially
     levels = min(_port_bomb_levels(strength, d1, d2), port.eff)
@@ -1523,7 +1570,7 @@ def _air_port(r: _Run, side: Side, port_id: str, fuel=_always_fuelled) -> None:
                {"port_id": port.id, "level": new_eff, "strength": strength})
 
 
-def _air_facility_bomb(r: _Run, side: Side, tgt: Coord, fuel=_always_fuelled) -> None:
+def _air_facility_bomb(r: _Run, side: Side, tgt: Coord, fuel) -> None:
     """[41.36] / [36.14] / [41.5] B-AF Bombing Air Facilities: "The result is the NUMBER OF CAPACITY
     LEVELS that facility is reduced."
 
@@ -1551,7 +1598,8 @@ def _air_facility_bomb(r: _Run, side: Side, tgt: Coord, fuel=_always_fuelled) ->
     strength = _air_points(r.state, side, "LAND", "strike")
     if strength <= 0:                                    # no committed strike / lost the sky
         return
-    if not fuel():                                       # 38.21: no fuel, no flight -- and no die
+    strength = fuel(strength)                            # 38.24: however many planes were fuelled
+    if strength <= 0:                                    # 38.21: no fuel, no flight -- and no die
         return
     d1, d2 = r.d6("air_bombard"), r.d6("air_bombard")    # 41.22: two dice, read sequentially
     levels = min(_port_bomb_levels(strength, d1, d2), facility.level)
@@ -1569,14 +1617,15 @@ def _air_facility_bomb(r: _Run, side: Side, tgt: Coord, fuel=_always_fuelled) ->
                {"facility_id": facility.id, "kind": facility.kind})
 
 
-def _air_recon(r: _Run, side: Side, tgt: Coord, fuel=_always_fuelled) -> None:
+def _air_recon(r: _Run, side: Side, tgt: Coord, fuel) -> None:
     """42.2 recon: reveal the target hex's unit TYPES + TOE (+-2 noise, 42.24), FORBIDDEN over a
     Major City (42.22, fort_level>1). The hex folds into the per-OpStage air_sighted set (the
     fog-lift observation reads); the typed detail rides in `revealed`, bounded to 'even less detail
     than Patrol' (3.6) -- unit CLASS, never id. The +-2 noise is baked here (rng), so apply stays pure."""
     if r.state.fort_level(tgt) > 1:                      # 42.22: no recon over a Major City
         return
-    if not fuel():                                       # 38.21: no fuel, no flight
+    committed = _air_points(r.state, side, "LAND", "recon")
+    if committed > 0 and fuel(committed) <= 0:           # 38.21: no fuel, no flight
         return
     enemies = sorted(r.state.enemies_at(tgt, side), key=lambda u: u.id)
     revealed: list[dict] = []

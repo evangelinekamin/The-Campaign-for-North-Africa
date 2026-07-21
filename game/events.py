@@ -338,8 +338,12 @@ class EventKind(str, Enum):
     # fueled" be assigned missions (33 IV.F.1), so a mission whose bill the side's air-facility dumps
     # cannot cover is NOT FLOWN -- nothing is drawn, no CRT die is rolled, the target is untouched.
     # A marker: it folds to identity and records what the sortie would have cost against what was in
-    # the larder. Emitted for a CAP (the per-OpStage air-superiority commitment) as well as for a
-    # tasked mission; a side that cannot fuel its fighters commits none and concedes the sky.
+    # the larder. Emitted only when the larder cannot fuel ONE aeroplane: 38.24 refuels plane by
+    # plane ("this is done for each plane that a Player wishes to refuel"), so a part-funded mission
+    # FLIES, at the Air Points its fuelled planes carry, and emits the ordinary draw instead.
+    # Emitted for a TASKED mission only. The per-OpStage air-superiority contest draws no fuel and
+    # grounds nothing -- see engine._air_superiority for why an un-ordered Combat Air Patrol is not
+    # billed until 40.21's mission column exists (38.25/40.3 make it the Player's to decline).
     AIR_MISSION_GROUNDED = "AIR_MISSION_GROUNDED"
     # [36.0] AIR FACILITIES -- the base an air force flies from, and the thing bombs take away.
     #

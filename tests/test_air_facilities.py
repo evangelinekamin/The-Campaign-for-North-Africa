@@ -59,6 +59,14 @@ def _air_dump(sid="AF-Sup", side=Side.ALLIED, hex_=(0, 0), **pools) -> SupplyUni
     return SupplyUnit(sid, side, hex_, air_dump=True, **{**base, **pools})
 
 
+def _fuelled(points: int) -> int:
+    """The 38.24 draw a test of 41.36's Capacity-Level arithmetic passes in: every committed Air
+    Point flies. Written out at each call site rather than defaulted inside the resolver -- a
+    resolver that can be called WITHOUT a fuel argument is a resolver a future caller can fly for
+    free, silently, and this engine fails loud instead."""
+    return points
+
+
 # --- [36.1]-[36.4] the charted capacity levels ---------------------------------------------
 
 def test_charted_capacity_levels():
@@ -275,7 +283,7 @@ def test_41_36_bombing_reduces_capacity_levels_on_the_41_5_crt():
     table prints ONE row for "Airfields / Air Landing Strips / Ports", so the airfield reads the
     same transcribed column set the harbour does."""
     r = _Run(_bomb_state(6))
-    _air_facility_bomb(r, Side.AXIS, (0, 0))
+    _air_facility_bomb(r, Side.AXIS, (0, 0), _fuelled)
     resolved = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED]
     assert len(resolved) == 1 and resolved[0].payload["arena"] == "AIRFIELD"
     assert len(resolved[0].rng_draws) == 2                        # 41.22: two dice, sequential
@@ -288,7 +296,7 @@ def test_41_36_bombing_reduces_capacity_levels_on_the_41_5_crt():
 def test_41_36_never_bombs_a_facility_your_own_side_holds():
     st = replace(_bomb_state(6), control={(0, 0): Control.AXIS})
     r = _Run(st)
-    _air_facility_bomb(r, Side.AXIS, (0, 0))
+    _air_facility_bomb(r, Side.AXIS, (0, 0), _fuelled)
     assert r.events == []
 
 
@@ -302,7 +310,7 @@ def test_41_36_a_destroyed_strip_leaves_the_map_an_airfield_does_not():
                      air_superiority={"LAND": Side.AXIS.value})
         # roll until the CRT actually takes the level (the 471+ column is 1-4 levels on every code)
         r = _Run(st)
-        _air_facility_bomb(r, Side.AXIS, (0, 0))
+        _air_facility_bomb(r, Side.AXIS, (0, 0), _fuelled)
         assert r.state.air_facility("F") is not None or not still_there
         if still_there:
             assert r.state.air_facility("F").level == 0

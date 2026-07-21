@@ -282,8 +282,11 @@ def air_port_bombing_crt_41_5() -> list:
 
 def aircraft_characteristics_4_44() -> dict:
     """[4.44A/b/c] AIRCRAFT CHARACTERISTICS CHARTS, by aircraft name: the charted `tacair`
-    (34.13), `bombload` (34.14) and `fuel` Consumption Rating (34.17/38.21 -- "the number of
-    Fuel Points the plane requires before it may be flown") of each transcribed type. Only the
-    four types game.air expresses an Air Point in are transcribed; see the data file's own note
-    (every row eyes-verified off the scan, the Commonwealth OCR being column-shifted)."""
+    (34.13), `bombload` (34.14), `fuel` Consumption Rating (34.17/38.21 -- "the number of Fuel
+    Points the plane requires before it may be flown") and `mission_capability` ("the types of
+    missions the plane may be assigned" -- the F/S/R/D cells on the fighter charts, D/R/B/Transport
+    on the bomber charts) of each transcribed type. Only the SIX types game.air expresses an Air
+    Point in are transcribed, three per side; see the data file's own three notes (every row
+    eyes-verified off the scan, the Commonwealth OCR being column-shifted, and the D-vs-B reading
+    of the Mission Capability column recorded as a flagged judgement call)."""
     return _data()["aircraft_characteristics_4_44"]["aircraft"]
