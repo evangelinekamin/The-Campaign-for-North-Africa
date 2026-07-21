@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from . import campaign_claim, construction, supply, tactics, wells
+from . import campaign_claim, construction, malta, supply, tactics, wells
 from .campaign_claim import (STAGING, garrison_units,   # the rule-64.73 standing orders, re-exported
                              hold_depots, hold_garrisons)   # (game.campaign_staff and the tests import them from here)
 from .events import Control, Side
@@ -927,6 +927,36 @@ class CampaignAxisPolicy(_CampaignAxisSupplyMixin, ScriptedPolicy):
 
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
         return take_and_hold_moves(state, side, super().movement(state, side), escort=True)
+
+    def malta_raid(self, state: GameState) -> str:
+        """[44.23] Spend the heaviest Availability Level still in the budget while Malta is at
+        full health; drop to the unlimited Level I once the island is already damaged.
+
+        A DOCTRINE, NOT A CALENDAR, and the distinction is the whole point of this block. The
+        thing this engine deleted to make room for rule 44 was a hardcoded month table; a policy
+        that spent III in January 1942 because that is when the Luftwaffe historically arrived
+        would be the same mistake wearing a different hat. So the trigger is the BOARD: a heavy
+        raid is worth its one-of-twelve Game-Turns only against an island standing at its full
+        capacity (there is a level there to take), and against a Malta already knocked down the
+        free Level I keeps the pressure on for nothing. That is a commander's reading of the
+        position, which is what a policy is for and what the rulebook leaves to him ("it is up to
+        the Axis Player to plan his raids according to what he wants to accomplish and when he
+        wants to do it", 44.23).
+
+        The second half is RATIONING, and it is the reason for the `elapsed` term. The campaign
+        row grants 49 Game-Turns of heavy raiding out of 111; a commander who simply took the
+        heaviest level on offer would spend every one of them before Game-Turn 50 and fight the
+        second half of the war with nothing. So a level is taken only while the share of it already
+        spent is no greater than the share of the war already fought -- the budget paced against
+        the calendar of the SCENARIO, not against a calendar of history."""
+        if malta.capacity(state) < malta.repair_ceiling(state):
+            return "I"
+        elapsed = (state.turn - 1) / max(1, state.max_turns)
+        for level in ("IV", "III", "II"):
+            allowance = malta.budget()[level]
+            if allowance and malta.spent(state, level) <= elapsed * allowance:
+                return level
+        return "I"
 
     def retreat_before_assault(self, state: GameState, side: Side,
                                pinned: frozenset[str]) -> list[MoveOrder]:

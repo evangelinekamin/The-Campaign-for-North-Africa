@@ -1,43 +1,168 @@
 {
   "_comment": "FAITHFUL logistics magnitudes for The Campaign for North Africa, transcribed from the rulebook charts (docs/rules/90-charts-tables-and-play-aids.md; garbled tables cross-checked against the scanned PDF pages 108-109). This mirrors data/unit_stats.json: raw rulebook values plus a _comment citing the exact chart/rule for each. It is a DATA FILE ONLY -- the engine is not wired to it in this phase. Where a value is noted PROXY/ABSTRACTED, the rulebook itself gives no single number for the land game. Each block also records the current engine proxy (game/supply.py, game/scenario.py, game/oob.py, game/engine.py) so the wire step can measure the rescale. See scale_observation in the task report.",
-
   "point_definitions": {
     "_comment": "The physical scale of one supply Point, for sanity-checking the equivalent-weights conversions. Fuel [49.11], Ammo [50.11], plus the [54.5] tonnages.",
     "fuel_point_pounds": 250,
     "fuel_point_gallons": 35,
     "ammo_point_tons_approx": 4
   },
-
   "fuel_consumption": {
     "_comment": "[49.19] FUEL CONSUMPTION CHART + rules 49.13/49.14. LAW: a TOE Strength Point of vehicles burns (fuel_consumption_rate) Fuel Points for every 5 CP -- or fraction -- expended IN MOVEMENT (49.13); combat CP burn no fuel (49.13). Total for a unit = rate x ceil(CP/5) x TOE_strength_points. Foot/camel/motorcycle burn nothing (49.12). The [49.19] grid below is that multiplication table (rows=CP expended, cols=rate 1..6, cell=Fuel Points per TOE point); sub-5-CP rows are fractional (0.2..4.8) and the game tracks them as fractions. ENGINE PROXY (game/supply.py fuel_rate/_FUEL_RATE_PROXY + fuel_cost): rate is a flat per-mobility-class 2(VEHICLE)/1(else), and fuel_cost = rate x ceil(CP/5) with NO x strength multiply -- so the engine (a) uses rate 2 where real tanks are 3-7, and (b) omits the per-TOE-point factor, undercharging a full-strength unit by ~strength-fold. faithful law is present; only the magnitude/units are proxy.",
     "rule_49_13_formula": "fuel_points = fuel_consumption_rate * ceil(cp_expended_in_movement / 5) * toe_strength_points",
     "fuel_capacity_rating_formula": "CPA * (1/5) * fuel_consumption_rate   [49.14]  -- the fuel a TOE point carries in its own tanks",
     "chart_49_19": {
       "_comment": "rows are CP's expended in movement; columns keyed by the vehicle's fuel consumption rate 1..6; value = Fuel Points consumed per TOE Strength Point.",
-      "cp_1":  {"1": 0.2, "2": 0.4, "3": 0.6, "4": 0.8, "5": 1.0, "6": 1.2},
-      "cp_2":  {"1": 0.4, "2": 0.8, "3": 1.2, "4": 1.6, "5": 2.0, "6": 2.4},
-      "cp_3":  {"1": 0.6, "2": 1.2, "3": 1.8, "4": 2.4, "5": 3.0, "6": 3.6},
-      "cp_4":  {"1": 0.8, "2": 1.6, "3": 2.4, "4": 3.2, "5": 4.0, "6": 4.8},
-      "cp_5":  {"1": 1,  "2": 2,  "3": 3,  "4": 4,  "5": 5,  "6": 6},
-      "cp_10": {"1": 2,  "2": 4,  "3": 6,  "4": 8,  "5": 10, "6": 12},
-      "cp_15": {"1": 3,  "2": 6,  "3": 9,  "4": 12, "5": 15, "6": 18},
-      "cp_20": {"1": 4,  "2": 8,  "3": 12, "4": 16, "5": 20, "6": 24},
-      "cp_25": {"1": 5,  "2": 10, "3": 15, "4": 20, "5": 25, "6": 30},
-      "cp_30": {"1": 6,  "2": 12, "3": 18, "4": 24, "5": 30, "6": 36},
-      "cp_35": {"1": 7,  "2": 14, "3": 21, "4": 28, "5": 35, "6": 42},
-      "cp_40": {"1": 8,  "2": 16, "3": 24, "4": 32, "5": 40, "6": 48},
-      "cp_45": {"1": 9,  "2": 18, "3": 27, "4": 36, "5": 45, "6": 54},
-      "cp_50": {"1": 10, "2": 20, "3": 30, "4": 40, "5": 50, "6": 60}
+      "cp_1": {
+        "1": 0.2,
+        "2": 0.4,
+        "3": 0.6,
+        "4": 0.8,
+        "5": 1.0,
+        "6": 1.2
+      },
+      "cp_2": {
+        "1": 0.4,
+        "2": 0.8,
+        "3": 1.2,
+        "4": 1.6,
+        "5": 2.0,
+        "6": 2.4
+      },
+      "cp_3": {
+        "1": 0.6,
+        "2": 1.2,
+        "3": 1.8,
+        "4": 2.4,
+        "5": 3.0,
+        "6": 3.6
+      },
+      "cp_4": {
+        "1": 0.8,
+        "2": 1.6,
+        "3": 2.4,
+        "4": 3.2,
+        "5": 4.0,
+        "6": 4.8
+      },
+      "cp_5": {
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 6
+      },
+      "cp_10": {
+        "1": 2,
+        "2": 4,
+        "3": 6,
+        "4": 8,
+        "5": 10,
+        "6": 12
+      },
+      "cp_15": {
+        "1": 3,
+        "2": 6,
+        "3": 9,
+        "4": 12,
+        "5": 15,
+        "6": 18
+      },
+      "cp_20": {
+        "1": 4,
+        "2": 8,
+        "3": 12,
+        "4": 16,
+        "5": 20,
+        "6": 24
+      },
+      "cp_25": {
+        "1": 5,
+        "2": 10,
+        "3": 15,
+        "4": 20,
+        "5": 25,
+        "6": 30
+      },
+      "cp_30": {
+        "1": 6,
+        "2": 12,
+        "3": 18,
+        "4": 24,
+        "5": 30,
+        "6": 36
+      },
+      "cp_35": {
+        "1": 7,
+        "2": 14,
+        "3": 21,
+        "4": 28,
+        "5": 35,
+        "6": 42
+      },
+      "cp_40": {
+        "1": 8,
+        "2": 16,
+        "3": 24,
+        "4": 32,
+        "5": 40,
+        "6": 48
+      },
+      "cp_45": {
+        "1": 9,
+        "2": 18,
+        "3": 27,
+        "4": 36,
+        "5": 45,
+        "6": 54
+      },
+      "cp_50": {
+        "1": 10,
+        "2": 20,
+        "3": 30,
+        "4": 40,
+        "5": 50,
+        "6": 60
+      }
     },
     "fuel_consumption_rate_by_model": {
       "_comment": "The per-model 'Fuel Rate' column of the Tank & Gun Characteristics Charts ([4.47] Commonwealth, [4.48] Italian, [4.49] German) -- this is the '1..6' index into chart_49_19. Guns are almost all rate 1; SP guns 2-3; tanks 1-7. These belong on the unit/model and mirror data/unit_stats.json 'models'. WIRED: game/logistics_data.py fuel_rate_by_model() flattens the three tank sub-dicts onto Unit.fuel_rate (game/oob.py); the gun/SP scalars are oob role defaults. Under the Regime-B FULL-LOGISTICS fuel law (49.13, game/supply.py fuel_cost) the rate is multiplied by ceil(CP/5) x TOE-strength.",
-      "german_tank": {"pz1": 2, "pz2": 2, "pz3e": 3, "pz3h": 3, "pz3j": 3, "pz4d": 4, "pz4e": 4, "pz4f2": 4},
+      "german_tank": {
+        "pz1": 2,
+        "pz2": 2,
+        "pz3e": 3,
+        "pz3h": 3,
+        "pz3j": 3,
+        "pz4d": 4,
+        "pz4e": 4,
+        "pz4f2": 4
+      },
       "german_gun_typical": 1,
       "german_sp_gun": 2,
-      "commonwealth_tank": {"a9": 2, "a10": 2, "a13": 2, "churchill2": 7, "crusader1": 3, "crusader2": 3, "crusader3": 3, "grant": 7, "mk6": 1, "matilda2": 3, "sherman": 6, "stuart": 4, "valentine2": 3},
+      "commonwealth_tank": {
+        "a9": 2,
+        "a10": 2,
+        "a13": 2,
+        "churchill2": 7,
+        "crusader1": 3,
+        "crusader2": 3,
+        "crusader3": 3,
+        "grant": 7,
+        "mk6": 1,
+        "matilda2": 3,
+        "sherman": 6,
+        "stuart": 4,
+        "valentine2": 3
+      },
       "commonwealth_gun_typical": 1,
       "commonwealth_sp_gun": 3,
-      "italian_tank": {"cv33": 1, "l6": 2, "m11": 2, "m13": 2, "m14": 2},
+      "italian_tank": {
+        "cv33": 1,
+        "l6": 2,
+        "m11": 2,
+        "m13": 2,
+        "m14": 2
+      },
       "italian_gun_typical": 1,
       "italian_sp_75_18": 2
     },
@@ -49,12 +174,17 @@
       "rounding": "down"
     },
     "engine_proxy": {
-      "fuel_rate_by_mobility": {"VEHICLE": 2, "MOTORIZED": 1, "RECCE": 1, "LIGHT_TRUCK": 1, "MOTORCYCLE": 1},
+      "fuel_rate_by_mobility": {
+        "VEHICLE": 2,
+        "MOTORIZED": 1,
+        "RECCE": 1,
+        "LIGHT_TRUCK": 1,
+        "MOTORCYCLE": 1
+      },
       "fuel_cost_formula": "fuel_rate(unit) * ceil(cp/5)   -- NO x strength",
       "location": "game/supply.py _FUEL_RATE_PROXY / fuel_rate() / fuel_cost()"
     }
   },
-
   "ammunition_consumption": {
     "_comment": "[50.2] AMMUNITION CONSUMPTION RATES TABLE (recovered from PDF page 108 -- did not OCR into docs/rules/90). LAW (50.14): Ammo Points expended = per-function rate x the number of TOE Strength Points USING that combat function. A 4-TOE 150mm gun barraging spends 4x4=16 Ammo regardless of actual barrage points (50.14). Two sub-tables: the full 'Logistics Game Played' rates and the coarser 'Logistics Game Abstracted' battalion-equivalent rates. The engine models the LAND game, so use the 'played' land rates. ENGINE (game/supply.py AMMO_RATE via logistics_data.ammo_rates()): reads logistics_game_played -> barrage 4 / anti_armor 3 / assault 2, FAITHFUL to the chart. AA (anti_air, per target group) is not modelled -- the land engine charges no flak ammo.",
     "logistics_game_played": {
@@ -73,16 +203,23 @@
       "assault_non_phasing_battalion_eq": 1,
       "anti_air_gun_class_single_target_group": 1
     },
-    "captured_ammo_usable_fraction": {"_comment": "[50.16] only 1/3 (rounded up) of captured/recaptured Ammo Points are usable by the captor; the rest are lost.", "value": 0.3333, "round": "up"},
+    "captured_ammo_usable_fraction": {
+      "_comment": "[50.16] only 1/3 (rounded up) of captured/recaptured Ammo Points are usable by the captor; the rest are lost.",
+      "value": 0.3333,
+      "round": "up"
+    },
     "engine_proxy": {
       "_comment": "Documentation mirror only -- NOT read by code (ammo_rates() reads logistics_game_played above). Kept as the single documented home of the engine's live ammo law.",
-      "AMMO_RATE": {"barrage": 4, "anti_armor": 3, "assault": 2},
+      "AMMO_RATE": {
+        "barrage": 4,
+        "anti_armor": 3,
+        "assault": 2
+      },
       "ammo_cost_formula": "AMMO_RATE[activity] * max(1, strength) -- Ammo Points to fire `activity` once (50.14)",
       "ammo_capacity_formula": "max(applicable AMMO_RATE) * max(1, strength) -- the 50.0 'fire once' intrinsic pool (S6)",
       "location": "game/supply.py AMMO_RATE / ammo_cost() / ammo_capacity()"
     }
   },
-
   "stores_consumption": {
     "_comment": "Rule 51.1 (no numbered chart; the rates are inline in chapter 51). Stores are distributed once at the START of each Game-Turn (not per OpStage). ENGINE PROXY (game/supply.py stores_cost): 4 per TOE for combat units, 1 per TOE for non-combat -- FAITHFUL for the combat/HQ split; guards, prisoners, and half-rations are not yet modelled.",
     "per_toe_strength_point_per_game_turn": 4,
@@ -104,7 +241,6 @@
       "location": "game/supply.py stores_cost() ; game/engine.py DISORGANIZED_AFTER"
     }
   },
-
   "water": {
     "_comment": "Chapter 52. Consumption rates are inline (52.41/52.42/52.43/52.6); the [52.7] WATER AVAILABILITY TABLE gives WELL YIELDS. ENGINE PROXY (game/supply.py water_cost): 1 flat for infantry, 1 per TOE for vehicle/gun/truck -- FAITHFUL to 52.41/52.42; hot-weather +1 is a PROXY (52.43 gives no number). Pasta Point handled in game/engine.py _pasta_point (52.6).",
     "consumption_52_4": {
@@ -118,10 +254,31 @@
     },
     "availability_table_52_7": {
       "_comment": "[52.7] WATER AVAILABILITY TABLE -- Water Points drawn from a well by die roll. A '*' entry: after drawing, roll one die secretly; on a 1 the Town/Bir is Depleted. Oases and Major Cities never deplete and yield unlimited water.",
-      "town":  {"1": 100, "2": 150, "3": 200, "4": 300, "5": 350, "6": 500},
-      "town_depletion_check_on_die": [5, 6],
-      "bir":   {"1": 50, "2": 100, "3": 150, "4": 200, "5": 300, "6": 400},
-      "bir_depletion_check_on_die": [4, 5, 6],
+      "town": {
+        "1": 100,
+        "2": 150,
+        "3": 200,
+        "4": 300,
+        "5": 350,
+        "6": 500
+      },
+      "town_depletion_check_on_die": [
+        5,
+        6
+      ],
+      "bir": {
+        "1": 50,
+        "2": 100,
+        "3": 150,
+        "4": 200,
+        "5": 300,
+        "6": 400
+      },
+      "bir_depletion_check_on_die": [
+        4,
+        5,
+        6
+      ],
       "oasis_or_major_city": "unlimited, never depletes"
     },
     "engine_proxy": {
@@ -129,86 +286,271 @@
       "location": "game/supply.py water_cost()"
     }
   },
-
   "supply_dump_capacity_54_12": {
     "_comment": "[54.12] SUPPLY DUMP CAPACITY CHART -- the MAXIMUM Points of each commodity a dump may hold, by location/terrain. 'U' = unlimited. Non-Dump = the ambient capacity of any non-dump hex. THIS IS THE BIG SCALE GAP: real dumps hold thousands of points; the engine seeds 40/60/120/150-point proxy dumps (game/oob.py DUMP_*). A faithful rescale multiplies dump seeds by ~20x (village stores) up to ~80x (other-terrain fuel). See scale_observation.",
-    "tunis_tripoli_offmap_box": {"ammo": "U", "fuel": "U", "stores": "U", "water": "U", "note": "boxes may NOT themselves be used as supply dumps"},
-    "major_city":   {"ammo": "U", "fuel": "U", "stores": "U", "water": "U"},
-    "village":      {"ammo": 2500, "fuel": 8000, "stores": 3000, "water": 1000},
-    "other_terrain":{"ammo": 1500, "fuel": 5000, "stores": 1000, "water": 1000},
-    "non_dump":     {"ammo": 50, "fuel": 0, "stores": 50, "water": 0},
+    "tunis_tripoli_offmap_box": {
+      "ammo": "U",
+      "fuel": "U",
+      "stores": "U",
+      "water": "U",
+      "note": "boxes may NOT themselves be used as supply dumps"
+    },
+    "major_city": {
+      "ammo": "U",
+      "fuel": "U",
+      "stores": "U",
+      "water": "U"
+    },
+    "village": {
+      "ammo": 2500,
+      "fuel": 8000,
+      "stores": 3000,
+      "water": 1000
+    },
+    "other_terrain": {
+      "ammo": 1500,
+      "fuel": 5000,
+      "stores": 1000,
+      "water": 1000
+    },
+    "non_dump": {
+      "ammo": 50,
+      "fuel": 0,
+      "stores": 50,
+      "water": 0
+    },
     "engine_proxy_dump_seeds": {
-      "generic_dump": {"ammo": 40, "fuel": 60, "stores": 0, "water": 0, "location": "game/scenario.py SupplyUnit(...)"},
-      "tobruk_al_dump": {"ammo": 120, "fuel": 60, "stores": 150, "water": 100, "location": "game/oob.py DUMP_AMMO/DUMP_FUEL/DUMP_STORES/DUMP_WATER"}
+      "generic_dump": {
+        "ammo": 40,
+        "fuel": 60,
+        "stores": 0,
+        "water": 0,
+        "location": "game/scenario.py SupplyUnit(...)"
+      },
+      "tobruk_al_dump": {
+        "ammo": 120,
+        "fuel": 60,
+        "stores": 150,
+        "water": 100,
+        "location": "game/oob.py DUMP_AMMO/DUMP_FUEL/DUMP_STORES/DUMP_WATER"
+      }
     }
   },
-
   "supply_dump_demolition_54_17": {
     "_comment": "[54.17] SUPPLY DUMP DEMOLITION TABLE -- percentage of a dump's supplies destroyed by die (modified). Included for completeness; not a consumption rate. Modifiers are cumulative (see rulebook 54.17). percent_by_modified_die is the CORRECTED table (see _errata below): we OVERRODE the 1979 printing at two cells.",
     "_errata": {
       "_ruling": "ERRATA APPLIED, owner-approved. percent_by_modified_die below is the CORRECTED table, NOT the 1979 printing. This is the ONE place in the transcription where we override the book: the 1979 book is misprinted here. Two auditors rendered the original scan (PDF p109) independently -- one at 400 dpi, one at 600 dpi -- and both confirm our OCR is faithful to the page, so the printed table really is non-monotone. We correct it rather than transcribe the misprint; anyone reading this file must see that we overrode the book, and why.",
-      "printed_1979": {"-2": 0, "-1": 33, "0": 0, "1": 10, "2": 20, "3": 33, "4": 50, "5": 75, "6": 100, "7": 33, "8+": 100},
-      "corrected": {"-2": 0, "-1": 0, "0": 0, "1": 10, "2": 20, "3": 33, "4": 50, "5": 75, "6": 100, "7": 100, "8+": 100},
-      "cells_changed": {"-1": "33 -> 0", "7": "33 -> 100"},
+      "printed_1979": {
+        "-2": 0,
+        "-1": 33,
+        "0": 0,
+        "1": 10,
+        "2": 20,
+        "3": 33,
+        "4": 50,
+        "5": 75,
+        "6": 100,
+        "7": 33,
+        "8+": 100
+      },
+      "corrected": {
+        "-2": 0,
+        "-1": 0,
+        "0": 0,
+        "1": 10,
+        "2": 20,
+        "3": 33,
+        "4": 50,
+        "5": 75,
+        "6": 100,
+        "7": 100,
+        "8+": 100
+      },
+      "cells_changed": {
+        "-1": "33 -> 0",
+        "7": "33 -> 100"
+      },
       "reason": "The correction is FORCED by the neighbours. Strike the two anomalous cells and every other cell is a clean monotone ladder -- 0/10/20/33/50/75/100 -- exactly as a demolition table must be, and the two struck cells are precisely the two pinned on BOTH sides: modified -1 sits between two 0s (a -1 destroying a THIRD of the dump while a 0 destroys nothing is impossible), and modified 7 sits between two 100s (a 7 undoing a 6 is impossible). Almost certainly a duplicated '33' slug in the page-14 paste-up. As printed, the best possible outcome in the game -- a natural 6 modified to 7 -- was PUNISHED, destroying 33% where the ladder gives 100%."
     },
-    "percent_by_modified_die": {"-2": 0, "-1": 0, "0": 0, "1": 10, "2": 20, "3": 33, "4": 50, "5": 75, "6": 100, "7": 100, "8+": 100}
+    "percent_by_modified_die": {
+      "-2": 0,
+      "-1": 0,
+      "0": 0,
+      "1": 10,
+      "2": 20,
+      "3": 33,
+      "4": 50,
+      "5": 75,
+      "6": 100,
+      "7": 100,
+      "8+": 100
+    }
   },
-
   "truck_characteristics_54_2": {
     "_comment": "[54.2] TRUCK CHARACTERISTICS CHART (MAXIMUM TRANSPORT CAPACITY). Per Truck Point: CPA when motorizing infantry/guns/supplies; how many TOE Strength Points of each class it can carry; how many SUPPLY POINTS of each commodity it can carry in convoy; its own Fuel Capacity; a Fuel Consumption Factor; and its Breakdown Adjustment Rating (BAR, in left column-shifts). na = not allowed. Light infantry needs 2 Light Truck Points per infantry TOE point (the '1/2' entry). BAR '2L' = 2 left shifts; the light-truck '2L' has a footnote that off-road it accrues +1 breakdown point. NOT YET IN ENGINE (truck haulage is CHUNK 4); game/supply.py currently carries supply units as flat MOTORIZED points (SUPPLY_CPA=15, SUPPLY_MOVE_FUEL=1).",
     "light": {
-      "cpa": {"infantry": 25, "guns": "na", "supplies": 40},
-      "toe_capacity": {"infantry": 0.5, "artillery": "na", "anti_air": 1, "infantry_note": "requires 2 Light Truck Points per 1 infantry TOE point"},
-      "supply_point_capacity": {"ammo": 2, "fuel": 50, "stores": 6, "water": 40},
+      "cpa": {
+        "infantry": 25,
+        "guns": "na",
+        "supplies": 40
+      },
+      "toe_capacity": {
+        "infantry": 0.5,
+        "artillery": "na",
+        "anti_air": 1,
+        "infantry_note": "requires 2 Light Truck Points per 1 infantry TOE point"
+      },
+      "supply_point_capacity": {
+        "ammo": 2,
+        "fuel": 50,
+        "stores": 6,
+        "water": 40
+      },
       "fuel_capacity": 8,
       "fuel_consumption_factor": 1,
       "bar": "2L (off-road: +1 breakdown point)"
     },
     "medium": {
-      "cpa": {"infantry": 20, "guns": 15, "supplies": 30},
-      "toe_capacity": {"infantry": 1, "artillery": 1, "anti_air": 2},
-      "supply_point_capacity": {"ammo": 4, "fuel": 120, "stores": 15, "water": 100},
+      "cpa": {
+        "infantry": 20,
+        "guns": 15,
+        "supplies": 30
+      },
+      "toe_capacity": {
+        "infantry": 1,
+        "artillery": 1,
+        "anti_air": 2
+      },
+      "supply_point_capacity": {
+        "ammo": 4,
+        "fuel": 120,
+        "stores": 15,
+        "water": 100
+      },
       "fuel_capacity": 6,
       "fuel_consumption_factor": 1,
       "bar": "2L"
     },
     "heavy": {
-      "cpa": {"infantry": 20, "guns": 15, "supplies": 30},
-      "toe_capacity": {"infantry": 2, "artillery": 1, "anti_air": 4},
-      "supply_point_capacity": {"ammo": 8, "fuel": 250, "stores": 30, "water": 200},
+      "cpa": {
+        "infantry": 20,
+        "guns": 15,
+        "supplies": 30
+      },
+      "toe_capacity": {
+        "infantry": 2,
+        "artillery": 1,
+        "anti_air": 4
+      },
+      "supply_point_capacity": {
+        "ammo": 8,
+        "fuel": 250,
+        "stores": 30,
+        "water": 200
+      },
       "fuel_capacity": 6,
       "fuel_consumption_factor": 1,
       "bar": "2L"
     }
   },
-
   "equivalent_weights_54_5": {
     "_comment": "[54.5] EQUIVALENT WEIGHTS CHART -- tonnage of one Point of each commodity, used to convert convoy/rail/air/interport TONNAGE (e.g. the [56.5] convoy capacity) into supply Points. So 1 ton = 1/4 Ammo pt = 8 Fuel pts = 1 Stores pt = 6 Water pts. Replacement Points and Truck/Motorization Points shipped by Axis Naval Convoy have VARIABLE tonnage -- 'see Axis Replacement Pool' (not a fixed chart value).",
-    "tons_per_supply_point": {"ammo": 4, "fuel": 0.125, "stores": 1, "water": 0.1667},
-    "replacement_point_tons": {"axis_naval_convoy": "varies -- see Axis Replacement Pool", "interport_or_railroad": "n/a", "air": 2, "air_note": "only infantry-class replacement points may go by air"},
-    "truck_motorization_point_tons": {"axis_naval_convoy": "varies -- see Axis Replacement Pool", "railroad": "n/a", "interport": 50, "air": "prohibited"},
-    "stacking_point_equivalents_by_rail_interport": {"truck_motorization_point": 0.1, "replacement_point": 0.2, "squadron_ground_support_unit": 0.5, "unit_of_stacking_points": 0.5}
+    "tons_per_supply_point": {
+      "ammo": 4,
+      "fuel": 0.125,
+      "stores": 1,
+      "water": 0.1667
+    },
+    "replacement_point_tons": {
+      "axis_naval_convoy": "varies -- see Axis Replacement Pool",
+      "interport_or_railroad": "n/a",
+      "air": 2,
+      "air_note": "only infantry-class replacement points may go by air"
+    },
+    "truck_motorization_point_tons": {
+      "axis_naval_convoy": "varies -- see Axis Replacement Pool",
+      "railroad": "n/a",
+      "interport": 50,
+      "air": "prohibited"
+    },
+    "stacking_point_equivalents_by_rail_interport": {
+      "truck_motorization_point": 0.1,
+      "replacement_point": 0.2,
+      "squadron_ground_support_unit": 0.5,
+      "unit_of_stacking_points": 0.5
+    }
   },
-
   "ports_55_3": {
     "_comment": "[55.3] PORT CAPACITY AND EFFICIENCY LEVEL CHART. Per Operations Stage a port ships 'in'/'out' that many STACKING POINTS. Efficiency Level = damage the port absorbs; losing one level cuts capacity by a fraction of 1/level. Stacking-points handled and tonnage handled are independent; Axis-convoy REPLACEMENT points off-load by the stacking-point schedule, not tonnage. Reinforcements are never gated by port capacity/efficiency. Special: Bizerta unusable by Axis before Game-Turn 35 (then roll to activate); Tobruk begins BELOW its listed efficiency 5 because the scuttled San Giorgio partially blocks the harbour; Bardia/Sollum in=0 but any one 0-stacking-point unit may still be shipped in. Port UNBLOCK costs (54.x demolition/repair table): Tobruk 25 Ammo + 10 Stores per level; Benghazi 100 Ammo + 50 Stores; other ports 50 Ammo + 25 Stores. ENGINE: game/scenario.py _tobruk_port seeds Tobruk from the values here -- max_eff = this listed efficiency_level (5), eff = 5 - 3 = 2 and blocked = 3 for the San Giorgio (55.25) -- and _caps_tonnage seeds every port's per-commodity Point caps _UNLIMITED so the port_supply_tonnage_55_3 MAXIMUM TONNAGE column is the sole 55.14 gate (the STACKING POINT in/out schedule below is transcribed but NOT yet enforced -- nothing reads efficiency_and_stacking's stacking_in/stacking_out: the engine gates tonnage only, so 55.13's TOE-Strength-Point limit and the legend's rule that Axis-convoy replacement points off-load by the stacking schedule are a FLAGGED gap). The UNBLOCK costs are transcribed but unreachable until the 55.26 engineer-clearing action exists (deferred).",
     "efficiency_and_stacking": {
-      "tripoli":      {"efficiency_level": 10, "stacking_in": 10, "stacking_out": 15},
-      "bizerta":      {"efficiency_level": 10, "stacking_in": 10, "stacking_out": 15, "note": "Axis-unusable before Game-Turn 35"},
-      "alexandria":   {"efficiency_level": 10, "stacking_in": 5, "stacking_out": 10},
-      "tobruk":       {"efficiency_level": 5, "stacking_in": 1, "stacking_out": 3, "note": "starts below eff 5 -- San Giorgio partially blocks harbour"},
-      "benghazi":     {"efficiency_level": 3, "stacking_in": 2, "stacking_out": 5},
-      "mersa_matruh": {"efficiency_level": 1, "stacking_in": 1, "stacking_out": 2},
-      "bardia":       {"efficiency_level": 1, "stacking_in": 0, "stacking_out": 1, "note": "any one 0-SP unit may still ship in"},
-      "sollum":       {"efficiency_level": 1, "stacking_in": 0, "stacking_out": 1, "note": "any one 0-SP unit may still ship in"},
-      "derna":        {"efficiency_level": 1, "stacking_in": "na", "stacking_out": 1},
-      "all_others":   {"efficiency_level": 1, "stacking_in": "na", "stacking_out": "na"}
+      "tripoli": {
+        "efficiency_level": 10,
+        "stacking_in": 10,
+        "stacking_out": 15
+      },
+      "bizerta": {
+        "efficiency_level": 10,
+        "stacking_in": 10,
+        "stacking_out": 15,
+        "note": "Axis-unusable before Game-Turn 35"
+      },
+      "alexandria": {
+        "efficiency_level": 10,
+        "stacking_in": 5,
+        "stacking_out": 10
+      },
+      "tobruk": {
+        "efficiency_level": 5,
+        "stacking_in": 1,
+        "stacking_out": 3,
+        "note": "starts below eff 5 -- San Giorgio partially blocks harbour"
+      },
+      "benghazi": {
+        "efficiency_level": 3,
+        "stacking_in": 2,
+        "stacking_out": 5
+      },
+      "mersa_matruh": {
+        "efficiency_level": 1,
+        "stacking_in": 1,
+        "stacking_out": 2
+      },
+      "bardia": {
+        "efficiency_level": 1,
+        "stacking_in": 0,
+        "stacking_out": 1,
+        "note": "any one 0-SP unit may still ship in"
+      },
+      "sollum": {
+        "efficiency_level": 1,
+        "stacking_in": 0,
+        "stacking_out": 1,
+        "note": "any one 0-SP unit may still ship in"
+      },
+      "derna": {
+        "efficiency_level": 1,
+        "stacking_in": "na",
+        "stacking_out": 1
+      },
+      "all_others": {
+        "efficiency_level": 1,
+        "stacking_in": "na",
+        "stacking_out": "na"
+      }
     },
     "unblock_costs": {
-      "tobruk_per_level":   {"ammo": 25, "stores": 10},
-      "benghazi_per_level": {"ammo": 100, "stores": 50},
-      "other_per_level":    {"ammo": 50, "stores": 25}
+      "tobruk_per_level": {
+        "ammo": 25,
+        "stores": 10
+      },
+      "benghazi_per_level": {
+        "ammo": 100,
+        "stores": 50
+      },
+      "other_per_level": {
+        "ammo": 50,
+        "stores": 25
+      }
     },
     "engine_note": {
       "_comment": "NOT a proxy any more -- every magnitude the engine seeds Tobruk with is charted and read from this file. Superseded the old TOBRUK_PORT_CAP {ammo 300, fuel 100, stores 500, water 150} + 1200 t re-derivation, which invented per-commodity Point caps the chart does not print; the caps are now _UNLIMITED and the charted MAXIMUM TONNAGE is the sole 55.14 gate.",
@@ -219,173 +561,1117 @@
       "location": "game/scenario.py _tobruk_port() -- the ONE seed, shared by campaign() and rommels_arrival(); it also records why the 60.7/61.6 printed Efficiency 7 is not followed"
     }
   },
-
   "port_supply_tonnage_55_3": {
     "_comment": "[55.3] PORT CAPACITY AND EFFICIENCY LEVEL CHART -- the MAXIMUM TONNAGE (supply) column, read directly from the scanned chart (PDF page 138/139, book-chart page 15; this column did NOT survive OCR into ports_55_3.efficiency_and_stacking, which only carried the Stacking-Point in/out schedule). Per 55.13/55.14 this is the tonnage of supplies (fuel/ammo/stores/water) a port may ship IN and/or OUT per Operations Stage AT PEAK EFFICIENCY; convert tonnage<->Points via equivalent_weights_54_5. A port reduced to Efficiency Level L of max M ships M/L -- i.e. L/M -- of this tonnage, rounded UP to the nearest ton (55.14; Benghazi example: 2500 t, max eff 3, reduced to 1 => 834 t). The rulebook stresses the stacking-point and tonnage schedules are INDEPENDENT (they do not gate each other), and that Axis-convoy replacement points off-load by the stacking-point schedule, not tonnage. All values below read cleanly; none are FLAGGED. efficiency_level is the same rating carried in ports_55_3.efficiency_and_stacking and is repeated here so the 55.14 tonnage-reduction math is self-contained.",
     "max_supply_tonnage_per_opstage": {
-      "tripoli":      {"tons": 15000, "efficiency_level": 10},
-      "bizerta":      {"tons": 3333,  "efficiency_level": 10, "note": "Axis-unusable before Game-Turn 35"},
-      "alexandria":   {"tons": 15000, "efficiency_level": 10},
-      "tobruk":       {"tons": 1700,  "efficiency_level": 5, "note": "starts below eff 5 -- San Giorgio partially blocks harbour"},
-      "benghazi":     {"tons": 2500,  "efficiency_level": 3, "note": "matches the 55.14 worked example"},
-      "mersa_matruh": {"tons": 250,   "efficiency_level": 1},
-      "bardia":       {"tons": 400,   "efficiency_level": 1},
-      "sollum":       {"tons": 250,   "efficiency_level": 1},
-      "derna":        {"tons": 300,   "efficiency_level": 1},
-      "all_others":   {"tons": 100,   "efficiency_level": 1}
+      "tripoli": {
+        "tons": 15000,
+        "efficiency_level": 10
+      },
+      "bizerta": {
+        "tons": 3333,
+        "efficiency_level": 10,
+        "note": "Axis-unusable before Game-Turn 35"
+      },
+      "alexandria": {
+        "tons": 15000,
+        "efficiency_level": 10
+      },
+      "tobruk": {
+        "tons": 1700,
+        "efficiency_level": 5,
+        "note": "starts below eff 5 -- San Giorgio partially blocks harbour"
+      },
+      "benghazi": {
+        "tons": 2500,
+        "efficiency_level": 3,
+        "note": "matches the 55.14 worked example"
+      },
+      "mersa_matruh": {
+        "tons": 250,
+        "efficiency_level": 1
+      },
+      "bardia": {
+        "tons": 400,
+        "efficiency_level": 1
+      },
+      "sollum": {
+        "tons": 250,
+        "efficiency_level": 1
+      },
+      "derna": {
+        "tons": 300,
+        "efficiency_level": 1
+      },
+      "all_others": {
+        "tons": 100,
+        "efficiency_level": 1
+      }
     },
     "reduction_rule_55_14": "at efficiency level L of maximum M, tonnage = ceil(max_tons * L / M)"
   },
-
   "axis_naval_convoys_56": {
     "_comment": "The Axis Naval Convoy System (chapter 56). Convoy CAPACITY is a TONNAGE that must be converted to supply Points via [54.5]. Replacement Points and Truck/Motorization Points shipped by convoy draw VARIABLE tonnage from the Axis Replacement Pool (see [54.5] and 56 -- there is NO fixed per-point tonnage for those). ENGINE PROXY: game/scenario.py _rommel_convoys ships whole Supply-Unit loads / port-loads on a static timetable; the 56.4 monthly level and 56.5 tonnage-by-die are not modelled.",
     "convoy_level_chart_56_4": {
       "_comment": "[56.4] AXIS NAVAL CONVOY LEVEL CHART -- the convoy Level letter (A-G) in effect each month; feeds into [56.5]. '-' = no convoys that month.",
-      "1940": {"jan": "-", "feb": "-", "mar": "-", "apr": "-", "may": "-", "jun": "-", "jul": "-", "aug": "-", "sep": "B", "oct": "B", "nov": "B", "dec": "B"},
-      "1941": {"jan": "B", "feb": "E", "mar": "F", "apr": "E", "may": "D", "jun": "G", "jul": "C", "aug": "E", "sep": "C", "oct": "D", "nov": "E", "dec": "A"},
-      "1942": {"jan": "C", "feb": "B", "mar": "B", "apr": "G", "may": "F", "jun": "A", "jul": "F", "aug": "B", "sep": "D", "oct": "A", "nov": "G", "dec": "C"}
+      "1940": {
+        "jan": "-",
+        "feb": "-",
+        "mar": "-",
+        "apr": "-",
+        "may": "-",
+        "jun": "-",
+        "jul": "-",
+        "aug": "-",
+        "sep": "B",
+        "oct": "B",
+        "nov": "B",
+        "dec": "B"
+      },
+      "1941": {
+        "jan": "B",
+        "feb": "E",
+        "mar": "F",
+        "apr": "E",
+        "may": "D",
+        "jun": "G",
+        "jul": "C",
+        "aug": "E",
+        "sep": "C",
+        "oct": "D",
+        "nov": "E",
+        "dec": "A"
+      },
+      "1942": {
+        "jan": "C",
+        "feb": "B",
+        "mar": "B",
+        "apr": "G",
+        "may": "F",
+        "jun": "A",
+        "jul": "F",
+        "aug": "B",
+        "sep": "D",
+        "oct": "A",
+        "nov": "G",
+        "dec": "C"
+      }
     },
     "convoy_capacity_table_56_5": {
       "_comment": "[56.5] AXIS NAVAL CONVOY CAPACITY TABLE -- total tonnage = fixed_tons + variable_tons_per_die * die_roll(1-6), rounded UP to nearest 1,000 tons. Convert to supply Points via equivalent_weights_54_5.",
-      "A": {"fixed_tons": 6000, "variable_tons_per_die": 1000},
-      "B": {"fixed_tons": 7000, "variable_tons_per_die": 1500},
-      "C": {"fixed_tons": 10000, "variable_tons_per_die": 1500},
-      "D": {"fixed_tons": 11000, "variable_tons_per_die": 2000},
-      "E": {"fixed_tons": 11000, "variable_tons_per_die": 2500},
-      "F": {"fixed_tons": 15000, "variable_tons_per_die": 2000},
-      "G": {"fixed_tons": 32000, "variable_tons_per_die": 3000},
+      "A": {
+        "fixed_tons": 6000,
+        "variable_tons_per_die": 1000
+      },
+      "B": {
+        "fixed_tons": 7000,
+        "variable_tons_per_die": 1500
+      },
+      "C": {
+        "fixed_tons": 10000,
+        "variable_tons_per_die": 1500
+      },
+      "D": {
+        "fixed_tons": 11000,
+        "variable_tons_per_die": 2000
+      },
+      "E": {
+        "fixed_tons": 11000,
+        "variable_tons_per_die": 2500
+      },
+      "F": {
+        "fixed_tons": 15000,
+        "variable_tons_per_die": 2000
+      },
+      "G": {
+        "fixed_tons": 32000,
+        "variable_tons_per_die": 3000
+      },
       "rounding": "up to nearest 1000 tons"
     },
     "air_convoy_bombing_crt_41_66": {
       "_comment": "[41.66]/[32.66] the AXIS NAVAL CONVOY row of the [41.5] AIR BOMBARDMENT AND SECONDARY BARRAGE TARGETS TABLE, transcribed cell-by-cell from the scanned foldout chart page 12 (PDF page-107; this dense grid did NOT OCR into docs/rules/90 -- see the page-108 sibling that only carried the Key). Procedure (41.66): the Commonwealth Player totals his attacking Bomb Points, selects the matching bomb_points column, rolls two dice reading them SEQUENTIALLY as a two-digit code (tens=first die, units=second die: 11,12..16,21..66), and reads the cross-indexed result -- expressed in TENS OF PERCENT of the cargo in that convoy lost. 41.67 then divides that percentage evenly among the cargo types, rounding each LOST amount up. Each column's die entries partition all 36 sequential codes exactly (verified). Columns with bomb_points below their floor never damage a convoy (the 1..20 column is a flat 0%). hi=null on the final column is the open 471+ bracket. The three torpedo/barrage-weapon header rows of the same chart are NOT transcribed (torpedoes 41.7 and the barrage-vs-facility path 12.53 are deferred); only the Bomb-Points columns feed convoy bombing.",
       "columns": [
-        {"bomb_points": [1, 20], "results": [
-          {"die": [11, 66], "pct_lost": 0}]},
-        {"bomb_points": [21, 40], "results": [
-          {"die": [11, 54], "pct_lost": 0},
-          {"die": [55, 64], "pct_lost": 5},
-          {"die": [65, 66], "pct_lost": 10}]},
-        {"bomb_points": [41, 80], "results": [
-          {"die": [11, 33], "pct_lost": 0},
-          {"die": [34, 64], "pct_lost": 5},
-          {"die": [65, 66], "pct_lost": 10}]},
-        {"bomb_points": [81, 120], "results": [
-          {"die": [11, 22], "pct_lost": 0},
-          {"die": [23, 54], "pct_lost": 5},
-          {"die": [55, 64], "pct_lost": 10},
-          {"die": [65, 66], "pct_lost": 20}]},
-        {"bomb_points": [121, 160], "results": [
-          {"die": [11, 45], "pct_lost": 5},
-          {"die": [46, 63], "pct_lost": 10},
-          {"die": [64, 66], "pct_lost": 20}]},
-        {"bomb_points": [161, 200], "results": [
-          {"die": [11, 32], "pct_lost": 5},
-          {"die": [33, 56], "pct_lost": 10},
-          {"die": [61, 66], "pct_lost": 20}]},
-        {"bomb_points": [201, 260], "results": [
-          {"die": [11, 21], "pct_lost": 5},
-          {"die": [22, 51], "pct_lost": 10},
-          {"die": [52, 63], "pct_lost": 20},
-          {"die": [64, 66], "pct_lost": 25}]},
-        {"bomb_points": [261, 320], "results": [
-          {"die": [11, 14], "pct_lost": 5},
-          {"die": [15, 42], "pct_lost": 10},
-          {"die": [43, 56], "pct_lost": 20},
-          {"die": [61, 66], "pct_lost": 25}]},
-        {"bomb_points": [321, 390], "results": [
-          {"die": [11, 23], "pct_lost": 10},
-          {"die": [24, 51], "pct_lost": 20},
-          {"die": [52, 63], "pct_lost": 25},
-          {"die": [64, 66], "pct_lost": 30}]},
-        {"bomb_points": [391, 470], "results": [
-          {"die": [11, 15], "pct_lost": 10},
-          {"die": [16, 34], "pct_lost": 20},
-          {"die": [35, 52], "pct_lost": 25},
-          {"die": [53, 63], "pct_lost": 30},
-          {"die": [64, 66], "pct_lost": 40}]},
-        {"bomb_points": [471, null], "results": [
-          {"die": [11, 24], "pct_lost": 20},
-          {"die": [25, 36], "pct_lost": 25},
-          {"die": [41, 54], "pct_lost": 30},
-          {"die": [55, 63], "pct_lost": 40},
-          {"die": [64, 66], "pct_lost": 50}]}
-      ]
+        {
+          "bomb_points": [
+            1,
+            20
+          ],
+          "torpedo_points": [
+            1,
+            5
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                66
+              ],
+              "pct_lost": 0
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            21,
+            40
+          ],
+          "torpedo_points": [
+            6,
+            12
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                54
+              ],
+              "pct_lost": 0
+            },
+            {
+              "die": [
+                55,
+                64
+              ],
+              "pct_lost": 5
+            },
+            {
+              "die": [
+                65,
+                66
+              ],
+              "pct_lost": 10
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            41,
+            80
+          ],
+          "torpedo_points": [
+            13,
+            24
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                33
+              ],
+              "pct_lost": 0
+            },
+            {
+              "die": [
+                34,
+                64
+              ],
+              "pct_lost": 5
+            },
+            {
+              "die": [
+                65,
+                66
+              ],
+              "pct_lost": 10
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            81,
+            120
+          ],
+          "torpedo_points": [
+            25,
+            50
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                22
+              ],
+              "pct_lost": 0
+            },
+            {
+              "die": [
+                23,
+                54
+              ],
+              "pct_lost": 5
+            },
+            {
+              "die": [
+                55,
+                64
+              ],
+              "pct_lost": 10
+            },
+            {
+              "die": [
+                65,
+                66
+              ],
+              "pct_lost": 20
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            121,
+            160
+          ],
+          "torpedo_points": [
+            51,
+            80
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                45
+              ],
+              "pct_lost": 5
+            },
+            {
+              "die": [
+                46,
+                63
+              ],
+              "pct_lost": 10
+            },
+            {
+              "die": [
+                64,
+                66
+              ],
+              "pct_lost": 20
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            161,
+            200
+          ],
+          "torpedo_points": [
+            81,
+            120
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                32
+              ],
+              "pct_lost": 5
+            },
+            {
+              "die": [
+                33,
+                56
+              ],
+              "pct_lost": 10
+            },
+            {
+              "die": [
+                61,
+                66
+              ],
+              "pct_lost": 20
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            201,
+            260
+          ],
+          "torpedo_points": [
+            121,
+            160
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                21
+              ],
+              "pct_lost": 5
+            },
+            {
+              "die": [
+                22,
+                51
+              ],
+              "pct_lost": 10
+            },
+            {
+              "die": [
+                52,
+                63
+              ],
+              "pct_lost": 20
+            },
+            {
+              "die": [
+                64,
+                66
+              ],
+              "pct_lost": 25
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            261,
+            320
+          ],
+          "torpedo_points": [
+            161,
+            210
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                14
+              ],
+              "pct_lost": 5
+            },
+            {
+              "die": [
+                15,
+                42
+              ],
+              "pct_lost": 10
+            },
+            {
+              "die": [
+                43,
+                56
+              ],
+              "pct_lost": 20
+            },
+            {
+              "die": [
+                61,
+                66
+              ],
+              "pct_lost": 25
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            321,
+            390
+          ],
+          "torpedo_points": [
+            211,
+            270
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                23
+              ],
+              "pct_lost": 10
+            },
+            {
+              "die": [
+                24,
+                51
+              ],
+              "pct_lost": 20
+            },
+            {
+              "die": [
+                52,
+                63
+              ],
+              "pct_lost": 25
+            },
+            {
+              "die": [
+                64,
+                66
+              ],
+              "pct_lost": 30
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            391,
+            470
+          ],
+          "torpedo_points": [
+            271,
+            340
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                15
+              ],
+              "pct_lost": 10
+            },
+            {
+              "die": [
+                16,
+                34
+              ],
+              "pct_lost": 20
+            },
+            {
+              "die": [
+                35,
+                52
+              ],
+              "pct_lost": 25
+            },
+            {
+              "die": [
+                53,
+                63
+              ],
+              "pct_lost": 30
+            },
+            {
+              "die": [
+                64,
+                66
+              ],
+              "pct_lost": 40
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            471,
+            null
+          ],
+          "torpedo_points": [
+            341,
+            null
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                24
+              ],
+              "pct_lost": 20
+            },
+            {
+              "die": [
+                25,
+                36
+              ],
+              "pct_lost": 25
+            },
+            {
+              "die": [
+                41,
+                54
+              ],
+              "pct_lost": 30
+            },
+            {
+              "die": [
+                55,
+                63
+              ],
+              "pct_lost": 40
+            },
+            {
+              "die": [
+                64,
+                66
+              ],
+              "pct_lost": 50
+            }
+          ]
+        }
+      ],
+      "_comment_torpedo_index": "[41.5] THE SAME ELEVEN COLUMNS, INDEXED A SECOND WAY. The foldout prints THREE parallel index scales above one grid -- Torpedo Points, Barrage Points, Bomb Points -- so a torpedo attack and a bomb attack read the SAME result cells through DIFFERENT column boundaries. Transcribed and eyes-verified off the scan (PDF p.107, the header block rendered alone): Torpedo Points 1-5 / 6-12 / 13-24 / 25-50 / 51-80 / 81-120 / 121-160 / 161-210 / 211-270 / 271-340 / 341+, aligned column-for-column with the Bomb Points scale already transcribed. It is needed because [4.44A] gives the Swordfish Mk. I -- Malta's only anti-shipping aircraft at the campaign's start (60.46) -- a Bombload Capacity of '-' and a Torpedo Capacity of 8: it MAY NOT CARRY BOMBS, so Malta's convoy attack has no reading on the Bomb-Point scale at all. 41.17: 'Torpedoes may be used only against ships and ports.' The Barrage-Points scale is still untranscribed (it is owed to 12.53's barrage-vs-facility path, not to this one)."
     },
     "air_distance_chart_56_18": {
       "_comment": "[56.18] AXIS NAVAL CONVOY AIR DISTANCE CHART -- distance in hexes from an air-base box (Sicily/Italy/Crete/Malta/Benghazi/Derna/Tobruk) to each shipping lane's Rally Point, for interdiction range checks. Not a logistics MAGNITUDE (it gates air missions against convoys); recorded as a reference only. Lanes: 1 Sicily->Bizerta, 2 Sicily->Tripoli, 3 Italy->Benghazi, 4 Greece->Benghazi, 5 Greece->Tobruk, 6 Italy->Tobruk. Full grid in docs/rules/90 lines ~173-188."
     }
   },
-
   "air_bombardment_41_5": {
     "_comment": "[41.5] AIR BOMBARDMENT AND SECONDARY BARRAGE TARGETS TABLE, the PORTS row (shared with Airfields / Air Landing Strips), transcribed and eyes-verified cell-by-cell from the scanned foldout chart page 12 (PDF page 107) -- the dense grid that did NOT OCR into docs/rules/90 (only the row labels came through, lines ~1005/1025). Procedure (41.22 / 41.39B): the bombing Player totals his Bomb Points, selects the matching bomb_points column, rolls two dice reading them SEQUENTIALLY as a two-digit code (tens=first die, units=second die: 11,12..16,21..66), and reads the cross-indexed result -- the number of Efficiency LEVELS the port loses (55.1). A result of 0 is No Effect: the port lost no levels this OpStage, so 55.18 lets it regenerate. Each column's die entries partition all 36 sequential codes exactly (guarded by tests/test_air.py). hi=null on the final column is the open 471+ bracket. The Axis Naval Convoy row of this SAME chart lives in axis_naval_convoys_56.air_convoy_bombing_crt_41_66 (already transcribed and tested); the remaining land rows (Supply Dump, Fortification, Railroad, Road, Trucks/Combat Units) are the broader T0-10 job and are not transcribed here.",
     "ports": {
       "_row": "Airfields / Air Landing Strips / Ports -- Efficiency Levels lost (41.39B Bombing Ports)",
       "columns": [
-        {"bomb_points": [1, 20], "results": [
-          {"die": [11, 62], "levels": 0}, {"die": [63, 66], "levels": 1}]},
-        {"bomb_points": [21, 40], "results": [
-          {"die": [11, 55], "levels": 0}, {"die": [56, 66], "levels": 1}]},
-        {"bomb_points": [41, 80], "results": [
-          {"die": [11, 51], "levels": 0}, {"die": [52, 66], "levels": 1}]},
-        {"bomb_points": [81, 120], "results": [
-          {"die": [11, 42], "levels": 0}, {"die": [43, 66], "levels": 1}]},
-        {"bomb_points": [121, 160], "results": [
-          {"die": [11, 36], "levels": 0}, {"die": [41, 62], "levels": 1}, {"die": [63, 66], "levels": 2}]},
-        {"bomb_points": [161, 200], "results": [
-          {"die": [11, 31], "levels": 0}, {"die": [32, 56], "levels": 1}, {"die": [61, 66], "levels": 2}]},
-        {"bomb_points": [201, 260], "results": [
-          {"die": [11, 15], "levels": 0}, {"die": [16, 55], "levels": 1}, {"die": [56, 65], "levels": 2}, {"die": [66, 66], "levels": 3}]},
-        {"bomb_points": [261, 320], "results": [
-          {"die": [11, 12], "levels": 0}, {"die": [13, 46], "levels": 1}, {"die": [51, 64], "levels": 2}, {"die": [65, 66], "levels": 3}]},
-        {"bomb_points": [321, 390], "results": [
-          {"die": [11, 43], "levels": 1}, {"die": [44, 63], "levels": 2}, {"die": [64, 65], "levels": 3}, {"die": [66, 66], "levels": 4}]},
-        {"bomb_points": [391, 470], "results": [
-          {"die": [11, 36], "levels": 1}, {"die": [41, 55], "levels": 2}, {"die": [56, 63], "levels": 3}, {"die": [64, 66], "levels": 4}]},
-        {"bomb_points": [471, null], "results": [
-          {"die": [11, 25], "levels": 1}, {"die": [26, 52], "levels": 2}, {"die": [53, 61], "levels": 3}, {"die": [62, 66], "levels": 4}]}
+        {
+          "bomb_points": [
+            1,
+            20
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                62
+              ],
+              "levels": 0
+            },
+            {
+              "die": [
+                63,
+                66
+              ],
+              "levels": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            21,
+            40
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                55
+              ],
+              "levels": 0
+            },
+            {
+              "die": [
+                56,
+                66
+              ],
+              "levels": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            41,
+            80
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                51
+              ],
+              "levels": 0
+            },
+            {
+              "die": [
+                52,
+                66
+              ],
+              "levels": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            81,
+            120
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                42
+              ],
+              "levels": 0
+            },
+            {
+              "die": [
+                43,
+                66
+              ],
+              "levels": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            121,
+            160
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                36
+              ],
+              "levels": 0
+            },
+            {
+              "die": [
+                41,
+                62
+              ],
+              "levels": 1
+            },
+            {
+              "die": [
+                63,
+                66
+              ],
+              "levels": 2
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            161,
+            200
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                31
+              ],
+              "levels": 0
+            },
+            {
+              "die": [
+                32,
+                56
+              ],
+              "levels": 1
+            },
+            {
+              "die": [
+                61,
+                66
+              ],
+              "levels": 2
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            201,
+            260
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                15
+              ],
+              "levels": 0
+            },
+            {
+              "die": [
+                16,
+                55
+              ],
+              "levels": 1
+            },
+            {
+              "die": [
+                56,
+                65
+              ],
+              "levels": 2
+            },
+            {
+              "die": [
+                66,
+                66
+              ],
+              "levels": 3
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            261,
+            320
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                12
+              ],
+              "levels": 0
+            },
+            {
+              "die": [
+                13,
+                46
+              ],
+              "levels": 1
+            },
+            {
+              "die": [
+                51,
+                64
+              ],
+              "levels": 2
+            },
+            {
+              "die": [
+                65,
+                66
+              ],
+              "levels": 3
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            321,
+            390
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                43
+              ],
+              "levels": 1
+            },
+            {
+              "die": [
+                44,
+                63
+              ],
+              "levels": 2
+            },
+            {
+              "die": [
+                64,
+                65
+              ],
+              "levels": 3
+            },
+            {
+              "die": [
+                66,
+                66
+              ],
+              "levels": 4
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            391,
+            470
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                36
+              ],
+              "levels": 1
+            },
+            {
+              "die": [
+                41,
+                55
+              ],
+              "levels": 2
+            },
+            {
+              "die": [
+                56,
+                63
+              ],
+              "levels": 3
+            },
+            {
+              "die": [
+                64,
+                66
+              ],
+              "levels": 4
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            471,
+            null
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                25
+              ],
+              "levels": 1
+            },
+            {
+              "die": [
+                26,
+                52
+              ],
+              "levels": 2
+            },
+            {
+              "die": [
+                53,
+                61
+              ],
+              "levels": 3
+            },
+            {
+              "die": [
+                62,
+                66
+              ],
+              "levels": 4
+            }
+          ]
+        }
       ]
     }
   },
-
   "aircraft_characteristics_4_44": {
     "_comment": "[4.44A/b/c] AIRCRAFT CHARACTERISTICS CHARTS -- the per-plane ratings rules 34.13/34.14/34.17 name, and the only place the book prints them. TRANSCRIBED HERE: only the SIX types the engine's abstract Air Points are expressed in (three per side; see game/air.REPRESENTATIVE_AIRCRAFT); the rest of the three charts is a per-plane roster job that belongs with the Squadron Composition Sheet (34.72) in Phase 5.3/5.4, and inventing rows we do not use would be transcription for its own sake. EVERY row below was read WITH EYES off the 1979 scan at 300 dpi -- Commonwealth PDF p.112 (fighters) and p.113 (bombers), Axis PDF p.144 (Italian + German fighters) and p.145 (German bombers) -- because the OCR in docs/rules/90-charts is column-shifted in the Commonwealth fighter table (it drops a cell on the Gladiator row and reads the drop-tank variants' Fuel as the Bomb column). CHART DEFINITIONS, verbatim: 'TacAir = Tactical Air Combat Rating. A parenthesized rating indicates that the plane may never be flown on a mission permitting it to initiate air-to-air combat.' (34.13); 'Bomb = Bombload Capacity... in points' (34.14); 'Fuel = Fuel Consumption Rating in the number of Fuel Points the plane requires before it may be flown' (34.17/38.21). A bombload of 0 is the chart's '-' (may not carry bombs). NOTE the book itself prints '-' in the Fuel column of the Gladiator Mk. II -- a misprint we do not need and therefore do not rule on.",
     "_comment_mission_capability": "MISSION CAPABILITY -- 'The types of missions the plane may be assigned' (the charts' own definition). Printed as a block of one-letter cells beside every row and transcribed per row below as `mission_capability`. The FIGHTER charts print four columns, F S R D; the BOMBER/flying-boat/transport/reconnaissance charts print D R B Transport. CELL VALUES, verbatim from the two keys: '! = Does possess this capability, but may not be flown on night missions'; 'N = Possesses this mission(s) capability and may be flown on night missions'; 'A = Possesses the missions capability, and in addition may strafe armored vehicles' (Commonwealth key only); 'S = May only Strafe, may not be assigned any bombing missions' (Commonwealth key only, and it appears in the D column -- the Lysander Mk. I); '0 = The Blenheim IVF may be assigned only Night Scramble missions'; does-not-possess is printed '-' on the Axis charts ('- = Does not possess this capability', German key, PDF p.145) and '.' on the Commonwealth ones ('. = Does not possess this mission capability', PDF p.113) -- ONE meaning, two glyphs, NORMALISED TO '-' below. COLUMN MEANINGS, verbatim: 'F = Offensive or Defensive Combat Air Patrol (CAP) or Strafing missions. S = Scramble Mission. R = Reconnaissance (naval and/or land) missions. D = Strafe and/or any type of bombing missions (see B below). B = Axis Naval Convoy and Land Support Bombing missions' (Commonwealth key, PDF p.113) / 'B = Maltese and Land Support Bombing missions' (German key, PDF p.145 -- each side's B names its OWN strategic target plus Land Support). 'Transport = Transport missions.'",
     "_comment_mission_capability_ruling": "THE D-vs-B READING IS A JUDGEMENT CALL AND IT IS FLAGGED. 'D = Strafe and/or any type of bombing missions (see B below)' can be read two ways: (i) D is a SUPERSET -- a D plane strafes AND flies any bombing mission, and '(see B below)' merely points at where the bombing-mission types are enumerated; or (ii) D and B are DISJOINT -- a D plane may not fly the missions listed under B. WE READ (i), on the book's own internal evidence: [41.16] 'dive bombers may strafe and bomb the same target and fighters with bombload capacities may both strafe and bomb a target, IF THEY HAVE A D CAPABILITY' makes D the strafe-AND-bomb marker rather than a bombing-mission whitelist; the Commonwealth key's 'S = May only Strafe, may not be assigned any bombing missions' sits in the D column, which is only coherent if D is the strafe column with a bombing rider; and reading (ii) is refuted by the charts themselves -- on [4.44b] the ONLY German aircraft carrying B is the Ar. 196 flying boat (Bombload 1), so under (ii) neither the Ju. 87B Stuka (D=!) nor the He. 111 (D=N) could fly a Land Support or a Maltese bombing mission and the Luftwaffe's entire bombing of Malta and of the Eighth Army would be flown by flying boats. Under reading (i) B is the pure-bomber cell (bombs, does not strafe), which is what every Commonwealth bomber row carries. Note [41.21]: 'Land support missions are concerned with bombing land installations, PORTS, personnel and equipment' -- so a B plane's Land Support bombing covers the harbour (B-P) and airfield (B-AF) missions the engine flies, as well as B-CU. NOTHING IN THE ENGINE GATES ON THIS TODAY: the column is transcribed so that the roster work of 5.3/5.4 has it, and game.air.mission_capable is the read (a test asserts every representative type possesses the capability its role needs). If the owner rules (ii), the Axis strike representative must change.",
     "aircraft": {
-      "Bf. 109E": {"nation": "german", "class": "fighter", "range": 41, "tacair": 6, "tacair_parenthesized": false, "maneuver": 34, "bombload": 0, "fuel": 1, "mission_capability": {"F": "!", "S": "!", "R": "-", "D": "!"}},
-      "Ju. 87B": {"nation": "german", "class": "dive_bomber", "range": 36, "tacair": 3, "tacair_parenthesized": true, "maneuver": 25, "bombload": 5, "fuel": 1, "mission_capability": {"D": "!", "R": "-", "B": "-", "Transport": "-"}},
-      "Hs. 126": {"nation": "german", "class": "reconnaissance", "range": 45, "tacair": 2, "tacair_parenthesized": true, "maneuver": 14, "bombload": 2, "fuel": 1, "mission_capability": {"D": "!", "R": "!", "B": "-", "Transport": "-"}},
-      "Lysander Mk. I": {"nation": "commonwealth", "class": "reconnaissance", "range": 60, "tacair": 2, "tacair_parenthesized": true, "maneuver": 20, "bombload": 0, "fuel": 1, "mission_capability": {"D": "S", "R": "!", "B": "-", "Transport": "-"}},
-      "Hurricane Mk. I": {"nation": "commonwealth", "class": "fighter", "range": 52, "tacair": 4, "tacair_parenthesized": false, "maneuver": 32, "bombload": 0, "fuel": 1, "mission_capability": {"F": "!", "S": "!", "R": "-", "D": "-"}},
-      "Blenheim Mk. I": {"nation": "commonwealth", "class": "bomber", "range": 101, "tacair": 1, "tacair_parenthesized": true, "maneuver": 22, "bombload": 5, "fuel": 2, "mission_capability": {"D": "-", "R": "-", "B": "!", "Transport": "-"}}
+      "Bf. 109E": {
+        "nation": "german",
+        "class": "fighter",
+        "range": 41,
+        "tacair": 6,
+        "tacair_parenthesized": false,
+        "maneuver": 34,
+        "bombload": 0,
+        "fuel": 1,
+        "mission_capability": {
+          "F": "!",
+          "S": "!",
+          "R": "-",
+          "D": "!"
+        }
+      },
+      "Ju. 87B": {
+        "nation": "german",
+        "class": "dive_bomber",
+        "range": 36,
+        "tacair": 3,
+        "tacair_parenthesized": true,
+        "maneuver": 25,
+        "bombload": 5,
+        "fuel": 1,
+        "mission_capability": {
+          "D": "!",
+          "R": "-",
+          "B": "-",
+          "Transport": "-"
+        }
+      },
+      "Hs. 126": {
+        "nation": "german",
+        "class": "reconnaissance",
+        "range": 45,
+        "tacair": 2,
+        "tacair_parenthesized": true,
+        "maneuver": 14,
+        "bombload": 2,
+        "fuel": 1,
+        "mission_capability": {
+          "D": "!",
+          "R": "!",
+          "B": "-",
+          "Transport": "-"
+        }
+      },
+      "Lysander Mk. I": {
+        "nation": "commonwealth",
+        "class": "reconnaissance",
+        "range": 60,
+        "tacair": 2,
+        "tacair_parenthesized": true,
+        "maneuver": 20,
+        "bombload": 0,
+        "fuel": 1,
+        "mission_capability": {
+          "D": "S",
+          "R": "!",
+          "B": "-",
+          "Transport": "-"
+        }
+      },
+      "Hurricane Mk. I": {
+        "nation": "commonwealth",
+        "class": "fighter",
+        "range": 52,
+        "tacair": 4,
+        "tacair_parenthesized": false,
+        "maneuver": 32,
+        "bombload": 0,
+        "fuel": 1,
+        "mission_capability": {
+          "F": "!",
+          "S": "!",
+          "R": "-",
+          "D": "-"
+        }
+      },
+      "Blenheim Mk. I": {
+        "nation": "commonwealth",
+        "class": "bomber",
+        "range": 101,
+        "tacair": 1,
+        "tacair_parenthesized": true,
+        "maneuver": 22,
+        "bombload": 5,
+        "fuel": 2,
+        "mission_capability": {
+          "D": "-",
+          "R": "-",
+          "B": "!",
+          "Transport": "-"
+        }
+      }
     }
   },
-
   "squadron_capacity_35_23": {
     "_comment": "[35.23] SQUADRON CAPACITY CHART, eyes-verified off the 1979 scan (Charts and Tables page 10, PDF page 105 -- the same rendered page that carries the [24.18] Demolition Chart, the [38.37] Aircraft Refit Table and the [45.6] Pilot and Plane Recovery Table). 'Ready plus Reserve' is the number BOTH 38.23 and 38.33 cap an SGSU's work at: 'an Italian SGSU can handle refueling chores for a total of 12 planes, regardless of squadron assignment, in a given Operations Stage' (38.23), and 'each SGSU can refit up to the maximum planes the SGSU can contain (Ready plus Reserve)' (38.33). The Commonwealth squadron grows mid-war, so its row is DATED -- and the dating is transcribed HERE, in `from`/`to` [year, month] pairs read off the row labels, rather than left as a boundary literal in engine code (game.air.squadron_capacity selects the row whose span contains the Game-Turn's month).",
     "_owner_ruling_needed": "THE BOOK PRINTS THIS CHART TWICE AND THE TWO PRINTINGS DISAGREE ABOUT THE COMMONWEALTH ROWS -- the 54.17 class, raised rather than decided in passing. BOTH were rendered at 300 dpi and read with eyes, not OCR. (i) THE PLAY-AID CHART, PDF p.105 (Charts and Tables p.10): 'Commonwealth Squadron (1940-41) 12 4 16' and 'Commonwealth Squadron (1942-43) 18 6 24'. (ii) THE RULE TEXT of case 35.23 itself, PDF p.53: 'Commonwealth Squadron (1940-June '41) 15 5 (20 total)' and 'Commonwealth Squadron (July 41-43) 18 6 (24 total)', followed by the prose 'Players will note that starting with July 1941 Commonwealth Squadrons increase their capacity.' So the two printings disagree TWICE over: the early-war Commonwealth capacity (16 total against 20) and the DATE the squadron grows (the chart's row labels put it at January 1942; the rule text says July 1941 twice, in the row label and again in prose). The Italian (9/3/12) and German (12/4/16) rows are IDENTICAL in both printings and are not in dispute. Both printings are internally consistent with 35.23's own 'a squadron can always keep 1/3 more in reserve' (12+4, 15+5, 18+6), so neither can be dismissed as an arithmetic slip; note only that the chart's 1940-41 Commonwealth row is a duplicate of the German Staffel row directly above it, which is what a copying error would look like -- evidence, not proof. UNTIL THE OWNER RULES, the engine reads printing (i), the play aid, because it is the same rendered chart box every other 5.3 magnitude was transcribed from ([38.37]'s columns, [45.6]) and reading half a box from one printing and half from another would be worse than either. Printing (ii) is transcribed verbatim below under `rule_text_35_23_unapplied` and NOTHING reads it. This binds nothing today (the engine's proxy squadrons are 1-2 aeroplanes against a charted 12-24 allowance); it becomes load-bearing the moment 34.6/59.3's real Initial Air Strengths land, which is Phase 5.4/5.5.",
     "nationalities": {
-      "italian":              {"_row": "Italian Squadriglia",              "ready":  9, "reserve": 3, "total": 12},
-      "german":               {"_row": "German Staffel",                   "ready": 12, "reserve": 4, "total": 16},
-      "commonwealth_1940_41": {"_row": "Commonwealth Squadron (1940-41)",  "ready": 12, "reserve": 4, "total": 16, "from": [1940, 1], "to": [1941, 12]},
-      "commonwealth_1942_43": {"_row": "Commonwealth Squadron (1942-43)",  "ready": 18, "reserve": 6, "total": 24, "from": [1942, 1], "to": [1943, 12]}
+      "italian": {
+        "_row": "Italian Squadriglia",
+        "ready": 9,
+        "reserve": 3,
+        "total": 12
+      },
+      "german": {
+        "_row": "German Staffel",
+        "ready": 12,
+        "reserve": 4,
+        "total": 16
+      },
+      "commonwealth_1940_41": {
+        "_row": "Commonwealth Squadron (1940-41)",
+        "ready": 12,
+        "reserve": 4,
+        "total": 16,
+        "from": [
+          1940,
+          1
+        ],
+        "to": [
+          1941,
+          12
+        ]
+      },
+      "commonwealth_1942_43": {
+        "_row": "Commonwealth Squadron (1942-43)",
+        "ready": 18,
+        "reserve": 6,
+        "total": 24,
+        "from": [
+          1942,
+          1
+        ],
+        "to": [
+          1943,
+          12
+        ]
+      }
     },
     "rule_text_35_23_unapplied": {
       "_comment": "THE SECOND PRINTING, case 35.23's own table on PDF p.53, transcribed verbatim and DELIBERATELY UNREAD pending the owner ruling above. Nothing in game/ loads this key; it exists so that the disputed reading is on the record beside the applied one and the ruling is a one-line switch rather than a re-transcription.",
-      "commonwealth_1940_june_41": {"_row": "Commonwealth Squadron (1940-June '41)", "ready": 15, "reserve": 5, "total": 20, "from": [1940, 1], "to": [1941, 6]},
-      "commonwealth_july_41_43":   {"_row": "Commonwealth Squadron (July 41-43)",    "ready": 18, "reserve": 6, "total": 24, "from": [1941, 7], "to": [1943, 12]}
+      "commonwealth_1940_june_41": {
+        "_row": "Commonwealth Squadron (1940-June '41)",
+        "ready": 15,
+        "reserve": 5,
+        "total": 20,
+        "from": [
+          1940,
+          1
+        ],
+        "to": [
+          1941,
+          6
+        ]
+      },
+      "commonwealth_july_41_43": {
+        "_row": "Commonwealth Squadron (July 41-43)",
+        "ready": 18,
+        "reserve": 6,
+        "total": 24,
+        "from": [
+          1941,
+          7
+        ],
+        "to": [
+          1943,
+          12
+        ]
+      }
     }
   },
-
   "aircraft_refit_38_37": {
     "_comment": "[38.37] AIRCRAFT REFIT TABLE, transcribed and eyes-verified cell by cell off the 1979 scan (Charts and Tables page 10, PDF page 105). The rulebook's Case 38.3 calls it 38.38 in prose and the chart itself is headed [38.37]; they are the one table. PROCEDURE (38.34), verbatim: 'Players must roll for each squadron undergoing refit... The Player simply determines the number of aircraft in the squadron undergoing refit and throws ONE DIE, making any adjustments (see Case 38.35) and consulting the Aircraft Refit Table. The table gives him the PERCENTAGE OF PLANES SUCCESSFULLY REFITTED. (Round all fractions up.)' That one die is a d6, and the table's own span proves it: 6 + 2 (Italian SGSU) + 1 (foreign squadron) = 9, which is exactly where the printed columns stop.",
     "by_squadron": {
       "_row": "B. By Squadron -- Dice Roll -> % of Planes Refitted",
       "columns": [
-        {"die": [1, 1], "pct_refitted": 100}, {"die": [2, 2], "pct_refitted": 80},
-        {"die": [3, 3], "pct_refitted": 70}, {"die": [4, 4], "pct_refitted": 60},
-        {"die": [5, 5], "pct_refitted": 50}, {"die": [6, 7], "pct_refitted": 40},
-        {"die": [8, 9], "pct_refitted": 33}
+        {
+          "die": [
+            1,
+            1
+          ],
+          "pct_refitted": 100
+        },
+        {
+          "die": [
+            2,
+            2
+          ],
+          "pct_refitted": 80
+        },
+        {
+          "die": [
+            3,
+            3
+          ],
+          "pct_refitted": 70
+        },
+        {
+          "die": [
+            4,
+            4
+          ],
+          "pct_refitted": 60
+        },
+        {
+          "die": [
+            5,
+            5
+          ],
+          "pct_refitted": 50
+        },
+        {
+          "die": [
+            6,
+            7
+          ],
+          "pct_refitted": 40
+        },
+        {
+          "die": [
+            8,
+            9
+          ],
+          "pct_refitted": 33
+        }
       ],
       "modifiers": {
         "_printed": "Modifiers: German Squadron Ground Support Unit add 1. Italian Ground Support Unit add 2. Planes attempting refit not assigned to Squadron Ground Suport Unit attempting refit add 1.",
@@ -399,45 +1685,73 @@
     "by_plane_optional_38_39": {
       "_row": "A. By Plane -- Dice Roll to Refit (two dice), per plane",
       "_comment": "The chart's section A is Case 38.39's OPTIONAL per-plane method -- 'Players wishing to use a more painstaking if (slightly) more accurate method of refitting planes may roll for each plane individually' -- and NOT the rule. 38.34's by-squadron table above is the rule, and it is what the engine rolls. Transcribed because it is the same printed chart box and the scan has been read; nothing in game/ reads it.",
-      "refit_on": {"commonwealth": [2, 8], "german": [2, 7], "italian": [2, 6]},
-      "modifiers": {"foreign_squadron": 2}
+      "refit_on": {
+        "commonwealth": [
+          2,
+          8
+        ],
+        "german": [
+          2,
+          7
+        ],
+        "italian": [
+          2,
+          6
+        ]
+      },
+      "modifiers": {
+        "foreign_squadron": 2
+      }
     }
   },
-
   "scenario_61_desert_fox_initial_supply": {
     "_comment": "Initial supply placement and port states for the Desert Fox scenario group (docs/rules/61-scenario-group-two-the-desert-fox.md). DATA ONLY: the engine's game/scenario.py currently seeds proxy dumps/ports (see supply_dump_capacity_54_12.engine_proxy_dump_seeds and ports_55_3.engine_proxy). The percentage figures are PLACEMENT constraints on how the pool is split across dumps, not consumption rates. Line numbers cite the current markdown transcription.",
     "axis_dump_split_61_44": {
       "_comment": "[61.44] Supply (docs/rules/61 line 196): the Axis Player divides this pool among his THREE ACTIVE dumps (he receives five dumps total, two of which are Dummies -- line 194); no more than 50% of each commodity may sit at any one dump.",
-      "fuel": 9600, "ammo": 2500, "stores": 950, "water": 1100,
-      "active_dumps": 3, "max_percent_per_dump": 50
+      "fuel": 9600,
+      "ammo": 2500,
+      "stores": 950,
+      "water": 1100,
+      "active_dumps": 3,
+      "max_percent_per_dump": 50
     },
     "axis_tripoli_builtin_61_44": {
       "_comment": "[61.44] (line 198): Tripoli box built-in supplies, in addition to the dump split above.",
-      "fuel": 3000, "ammo": 1500, "stores": 500
+      "fuel": 3000,
+      "ammo": 1500,
+      "stores": 500
     },
     "axis_air_facility_pool_61_44": {
-   "_comment": "[61.44] (docs/rules/61 line 200), verbatim: \"For distribution to Air Facilities (remember, Tripoli/Tunisia air facilities have unlimited Fuel and Ammo) there are 50 Fuel Points and 50 Ammo Points.\" No Stores and no Water are charted for the Desert Fox Axis air facilities. The 36.5 unlimited-supply Tripoli/Tunisia boxes are off-map and unseeded (Tripoli has no hex in sections A-E).",
-   "fuel": 50,
-   "ammo": 50
-  },
-  "commonwealth_air_facility_pool_61_36": {
-   "_comment": "[61.36] (docs/rules/61 lines 118-120), verbatim: \"Air Supply -- The Commonwealth Player has 180 Fuel Points, 250 Ammo Points, and 50 Stores for distribution amongst Air Facilities.\" No air Water is charted.",
-   "fuel": 180,
-   "ammo": 250,
-   "stores": 50
-  },
-  "commonwealth_dump_split_61_36": {
+      "_comment": "[61.44] (docs/rules/61 line 200), verbatim: \"For distribution to Air Facilities (remember, Tripoli/Tunisia air facilities have unlimited Fuel and Ammo) there are 50 Fuel Points and 50 Ammo Points.\" No Stores and no Water are charted for the Desert Fox Axis air facilities. The 36.5 unlimited-supply Tripoli/Tunisia boxes are off-map and unseeded (Tripoli has no hex in sections A-E).",
+      "fuel": 50,
+      "ammo": 50
+    },
+    "commonwealth_air_facility_pool_61_36": {
+      "_comment": "[61.36] (docs/rules/61 lines 118-120), verbatim: \"Air Supply -- The Commonwealth Player has 180 Fuel Points, 250 Ammo Points, and 50 Stores for distribution amongst Air Facilities.\" No air Water is charted.",
+      "fuel": 180,
+      "ammo": 250,
+      "stores": 50
+    },
+    "commonwealth_dump_split_61_36": {
       "_comment": "[61.36] Supply (line 112): the Commonwealth Player divides this pool among his NINE Dumps (he receives nine Dumps plus three Dummy Dumps -- line 104); no more than 25% of each item at any one dump, and every ACTUAL dump must hold at least 50 of each item.",
-      "fuel": 2550, "ammo": 1700, "stores": 1600,
-      "dumps": 9, "max_percent_per_dump": 25, "min_per_item_per_actual_dump": 50
+      "fuel": 2550,
+      "ammo": 1700,
+      "stores": 1600,
+      "dumps": 9,
+      "max_percent_per_dump": 25,
+      "min_per_item_per_actual_dump": 50
     },
     "commonwealth_tobruk_builtin_61_36": {
       "_comment": "[61.36] (line 110): Tobruk built-in supplies (Tobruk is itself a supply dump -- line 104), in addition to the dump split.",
-      "fuel": 500, "ammo": 1500, "stores": 1000
+      "fuel": 500,
+      "ammo": 1500,
+      "stores": 1000
     },
     "commonwealth_benghazi_builtin_61_36": {
       "_comment": "[61.36] (line 108): Benghazi built-in supplies (Benghazi is also a supply dump); Benghazi additionally holds 10 Points of Italian Prisoners, a POW Camp, and one Commonwealth Guard.",
-      "fuel": 100, "ammo": 50, "stores": 150
+      "fuel": 100,
+      "ammo": 50,
+      "stores": 150
     },
     "initial_port_states_61_6": {
       "_comment": "[61.6] Construction on the map at start (line 210): all ports begin at their full (listed 55.3) Efficiency Level EXCEPT the two below -- Benghazi scuttled to zero, Tobruk at seven with the San Giorgio still blocking the harbour. Transcribed verbatim as the rulebook states it; NOT reconciled here. FLAG -- THE ENGINE DOES NOT FOLLOW tobruk_efficiency: the printed 7 (60.7 prints the digit, 61.6 the word 'seven'; both verified on the scan, PDF p79/p81, so it is the book's own contradiction and not an OCR artifact) exceeds the 55.3 listed maximum of 5, which 55.18 forbids ('can never go above its maximum assigned level'), and the chart legend defines capacity only as a reduction FROM the listed level -- so an Efficiency 7 on a listed-5 port has no defined capacity at all. game/scenario.py _tobruk_port seeds the charted 2 of 5 (55.3 dagger + 55.25's -3) instead and carries the full reasoning; this row stays as the faithful record of what the page prints.",
@@ -450,32 +1764,37 @@
     "_comment": "[60.34]/[60.44] initial supply pools for the FULL CAMPAIGN (Scenario Group One, docs/rules/60-scenario-group-one-the-italians.md). Rule 64.3 mandates SECTION 60 for the entire campaign's initial placement; the engine previously mis-seeded the SECTION-61 Desert Fox pools above (game/oob.py), handing the Axis 9600 Fuel where 60.34 charts 3000. These are the ANONYMOUS FIELD-DUMP pools only (the 'Dump 1/2/I' counters the player places on the map); the NAMED-location dumps (Tobruk, Bardia, Benghazi, Derna, Mersa Matruh, Sidi Barrani) are seeded elsewhere in game/scenario.py. The airfield-distributed pools belong to the AIR GAME and are seeded separately, from axis_air_facility_pool_60_34 / commonwealth_air_facility_pool_60_44 below (Phase 5.1 -- until the Air Game was played, rule 59.61 said to ignore them).",
     "axis_field_dump_pool_60_34": {
       "_comment": "[60.34] (docs/rules/60 lines 133-134): the sum of the two anonymous field dumps -- Dump 1 (1000 ammo/1500 fuel/1500 stores/200 water) + Dump 2 (1000/1500/1000/200), placed on map section C in Libya. Two additional Dummy dumps carry no supply.",
-      "ammo": 2000, "fuel": 3000, "stores": 2500, "water": 400
+      "ammo": 2000,
+      "fuel": 3000,
+      "stores": 2500,
+      "water": 400
     },
     "axis_air_facility_pool_60_34": {
-   "_comment": "[60.34] (docs/rules/60 line 139), verbatim: \"In addition the Axis Player receives a total of 1200 Ammo, 850 Fuel, 100 Stores and 100 Water Points which may be FREELY DISTRIBUTED AMONG HIS AIRFIELDS.\" A separate pool from the field dumps above: it lands in the rule-36.17 air-facility dumps (SupplyUnit.air_dump), which only an SGSU may draw from (35.14) and the land army may not. 59.61 -- \"ignore all Trucks and supplies available at/for Air facilities in the initial set-ups\" -- suppressed this row while the Air Game was abstract; it is in force from Phase 5.1. Free placement among the facilities is the Player's; game.oob.air_dumps splits it evenly (remainder to the earliest facility by id), the same authored convention as the field-dump split.",
-   "ammo": 1200,
-   "fuel": 850,
-   "stores": 100,
-   "water": 100
-  },
-  "commonwealth_air_facility_pool_60_44": {
-   "_comment": "[60.44] (docs/rules/60 lines 233-239), verbatim: \"Air Supply (Distribute amongst Air Facilities as desired) Ammo: 200 Fuel: 250 Stores: 50\". The chart lists NO air Water for the Commonwealth (as 60.44 lists no dump Water either -- CW water is the 52.7 wells and the 54.3 pipeline).",
-   "ammo": 200,
-   "fuel": 250,
-   "stores": 50
-  },
-  "commonwealth_field_dump_pool_60_44": {
-      "_comment": "[60.44] (docs/rules/60 line 229): Dump I (500 ammo/750 fuel/500 stores), the one anonymous field dump placed in Egypt on map C or D. One additional Dummy dump carries no supply. 60.44 charts NO dump Water for the Commonwealth -- forward CW water is the 52.7 wells / 54.3 rail (both deferred); Cairo and Alexandria hold unlimited supply, water included (60.44 note).",
-      "ammo": 500, "fuel": 750, "stores": 500
+      "_comment": "[60.34] (docs/rules/60 line 139), verbatim: \"In addition the Axis Player receives a total of 1200 Ammo, 850 Fuel, 100 Stores and 100 Water Points which may be FREELY DISTRIBUTED AMONG HIS AIRFIELDS.\" A separate pool from the field dumps above: it lands in the rule-36.17 air-facility dumps (SupplyUnit.air_dump), which only an SGSU may draw from (35.14) and the land army may not. 59.61 -- \"ignore all Trucks and supplies available at/for Air facilities in the initial set-ups\" -- suppressed this row while the Air Game was abstract; it is in force from Phase 5.1. Free placement among the facilities is the Player's; game.oob.air_dumps splits it evenly (remainder to the earliest facility by id), the same authored convention as the field-dump split.",
+      "ammo": 1200,
+      "fuel": 850,
+      "stores": 100,
+      "water": 100
     },
-  "italian_sgsu_available_60_32": {
-   "_comment": "[60.32] Italian Air Strengths (docs/rules/60 line 108), verbatim final line: \"Italian SGSU Available: 39.\" A COUNTER COUNT, not a supply magnitude -- how many Squadron Ground Support Unit counters the Italian Player has to place. [60.42] states the placement rule for both sides: \"the following planes, SGSU's and pilots may be placed at any ... air facility, WITHIN THE CAPACITY OF THAT FACILITY\" (36.12 six per airfield, 36.2 one per landing strip, 36.3 three per flying boat basin, 36.4 one per alighting area). Cited to [60.32] and NOT to [60.31], which is the Italian Initial Deployment -- a different chart. game.oob.seed_sgsus reads it as a CEILING: the map takes what its facilities can hold and no more.",
-   "sgsu": 39
-  },
-  "commonwealth_sgsu_available_60_42": {
-   "_comment": "[60.42] Commonwealth North African Air Force (docs/rules/60 line 209), verbatim: \"SGSU Available: 14.\" Same placement rule and the same ceiling reading as the Italian row above.",
-   "sgsu": 14
-  }
+    "commonwealth_air_facility_pool_60_44": {
+      "_comment": "[60.44] (docs/rules/60 lines 233-239), verbatim: \"Air Supply (Distribute amongst Air Facilities as desired) Ammo: 200 Fuel: 250 Stores: 50\". The chart lists NO air Water for the Commonwealth (as 60.44 lists no dump Water either -- CW water is the 52.7 wells and the 54.3 pipeline).",
+      "ammo": 200,
+      "fuel": 250,
+      "stores": 50
+    },
+    "commonwealth_field_dump_pool_60_44": {
+      "_comment": "[60.44] (docs/rules/60 line 229): Dump I (500 ammo/750 fuel/500 stores), the one anonymous field dump placed in Egypt on map C or D. One additional Dummy dump carries no supply. 60.44 charts NO dump Water for the Commonwealth -- forward CW water is the 52.7 wells / 54.3 rail (both deferred); Cairo and Alexandria hold unlimited supply, water included (60.44 note).",
+      "ammo": 500,
+      "fuel": 750,
+      "stores": 500
+    },
+    "italian_sgsu_available_60_32": {
+      "_comment": "[60.32] Italian Air Strengths (docs/rules/60 line 108), verbatim final line: \"Italian SGSU Available: 39.\" A COUNTER COUNT, not a supply magnitude -- how many Squadron Ground Support Unit counters the Italian Player has to place. [60.42] states the placement rule for both sides: \"the following planes, SGSU's and pilots may be placed at any ... air facility, WITHIN THE CAPACITY OF THAT FACILITY\" (36.12 six per airfield, 36.2 one per landing strip, 36.3 three per flying boat basin, 36.4 one per alighting area). Cited to [60.32] and NOT to [60.31], which is the Italian Initial Deployment -- a different chart. game.oob.seed_sgsus reads it as a CEILING: the map takes what its facilities can hold and no more.",
+      "sgsu": 39
+    },
+    "commonwealth_sgsu_available_60_42": {
+      "_comment": "[60.42] Commonwealth North African Air Force (docs/rules/60 line 209), verbatim: \"SGSU Available: 14.\" Same placement rule and the same ceiling reading as the Italian row above.",
+      "sgsu": 14
+    }
   }
 }

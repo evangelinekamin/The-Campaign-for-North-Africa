@@ -324,10 +324,18 @@ class InterdictionOrder:
     its cargo before it lands (41.67), leaving a smaller SUPPLY_ARRIVED beside a marker
     CONVOY_INTERDICTED. The interdictor is the side OPPOSING the convoy (derived at the
     seam, not stored). Default GameState.interdictions=() draws no dice and reduces no
-    cargo, so every scenario without a seeded schedule stays byte-identical."""
+    cargo, so every scenario without a seeded schedule stays byte-identical.
+
+    `source` names a LIVE producer for the attack's strength, and the only one is "malta":
+    rule 44 makes the Maltese effort a function of the island's current Capacity Levels and
+    surviving aeroplanes (game.malta), not of a number typed into a schedule, and its weapon
+    is the torpedo rather than the bomb ([4.44A]: the Swordfish may not carry bombs), so it
+    reads the [41.5] table through a different index scale. An order with no source is a
+    static one and uses `bomb_points` as printed; a sourced order ignores that field."""
     lane: str
     turn: int
     bomb_points: int
+    source: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -592,6 +600,17 @@ class GameState:
     # Default () fields none, so every scenario that seeds no facility is byte-identical -- the
     # 35.14 SGSU upkeep beat and the 41.36 facility-bombing mission both fire only when one exists.
     air_facilities: tuple[AirFacility, ...] = ()
+    # [44.0] MALTA, the two numbers the island's half of the war turns on (game.malta).
+    # `malta_planes` is the aeroplanes standing on it -- 60.46's printed establishment, reduced by
+    # 41.36's "for every level destroyed, remove 10% of the planes on the ground" and by nothing
+    # else, because Malta's replacement flow ([34.86] via 34.81A) is untranscribed. Its LEVELS are
+    # not here: they are ordinary AirFacility Capacity Levels carried in air_facilities above, which
+    # is what lets 36.14, 41.36 and the invariants apply to Malta unchanged.
+    # `malta_raids` is the Axis's [44.41] ledger -- Availability Level ("I".."IV") -> the Game-Turns
+    # he has spent it on, counted for a raid he cancels as well (44.29). Defaults (0, {}) put no
+    # island in the scenario and spend no budget, so every non-campaign scenario is byte-identical.
+    malta_planes: int = 0
+    malta_raids: dict = field(default_factory=dict)
     # Commonwealth Mediterranean Fleet (rule 30): the off-shore naval-bombardment fire support.
     # Default () fields no ship, so every naval-less scenario stays byte-identical -- the CW
     # Fleet-Assignment beat fires only when a side carries naval (game.engine._naval_bombardment).
@@ -897,6 +916,18 @@ class GameState:
         else:
             unfit.pop(squadron, None)
         return replace(self, air_unfit=unfit)
+
+    def with_malta_planes(self, planes: int) -> "GameState":
+        """[41.36] Set how many aeroplanes stand on Malta. Never below zero: a raid that would
+        remove more planes than the island holds removes the island's air force and stops."""
+        return replace(self, malta_planes=max(0, planes))
+
+    def with_malta_raid(self, level: str) -> "GameState":
+        """[44.23]/[44.29] Book one Game-Turn of Axis Strategic Bombardment of Malta against an
+        Availability Level -- spent whether the raid was flown or cancelled."""
+        raids = dict(self.malta_raids)
+        raids[level] = raids.get(level, 0) + 1
+        return replace(self, malta_raids=raids)
 
     def air_superiority_of(self, arena: str) -> "str | None":
         """The Side value that holds the sky in `arena` this OpStage, or None (contested /

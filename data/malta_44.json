@@ -1,0 +1,89 @@
+{
+  "_comment": "[44.0] MALTA -- the island as a PLACE with health, and the two-way loop that makes it one. Every magnitude here is transcribed from the 1979 book or read off the printed game-map; nothing is calibrated. This file exists because game/scenario.py used to carry a hand-typed calendar (_malta_bomb_points: 100/200/300/500/0/150/400 by month) that decided, more than any actual rule, who won the campaign -- invention I2 in scratchpad/port/00-THE-PORT-PLAN.md. Rule 44 replaces it: Maltese air-facility LEVELS -> 18 planes per level (44.14) -> the strike planes that reach the convoy lane -> the [41.5] CRT -> the percentage of the Axis convoy destroyed; and back the other way, the Axis spends from a FINITE Availability budget ([44.41], 64.52) to raid the island (44.21/44.24), knocking levels down and killing 10% of the planes on the ground per level (41.36), while the Commonwealth repairs on the [44.5] table (44.13).",
+
+  "air_facilities_44_12": {
+    "_comment": "[44.12] 'Maltese air facilities are printed directly on the game-map (unlike most others). They are permanent and may never be moved. No further air facilities may be built on Malta. Although they may not be destroyed, Maltese air facilities may be reduced (by Axis bombing) to zero effectiveness.' PROVENANCE, AND IT IS NOT THE RULEBOOK: the Malta facilities are printed on GameMap 'A' (the off-scale Malta box, 44.11) and appear in NO chart in the book, so they were read off the game-map image shipped in CNAv2.1.0.vmod (Mitch Guthrie's 2021 redraw) -- the same source data/cna_map_grid.json and every terrain/road file already come from -- with hexes resolved through game.coords' Malta section 'M'. Each printed capacity matches the rulebook's own charted maximum for its kind (36.12 airfield six, 36.3 flying boat basin three, 36.4 alighting area one), and the total (28) contains every scenario's printed initial capacity (60.46 five, 61.34 eight, 62.36 fourteen, 63.37 'all facilities at full capacity'), which is the cross-check that the redraw is faithful here.",
+    "facilities": [
+      {"name": "Hal Far", "hex": "M0505", "kind": "airfield", "max_level": 6},
+      {"name": "Kalafrana", "hex": "M0506", "kind": "basin", "max_level": 3},
+      {"name": "Luqa", "hex": "M0704", "kind": "airfield", "max_level": 6},
+      {"name": "Safi", "hex": "M0604", "kind": "airfield", "max_level": 6},
+      {"name": "Takali", "hex": "M0802", "kind": "airfield", "max_level": 6},
+      {"name": "Valetta", "hex": "M0805", "kind": "alighting", "max_level": 1}
+    ]
+  },
+
+  "planes_per_level_44_14": {
+    "_rule": "[44.14] 'The Commonwealth Player does not need -- nor does he use -- SGSU's on Malta. Each level of air facility can handle up to 18 planes of any type. Thus an airfield operating at maximum capacity (6 levels) could handle 108 planes.'",
+    "planes": 18
+  },
+
+  "initial_setup_60_46": {
+    "_rule": "[60.46] the campaign's own Malta set-up (64.3 sends the full campaign to Section 60 for every initial deployment). Verbatim: 'Planes: 15 Hurricane MkI's, 12 Swordfish, 3 Gladiators, 1 Sea Gladiator. AA: 17 AA Points. State of Air facilities: The Malta bases have an initial capacity of five SGSU's. These may be spread amongst the Malta facilities as the player wishes. Construction on increasing the capacity of Malta Air Facilities may begin in October, 1940.'",
+    "capacity_levels": 5,
+    "construction_begins": [1940, 10],
+    "planes": [
+      {"type": "Hurricane Mk. I", "number": 15, "role": "fighter"},
+      {"type": "Swordfish Mk. I", "number": 12, "role": "strike"},
+      {"type": "Gladiator", "number": 3, "role": "fighter"},
+      {"type": "Sea Gladiator", "number": 1, "role": "fighter"}
+    ],
+    "strike_weapon": {
+      "_comment": "[4.44A] Swordfish Mk. I, read with eyes off the scanned Commonwealth Bombers/Flying Boats/Transports/Reconnaissance chart (PDF p.113): Range 48, TacAir (1), Maneuver 7, Bomb '-/T8', Fuel 1, mission capability B. The chart's own key: 'Bomb = Bombload Capacity and torpedo carrying capability, if any, in points. -- = May not carry bombs. Only planes possessing an /T may carry torpedos. The number to the left of the stroke is the Bombload Capacity. The number to the right of the T is the Torpedo Capacity.' So Malta's only anti-shipping aircraft in 1940 CANNOT CARRY BOMBS AT ALL: it attacks the convoy with torpedoes, on the [41.5] table's TORPEDO POINTS index (see logistics_rates.json air_convoy_bombing_crt_41_66.columns[].torpedo_points), not its Bomb Points index. B = 'Axis Naval Convoy and Land Support Bombing missions' -- the mission capability this use needs, printed on the row.",
+      "type": "Swordfish Mk. I",
+      "weapon": "torpedo",
+      "points_per_plane": 8
+    }
+  },
+
+  "later_scenario_establishments": {
+    "_comment": "NOTHING READS THIS. It is recorded as the evidence for the one gap this port leaves open in rule 44: Malta's plane establishment GROWS through the war (34.81A caps it -- 'no more than 10% of a month's airplane reinforcements may be sent to Malta' -- off the [34.86] Commonwealth Airplane Reinforcement and Squadron Withdrawal Schedule, which is untranscribed), and so does its facility capacity. Our campaign holds both at their printed September-1940 values, so our Malta only ever loses planes and levels. These four printed snapshots are what the growth actually looks like, and they are the acceptance test for whoever transcribes [34.86].",
+    "snapshots": [
+      {"scenario": "60.46 Graziani / campaign start", "date": [1940, 9], "capacity_levels": 5, "planes": 31},
+      {"scenario": "61.34 Desert Fox", "date": [1941, 3], "capacity_levels": 8, "planes": 55},
+      {"scenario": "62.36 Crusader", "date": [1941, 11], "capacity_levels": 14, "planes": 74},
+      {"scenario": "63.37 El Alamein", "date": [1942, 10], "capacity_levels": 28, "planes": 118}
+    ]
+  },
+
+  "construction_table_44_5": {
+    "_comment": "[44.5] MALTESE AIR FACILITY CONSTRUCTION TABLE, transcribed and eyes-verified off the scan (PDF p.178, rendered at 400 dpi). 'Nr. Levels = Total number of levels of Air Facility repaired and/or constructed.' [44.13]: 'The initial capacity of Maltese air bases is given in each scenario. It may be increased -- up to the standard levels -- by using the Maltese Air Facility Construction Table (44.5). The Commonwealth Player may use the table ONCE EACH GAME-TURN FOR EACH AIR FACILITY on Malta... No supplies need be expended.'",
+    "die": {"1": 0, "2": 1, "3": 1, "4": 1, "5": 1, "6": 2}
+  },
+
+  "strategic_commitment_44_41": {
+    "_comment": "[44.41] AXIS STRATEGIC AIRFORCE COMMITMENT CHART, transcribed and eyes-verified off the scan (PDF p.178, rendered at 400 dpi). The chart's own key: '*Malta is not in the scenario. U = That availability level may be used an unlimited number of times. # = That availability level may only be used for that number of game turns of Axis Strategic Bombardment of Malta. na = Not applicable or not allowed.' [64.52]: 'The Axis Player's Malta Air Availability is determined using the appropriate campaign game row on the Axis Strategic Airforce Commitment Chart.' [44.23]: 'No Availability Level may ever be used more Game-Turns than it is listed as available. It is up to the Axis Player to plan his raids according to what he wants to accomplish and when he wants to do it.' null = unlimited (U); 0 = na.",
+    "rows": {
+      "campaign_64": {"I": null, "II": 25, "III": 12, "IV": 12},
+      "graziani_60": {"I": null, "II": 0, "III": 0, "IV": 0},
+      "race_for_tobruk_61": {"I": null, "II": 6, "III": 3, "IV": 1},
+      "crusader_62": {"I": null, "II": 4, "III": 2, "IV": 2},
+      "last_chance_63": {"I": 0, "II": 0, "III": 0, "IV": 0},
+      "long_retreat_63": {"I": null, "II": 3, "III": 0, "IV": 0}
+    }
+  },
+
+  "availability_table_44_42": {
+    "_comment": "[44.42] AXIS MALTA AVAILABILITY TABLE, transcribed and eyes-verified cell by cell off the scan (PDF p.178, rendered at 400 dpi over the table alone). Two dice ADDED (2..12; the chart's DICE column runs 2-12, unlike the [41.5] sequential-code tables). Each cell is [in_play_pct, strategic_pct]; null = the chart's 'na'. The chart's own key: 'na = No forces are available for the strategic bombardment of Malta this Game-Turn. Nr/ = That percentage of each type of planes IN PLAY AND BASED ON SICILY AND ITALY that may participate in strategic bombardment of Malta. /Nr = Used to determine the number of each type of plane available from the Axis Player's STRATEGIC FORCES (i.e., not actually in play) that may participate in that Game-Turn's raid on Malta missions. The planes available are calculated reading the number as a percentage of each type of the planes based on Italy/Sicily, rounding fractions down (e.g., 200 = 200%, or double the number of each type of plane in play).'",
+    "dice": {
+      "2":  {"I": [10, 30],  "II": [100, 200], "III": null,        "IV": [50, 100]},
+      "3":  {"I": [50, 50],  "II": [10, 10],   "III": [100, 100],  "IV": [100, 200]},
+      "4":  {"I": null,      "II": [100, 100], "III": [10, 20],    "IV": [100, 100]},
+      "5":  {"I": [25, 25],  "II": [50, 50],   "III": [100, 200],  "IV": [100, 300]},
+      "6":  {"I": [25, 25],  "II": [10, 10],   "III": [50, 100],   "IV": [100, 100]},
+      "7":  {"I": null,      "II": [25, 50],   "III": [100, 100],  "IV": [100, 200]},
+      "8":  {"I": [10, 10],  "II": null,       "III": [50, 50],    "IV": [100, 100]},
+      "9":  {"I": [50, 25],  "II": [25, 25],   "III": [25, 50],    "IV": [50, 50]},
+      "10": {"I": null,      "II": [50, 100],  "III": [25, 25],    "IV": [100, 200]},
+      "11": {"I": [25, 50],  "II": [100, 100], "III": [100, 300],  "IV": [100, 300]},
+      "12": {"I": [10, 20],  "II": [10, 20],   "III": [100, 200],  "IV": [25, 75]}
+    }
+  },
+
+  "italy_sicily_basing_43_1": {
+    "_comment": "[43.12] 'Until 1/35 Game-Turn 1941, 75% of all German bombers must be based in Italy/Sicily.' [43.13] 'From June 1/35 Game-Turn 1941 to the end of the game at least 50% of all He111's, Ju88's, and FW220's must be based in Crete; the remaining 25% may be based in Sicily/Italy or in Crete.' [43.25] 'Bombers based in Italy/Sicily may coordinate with African-based fighters for CAP. THEY MAY ALSO BE USED IN RAIDS ON MALTA (see 44.0)' -- and, by omission, Crete-based bombers may not. THIS BLOCK IS RULE 43 ARRIVING EARLY, and it is here under protest: [44.42]'s percentages are percentages OF THE PLANES BASED IN ITALY/SICILY, so the Axis half of rule 44 cannot be computed at all without a basing fraction, and 43.0 is otherwise scheduled for block 5.5. These are the book's own two numbers; the SECOND one is a permission ('may') rather than a requirement, so 25 is the printed CEILING on the post-June-1941 Italy/Sicily basing and our Axis takes it -- a policy choice, flagged, made where the alternative (0) would silently end the Malta war in June 1941.",
+    "before_turn_35_pct": 75,
+    "from_turn_35_pct": 25,
+    "change_turn": 35
+  }
+}

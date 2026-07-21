@@ -145,6 +145,17 @@ class Policy:
                  eligible: frozenset[str]) -> list[MoveOrder]:
         return []  # optional: a non-phasing motorized unit slides aside as an enemy moves adjacent (rule 8.5)
 
+    def malta_raid(self, state: GameState) -> str:
+        """[44.23]/[44.25] The Axis Malta Availability Level ("I".."IV") to commit this Game-Turn.
+
+        THE ONE DECISION RULE 44 GIVES THE AXIS, and the historical one: II, III and IV are a
+        finite budget (25/12/12 Game-Turns over the campaign, [44.41] via 64.52), so every heavy
+        raid is one the Axis cannot fly later. Level I is unlimited and is also the do-nothing
+        answer -- 44.25: "if, at any time, the Axis Player does not wish to bomb Malta he is
+        considered to have used Level I". The base returns it, so a policy that has no Malta
+        doctrine spends nothing it cannot afford; the engine re-validates against the budget."""
+        return "I"
+
 
 class ScriptedPolicy(Policy):
     """Simple desert doctrine: the attacker presses toward the objective along the

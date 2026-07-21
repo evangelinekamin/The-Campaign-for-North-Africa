@@ -59,9 +59,14 @@ AND THREE MORE, NAMED HERE BECAUSE THEY ARE EASY TO MISTAKE FOR BUILT:
     Points) and data/logistics_rates.json transcribes only bomb_points -- but 12.54 sends the barrage
     at a facility to the Bombload column, so the facility path needs no new transcription. The
     Barrage-Points scale is owed to the OTHER target rows of that table.
-  * **NO SCENARIO OR POLICY GENERATES AN 'airfield' AIR MISSION.** engine._air_facility_bomb is the
-    41.36 resolver and it is real and tested, but the only caller in the tree is the test. It is
-    5.4's foundation (44.21's suppression of Malta is what will fly these), not a live channel.
+  * **NO SCENARIO OR POLICY GENERATES AN 'airfield' AIR MISSION** -- still true of the LAND SUPPORT
+    channel. engine._air_facility_bomb is the 41.36 resolver for a tactical B-AF mission and the
+    only caller in the tree is its test. What 5.4 built instead is the STRATEGIC one: engine.
+    _malta_raid resolves 44.21's raid on the same [41.5] Airfields row and the same 41.36 rule, but
+    it may not route through _air_facility_bomb, because that function sizes its attack from
+    _air_points (the LAND arena's committed strike points, gated by air superiority and paid for
+    with 38.24 fuel) and a Malta raid is sized by the [44.42] Availability Table out of a force
+    that is largely NOT IN PLAY (44.22). Two callers, one rule, two different sources of strength.
   * **THE 35.14 UPKEEP HAS NO REFILL PATH, AND 5.3 HAS NOW HUNG THE REFIT TABLE ON IT.** See
     engine._sgsu_upkeep's own flag: 36.3, 35.15 and the [60.33]/[60.43] air-facility lorry rows are
     the rulebook's three ways to restock an airfield and none is built, so the charted allotment is a

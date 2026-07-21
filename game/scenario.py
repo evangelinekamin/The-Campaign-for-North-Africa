@@ -17,7 +17,7 @@ import random
 from collections import deque
 from dataclasses import replace
 
-from . import (calendar, campaign_victory, cna_map, coords, logistics_data, oob, villages,
+from . import (calendar, campaign_victory, cna_map, coords, logistics_data, malta, oob, villages,
                wells)
 from .events import Phase, Side
 from .hexmap import Coord, distance, neighbors
@@ -1275,36 +1275,37 @@ def _campaign_air_missions(max_turns: int) -> tuple[AirMission, ...]:
                  for side in (Side.AXIS, Side.ALLIED))
 
 
-def _malta_bomb_points(gt: int) -> int:
-    """Historical Malta pressure on the Axis convoy, mapped to 41.66 CRT Bomb-Point columns (rule
-    44 is untranscribed -- a FLAGGED proxy, like the _TOBRUK_* weights): rising through 1941 to the
-    Force-K peak (Nov-Dec 1941), collapsing to zero under the Jan-Apr 1942 Luftwaffe blitz on the
-    island, then reviving as the RAF returns. A primary calibration lever for the Axis faucet."""
-    year, month = calendar.gt_to_month(gt)
-    if year <= 1940:
-        return 100
-    if year == 1941:
-        if month <= 6:
-            return 200
-        if month <= 10:
-            return 300
-        return 500                       # Nov-Dec 1941: Force K at its peak
-    if month <= 4:
-        return 0                          # Jan-Apr 1942: the Luftwaffe blitz suppresses Malta
-    if month <= 7:
-        return 150                        # May-Jul 1942
-    return 400                            # Aug-Dec 1942: the revival
+# [60.46] "The Malta bases have an initial capacity of five SGSU's" -- the campaign's own Malta
+# set-up, reached through 64.3 ("if the entire campaign is being played, the Players use the
+# information provided in Section 60.0 for the initial placement and distribution of their land,
+# sea, and AIR forces"). Read from the data file rather than typed, like every other magnitude.
+_MALTA_LEVELS = logistics_data.malta_setup_60_46()["capacity_levels"]
 
 
 def _campaign_malta_interdiction(max_turns: int) -> tuple[InterdictionOrder, ...]:
-    """Rule 44 (Malta) abstracted as a Commonwealth interdiction of the Axis Mediterranean convoy
-    lane (60.37 lane '2') -- the twin of the Tobruk-ferry interdiction. Each Game-Turn's convoy is
-    under _malta_bomb_points(gt) of 41.66 CRT bombing, skimming a tens-of-percent of its cargo
-    before it lands at Benghazi (41.67), leaving a smaller SUPPLY_ARRIVED beside a CONVOY_INTERDICTED
-    marker. The counterweight -- Malta's strangling of the sea lane that kept the Panzerarmee short
-    of fuel. Turns Malta is suppressed (bomb_points 0) seed no order and draw no dice."""
-    return tuple(InterdictionOrder("2", t, _malta_bomb_points(t))
-                 for t in range(1, max_turns + 1) if _malta_bomb_points(t) > 0)
+    """[44.0] Malta's standing strike at the Axis Mediterranean convoy lane (60.37 lane '2') -- one
+    order per Game-Turn, EVERY Game-Turn, carrying no strength of its own.
+
+    THE NUMBER THAT USED TO BE HERE IS GONE, AND ITS DELETION IS THE POINT OF THIS BLOCK. Until
+    rule 44 landed, this schedule was generated from `_malta_bomb_points(gt)` -- a hand-typed
+    calendar (100 in 1940, 200, 300, 500 at the Force-K peak, 0 through the 1942 Luftwaffe blitz,
+    150, 400) that no rule produced, no Axis action could touch and no Commonwealth action could
+    strengthen. Held to an identical dice stream it was worth 95-320 Victory Points and flipped the
+    winner on seed 7. It was the single largest determinant of who won this campaign, and it was
+    invention I2.
+
+    What replaces it is the island (game.malta): every order is `source="malta"`, and its weight is
+    read at the moment the convoy sails from Malta's CURRENT Capacity Levels, the 18 planes each
+    level operates (44.14), the strike aircraft that have survived the Axis raids, and the Torpedo
+    Capacity of 8 those Swordfish actually carry ([4.44A]). A Malta bombed flat sends nothing --
+    which is the 1942 blitz, EARNED by the Axis raid budget instead of written into an `if`.
+
+    The order is seeded for every turn rather than only for turns Malta is strong, and that is
+    deliberate: an order that is sometimes absent is a die sometimes not drawn, which is exactly
+    the conditional-draw hazard game.dice exists to contain. The dice now fall every turn and the
+    island's strength decides what they mean."""
+    return tuple(InterdictionOrder("2", t, 0, source="malta")
+                 for t in range(1, max_turns + 1))
 
 
 _TOBRUK = "C4807"    # the fortress (a 64.73 victory hex); the sea lifeline that lets a siege hold
@@ -1578,5 +1579,8 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
                        + _campaign_tobruk_axis_interdiction(max_turns)),   #   (30/41.6): each side can fight the other's lane
         air=_campaign_air(),                                # C4: BOTH air forces (34/40-46) -- without
         air_missions=_campaign_air_missions(max_turns),     # them no harbour can ever be cut (41.39B)
-        air_facilities=tuple(facilities),                   # C6/36: the squadron bases on the map
+        air_facilities=tuple(facilities) + tuple(malta.seed_facilities(_MALTA_LEVELS)),
+                                                            # C6/36: the squadron bases on the map, PLUS
+                                                            # rule 44's island (44.12/60.46)
+        malta_planes=malta.initial_planes(),                # 60.46: the 31 aeroplanes on Malta
     )

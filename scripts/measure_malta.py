@@ -15,13 +15,22 @@ HOW THIS A/B HOLDS THE DICE STILL. game.dice gives interdiction its own stream, 
 111 ORDERS on Malta's lane -- one per Game-Turn -- so interdiction consumes its stream at exactly
 the same rate in both:
 
-  * arm OFF:  bomb_points=1   -- the [41.66] CRT's flat-0% column. It DRAWS its two dice and denies
-                                 nothing. This is Malta switched off WITHOUT switching off its dice.
-  * arm MAX:  bomb_points=500 -- the CRT's top column (20-50% of every cargo, rule 41.66).
+  * arm OFF:   the Malta lane's orders replaced by static bomb_points=1 -- the [41.5] CRT's flat-0%
+                 column. It DRAWS its two dice and denies nothing. Malta switched off WITHOUT
+                 switching off its dice.
+  * arm LIVE:  the campaign exactly as seeded -- rule 44's island (game.malta), whose strength each
+                 Game-Turn is read off its surviving Capacity Levels and Swordfish.
 
-Both arms therefore roll the IDENTICAL interdiction dice; they differ only in which column those
-dice are read on. One variable. The other two interdicted lanes (6 = Italy->Tobruk, SEA-TOBRUK =
-the Commonwealth ferry) are left exactly as the campaign seeds them, in both arms.
+Both arms therefore roll the IDENTICAL interdiction dice AND the identical rule-44 dice (the island
+is seeded in both, so the Axis raid and the [44.5] repair draw the same); they differ only in
+whether the convoy attack is read on Malta's live column or on the flat-0% one. One variable. The
+other two interdicted lanes (6 = Italy->Tobruk, SEA-TOBRUK = the Commonwealth ferry) are left
+exactly as the campaign seeds them, in both arms.
+
+UPDATED FOR RULE 44 (Phase 5.4). The arms used to be bomb=1 against bomb=500 -- a measurement of
+the CRT's dynamic range, made when Malta's strength was a constant somebody typed. There is now an
+island to switch off instead, so the LIVE arm measures OUR Malta rather than the ceiling of the
+table it reads.
 
 WHAT IS STILL NOT A MEASUREMENT. Five seeds is not a distribution. Malta really does sink cargo, so
 the two arms diverge downstream and consume their OTHER streams differently from then on -- that is
@@ -38,6 +47,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from game import malta                                              # noqa: E402
 from game.campaign_policy import (CampaignAxisPolicy,               # noqa: E402
                                   CampaignCommonwealthPolicy)
 from game.campaign_victory import CampaignVictory                   # noqa: E402
@@ -48,17 +58,20 @@ from game.state import InterdictionOrder                            # noqa: E402
 
 SEEDS = (1941, 7, 2026, 1, 99)
 MALTA_LANE = "2"        # scenario._campaign_malta_interdiction: the Axis Mediterranean convoy lane
-OFF, MAX = 1, 500       # the flat-0% column, and the top column of the [41.66] CRT
+OFF, LIVE = "off", "live"
 
 
-def _with_malta(state, bomb_points: int):
-    """The campaign with Malta's lane bombed at `bomb_points` EVERY Game-Turn, and every other
-    interdicted lane left exactly as seeded. 111 orders in either arm -> the interdiction stream is
-    consumed at the same rate whichever column we read."""
+def _arm(state, arm: str):
+    """The campaign in one of the two arms. LIVE is the state exactly as the scenario built it;
+    OFF swaps Malta's lane orders for static flat-0%-column ones, leaving their COUNT (one per
+    Game-Turn) and everything else -- including the island, its raids and its repairs -- alone, so
+    the interdiction stream is consumed at the same rate in both."""
+    if arm == LIVE:
+        return state
     others = tuple(o for o in state.interdictions if o.lane != MALTA_LANE)
-    malta = tuple(InterdictionOrder(MALTA_LANE, t, bomb_points)
-                  for t in range(1, state.max_turns + 1))
-    return replace(state, interdictions=others + malta)
+    silent = tuple(InterdictionOrder(MALTA_LANE, t, 1)
+                   for t in range(1, state.max_turns + 1))
+    return replace(state, interdictions=others + silent)
 
 
 def _score(state) -> tuple[int, int]:
@@ -76,17 +89,28 @@ def _score(state) -> tuple[int, int]:
     return axis, cwlth
 
 
-def _play(seed: int, bomb_points: int) -> dict:
-    res = run(_with_malta(campaign(seed=seed), bomb_points),
-              CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+def _play(seed: int, arm: str) -> dict:
+    start = campaign(seed=seed)
+    res = run(_arm(start, arm), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     axis, cwlth = _score(res.final)
     denied = sum(e.payload["tons_lost"] for e in res.events
                  if e.kind is EventKind.CONVOY_INTERDICTED and e.payload["lane"] == MALTA_LANE)
     dice = tuple(d for e in res.events if e.kind is EventKind.CONVOY_INTERDICTED
                  and e.payload["lane"] == MALTA_LANE for d in e.rng_draws)
-    return {"seed": seed, "bomb": bomb_points, "axis": axis, "allied": cwlth,
+    raids = [e for e in res.events if e.kind is EventKind.MALTA_RAID_ORDERED]
+    hits = [e for e in res.events if e.kind is EventKind.MALTA_PLANES_LOST]
+    return {"seed": seed, "arm": arm, "axis": axis, "allied": cwlth,
             "winner": None if res.winner is None else res.winner.value,
-            "reason": res.reason, "tons_denied": denied, "dice": dice}
+            "reason": res.reason, "tons_denied": denied, "dice": dice,
+            # rule 44's own trajectory: does the island move, and does the budget run down?
+            "raids": len(raids), "budget": dict(res.final.malta_raids),
+            "levels_start": malta.capacity(start), "levels_end": malta.capacity(res.final),
+            "levels_min": min([malta.capacity(start)]
+                              + [e.payload["level"] for e in res.events
+                                 if e.kind is EventKind.AIR_FACILITY_LEVEL_CHANGED
+                                 and str(e.payload["facility_id"]).startswith(malta.PREFIX)]),
+            "planes_start": start.malta_planes, "planes_end": res.final.malta_planes,
+            "planes_killed": sum(e.payload["lost"] for e in hits)}
 
 
 def main() -> None:
@@ -94,18 +118,18 @@ def main() -> None:
     ap.add_argument("--seeds", type=int, nargs="+", default=list(SEEDS))
     args = ap.parse_args()
 
-    jobs = [(s, b) for s in args.seeds for b in (OFF, MAX)]
+    jobs = [(s, b) for s in args.seeds for b in (OFF, LIVE)]
     with ProcessPoolExecutor() as pool:                    # 16 threads: one campaign per worker
         out = list(pool.map(_play, [j[0] for j in jobs], [j[1] for j in jobs]))
-    by = {(r["seed"], r["bomb"]): r for r in out}
+    by = {(r["seed"], r["arm"]): r for r in out}
 
-    print(f"\nMALTA A/B -- bomb={OFF} (CRT flat-0% column) vs bomb={MAX} (CRT top column)")
+    print("\nMALTA A/B -- the island SILENCED (flat-0% column) vs the island LIVE (rule 44)")
     print("the full 111-turn campaign, CampaignAxisPolicy vs CampaignCommonwealthPolicy\n")
-    hdr = f"{'seed':>5} | {'MALTA OFF (bomb=1)':^30} | {'MALTA MAX (bomb=500)':^30} | {'swing':>18}"
+    hdr = f"{'seed':>5} | {'MALTA SILENCED':^30} | {'MALTA LIVE (rule 44)':^30} | {'swing':>18}"
     print(hdr)
     print("-" * len(hdr))
     for s in args.seeds:
-        off, mx = by[(s, OFF)], by[(s, MAX)]
+        off, mx = by[(s, OFF)], by[(s, LIVE)]
         o = f"{off['reason'].split(':')[0][:17]:17s} {off['axis']:3d}-{off['allied']:<3d}"
         m = f"{mx['reason'].split(':')[0][:17]:17s} {mx['axis']:3d}-{mx['allied']:<3d}"
         # the Axis margin: how far ahead the Axis is. Malta should push it DOWN.
@@ -115,11 +139,19 @@ def main() -> None:
 
     print("\nthe dice held still (the whole point):")
     for s in args.seeds:
-        off, mx = by[(s, OFF)], by[(s, MAX)]
+        off, mx = by[(s, OFF)], by[(s, LIVE)]
         n = min(len(off["dice"]), len(mx["dice"]))
         shared = off["dice"][:n] == mx["dice"][:n]
         print(f"  seed {s:>5}: first {n:3d} Malta dice identical in both arms: {shared} "
-              f"| tons denied  off={off['tons_denied']:>9,}  max={mx['tons_denied']:>9,}")
+              f"| tons denied  off={off['tons_denied']:>9,}  live={mx['tons_denied']:>9,}")
+
+    print("\ndoes the island actually move? (the LIVE arm, rule 44's own trajectory)")
+    for s in args.seeds:
+        m = by[(s, LIVE)]
+        budget = " ".join(f"{k}x{v}" for k, v in sorted(m["budget"].items())) or "-"
+        print(f"  seed {s:>5}: levels {m['levels_start']}->{m['levels_end']} (low {m['levels_min']}) "
+              f"| planes {m['planes_start']}->{m['planes_end']} (-{m['planes_killed']}) "
+              f"| raids {m['raids']:>3d}  budget spent: {budget}")
     print("\n(the arms diverge in draw COUNT once sunk cargo changes the war -- that is the signal,")
     print(" not the noise. Five seeds is not a distribution: read the sign, not one seed.)\n")
 

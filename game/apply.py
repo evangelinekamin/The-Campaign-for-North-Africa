@@ -405,6 +405,17 @@ def apply(state: GameState, event: Event) -> GameState:
         # boundary: an unfit plane stays unfit until somebody refits it.
         return state.with_air_unfit(p["squadron"], p["unfit"])
 
+    if k == EventKind.MALTA_RAID_ORDERED:
+        # 44.23 / 44.29: one Game-Turn of Axis Strategic Bombardment booked against the Availability
+        # Level he consulted the [44.42] table with -- spent whether he raided or cancelled. A pure
+        # scalar fold onto malta_raids; the damage the raid does rides on 41.36's own events.
+        return state.with_malta_raid(p["level"])
+
+    if k == EventKind.MALTA_PLANES_LOST:
+        # 41.36: "for every level destroyed, remove 10% of the planes on the ground". The generator
+        # has already baked the survivors into `planes`, so apply stays pure and needs no chart.
+        return state.with_malta_planes(p["planes"])
+
     if k == EventKind.SGSU_UNSUPPLIED:
         # 35.14: the SGSU could not draw its own upkeep this Operations Stage, so it "may not repair
         # its planes" -- +1 consecutive stage short. The sibling fold of WATER_SHORTFALL.

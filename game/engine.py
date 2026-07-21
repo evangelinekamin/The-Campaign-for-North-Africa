@@ -16,7 +16,7 @@ from dataclasses import dataclass, replace
 from typing import Protocol
 
 from . import (air, calendar, combat, combat_tables, construction, cp_costs, initiative,
-               logistics_data, stacking, supply, tactics, weather, wells)
+               logistics_data, malta, stacking, supply, tactics, weather, wells)
 from .apply import apply
 from .dice import DiceBox
 from .events import CONTROL_OF, Control, Event, EventKind, Phase, Side
@@ -166,6 +166,10 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
     while not done:
         recalled = _rommel_recall(r)                    # 31 Berlin recall (the ONLY new RNG) -- BEFORE initiative
         _initiative(r, axis_recalled=recalled)          # 5.2 I / 7.14: who holds Initiative this game-turn
+        _malta_construction(r)                          # 44.13/[44.5]: the CW patches the island, once per GT
+        _malta_raid(r, policies)                        # 33 II.B / 44.24: the Axis Strategic Air Phase --
+                                                        # ONE raid per Game-Turn, out of a finite [44.41]
+                                                        # budget, ahead of the turn's convoy traffic (41.0)
         _stores_setup(r)                                # 48 IV: Stores Expenditure + 6% base evaporation
         for stage in (1, 2, 3):
             r.ports_bombed_this_stage = set()            # 55.18: this stage's bomb ledger starts empty
@@ -392,6 +396,112 @@ def _rommel_move(r: _Run, policy: Policy, side: Side) -> None:
 
 # --- phases ------------------------------------------------------------------
 
+def _malta_construction(r: _Run) -> None:
+    """[44.13] / [44.5] THE COMMONWEALTH HALF OF THE MALTA DUEL, once per GAME-TURN.
+
+        44.13 "The initial capacity of Maltese air bases is given in each scenario. It may be
+               increased -- up to the standard levels -- by using the Maltese Air Facility
+               Construction Table (44.5). The Commonwealth Player may use the table ONCE EACH
+               GAME-TURN FOR EACH AIR FACILITY ON MALTA, the table informing the Commonwealth
+               Player how many levels he may construct for each facility. NO SUPPLIES NEED BE
+               EXPENDED."
+
+    One die per repairable facility, in id order, each adding that facility's own charted result
+    (44.5: a 1 gives nothing, 2-5 give one level, a 6 gives two) up to its kind's ceiling. It runs
+    BEFORE the Axis raid and before the turn's convoys, so the island the Axis finds is the island
+    the Commonwealth has just patched, and the damage a raid does stands for the whole Game-Turn's
+    sea traffic -- which is the order the book's Strategic Air Phase implies (41.0: "any Malta
+    bombing missions are resolved immediately, in the Strategic Air Planning Stage", ahead of the
+    Convoy Resolution Phase).
+
+    The repair CEILING is ours and is argued in full at malta.repair_ceiling: the Commonwealth
+    repairs back to the establishment his scenario printed rather than building on to the
+    structural maximum, because the growth path ([34.86] via 34.81A) is untranscribed and building
+    to 28 levels on a die would be a second invented calendar in the place of the one this block
+    exists to delete."""
+    if not malta.in_play(r.state) or not malta.may_construct(*calendar.gt_to_month(r.state.turn)):
+        return
+    for facility in malta.repairable(r.state):
+        die = r.d6("malta")
+        built = min(malta.repair_levels(die), facility.max_level - facility.level,
+                    malta.repair_ceiling(r.state) - malta.capacity(r.state))
+        if built <= 0:                               # 44.5: a die of 1 builds nothing
+            continue
+        r.emit(EventKind.AIR_FACILITY_LEVEL_CHANGED, Side.ALLIED, "ALLIED/Malta",
+               {"facility_id": facility.id, "level": facility.level + built,
+                "strength": 0, "built": built}, rng_draws=(die,))
+
+
+def _malta_raid(r: _Run, policies: dict) -> None:
+    """[44.2] / [44.4] / [41.36] THE AXIS HALF OF THE MALTA DUEL, once per GAME-TURN.
+
+        44.21 "Axis bombers based in Italy/Sicily as well as any African-based Axis planes that can
+               reach the island can raid Malta, BOMBING THE MALTESE AIR FACILITIES to reduce their
+               capability to refit planes."
+        44.24 "Axis Raids on Malta take place in the Strategic Air Phase of the Game-Turn, and thus
+               OCCUR ONLY ONCE PER GAME-TURN. ... The Axis Player chooses the planes in the game he
+               wishes to bomb Malta with by consulting the portion of the Malta Availability Table
+               of his choice (44.23)."
+        44.29 "The Axis Player may, after rolling on the Table, decide not to raid. The raid is
+               cancelled, BUT HE STILL HAS USED THE TABLE HE ROLLED FOR ONCE."
+
+    The Availability Level is the Axis policy's decision (Policy.malta_raid) and the budget it is
+    drawn from is finite and printed: [44.41]'s campaign row via 64.52, I unlimited / II 25 / III 12
+    / IV 12 Game-Turns. An unavailable Level is refused here rather than trusted -- the same
+    re-validation every order in this engine gets -- and falls back to Level I, which 44.25 makes
+    the do-nothing choice as well ("if, at any time, the Axis Player does not wish to bomb Malta he
+    is considered to have used Level I").
+
+    Two dice on [44.42] then say how much of the Italy/Sicily-based force flies, and the bombs fall
+    on ONE Maltese facility (44.24 assigns squadrons to specific airfields; malta.raid_target picks
+    the fullest) through the [41.5] Airfields row -- the identical resolver an African field is
+    bombed by, because 41.36 is the identical rule. 41.36's second clause then takes 10% of the
+    island's aeroplanes per level destroyed.
+
+    THE BUDGET IS SPENT WHATEVER HAPPENS. A raid the chart grants no forces for (44.42's na), a
+    raid on an island already flat, and a raid the Axis cancels all cost the same one Game-Turn of
+    that Availability Level -- which is what makes the choice of WHEN a real one.
+
+    NOTE WHAT IS DELIBERATELY ABSENT: no AIR_FACILITY_DESTROYED is ever emitted here, however far
+    down a Maltese facility is driven. 36.2/24.76 take an African landing strip or flying-boat
+    facility OFF THE MAP at zero, and 44.12 overrides that for this island alone -- "they are
+    permanent and may never be moved... ALTHOUGH THEY MAY NOT BE DESTROYED, Maltese air facilities
+    may be reduced (by Axis bombing) TO ZERO EFFECTIVENESS." A flattened Malta is a Malta at zero
+    that the [44.5] table can build back."""
+    if not malta.in_play(r.state):
+        return
+    policy = policies[Side.AXIS]
+    level = getattr(policy, "malta_raid", lambda *_: malta.DEFAULT_LEVEL)(r.state)
+    if level not in malta.LEVELS or not malta.available(r.state, level):
+        level = malta.DEFAULT_LEVEL                  # 44.23: the budget is a hard ceiling
+    d1, d2 = r.d6("malta"), r.d6("malta")            # [44.42]: two dice, ADDED (2..12)
+    plan = malta.raid(r.state, level, d1 + d2, r.state.turn)
+    target = malta.raid_target(r.state)
+    actor = "AXIS/Malta"
+    r.emit(EventKind.MALTA_RAID_ORDERED, Side.AXIS, actor,
+           {"level": plan.level, "dice": plan.dice, "in_play_pct": plan.in_play_pct,
+            "strategic_pct": plan.strategic_pct, "planes": plan.planes,
+            "bomb_points": plan.bomb_points, "based": malta.italy_sicily_planes(r.state, r.state.turn),
+            "target": target.id if target else None,
+            "cancelled": plan.planes <= 0 or target is None}, rng_draws=(d1, d2))
+    if plan.planes <= 0 or target is None:           # 44.42 na, or nothing left standing to bomb
+        return
+    b1, b2 = r.d6("malta"), r.d6("malta")            # [41.5]: two dice, read SEQUENTIALLY (41.22)
+    levels = min(_port_bomb_levels(plan.bomb_points, b1, b2), target.level)
+    r.emit(EventKind.AIR_STRIKE_RESOLVED, Side.AXIS, actor,
+           {"arena": "AIRFIELD", "target": target.id, "strength": plan.bomb_points,
+            "levels": levels, "level": target.level - levels}, rng_draws=(b1, b2))
+    if levels <= 0:
+        return
+    r.emit(EventKind.AIR_FACILITY_LEVEL_CHANGED, Side.AXIS, actor,
+           {"facility_id": target.id, "level": target.level - levels,
+            "strength": plan.bomb_points})
+    lost = malta.planes_lost(r.state, levels)        # 41.36: 10% of the planes on the ground / level
+    if lost > 0:
+        r.emit(EventKind.MALTA_PLANES_LOST, Side.AXIS, actor,
+               {"lost": lost, "planes": r.state.malta_planes - lost, "levels": levels})
+
+
 def _reinforcements(r: _Run) -> None:
     """Bring on any units scheduled to enter this game-turn (rule 20). Each is
     already in state at its entry hex but dormant (off-map, state.on_map) until its
@@ -438,15 +548,22 @@ def _interdiction_for(state: GameState, convoy):
     return None
 
 
-def _convoy_loss_pct(bomb_points: int, d1: int, d2: int) -> int:
-    """[41.66] resolve one convoy-bombing attack on the [41.5] Air Bombardment CRT: pick the
-    Bomb-Point column, read the two dice SEQUENTIALLY as a two-digit code (tens=d1, units=d2),
-    and return the tens-of-percent of cargo lost. Bomb Points below the table's floor never
-    damage a convoy (returns 0)."""
+def _convoy_loss_pct(points: int, d1: int, d2: int, weapon: str = "bomb") -> int:
+    """[41.66] resolve one convoy attack on the [41.5] Air Bombardment CRT: pick the column, read
+    the two dice SEQUENTIALLY as a two-digit code (tens=d1, units=d2), and return the tens-of-
+    percent of cargo lost. Points below the table's floor never damage a convoy (returns 0).
+
+    `weapon` chooses WHICH INDEX SCALE the same eleven result columns are entered through. The
+    foldout prints three side by side -- Torpedo Points, Barrage Points, Bomb Points -- and the
+    choice is a property of the aircraft, not of the target: [4.44A] gives the Swordfish Mk. I that
+    flies Malta's convoy strike a Bombload Capacity of "-" and a Torpedo Capacity of 8, so its
+    attack has no reading at all on the Bomb-Point scale (41.17 permits the torpedo: "torpedoes may
+    be used only against ships and ports")."""
+    key = f"{weapon}_points"
     code = d1 * 10 + d2
     for col in logistics_data.convoy_bombing_crt_41_66():
-        lo, hi = col["bomb_points"]
-        if bomb_points >= lo and (hi is None or bomb_points <= hi):
+        lo, hi = col[key]
+        if points >= lo and (hi is None or points <= hi):
             for entry in col["results"]:
                 dlo, dhi = entry["die"]
                 if dlo <= code <= dhi:
@@ -486,6 +603,18 @@ def _apply_convoy_loss(cargo: dict, pct: int) -> tuple[dict, int]:
     return reduced, tons_lost
 
 
+def _interdiction_strength(state: GameState, order) -> tuple[int, str]:
+    """How hard this interdiction hits, and with what -- (points, weapon) for the [41.5] column
+    lookup. A plain scheduled order carries its own Bomb Points; a MALTA-sourced one (rule 44)
+    has none to carry, because the strength of the Maltese effort is a LIVE fact about the island:
+    its current Capacity Levels, 18 planes per level (44.14), the strike aircraft that survive on
+    it, and the Torpedo Capacity of 8 those aircraft actually fly with ([4.44A]). This one branch
+    is the whole difference between a Malta that is a rule and the calendar it replaced."""
+    if order.source == "malta":
+        return malta.convoy_column_points(state)
+    return order.bomb_points, "bomb"
+
+
 def _interdict(convoy, state: GameState, rng):
     """The interdiction worker shared by interdict() and _naval_convoys: returns
     (reduced_cargo, order|None, pct_lost, tons_lost, dice). Draws the two [41.66] CRT dice on
@@ -504,8 +633,9 @@ def _interdict(convoy, state: GameState, rng):
     order = _interdiction_for(state, convoy)
     if order is None:
         return dict(convoy.cargo), None, 0, 0, ()
+    points, weapon = _interdiction_strength(state, order)
     d1, d2 = rng.randint(1, 6), rng.randint(1, 6)      # 41.66: two dice, read sequentially
-    pct = _convoy_loss_pct(order.bomb_points, d1, d2)
+    pct = _convoy_loss_pct(points, d1, d2, weapon)
     reduced, tons_lost = _apply_convoy_loss(convoy.cargo, pct)
     return reduced, order, pct, tons_lost, (d1, d2)
 

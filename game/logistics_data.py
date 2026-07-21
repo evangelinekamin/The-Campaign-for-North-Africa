@@ -313,3 +313,65 @@ def squadron_capacity_35_23() -> dict:
     the Commonwealth rows; the unapplied one sits beside it in the data file under
     `rule_text_35_23_unapplied` with the owner ruling written out. See air.squadron_capacity."""
     return _data()["squadron_capacity_35_23"]["nationalities"]
+
+
+# --- [44.0] MALTA -------------------------------------------------------------------------------
+# A SECOND data file, and deliberately so: rule 44's charts are neither logistics rates nor an
+# order of battle, and one of them (the printed Maltese air facilities) does not come out of the
+# rulebook at all -- it comes off the game-map. They live together in data/malta_44.json with their
+# provenance attached, and game.malta is the only reader.
+
+_MALTA_PATH = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "..", "data", "malta_44.json"))
+
+
+@lru_cache(maxsize=1)
+def _malta() -> dict:
+    with open(_MALTA_PATH) as f:
+        return json.load(f)
+
+
+def malta_facilities_44_12() -> list:
+    """[44.12] The Maltese air facilities as PRINTED ON THE GAME-MAP -- name, hex label, kind and
+    charted maximum Capacity Level. Read off the map image, not the rulebook (the book charts no
+    Malta facility anywhere); the data file carries that provenance and the cross-check that every
+    printed maximum equals its kind's rulebook ceiling."""
+    return _malta()["air_facilities_44_12"]["facilities"]
+
+
+def malta_planes_per_level_44_14() -> int:
+    """[44.14] "Each 'level' of air facility can handle up to 18 planes of any type." """
+    return _malta()["planes_per_level_44_14"]["planes"]
+
+
+def malta_setup_60_46() -> dict:
+    """[60.46] The campaign's Malta set-up (64.3 sends the full campaign to Section 60): the
+    initial total `capacity_levels`, the month `construction_begins`, the printed `planes` roster
+    and the `strike_weapon` block naming Malta's anti-shipping type and its per-plane points."""
+    return _malta()["initial_setup_60_46"]
+
+
+def malta_construction_table_44_5() -> dict:
+    """[44.5] MALTESE AIR FACILITY CONSTRUCTION TABLE: die face (as a string) -> the number of
+    Capacity Levels repaired and/or constructed. One roll per Malta facility per Game-Turn."""
+    return _malta()["construction_table_44_5"]["die"]
+
+
+def malta_commitment_44_41(scenario: str = "campaign_64") -> dict:
+    """[44.41] AXIS STRATEGIC AIRFORCE COMMITMENT CHART, one scenario row: Availability Level
+    ("I".."IV") -> the number of Game-Turns it may be used, None for the chart's U (unlimited) and
+    0 for its na. [64.52] sends both campaign games to the campaign row."""
+    return _malta()["strategic_commitment_44_41"]["rows"][scenario]
+
+
+def malta_availability_44_42() -> dict:
+    """[44.42] AXIS MALTA AVAILABILITY TABLE: the two-dice total (as a string, 2..12) -> Level ->
+    [in-play %, strategic %], or None for the chart's na."""
+    return _malta()["availability_table_44_42"]["dice"]
+
+
+def malta_italy_sicily_basing_43_1() -> dict:
+    """[43.12]/[43.13] The percentage of the Axis bomber force based in Italy/Sicily -- the base
+    [44.42]'s percentages are percentages OF. Carries `before_turn_35_pct`, `from_turn_35_pct` and
+    the `change_turn` the two printed cases meet at."""
+    return _malta()["italy_sicily_basing_43_1"]

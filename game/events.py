@@ -407,6 +407,24 @@ class EventKind(str, Enum):
     AIR_SQUADRON_UNFIT = "AIR_SQUADRON_UNFIT"
     AIR_REFIT_RESOLVED = "AIR_REFIT_RESOLVED"
     AIR_REFIT_DENIED = "AIR_REFIT_DENIED"
+    # [44.0] MALTA -- the island as a place with health (game.malta), once per GAME-TURN.
+    #
+    # MALTA_RAID_ORDERED {level, dice, in_play_pct, strategic_pct, planes, bomb_points, based,
+    # target, cancelled} (rng_draws=(d1,d2)) is the Axis's [44.42] consultation and the ONLY fold
+    # onto GameState.malta_raids: it books one Game-Turn against the Availability Level he
+    # committed, spent "regardless of whether he cancels or not" (44.29). What the raid then DOES
+    # to the island rides on the events rule 41.36 already has -- AIR_STRIKE_RESOLVED with
+    # arena="AIRFIELD" for the [41.5] roll and AIR_FACILITY_LEVEL_CHANGED for the levels lost --
+    # so the Maltese fields are damaged by exactly the same path as an African one.
+    #
+    # MALTA_PLANES_LOST {lost, planes, levels} is 41.36's second clause, "for every level destroyed,
+    # remove 10% of the planes on the ground", folding onto GameState.malta_planes alone. There is
+    # no counter and no TOE in it, so conservation, stacking and supply are untouched.
+    #
+    # Both are absent from every scenario that seeds no island (state.malta_planes defaults to 0
+    # and game.malta.in_play is False), which is what keeps the two benchmarks byte-identical.
+    MALTA_RAID_ORDERED = "MALTA_RAID_ORDERED"
+    MALTA_PLANES_LOST = "MALTA_PLANES_LOST"
     # Commonwealth off-shore naval bombardment (rule 30.2). NAVAL_BOMBARDMENT {ship_id, target,
     # actual, target_class, target_unit, pinned, loss, half} (rng_draws=(d1,d2)) feeds a ship's
     # Gun Rating as Actual Barrage Points into the 12.6 CRT with NO ammo draw (30.22): the Pin
