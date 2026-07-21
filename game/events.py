@@ -390,7 +390,11 @@ class EventKind(str, Enum):
     # Operations Stage, modified by 38.35's serviceability DRMs (+2 Italian, +1 German), read on the
     # transcribed table as the PERCENTAGE of the planes undergoing refit that came back (round up).
     # The 38.36 Stores Point it costs -- "whether successful or not" -- rides the existing
-    # SUPPLY_CONSUMED off the 36.17 air-facility dump, so no new conservation path exists.
+    # SUPPLY_CONSUMED off the 36.17 air-facility dump, so no new conservation path exists. NOTE the
+    # rest of that case, which this engine does NOT model: "A Player is not required to try to refit
+    # any plane; THE CHOICE TO REFIT OR NOT IS UP TO HIM." Every squadron with an unfit plane
+    # attempts, every stage, and pays -- our default, flagged at engine._air_maintenance, not the
+    # book's law.
     #
     # AIR_REFIT_DENIED {squadron, arena, role, undergoing, reason} is the refusal, a marker folding
     # to identity: 'no_sgsu' when no Squadron Ground Support Unit may work ("SGSUs without the

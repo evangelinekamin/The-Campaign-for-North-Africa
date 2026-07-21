@@ -22,6 +22,8 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import game.air as air
@@ -60,6 +62,13 @@ def test_the_refit_table_is_the_chart_on_page_10_of_the_scan():
     # proof that 38.34's "throws one die" is a d6: 6 + 2 (Italian SGSU) + 1 (foreign squadron) = 9
     mods = aircraft_refit_table_38_37()["modifiers"]
     assert 6 + mods["italian_sgsu"] + mods["foreign_squadron"] == 9
+    # a roll off the printed table FAILS LOUD rather than clamping to the nearest column. Nothing
+    # can produce one today (one d6 plus the two modelled DRMs spans 1..8), which is exactly why
+    # the silent clamp that used to sit here was unreachable dead code -- and why it would have
+    # started answering 33% to a roll of 10 the day 35.17/38.33's foreign-squadron +1 lands.
+    for off_table in (0, 10):
+        with pytest.raises(ValueError):
+            air.refit_percent(off_table)
 
 
 def test_38_35_the_serviceability_modifiers_are_the_axis_unserviceability():
@@ -98,11 +107,48 @@ def test_the_squadron_capacity_chart_is_transcribed():
         == (18, 6)
     for row in chart.values():
         assert row["ready"] + row["reserve"] == row["total"]
-    # 38.33 reads the Total, and the Commonwealth squadron grows mid-war
-    assert air.squadron_capacity("IT", 1941) == 12
-    assert air.squadron_capacity("GE", 1941) == 16
-    assert air.squadron_capacity("CW", 1941) == 16
-    assert air.squadron_capacity("CW", 1942) == 24
+    # 38.33 reads the Total. The undated rows ignore the date; the Commonwealth rows are chosen by
+    # the span each carries, which is transcribed WITH the chart and not decided in engine code.
+    assert air.squadron_capacity("IT", 1941, 7) == 12
+    assert air.squadron_capacity("GE", 1941, 7) == 16
+    assert air.squadron_capacity("CW", 1940, 9) == 16
+    assert air.squadron_capacity("CW", 1941, 12) == 16
+    assert air.squadron_capacity("CW", 1942, 1) == 24
+    # off the printed spans is a loud failure, not the nearest row (the chart runs 1940-43 because
+    # that is the war)
+    with pytest.raises(ValueError):
+        air.squadron_capacity("CW", 1944, 1)
+
+
+def test_35_23_owner_ruling_the_book_prints_this_chart_twice_and_they_disagree():
+    """OWNER RULING NEEDED, recorded rather than decided (the 54.17 class). BOTH printings were
+    rendered at 300 dpi and read with eyes:
+
+      the play aid, PDF p.105:  Commonwealth Squadron (1940-41)       12  4  16
+                                Commonwealth Squadron (1942-43)       18  6  24
+      case 35.23, PDF p.53:     Commonwealth Squadron (1940-June '41) 15  5  (20 total)
+                                Commonwealth Squadron (July 41-43)    18  6  (24 total)
+
+    plus the rule text's own prose, "Players will note that starting with July 1941 Commonwealth
+    Squadrons increase their capacity". So the two disagree about the early-war capacity (16 v 20)
+    AND about when it grows (January 1942 v July 1941). The engine applies the play aid pending the
+    ruling; this test pins the fact that the OTHER printing is transcribed verbatim beside it and
+    that nothing reads it -- so the ruling is a switch, not a re-transcription. It binds nothing
+    today (proxy squadrons are 1-2 aeroplanes) and binds everything at 34.6/59.3."""
+    from game.logistics_data import _data
+    disputed = _data()["squadron_capacity_35_23"]["rule_text_35_23_unapplied"]
+    early = disputed["commonwealth_1940_june_41"]
+    assert (early["ready"], early["reserve"], early["total"]) == (15, 5, 20)
+    assert tuple(early["to"]) == (1941, 6)              # "June '41", not December
+    late = disputed["commonwealth_july_41_43"]
+    assert (late["ready"], late["reserve"], late["total"]) == (18, 6, 24)
+    assert tuple(late["from"]) == (1941, 7)             # the prose's "starting with July 1941"
+    # the applied reading is the other one, and July 1941 is exactly where they part company
+    assert air.squadron_capacity("CW", 1941, 7) == 16 and early["total"] == 20
+    # the Italian and German rows are identical in both printings, so they are not in dispute
+    assert squadron_capacity_35_23()["italian"]["total"] == 12
+    assert squadron_capacity_35_23()["german"]["total"] == 16
+    assert not [k for k in disputed if k.startswith(("italian", "german"))]
 
 
 # --- fixtures ---------------------------------------------------------------------------------
@@ -258,6 +304,26 @@ def test_38_36_one_stores_point_per_attempt_whether_it_succeeds_or_not():
         assert r.state.supply("AF-Sup").stores == 98
 
 
+def test_38_36_the_choice_not_to_refit_is_not_modelled_and_that_is_our_default():
+    """FLAGGED JUDGEMENT CALL, recorded in a test rather than in a comment alone. Case 38.36 does
+    not end at the Stores Point -- its second sentence is "A PLAYER IS NOT REQUIRED TO TRY TO REFIT
+    ANY PLANE; THE CHOICE TO REFIT OR NOT IS UP TO HIM." This engine has no order channel through
+    which a Policy could decline (33 IV.F.7 is a Player segment, and ours is a SYSTEM beat), so
+    EVERY squadron with an unfit plane attempts every Operations Stage and pays.
+
+    The cost is real and is asserted here: a squadron whose airfield has no FUEL left cannot fly
+    whatever the mechanics do, yet the beat still spends a Stores Point on it -- a bill no Player
+    would pay, drawn out of the same finite 36.17 pot whose exhaustion is the standing 5.1 owner
+    ruling. So the drain on the air dump must not be attributed wholly to 35.14's upkeep."""
+    st = _state(unfit={AXIS_STRIKE: 2}, supplies=[_dump(fuel=0, stores=5)])
+    assert air.refuel(st, Side.AXIS, "strike", 6).points == 0      # 38.21: it cannot fly at all
+    r = _Run(st)
+    _pin_die(r, 1)
+    _air_maintenance(r)
+    assert [e.payload["qty"] for e in r.events if e.kind == EventKind.SUPPLY_CONSUMED] == [1]
+    assert r.state.supply("AF-Sup").stores == 4                    # paid anyway
+
+
 def test_38_36_without_the_stores_point_there_is_no_attempt_and_no_die():
     st = _state(unfit={AXIS_STRIKE: 2}, supplies=[_dump(stores=0)])
     r = _Run(st)
@@ -315,8 +381,13 @@ def test_38_23_the_sgsus_allowance_is_shared_across_the_squadrons_it_works():
     """"An Italian SGSU can handle refueling chores for a total of 12 planes, REGARDLESS OF SQUADRON
     ASSIGNMENT, in a given Operations Stage" (38.23), and 38.33 gives refitting the same allowance.
     So it is ONE budget per counter per stage, not a fresh 12 for every squadron it touches: with a
-    single Squadriglia on the field, the strike squadron takes all twelve and the recon squadron is
-    turned away until another SGSU can work."""
+    single Squadriglia on the field, the FIRST squadron the beat reaches takes all twelve and the
+    other is turned away until another SGSU can work.
+
+    Which one is first is engine._REFITTABLE_ROLES's fixed ("recon", "strike") order, so it is
+    pinned exactly -- an earlier version of this test accepted either order, which would have stayed
+    green if the role order silently flipped, in a file whose whole subject is a conditional die in
+    a per-subsystem stream."""
     st = _state(strike=100, recon=30, unfit={AXIS_STRIKE: 20, "AXIS/LAND/recon": 20})
     r = _Run(st)
     _pin_die(r, 1)
@@ -324,8 +395,7 @@ def test_38_23_the_sgsus_allowance_is_shared_across_the_squadrons_it_works():
     got = [(e.payload["role"], e.payload.get("attempting"), e.payload.get("reason"))
            for e in r.events
            if e.kind in (EventKind.AIR_REFIT_RESOLVED, EventKind.AIR_REFIT_DENIED)]
-    assert got == [("recon", None, "sgsu_capacity"), ("strike", 12, None)] \
-        or got == [("recon", 12, None), ("strike", None, "sgsu_capacity")]
+    assert got == [("recon", 12, None), ("strike", None, "sgsu_capacity")]
     # and a second SGSU on a field with room for it works the squadron the first could not
     st2 = _state(strike=100, recon=30, units=[_sgsu("SGSU-A"), _sgsu("SGSU-B")],
                  unfit={AXIS_STRIKE: 20, "AXIS/LAND/recon": 20})
@@ -408,20 +478,50 @@ def test_the_campaign_refits_and_the_ledger_is_replayable():
               and e.actor.endswith("/Air") and e.payload["commodity"] == supply.STORES]
     assert len(stores) == len(refits)
     assert {e.payload["supply_id"] for e in stores} <= air_dumps
-    # 38.35: the modifier each roll carries is the nationality of the SGSU that did the work, and
-    # the campaign's are the charted ones -- [60.32]'s Italian SGSUs in Libya, [60.42]'s
-    # Commonwealth in Egypt. So the Axis rolls at +2 all war and the Eighth Army's air force at +0.
+    # 38.35: the modifier each roll carries is the nationality of the SGSU that did the work.
     assert {(e.side, e.payload["nationality"], e.payload["drm"]) for e in refits} \
         == {(Side.ALLIED, "CW", 0)}
     # ONLY the Commonwealth refits over these three turns, and that is the schedule rather than a
     # bug -- the same fact test_air_fuel records about the fuel bill. In September 1940 the Axis
     # HOLDS Tobruk, so _air_port refuses its half of the symmetric duel ("never bomb your own
-    # harbour"); it flies nothing, so nothing of its goes unfit and nothing needs refitting. It
-    # starts paying the game-turn the fortress changes hands, at [60.32]'s Italian SGSUs and +2.
+    # harbour"); it flies nothing, so nothing of its goes unfit and nothing needs refitting.
     assert {e.side for e in refits} == {Side.ALLIED}
-    assert air.refit_drm("IT") == 2
     assert fold(res.initial, res.events) == res.final
     check(res.final)
+
+
+def test_owner_ruling_the_campaign_axis_refits_at_2_because_no_german_sgsu_was_transcribed():
+    """OWNER RULING NEEDED, pinned here so the fact cannot quietly become a rule.
+
+    The [38.37] modifier this engine applies is the refitting SGSU counter's nationality, and every
+    Axis SGSU the campaign fields is ITALIAN -- not because the book charts Italian ground crews for
+    the Deutsches Afrikakorps, but because game.oob seeds the Axis pool from [60.32] "Italian SGSU
+    Available: 39" (Scenario Group One, the Italians, Sept 1940 - Feb 1941) and NO German SGSU
+    availability is transcribed for the campaign anywhere. So the Luftwaffe's Staffeln -- the engine
+    flies Bf. 109Es, Ju. 87Bs and Hs. 126s for the Axis -- are refitted all war at the ITALIAN +2,
+    where under EITHER side of the chart-versus-prose subject dispute a German squadron worked by
+    its own German ground crew would take +1 ([38.37] "German Squadron Ground Support Unit add 1";
+    38.35 "if the planes are German, add one").
+
+    An earlier version of this test asserted the opposite -- that "the campaign's are the charted
+    ones ... so the Axis rolls at +2 all war" -- citing [60.32]. [60.32] charts NOTHING about
+    1941-42 Axis air, and the +2 is an artefact of a counter that was never transcribed. It is worth
+    about a sixth of the Axis air force (48.6% realised refit against ~56.7%), which is why it is a
+    ruling and not a footnote. The book does chart German SGSUs, but only in the later scenario
+    groups (docs/rules/62:311 = 33; docs/rules/63:289/313 = 21 and 27) and [61]:162 prints no count
+    at all, so there is no campaign schedule to transcribe and none has been invented."""
+    st = campaign(seed=4)
+    sgsus = [u for u in st.units if supply.is_sgsu(u)]
+    assert sgsus                                                # both sides do field ground crews
+    assert {u.nationality for u in sgsus if u.side == Side.AXIS} == {"IT"}
+    assert {u.nationality for u in sgsus if u.side == Side.ALLIED} == {"CW"}
+    assert not [u for u in sgsus if u.nationality == "GE"]      # THE GAP, pinned
+    # the Axis flies German aeroplanes and refits them at the ITALIAN modifier
+    assert air.AIRCRAFT[air.REPRESENTATIVE_AIRCRAFT[(Side.AXIS, "strike")]]["nation"] == "german"
+    assert air.refit_drm("IT") == 2 and air.refit_drm("GE") == 1
+    # and the difference is the size of the ruling: mean realised refit over a fair d6
+    mean = lambda drm: sum(air.refit_percent(d + drm) for d in range(1, 7)) / 6
+    assert round(mean(2), 1) == 48.8 and round(mean(1), 1) == 56.7
 
 
 def test_the_campaign_is_deterministic_with_the_refit_die_in_the_stream():

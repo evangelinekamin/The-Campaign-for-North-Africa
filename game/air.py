@@ -75,6 +75,17 @@ AND THREE MORE, NAMED HERE BECAUSE THEY ARE EASY TO MISTAKE FOR BUILT:
     air force nobody resupplies; the missing piece is the resupply, not the rule. **It is the
     binding constraint on Phase 5.4: Malta cannot be a lever pulled by an air force that stops
     flying in 1941.**
+
+    CORRECTION, 2026-07-21 (the 5.3 repair pass): 35.14 is NOT the whole of that drain, and the
+    5.3 commit's attribution of it was too clean. 38.36 charges a Stores Point for every refit
+    ATTEMPT, and this engine attempts for every squadron with an unfit plane every Operations
+    Stage because the rest of that case -- "A PLAYER IS NOT REQUIRED TO TRY TO REFIT ANY PLANE;
+    THE CHOICE TO REFIT OR NOT IS UP TO HIM" -- has no order channel to route it through
+    (flagged at engine._air_maintenance). MEASURED over the full campaign, Stores drawn out of
+    the air-facility dumps: seed 7 Commonwealth 33 on compulsory refit attempts against 18 on
+    35.14 upkeep -- the larger half of its drain; seed 4 Axis 28 against 73, Commonwealth 7
+    against 46. So OUR default is a co-driver of the exhaustion, worth between a quarter and two
+    thirds of it, and the owner ruling should be read with that in it.
 """
 from __future__ import annotations
 
@@ -517,9 +528,12 @@ SQUADRON_CAPACITY = logistics_data.squadron_capacity_35_23()
 # modifier for at all.
 _REFIT_DRM_KEY: dict[str, str] = {"IT": "italian_sgsu", "GE": "german_sgsu"}
 
-# [35.23] the Commonwealth squadron grows mid-war; the other two rows do not.
-_CW_LARGER_SQUADRON_FROM_YEAR = 1942
 _CAPACITY_KEY: dict[str, str] = {"IT": "italian", "GE": "german"}
+
+# [38.36] "For every squadron undergoing an attempted refit -- whether successful or not -- the
+# Player must have present and actually EXPEND ONE STORES POINT." The rule's own quantity, named
+# here beside the 35.14 upkeep rates rather than left inline at the point of expenditure.
+REFIT_STORES_PER_ATTEMPT = 1
 
 
 def refit_drm(nationality: str) -> int:
@@ -527,12 +541,27 @@ def refit_drm(nationality: str) -> int:
     refit die: +2 Italian, +1 German, none Commonwealth. A HIGHER modified roll is a WORSE result
     on the table, so these two numbers ARE the Axis's chronic unserviceability.
 
-    ⚠ THE CHART AND THE CASE NAME DIFFERENT SUBJECTS, and the data file records it at length: the
-    chart modifies for the SGSU's nationality, 38.35's prose for the PLANES'. They coincide whenever
-    a squadron is worked by its own SGSU -- the book's normal case (38.0) and the only case this
-    engine has, since no roster bases planes away from their own SGSU until 34.72. We read the SGSU,
-    because that is a transcribed counter ([60.32] "Italian SGSU Available: 39") while the plane TYPE
-    is game.air's own flagged representative-aircraft proxy, and a proxy must not decide a rule.
+    ⚠⚠ TWO OWNER RULINGS RIDE ON THIS FUNCTION. Both are written out in full in the data file
+    (aircraft_refit_38_37.by_squadron.modifiers), and neither is decided here.
+
+    1. THE CHART AND THE CASE NAME DIFFERENT SUBJECTS: the chart modifies for the refitting SGSU's
+       nationality, 38.35's prose for the PLANES'. These do NOT merely differ in cases this engine
+       cannot reach -- [35.28] licenses "Italian squadrons ... entirely of German planes", so an
+       Italian Squadriglia worked by its OWN Italian SGSU reads +2 on the chart and +1 in the prose.
+       The book contradicts itself in its own normal case. We read the SGSU counter (the chart's
+       subject, and a transcribed fact) rather than the plane type (game.air's flagged
+       representative-aircraft proxy) -- but that is a choice, not a coincidence.
+
+    2. AND IN THE CAMPAIGN THE CHOICE IS MADE BY A COUNTER THAT WAS NEVER TRANSCRIBED. The campaign
+       order of battle holds SEVEN Axis SGSUs, all Italian ([60.32] "Italian SGSU Available: 39",
+       Scenario Group One, Sept 1940 - Feb 1941) and NO German one, because no German SGSU
+       availability is transcribed for the campaign at all (game.oob.seed_sgsus carries the same
+       flag). So the Luftwaffe's Staffeln -- the Bf. 109E / Ju. 87B / Hs. 126 of
+       REPRESENTATIVE_AIRCRAFT -- are refitted all war at the ITALIAN +2, when under EITHER reading
+       above a German squadron worked by its own German ground crew takes +1. THE +2 THE AXIS ROLLS
+       AT IN THIS ENGINE IS THEREFORE AN ARTEFACT OF A MISSING COUNTER, NOT A PRINTED FACT ABOUT THE
+       GERMAN AIR FORCE, and it is worth about a sixth of the Axis air force (realised refit 48.6%
+       at +2 against ~56.7% at +1). The 5.3 commit message called it "the printed size"; it is not.
 
     NOT modelled, and the same flag air.may_refit already carries: the chart's third modifier, +1 for
     "planes attempting refit not assigned to [the] Squadron Ground Support Unit attempting refit".
@@ -547,14 +576,16 @@ def refit_percent(roll: int) -> int:
     1->100, 2->80, 3->70, 4->60, 5->50, 6,7->40, 8,9->33. Read off the transcribed columns.
 
     One d6 plus the chart's own modifiers spans exactly the printed 1..9 (6 + 2 Italian + 1 foreign
-    = 9), so no roll can fall outside the table; a roll that somehow did is clamped to the nearest
-    printed end rather than inventing a column."""
-    columns = REFIT_TABLE["columns"]
-    for col in columns:
+    = 9), so no roll can fall outside the table. A roll that somehow did is a ValueError, NOT a
+    clamp: this file's house rule twenty lines from its top is that an unknown key fails loud rather
+    than silently answering (see _POINTS_PER_PLANE_RATING, read with [] and never .get()). The
+    clamp this replaces would have answered 33% to a roll of 10 the day 35.17/38.33's +1
+    foreign-squadron modifier lands and pushes the span past the printed table."""
+    for col in REFIT_TABLE["columns"]:
         lo, hi = col["die"]
         if lo <= roll <= hi:
             return col["pct_refitted"]
-    return columns[0]["pct_refitted"] if roll < columns[0]["die"][0] else columns[-1]["pct_refitted"]
+    raise ValueError(f"[38.37] modified refit roll {roll} is off the printed table (1..9)")
 
 
 def refitted_planes(undergoing: int, roll: int) -> int:
@@ -565,15 +596,36 @@ def refitted_planes(undergoing: int, roll: int) -> int:
     return -(-undergoing * refit_percent(roll) // 100)      # ceil, in integers
 
 
-def squadron_capacity(nationality: str, year: int) -> int:
+def squadron_capacity(nationality: str, year: int, month: int) -> int:
     """[35.23]/[38.33] The most planes ONE Squadron Ground Support Unit may refit: its squadron's
     charted Ready plus Reserve -- "each SGSU can refit up to the maximum planes the SGSU can contain
-    (Ready plus Reserve)". Italian 12, German 16, Commonwealth 16 in 1940-41 and 24 from 1942."""
+    (Ready plus Reserve)". Italian 12 and German 16 undated; the Commonwealth squadron GROWS, so its
+    row is chosen by the Game-Turn's (year, month).
+
+    THE DATING IS TRANSCRIBED, NOT INFERRED HERE. Each Commonwealth row in the data file carries the
+    `from`/`to` [year, month] span read off its own printed label, and this function selects the row
+    whose span contains the date -- the boundary is a chart magnitude and lives with the chart. A
+    date outside every printed row is a ValueError rather than a nearest-row guess (the book charts
+    1940-43 because that is the war; nothing should be asking for 1944).
+
+    ⚠ OWNER RULING NEEDED, WRITTEN OUT IN FULL AT squadron_capacity_35_23._owner_ruling_needed IN
+    THE DATA FILE: the book prints this chart TWICE and the two printings disagree about BOTH
+    Commonwealth numbers -- the play aid (PDF p.105) says 12+4=16 for 1940-41 and 18+6=24 from
+    1942-43; case 35.23's own table (PDF p.53) says 15+5=20 for "1940-June '41" and 18+6=24 from
+    "July 41-43", with the prose "starting with July 1941 Commonwealth Squadrons increase their
+    capacity". BOTH were rendered and read with eyes. We apply the play aid pending the ruling,
+    because every other 5.3 magnitude came off that same chart box; the rule-text printing is
+    transcribed verbatim beside it under `rule_text_35_23_unapplied` and nothing reads it. The
+    Italian and German rows are identical in both printings and are not in dispute."""
     key = _CAPACITY_KEY.get(nationality)
-    if key is None:
-        key = ("commonwealth_1942_43" if year >= _CW_LARGER_SQUADRON_FROM_YEAR
-               else "commonwealth_1940_41")
-    return SQUADRON_CAPACITY[key]["total"]
+    if key is not None:
+        return SQUADRON_CAPACITY[key]["total"]
+    for row in SQUADRON_CAPACITY.values():
+        if "from" not in row:                           # the undated Italian / German rows
+            continue
+        if tuple(row["from"]) <= (year, month) <= tuple(row["to"]):
+            return row["total"]
+    raise ValueError(f"[35.23] no charted Commonwealth squadron capacity for {year}-{month:02d}")
 
 
 def squadron(side: Side, arena: str, role: str) -> str:
@@ -632,12 +684,14 @@ def ready_points(state: GameState, side: Side, arena: str, role: str, points: in
     The cap is taken in planes and read back out in the rating those Air Points are denominated in
     (34.13 TacAir / 34.14 Bombload), never above what was asked for -- the identical arithmetic
     air.refuel uses when a larder fuels only part of a force, because it is the identical question
-    asked of a different shortage."""
+    asked of a different shortage.
+
+    A squadron with NO establishment needs no special case and no longer carries one: its
+    ready_planes is zero, so the cap grounds it -- which is the right answer to "how many of a
+    squadron that has no aeroplanes may fly", not a fallback. (It is also unreachable: the only
+    caller reads its commitment off the same pool, so points > 0 implies an establishment.)"""
     if points <= 0 or not refit_modelled(state, side):
         return points
-    total = squadron_planes(state, side, arena, role)
-    if total <= 0:
-        return points                                   # no establishment to be unfit
     return min(points, ready_planes(state, side, arena, role) * points_per_plane(side, role))
 
 

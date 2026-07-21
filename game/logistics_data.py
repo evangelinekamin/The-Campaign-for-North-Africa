@@ -303,7 +303,13 @@ def aircraft_refit_table_38_37() -> dict:
 
 def squadron_capacity_35_23() -> dict:
     """[35.23] SQUADRON CAPACITY CHART, by nationality key ("italian", "german",
-    "commonwealth_1940_41", "commonwealth_1942_43"): the charted `ready` + `reserve` = `total`.
+    "commonwealth_1940_41", "commonwealth_1942_43"): the charted `ready` + `reserve` = `total`,
+    the dated Commonwealth rows additionally carrying the `from`/`to` [year, month] span read off
+    their own printed labels (the boundary is part of the chart, so it is transcribed with it).
     The total is the cap 38.23 puts on an SGSU's refuelling and 38.33 on its refitting -- "each
-    SGSU can refit up to the maximum planes the SGSU can contain (Ready plus Reserve)"."""
+    SGSU can refit up to the maximum planes the SGSU can contain (Ready plus Reserve)".
+
+    Returns only the APPLIED printing. The book prints this chart twice and the two disagree about
+    the Commonwealth rows; the unapplied one sits beside it in the data file under
+    `rule_text_35_23_unapplied` with the owner ruling written out. See air.squadron_capacity."""
     return _data()["squadron_capacity_35_23"]["nationalities"]

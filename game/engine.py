@@ -1449,9 +1449,21 @@ def _air_unfit(r: _Run, side: Side, arena: str, role: str, points: int) -> None:
 
 def _refit_stores_dump(state: GameState, side: Side):
     """[38.36]/[36.17] The air-facility dump the Stores Point for a refit attempt comes out of: the
-    first of this side's, in id order, that holds one. Pooled across the side's fields for the same
-    reason air.refuel's larder is, and flagged in the same place."""
-    return next((su for su in air.facility_dumps(state, side) if su.stores >= 1), None)
+    first of this side's, in id order, that holds one.
+
+    ⚠ FLAGGED, AND IT IS A LOCALITY DEFECT IN ITS OWN RIGHT, not merely air.refuel's. Both of the
+    rules that meet here are about ONE FIELD: 38.36 says the Player "must have PRESENT and actually
+    expend one Stores Point", and 36.17 makes the pile a property of the individual airfield -- "an
+    airfield is a supply dump for supplies to be used by the SGSUs ON THAT AIRFIELD... any SGSU at
+    an airfield may make use of the supplies THERE". This walk takes the first dump in id order
+    anywhere the SIDE holds a facility, so a Staffel's mechanics can be paid for out of a field
+    hundreds of hexes away -- the identical mis-sourcing air.refuel measured for the fuel bill
+    (38 hexes at campaign(seed=4), past the Stuka's own charted range). It is forced by the same
+    thing: a squadron here is a national (side, arena, role) pool with no base hex of its own. It
+    dissolves with 34.72's Squadron Composition Sheet, and until then a refit is billed to the
+    nation, not to the field."""
+    return next((su for su in air.facility_dumps(state, side)
+                 if su.stores >= air.REFIT_STORES_PER_ATTEMPT), None)
 
 
 def _air_maintenance(r: _Run) -> None:
@@ -1491,12 +1503,33 @@ def _air_maintenance(r: _Run) -> None:
     beat and it is NOT built: it needs planes to be IN a hex, and our Air Points are hexless. Flagged
     here rather than approximated.
 
+    ⚠ 38.36's SECOND SENTENCE IS NOT MODELLED, AND IT IS A JUDGEMENT CALL WITH A COST. The case
+    ends "A PLAYER IS NOT REQUIRED TO TRY TO REFIT ANY PLANE; THE CHOICE TO REFIT OR NOT IS UP TO
+    HIM." This beat attempts a refit for EVERY squadron with an unfit plane, every Operations Stage,
+    and 38.36 charges a Stores Point for each attempt whether it succeeds or not -- so a squadron
+    that cannot fly for want of fuel (AIR_MISSION_GROUNDED fires hundreds of times a campaign) keeps
+    burning the airfield's finite 36.17 Stores on refits no Player would pay for. Auto-attempting is
+    the only thing available -- no order channel routes an air-maintenance decision from a Policy to
+    this beat, and inventing a heuristic for when a staff would decline would be inventing play, not
+    porting a rule -- but it is OUR default, not the book's law, and it is one of the things draining
+    the pot whose exhaustion is the standing 5.1 owner ruling (35.14 has no refill path). MEASURED,
+    the Stores drawn out of the air-facility dumps over a full campaign: at seed 7 the Commonwealth
+    spends 33 on compulsory refit attempts against 18 on 35.14's upkeep, at seed 4 the Axis 28
+    against 73 -- between a quarter and two thirds of the drain is this default. It ends when the air
+    seats can write a maintenance column (33 IV.F.7 is a Player segment, not a system one), and until
+    then the exhaustion must not be attributed wholly to 35.14's upkeep.
+
     NOT modelled, each named where it lands: 38.34's SEPARATE roll for planes refitting at another
     squadron's SGSU, and the +1 that goes with it (38.33/38.35) -- there is no plane-to-SGSU
     assignment to test until 34.72, so every refit here is a squadron's own, which is the permissive
     reading and the one 38.0 calls maximum efficiency; 38.4's arming, a different commodity and a
     different block; and 38.37's optional per-plane method (38.39), transcribed in the data file and
-    deliberately unused. 38.33's plane ALLOWANCE, by contrast, IS modelled -- see `left` below."""
+    deliberately unused. 38.33's plane ALLOWANCE, by contrast, IS modelled -- see `left` below.
+
+    ⚠ AND THE 38.35 MODIFIER THIS BEAT APPLIES TO THE AXIS IS AN ARTEFACT OF A MISSING COUNTER --
+    the campaign fields seven Italian SGSUs and no German one, so the Luftwaffe refits at the
+    Italian +2 where a German Staffel would take +1 under either reading of the rule. Two owner
+    rulings, both written out at game.air.refit_drm and in the data file."""
     if not r.state.air:
         return
     # gather first, emit second: a stage in which no squadron has anything to refit must emit
@@ -1514,7 +1547,10 @@ def _air_maintenance(r: _Run) -> None:
     if not work:
         return
     r.go(Phase.LOGISTICS, Side.SYSTEM)                    # a SYSTEM housekeeping beat, like convoys
-    year, _month = calendar.gt_to_month(r.state.turn)     # [35.23]: the CW squadron grows in 1942
+    # [35.23]: the Commonwealth squadron GROWS mid-war, and which row a date falls in is transcribed
+    # with the chart (air.squadron_capacity), never decided here. Month as well as year, because the
+    # unapplied second printing of the chart dates the change to July 1941 -- see the owner ruling.
+    year, month = calendar.gt_to_month(r.state.turn)
     # 38.33/38.23: each SGSU's work is capped IN PLANES for the whole Operations Stage -- "each SGSU
     # can refit up to the maximum planes the SGSU can contain (Ready plus Reserve)", and 38.23 says
     # the same allowance is spent "regardless of squadron assignment". So it is one shared budget per
@@ -1530,7 +1566,9 @@ def _air_maintenance(r: _Run) -> None:
         # first with allowance left takes the squadron.
         able = air.able_sgsus(r.state, side)
         sgsu = next((u for u in able
-                     if left.setdefault(u.id, air.squadron_capacity(u.nationality, year)) > 0), None)
+                     if left.setdefault(u.id,
+                                        air.squadron_capacity(u.nationality, year, month)) > 0),
+                    None)
         if sgsu is None:
             # no mechanics at all, or every one of them has already spent his stage (38.23/38.33)
             reason = "no_sgsu" if not able else "sgsu_capacity"
@@ -1546,7 +1584,8 @@ def _air_maintenance(r: _Run) -> None:
             continue
         # 38.36: the Point is spent BEFORE the die, and whether the roll succeeds or not
         r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
-               {"supply_id": dump.id, "commodity": supply.STORES, "qty": 1})
+               {"supply_id": dump.id, "commodity": supply.STORES,
+                "qty": air.REFIT_STORES_PER_ATTEMPT})
         left[sgsu.id] -= attempting                       # 38.23/38.33: the mechanics' stage is spent
         die = r.d6("air_refit")
         drm = air.refit_drm(sgsu.nationality)             # 38.35: +2 Italian, +1 German

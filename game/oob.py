@@ -423,7 +423,27 @@ def seed_sgsus(facilities: list[AirFacility], available: dict) -> list[Unit]:
     Used by the full campaign, whose order of battle ships no SGSU counter at all. The Desert Fox
     scenarios are NOT seeded this way: their extraction ships real SGSU counters at their own
     (drifted) hexes, and inventing more beside them would double the squadron bases the scenario
-    charts."""
+    charts.
+
+    ⚠⚠ OWNER RULING NEEDED -- EVERY AXIS SGSU HERE IS ITALIAN, AND SINCE PHASE 5.3 THAT DECIDES A
+    RULE. The nationality below is the label of the pool the counter came out of: the Axis pool is
+    [60.32]'s "Italian SGSU Available: 39" and nothing else, because NO GERMAN SGSU AVAILABILITY IS
+    TRANSCRIBED FOR THE CAMPAIGN AT ALL (grep SGSU over data/reinforcements_campaign.json and
+    data/oob_campaign_extra.json returns nothing). [60.32] is Scenario Group One -- the Italians, 15
+    Sept 1940 to Feb 1941 -- so the campaign runs the whole 1941-42 war on the September-1940
+    Italian ground crews. The book DOES chart German SGSUs for exactly that period, but only inside
+    the later SCENARIO groups (docs/rules/62 line 311 "The Axis Player receives 33 German SGSU's";
+    docs/rules/63 lines 289/313, 21 and 27), while [61] line 162 prints no count at all ("German
+    SGSU's are available as per the Air Game rules"). There is therefore no campaign arrival
+    schedule to transcribe, and writing one would be inventing an order of battle.
+
+    IT IS NOT COSMETIC ANY MORE. Before Phase 5.3 `Unit.nationality` was read by nothing; now
+    engine._air_maintenance reads it for [38.37]'s serviceability modifier, so this literal is what
+    refits the Deutsches Afrikakorps's Staffeln at the ITALIAN +2 for the entire war, where a German
+    SGSU would take +1 -- worth about a sixth of the Axis air force (realised refit 48.6% against
+    ~56.7%). See game.air.refit_drm, which carries the same flag from the other end. The ruling:
+    transcribe a German SGSU availability for the campaign, or state that the Axis refit modifier is
+    uniformly +2 because this order of battle contains no German SGSU counter."""
     stats = _load("unit_stats.json")
     seen: dict[str, int] = {}
     left = dict(available)
