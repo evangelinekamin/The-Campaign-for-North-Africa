@@ -2087,7 +2087,7 @@
     }
   },
   "aircraft_characteristics_4_44": {
-    "_comment": "[4.44A/b/c] AIRCRAFT CHARACTERISTICS CHARTS -- the per-plane ratings rules 34.13/34.14/34.17 name, and the only place the book prints them. TRANSCRIBED HERE: only the SIX types the engine's abstract Air Points are expressed in (three per side; see game/air.REPRESENTATIVE_AIRCRAFT); the rest of the three charts is a per-plane roster job that belongs with the Squadron Composition Sheet (34.72) in Phase 5.3/5.4, and inventing rows we do not use would be transcription for its own sake. EVERY row below was read WITH EYES off the 1979 scan at 300 dpi -- Commonwealth PDF p.112 (fighters) and p.113 (bombers), Axis PDF p.144 (Italian + German fighters) and p.145 (German bombers) -- because the OCR in docs/rules/90-charts is column-shifted in the Commonwealth fighter table (it drops a cell on the Gladiator row and reads the drop-tank variants' Fuel as the Bomb column). CHART DEFINITIONS, verbatim: 'TacAir = Tactical Air Combat Rating. A parenthesized rating indicates that the plane may never be flown on a mission permitting it to initiate air-to-air combat.' (34.13); 'Bomb = Bombload Capacity... in points' (34.14); 'Fuel = Fuel Consumption Rating in the number of Fuel Points the plane requires before it may be flown' (34.17/38.21). A bombload of 0 is the chart's '-' (may not carry bombs). NOTE the book itself prints '-' in the Fuel column of the Gladiator Mk. II -- a misprint we do not need and therefore do not rule on.",
+    "_comment": "[4.44A/b/c] AIRCRAFT CHARACTERISTICS CHARTS -- the per-plane ratings rules 34.13/34.14/34.17 name, and the only place the book prints them. TRANSCRIBED HERE: EVERY TYPE THE [34.6]/[59.3] INITIAL AIR STRENGTHS ACTUALLY FIELD (data/air_establishments.json -- [60.32]'s nine Italian rows, [60.42]'s eleven Commonwealth rows and [60.46]'s four Maltese ones), plus the three German types the engine's earlier six-representative proxy was expressed in and the three types rule 43.11/43.13 names. The rest of the three charts -- the P-40s, the Spitfires, the Wellingtons, the Bf. 109F/G, the types that arrive on the untranscribed [34.86]/[34.87] reinforcement schedules -- is still untranscribed, and each is a row this file gains the day that schedule lands. EVERY row below was read WITH EYES off the 1979 scan at 300-400 dpi -- Commonwealth PDF p.112 (fighters) and p.113 (bombers), Axis PDF p.144 ([4.44b] Italian + [4.44c] German fighters) and p.145 (German bombers) -- because the OCR in docs/rules/90-charts is column-shifted in BOTH the Commonwealth fighter table (it drops a cell on the Gladiator row and reads the drop-tank variants' Fuel as the Bomb column) and the Italian fighter table (it folds the header into the C.R. 32 row and shifts every Italian fighter's ratings up one line). CHART DEFINITIONS, verbatim: 'TacAir = Tactical Air Combat Rating. A parenthesized rating indicates that the plane may never be flown on a mission permitting it to initiate air-to-air combat.' (34.13); 'Bomb = Bombload Capacity and torpedo carrying capability, if any, in points... The number to the left of the stroke is the Bombload Capacity. The number to the right of the T is the Torpedo Capacity.' (34.14); 'Fuel = Fuel Consumption Rating in the number of Fuel Points the plane requires before it may be flown' (34.17/38.21). A bombload of 0 is the chart's '-' (may not carry bombs) and a printed '/T' is carried as a separate `torpedo` key. '**' marks a TRANSFER-mission range (34.11) and such a row is never the applied one. The book prints '-' in the FUEL column of the Gladiator Mk. II, where the key gives that glyph no meaning at all -- transcribed as null and raised as an owner ruling on the row itself.",
     "_comment_mission_capability": "MISSION CAPABILITY -- 'The types of missions the plane may be assigned' (the charts' own definition). Printed as a block of one-letter cells beside every row and transcribed per row below as `mission_capability`. The FIGHTER charts print four columns, F S R D; the BOMBER/flying-boat/transport/reconnaissance charts print D R B Transport. CELL VALUES, verbatim from the two keys: '! = Does possess this capability, but may not be flown on night missions'; 'N = Possesses this mission(s) capability and may be flown on night missions'; 'A = Possesses the missions capability, and in addition may strafe armored vehicles' (Commonwealth key only); 'S = May only Strafe, may not be assigned any bombing missions' (Commonwealth key only, and it appears in the D column -- the Lysander Mk. I); '0 = The Blenheim IVF may be assigned only Night Scramble missions'; does-not-possess is printed '-' on the Axis charts ('- = Does not possess this capability', German key, PDF p.145) and '.' on the Commonwealth ones ('. = Does not possess this mission capability', PDF p.113) -- ONE meaning, two glyphs, NORMALISED TO '-' below. COLUMN MEANINGS, verbatim: 'F = Offensive or Defensive Combat Air Patrol (CAP) or Strafing missions. S = Scramble Mission. R = Reconnaissance (naval and/or land) missions. D = Strafe and/or any type of bombing missions (see B below). B = Axis Naval Convoy and Land Support Bombing missions' (Commonwealth key, PDF p.113) / 'B = Maltese and Land Support Bombing missions' (German key, PDF p.145 -- each side's B names its OWN strategic target plus Land Support). 'Transport = Transport missions.'",
     "_comment_mission_capability_ruling": "THE D-vs-B READING IS A JUDGEMENT CALL AND IT IS FLAGGED. 'D = Strafe and/or any type of bombing missions (see B below)' can be read two ways: (i) D is a SUPERSET -- a D plane strafes AND flies any bombing mission, and '(see B below)' merely points at where the bombing-mission types are enumerated; or (ii) D and B are DISJOINT -- a D plane may not fly the missions listed under B. WE READ (i), on the book's own internal evidence: [41.16] 'dive bombers may strafe and bomb the same target and fighters with bombload capacities may both strafe and bomb a target, IF THEY HAVE A D CAPABILITY' makes D the strafe-AND-bomb marker rather than a bombing-mission whitelist; the Commonwealth key's 'S = May only Strafe, may not be assigned any bombing missions' sits in the D column, which is only coherent if D is the strafe column with a bombing rider; and reading (ii) is refuted by the charts themselves -- on [4.44b] the ONLY German aircraft carrying B is the Ar. 196 flying boat (Bombload 1), so under (ii) neither the Ju. 87B Stuka (D=!) nor the He. 111 (D=N) could fly a Land Support or a Maltese bombing mission and the Luftwaffe's entire bombing of Malta and of the Eighth Army would be flown by flying boats. Under reading (i) B is the pure-bomber cell (bombs, does not strafe), which is what every Commonwealth bomber row carries. Note [41.21]: 'Land support missions are concerned with bombing land installations, PORTS, personnel and equipment' -- so a B plane's Land Support bombing covers the harbour (B-P) and airfield (B-AF) missions the engine flies, as well as B-CU. NOTHING IN THE ENGINE GATES ON THIS TODAY: the column is transcribed so that the roster work of 5.3/5.4 has it, and game.air.mission_capable is the read (a test asserts every representative type possesses the capability its role needs). If the owner rules (ii), the Axis strike representative must change.",
     "aircraft": {
@@ -2119,6 +2119,57 @@
         "mission_capability": {
           "D": "!",
           "R": "-",
+          "B": "-",
+          "Transport": "-"
+        }
+      },
+      "Fw. 200 C": {
+        "_note": "One of the three types [43.11]/[43.13] name (the owner ruled on 2026-07-21 that the rule's 'FW220' is this aeroplane). Transcribed so that the constrained list can bind against a real chart row the day the untranscribed [34.87] Axis Airplane Reinforcement Schedule puts a Condor in the order of battle. PDF p.145, read with eyes.",
+        "nation": "german",
+        "class": "bomber",
+        "range": 205,
+        "tacair": 5,
+        "tacair_parenthesized": true,
+        "maneuver": 21,
+        "bombload": 14,
+        "fuel": 3,
+        "mission_capability": {
+          "D": "!",
+          "R": "!",
+          "B": "-",
+          "Transport": "-"
+        }
+      },
+      "He. 111": {
+        "_note": "Named by [43.11] and [43.13]. Same provenance and same reason as the Fw. 200 C above.",
+        "nation": "german",
+        "class": "bomber",
+        "range": 112,
+        "tacair": 6,
+        "tacair_parenthesized": true,
+        "maneuver": 22,
+        "bombload": 27,
+        "fuel": 3,
+        "mission_capability": {
+          "D": "N",
+          "R": "-",
+          "B": "-",
+          "Transport": "-"
+        }
+      },
+      "Ju. 88D": {
+        "_note": "Named by [43.11] and [43.13]. Same provenance and same reason as the Fw. 200 C above.",
+        "nation": "german",
+        "class": "bomber",
+        "range": 118,
+        "tacair": 5,
+        "tacair_parenthesized": true,
+        "maneuver": 25,
+        "bombload": 33,
+        "fuel": 2,
+        "mission_capability": {
+          "D": "!",
+          "R": "!",
           "B": "-",
           "Transport": "-"
         }
@@ -2183,6 +2234,332 @@
         "mission_capability": {
           "D": "-",
           "R": "-",
+          "B": "!",
+          "Transport": "-"
+        }
+      },
+      "Blenheim Mk. IV": {
+        "nation": "commonwealth",
+        "class": "bomber",
+        "range": 131,
+        "tacair": 3,
+        "tacair_parenthesized": true,
+        "maneuver": 21,
+        "bombload": 6,
+        "fuel": 3,
+        "mission_capability": {
+          "D": "-",
+          "R": "-",
+          "B": "!",
+          "Transport": "-"
+        }
+      },
+      "Blenheim Mk. IVF": {
+        "nation": "commonwealth",
+        "class": "fighter",
+        "range": 146,
+        "tacair": 5,
+        "tacair_parenthesized": false,
+        "maneuver": 30,
+        "bombload": 0,
+        "fuel": 3,
+        "mission_capability": {
+          "F": "N",
+          "S": "0",
+          "R": "-",
+          "D": "-"
+        }
+      },
+      "Bombay Mk. I": {
+        "_readying_34_12": "THE CHART PRINTS TWO ROWS FOR THIS AIRCRAFT and 34.12 makes the choice the owner's: 'Certain aircraft have more than one listed Range, usually as a result of an increased fuel capacity or bombload. PLAYERS ARE FREE TO CHOOSE WHICHEVER RANGE LOAD THEY WISH.' Row one is 'Bombay Mk. I 203** (1) 6 - 2 . . . . Bristol' and the chart's key defines '** = The range if being flown on a TRANSFER mission (remember to double this number)', so row one is the ferry configuration and carries no mission capability at all. Row two -- 'or 88 (1) 5 10 2 . . ! 1 or 10 tons' -- is the operational one and is the row applied below; both are transcribed verbatim under readying_options.",
+        "nation": "commonwealth",
+        "class": "bomber",
+        "range": 88,
+        "tacair": 1,
+        "tacair_parenthesized": true,
+        "maneuver": 5,
+        "bombload": 10,
+        "fuel": 2,
+        "mission_capability": {
+          "D": "-",
+          "R": "-",
+          "B": "!",
+          "Transport": "1 or 10 tons"
+        },
+        "readying_options": [
+          {"range": 203, "transfer_range": true, "tacair": 1, "maneuver": 6, "bombload": 0, "fuel": 2,
+           "mission_capability": {"D": "-", "R": "-", "B": "-", "Transport": "-"}},
+          {"range": 88, "tacair": 1, "maneuver": 5, "bombload": 10, "fuel": 2,
+           "mission_capability": {"D": "-", "R": "-", "B": "!", "Transport": "1 or 10 tons"}}
+        ]
+      },
+      "Sunderland": {
+        "_readying_34_12": "TWO ROWS, NEITHER OF THEM A TRANSFER ROW (no '**'), so 34.12's free choice is real here: 'Sunderland 238 (5) 7 - 4 . ! . . Short' -- the long-ranged RECONNAISSANCE readying, applied below -- or '176 (5) 11 9 4 . . ! .', the same flying boat readied as a bomber. The chart's own Notes say 'The Sunderland is a flying boat', so 34.4 confines it to a flying boat basin or alighting area. The applied row is the first printed one, which is the capability [60.42]'s eighteen Sunderlands are fielded for (game.establishment gives them the recon role).",
+        "nation": "commonwealth",
+        "class": "flying_boat",
+        "range": 238,
+        "tacair": 5,
+        "tacair_parenthesized": true,
+        "maneuver": 7,
+        "bombload": 0,
+        "fuel": 4,
+        "mission_capability": {
+          "D": "-",
+          "R": "!",
+          "B": "-",
+          "Transport": "-"
+        },
+        "readying_options": [
+          {"range": 238, "tacair": 5, "maneuver": 7, "bombload": 0, "fuel": 4,
+           "mission_capability": {"D": "-", "R": "!", "B": "-", "Transport": "-"}},
+          {"range": 176, "tacair": 5, "maneuver": 11, "bombload": 9, "fuel": 4,
+           "mission_capability": {"D": "-", "R": "-", "B": "!", "Transport": "-"}}
+        ]
+      },
+      "63.11": {
+        "_printed_name": "THE CHART PRINTS THIS ROW'S NAME AS '63.11', with 'Potez' in the Manufacturer column (PDF p.113, read with eyes). [60.42] lists the same aeroplane as 'Potez 63/11*'. The KEY of this data file is the CHART's printed name, because that is what game.basing and game.establishment match on; the scenario's spelling is carried beside the muster row in data/air_establishments.json under `printed`.",
+        "nation": "commonwealth",
+        "class": "reconnaissance",
+        "range": 75,
+        "tacair": 5,
+        "tacair_parenthesized": true,
+        "maneuver": 26,
+        "bombload": 0,
+        "fuel": 1,
+        "mission_capability": {
+          "D": "-",
+          "R": "!",
+          "B": "-",
+          "Transport": "-"
+        }
+      },
+      "Gladiator Mk. II": {
+        "_fuel_misprint_4_44A": "THE BOOK PRINTS A DASH IN THIS ROW'S FUEL COLUMN and the chart's own key gives '-' a meaning only in the Bomb column ('\"-\" = May not carry bombs'). 34.17 gives EVERY plane a Fuel Consumption Rating -- 'the number of Fuel Points a plane requires to perform any mission' -- so a dash there is a misprint of the same class as the 54.17 demolition table, not a rating of zero and not a permission to fly free. It is transcribed as null rather than guessed. The Sea Gladiator -- the same airframe, navalised, on the row eleven lines below -- prints Fuel 1, which is the obvious repair and is exactly why it is the OWNER's to make and not ours. NOTHING READS IT TODAY: fuel is billed by 38.24 only for the strike and recon roles (engine._REFITTABLE_ROLES / _air_fuel), the Gladiator is a fighter, and game.establishment.fuel_per_plane averages over the types that print a rating and says so.",
+        "nation": "commonwealth",
+        "class": "fighter",
+        "range": 44,
+        "tacair": 2,
+        "tacair_parenthesized": false,
+        "maneuver": 27,
+        "bombload": 0,
+        "fuel": null,
+        "mission_capability": {
+          "F": "!",
+          "S": "!",
+          "R": "-",
+          "D": "-"
+        }
+      },
+      "Sea Gladiator": {
+        "nation": "commonwealth",
+        "class": "fighter",
+        "range": 38,
+        "tacair": 2,
+        "tacair_parenthesized": false,
+        "maneuver": 27,
+        "bombload": 0,
+        "fuel": 1,
+        "mission_capability": {
+          "F": "!",
+          "S": "!",
+          "R": "-",
+          "D": "-"
+        }
+      },
+      "MS406": {
+        "_note": "The chart's own Notes: 'The C714, D.520 and MS406 are French aircraft' and 'MS406, Sea Gladiator, Swordfish and Valentia aircraft are never received as reinforcements.' [60.42] lists it as 'Morane 406's*', the asterisk being '*May be in the same squadron (Free French)'.",
+        "nation": "commonwealth",
+        "class": "fighter",
+        "range": 45,
+        "tacair": 4,
+        "tacair_parenthesized": false,
+        "maneuver": 32,
+        "bombload": 0,
+        "fuel": 1,
+        "mission_capability": {
+          "F": "!",
+          "S": "!",
+          "R": "-",
+          "D": "-"
+        }
+      },
+      "Swordfish Mk. I": {
+        "_torpedo": "Bomb reads '-/T8': Bombload Capacity '-' (may not carry bombs) and Torpedo Capacity 8. The [41.5] Key's +25% modification presupposes that a torpedo-armed plane contributes Bomb Points and 41.74 supplies the conversion -- the owner's ruling of 2026-07-21, written out in full at data/malta_44.json initial_setup_60_46.strike_weapon._owner_ruling_settled.",
+        "nation": "commonwealth",
+        "class": "bomber",
+        "range": 48,
+        "tacair": 1,
+        "tacair_parenthesized": true,
+        "maneuver": 7,
+        "bombload": 0,
+        "torpedo": 8,
+        "fuel": 1,
+        "mission_capability": {
+          "D": "-",
+          "R": "-",
+          "B": "!",
+          "Transport": "-"
+        }
+      },
+      "Valentia": {
+        "nation": "commonwealth",
+        "class": "transport",
+        "range": 31,
+        "tacair": 0,
+        "tacair_parenthesized": false,
+        "maneuver": 1,
+        "bombload": 10,
+        "fuel": 1,
+        "mission_capability": {
+          "D": "-",
+          "R": "-",
+          "B": "!",
+          "Transport": "1/4 or 5 tons"
+        }
+      },
+      "C.R. 32": {
+        "nation": "italian",
+        "class": "fighter",
+        "range": 42,
+        "tacair": 3,
+        "tacair_parenthesized": false,
+        "maneuver": 25,
+        "bombload": 1,
+        "fuel": 1,
+        "mission_capability": {
+          "F": "!",
+          "S": "!",
+          "R": "-",
+          "D": "!"
+        }
+      },
+      "C.R. 42 Falco": {
+        "_note": "The chart prints THREE Falco rows -- 'C.R. 42 Falco' (Bomb '-') and 'C.R. 42AS Falco' (Bomb 1), plus the C.R. 32 above them. [60.32] lists 'CR 42', which is this row and not the AS.",
+        "nation": "italian",
+        "class": "fighter",
+        "range": 43,
+        "tacair": 3,
+        "tacair_parenthesized": false,
+        "maneuver": 28,
+        "bombload": 0,
+        "fuel": 1,
+        "mission_capability": {
+          "F": "N",
+          "S": "!",
+          "R": "-",
+          "D": "-"
+        }
+      },
+      "Ba 65": {
+        "nation": "italian",
+        "class": "bomber",
+        "range": 55,
+        "tacair": 4,
+        "tacair_parenthesized": true,
+        "maneuver": 18,
+        "bombload": 10,
+        "fuel": 2,
+        "mission_capability": {
+          "D": "!",
+          "R": "-",
+          "B": "-",
+          "Transport": "-"
+        }
+      },
+      "Ba 88 Lince": {
+        "nation": "italian",
+        "class": "bomber",
+        "range": 92,
+        "tacair": 4,
+        "tacair_parenthesized": true,
+        "maneuver": 16,
+        "bombload": 11,
+        "fuel": 3,
+        "mission_capability": {
+          "D": "-",
+          "R": "-",
+          "B": "!",
+          "Transport": "-"
+        }
+      },
+      "Ca 309 Ghibli": {
+        "nation": "italian",
+        "class": "reconnaissance",
+        "range": 84,
+        "tacair": 2,
+        "tacair_parenthesized": true,
+        "maneuver": 9,
+        "bombload": 4,
+        "fuel": 2,
+        "mission_capability": {
+          "D": "-",
+          "R": "!",
+          "B": "!",
+          "Transport": "0 or 1/2"
+        }
+      },
+      "Ro 37bis": {
+        "nation": "italian",
+        "class": "reconnaissance",
+        "range": 93,
+        "tacair": 2,
+        "tacair_parenthesized": true,
+        "maneuver": 20,
+        "bombload": 2,
+        "fuel": 2,
+        "mission_capability": {
+          "D": "-",
+          "R": "!",
+          "B": "!",
+          "Transport": "-"
+        }
+      },
+      "S.M. 79 Sparviero": {
+        "nation": "italian",
+        "class": "bomber",
+        "range": 120,
+        "tacair": 4,
+        "tacair_parenthesized": true,
+        "maneuver": 19,
+        "bombload": 12,
+        "torpedo": 6,
+        "fuel": 3,
+        "mission_capability": {
+          "D": "-",
+          "R": "-",
+          "B": "!",
+          "Transport": "-"
+        }
+      },
+      "S.M. 81 Pipistrello": {
+        "nation": "italian",
+        "class": "bomber",
+        "range": 90,
+        "tacair": 5,
+        "tacair_parenthesized": true,
+        "maneuver": 14,
+        "bombload": 11,
+        "fuel": 3,
+        "mission_capability": {
+          "D": "-",
+          "R": "!",
+          "B": "N",
+          "Transport": "1P or 2 1/2"
+        }
+      },
+      "Cant Z. 501 Gabbiano": {
+        "_note": "Transcribed because it is the only candidate reading of [60.32]'s garbled '2S01' row, which is NOT seeded -- see the unresolved_type_60_32 block in data/air_establishments.json. The chart's own Notes: 'The German Ar. 196 and Italian Cant Z.506B Airone and Cant Z.501 Gabbiano are flying boats', so 34.4 confines it to a flying boat basin or alighting area.",
+        "nation": "italian",
+        "class": "flying_boat",
+        "range": 130,
+        "tacair": 2,
+        "tacair_parenthesized": true,
+        "maneuver": 7,
+        "bombload": 7,
+        "fuel": 2,
+        "mission_capability": {
+          "D": "-",
+          "R": "!",
           "B": "!",
           "Transport": "-"
         }

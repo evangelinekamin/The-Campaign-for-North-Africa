@@ -356,9 +356,12 @@ class AirWing:
     convoy work); the split is FORCED by 41.63 (N-Africa Axis fighters may not CAP convoys),
     so the two contests are separate. `fighters`/`strike`/`recon` are Air Points by role --
     fighters contest air superiority (40/45/46 abstracted into one roll), strike flies the
-    41.31 bombing missions, recon the 42.2 fog-lift. The magnitudes are FLAGGED PROXY (the
-    34.6/59.3 Initial Air Strengths chart is untranscribed, like the 55.3 port caps). Default
-    GameState.air=() means no air beat fires (byte-identical)."""
+    41.31 bombing missions, recon the 42.2 fog-lift. THE MAGNITUDES ARE THE BOOK'S: the campaign
+    seeds each wing from the [34.6]/[59.3] Initial Air Strengths ([60.32]/[60.42] -- game.roster),
+    every aeroplane at its own charted TacAir or Bombload, and game.roster converts the points back
+    to aeroplanes at the same establishment's ratio. (The two benchmark scenarios keep authored
+    Air-Point proxies: their own muster, [61.42], is half-untranscribable until [34.87] lands.)
+    Default GameState.air=() means no air beat fires (byte-identical)."""
     id: str
     side: Side
     arena: str                     # "LAND" | "SEA" (41.63 keeps them separate)

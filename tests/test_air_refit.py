@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import game.air as air
 import game.basing as basing
+import game.roster as roster
 import game.supply as supply
 from game.apply import fold
 from game.engine import _air_maintenance, _air_points, _air_support, _Run, run
@@ -183,15 +184,17 @@ def _dump(sid="AF-Sup", side=Side.AXIS, hex_=(0, 0), fuel=99, stores=99, **kw) -
     return SupplyUnit(sid, side, hex_, fuel=fuel, stores=stores, air_dump=True, **{**base, **kw})
 
 
-def _state(*, units=None, facilities=None, supplies=None, missions=(), strike=40, recon=0,
+def _state(*, units=None, facilities=None, supplies=None, missions=(), strike=23, recon=0,
            fighters=0, stage=2, turn=1, unfit=None) -> GameState:
     """An Axis LAND wing based on an airfield at (0,0) with a fed Italian SGSU, over an Allied
     stack at (1,0). Stage 2 by default, past [59.32]'s free opening tank.
 
-    THE WING IS DECLARED FOUR TIMES THE FORCE THAT FLIES, and that is rule 43 (game.basing): 43.12
-    bases 75% of every German bomber pool in Italy/Sicily, so an ESTABLISHMENT of 40 Bomb Points
-    (8 Ju. 87B on the 34.14 bridge) puts TWO aeroplanes -- 10 Bomb Points -- over the desert, and
-    two aeroplanes is the squadron this refit ledger is told in."""
+    THE SQUADRON IS TWO AEROPLANES, and the Air Points that say so changed with the [34.6]/[59.3]
+    transcription (2026-07-22). The wing used to be declared four times the force that flew, because
+    rule 43 was applied to the whole abstract Axis bomber pool and left a quarter of it in Africa;
+    43.11/43.12/43.13 speak about GERMAN bombers and [60.32] musters none, so nothing is based away
+    and 23 Bomb Points ARE the two aeroplanes ([60.32]'s 184 bombers carry 2,147 between them --
+    game.roster). Two aeroplanes is the squadron this refit ledger is told in, as before."""
     foe = Unit("GAR", Side.ALLIED, (1, 0), (StepRecord("in", 6),), mobility=Mobility.FOOT,
                cpa=10, stacking_points=2, oca=5, dca=8)
     units = (foe,) + ((_sgsu(),) if units is None else tuple(units))
@@ -229,8 +232,9 @@ AXIS_STRIKE = "AXIS/LAND/strike"
 def _ready(state) -> int:
     """[38.31] + [43.12] The Axis bombers that MAY fly, read against the squadron that is actually
     in Africa (basing.establishment) rather than against the whole establishment -- which is what
-    engine._air_points does, and the reason air.ready_planes takes the override at all: three
-    quarters of the pool is standing in Sicily and is no part of the desert squadron's readiness."""
+    engine._air_points does, and the reason air.ready_planes takes the override at all. The override
+    is inert while the Axis fields no German bomber for rule 43 to base in the Mediterranean, and it
+    is asserted live in tests/test_basing.py against a doctored establishment that does."""
     return air.ready_planes(state, Side.AXIS, "LAND", "strike",
                             basing.establishment(state, Side.AXIS, "LAND", "strike"))
 
@@ -239,8 +243,8 @@ def _ready(state) -> int:
 
 def test_38_31_a_mission_flown_leaves_its_planes_unfit():
     """"As soon as a plane flies any mission other than transfer, it must be refitted again." The
-    fixture's African contingent is two Ju 87Bs (34.14, bombload 5), so two aeroplanes come back
-    unfit."""
+    fixture's African contingent is two of [60.32]'s bombers (34.14; they average 11 Bomb Points
+    apiece), so two aeroplanes come back unfit."""
     r = _Run(_state(missions=(AirMission(Side.AXIS, "strike", (1, 0), 1),)))
     _air_support(r, Side.AXIS, set())
     unfit = [e for e in r.events if e.kind == EventKind.AIR_SQUADRON_UNFIT]
@@ -267,11 +271,11 @@ def test_38_31_an_unrefitted_squadron_may_fly_no_mission_even_when_fuelled():
 
 
 def test_38_31_a_half_refitted_squadron_flies_at_its_refitted_planes_share():
-    """One Ju 87B of two ready carries its own Bombload of 5 into the [41.5] column, not the
-    African contingent's 10 -- the same arithmetic air.refuel uses for a part-fuelled force."""
+    """One bomber of two ready carries its own Bombload of 11 into the [41.5] column, not the
+    squadron's 23 -- the same arithmetic air.refuel uses for a part-fuelled force."""
     st = _state(unfit={AXIS_STRIKE: 1})
     assert _ready(st) == 1
-    assert _air_points(st, Side.AXIS, "LAND", "strike") == 5
+    assert _air_points(st, Side.AXIS, "LAND", "strike") == 11
     # and flying it un-fits that ONE plane, never more than were ready
     r = _Run(replace(st, air_missions=(AirMission(Side.AXIS, "strike", (1, 0), 1),)))
     _air_support(r, Side.AXIS, set())
@@ -391,9 +395,9 @@ def test_35_17_and_36_13_an_sgsu_off_its_field_or_over_capacity_may_not_work():
 def test_38_33_one_sgsu_refits_at_most_its_charted_ready_plus_reserve():
     """"Each SGSU can refit up to the maximum planes the SGSU can contain (Ready plus Reserve)" --
     [35.23]'s 12 for an Italian Squadriglia. It does not bind at the proxy Air-Point establishments
-    the scenarios seed (a squadron here is one or two aeroplanes); it binds the moment 34.6/59.3's
-    real Initial Air Strengths land, so it is asserted on a squadron big enough to feel it."""
-    st = _state(strike=100, unfit={AXIS_STRIKE: 20})    # 100 Bomb Points = 20 Stukas, all unfit
+    the fixtures in this file seed (a squadron here is two aeroplanes); it binds on the real
+    [34.6]/[59.3] establishments, so it is asserted on a squadron big enough to feel it."""
+    st = _state(strike=230, unfit={AXIS_STRIKE: 20})    # 230 Bomb Points = 20 bombers, all unfit
     r = _Run(st)
     _pin_die(r, 1)                                      # 1 + 2 = 3 -> 70%
     _air_maintenance(r)
@@ -414,7 +418,7 @@ def test_38_23_the_sgsus_allowance_is_shared_across_the_squadrons_it_works():
     pinned exactly -- an earlier version of this test accepted either order, which would have stayed
     green if the role order silently flipped, in a file whose whole subject is a conditional die in
     a per-subsystem stream."""
-    st = _state(strike=100, recon=30, unfit={AXIS_STRIKE: 20, "AXIS/LAND/recon": 20})
+    st = _state(strike=230, recon=30, unfit={AXIS_STRIKE: 20, "AXIS/LAND/recon": 20})
     r = _Run(st)
     _pin_die(r, 1)
     _air_maintenance(r)
@@ -423,7 +427,7 @@ def test_38_23_the_sgsus_allowance_is_shared_across_the_squadrons_it_works():
            if e.kind in (EventKind.AIR_REFIT_RESOLVED, EventKind.AIR_REFIT_DENIED)]
     assert got == [("recon", 12, None), ("strike", None, "sgsu_capacity")]
     # and a second SGSU on a field with room for it works the squadron the first could not
-    st2 = _state(strike=100, recon=30, units=[_sgsu("SGSU-A"), _sgsu("SGSU-B")],
+    st2 = _state(strike=230, recon=30, units=[_sgsu("SGSU-A"), _sgsu("SGSU-B")],
                  unfit={AXIS_STRIKE: 20, "AXIS/LAND/recon": 20})
     r2 = _Run(st2)
     _pin_die(r2, 1)
@@ -451,7 +455,7 @@ def test_the_beat_is_silent_for_a_side_the_scenario_never_based_on_the_map():
     rule. Both sides ARE based on the map in the full campaign."""
     st = _state(facilities=[], supplies=[], units=[], unfit={AXIS_STRIKE: 2})
     assert not air.refit_modelled(st, Side.AXIS)
-    assert _air_points(st, Side.AXIS, "LAND", "strike") == 10       # ungoverned, as before 5.3
+    assert _air_points(st, Side.AXIS, "LAND", "strike") == 23       # ungoverned, as before 5.3
     r = _Run(st)
     _air_maintenance(r)
     assert r.events == []
@@ -464,15 +468,15 @@ def test_the_cycle_turns_over_stage_after_stage():
     with the die pinned, is the governor in miniature."""
     r = _Run(_state(missions=(AirMission(Side.AXIS, "strike", (1, 0), 1),)))
     _pin_die(r, 4)                                      # 4 + 2 Italian = 6 -> 40%
-    _air_support(r, Side.AXIS, set())                   # stage 2: both Stukas fly
+    _air_support(r, Side.AXIS, set())                   # stage 2: both bombers fly
     assert r.state.air_unfit == {AXIS_STRIKE: 2}
     _air_maintenance(r)                                 # 40% of 2 = 0.8 -> 1 back
     assert r.state.air_unfit == {AXIS_STRIKE: 1}
     strikes = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED]
     _air_support(r, Side.AXIS, set())                   # and the one refitted plane flies alone
     strikes2 = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED]
-    assert strikes[0].payload["strength"] == 10         # the whole African contingent
-    assert strikes2[-1].payload["strength"] == 5        # one Ju 87B's own Bombload
+    assert strikes[0].payload["strength"] == 23         # the whole African contingent
+    assert strikes2[-1].payload["strength"] == 11       # one bomber's own Bombload
     assert r.state.air_unfit == {AXIS_STRIKE: 2}
     assert fold(r.initial, r.events) == r.state
     check(r.state)
@@ -520,34 +524,34 @@ def test_the_campaign_refits_and_the_ledger_is_replayable():
     check(res.final)
 
 
-def test_owner_ruling_the_campaign_axis_refits_at_2_because_no_german_sgsu_was_transcribed():
-    """OWNER RULING NEEDED, pinned here so the fact cannot quietly become a rule.
+def test_the_campaign_axis_refits_at_2_and_that_is_now_the_printed_answer():
+    """RESTATED 2026-07-22, AND THE RESTATEMENT IS THE FINDING. This test used to pin an OWNER
+    RULING: every Axis SGSU the campaign fields is Italian, so the Luftwaffe's Staffeln were being
+    refitted all war at the Italian +2 where a German ground crew would take +1 ([38.37] "German
+    Squadron Ground Support Unit add 1"), and that +2 was an artefact of a counter nobody had
+    transcribed rather than a printed fact about the German air force.
 
-    The [38.37] modifier this engine applies is the refitting SGSU counter's nationality, and every
-    Axis SGSU the campaign fields is ITALIAN -- not because the book charts Italian ground crews for
-    the Deutsches Afrikakorps, but because game.oob seeds the Axis pool from [60.32] "Italian SGSU
-    Available: 39" (Scenario Group One, the Italians, Sept 1940 - Feb 1941) and NO German SGSU
-    availability is transcribed for the campaign anywhere. So the Luftwaffe's Staffeln -- the engine
-    flies Bf. 109Es, Ju. 87Bs and Hs. 126s for the Axis -- are refitted all war at the ITALIAN +2,
-    where under EITHER side of the chart-versus-prose subject dispute a German squadron worked by
-    its own German ground crew would take +1 ([38.37] "German Squadron Ground Support Unit add 1";
-    38.35 "if the planes are German, add one").
+    THE [34.6]/[59.3] TRANSCRIPTION SETTLED IT: there is no Luftwaffe in this campaign to
+    mis-modify. [60.32] musters nine Italian types and no German one, so an Italian ground crew
+    working an Italian aeroplane at +2 is exactly what the chart prints, on either side of the
+    chart-versus-prose subject dispute. The engine is consistent with the book here.
 
-    An earlier version of this test asserted the opposite -- that "the campaign's are the charted
-    ones ... so the Axis rolls at +2 all war" -- citing [60.32]. [60.32] charts NOTHING about
-    1941-42 Axis air, and the +2 is an artefact of a counter that was never transcribed. It is worth
-    about a sixth of the Axis air force (48.6% realised refit against ~56.7%), which is why it is a
-    ruling and not a footnote. The book does chart German SGSUs, but only in the later scenario
-    groups (docs/rules/62:311 = 33; docs/rules/63:289/313 = 21 and 27) and [61]:162 prints no count
-    at all, so there is no campaign schedule to transcribe and none has been invented."""
+    THE DEBT DOES NOT VANISH, IT MOVES, and it is pinned below rather than dropped: the day
+    [34.87]'s Axis Airplane Reinforcement Schedule brings German aeroplanes to Africa, they will be
+    refitted by Italian SGSUs at +2 -- because no German SGSU availability is transcribed for the
+    campaign anywhere (game.oob.seed_sgsus carries the same flag; the book charts German SGSUs only
+    in the later scenario groups, docs/rules/62:311 = 33 and docs/rules/63:289/313 = 21 and 27, and
+    [61]:162 prints no count at all). It is worth about a sixth of the force that arrives (48.8%
+    realised refit against 56.7%), which is why the two counts are asserted together."""
     st = campaign(seed=4)
     sgsus = [u for u in st.units if supply.is_sgsu(u)]
     assert sgsus                                                # both sides do field ground crews
     assert {u.nationality for u in sgsus if u.side == Side.AXIS} == {"IT"}
     assert {u.nationality for u in sgsus if u.side == Side.ALLIED} == {"CW"}
-    assert not [u for u in sgsus if u.nationality == "GE"]      # THE GAP, pinned
-    # the Axis flies German aeroplanes and refits them at the ITALIAN modifier
-    assert air.AIRCRAFT[air.REPRESENTATIVE_AIRCRAFT[(Side.AXIS, "strike")]]["nation"] == "german"
+    assert not [u for u in sgsus if u.nationality == "GE"]      # THE GAP, pinned...
+    chart = air.AIRCRAFT                                        # ...and the aeroplanes it matches:
+    assert all(chart[m.type]["nation"] == "italian"             # an Italian air force worked by
+               for m in roster.roster(Side.AXIS))               # Italian ground crews, as printed
     assert air.refit_drm("IT") == 2 and air.refit_drm("GE") == 1
     # and the difference is the size of the ruling: mean realised refit over a fair d6
     mean = lambda drm: sum(air.refit_percent(d + drm) for d in range(1, 7)) / 6

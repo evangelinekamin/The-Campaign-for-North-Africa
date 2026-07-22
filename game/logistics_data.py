@@ -335,10 +335,12 @@ def aircraft_characteristics_4_44() -> dict:
     (34.13), `bombload` (34.14), `fuel` Consumption Rating (34.17/38.21 -- "the number of Fuel
     Points the plane requires before it may be flown") and `mission_capability` ("the types of
     missions the plane may be assigned" -- the F/S/R/D cells on the fighter charts, D/R/B/Transport
-    on the bomber charts) of each transcribed type. Only the SIX types game.air expresses an Air
-    Point in are transcribed, three per side; see the data file's own three notes (every row
-    eyes-verified off the scan, the Commonwealth OCR being column-shifted, and the D-vs-B reading
-    of the Mission Capability column recorded as a flagged judgement call)."""
+    on the bomber charts) of each transcribed type. EVERY TYPE THE [34.6]/[59.3] INITIAL AIR
+    STRENGTHS FIELD is transcribed (game.roster), plus the three German heavy bombers rule 43.11/
+    43.13 names; the rest of the three charts waits on the [34.86]/[34.87] reinforcement schedules.
+    See the data file's own three notes (every row eyes-verified off the scan, BOTH the Commonwealth
+    and Italian fighter OCR being column-shifted, and the D-vs-B reading of the Mission Capability
+    column recorded as a flagged judgement call)."""
     return _data()["aircraft_characteristics_4_44"]["aircraft"]
 
 
@@ -463,3 +465,29 @@ def air_facilities_60_5() -> list:
     `on_map: false` and are not placeable on maps A-E. Capacity is NOT here: it is rule 36's, by
     kind (game.air.MAX_CAPACITY). Verified against the scan, PDF p.79."""
     return _air_facilities()["air_facilities_60_5"]["facilities"]
+
+
+# --- [34.6] / [59.3] THE INITIAL AIR STRENGTHS ---------------------------------------------------
+# A FOURTH data file, on the same principle as data/malta_44.json and data/air_facilities_60_5.json:
+# a scenario's Initial Air Strengths are not a rate chart, they are an ORDER OF BATTLE -- twenty
+# printed muster rows carrying their own provenance, their own role reading and their own owner
+# ruling. game.roster is its only reader.
+
+_AIR_ESTABLISHMENTS_PATH = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "..", "data", "air_establishments.json"))
+
+
+@lru_cache(maxsize=1)
+def _air_establishments() -> dict:
+    with open(_AIR_ESTABLISHMENTS_PATH) as f:
+        return json.load(f)
+
+
+def air_establishments_59_3() -> dict:
+    """[34.6]/[59.3] INITIAL AIR STRENGTHS, by scenario key then by side: the printed muster rows
+    ([60.32] Italian, [60.42] Commonwealth), each with the [4.44] chart name of the `type`, the
+    scenario's own spelling, Total `available`, Total `refitted` (59.32's readiness at Game-Turn 1)
+    and the `role` the type is fielded in. Also carries the scenario's pilot and SGSU rows, and
+    [60.32]'s garbled '2S01' row -- transcribed, UNSEEDED, and raised as an owner ruling. See
+    game.roster for what reads this and the data file's own four notes for what it is."""
+    return _air_establishments()

@@ -17,8 +17,8 @@ import random
 from collections import deque
 from dataclasses import replace
 
-from . import (calendar, campaign_victory, cna_map, coords, logistics_data, malta, oob, villages,
-               wells)
+from . import (air, calendar, campaign_victory, cna_map, coords, logistics_data, malta, oob,
+               roster, villages, wells)
 from .events import Phase, Side
 from .hexmap import Coord, distance, neighbors
 from .movement import TerrainMap, edge
@@ -627,14 +627,14 @@ def _rommel_trucks(supplies, target) -> tuple[TruckFormation, ...]:
 # the siege (later start-turn, sparser cadence, a stronger contesting RAF) into a race against
 # the 12-turn clock.
 _TOBRUK_LW_FIGHTERS = 8              # F: the Axis LAND fighter pool contesting the sky
-# S: the Axis LAND bomber ESTABLISHMENT -- and the unit changed under it in the 5.5 repair pass.
-# [43.12] bases 75% of every German bomber pool in Italy/Sicily (game.basing), so the number that
-# batters the harbour is a QUARTER of this: 24 points is 5 Ju. 87B, of which rule 43 leaves 2 in
-# Africa, which is the same two aeroplanes and the same [41.5] 1-20 column this scenario has always
-# flown. The magnitude is a flagged proxy either way ([34.6]/[59.3] is untranscribed); what the
-# repair fixed is that it is now denominated in the establishment rule 43 speaks about, so a basing
-# rule cannot silently halve a scenario's designed air campaign.
-_TOBRUK_LW_STRIKE = 24              # S: the Axis LAND bomber establishment (a quarter of it flies)
+# S: the Axis LAND bomber ESTABLISHMENT, and it is STILL A FLAGGED PROXY where the campaign's is
+# not. The siege is a Desert Fox-era situation and its own muster is [61.42], which cannot be
+# transcribed today: its German half is "all of the German planes listed in the Axis Airplane
+# Reinforcement Chart", i.e. [34.87], which is untranscribed (game.roster). So this scenario keeps
+# its authored Air-Point magnitude and converts it through the CAMPAIGN roster's ratios -- 24 Bomb
+# Points is 3 of [60.32]'s bombers -- and rule 43 now takes nothing off it, because 43.11/43.12/
+# 43.13 are written about German bombers and the transcribed establishment fields none.
+_TOBRUK_LW_STRIKE = 24              # S: the Axis LAND bomber establishment (all of it flies)
 _TOBRUK_DAF_FIGHTERS = 3           # G: the Commonwealth LAND fighter pool (only when raf=True)
 _TOBRUK_PORTBOMB_START = 1         # first game-turn the harbour is bombed
 _TOBRUK_PORTBOMB_CADENCE = 1       # bomb every N-th turn from the start
@@ -1242,38 +1242,70 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
     return tuple(ports)
 
 
-# --- C4: the air war over the harbours (rules 40-46 at the abstract 32.0/58.0 grain) ----------
-# FLAGGED PROXY: the 34.6/59.3 Initial Air Strengths chart is untranscribed (see state.AirWing,
-# which says so of its own magnitudes), so these Air Points are proxies. The forces that FLY are
-# deliberately SYMMETRIC -- neither side is handed the sky by fiat -- because this is the UNTUNED
-# structural baseline: the 40/45/46 superiority roll should decide who flies, not the seeding. What
-# is asymmetric is the ESTABLISHMENT each is declared in, and that is rule 43 (below). Period-varying
-# strengths (the Luftwaffe's 1941-42 ascendancy, the Desert Air Force's 1942 revival) are the
-# obvious calibration lever, and deliberately NOT pulled here.
-_AIR_FIGHTERS = 8          # F: the fighter pool contesting air superiority each Operations Stage
-_AIR_STRIKE = 6            # S: the strike points that batter a harbour (41.39B) -- the force FLYING
-# THE AXIS FIGURE IS AN ESTABLISHMENT, NOT A SORTIE, and the asymmetry is rule 43's, not a thumb on
-# the scale: [43.12] "75% of ALL GERMAN BOMBERS must be based in Italy/Sicily", so the Luftwaffe
-# needs four times the pool to put _AIR_STRIKE's worth of bombers over the desert (24 points = 5
-# Ju. 87B, of which game.basing leaves 2 in Africa). The Commonwealth's basing is rule 36's and is
-# entirely on the map, so its wing is declared in sorties. Both magnitudes remain flagged proxies.
-_AXIS_AIR_STRIKE = 24      # S: the German bomber ESTABLISHMENT rule 43 takes its Mediterranean cut of
+# --- C4: the air war over the harbours (rules 34-46) ------------------------------------------
+# NO LONGER A PROXY. The [34.6]/[59.3] Initial Air Strengths are transcribed (game.roster,
+# data/air_establishments.json), so the campaign's two air forces are the ones the book musters:
+# [60.32]'s 394 Italian aeroplanes (385 of them seeded -- one garbled row is left to an
+# owner ruling) and [60.42]'s 143 Commonwealth ones, each at its own charted
+# TacAir / Bombload rating. What this deletes is _AIR_FIGHTERS / _AIR_STRIKE / _AXIS_AIR_STRIKE --
+# three hand-picked integers (8 / 6 / 24) that were "deliberately SYMMETRIC ... the untuned
+# structural baseline". They were not a baseline, they were an invention, and the symmetry was the
+# largest thing wrong with them: the September-1940 Regia Aeronautica outnumbers the Desert Air
+# Force better than three to one in aeroplanes and better than five to one in Bomb Points, which is
+# the historical situation Graziani's offensive is fought in and which no seeded symmetry could
+# produce. The period variation those constants could not express arrives with the [34.86]/[34.87]
+# reinforcement schedules, which are the next transcription (game.roster says so).
 
 
 def _campaign_air() -> tuple[AirWing, ...]:
-    """A LAND-arena air wing for BOTH sides -- the Luftwaffe/Regia Aeronautica and the Desert Air
-    Force. The campaign seeded NONE, and that single omission is why its Tobruk was invulnerable:
-    with state.air empty no air beat fires at all, engine._air_port is unreachable, and no port can
-    ever lose Efficiency. And interdiction alone cannot cut the lane: the 41.66 CRT skims a
+    """[59.3] A LAND-arena air wing for BOTH sides at their charted Initial Air Strengths -- the
+    Regia Aeronautica ([60.32]) and the Desert Air Force ([60.42]).
+
+    The campaign once seeded NO air at all, and that single omission is why its Tobruk was
+    invulnerable: with state.air empty no air beat fires, engine._air_port is unreachable, and no
+    port can ever lose Efficiency. And interdiction alone cannot cut the lane: the 41.66 CRT skims a
     PERCENTAGE off a cargo the 55.3 SHARED tonnage budget has already clipped to the harbour's
-    680 t/OpStage (1700 t at eff 2/5), so a cut that still leaves the manifest over the budget lands the same
-    tonnage -- arithmetically inert (see the Tobruk interdiction tests). Only bombing the harbour's
-    Efficiency down ([41.5], _air_port) actually chokes a sea lane, and the harbour regenerates
-    (55.18) between the bombs, so it takes a sustained air campaign to keep it shut."""
-    return (AirWing("LW-land", Side.AXIS, "LAND",
-                    fighters=_AIR_FIGHTERS, strike=_AXIS_AIR_STRIKE, recon=0),
+    680 t/OpStage (1700 t at eff 2/5), so a cut that still leaves the manifest over the budget lands
+    the same tonnage -- arithmetically inert (see the Tobruk interdiction tests). Only bombing the
+    harbour's Efficiency down ([41.5], _air_port) actually chokes a sea lane, and the harbour
+    regenerates (55.18) between the bombs, so it takes a sustained air campaign to keep it shut.
+
+    ONE ARENA, WHICH IS THE PROXY THAT SURVIVES: [59.31] divides a side's air force by THEATRE
+    (North Africa / Malta for the Commonwealth, North Africa / Sicily / Italy / Crete for the Axis)
+    and this wing is the whole of a side's establishment in the LAND arena, from which game.basing
+    subtracts what rule 43 bases in the Mediterranean and what 39.19 has already sent to Malta."""
+    return (AirWing("RA-land", Side.AXIS, "LAND",
+                    fighters=roster.points(Side.AXIS, "fighters"),
+                    strike=roster.points(Side.AXIS, "strike"),
+                    recon=roster.points(Side.AXIS, "recon")),
             AirWing("DAF-land", Side.ALLIED, "LAND",
-                    fighters=_AIR_FIGHTERS, strike=_AIR_STRIKE, recon=0))
+                    fighters=roster.points(Side.ALLIED, "fighters"),
+                    strike=roster.points(Side.ALLIED, "strike"),
+                    recon=roster.points(Side.ALLIED, "recon")))
+
+
+def _campaign_air_unfit() -> dict:
+    """[59.32]/[38.31] THE READINESS LEDGER AT GAME-TURN 1. "Planes are listed by type, WITH THE
+    READY PLANES INDICATED AS A PORTION OF THE TOTAL AVAILABLE" -- and [60.32]/[60.42] print that
+    portion for every row: 47 of the Axis's 184 bombers begin the campaign refitted, 43 of the
+    Commonwealth's 56.
+
+    This OVERRIDES 38.31's blanket "at the start of a Scenario, all planes are considered
+    refitted": the scenario's own muster is the more specific rule, and it is the same reading
+    data/malta_44.json already applies to [60.46]'s "12 Swordfish (1 SGSU) (9 ready)". So both air
+    forces open the war with three quarters of their strength in the hangars, and the [38.37] Refit
+    Table -- not a seeding decision -- governs how fast it comes out.
+
+    THE FIGHTER ROWS ARE SEEDED AND INERT, deliberately. engine._REFITTABLE_ROLES leaves the fighter
+    arm outside the ledger (our air-superiority contest is an always-on abstraction, not an ORDERED
+    CAP that a Player may decline -- the argument is at engine._air_superiority), so nothing reads
+    or clears a fighter's unfit count today. It is recorded rather than dropped because [59.32]
+    prints it, and because the day CAP becomes a real assignable mission the ledger must already say
+    that 82 of the Regia Aeronautica's 135 fighters were unserviceable in September 1940."""
+    return {air.squadron(side, "LAND", role): roster.unfit(side, role)
+            for side in (Side.AXIS, Side.ALLIED)
+            for role in ("fighters", "strike", "recon")
+            if roster.unfit(side, role) > 0}
 
 
 def _campaign_air_missions(max_turns: int) -> tuple[AirMission, ...]:
@@ -1625,7 +1657,9 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         interdictions=(_campaign_malta_interdiction(max_turns)             # C4: Malta throttles the Axis Med convoy (rule 44)
                        + _campaign_tobruk_ferry_interdiction(max_turns)    # + BOTH halves of the Tobruk sea duel
                        + _campaign_tobruk_axis_interdiction(max_turns)),   #   (30/41.6): each side can fight the other's lane
-        air=_campaign_air(),                                # C4: BOTH air forces (34/40-46) -- without
+        air=_campaign_air(),                                # C4: BOTH air forces at their [59.3]
+        air_unfit=_campaign_air_unfit(),                    # Initial Air Strengths, three quarters of
+                                                            # each in the hangars (59.32) -- without
         air_missions=_campaign_air_missions(max_turns),     # them no harbour can ever be cut (41.39B)
         air_facilities=tuple(facilities) + tuple(malta.seed_facilities(_MALTA_LEVELS)),
                                                             # C6/36: the squadron bases on the map, PLUS

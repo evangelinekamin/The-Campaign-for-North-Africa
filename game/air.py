@@ -103,7 +103,7 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from . import logistics_data
+from . import logistics_data, roster
 from .events import Control, Side
 from .state import AirFacility, GameState, SupplyUnit, Unit
 
@@ -338,99 +338,59 @@ def may_refit(state: GameState, sgsu: Unit) -> bool:
 # 36.17 pile Phase 5.1 put on the map. Until this block, no Fuel Point had ever left any dump for
 # any aircraft anywhere: the air force was fed on air.
 #
-# THE ONE THING THAT IS NOT IN THE BOOK IS OUR OWN ABSTRACTION. game.state.AirWing is not a roster
-# of planes; it is Air Points by role, and the engine already commits itself to what two of those
-# roles MEAN:
+# THE ONE THING THAT IS NOT IN THE BOOK IS OUR OWN ABSTRACTION. game.state.AirWing is not a
+# squadron composition sheet; it is Air Points by role, and the engine already commits itself to
+# what two of those roles MEAN:
 #   * STRIKE Air Points are BOMB POINTS -- _air_port / _air_facility_bomb feed them straight into
 #     the Bomb-Point columns of the [41.5] CRT, and 34.14 defines Bombload Capacity as "the number
 #     of Bomb Points... that a Plane can carry".
 #   * FIGHTER Air Points are TACAIR -- _air_superiority adds a die to them and compares, and 34.13
 #     defines TacAir as "the aircraft's combat rating vis a vis other aircraft".
-# Both of those ratings belong to a PLANE. So the conversion is forced once you name the plane:
-# planes = ceil(points / that plane's rating), and each plane burns its Fuel Consumption Rating.
+# Both of those ratings belong to a PLANE, so the bridge is planes <-> points at a charted rating,
+# and each plane burns its own Fuel Consumption Rating.
 #
-# ⚠ FLAGGED, TWICE. (a) WHICH plane represents a wing is OUR judgement call -- the 34.6/59.3 Initial
-# Air Strengths roster is untranscribed (state.AirWing says so of its own magnitudes), so we name the
-# type each air force actually flew in this theatre and cite the chart row. (b) RECON has no charted
-# per-point scale at all -- no rating on the chart is denominated in "recon points" -- so one recon
-# Air Point is read as one aeroplane. Both dissolve when 5.3/5.4 build the Squadron Composition Sheet
-# (34.72) and the real roster; the RULE above does not depend on either.
+# THE DENOMINATOR IS NOW THE BOOK'S. Until the [34.6]/[59.3] Initial Air Strengths were transcribed
+# this module named ONE representative type per side and role -- a Ju. 87B stood for the entire Axis
+# bomber arm -- and every conversion divided by that one aeroplane's rating. game.roster replaces it
+# with [60.32]/[60.42]'s real muster: 385 Axis and 143 Commonwealth aeroplanes, each at its own
+# charted rating, so 2,147 Axis strike Air Points are exactly the 184 bombers the book gives the
+# Regia Aeronautica. What survives of the proxy is named in game.roster and is one line: an Air
+# Point buys the establishment's AVERAGE aeroplane, because a wing here still has no roster of its
+# own. That dissolves with 34.72's Squadron Composition Sheet.
+#
+# ⚠ STILL FLAGGED: RECON has no charted per-point scale at all -- no rating on any of the three
+# charts is denominated in "recon points" -- so one recon Air Point is read as one aeroplane.
 AIRCRAFT = logistics_data.aircraft_characteristics_4_44()
-
-# The type each side's abstract wing is expressed in. Every row is transcribed in
-# data/logistics_rates.json and eyes-verified off the 1979 scan -- ratings AND the Mission
-# Capability cells ("the types of missions the plane may be assigned"), which is the chart's own
-# statement of what a type may be ORDERED to do:
-#   Bf. 109E        (PDF p.144) TacAir 6, Fuel 1, F=! S=! R=- D=!  -- the Luftwaffe's fighter
-#   Ju. 87B         (PDF p.145) Bomb 5,   Fuel 1, D=! R=- B=- T=-  -- the Stuka, the Axis bomber
-#   Hs. 126         (PDF p.145) Fuel 1,           D=! R=! B=- T=-  -- German army-cooperation recon
-#   Hurricane Mk. I (PDF p.112) TacAir 4, Fuel 1, F=! S=! R=- D=-  -- the Desert Air Force's fighter
-#   Blenheim Mk. I  (PDF p.113) Bomb 5,   Fuel 2, D=- R=- B=! T=-  -- its light bomber
-#   Lysander Mk. I  (PDF p.113) Fuel 1,           D=S R=! B=- T=-  -- its army-cooperation recon
-REPRESENTATIVE_AIRCRAFT: dict[tuple[Side, str], str] = {
-    (Side.AXIS, "fighters"): "Bf. 109E",
-    (Side.AXIS, "strike"): "Ju. 87B",
-    (Side.AXIS, "recon"): "Hs. 126",
-    (Side.ALLIED, "fighters"): "Hurricane Mk. I",
-    (Side.ALLIED, "strike"): "Blenheim Mk. I",
-    (Side.ALLIED, "recon"): "Lysander Mk. I",
-}
-
-# Which charted rating an Air Point of each role is denominated in (see the block comment):
-# fighters -> 34.13 TacAir, strike -> 34.14 Bombload, recon -> None, one point is one plane.
-# EXPLICIT IN ALL THREE ROLES and read with [], never .get(): an unknown role is a KeyError, not a
-# silent one-plane mission at rating 1.
-_POINTS_PER_PLANE_RATING: dict[str, "str | None"] = {
-    "fighters": "tacair", "strike": "bombload", "recon": None}
-
-# [4.44A/b/c] MISSION CAPABILITY -- which printed cell each role's missions need. The chart prints
-# F S R D beside every fighter and D R B Transport beside every bomber, and defines the block as
-# "the types of missions the plane may be assigned":
-#   F  "Offensive or Defensive Combat Air Patrol (CAP) or Strafing missions"   -> our fighters
-#   R  "Reconnaissance (naval and/or land) missions"                           -> our recon
-#   D  "Strafe and/or any type of bombing missions (see B below)"     \  either one is a bombing
-#   B  "Axis Naval Convoy [Maltese, on the Axis chart] and Land Support Bombing missions"  /  order
-# The D-vs-B split is a flagged JUDGEMENT CALL, argued at length in the data file's
-# _comment_mission_capability_ruling: we read D as a superset of B (41.16 makes D the
-# strafe-AND-bomb marker, and the alternative would leave the Luftwaffe bombing Malta and the
-# Eighth Army with Ar. 196 flying boats, the only German airframe on the chart carrying B). Both
-# our strike representatives pass either way for the missions the engine actually flies them on:
-# the Ju. 87B carries D, the Blenheim Mk. I carries B, and 41.21 puts ports and airfields inside
-# "Land Support". NOTHING GATES ON THIS YET -- it is transcribed for the 5.3/5.4 roster, and
-# mission_capable is the read a test asserts the six representatives against.
-_MISSION_CAPABILITY_FOR_ROLE: dict[str, tuple[str, ...]] = {
-    "fighters": ("F",), "strike": ("D", "B"), "recon": ("R",)}
-
-# The cells that mean "does not possess this capability": '-' as printed on the Axis charts, and
-# 'S' which the Commonwealth key defines as "May only Strafe, MAY NOT BE ASSIGNED ANY BOMBING
-# MISSIONS" (the Lysander's D cell -- it is a strafe permission, not a bombing one).
-_NO_CAPABILITY = {"-", "S"}
 
 
 def mission_capable(side: Side, role: str) -> bool:
-    """[4.44A/b/c] Does the type `side` flies its `role` Air Points as possess the charted Mission
-    Capability that role's missions need? Read off the transcribed cells, and true of all six
-    representatives (tests/test_air_fuel.py asserts it). A pure data check: no engine path gates on
-    it, because our Air Points are not a roster -- when 5.3/5.4 build the Squadron Composition
-    Sheet, THAT is where a plane is refused a mission its chart row does not permit."""
-    cells = AIRCRAFT[REPRESENTATIVE_AIRCRAFT[(side, role)]].get("mission_capability", {})
-    return any(cells.get(c, "-") not in _NO_CAPABILITY
-               for c in _MISSION_CAPABILITY_FOR_ROLE[role])
+    """[4.44A/b/c] Does every type `side` fields in `role` possess the charted Mission Capability
+    that role's missions need? Read off the transcribed cells of the whole establishment
+    (game.roster.mission_capable, which tests/test_establishment.py asserts row by row). A pure data
+    check: no engine path gates on it, because our Air Points are not a roster -- when 34.72's
+    Squadron Composition Sheet lands, THAT is where a plane is refused a mission its chart row does
+    not permit."""
+    return roster.mission_capable(side, role)
 
 
 def points_per_plane(side: Side, role: str) -> int:
-    """The charted rating one aeroplane of `side`'s `role` type carries an Air Point in: 34.13
+    """The Air Points ONE aeroplane of `side`'s `role` establishment carries, on average: 34.13
     TacAir for a fighter, 34.14 Bombload for a strike, and 1 for recon (flagged -- no rating on the
-    chart is denominated in "recon points", so one Air Point is one aeroplane)."""
-    key = _POINTS_PER_PLANE_RATING[role]
-    return 1 if key is None else AIRCRAFT[REPRESENTATIVE_AIRCRAFT[(side, role)]][key]
+    chart is denominated in "recon points", so one Air Point is one aeroplane).
+
+    A REPORTING read, and the only rounded one. Every conversion the engine actually makes goes
+    through planes_flying / points_of_planes, which do the arithmetic in exact integers over the
+    whole establishment and never through this floor."""
+    return roster.points(side, role) // roster.planes(side, role)
 
 
 def fuel_per_plane(side: Side, role: str) -> int:
     """[34.17] One aeroplane's Fuel Consumption Rating -- "the number of Fuel Points required to
-    enable ONE PLANE of that type to fly any one mission" (38.21). The unit the 38.24 draw is
-    quantised in, because 38.24 refuels ONE PLANE AT A TIME."""
-    return AIRCRAFT[REPRESENTATIVE_AIRCRAFT[(side, role)]]["fuel"]
+    enable ONE PLANE of that type to fly any one mission" (38.21) -- as this establishment's own
+    average (game.roster.fuel_per_plane, which carries the Gladiator Mk. II's misprinted Fuel cell
+    as a flag). The unit the 38.24 draw is quantised in, because 38.24 refuels ONE PLANE AT A
+    TIME."""
+    return roster.fuel_per_plane(side, role)
 
 
 def planes_flying(side: Side, role: str, points: int) -> int:
@@ -439,9 +399,14 @@ def planes_flying(side: Side, role: str, points: int) -> int:
     Rounded UP: a mission flown by a fraction of a plane is flown by a plane. Zero points are zero
     planes -- a side that has lost the sky to a scale of 0, or fields no wing of that role, puts
     nothing in the air and therefore burns nothing."""
-    if points <= 0:
-        return 0
-    return -(-points // points_per_plane(side, role))   # ceil, in integers
+    return roster.planes_flying(side, role, points)
+
+
+def points_of_planes(side: Side, role: str, count: int) -> int:
+    """The inverse of planes_flying: the Air Points `count` aeroplanes carry (34.13/34.14). Rounded
+    DOWN, so that a force cut to a number of planes never reads back as more Air Points than it left
+    with -- which is what keeps rule 43's basing cut and 38.31's refit cap caps."""
+    return roster.points_of_planes(side, role, count)
 
 
 def mission_fuel(side: Side, role: str, points: int) -> int:
@@ -552,7 +517,7 @@ def refuel(state: GameState, side: Side, role: str, points: int) -> Sortie:
             remaining -= take
     # the whole force flies at the points it was committed with; a part-funded one flies at its
     # planes' share of them (never more than was committed)
-    flown = points if planes == committed else min(points, planes * points_per_plane(side, role))
+    flown = points if planes == committed else min(points, points_of_planes(side, role, planes))
     return Sortie(flown, planes, committed, tuple(draws), need, available)
 
 
@@ -623,12 +588,12 @@ def refit_drm(nationality: str) -> int:
        order of battle holds SEVEN Axis SGSUs, all Italian ([60.32] "Italian SGSU Available: 39",
        Scenario Group One, Sept 1940 - Feb 1941) and NO German one, because no German SGSU
        availability is transcribed for the campaign at all (game.oob.seed_sgsus carries the same
-       flag). So the Luftwaffe's Staffeln -- the Bf. 109E / Ju. 87B / Hs. 126 of
-       REPRESENTATIVE_AIRCRAFT -- are refitted all war at the ITALIAN +2, when under EITHER reading
-       above a German squadron worked by its own German ground crew takes +1. THE +2 THE AXIS ROLLS
-       AT IN THIS ENGINE IS THEREFORE AN ARTEFACT OF A MISSING COUNTER, NOT A PRINTED FACT ABOUT THE
-       GERMAN AIR FORCE, and it is worth about a sixth of the Axis air force (realised refit 48.6%
-       at +2 against ~56.7% at +1). The 5.3 commit message called it "the printed size"; it is not.
+       flag). THAT DEFECT HAS HALF DISSOLVED with the [59.3] transcription: [60.32] musters NO
+       GERMAN AEROPLANE AT ALL, so the campaign's Axis air force is Italian aircraft worked by
+       Italian ground crews and the +2 is now the printed answer for every squadron in it under
+       either reading. It comes back the day [34.87]'s reinforcement schedule brings the Luftwaffe
+       to Africa without a German SGSU to work it -- worth about a sixth of the force that arrives
+       (realised refit 48.6% at +2 against ~56.7% at +1).
 
     NOT modelled, and the same flag air.may_refit already carries: the chart's third modifier, +1 for
     "planes attempting refit not assigned to [the] Squadron Ground Support Unit attempting refit".
@@ -770,8 +735,8 @@ def ready_points(state: GameState, side: Side, arena: str, role: str, points: in
     caller reads its commitment off the same pool, so points > 0 implies an establishment.)"""
     if points <= 0 or not refit_modelled(state, side):
         return points
-    return min(points, ready_planes(state, side, arena, role, establishment)
-               * points_per_plane(side, role))
+    return min(points, points_of_planes(
+        side, role, ready_planes(state, side, arena, role, establishment)))
 
 
 def flying_planes(state: GameState, side: Side, arena: str, role: str, points: int,

@@ -346,8 +346,10 @@ def test_losing_the_land_sky_below_a_point_grounds_fort_and_port_bombing():
 
 def test_fort_and_port_bombing_carry_committed_strength():
     # winning/contested sky -> the committed strike points ride the payload for legibility.
-    # A 6-point Axis bomber establishment is TWO Ju. 87B, of which rule 43.12 bases three quarters
-    # (one, floored) in Italy/Sicily: the one aeroplane left in Africa carries its Bombload of 5.
+    # RESTATED 2026-07-22: a 6-point Axis bomber establishment used to be two Ju. 87B of which rule
+    # 43.12 based three quarters in Italy/Sicily, leaving one aeroplane carrying Bombload 5. Rule 43
+    # speaks about GERMAN bombers and [60.32] musters none, so nothing is based away and all six
+    # Bomb Points fly.
     from game.state import Port
     port = Port("PORT-X", Side.ALLIED, (2, 0), kind="major", max_eff=5, eff=4,
                 cap_ammo=400, cap_fuel=400, cap_stores=400, cap_water=400, cap_tons=1000)
@@ -355,13 +357,13 @@ def test_fort_and_port_bombing_carry_committed_strength():
                            missions=(AirMission(Side.AXIS, "fort", (1, 0), 1),)))
     _air_support(r, Side.AXIS, set())
     fr = [e for e in r.events if e.kind == EventKind.FORT_REDUCED]
-    assert len(fr) == 1 and fr[0].payload["strength"] == 5
+    assert len(fr) == 1 and fr[0].payload["strength"] == 6
     r2 = _Run(_strike_state(air_strike=6, ports=(port,),
                             missions=(AirMission(Side.AXIS, "port", "PORT-X", 1),)))
     _air_support(r2, Side.AXIS, set())
     marker = [e for e in r2.events if e.kind == EventKind.AIR_STRIKE_RESOLVED
               and e.payload.get("arena") == "PORT"]
-    assert len(marker) == 1 and marker[0].payload["strength"] == 5   # committed strike rides the marker
+    assert len(marker) == 1 and marker[0].payload["strength"] == 6   # committed strike rides the marker
     for pe in r2.events:                                             # and any efficiency drop carries it too
         if pe.kind == EventKind.PORT_EFFICIENCY_CHANGED:
             assert pe.payload["strength"] == 5
@@ -370,18 +372,23 @@ def test_fort_and_port_bombing_carry_committed_strength():
 # --- superiority scaling (the Step-3 gate read at mission time) --------------
 
 def test_air_points_scale_the_loser():
-    """The superiority scale is taken on the AFRICAN contingent, not on the establishment: rule 43
-    bases three quarters of an 8-point Axis bomber pool (2 Ju. 87B) in Italy/Sicily, so 5 Bomb
-    Points are over the desert to be contested, and losing the sky halves THOSE. Scaling first and
-    basing second would have made the whole air-superiority contest invisible for the Axis -- a
-    loser-scale of 0.5 on top of a cap at 0.25 changes nothing (engine._air_points)."""
+    """The superiority scale is taken on the AFRICAN contingent, not on the establishment. Scaling
+    first and basing second would make the whole air-superiority contest invisible for the Axis the
+    moment rule 43 binds -- a loser-scale of 0.5 on top of a cap at 0.25 changes nothing
+    (engine._air_points), which is the ordering bug the 5.5 repair pass fixed and this pins.
+
+    RESTATED 2026-07-22: the ORDER is what this test is for, and it is unchanged; the numbers moved
+    because rule 43 no longer bases anything away ([60.32] musters no German bomber for its typed
+    and untyped cases to bind on). The full 8 Bomb Points are over the desert, and losing the sky
+    halves THOSE. tests/test_basing.py exercises the ordering against an establishment rule 43 does
+    govern."""
     s = _strike_state(air_strike=8, superiority=Side.ALLIED.value)   # Axis LOST the LAND sky
-    assert _air_points(s, Side.AXIS, "LAND", "strike") == 2          # halved, from 5
+    assert _air_points(s, Side.AXIS, "LAND", "strike") == 4          # halved, from 8
     assert _air_points(s, Side.ALLIED, "LAND", "strike") == 0        # no Allied wing here
     s2 = _strike_state(air_strike=8, superiority=Side.AXIS.value)    # Axis WON
-    assert _air_points(s2, Side.AXIS, "LAND", "strike") == 5         # the African contingent, whole
+    assert _air_points(s2, Side.AXIS, "LAND", "strike") == 8         # the African contingent, whole
     s3 = _strike_state(air_strike=8, superiority=None)               # contested
-    assert _air_points(s3, Side.AXIS, "LAND", "strike") == 5
+    assert _air_points(s3, Side.AXIS, "LAND", "strike") == 8
 
 
 # --- RECON (42.2): folds air_sighted, forbidden over a Major City ------------

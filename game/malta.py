@@ -326,15 +326,16 @@ def italy_sicily_planes(state: GameState, turn: int) -> int:
     raided Malta in the Strategic Air Phase and all of it bombed Tobruk in the three Operations Stages
     of the same Game-Turn, which is 35 aeroplanes out of a force of 20.
 
-    ⚠ THE ESTABLISHMENT IT IS A PERCENTAGE OF IS OUR PROXY, NOT THE BOOK'S, and the flag is argued
-    in full in game.basing: the campaign seeds the Axis two dozen strike Air Points -- five Ju. 87B
-    on the 34.14 Bombload bridge -- where [60.32] musters 133 SM 79s, 56 Ca 309s, 24 Ba 88s and 17 SM
-    81s, and 43.11/43.13 name GERMAN HEAVY BOMBER types this engine does not field separately (the
-    owner ruling, at basing.typed_requirement_applies; 43.12's untyped sentence, which is what sizes
-    this number before Game-Turn 35, needs no ruling at all).
-    Until [34.6]/[59.3] is transcribed the Axis raid is a shadow of the book's raid, and the honest
-    reading of any Malta measurement taken today is that the ISLAND'S half of the loop is live at
-    the book's scale and the AXIS's half is live at one one-hundredth of it."""
+    THE ESTABLISHMENT IT IS A PERCENTAGE OF IS NOW THE BOOK'S. [60.32] musters 133 S.M. 79s, 56
+    Ca 309s, 24 Ba 88s, 17 S.M. 81s and five more types, and game.roster carries all of them, so the
+    raid is sized off 184 real bombers rather than off five representative Stukas -- which is the
+    whole of why a Malta raid can now deliver Bomb Points at all. The previous note here said "the
+    AXIS's half is live at one one-hundredth" of the island's; that is fixed.
+
+    ⚠ WHAT IS STILL A JUDGEMENT IS THE BASING FRACTION, not the force. [60.32] prints "no planes
+    start the game in Italy/Sicily" while rule 44 requires some to be there, and the number that
+    resolves it is the flagged [63.46] 10% at basing.discretionary_pct -- an OWNER RULING, written
+    out in full at `_owner_ruling_needed_60_32_vs_44_21` in data/malta_44.json."""
     return basing.italy_sicily_planes(state, turn)
 
 
@@ -377,9 +378,10 @@ def raid(state: GameState, level: str, dice: int, turn: int) -> Raid:
         return Raid(level, dice, 0, 0, 0, 0)
     based = italy_sicily_planes(state, turn)
     planes = based * row[0] // 100 + based * row[1] // 100
-    bombload = logistics_data.aircraft_characteristics_4_44()[
-        air.REPRESENTATIVE_AIRCRAFT[(Side.AXIS, "strike")]]["bombload"]
-    return Raid(level, dice, row[0], row[1], planes, planes * bombload)
+    # [34.14] the Bomb Points those aeroplanes carry, at the charted Bombload of the establishment
+    # they are drawn from ([60.32] -- game.roster, where a bomber is an S.M. 79 far more often than
+    # it is anything else, not the single representative type this used to divide by).
+    return Raid(level, dice, row[0], row[1], planes, air.points_of_planes(Side.AXIS, "strike", planes))
 
 
 def raid_target(state: GameState) -> "AirFacility | None":

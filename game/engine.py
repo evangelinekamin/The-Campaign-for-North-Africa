@@ -622,17 +622,16 @@ def _malta_africa(r: _Run, policies: dict, plan) -> int:
     planes = max(0, min(int(axis.malta_africa_planes(r.state, available, plan.level)), available))
     if planes <= 0:
         return 0
-    bombload = logistics_data.aircraft_characteristics_4_44()[
-        air.REPRESENTATIVE_AIRCRAFT[(Side.AXIS, role)]]["bombload"]
+    bomb_points = air.points_of_planes(Side.AXIS, role, planes)   # 34.14: their charted Bombload
     r.emit(EventKind.MALTA_RAID_REINFORCED, Side.AXIS, "AXIS/Malta",
            {"squadron": squadron, "arena": arena, "role": role, "planes": planes,
-            "bomb_points": planes * bombload, "cap": plan.planes,
+            "bomb_points": bomb_points, "cap": plan.planes,
             "strategic": basing.strategic_planes(r.state, Side.AXIS, arena, role) + planes})
     if air.refit_modelled(r.state, Side.AXIS):       # 38.31: they have flown -- and the ledger is
         r.emit(EventKind.AIR_SQUADRON_UNFIT, Side.AXIS, "AXIS/Air",   # only kept where 38.3 governs
                {"squadron": squadron, "arena": arena, "role": role, "planes": planes,
                 "unfit": air.unfit_planes(r.state, Side.AXIS, arena, role) + planes})
-    return planes * bombload
+    return bomb_points
 
 
 def _reinforcements(r: _Run) -> None:
@@ -727,10 +726,12 @@ def _bombardment_result(bomb_points: int, d1: int, d2: int) -> int:
     two air readings). While this was called `_port_bomb_levels` and returned "the Efficiency Levels
     the port loses", every caller applied the Ports meaning to whatever it was pointed at.
 
-    At the campaign's proxy African contingent of ten Bomb Points (column 1..20 -- two of the five
-    Ju. 87B rule 43 does not base in Sicily) the roll is a 0 on 32 of 36 codes and a 1 on 4, which is
-    what lets a harbour regenerate (55.18) between the bombs and makes the siege a duel rather than a
-    one-way ratchet."""
+    THE COLUMN A HARBOUR IS BOMBED ON MOVED WITH THE [59.3] TRANSCRIPTION. It used to be the
+    1..20 one (the campaign's proxy African contingent was two Ju. 87B), where the roll is a 0 on 32
+    of 36 codes and a 1 on 4 -- which is what let a harbour regenerate (55.18) between the bombs.
+    The real establishment commits what its refitted bombers and its air-facility fuel can pay for,
+    so the column is now whatever 38.24 and 38.31 leave standing, and the duel is decided by the
+    larder rather than by a seeded constant."""
     return _crt_result(logistics_data.air_port_bombing_crt_41_5(), bomb_points, d1, d2, "levels")
 
 

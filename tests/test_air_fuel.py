@@ -21,6 +21,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import game.air as air
+import game.roster as roster
 import game.supply as supply
 from game.apply import fold
 from game.engine import _air_fuel, _air_support, _air_superiority, _Run, run
@@ -46,13 +47,22 @@ def test_the_transcribed_aircraft_rows_are_the_charts():
     assert ac["Hurricane Mk. I"]["tacair"] == 4 and ac["Hurricane Mk. I"]["fuel"] == 1
     assert ac["Blenheim Mk. I"]["bombload"] == 5 and ac["Blenheim Mk. I"]["fuel"] == 2
     assert ac["Hs. 126"]["fuel"] == 1 and ac["Lysander Mk. I"]["fuel"] == 1
-    # every type an Air Point may be expressed in is transcribed, and carries a usable rating in
-    # the column its role is denominated in (a fighter's TacAir, a bomber's Bombload) plus a Fuel
-    # Consumption Rating -- the three numbers the conversion needs
-    for (side, role), name in air.REPRESENTATIVE_AIRCRAFT.items():
-        assert name in ac and ac[name]["fuel"] > 0
-        key = air._POINTS_PER_PLANE_RATING.get(role)
-        assert key is None or ac[name][key] > 0
+    # RESTATED with the [34.6]/[59.3] transcription (2026-07-22): an Air Point is no longer
+    # expressed in one representative type per side and role -- game.roster converts through the
+    # WHOLE muster -- so the property this asserted is now asserted of every type either
+    # establishment fields. Each carries a usable rating in the column its role is denominated in
+    # (a fighter's TacAir, a bomber's Bombload) and a Fuel Consumption Rating. THE ONE EXCEPTION IS
+    # THE BOOK'S OWN MISPRINT: [4.44A] prints a dash in the Gladiator Mk. II's Fuel column, which is
+    # transcribed as null and raised as an owner ruling rather than guessed at.
+    for side in (Side.AXIS, Side.ALLIED):
+        for role in ("fighters", "strike", "recon"):
+            for m in roster.by_role(side, role):
+                assert m.type in ac, m.type
+                key = roster.RATING_FOR_ROLE[role]
+                assert key is None or ac[m.type][key] > 0, (m.type, key)
+                assert ac[m.type]["fuel"] is None or ac[m.type]["fuel"] > 0, m.type
+    assert ac["Gladiator Mk. II"]["fuel"] is None
+    assert "misprint" in ac["Gladiator Mk. II"]["_fuel_misprint_4_44A"].lower()
 
 
 def test_4_44_the_mission_capability_column_is_transcribed_and_every_type_passes_it():
@@ -76,38 +86,57 @@ def test_4_44_the_mission_capability_column_is_transcribed_and_every_type_passes
     assert ac["Lysander Mk. I"]["mission_capability"]["D"] == "S"
     assert ac["Bf. 109E"]["mission_capability"]["F"] == "!"
     assert ac["Hurricane Mk. I"]["mission_capability"]["F"] == "!"
-    # every type an Air Point is expressed in may be ASSIGNED the missions its role flies:
-    # fighters need F (CAP), strike needs D or B (bombing), recon needs R
-    for side, role in air.REPRESENTATIVE_AIRCRAFT:
-        assert air.mission_capable(side, role), (side, role)
+    # every type EITHER ESTABLISHMENT FIELDS may be ASSIGNED the missions its role flies: fighters
+    # need F (CAP), strike needs D or B (bombing), recon needs R. (Restated 2026-07-22: this used to
+    # walk the six representative types; it now walks all twenty muster rows, which is what makes it
+    # a check on the role column of data/air_establishments.json rather than on six literals.)
+    for side in (Side.AXIS, Side.ALLIED):
+        for role in ("fighters", "strike", "recon"):
+            assert air.mission_capable(side, role), (side, role)
     # ...and the check has teeth: the Lysander's D cell is "S", which the Commonwealth key defines
     # as "May only Strafe, MAY NOT BE ASSIGNED ANY BOMBING MISSIONS", and its B cell is empty -- so
     # it would fail the gate as a strike type, which is why it is only ever flown as recon
     lysander = ac["Lysander Mk. I"]["mission_capability"]
-    assert air._MISSION_CAPABILITY_FOR_ROLE["strike"] == ("D", "B")
-    assert all(lysander[c] in air._NO_CAPABILITY for c in ("D", "B"))
+    assert roster.CAPABILITY_FOR_ROLE["strike"] == ("D", "B")
+    assert all(lysander[c] in roster.NO_CAPABILITY for c in ("D", "B"))
 
 
 def test_air_points_convert_to_aeroplanes_by_the_charted_rating():
-    """34.14: strike Air Points ARE Bomb Points (the engine feeds them to the [41.5] columns), so
-    a Ju 87B carrying 5 of them is one aeroplane and 6 points need two. 34.13: fighter Air Points
-    are TacAir, so 8 of them is two Bf 109Es (rating 6) but two Hurricanes (rating 4)."""
-    assert air.planes_flying(Side.AXIS, "strike", 5) == 1
-    assert air.planes_flying(Side.AXIS, "strike", 6) == 2        # rounded UP: a part-plane flies
-    assert air.planes_flying(Side.AXIS, "fighters", 6) == 1
-    assert air.planes_flying(Side.AXIS, "fighters", 8) == 2
-    assert air.planes_flying(Side.ALLIED, "fighters", 8) == 2
-    assert air.planes_flying(Side.ALLIED, "fighters", 9) == 3
+    """34.14: strike Air Points ARE Bomb Points (the engine feeds them to the [41.5] columns) and
+    34.13: fighter Air Points are TacAir. RESTATED 2026-07-22, and the reason is the whole of this
+    block: the divisor used to be ONE hand-picked representative type per side and role (a Ju. 87B
+    at Bomb 5 stood for the entire Axis bomber arm), and it is now the [34.6]/[59.3] ESTABLISHMENT's
+    own ratio -- [60.32]'s 184 bombers carrying 2,147 Bomb Points, [60.42]'s 56 carrying 382. The
+    numbers below moved because the denominator became the book's; the law did not move.
+
+    THE IDENTITY THAT MATTERS is that the whole establishment converts back to itself exactly, in
+    both directions. Everything else is a share of it, rounded UP into planes (a mission flown by a
+    fraction of an aeroplane is flown by an aeroplane) and DOWN back into points (a force cut to a
+    number of planes never reads back as more Air Points than it left with)."""
+    for side in (Side.AXIS, Side.ALLIED):
+        for role in ("fighters", "strike", "recon"):
+            whole = roster.points(side, role)
+            assert air.planes_flying(side, role, whole) == roster.planes(side, role)
+            assert air.points_of_planes(side, role, roster.planes(side, role)) == whole
+    assert air.planes_flying(Side.AXIS, "strike", 11) == 1       # 2147/184: one average bomber
+    assert air.planes_flying(Side.AXIS, "strike", 12) == 2       # rounded UP: a part-plane flies
+    assert air.planes_flying(Side.AXIS, "fighters", 3) == 1      # 405/135 = 3 exactly (C.R. 42/32)
+    assert air.planes_flying(Side.AXIS, "fighters", 8) == 3
+    assert air.planes_flying(Side.ALLIED, "fighters", 8) == 3    # 157/55, a mixed fighter arm
     assert air.planes_flying(Side.ALLIED, "recon", 3) == 3       # flagged: 1 point = 1 recon plane
     assert air.planes_flying(Side.AXIS, "strike", 0) == 0
+    assert air.points_of_planes(Side.AXIS, "strike", 0) == 0
 
 
 def test_the_mission_bill_is_planes_times_the_fuel_consumption_rating():
-    """38.21: the bill is per plane per mission, and it does not vary with distance (34.17)."""
-    assert air.mission_fuel(Side.AXIS, "strike", 6) == 2         # 2 Stukas x Fuel 1
-    assert air.mission_fuel(Side.ALLIED, "strike", 6) == 4       # 2 Blenheims x Fuel 2
-    assert air.mission_fuel(Side.AXIS, "fighters", 8) == 2       # 2 Bf 109Es x Fuel 1
-    assert air.mission_fuel(Side.ALLIED, "recon", 2) == 2
+    """38.21: the bill is per plane per mission, and it does not vary with distance (34.17). The
+    per-plane rating is the establishment's own average now ([60.32]'s bombers are mostly S.M. 79s
+    at Fuel 3; the Commonwealth's mixed bomber force averages to 3 as well)."""
+    assert air.fuel_per_plane(Side.AXIS, "strike") == 3
+    assert air.mission_fuel(Side.AXIS, "strike", 12) == 6        # 2 bombers x Fuel 3
+    assert air.mission_fuel(Side.ALLIED, "strike", 7) == 6       # 2 bombers x Fuel 3
+    assert air.mission_fuel(Side.AXIS, "fighters", 8) == 3       # 3 fighters x Fuel 1
+    assert air.mission_fuel(Side.ALLIED, "recon", 2) == 6
     assert air.mission_fuel(Side.AXIS, "strike", 0) == 0         # no planes, no fuel
 
 
@@ -128,10 +157,11 @@ def _state(*, facilities=(), supplies=(), missions=(), strike=40, fighters=0, re
            control=None, weather="clear", stage=2) -> GameState:
     """An Axis LAND wing over an Allied stack at (1,0), based on the facilities passed in.
 
-    THE WING IS DECLARED FOUR TIMES THE FORCE THAT FLIES, and that is rule 43 (game.basing): 43.12
-    bases 75% of every German bomber pool in Italy/Sicily, so an ESTABLISHMENT of 40 Bomb Points
-    (8 Ju. 87B on the 34.14 bridge) puts two aeroplanes -- 10 Bomb Points -- over the desert, which
-    is the force these fuel bills are counted in.
+    THE WHOLE WING FLIES, AND THAT CHANGED WITH THE [59.3] TRANSCRIPTION (2026-07-22). It used to
+    be declared four times the force that flew, because rule 43 was applied to the whole abstract
+    Axis bomber pool; 43.11/43.12/43.13 speak about GERMAN bombers and the transcribed [60.32]
+    muster fields none, so nothing is now based off the desert and an establishment of 40 Bomb
+    Points is 4 aeroplanes over the target (2,147 Bomb Points to 184 bombers -- game.roster).
 
     STAGE 2 BY DEFAULT, and that is [59.32]: "All planes (refitted or not) are considered to begin
     a scenario FUELED AND ARMED (at no cost to the supplies available)", so the scenario's opening
@@ -164,9 +194,9 @@ def test_38_24_the_fuel_comes_out_of_the_air_facilitys_own_dump():
     _air_support(r, Side.AXIS, set())
     drawn = [e for e in r.events if e.kind == EventKind.SUPPLY_CONSUMED]
     assert [(e.payload["supply_id"], e.payload["commodity"], e.payload["qty"]) for e in drawn] \
-        == [("AF-Sup", supply.FUEL, 2)]                  # 2 Stukas x Fuel 1
-    assert drawn[0].actor == "AXIS/Air"
-    assert r.state.supply("AF-Sup").fuel == 7
+        == [("AF-Sup", supply.FUEL, 9)]                  # 3 of the 4 bombers x Fuel 3 (38.24 pays
+    assert drawn[0].actor == "AXIS/Air"                  # per plane; the larder holds nine)
+    assert r.state.supply("AF-Sup").fuel == 0
     assert any(e.kind == EventKind.AIR_STRIKE_RESOLVED for e in r.events)   # and it flew
 
 
@@ -209,7 +239,7 @@ def test_the_draw_spreads_over_the_fields_in_id_order():
     st = _state(facilities=[_field("F1", hex_=(0, 0)), _field("F2", hex_=(1, 0))],
                 supplies=[_dump("F1-Sup", fuel=1, hex_=(0, 0)),
                           _dump("F2-Sup", fuel=5, hex_=(1, 0))])
-    assert air.refuel(st, Side.AXIS, "strike", 20).draws == (("F1-Sup", 1), ("F2-Sup", 3))
+    assert air.refuel(st, Side.AXIS, "strike", 20).draws == (("F1-Sup", 1), ("F2-Sup", 5))
     assert air.refuel(st, Side.AXIS, "strike", 0).draws == ()
 
 
@@ -221,15 +251,16 @@ def test_38_24_refuels_ONE_PLANE_AT_A_TIME_and_a_half_paid_force_flies_half():
     Points into the [41.5] column, not the six the wing committed. This block used to refuse the
     whole mission unless it could fund every plane, which is what turned a thinning air force into
     a dead one."""
-    st = _state(facilities=[_field()], supplies=[_dump(fuel=1)])
-    s = air.refuel(st, Side.AXIS, "strike", 6)             # 6 Bomb Points = 2 Ju 87Bs at Bomb 5
-    assert (s.committed, s.planes, s.points) == (2, 1, 5)
-    assert s.draws == (("AF-Sup", 1),) and (s.need, s.available) == (2, 1)
+    st = _state(facilities=[_field()], supplies=[_dump(fuel=3)])
+    s = air.refuel(st, Side.AXIS, "strike", 23)            # 23 Bomb Points = 2 bombers at Fuel 3
+    assert (s.committed, s.planes, s.points) == (2, 1, 11)
+    assert s.draws == (("AF-Sup", 3),) and (s.need, s.available) == (6, 3)
     # and the half-funded sortie really does fly, at the reduced strength
-    r = _Run(_state(facilities=[_field()], supplies=[_dump(fuel=1)], missions=_strike_mission()))
+    r = _Run(_state(facilities=[_field()], supplies=[_dump(fuel=3)], strike=23,
+                    missions=_strike_mission()))
     _air_support(r, Side.AXIS, set())
     resolved = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED]
-    assert len(resolved) == 1 and resolved[0].payload["strength"] == 5
+    assert len(resolved) == 1 and resolved[0].payload["strength"] == 11
     assert not any(e.kind == EventKind.AIR_MISSION_GROUNDED for e in r.events)
     assert r.state.supply("AF-Sup").fuel == 0
 
@@ -239,12 +270,12 @@ def test_38_24_refuels_ONE_PLANE_AT_A_TIME_and_a_half_paid_force_flies_half():
 def test_38_21_a_larder_that_cannot_fuel_ONE_plane_grounds_the_mission():
     """"Planes must have fuel to fly" (38.21). Only a larder that cannot pay for a single aeroplane
     grounds the sortie outright -- anything above that flies the planes it can pay for (38.24). The
-    Commonwealth is the sharper fixture: a Blenheim Mk. I burns TWO Fuel Points, so one Point in
-    the larder buys no bomber at all."""
+    Commonwealth is the sharper fixture: its bomber force averages THREE Fuel Points a sortie, so
+    one Point in the larder buys no bomber at all."""
     st = _state(facilities=[_field(side=Side.ALLIED)],
                 supplies=[_dump("CW-Sup", side=Side.ALLIED, fuel=1)])
-    s = air.refuel(st, Side.ALLIED, "strike", 6)          # 2 Blenheims x Fuel 2 = 4, larder holds 1
-    assert (s.committed, s.planes, s.points, s.need, s.available) == (2, 0, 0, 4, 1)
+    s = air.refuel(st, Side.ALLIED, "strike", 7)          # 2 bombers x Fuel 3 = 6, larder holds 1
+    assert (s.committed, s.planes, s.points, s.need, s.available) == (2, 0, 0, 6, 1)
     assert s.draws == ()                                  # nothing is drawn at all
 
     st = _state(facilities=[_field()], supplies=[_dump(fuel=0)], missions=_strike_mission())
@@ -254,7 +285,8 @@ def test_38_21_a_larder_that_cannot_fuel_ONE_plane_grounds_the_mission():
     assert len(grounded) == 1
     p = grounded[0].payload
     assert p["kind"] == "strike" and p["role"] == "strike"
-    assert p["need"] == 2 and p["available"] == 0 and p["points"] == 10   # 43.12's African quarter
+    assert p["need"] == 12 and p["available"] == 0 and p["points"] == 40  # 4 bombers x Fuel 3, and
+                                                                         # rule 43 bases none away
     # nothing flew and nothing was drawn
     assert not any(e.kind == EventKind.AIR_STRIKE_RESOLVED for e in r.events)
     assert not any(e.kind == EventKind.SUPPLY_CONSUMED for e in r.events)
@@ -329,7 +361,7 @@ def test_39_11_a_blind_sortie_is_billed_whether_or_not_the_target_was_there():
     assert r.state.fort_level((1, 0)) == 0                       # nothing was there to batter
     assert not any(e.kind == EventKind.FORT_REDUCED for e in r.events)
     assert [(e.payload["supply_id"], e.payload["qty"])           # ...and the sortie was billed
-            for e in r.events if e.kind == EventKind.SUPPLY_CONSUMED] == [("AF-Sup", 2)]
+            for e in r.events if e.kind == EventKind.SUPPLY_CONSUMED] == [("AF-Sup", 9)]
 
     # the structural refusal is still free: never batter works your OWN side holds
     own = replace(_state(facilities=[_field()], supplies=[_dump(fuel=9)],
@@ -432,14 +464,14 @@ def test_a_side_that_LOSES_its_last_field_is_grounded_not_freed():
 def test_air_fuel_reports_the_air_points_that_actually_fly():
     """The helper returns FUELLED Air Points, not a yes/no: the full commitment while the larder
     covers every plane, a plane's share of it while it covers some, and 0 when it covers none."""
-    st = _state(facilities=[_field()], supplies=[_dump(fuel=3)])
+    st = _state(facilities=[_field()], supplies=[_dump(fuel=9)])
     r = _Run(st)
     mission = {"arena": "LAND", "kind": "strike"}
-    assert _air_fuel(r, Side.AXIS, "strike", 6, mission) == 6     # 2 Stukas, 2 Fuel Points
-    assert r.state.supply("AF-Sup").fuel == 1
-    assert _air_fuel(r, Side.AXIS, "strike", 6, mission) == 5     # 1 of the 2 Stukas flies
+    assert _air_fuel(r, Side.AXIS, "strike", 23, mission) == 23   # 2 bombers, 6 Fuel Points
+    assert r.state.supply("AF-Sup").fuel == 3
+    assert _air_fuel(r, Side.AXIS, "strike", 23, mission) == 11   # 1 of the 2 bombers flies
     assert r.state.supply("AF-Sup").fuel == 0
-    assert _air_fuel(r, Side.AXIS, "strike", 6, mission) == 0     # grounded
+    assert _air_fuel(r, Side.AXIS, "strike", 23, mission) == 0    # grounded
     assert [e.payload["kind"] for e in r.events
             if e.kind == EventKind.AIR_MISSION_GROUNDED] == ["strike"]
 

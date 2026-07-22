@@ -1410,10 +1410,57 @@ Sizes assume **one person**. **⏱** is a working-days estimate, honestly.
    after), a discontinuity produced by a type list rather than by the war. Read as a stand-in (our one
    abstract bomber represents the whole German bomber arm), Crete takes its half and Africa stays at 25%
    all war. Flipping the list in `data/malta_44.json` is the whole of the affirmative ruling.
+   **→ DISSOLVED, NOT ANSWERED (2026-07-22, the [34.6]/[59.3] block below). It was a question about a
+   PROXY. On the real muster the answer is flatter: [60.32] musters no German aeroplane at all, so rule
+   43 — typed and untyped alike — has nothing to base until [34.87] brings the Luftwaffe.**
 2. **What is "FW220"?** 43.11 and 43.13 both name it and **no such aircraft is in the game**. The
    [4.44b] chart (PDF p145, read with eyes) prints eight German types and the nearest Focke Wulf bomber
    is the **Fw. 200 C** (Range 205, Bomb 14). This is a book-internal inconsistency of the 54.17 class;
    it is left unseeded under `unresolved_type_43_11` rather than guessed.
+   **→ RULED 2026-07-21 (Eve): it IS the Fw. 200 C. Seeded, and the row is now transcribed.**
+
+#### 5.6 LANDED — 2026-07-22. **[34.6]/[59.3] THE REAL INITIAL AIR STRENGTHS.**
+
+**The Axis strike establishment was a four-aeroplane proxy.** `game.air.REPRESENTATIVE_AIRCRAFT`
+named one type per side and role — a Ju. 87B at Bombload 5 stood for the whole Axis bomber arm — and
+`scenario._AXIS_AIR_STRIKE` seeded it 24 Bomb Points, of which rule 43 left a quarter in Africa.
+**[60.32] musters 133 S.M. 79 Sparvieros alone.** Percentages of three round to zero, which is why 84
+of 111 Malta raids delivered nothing.
+
+**BUILT.** `data/air_establishments.json` (the fourth data file, beside `malta_44` and
+`air_facilities_60_5`) carries [60.32]'s nine Italian rows and [60.42]'s eleven Commonwealth ones —
+Total Available, Total Refitted, the pilots, the SGSU counts — read with eyes off PDF p.78.
+`aircraft_characteristics_4_44` grows from 6 rows to 28: **every type either establishment fields**,
+plus the three German heavies 43.11/43.13 names, each read off PDF p.112/113 (Commonwealth) and
+p.144/145 (Axis) — **the Italian fighter OCR in `docs/rules/90-charts` is column-shifted exactly as
+the Commonwealth one was**, folding the header into the C.R. 32 row. `game/roster.py` is the bridge:
+role ← the printed Mission Capability cells, Air Points ← Σ available × charted rating, and the
+points↔planes conversion is now the *establishment's* own exact ratio instead of one hand-picked
+type's. `scenario._campaign_air` seeds both wings from it (Axis 405/2147/66, Commonwealth 157/382/32
+fighters/strike/recon) and `air_unfit` from **[59.32]'s Refitted column** — three quarters of both air
+forces start in the hangars, which 38.31's blanket "all planes are considered refitted" had been
+overriding.
+
+**MEASURED** (`scripts/measure_air.py`). Axis 385 aeroplanes (135 fighters / 184 bombers / 66 recon),
+Commonwealth 143 (55 / 56 / 32) — **and the same at Game-Turn 35, which is the finding**: [34.86] and
+[34.87], the two monthly Airplane Reinforcement Schedules, are untranscribed, so nothing enters this
+war after the set-up and nothing outside Malta leaves it. Rule 43 bases 18 of the 184 bombers in
+Italy/Sicily and none in Crete, at every Game-Turn, for the reasons above. **Malta raids delivering
+bomb points, over the full 111-turn campaign: 27 of 111 → 92 / 91 / 82 of 111 on seeds 4 / 1941 / 7**
+(median 151 Bomb Points a raid, max 968; 19–22 Maltese capacity levels knocked down and 24–26
+aeroplanes destroyed on the ground, where the old proxy could barely scratch the island). The raids
+that still deliver nothing are [44.42]'s own `na` cells and the Game-Turns Malta is already flat.
+
+**🔴 ONE NEW OWNER RULING, and it is the interesting one.** **[60.32] prints "no planes start the game
+in Italy/Sicily", and [44.21]/[44.25]/[44.27] make an Italy/Sicily base the precondition for any Axis
+raid on Malta** — while [64.52] and [44.41]'s campaign row give him unlimited Level-I raids. The
+bridge the book intends is 43.1's free basing choice plus a rule-37 transfer, and this engine has an
+order channel for neither. **Seeding zero is not neutral — it silently repeals rule 44** — so
+`basing.discretionary_pct` takes **[63.46]'s printed 10% ceiling**, the only number the book prints
+for that posture, flagged as a transplant from the El Alamein group. Also: **[60.32]'s ninth row reads
+"2S01"** and no chart prints it (the Cant Z. 501 Gabbiano is the only candidate) — transcribed, **left
+unseeded**, nine aeroplanes; and **[4.44A] prints a DASH in the Gladiator Mk. II's Fuel column**, where
+the key gives that glyph no meaning — transcribed as null.
 
 **THE DEFERRED AIR DEBT IS WRITTEN DOWN IN THE CODE**, at the top of `game/basing.py` (the last module
 of Phase 5, where the next person will look). Restated here: 40, 45, 46, pilots, maneuver, night,

@@ -17,10 +17,14 @@ The rule these two enforce together is that the Axis air force cannot be everywh
 THE INVARIANT THIS FILE EXISTS TO PIN IS THAT AN AEROPLANE IS IN EXACTLY ONE PLACE: what rule 44
 raids Malta with is what rule 43 has taken off the African battlefield, subtracted once.
 
-⚠ ONE OWNER RULING RIDES ON THIS FILE and is asserted rather than hidden: 43.11/43.13 are written
-about GERMAN HEAVY BOMBER types, and this engine's abstract Axis strike pool is a Ju. 87B, which is
-not one of them -- so from Game-Turn 35, when 43.12's untyped sentence expires, the Crete half binds
-on nothing. The tests below measure what that costs rather than assert it away.
+RESTATED 2026-07-22, WHEN THE [34.6]/[59.3] INITIAL AIR STRENGTHS LANDED. This file used to carry
+an owner ruling: rule 43's typed cases name German heavy bombers and the engine's Axis strike pool
+was ONE abstract Ju. 87B, so the Crete half bound on nothing for a reason that was ours. With the
+real muster transcribed (game.roster) the answer is flatter and needs no ruling at all -- **[60.32]
+MUSTERS NO GERMAN AEROPLANE**, so every clause of rule 43, typed and untyped alike, has nothing to
+base until the untranscribed [34.87] reinforcement schedule brings the Luftwaffe to Africa. The
+tests below therefore assert the LAW against a doctored establishment that does field a named type,
+and assert separately that the campaign's own establishment does not.
 """
 from __future__ import annotations
 
@@ -34,6 +38,7 @@ import game.air as air
 import game.basing as basing
 import game.logistics_data as logistics_data
 import game.malta as malta
+import game.roster as roster
 import game.supply as supply
 from game.apply import apply
 from game.campaign_policy import CampaignAxisPolicy, malta_africa_doctrine
@@ -46,6 +51,22 @@ from game.state import AirWing, GameState, VP
 from game.terrain import Terrain
 
 AXIS_STRIKE = "AXIS/LAND/strike"
+
+
+def _with_german_bombers(monkeypatch, available=100):
+    """Put a type rule 43 NAMES into the Axis bomber establishment -- the chart's own "He. 111", so
+    the exact string match binds -- and keep it the whole of that establishment, so the percentages
+    below are percentages of a force the rule governs entire. This is what [34.87]'s Axis Airplane
+    Reinforcement Schedule will do for real; until it is transcribed, a monkeypatch is the only way
+    to exercise a law the campaign cannot yet reach."""
+    real = roster._establishments()
+    kept = [r for r in real["campaign_64"]["AXIS"]["planes"] if r["role"] != "strike"]
+    axis = {**real["campaign_64"]["AXIS"],
+            "planes": kept + [{"type": "He. 111", "printed": "He 111", "available": available,
+                               "refitted": available, "role": "strike"}]}
+    patched = {**real,
+               "campaign_64": {**real["campaign_64"], "AXIS": axis}}
+    monkeypatch.setattr(roster, "_establishments", lambda: patched)
 
 
 def _mini(*, strike=6, turn=1, missions=(), unfit=None, strategic=None) -> GameState:
@@ -78,12 +99,16 @@ def test_the_three_printed_basing_percentages():
     assert basing.italy_sicily_pct(34) + basing.crete_pct(34) == printed["mediterranean_pct"]
 
 
-def test_the_malta_capable_force_collapses_at_game_turn_35():
-    """43.13 + 43.25, read on a real establishment: the same island, the same aeroplanes, and two
-    thirds fewer of them able to reach it once Crete takes its half."""
-    st = _mini(strike=100)                               # 20 Ju 87B on the 34.14 bridge
-    assert basing.italy_sicily_planes(st, 34) == 15
-    assert basing.italy_sicily_planes(st, 35) == 5
+def test_the_malta_capable_force_collapses_at_game_turn_35(monkeypatch):
+    """43.13 + 43.25, read on an establishment rule 43 actually governs: the same island, the same
+    aeroplanes, and two thirds fewer of them able to reach it once Crete takes its half. (The
+    establishment is doctored to field He. 111s, because [60.32]'s does not field one German
+    aeroplane -- see test_the_campaign_musters_no_german_aeroplane_at_all.)"""
+    _with_german_bombers(monkeypatch)
+    st = _mini(strike=2700)                              # 100 He. 111 at Bombload 27
+    assert air.squadron_planes(st, Side.AXIS, "LAND", "strike") == 100
+    assert basing.italy_sicily_planes(st, 34) == 75
+    assert basing.italy_sicily_planes(st, 35) == 25
     # and rule 44 reads THIS function, so the two cannot drift apart
     assert malta.italy_sicily_planes(st, 35) == basing.italy_sicily_planes(st, 35)
 
@@ -101,39 +126,53 @@ def test_an_aeroplane_is_in_exactly_one_place():
         assert basing.africa_planes(st, Side.AXIS, turn) + med == pool
 
 
-def test_43_12_is_untyped_so_the_desert_keeps_a_quarter_of_the_bombers_until_game_turn_35():
+def test_43_12_is_untyped_but_it_is_not_un_nationed(monkeypatch):
     """"Until 1/35 Game-Turn 1941, 75% OF ALL GERMAN BOMBERS must be based in Italy/Sicily" names no
-    aircraft type, so it binds on the one abstract German bomber pool this engine fields whatever
-    the owner rules about 43.11's three named types. Twenty Stukas, fifteen in Sicily, five in
-    Africa -- and the five carry the Bombload of five aeroplanes and no more."""
-    st = _mini(strike=100)
-    assert basing.africa_planes(st, Side.AXIS, 1) == 5
-    assert basing.establishment(st, Side.AXIS, "LAND", "strike") == 5
-    assert basing.available_points(st, Side.AXIS, "LAND", "strike", 100) == 25   # 5 x Bombload 5
+    aircraft TYPE -- which is why it used to be read as binding on the whole abstract Axis pool --
+    but it does name a NATIONALITY, and that word is the whole difference now that the establishment
+    is the book's. Given a German bomber force it takes three quarters of it off the desert; given
+    [60.32]'s Regia Aeronautica it takes nothing.
+
+    RESTATED 2026-07-22 (rule 5: the old assertion enshrined the proxy, not the rule -- it read
+    "twenty Stukas, fifteen in Sicily, five in Africa" of an establishment that never existed)."""
+    _with_german_bombers(monkeypatch)
+    st = _mini(strike=2700)                                          # 100 He. 111
+    assert basing.africa_planes(st, Side.AXIS, 1) == 25
+    assert basing.establishment(st, Side.AXIS, "LAND", "strike") == 25
+    assert basing.available_points(st, Side.AXIS, "LAND", "strike", 2700) == 675  # 25 x Bombload 27
     # every other side, arena and role is untouched by rule 43 -- 43.1 is the German Player's
     daf = replace(st, air=st.air + (AirWing("DAF", Side.ALLIED, "LAND",
-                                            fighters=0, strike=100, recon=0),))
+                                            fighters=0, strike=382, recon=0),))
     assert basing.africa_planes(daf, Side.ALLIED, 1) == air.squadron_planes(
-        daf, Side.ALLIED, "LAND", "strike") == 20
-    assert basing.available_points(daf, Side.ALLIED, "LAND", "strike", 100) == 100
+        daf, Side.ALLIED, "LAND", "strike") == 56
+    assert basing.available_points(daf, Side.ALLIED, "LAND", "strike", 382) == 382
     assert basing.available_points(st, Side.AXIS, "LAND", "recon", 2) == 2
     assert basing.available_points(daf, Side.ALLIED, "SEA", "strike", 0) == 0
 
 
 # --- the owner ruling ----------------------------------------------------------------------------
 
-def test_43_11_and_43_13_name_types_this_engine_does_not_field():
-    """⚠ OWNER RULING (1). 43.11/43.13 constrain named GERMAN HEAVY BOMBERS and nothing else, and
-    game.air expresses the Axis LAND bomber pool as the Ju. 87B -- a Stuka, which they do not name
-    and which flew from African strips. So the CRETE half binds on nothing, and when 43.12's untyped
-    sentence expires at Game-Turn 35 the Luftwaffe's desert bomber force TRIPLES. That discontinuity
-    is the cost of leaving the ruling open, and it is measured here rather than smoothed away."""
+def test_the_campaign_musters_no_german_aeroplane_at_all():
+    """THE FINDING THAT DISSOLVED OWNER RULING (1), and it is a fact about the book rather than a
+    reading of it: [60.32] is the campaign's Initial Air Strengths ([64.3] sends the campaign to
+    section 60) and every one of its nine rows is Italian. So the Axis air force in Africa in
+    September 1940 is the Regia Aeronautica entire, rule 43 -- typed and untyped alike -- has no
+    German bomber to base anywhere, and the whole establishment flies over the desert.
+
+    The Luftwaffe arrives on [34.87]'s Axis Airplane Reinforcement Schedule, which is untranscribed;
+    when it lands, rule 43 starts binding on its own with no code change, which is what the doctored
+    fixtures above prove."""
+    chart = logistics_data.aircraft_characteristics_4_44()
+    assert [m.type for m in roster.roster(Side.AXIS)]         # the muster is not empty...
+    assert not [m for m in roster.roster(Side.AXIS) if chart[m.type]["nation"] == "german"]
+    assert all(chart[m.type]["nation"] == "italian" for m in roster.roster(Side.AXIS))
     st = _mini(strike=100)
-    assert air.REPRESENTATIVE_AIRCRAFT[(Side.AXIS, "strike")] == "Ju. 87B"
+    assert basing.constrained_planes(st, Side.AXIS) == 0
     assert not basing.typed_requirement_applies(st, Side.AXIS)
-    assert basing.crete_planes(st, 35) == 0                  # the unseeded half of the ruling
-    assert basing.africa_planes(st, Side.AXIS, 34) == 5       # 43.12 in force
-    assert basing.africa_planes(st, Side.AXIS, 35) == 15      # 43.12 expired, 43.13 typed out
+    assert basing.crete_planes(st, 35) == 0
+    pool = air.squadron_planes(st, Side.AXIS, "LAND", "strike")
+    assert basing.africa_planes(st, Side.AXIS, 34) == pool    # 43.12 has nothing to base
+    assert basing.africa_planes(st, Side.AXIS, 35) == pool    # nor do 43.11/43.13
 
 
 def test_the_constrained_types_are_the_chart_s_printed_names_not_the_rule_s_prose():
@@ -148,9 +187,9 @@ def test_the_constrained_types_are_the_chart_s_printed_names_not_the_rule_s_pros
     CHART. Eve ruled it the same aeroplane as the chart's "Fw. 200 C", so the constrained list now
     carries all three types the rule names -- and the mechanism this test guards is unchanged: the
     seeded name is the CHART's, so it can bind."""
-    # The German half of [4.44b], as the 1979 chart prints it. The full roster is untranscribed
-    # ([34.6]/[59.3] is Phase 6 work) -- only the six representative rows are in the data file --
-    # so this literal is the scan reading itself, and it is what the constrained list must live in.
+    # The German half of [4.44b], as the 1979 chart prints it. The data file transcribes six of the
+    # eight (the Ar. 196 and the Ju. 52/3m are in no muster and are not needed), so this literal is
+    # the scan reading itself, and it is what the constrained list must live in.
     printed_p145 = ("Ar. 196", "Fw. 200 C", "He. 111", "Hs. 126", "Ju. 52/3m",
                     "Ju. 87B", "Ju. 87D", "Ju. 88D")
     assert basing.constrained_types() == ("Fw. 200 C", "He. 111", "Ju. 88D")
@@ -169,18 +208,17 @@ def test_the_constrained_types_are_the_chart_s_printed_names_not_the_rule_s_pros
 
 
 def test_the_crete_half_binds_the_moment_a_named_type_enters_the_order_of_battle(monkeypatch):
-    """The law is written once and the DATA decides whether it binds. Put a He. 111 in the Axis
-    bomber seat -- the chart's own name for it -- and from Game-Turn 35 half the force sits in
-    Crete, where 43.25 lets it raid nothing and 43.11 keeps it off the battlefield."""
-    monkeypatch.setitem(air.REPRESENTATIVE_AIRCRAFT, (Side.AXIS, "strike"), "He. 111")
-    monkeypatch.setitem(air.AIRCRAFT, "He. 111", {"bombload": 5, "fuel": 3, "tacair": 0})
-    st = _mini(strike=100)
+    """The law is written once and the DATA decides whether it binds. Put He. 111s in the Axis
+    bomber establishment -- the chart's own name for the aeroplane -- and from Game-Turn 35 half the
+    force sits in Crete, where 43.25 lets it raid nothing and 43.11 keeps it off the battlefield."""
+    _with_german_bombers(monkeypatch)
+    st = _mini(strike=2700)                                  # 100 He. 111
     assert basing.typed_requirement_applies(st, Side.AXIS)
-    assert basing.crete_planes(st, 35) == 10                 # 20 aeroplanes, half to Crete
-    assert basing.africa_planes(st, Side.AXIS, 35) == 5       # ...and the desert keeps a quarter
-    assert basing.africa_planes(st, Side.AXIS, 34) == 5       # as it already did under 43.12
+    assert basing.crete_planes(st, 35) == 50                 # 100 aeroplanes, half to Crete
+    assert basing.africa_planes(st, Side.AXIS, 35) == 25      # ...and the desert keeps a quarter
+    assert basing.africa_planes(st, Side.AXIS, 34) == 25      # as it already did under 43.12
     # ...and the readiness ledger is then measured against the AFRICAN force, not the whole one
-    assert basing.establishment(replace(st, turn=35), Side.AXIS, "LAND", "strike") == 5
+    assert basing.establishment(replace(st, turn=35), Side.AXIS, "LAND", "strike") == 25
 
 
 # --- [39.19] the Strategic-Phase ledger ----------------------------------------------------------
@@ -188,14 +226,16 @@ def test_the_crete_half_binds_the_moment_a_named_type_enters_the_order_of_battle
 def test_39_19_a_plane_that_flew_the_strategic_phase_may_not_fly_the_desert():
     """"A plane flying a mission in an Operations Stage may not fly in the Strategic Phase of that
     Game-Turn AND VICE VERSA." Both Stukas go to Malta; the desert gets nothing."""
-    none = _mini(strike=40)                                      # 8 Ju 87B on the 34.14 bridge...
-    assert air.squadron_planes(none, Side.AXIS, "LAND", "strike") == 8
-    assert basing.africa_planes(none, Side.AXIS, 1) == 2          # ...of which 43.12 leaves TWO
-    assert _air_points(none, Side.AXIS, "LAND", "strike") == 10   # 2 x Bombload 5
+    none = _mini(strike=40)                                      # 4 of [60.32]'s bombers...
+    assert air.squadron_planes(none, Side.AXIS, "LAND", "strike") == 4
+    assert basing.africa_planes(none, Side.AXIS, 1) == 4          # ...all four in Africa (43.12
+    assert _air_points(none, Side.AXIS, "LAND", "strike") == 40   # bases no Italian aeroplane)
     one = _mini(strike=40, strategic={AXIS_STRIKE: 1})
-    assert _air_points(one, Side.AXIS, "LAND", "strike") == 5     # the other plane's Bombload
-    both = _mini(strike=40, strategic={AXIS_STRIKE: 2})
-    assert _air_points(both, Side.AXIS, "LAND", "strike") == 0    # both African bombers went
+    assert _air_points(one, Side.AXIS, "LAND", "strike") == 35    # the other three carry 35 points
+    three = _mini(strike=40, strategic={AXIS_STRIKE: 3})
+    assert _air_points(three, Side.AXIS, "LAND", "strike") == 11  # one bomber left
+    allgone = _mini(strike=40, strategic={AXIS_STRIKE: 4})
+    assert _air_points(allgone, Side.AXIS, "LAND", "strike") == 0  # every African bomber went
 
 
 def test_39_19_the_exclusion_lasts_the_GAME_TURN_not_the_operations_stage():
@@ -248,10 +288,12 @@ def test_44_25_the_axis_may_add_african_bombers_and_they_carry_their_bombload():
     assert sent, "the Axis policy asked for African planes and got none"
     p = sent[0].payload
     assert p["squadron"] == AXIS_STRIKE and p["planes"] > 0
-    assert p["bomb_points"] == p["planes"] * air.AIRCRAFT["Ju. 87B"]["bombload"]
+    assert p["bomb_points"] == air.points_of_planes(Side.AXIS, "strike", p["planes"])
     assert r.state.air_strategic[AXIS_STRIKE] == p["planes"] == p["strategic"]
-    # 38.31: they have flown a mission, so they are no longer refitted
-    assert r.state.air_unfit[AXIS_STRIKE] == p["planes"]
+    # 38.31: they have flown a mission, so they are no longer refitted -- on top of the [59.32]
+    # aeroplanes the campaign already opens with in the hangars (137 of the Axis's 184 bombers)
+    assert r.state.air_unfit[AXIS_STRIKE] == campaign(
+        seed=7, max_turns=3).air_unfit[AXIS_STRIKE] + p["planes"]
     # ...and the bombs they carry reach the island: the [41.5] roll is made on the larger total
     strike = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED
               and e.payload.get("arena") == "AIRFIELD"][0]

@@ -127,17 +127,20 @@ def test_a_loss_larger_than_the_hex_holds_takes_everything_and_no_more():
 
 # --- fixtures ----------------------------------------------------------------------------------
 
-def _state(*, missions=(), supplies=(), trucks=(), forts=None, strike=800, city=False,
+def _state(*, missions=(), supplies=(), trucks=(), forts=None, strike=200, city=False,
            stage=2) -> GameState:
     """An Axis LAND wing over an Allied logistics target at (1,0). Stage 2: [59.32] gives the
     scenario's first Operations Stage its fuel free, so a fixture that wants a fuel bill must be
     past it. The Axis is based on its own field at (0,0) with a full dump, so nothing here is
     grounded for want of fuel and every refusal under test is the RULE's.
 
-    THE WING IS DECLARED FOUR TIMES THE FORCE THAT FLIES, and that is rule 43 (game.basing): 43.12
-    bases 75% of every German bomber pool in Italy/Sicily, so an ESTABLISHMENT of 800 Bomb Points
-    (160 Ju. 87B on the 34.14 bridge) puts 40 aeroplanes -- 200 Bomb Points -- over the desert,
-    which is the [41.5] column these rows are read on.
+    THE WHOLE WING FLIES, AND THAT CHANGED WITH THE [59.3] TRANSCRIPTION (2026-07-22). The
+    establishment used to be declared four times the force that flew, because rule 43 was applied to
+    the whole abstract Axis bomber pool; 43.11/43.12/43.13 speak about GERMAN bombers and [60.32]
+    musters none, so what rule 43 REQUIRES to be based off the desert is nothing. What is still
+    based away is 43.1's DISCRETIONARY basing -- the flagged [63.46] 10% at basing.discretionary_pct
+    -- which takes ONE of these 18 aeroplanes ([60.32]'s bombers, game.roster) and leaves 198 Bomb
+    Points over the target: the same [41.5] 161-200 column these rows have always been read on.
 
     `city` stamps the target hex a MAJOR CITY, because 41.31's and 41.32's bombing shelters are
     written about cities and not about fortification levels (engine._city_wall)."""
@@ -225,7 +228,7 @@ def test_41_35_a_hex_with_no_unattached_trucks_loses_none():
 def test_41_35_a_no_effect_roll_burns_nothing_but_is_still_a_mission_flown():
     """A 0% result leaves the dump whole. The sortie was still flown and still billed -- 39.0's
     blind mission, the same line _air_strike and _air_port already draw."""
-    st = _state(supplies=[_enemy_dump(fuel=100)], strike=40)   # 10 Bomb Points: the 1-20 column
+    st = _state(supplies=[_enemy_dump(fuel=100)], strike=10)   # 10 Bomb Points: the 1-20 column
     r = _Run(st)
     _pin(r, 1, 1)                                        # code 11 -> 0%
     billed: list[int] = []
@@ -248,7 +251,7 @@ def test_41_35_a_dump_is_hidden_so_the_sortie_is_flown_blind_and_never_hits_your
     r = _Run(st)
     billed: list[int] = []
     _air_dump_bomb(r, Side.AXIS, (1, 0), lambda pts: billed.append(pts) or pts)
-    assert billed == [200]                               # flown blind over a hex holding nothing his
+    assert billed == [198]                               # flown blind over a hex holding nothing his
     assert not [e for e in r.events if e.kind == EventKind.AIR_DUMP_BOMBED]
     resolved = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED][0]
     assert resolved.payload["dumps"] == [] and resolved.rng_draws == ()
