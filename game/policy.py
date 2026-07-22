@@ -316,9 +316,16 @@ class ScriptedPolicy(Policy):
         Replaces the earlier single-hop shuttle: an abstract-era stand-in that could only reach one convoy
         hop from the rear port and so stranded every army the instant it advanced past its start-line
         dumps. The relay lives in game.relay, shared by every competent built-in policy (a lazy import
-        because relay reads this module's TruckOrder/BuildOrder dataclasses)."""
+        because relay reads this module's TruckOrder/BuildOrder dataclasses).
+
+        PLUS [35.15]'s air-supply shuttle, and it is a separate call because it is a separate job:
+        the "Any Air Facility" lorries the [60.33]/[60.43] charts park at a squadron base are that
+        squadron's First Line Transport, and what they haul is the 36.17 larder its SGSUs eat from --
+        which the forward relay may not even see (it strips air dumps out of its view of the map, so
+        that the army's freight never lands in a pile no unit of the army may draw from). A scenario
+        that seeds no line-1 formation gets an empty list and stays byte-identical."""
         from . import relay
-        return relay.campaign_truck_orders(state, side)
+        return relay.campaign_truck_orders(state, side) + relay.air_supply_orders(state, side)
 
     def construction(self, state: GameState, side: Side) -> list[BuildOrder]:
         """[24.9] Construct the forward dump at the head of the advance (game.relay.build_the_chain): turn

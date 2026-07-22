@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import game.air as air
 import game.supply as supply
 from game import oob
+from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy
 from game.apply import apply, fold
 from game.engine import _air_facility_bomb, _Run, _sgsu_upkeep, run
 from game.events import Control, Event, EventKind, Phase, Side
@@ -844,3 +845,79 @@ def test_36_17_the_observation_does_not_offer_an_air_dump_as_the_armys_supply():
     obs = observation.observe(st, Side.ALLIED)
     listed = {s["id"]: s for s in obs["your_supplies"]}
     assert listed["AF-Sup"]["air_dump"] is True
+
+
+# --- [35.15] / [36.3] / [36.17] THE FAUCET ON THE LARDER ------------------------------------------
+#
+# The drain was measured to the last Point on campaign seed 4: the Axis's charted 850 air Fuel Points
+# = 467 evaporated (49.3) + 325 spent on 35.14 upkeep + 58 burnt by aeroplanes (38.24), and nothing
+# on the map could put a Point back. These pin the three rules that now can.
+
+def test_the_air_facility_lorry_rows_are_first_line_transport_attached_to_a_squadron():
+    """[35.15] "Truck units may be attached to an SGSU as FIRST LINE TRANSPORT. They are used to
+    carry the supplies that the SGSU needs to keep its planes fit and readied." So the [60.33] and
+    [60.43] "Any Air Facility" rows are seeded at line 1 -- the one place a formation's line is
+    load-bearing -- and they stand on a field that HAS a squadron and therefore a larder."""
+    st = campaign(seed=4)
+    first_line = [t for t in st.trucks if t.line == 1]
+    assert first_line, "the charts' Any-Air-Facility rows must be on the board (59.61 is over)"
+    assert {t.side for t in first_line} == {Side.AXIS, Side.ALLIED}
+    # [60.33] 10 L + 50 M for the Axis, [60.43] 5 L + 30 M + 20 H for the Commonwealth
+    def points(side):
+        return {t.truck_class: t.points for t in first_line if t.side == side}
+    assert points(Side.AXIS) == {"light": 10, "medium": 50}
+    assert points(Side.ALLIED) == {"light": 5, "medium": 30, "heavy": 20}
+    larders = {(s.side, s.hex) for s in st.supplies if s.air_dump}
+    for t in first_line:
+        assert (t.side, t.hex) in larders, f"{t.id} is attached to no squadron's dump"
+
+
+def test_the_general_freight_relay_never_moves_a_first_line_air_lorry():
+    """The two pools are disjoint by construction: campaign_truck_orders strips air dumps out of its
+    view of the map (the army's freight must never land in a pile no land unit may draw from, 36.17)
+    and skips line-1 formations, so a lorry attached to a squadron is never ordered to the front."""
+    from game import relay
+    st = campaign(seed=4)
+    first_line = {t.id for t in st.trucks if t.line == 1}
+    for side in (Side.AXIS, Side.ALLIED):
+        freight = {o.truck_id for o in relay.campaign_truck_orders(st, side)}
+        assert not (freight & first_line)
+        shuttle = {o.truck_id for o in relay.air_supply_orders(st, side)}
+        assert shuttle <= first_line
+
+
+def test_the_shuttle_fills_the_larder_and_the_larder_stops_emptying():
+    """END TO END, and it is the whole block: run the campaign and the air-facility dumps that used
+    to hit ZERO around Game-Turn 9-18 and stay there are still holding fuel and stores at the end --
+    because 35.15's lorries are hauling into them (TRUCK_UNLOADED against an air_dump), which no
+    order in this engine could previously even name as a destination."""
+    st = campaign(seed=4, max_turns=14)
+    r = run(st, axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
+    air_dumps = {s.id for s in st.supplies if s.air_dump}
+    delivered = [e for e in r.events if e.kind == EventKind.TRUCK_UNLOADED
+                 and e.payload["supply_id"] in air_dumps]
+    assert delivered, "no lorry ever reached an airfield larder"
+    assert sum(e.payload["cargo"].get("FUEL", 0) for e in delivered) > 0
+    for side in (Side.AXIS, Side.ALLIED):
+        held = sum(s.fuel for s in r.final.supplies if s.air_dump and s.side == side)
+        assert held > 0, f"{side.name} air larder is dry again"
+    # ...and the consequence 35.14 hangs on it: an SGSU that may still work its planes
+    denied = [e for e in r.events if e.kind == EventKind.AIR_REFIT_DENIED
+              and e.payload.get("reason") == "no_sgsu"]
+    assert not denied, "every squadron was still grounded for want of a fed SGSU"
+
+
+def test_the_shuttle_is_sized_to_the_demand_and_not_to_the_terrain_ceiling():
+    """[35.14]/[38.36]/[38.24] vs [54.12]. A dump in open desert takes 8,000 Fuel Points, and the
+    [60.33] park could lift thousands of them out of the army's own depot on one trip. The target is
+    one Game-Turn of the side's air operations -- which is very nearly what [60.34] and [60.44]
+    seeded these larders with in the first place, and that agreement is the check."""
+    from game import relay
+    st = campaign(seed=4)
+    for side, charted in ((Side.AXIS, 850), (Side.ALLIED, 250)):
+        want = relay._air_demand(st, side)
+        assert want["STORES"] > 0 and want["FUEL"] > 0
+        ceiling = supply.dump_capacity_at(
+            st, next(s.hex for s in st.supplies if s.air_dump))["FUEL"]
+        assert ceiling > 5 * want["FUEL"], "the 54.12 ceiling is nowhere near a bound on this"
+        assert 0.3 * charted <= want["FUEL"] <= 3 * charted     # the book's own allotment, near

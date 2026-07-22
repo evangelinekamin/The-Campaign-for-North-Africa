@@ -458,9 +458,18 @@ class EventKind(str, Enum):
     # arena="AIRFIELD" for the [41.5] roll and AIR_FACILITY_LEVEL_CHANGED for the levels lost --
     # so the Maltese fields are damaged by exactly the same path as an African one.
     #
-    # MALTA_PLANES_LOST {lost, planes, levels} is 41.36's second clause, "for every level destroyed,
-    # remove 10% of the planes on the ground", folding onto GameState.malta_planes alone. There is
-    # no counter and no TOE in it, so conservation, stacking and supply are untouched.
+    # MALTA_PLANES_LOST {lost, planes, strike, levels, unfit} is 41.36's second clause, "for every
+    # level destroyed, remove 10% of the planes on the ground", folding onto GameState.malta_planes
+    # and its anti-shipping bucket malta_strike. There is no counter and no TOE in it, so
+    # conservation, stacking and supply are untouched.
+    #
+    # MALTA_REINFORCED {arrived, strike_arrived, planes, strike, allotted, month_total, headroom} is
+    # the other direction and the [34.86] schedule's only consumer: "airplane reinforcements arrive
+    # in the Naval Convoy Arrival Phase" (34.84), no more than a tenth of the month's to Malta
+    # (34.81A) and never past what its Capacity Levels can operate (34.81B at 44.14's eighteen a
+    # level). The generator has already applied both caps and split the arrival into its buckets, so
+    # apply stays pure and needs no chart. Emitted only when something actually lands, so a
+    # Malta-less scenario -- and a saturated island -- stay byte-identical.
     #
     # MALTA_STRIKE_UNFIT {planes, unfit} and MALTA_REFIT_RESOLVED {undergoing, die, percent,
     # refitted, unfit} (rng_draws=(die,)) are 44.16's half of rule 38.3 -- "planes based on Malta do
@@ -488,6 +497,7 @@ class EventKind(str, Enum):
     MALTA_RAID_ORDERED = "MALTA_RAID_ORDERED"
     MALTA_RAID_REINFORCED = "MALTA_RAID_REINFORCED"
     MALTA_PLANES_LOST = "MALTA_PLANES_LOST"
+    MALTA_REINFORCED = "MALTA_REINFORCED"
     MALTA_STRIKE_UNFIT = "MALTA_STRIKE_UNFIT"
     MALTA_REFIT_RESOLVED = "MALTA_REFIT_RESOLVED"
     # Commonwealth off-shore naval bombardment (rule 30.2). NAVAL_BOMBARDMENT {ship_id, target,

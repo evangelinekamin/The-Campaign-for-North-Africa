@@ -355,10 +355,24 @@ def test_the_commonwealth_trucks_actually_run():
     late = [e for e in moves if e.turn > 12]
     assert late, "the Commonwealth pool froze in the first half of the run"
 
+    # RESTATED 2026-07-22 (rules of this port, 5): asked of the FREIGHT pool, which is what this
+    # test has always been about. [35.15]'s First Line Transport is a second pool with a second job
+    # -- it shuttles between the port of arrival and the squadron larder it is attached to
+    # (game.relay.air_supply_orders), and the field it serves, D3516, happens to lie three hexes the
+    # Cairo side of the railhead. Standing there is that pool DOING its job, not idling at the base.
+    # Nothing is dropped: the air pool gets its own assertion below.
     for t in res.final.trucks:              # nobody drove back to the Delta and idled there
-        if t.side == Side.ALLIED:
+        if t.side == Side.ALLIED and t.line != 1:
             assert distance(t.hex, CAIRO) >= distance(MATRUH, CAIRO), \
                 f"{t.id} idled back at the base ({t.hex})"
+    air_pool = [t for t in res.final.trucks if t.side == Side.ALLIED and t.line == 1]
+    larders = {s.hex for s in res.final.supplies if s.air_dump and s.side == Side.ALLIED}
+    faucet_hexes = {p.hex for p in res.final.ports if p.side == Side.ALLIED}
+    assert air_pool, "the [60.43] Any-Air-Facility row is not on the board"
+    for t in air_pool:                     # ...and the air pool is on ITS cycle, not parked at home
+        assert t.hex in larders | faucet_hexes, f"{t.id} is neither at a field nor at the faucet"
+    assert any(e.payload["supply_id"] in {s.id for s in res.final.supplies if s.air_dump}
+               for e in unloads), "the air-supply shuttle never filled a 36.17 larder"
 
     # and the haul reaches a FORWARD depot: supply is west of the railhead, where the front is.
     # The depot list GROWS now (rule 54.11: the relay founds its own forward dumps), so an unload may
@@ -411,10 +425,24 @@ def test_the_relay_never_siphons_the_army_s_own_field_dumps():
                    if not s.constructed and not s.base
                    and not s.id.startswith(("AL-Stage", "AX-Stage"))}
     assert field_dumps, "no field dumps at all -- the check is vacuous"
+    # RESTATED 2026-07-22 (rules of this port, 5): asked of the FREIGHT relay's own lorries. The
+    # [35.15] air-supply shuttle (line 1) is a different pool under a different rule, and it lifts
+    # from exactly one thing this set does not contain -- the 36.17 larder UNDER ITS OWN WHEELS, for
+    # movement fuel, because a park seeded dry at an airfield with no army dump beneath it could
+    # otherwise never make its first hop and the faucet would never open ("any SGSU at an airfield
+    # may make use of the supplies there"). That is not the siphon this test forbids: the Points come
+    # straight back into the same larder on the return leg, and no division's field dump is touched.
+    # The freight relay's own guarantee is unchanged and is still checked here.
+    air_pool = {t.id for t in res.final.trucks if t.line == 1}
     for e in res.events:
-        if e.kind.name == "TRUCK_LOADED":
+        if e.kind.name == "TRUCK_LOADED" and e.payload["truck_id"] not in air_pool:
             assert e.payload["supply_id"] in spine | faucets, \
                 f"the relay lifted out of a field dump: {e.payload['supply_id']}"
+    for e in res.events:                   # and the air shuttle lifts only from the line or its own field
+        if e.kind.name == "TRUCK_LOADED" and e.payload["truck_id"] in air_pool:
+            sid = e.payload["supply_id"]
+            assert sid in spine | faucets or sid in {s.id for s in res.final.supplies if s.air_dump}, \
+                f"the air shuttle lifted out of a field dump: {sid}"
 
     # the field dumps keep their fuel, so they can still follow the army (32.3 / 32.24)
     mobile = [s for s in res.final.supplies

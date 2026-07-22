@@ -633,10 +633,15 @@ class GameState:
     air_facilities: tuple[AirFacility, ...] = ()
     # [44.0] MALTA, the two numbers the island's half of the war turns on (game.malta).
     # `malta_planes` is the aeroplanes standing on it -- 60.46's printed establishment, reduced by
-    # 41.36's "for every level destroyed, remove 10% of the planes on the ground" and by nothing
-    # else, because Malta's replacement flow ([34.86] via 34.81A) is untranscribed. Its LEVELS are
-    # not here: they are ordinary AirFacility Capacity Levels carried in air_facilities above, which
-    # is what lets 36.14, 41.36 and the invariants apply to Malta unchanged.
+    # 41.36's "for every level destroyed, remove 10% of the planes on the ground" and RAISED by the
+    # [34.86] Commonwealth Airplane Reinforcement Schedule under 34.81's two caps (game.malta.
+    # reinforcement). Its LEVELS are not here: they are ordinary AirFacility Capacity Levels carried
+    # in air_facilities above, which is what lets 36.14, 41.36 and the invariants apply to Malta
+    # unchanged.
+    # `malta_strike` is how many of those aeroplanes are the ANTI-SHIPPING arm -- the bucket that
+    # sets the island's Bomb Points. It is carried separately because [34.86] sends Malta fighters
+    # by the hundred and torpedo aircraft never again, so the September-1940 strike SHARE stops
+    # being true the moment a reinforcement lands (see malta.strike_establishment).
     # `malta_raids` is the Axis's [44.41] ledger -- Availability Level ("I".."IV") -> the Game-Turns
     # he has spent it on, counted for a raid he cancels as well (44.29).
     # `malta_unfit` is 38.31's readiness ledger for the island's anti-shipping arm, which 44.16
@@ -646,6 +651,7 @@ class GameState:
     # ready)" -- so three of the twelve start unserviceable. Defaults (0, {}, 0) put no island in
     # the scenario and spend no budget, so every non-campaign scenario is byte-identical.
     malta_planes: int = 0
+    malta_strike: int = 0
     malta_raids: dict = field(default_factory=dict)
     malta_unfit: int = 0
     # Commonwealth Mediterranean Fleet (rule 30): the off-shore naval-bombardment fire support.
@@ -982,6 +988,12 @@ class GameState:
         """[41.36] Set how many aeroplanes stand on Malta. Never below zero: a raid that would
         remove more planes than the island holds removes the island's air force and stops."""
         return replace(self, malta_planes=max(0, planes))
+
+    def with_malta_strike(self, planes: int) -> "GameState":
+        """[41.36]/[34.86] Set how many of Malta's aeroplanes are its anti-shipping arm. Bounded
+        above by the island's whole establishment -- a bucket may never hold more than the total it
+        is a bucket of -- and below by zero."""
+        return replace(self, malta_strike=max(0, min(planes, self.malta_planes)))
 
     def with_malta_raid(self, level: str) -> "GameState":
         """[44.23]/[44.29] Book one Game-Turn of Axis Strategic Bombardment of Malta against an

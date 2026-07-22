@@ -134,6 +134,13 @@ def _check_malta_unfit(state: GameState) -> None:
     if not 0 <= state.malta_unfit <= total:
         raise InvariantViolation(
             f"Malta unfit={state.malta_unfit} out of [0, strike planes={total}]")
+    # [34.86]/[41.36] ...and the anti-shipping arm is a BUCKET of the island's establishment, so it
+    # may never hold more aeroplanes than are standing there. Both directions move it now -- the
+    # reinforcement schedule up, the raid down -- and a bucket that outgrew its whole would put
+    # Bomb Points over the convoy lane that no aeroplane on Malta was carrying.
+    if not 0 <= state.malta_strike <= state.malta_planes:
+        raise InvariantViolation(
+            f"Malta strike={state.malta_strike} out of [0, planes={state.malta_planes}]")
 
 
 def _check_fort(coord, level: int) -> None:

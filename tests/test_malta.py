@@ -136,15 +136,23 @@ def test_a_flattened_malta_sends_nothing_and_that_is_the_earned_1942_blitz():
 def test_one_level_binds_the_44_14_capacity_below_the_strike_establishment():
     """[44.14] one level handles 18 planes; the strike aircraft are served first, so all twelve
     Swordfish still fly at one level -- and every plane the raids have killed is one that does
-    not. Taken with the readiness ledger cleared, because 44.16's refit is the OTHER limit."""
+    not. Taken with the readiness ledger cleared, because 44.16's refit is the OTHER limit.
+
+    RESTATED 2026-07-22 (rules of this port, 5). The second half used to write `malta_planes=15`
+    and assert the strike arm was `int(15 * 12 / 31)` -- the September-1940 SHARE of a shrunken
+    island. That share stopped being the rule when [34.86] landed: Malta's anti-shipping arm is a
+    tracked count now (state.malta_strike), because the schedule reinforces the island with
+    fighters and never with a torpedo aircraft, so a fixed 12/31 would have manufactured Swordfish
+    out of Spitfires. The claim worth pinning is unchanged and is asserted on the new ledger: an
+    island whose raids have taken it down to five anti-shipping aircraft flies five."""
     st = replace(campaign(seed=1, max_turns=4), malta_unfit=0)
     one = replace(st, air_facilities=tuple(
         replace(f, level=1 if f.id.endswith("Hal Far") else 0) if malta.is_malta(f) else f
         for f in st.air_facilities))
     assert malta.capacity(one) == 1
     assert malta.strike_planes(one) == 12
-    halved = replace(one, malta_planes=15)
-    assert malta.strike_planes(halved) == int(15 * 12 / 31) == 5
+    halved = replace(one, malta_planes=15, malta_strike=5)      # 41.36 took ~60% of the island
+    assert malta.strike_planes(halved) == 5
 
 
 # --- 44.16: Malta refits like all other planes ---------------------------------------------------
@@ -320,7 +328,13 @@ def test_the_whole_loop_turns_over_a_short_campaign():
     (trivially true -- 44.24 gives exactly one per turn) and that malta_planes never rose (vacuous
     -- 41.36 is its only writer and it only subtracts). Neither claim could fail. What is actually
     worth pinning is that the budget lands on the LEVELS the doctrine chose (not just any ten) and
-    that the lane's certified strength equals what game.malta says the island could send."""
+    that the lane's certified strength equals what game.malta says the island could send.
+
+    RESTATED AGAIN 2026-07-22 (rules of this port, 5): the certified-strength bound used to range
+    over 1..12 Swordfish, which was the whole island's establishment only while nothing replaced it.
+    [34.86] does now, so the bound ranges over the anti-shipping arm the island actually ends with --
+    and the assertion that a raid's Bomb Points are ALWAYS some whole number of aeroplanes at
+    torpedo-8 plus 41.73's quarter is exactly as tight as it was."""
     st = campaign(seed=7, max_turns=10)
     r = run(st, axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
     raids = [e for e in r.events if e.kind == EventKind.MALTA_RAID_ORDERED]
@@ -333,8 +347,11 @@ def test_the_whole_loop_turns_over_a_short_campaign():
     assert cut
     # 11: the log certifies the strength that produced the result, not the order's empty field
     assert all(e.payload["bomb_points"] > 0 for e in cut)
-    # every certified strength is n READY Swordfish x T8 counted as bombs, +25% rounding up
-    assert {e.payload["bomb_points"] for e in cut} <= {-(-n * 8 * 125 // 100) for n in range(1, 13)}
+    # every certified strength is n READY anti-shipping aircraft x T8 counted as bombs, +25%
+    # rounding up -- n bounded by the arm [34.86] has grown the island to by the last Game-Turn
+    assert r.final.malta_strike >= malta.initial_strike()      # 34.81A: the island GAINED aircraft
+    assert {e.payload["bomb_points"] for e in cut} <= {
+        -(-n * 8 * 125 // 100) for n in range(1, r.final.malta_strike + 1)}
 
 
 def test_a_sustained_axis_raid_drives_the_islands_TOTAL_capacity_to_zero(monkeypatch):
@@ -429,3 +446,122 @@ def test_the_maltese_hexes_can_never_alias_an_african_one():
     for label in ("M0505", "M0805"):                      # and the labels still round-trip
         assert coords.from_axial("M", *coords.to_axial(coords.parse(label))).label == label
     assert coords.distance(coords.parse("M0505"), coords.parse("M0506")) == 1
+
+
+# --- [34.86] / [34.81] the island GROWS ----------------------------------------------------------
+
+def test_the_34_86_schedule_is_transcribed_whole_and_its_row_totals_add_up():
+    """[34.86] Every printed row, in the chart's own order, with the arithmetic self-check the data
+    file carries: a `total` that disagrees with the sum of its own `planes` is a transcription slip,
+    and it fails here rather than in a campaign three hours later."""
+    rows = logistics_data.cw_air_reinforcements_34_86()
+    assert len(rows) == 28                                  # 4 Game-Turn rows in 1940 + 24 months
+    assert [(r["year"], r["month"]) for r in rows] == sorted((r["year"], r["month"]) for r in rows)
+    for row in rows:
+        assert row["total"] == sum(p["number"] for p in row["planes"]), row["label"]
+        assert row["turns"] == sorted(row["turns"]) and row["turns"]
+        assert all(p["role"] in ("fighters", "strike", "recon", "transport") for p in row["planes"])
+    # the chart's Game-Turns never overlap and never run past the campaign's 111
+    seen: set = set()
+    for row in rows:
+        assert not seen & set(row["turns"])
+        seen |= set(row["turns"])
+    assert max(seen) <= 111
+    assert sum(r["total"] for r in rows) == 6691            # the whole Commonwealth arrival
+
+
+def test_34_81A_caps_maltas_share_at_a_tenth_of_the_month_rounded_down():
+    """[34.81A] "No more than 10% of a month's airplane reinforcements may be sent to Malta." A
+    CEILING, so the share rounds DOWN -- and a month whose whole arrival is four aeroplanes (Nov II
+    1940, 4 B17Ds) sends the island none at all."""
+    st = campaign(seed=1, max_turns=4)
+    nov = malta.reinforcement(st, 8)                        # 1940 Nov II (GT 8): 4 planes
+    assert nov.month_total == 4 and nov.allotted == 0 and nov.planes == 0
+    dec = malta.reinforcement(st, 11)                       # 1940 Dec I (GT 11): 52 planes
+    assert dec.month_total == 52 and dec.allotted == 5 and dec.planes == 5
+
+
+def test_a_months_allotment_is_divided_amongst_its_weeks():
+    """[34.84] "The planes must be divided amongst the weeks as evenly as possible." January 1941
+    is 57 aeroplanes over Game-Turns 15-18, a fifth of which is Malta's 5 -- so 2 + 1 + 1 + 1."""
+    st = campaign(seed=1, max_turns=4)
+    weeks = [malta.reinforcement(st, t) for t in (15, 16, 17, 18)]
+    assert [w.allotted for w in weeks] == [5, 5, 5, 5]      # the MONTH's ceiling, on every row
+    assert [w.planes for w in weeks] == [2, 1, 1, 1] and sum(w.planes for w in weeks) == 5
+
+
+def test_34_81B_stops_the_island_filling_past_what_it_can_operate():
+    """[34.81B]/[44.14] "No airplane reinforcements may be sent... in excess of the facility's
+    current squadron capacity", and a Capacity Level operates eighteen planes. An island already
+    holding 18 x its levels takes nothing, however large the month's ceiling."""
+    st = campaign(seed=1, max_turns=4)
+    per_level = logistics_data.malta_planes_per_level_44_14()
+    full = replace(st, malta_planes=per_level * malta.capacity(st))
+    assert malta.reinforcement(full, 11).headroom == 0
+    assert malta.reinforcement(full, 11).planes == 0
+    one_seat = replace(full, malta_planes=per_level * malta.capacity(st) - 1)
+    assert malta.reinforcement(one_seat, 11).planes == 1    # and exactly the one seat that is free
+
+
+def test_the_anti_shipping_arm_grows_only_with_anti_shipping_arrivals():
+    """[34.86]/[4.44A] The composition is pro rata over the month's own types, and the roles are the
+    chart's. October 1940 is 30 Blenheim Mk. Is (a bomber, capability B) and 6 Skua Mk. IIs (printed
+    on the FIGHTERS table), so five sixths of the island's share is strike; September 1940 is three
+    Fulmars and two Hurricanes and none of it is."""
+    st = campaign(seed=1, max_turns=4)
+    oct40 = malta.reinforcement(st, 3)
+    assert (oct40.planes, oct40.strike) == (3, 2)          # 3 x 30/36 floored
+    assert malta.reinforcement(st, 2).planes == 0          # Sept IV: 5 aeroplanes, a tenth is zero
+
+
+def test_the_island_actually_gains_aeroplanes_over_a_campaign():
+    """The whole point of the block, end to end: run the schedule out and Malta's establishment
+    RISES, its anti-shipping arm with it, where before [34.86] the only writer of either was 41.36
+    and it only ever subtracted."""
+    st = campaign(seed=4, max_turns=12)
+    r = run(st, axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
+    got = [e for e in r.events if e.kind == EventKind.MALTA_REINFORCED]
+    assert got, "the [34.86] schedule delivered nothing in twelve Game-Turns"
+    assert all(e.payload["arrived"] > 0 for e in got)
+    assert r.final.malta_planes > st.malta_planes
+    assert r.final.malta_strike > st.malta_strike
+    assert r.final.malta_strike <= r.final.malta_planes     # the invariant, from the outside
+
+
+def test_the_growth_lands_inside_the_books_own_printed_snapshots():
+    """THE ACCEPTANCE TEST data/malta_44.json has carried unused since rule 44 landed: the book
+    prints Malta's establishment in four scenarios -- 31 aeroplanes in September 1940, 55 in March
+    1941, 74 in November 1941, 118 in October 1942. Run the schedule with no Axis raid at all (the
+    upper bound on our growth) and the island passes through 58 in March 1941 and saturates at 90:
+    inside the printed band, and reached from below.
+
+    This is what makes the free choice at malta.repair_ceiling reviewable rather than asserted --
+    if a later block lets the capacity run to twenty-eight levels, this test says what it costs."""
+    st = campaign(seed=4, max_turns=111)
+    march41 = november41 = None
+    for turn in range(1, 112):
+        got = malta.reinforcement(st, turn)
+        if got.planes:
+            st = replace(st, malta_planes=st.malta_planes + got.planes,
+                         malta_strike=st.malta_strike + got.strike)
+        if turn == 26:
+            march41 = st.malta_planes                       # end of March 1941
+        if turn == 58:
+            november41 = st.malta_planes
+    assert 31 < march41 <= 60 and abs(march41 - 55) <= 5    # [61.34]: the book prints 55
+    assert 55 <= november41 <= 95                           # [62.36]: the book prints 74
+    assert st.malta_planes == 90 == logistics_data.malta_planes_per_level_44_14() * 5
+    assert st.malta_strike < st.malta_planes // 2           # and it is mostly FIGHTERS, as the
+    #                                                         book's own snapshots are ([63.37]: 3
+    #                                                         Swordfish and 54 Spitfire VBs)
+
+
+def test_the_build_ceiling_follows_the_aeroplanes_and_stops_at_the_standard_levels():
+    """[44.13] "It may be increased -- up to the standard levels". Our Commonwealth builds the
+    capacity his aeroplanes need (44.14's eighteen a level), never below what [60.46] printed and
+    never past the twenty-eight the six printed facilities can stand at."""
+    st = campaign(seed=1, max_turns=4)
+    assert malta.structural_capacity(st) == 28
+    assert malta.repair_ceiling(st) == 5                    # 31 aeroplanes need 2; the floor is 5
+    assert malta.repair_ceiling(replace(st, malta_planes=91)) == 6
+    assert malta.repair_ceiling(replace(st, malta_planes=10_000)) == 28

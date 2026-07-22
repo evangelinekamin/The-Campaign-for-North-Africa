@@ -188,6 +188,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             _water_body(r)                              # 48 V.C.1: water draw + the +5% hot-evap slice
             if stage == 1:                              # reinforcement UNITS arrive once, in the 1st stage
                 _reinforcements(r)
+                _malta_reinforcement(r)                 # 34.84/[34.86]: and Malta's AEROPLANES
             _naval_convoys(r, policies)                  # 48 V.D: the Naval Convoy Arrival Phase runs
                                                          # EVERY Operations Stage (VI/VII repeat all of V) --
                                                          # the turn's manifest unloads across the stages
@@ -471,11 +472,10 @@ def _malta_construction(r: _Run) -> None:
     bombing missions are resolved immediately, in the Strategic Air Planning Stage", ahead of the
     Convoy Resolution Phase).
 
-    The repair CEILING is ours and is argued in full at malta.repair_ceiling: the Commonwealth
-    repairs back to the establishment his scenario printed rather than building on to the
-    structural maximum, because the growth path ([34.86] via 34.81A) is untranscribed and building
-    to 28 levels on a die would be a second invented calendar in the place of the one this block
-    exists to delete."""
+    The build CEILING is the one free choice in the path and is argued in full at
+    malta.repair_ceiling: 44.13 makes construction free and unmetered, so our Commonwealth builds
+    the capacity his aeroplanes need (44.14's eighteen a level, floored at [60.46]'s printed five)
+    rather than running the table to twenty-eight and turning 34.81B's reinforcement cap off."""
     if not malta.in_play(r.state) or not malta.may_construct(*calendar.gt_to_month(r.state.turn)):
         return
     for facility in malta.repairable(r.state):
@@ -487,6 +487,44 @@ def _malta_construction(r: _Run) -> None:
         r.emit(EventKind.AIR_FACILITY_LEVEL_CHANGED, Side.ALLIED, "ALLIED/Malta",
                {"facility_id": facility.id, "level": facility.level + built,
                 "strength": 0, "built": built}, rng_draws=(die,))
+
+
+def _malta_reinforcement(r: _Run) -> None:
+    """[34.86] / [34.81] / [34.84] MALTA'S REPLACEMENT FLOW -- the aeroplanes the Commonwealth
+    lands on the island, in the Naval Convoy Arrival Phase, once per Game-Turn.
+
+        34.84 "AIRPLANE REINFORCEMENTS ARRIVE IN THE NAVAL CONVOY ARRIVAL PHASE. The reinforcements
+               are listed as to the total of each type of plane arriving during that month... The
+               planes must be divided amongst the weeks as evenly as possible."
+        34.81A "No more than 10% of a month's airplane reinforcements may be sent to Malta."
+        34.81B "No airplane reinforcements may be sent to a Malta/N African Off-map air facility in
+                excess of the facility's current squadron capacity."
+
+    THE OTHER HALF OF THE DUEL, AND UNTIL THIS BLOCK IT DID NOT EXIST. Rule 44 gave the island a
+    health bar and the Axis a hammer; the [34.86] schedule was untranscribed, so Malta's aeroplanes
+    only ever went DOWN and its whole war was a slow grind toward zero. The book's Malta is the
+    opposite shape -- 31 aeroplanes in September 1940, 55 by March 1941, 74 by November 1941, 118 by
+    October 1942 -- because the Commonwealth reinforces it faster than the Regia Aeronautica can
+    bomb it. Both caps and the arrival's composition are game.malta.reinforcement's business; this
+    beat is the cadence and the event.
+
+    IT RUNS IN STAGE 1 ONLY, which is 34.84's own permission read at our grain: "all of the planes
+    arriving during a game-turn MAY ARRIVE IN THE FIRST OP STAGE of that game-turn at the owning
+    Player's choice". A Game-Turn the schedule does not name lands nothing and emits nothing.
+
+    NO DIE IS DRAWN HERE. The schedule is a calendar of printed totals, not a table -- which is why
+    a beat that changes the island's establishment on 28 of 111 Game-Turns costs the dice streams
+    nothing at all."""
+    if not malta.in_play(r.state):
+        return
+    got = malta.reinforcement(r.state, r.state.turn)
+    if got.planes <= 0:
+        return
+    r.emit(EventKind.MALTA_REINFORCED, Side.ALLIED, "ALLIED/Malta",
+           {"arrived": got.planes, "strike_arrived": got.strike,
+            "planes": r.state.malta_planes + got.planes,
+            "strike": r.state.malta_strike + got.strike,
+            "allotted": got.allotted, "month_total": got.month_total, "headroom": got.headroom})
 
 
 def _malta_raid(r: _Run, policies: dict) -> None:
@@ -568,12 +606,13 @@ def _malta_raid(r: _Run, policies: dict) -> None:
     lost = malta.planes_lost(r.state, levels)        # 41.36: 10% of the planes on the ground / level
     if lost > 0:
         left = r.state.malta_planes - lost
-        # The bombs fall on the unserviceable machines too: the 38.31 ledger may never stand for
-        # more aeroplanes than the island still has (malta.strike_establishment of the survivors).
-        unfit = min(r.state.malta_unfit,
-                    malta.strike_establishment(replace(r.state, malta_planes=left)))
+        # "The planes on the ground" draws no distinction by type, so the same 10% a level comes off
+        # the anti-shipping arm -- and the bombs fall on the unserviceable machines too, so the
+        # 38.31 ledger may never stand for more aeroplanes than that arm still has.
+        strike = r.state.malta_strike - malta.strike_lost(r.state, levels)
         r.emit(EventKind.MALTA_PLANES_LOST, Side.AXIS, actor,
-               {"lost": lost, "planes": left, "levels": levels, "unfit": unfit})
+               {"lost": lost, "planes": left, "strike": strike, "levels": levels,
+                "unfit": min(r.state.malta_unfit, strike)})
 
 
 def _malta_africa(r: _Run, policies: dict, plan) -> int:
@@ -1476,15 +1515,15 @@ def _sgsu_upkeep(r: _Run, side: Side) -> None:
     5.3 plugs into. NOT modelled: 35.15's first-line trucks attached to an SGSU, and the
     "additional supplies of Fuel and Ammunition" for the PLANES (34.17/38.21/38.24 -- Phase 5.2).
 
-    ⚠ FLAGGED, AND IT IS AN OWNER RULING: THIS DRAIN HAS NO CHARTED REFILL BUILT YET. The Stores and
-    Fuel legs come out of a finite [60.34]/[60.44] pot that nothing on the map replenishes -- the
-    rulebook DOES provide the refill (36.3 "they can bring supplies to a flying boat basin simply by
-    bringing trucks into the hex", 35.15's first-line trucks attached to an SGSU, and the [60.33]/
-    [60.43] "Any Air Facility" lorry rows), and none of the three is built, while every delivery route
-    the engine has is 36.17-excluded from air dumps by design. Measured, campaign seed 4: an Axis
-    squadron's ~12 charted Stores Points run out around Game-Turn 13 of 111 and it is unsupplied for
-    good. It reads on nothing today (may_refit has no consumer until 5.3) -- but 5.3 must not hang the
-    Refit Table on this gate until the refill side of it exists.
+    THE DRAIN NOW HAS THE FAUCET THE BOOK PRINTS. This flag used to read "no charted refill is built"
+    -- the Stores and Fuel legs came out of a finite [60.34]/[60.44] pot that nothing on the map
+    replenished, and measured on campaign seed 4 an Axis squadron's charted Stores ran out around
+    Game-Turn 13 of 111 and it was unsupplied for the rest of the war. game.relay.air_supply_orders
+    is the three rules that fix it: 35.15's First Line Transport (which is what the [60.33]/[60.43]
+    "Any Air Facility" lorry rows are), 36.3's "they can bring supplies... simply by bringing trucks
+    into the hex", and 36.17's airfield-as-dump they unload into. What is NOT fixed is the reach of
+    it -- one park a side against a dozen fields, so a squadron far from a port of arrival is still
+    fed by nobody until 35.15's attachment is a relation and not a placement. Flagged there.
 
     AND IT IS THE BIGGEST SINGLE DRAW ON THE AIR LARDER, WHICH IS EASY TO MISS. Measured over the
     full campaign (seeds 4/1941/7): this upkeep takes 325-370 of the Axis's [60.34] 850 air Fuel

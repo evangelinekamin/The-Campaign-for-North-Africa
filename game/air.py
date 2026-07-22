@@ -74,19 +74,19 @@ AND THREE MORE, NAMED HERE BECAUSE THEY ARE EASY TO MISTAKE FOR BUILT:
     _air_points (the LAND arena's committed strike points, gated by air superiority and paid for
     with 38.24 fuel) and a Malta raid is sized by the [44.42] Availability Table out of a force
     that is largely NOT IN PLAY (44.22). Two callers, one rule, two different sources of strength.
-  * **THE 35.14 UPKEEP HAS NO REFILL PATH, AND 5.3 HAS NOW HUNG THE REFIT TABLE ON IT.** See
-    engine._sgsu_upkeep's own flag: 36.3, 35.15 and the [60.33]/[60.43] air-facility lorry rows are
-    the rulebook's three ways to restock an airfield and none is built, so the charted allotment is a
-    pot that only shrinks. 5.1 raised this as an OWNER RULING to make BEFORE 5.3, and 5.3 landed
-    without it, deliberately: the faithful thing is to implement rule 38 as printed and let the
-    consequence be visible rather than to invent a faucet. THE CONSEQUENCE, MEASURED over the full
-    campaign (seeds 4/1941/7): the air-facility pot empties, every SGSU then reads unfed, and from
-    roughly Game-Turn 13-33 every refit attempt is DENIED for want of an SGSU that may work --
-    AIR_REFIT_DENIED(reason='no_sgsu') 280/299/65 times, after which that side's squadrons are
-    permanently unfit and its air war is over. That is rule 35.14 doing exactly what it says to an
-    air force nobody resupplies; the missing piece is the resupply, not the rule. **It is the
-    binding constraint on Phase 5.4: Malta cannot be a lever pulled by an air force that stops
-    flying in 1941.**
+  * **THE 35.14 UPKEEP HAD NO REFILL PATH. IT HAS ONE NOW, AND IT IS THE BOOK'S.** For three blocks
+    this read "36.3, 35.15 and the [60.33]/[60.43] air-facility lorry rows are the rulebook's three
+    ways to restock an airfield and none is built, so the charted allotment is a pot that only
+    shrinks", and the consequence was measured over the full campaign (seeds 4/1941/7): the pot
+    emptied, every SGSU read unfed, and from roughly Game-Turn 13-33 every refit attempt was DENIED
+    for want of an SGSU that may work -- AIR_REFIT_DENIED(reason='no_sgsu') 280/299/65 times, after
+    which that side's squadrons were permanently unfit and its air war was over. That was rule 35.14
+    doing exactly what it says to an air force nobody resupplies. **game.relay.air_supply_orders is
+    the resupply**: 35.15's First Line Transport, which is what the [60.33]/[60.43] "Any Air
+    Facility" rows ARE, shuttling between the port of arrival and the 36.17 larder (36.3 says the
+    same of a flying boat basin in so many words -- "they can bring supplies... simply by bringing
+    trucks into the hex"). What is still missing is the ATTACHMENT: one park a side against a dozen
+    fields, so the squadrons far from a faucet are still fed by nobody. See that function's own flag.
 
     CORRECTION, 2026-07-21 (the 5.3 repair pass): 35.14 is NOT the whole of that drain, and the
     5.3 commit's attribution of it was too clean. 38.36 charges a Stores Point for every refit

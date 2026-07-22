@@ -491,3 +491,35 @@ def air_establishments_59_3() -> dict:
     [60.32]'s garbled '2S01' row -- transcribed, UNSEEDED, and raised as an owner ruling. See
     game.roster for what reads this and the data file's own four notes for what it is."""
     return _air_establishments()
+
+
+# --- [34.86] THE COMMONWEALTH AIRPLANE REINFORCEMENT SCHEDULE ------------------------------------
+# A FIFTH data file, on the principle the four above already set: thirty printed schedule rows with
+# their own key, their own withdrawal column and their own type-to-role reading are not a rate
+# chart. game.malta is its only reader.
+
+_AIR_REINFORCEMENTS_PATH = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "..", "data", "air_reinforcements_34_86.json"))
+
+
+@lru_cache(maxsize=1)
+def _air_reinforcements() -> dict:
+    with open(_AIR_REINFORCEMENTS_PATH) as f:
+        return json.load(f)
+
+
+def cw_air_reinforcements_34_86() -> list:
+    """[34.86] COMMONWEALTH AIRPLANE REINFORCEMENT AND SQUADRON WITHDRAWAL SCHEDULE, one row per
+    printed entry in the chart's own order: the `year`/`month`/`label` it is printed under, the
+    `turns` it arrives on ([34.84]'s "divided amongst the weeks as evenly as possible"), the row
+    `total`, the `planes` by printed type with the [4.44A] `chart_type` and the `role` it is
+    fielded in, and the `withdrawals` column verbatim (34.85 -- transcribed, unapplied).
+
+    Only 34.81A's Malta branch reads this; the mainland ninety per cent waits on [34.87], and the
+    data file's own `_what_is_not_wired` says why the two schedules land together or not at all."""
+    return _air_reinforcements()["commonwealth_34_86"]["months"]
+
+
+def malta_share_pct_34_81a() -> int:
+    """[34.81A] "No more than 10% of a month's airplane reinforcements may be sent to Malta." """
+    return _air_reinforcements()["malta_share_34_81a"]["pct"]

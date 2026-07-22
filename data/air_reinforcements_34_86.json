@@ -1,0 +1,2267 @@
+{
+  "_comment": "[34.86] COMMONWEALTH AIRPLANE REINFORCEMENT AND SQUADRON WITHDRAWAL SCHEDULE -- the chart that makes Malta a place that GETS STRONGER. A FIFTH data file, on the principle data/malta_44.json, data/air_facilities_60_5.json and data/air_establishments.json already set: this is not a rate chart, it is a THIRTY-ROW SCHEDULE with its own key, its own withdrawal column and its own type-to-role reading. Every row is transcribed from the 1979 book: the OCR in docs/rules/90-charts-tables-and-play-aids.md was checked CELL BY CELL against the scan (PDF page 143, rendered at 300 dpi in three column strips and read with eyes), and it survived that check everywhere except two glyphs, both corrected here and both recorded under _ocr_corrections.",
+  "_chart_label": "THE BOOK NUMBERS THIS CHART TWICE AND THE TWO DISAGREE. The chart's own printed heading (PDF p.143) reads '[34.84] COMMONWEALTH AIRPLANE REINFORCEMENT AND SQUADRON WITHDRAWAL CHART', while case 34.85 points at it as 'the Commonwealth Airplane Reinforcement and Squadron Withdrawal Schedule (Case 34.86)' and case 34.86 IS that title with a 'see Charts and Tables'. 34.84 is the case that describes how airplane reinforcements arrive, so the heading is the printer carrying the wrong case number down from the paragraph above; the engine calls it [34.86], which is the case that names it. Recorded rather than silently normalised. (docs/rules/90 also prints '[34.86] COMMONWEALTH PILOT ARRIVAL TABLE' over what case 34.88 names -- the same off-by-two, in the same block of the play aids.)",
+  "_ocr_corrections": [
+    "1942 Sep (GT 95..98): docs/rules/90 OCR reads '58 x Hurricane IIIC'. THE SCAN READS 'Hurricane IIC' (there is no Mk. IIIC on the [4.44A] chart, and no such Hurricane). Transcribed as Hurricane IIC.",
+    "1942 Nov (GT 103..106): docs/rules/90 OCR reads 'WD: 2F+'. THE SCAN READS 'WD: 2F*.' -- the asterisk is the chart's own footnote ('One squadron must consist of at least 12 Beaufighters'), and the chart prints no dagger-plus anywhere. Transcribed as 2F*.",
+    "1942 Jul (GT 87..90) prints '30 x Hurricane IC' and 1942 May prints 'Beaufighter IIF' / Jul '4 x Beaufighter II'. NEITHER NAME IS ON THE [4.44A] CHART (which has Hurricane Mk. I/IIA/IIB/IIC/IID and Beaufighter Mk. IF/VIF). They are transcribed AS PRINTED and mapped to the nearest charted row for their ratings -- Hurricane Mk. IIC and Beaufighter Mk. VIF -- which affects nothing the engine reads today (only `role` is consumed, and every candidate row is a fighter). Flagged rather than corrected: it is the book's spelling, not an OCR fault.",
+    "1941 Mar (GT 23..26) prints '16 x Wellington' with no mark. Read as Wellington Mk. I: it is the only Wellington on the [4.44A] chart before the Mk. IV first appears in the schedule's own April row, and the Mk. I is what [60.44]-era Commonwealth squadrons flew. Flagged."
+  ],
+  "_key_34_86": "The chart's own Key, VERBATIM (PDF p.143, read with eyes): \"Entries are the number of that type of plane that is received by the Commonwealth Player during that month, unless a particular Game-Turn is specified, divided as evenly as possible amongst the four weeks. WD: Squadron withdrawals, the number of each type of squadron that must be removed from play at the beginning of the month indicated (except Nov II, 1940), if any. The squadron must consist of at least 12 planes and may be removed from anywhere on the game maps. Squadron removals may come from Malta and/or the Allied Off-Map airfields. F: Any squadron consisting of at least 12 planes capable of Combat Air Patrol. B: Any squadron consisting of at least 12 planes capable of performing bombing missions. R: Any squadron of at least 12 planes capable of performing reconnaissance missions. *One squadron must consist of at least 12 Beaufighters (any combination of the two models). †Both squadrons must each consist of at least 12 Beaufighters (any combination of the two models). ‡One squadron must consist of at least 9 Bomb Points (any combination of planes with 9 or more Bomb Points). **Two squadrons must each consist of at least 12 planes with a possible Bombload Capacity of at least 9 Bomb Points (any combination of planes with 9 or more Bomb Points).\"",
+  "_rule_34_81": "[34.81] VERBATIM, and it is the whole of what the engine applies from this schedule: \"The Commonwealth Player's airforce reinforcements may be placed in any air facility in Malta, Cairo, Alexandria, or Off-map except Ethiopia. The reinforcements may be divided amongst the receiving air facilities in any distribution the Commonwealth Player chooses except as follows: A/No more than 10% of a month's airplane reinforcements may be sent to Malta. B/No airplane reinforcements may be sent to a Malta/N African Off-map air facility in excess of the facility's current squadron capacity.\" So the SCHEDULE is a law and the DIVISION is a free choice under two caps. game.malta.reinforcement applies both caps; what it sends under them is OUR ASSIGNMENT of the free choice and is argued there and at _our_assignment below.",
+  "_rule_34_84": "[34.84] VERBATIM (the arrival cadence): \"Airplane reinforcements arrive in the Naval Convoy Arrival Phase. The reinforcements are listed as to the total of each type of plane arriving during that month (the beginning of the campaign has arrivals during certain specific gameturns instead of months). The planes must be divided amongst the weeks as evenly as possible and all of the planes arriving during a game-turn may arrive in the First Op Stage of that game-turn at the owning Player's choice.\" Hence `turns` on every row -- the four Game-Turns of the month, or the single Game-Turn the 1940 rows name -- and hence the even division game.malta.reinforcement makes across them.",
+  "malta_share_34_81a": {
+    "_rule": "[34.81] A/ 'No more than 10% of a month's airplane reinforcements may be sent to Malta.' The magnitude, held here rather than as a literal in game.malta. It is a CEILING, so the engine rounds the share DOWN.",
+    "pct": 10
+  },
+  "_our_assignment": "OUR ASSIGNMENT OF 34.81'S FREE CHOICE, STATED IN FULL BECAUSE IT IS A CHOICE AND NOT A TRANSCRIPTION. The Commonwealth sends Malta the aeroplanes THE ISLAND CAN OPERATE and not one more: 44.14 gives a Capacity Level eighteen planes ('each level of air facility can handle up to 18 planes of any type'), so an island standing at five levels flies at most ninety, and a plane parked on Malta above that number can fly no mission at all -- it is 41.36 target practice ('for every level destroyed, remove 10% of the planes on the ground'). That is 34.81B read at 44.14's rate, and it is what governs: 34.81A's 10% ceiling is far larger than the island can hold (the schedule below musters 6,691 Commonwealth aeroplanes over the campaign, so a tenth of it is 669), and shipping the ceiling would put six hundred aircraft on an island the book's own scenarios show holding 31, 55, 74 and 118. WHAT THIS PRODUCES, against those four printed snapshots (recorded in data/malta_44.json later_scenario_establishments): 31 at the campaign's start, 58 by the end of March 1941 against the book's 55, and saturation at 90 -- inside the book's own band and reached from below. WHAT IT DOES NOT PRODUCE is the book's CAPACITY growth (5 -> 8 -> 14 -> 28 levels), because our Commonwealth builds capacity for the aeroplanes he has rather than for aeroplanes he has not been sent (game.malta.repair_ceiling): an island with fewer levels is MORE fragile to the Axis raid, not less, so the divergence runs in the Axis's favour. Both halves are one commander's decision and belong to a Commonwealth air seat this engine does not yet have.",
+  "_what_is_not_wired": "TWO THIRDS OF THIS CHART IS TRANSCRIBED AND UNAPPLIED, DELIBERATELY. (1) THE MAINLAND NINETY PER CENT. 34.81 divides a month's arrivals between Malta and the mainland Commonwealth air force, and only the Malta branch is wired; state.air's Commonwealth wings do not grow. That is not an oversight -- [34.87] AXIS AIRPLANE REINFORCEMENT SCHEDULE IS STILL UNTRANSCRIBED, so growing the Royal Air Force by six thousand aeroplanes while the Regia Aeronautica stays at [60.32]'s 385 would be a one-sided invention several times larger than anything Malta does. The two schedules land together or neither does. (2) THE WITHDRAWAL COLUMN. 34.85 requires the Commonwealth to withdraw the charted squadrons at the beginning of the month indicated, and the Key says they 'may be removed from anywhere on the game maps... may come from Malta and/or the Allied Off-Map airfields' -- MAY, not must. With no mainland ledger to remove a squadron from, applying WD to Malta alone would take the withdrawals entirely out of the island, which is the one place the chart does not oblige him to take them. The column is transcribed on every row and nothing reads it; it comes alive with the mainland half.",
+  "_role_assignment": "THE `role` COLUMN IS OURS, and it is assigned exactly as data/air_establishments.json assigns it -- off the [4.44A] chart, by WHICH OF ITS TWO TABLES the type is printed in and by the Mission Capability cell on its row (both read with eyes, PDF p.112 Fighters & Fighter-Bombers, p.113 Bombers, Flying Boats, Transports, Reconnaissance). A type on the fighters table takes `fighters` (the Skua Mk. II included -- the chart's own note calls it a divebomber, but it is printed on the fighters table and 34.21's pilot requirement follows the table). On the bombers table, a row whose capability cell carries B takes `strike`, a row carrying only R takes `recon`, and the Anson Mk. I -- R and B with a Bombload of 2 -- goes to `recon` on the same reading that sends the Ca 309 Ghibli there, while the 167 Maryland -- R and B at a Bombload of 9 -- goes to `strike` on the same reading that sends the S.M. 81 Pipistrello there. The A-28 Hudson carries NO D/R/B cell at all, only a transport tonnage, so it is `transport` -- a fourth bucket game.state.AirWing does not have, counted in Malta's establishment (41.36's bombs fall on 'the planes on the ground' without regard to type) and in nothing else.",
+  "commonwealth_34_86": {
+    "_comment": "One row per printed entry, in the chart's own order. `turns` is the Game-Turn or Game-Turns the row names; `total` is the row's plane count (the arithmetic sum of `planes`, carried so a transcription slip fails a test rather than a campaign); `withdrawals` is the WD column verbatim, unapplied.",
+    "months": [
+      {
+        "year": 1940,
+        "month": 9,
+        "label": "Sept IV",
+        "turns": [
+          2
+        ],
+        "total": 5,
+        "planes": [
+          {
+            "printed": "Fulmar",
+            "chart_type": "Fulmar Mk. II",
+            "role": "fighters",
+            "number": 3
+          },
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 2
+          }
+        ],
+        "withdrawals": []
+      },
+      {
+        "year": 1940,
+        "month": 10,
+        "label": "Oct I",
+        "turns": [
+          3
+        ],
+        "total": 36,
+        "planes": [
+          {
+            "printed": "Blenheim I",
+            "chart_type": "Blenheim Mk. I",
+            "role": "strike",
+            "number": 30
+          },
+          {
+            "printed": "Skua II",
+            "chart_type": "Skua Mk. II",
+            "role": "fighters",
+            "number": 6
+          }
+        ],
+        "withdrawals": [
+          "1F"
+        ]
+      },
+      {
+        "year": 1940,
+        "month": 11,
+        "label": "Nov II",
+        "turns": [
+          8
+        ],
+        "total": 4,
+        "planes": [
+          {
+            "printed": "B17D",
+            "chart_type": "B-17/D Flying Fortress",
+            "role": "strike",
+            "number": 4
+          }
+        ],
+        "withdrawals": [
+          "2F",
+          "2B**"
+        ]
+      },
+      {
+        "year": 1940,
+        "month": 12,
+        "label": "Dec I",
+        "turns": [
+          11
+        ],
+        "total": 52,
+        "planes": [
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 12
+          },
+          {
+            "printed": "Wellington I",
+            "chart_type": "Wellington Mk. I",
+            "role": "strike",
+            "number": 40
+          }
+        ],
+        "withdrawals": [
+          "1B"
+        ]
+      },
+      {
+        "year": 1941,
+        "month": 1,
+        "label": "Jan",
+        "turns": [
+          15,
+          16,
+          17,
+          18
+        ],
+        "total": 57,
+        "planes": [
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 44
+          },
+          {
+            "printed": "Blenheim I",
+            "chart_type": "Blenheim Mk. I",
+            "role": "strike",
+            "number": 12
+          },
+          {
+            "printed": "Wellington I",
+            "chart_type": "Wellington Mk. I",
+            "role": "strike",
+            "number": 1
+          }
+        ],
+        "withdrawals": [
+          "1F",
+          "2B**"
+        ]
+      },
+      {
+        "year": 1941,
+        "month": 2,
+        "label": "Feb",
+        "turns": [
+          19,
+          20,
+          21,
+          22
+        ],
+        "total": 72,
+        "planes": [
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 30
+          },
+          {
+            "printed": "Blenheim I",
+            "chart_type": "Blenheim Mk. I",
+            "role": "strike",
+            "number": 24
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 14
+          },
+          {
+            "printed": "Maryland",
+            "chart_type": "167 Maryland",
+            "role": "strike",
+            "number": 2
+          },
+          {
+            "printed": "Wellington I",
+            "chart_type": "Wellington Mk. I",
+            "role": "strike",
+            "number": 2
+          }
+        ],
+        "withdrawals": [
+          "1F"
+        ]
+      },
+      {
+        "year": 1941,
+        "month": 3,
+        "label": "Mar",
+        "turns": [
+          23,
+          24,
+          25,
+          26
+        ],
+        "total": 78,
+        "planes": [
+          {
+            "printed": "Blenheim IVF",
+            "chart_type": "Blenheim Mk. IVF",
+            "role": "fighters",
+            "number": 14
+          },
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 13
+          },
+          {
+            "printed": "Tomahawk",
+            "chart_type": "P-40 Tomahawk",
+            "role": "fighters",
+            "number": 2
+          },
+          {
+            "printed": "Blenheim I",
+            "chart_type": "Blenheim Mk. I",
+            "role": "strike",
+            "number": 21
+          },
+          {
+            "printed": "Maryland",
+            "chart_type": "167 Maryland",
+            "role": "strike",
+            "number": 6
+          },
+          {
+            "printed": "Lysander",
+            "chart_type": "Lysander Mk. I",
+            "role": "recon",
+            "number": 6
+          },
+          {
+            "printed": "Wellington",
+            "chart_type": "Wellington Mk. I",
+            "role": "strike",
+            "number": 16
+          }
+        ],
+        "withdrawals": [
+          "1B"
+        ]
+      },
+      {
+        "year": 1941,
+        "month": 4,
+        "label": "Apr",
+        "turns": [
+          27,
+          28,
+          29,
+          30
+        ],
+        "total": 158,
+        "planes": [
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 66
+          },
+          {
+            "printed": "Tomahawk",
+            "chart_type": "P-40 Tomahawk",
+            "role": "fighters",
+            "number": 25
+          },
+          {
+            "printed": "Blenheim I",
+            "chart_type": "Blenheim Mk. I",
+            "role": "strike",
+            "number": 18
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 10
+          },
+          {
+            "printed": "Maryland",
+            "chart_type": "167 Maryland",
+            "role": "strike",
+            "number": 6
+          },
+          {
+            "printed": "Lysander I",
+            "chart_type": "Lysander Mk. I",
+            "role": "recon",
+            "number": 6
+          },
+          {
+            "printed": "Wellington I",
+            "chart_type": "Wellington Mk. I",
+            "role": "strike",
+            "number": 13
+          },
+          {
+            "printed": "Wellington IV",
+            "chart_type": "Wellington Mk. IV",
+            "role": "strike",
+            "number": 14
+          }
+        ],
+        "withdrawals": [
+          "1F"
+        ]
+      },
+      {
+        "year": 1941,
+        "month": 5,
+        "label": "May",
+        "turns": [
+          31,
+          32,
+          33,
+          34
+        ],
+        "total": 153,
+        "planes": [
+          {
+            "printed": "Beaufighter IF",
+            "chart_type": "Beaufighter Mk. IF",
+            "role": "fighters",
+            "number": 16
+          },
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 65
+          },
+          {
+            "printed": "Tomahawk",
+            "chart_type": "P-40 Tomahawk",
+            "role": "fighters",
+            "number": 21
+          },
+          {
+            "printed": "Blenheim I",
+            "chart_type": "Blenheim Mk. I",
+            "role": "strike",
+            "number": 20
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 9
+          },
+          {
+            "printed": "Maryland",
+            "chart_type": "167 Maryland",
+            "role": "strike",
+            "number": 7
+          },
+          {
+            "printed": "Wellington IV",
+            "chart_type": "Wellington Mk. IV",
+            "role": "strike",
+            "number": 15
+          }
+        ],
+        "withdrawals": []
+      },
+      {
+        "year": 1941,
+        "month": 6,
+        "label": "Jun",
+        "turns": [
+          35,
+          36,
+          37,
+          38
+        ],
+        "total": 246,
+        "planes": [
+          {
+            "printed": "Beaufighter IF",
+            "chart_type": "Beaufighter Mk. IF",
+            "role": "fighters",
+            "number": 5
+          },
+          {
+            "printed": "Blenheim IVF",
+            "chart_type": "Blenheim Mk. IVF",
+            "role": "fighters",
+            "number": 15
+          },
+          {
+            "printed": "Gladiator II",
+            "chart_type": "Gladiator Mk. II",
+            "role": "fighters",
+            "number": 5
+          },
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 136
+          },
+          {
+            "printed": "Tomahawk",
+            "chart_type": "P-40 Tomahawk",
+            "role": "fighters",
+            "number": 41
+          },
+          {
+            "printed": "Blenheim I",
+            "chart_type": "Blenheim Mk. I",
+            "role": "strike",
+            "number": 10
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 10
+          },
+          {
+            "printed": "Maryland",
+            "chart_type": "167 Maryland",
+            "role": "strike",
+            "number": 6
+          },
+          {
+            "printed": "Lysander I",
+            "chart_type": "Lysander Mk. I",
+            "role": "recon",
+            "number": 12
+          },
+          {
+            "printed": "Wellington I",
+            "chart_type": "Wellington Mk. I",
+            "role": "strike",
+            "number": 6
+          }
+        ],
+        "withdrawals": [
+          "1F",
+          "1B"
+        ]
+      },
+      {
+        "year": 1941,
+        "month": 7,
+        "label": "Jul",
+        "turns": [
+          39,
+          40,
+          41,
+          42
+        ],
+        "total": 205,
+        "planes": [
+          {
+            "printed": "Gladiator II",
+            "chart_type": "Gladiator Mk. II",
+            "role": "fighters",
+            "number": 3
+          },
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 32
+          },
+          {
+            "printed": "Tomahawk",
+            "chart_type": "P-40 Tomahawk",
+            "role": "fighters",
+            "number": 20
+          },
+          {
+            "printed": "Wildcat",
+            "chart_type": "F4F Wildcat (Marlet I)",
+            "role": "fighters",
+            "number": 15
+          },
+          {
+            "printed": "Albacore",
+            "chart_type": "Albacore",
+            "role": "strike",
+            "number": 12
+          },
+          {
+            "printed": "Blenheim I",
+            "chart_type": "Blenheim Mk. I",
+            "role": "strike",
+            "number": 35
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 50
+          },
+          {
+            "printed": "Maryland",
+            "chart_type": "167 Maryland",
+            "role": "strike",
+            "number": 12
+          },
+          {
+            "printed": "Wellington I",
+            "chart_type": "Wellington Mk. I",
+            "role": "strike",
+            "number": 10
+          },
+          {
+            "printed": "Wellington IV",
+            "chart_type": "Wellington Mk. IV",
+            "role": "strike",
+            "number": 16
+          }
+        ],
+        "withdrawals": [
+          "1R"
+        ]
+      },
+      {
+        "year": 1941,
+        "month": 8,
+        "label": "Aug",
+        "turns": [
+          43,
+          44,
+          45,
+          46
+        ],
+        "total": 217,
+        "planes": [
+          {
+            "printed": "Beaufighter IF",
+            "chart_type": "Beaufighter Mk. IF",
+            "role": "fighters",
+            "number": 4
+          },
+          {
+            "printed": "Gladiator II",
+            "chart_type": "Gladiator Mk. II",
+            "role": "fighters",
+            "number": 2
+          },
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 27
+          },
+          {
+            "printed": "Tomahawk",
+            "chart_type": "P-40 Tomahawk",
+            "role": "fighters",
+            "number": 67
+          },
+          {
+            "printed": "Beaufort I",
+            "chart_type": "Beaufort Mk. I",
+            "role": "strike",
+            "number": 7
+          },
+          {
+            "printed": "Blenheim I",
+            "chart_type": "Blenheim Mk. I",
+            "role": "strike",
+            "number": 22
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 44
+          },
+          {
+            "printed": "Maryland",
+            "chart_type": "167 Maryland",
+            "role": "strike",
+            "number": 30
+          },
+          {
+            "printed": "Wellington IV",
+            "chart_type": "Wellington Mk. IV",
+            "role": "strike",
+            "number": 14
+          }
+        ],
+        "withdrawals": [
+          "1B"
+        ]
+      },
+      {
+        "year": 1941,
+        "month": 9,
+        "label": "Sep",
+        "turns": [
+          47,
+          48,
+          49,
+          50
+        ],
+        "total": 242,
+        "planes": [
+          {
+            "printed": "Beaufighter IF",
+            "chart_type": "Beaufighter Mk. IF",
+            "role": "fighters",
+            "number": 3
+          },
+          {
+            "printed": "Blenheim IVF",
+            "chart_type": "Blenheim Mk. IVF",
+            "role": "fighters",
+            "number": 13
+          },
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 140
+          },
+          {
+            "printed": "Hurricane IIA",
+            "chart_type": "Hurricane Mk. IIA",
+            "role": "fighters",
+            "number": 20
+          },
+          {
+            "printed": "Tomahawk",
+            "chart_type": "P-40 Tomahawk",
+            "role": "fighters",
+            "number": 23
+          },
+          {
+            "printed": "Beaufort I",
+            "chart_type": "Beaufort Mk. I",
+            "role": "strike",
+            "number": 2
+          },
+          {
+            "printed": "Blenheim I",
+            "chart_type": "Blenheim Mk. I",
+            "role": "strike",
+            "number": 15
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 10
+          },
+          {
+            "printed": "Maryland",
+            "chart_type": "167 Maryland",
+            "role": "strike",
+            "number": 3
+          },
+          {
+            "printed": "Wellington IV",
+            "chart_type": "Wellington Mk. IV",
+            "role": "strike",
+            "number": 13
+          }
+        ],
+        "withdrawals": [
+          "1F*"
+        ]
+      },
+      {
+        "year": 1941,
+        "month": 10,
+        "label": "Oct",
+        "turns": [
+          51,
+          52,
+          53,
+          54
+        ],
+        "total": 186,
+        "planes": [
+          {
+            "printed": "Beaufighter IF",
+            "chart_type": "Beaufighter Mk. IF",
+            "role": "fighters",
+            "number": 8
+          },
+          {
+            "printed": "Fulmar",
+            "chart_type": "Fulmar Mk. II",
+            "role": "fighters",
+            "number": 15
+          },
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 81
+          },
+          {
+            "printed": "Tomahawk",
+            "chart_type": "P-40 Tomahawk",
+            "role": "fighters",
+            "number": 16
+          },
+          {
+            "printed": "B17D",
+            "chart_type": "B-17/D Flying Fortress",
+            "role": "strike",
+            "number": 3
+          },
+          {
+            "printed": "Beaufort I",
+            "chart_type": "Beaufort Mk. I",
+            "role": "strike",
+            "number": 3
+          },
+          {
+            "printed": "Blenheim I",
+            "chart_type": "Blenheim Mk. I",
+            "role": "strike",
+            "number": 10
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 26
+          },
+          {
+            "printed": "Boston III",
+            "chart_type": "Boston Mk. III",
+            "role": "strike",
+            "number": 7
+          },
+          {
+            "printed": "Maryland",
+            "chart_type": "167 Maryland",
+            "role": "strike",
+            "number": 2
+          },
+          {
+            "printed": "Wellington I",
+            "chart_type": "Wellington Mk. I",
+            "role": "strike",
+            "number": 15
+          }
+        ],
+        "withdrawals": []
+      },
+      {
+        "year": 1941,
+        "month": 11,
+        "label": "Nov",
+        "turns": [
+          55,
+          56,
+          57,
+          58
+        ],
+        "total": 191,
+        "planes": [
+          {
+            "printed": "Beaufighter IF",
+            "chart_type": "Beaufighter Mk. IF",
+            "role": "fighters",
+            "number": 1
+          },
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 40
+          },
+          {
+            "printed": "Hurricane IIA",
+            "chart_type": "Hurricane Mk. IIA",
+            "role": "fighters",
+            "number": 20
+          },
+          {
+            "printed": "Kittyhawk I",
+            "chart_type": "P-40 Kittyhawk I",
+            "role": "fighters",
+            "number": 62
+          },
+          {
+            "printed": "B17D",
+            "chart_type": "B-17/D Flying Fortress",
+            "role": "strike",
+            "number": 1
+          },
+          {
+            "printed": "Baltimore I",
+            "chart_type": "A-30 Baltimore I",
+            "role": "strike",
+            "number": 4
+          },
+          {
+            "printed": "Beaufort I",
+            "chart_type": "Beaufort Mk. I",
+            "role": "strike",
+            "number": 4
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 16
+          },
+          {
+            "printed": "Bombay",
+            "chart_type": "Bombay Mk. I",
+            "role": "strike",
+            "number": 1
+          },
+          {
+            "printed": "Boston III",
+            "chart_type": "Boston Mk. III",
+            "role": "strike",
+            "number": 23
+          },
+          {
+            "printed": "Maryland",
+            "chart_type": "167 Maryland",
+            "role": "strike",
+            "number": 2
+          },
+          {
+            "printed": "Wellington I",
+            "chart_type": "Wellington Mk. I",
+            "role": "strike",
+            "number": 17
+          }
+        ],
+        "withdrawals": []
+      },
+      {
+        "year": 1941,
+        "month": 12,
+        "label": "Dec",
+        "turns": [
+          59,
+          60,
+          61,
+          62
+        ],
+        "total": 385,
+        "planes": [
+          {
+            "printed": "Beaufighter IF",
+            "chart_type": "Beaufighter Mk. IF",
+            "role": "fighters",
+            "number": 32
+          },
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 61
+          },
+          {
+            "printed": "Hurricane IIA",
+            "chart_type": "Hurricane Mk. IIA",
+            "role": "fighters",
+            "number": 32
+          },
+          {
+            "printed": "Kittyhawk I",
+            "chart_type": "P-40 Kittyhawk I",
+            "role": "fighters",
+            "number": 90
+          },
+          {
+            "printed": "Kittyhawk II",
+            "chart_type": "P-40 Kittyhawk II",
+            "role": "fighters",
+            "number": 45
+          },
+          {
+            "printed": "Baltimore I",
+            "chart_type": "A-30 Baltimore I",
+            "role": "strike",
+            "number": 9
+          },
+          {
+            "printed": "Beaufort I",
+            "chart_type": "Beaufort Mk. I",
+            "role": "strike",
+            "number": 1
+          },
+          {
+            "printed": "Blenheim I",
+            "chart_type": "Blenheim Mk. I",
+            "role": "strike",
+            "number": 40
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 20
+          },
+          {
+            "printed": "Boston III",
+            "chart_type": "Boston Mk. III",
+            "role": "strike",
+            "number": 32
+          },
+          {
+            "printed": "Maryland",
+            "chart_type": "167 Maryland",
+            "role": "strike",
+            "number": 3
+          },
+          {
+            "printed": "Tiger Moth II",
+            "chart_type": "Tiger Moth Mk. II",
+            "role": "recon",
+            "number": 1
+          },
+          {
+            "printed": "Wellington I",
+            "chart_type": "Wellington Mk. I",
+            "role": "strike",
+            "number": 10
+          },
+          {
+            "printed": "Wellington IV",
+            "chart_type": "Wellington Mk. IV",
+            "role": "strike",
+            "number": 9
+          }
+        ],
+        "withdrawals": [
+          "2F",
+          "1B"
+        ]
+      },
+      {
+        "year": 1942,
+        "month": 1,
+        "label": "Jan",
+        "turns": [
+          63,
+          64,
+          65,
+          66
+        ],
+        "total": 418,
+        "planes": [
+          {
+            "printed": "Beaufighter IF",
+            "chart_type": "Beaufighter Mk. IF",
+            "role": "fighters",
+            "number": 3
+          },
+          {
+            "printed": "Blenheim IVF",
+            "chart_type": "Blenheim Mk. IVF",
+            "role": "fighters",
+            "number": 15
+          },
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 96
+          },
+          {
+            "printed": "Hurricane IIA",
+            "chart_type": "Hurricane Mk. IIA",
+            "role": "fighters",
+            "number": 54
+          },
+          {
+            "printed": "Hurricane IIB",
+            "chart_type": "Hurricane Mk. IIB",
+            "role": "fighters",
+            "number": 36
+          },
+          {
+            "printed": "Kittyhawk I",
+            "chart_type": "P-40 Kittyhawk I",
+            "role": "fighters",
+            "number": 56
+          },
+          {
+            "printed": "Kittyhawk II",
+            "chart_type": "P-40 Kittyhawk II",
+            "role": "fighters",
+            "number": 45
+          },
+          {
+            "printed": "Kittyhawk III",
+            "chart_type": "P-40 Kittyhawk III",
+            "role": "fighters",
+            "number": 15
+          },
+          {
+            "printed": "Tomahawk",
+            "chart_type": "P-40 Tomahawk",
+            "role": "fighters",
+            "number": 4
+          },
+          {
+            "printed": "Caudron",
+            "chart_type": "C.714",
+            "role": "fighters",
+            "number": 1
+          },
+          {
+            "printed": "B17D",
+            "chart_type": "B-17/D Flying Fortress",
+            "role": "strike",
+            "number": 4
+          },
+          {
+            "printed": "B24",
+            "chart_type": "B-24/PB4y Liberator III",
+            "role": "strike",
+            "number": 4
+          },
+          {
+            "printed": "Baltimore I",
+            "chart_type": "A-30 Baltimore I",
+            "role": "strike",
+            "number": 15
+          },
+          {
+            "printed": "Beaufort I",
+            "chart_type": "Beaufort Mk. I",
+            "role": "strike",
+            "number": 2
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 37
+          },
+          {
+            "printed": "Boston III",
+            "chart_type": "Boston Mk. III",
+            "role": "strike",
+            "number": 7
+          },
+          {
+            "printed": "Hudson",
+            "chart_type": "A-28 Hudson",
+            "role": "transport",
+            "number": 3
+          },
+          {
+            "printed": "Lysander",
+            "chart_type": "Lysander Mk. I",
+            "role": "recon",
+            "number": 3
+          },
+          {
+            "printed": "Wellington IV",
+            "chart_type": "Wellington Mk. IV",
+            "role": "strike",
+            "number": 18
+          }
+        ],
+        "withdrawals": [
+          "4B**"
+        ]
+      },
+      {
+        "year": 1942,
+        "month": 2,
+        "label": "Feb",
+        "turns": [
+          67,
+          68,
+          69,
+          70
+        ],
+        "total": 232,
+        "planes": [
+          {
+            "printed": "Beaufighter IF",
+            "chart_type": "Beaufighter Mk. IF",
+            "role": "fighters",
+            "number": 21
+          },
+          {
+            "printed": "Blenheim IVF",
+            "chart_type": "Blenheim Mk. IVF",
+            "role": "fighters",
+            "number": 7
+          },
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 15
+          },
+          {
+            "printed": "Hurricane IIA",
+            "chart_type": "Hurricane Mk. IIA",
+            "role": "fighters",
+            "number": 36
+          },
+          {
+            "printed": "Hurricane IIB",
+            "chart_type": "Hurricane Mk. IIB",
+            "role": "fighters",
+            "number": 21
+          },
+          {
+            "printed": "Hurricane IIC",
+            "chart_type": "Hurricane Mk. IIC",
+            "role": "fighters",
+            "number": 16
+          },
+          {
+            "printed": "Kittyhawk II",
+            "chart_type": "P-40 Kittyhawk II",
+            "role": "fighters",
+            "number": 30
+          },
+          {
+            "printed": "Kittyhawk III",
+            "chart_type": "P-40 Kittyhawk III",
+            "role": "fighters",
+            "number": 12
+          },
+          {
+            "printed": "Baltimore I",
+            "chart_type": "A-30 Baltimore I",
+            "role": "strike",
+            "number": 30
+          },
+          {
+            "printed": "Beaufort I",
+            "chart_type": "Beaufort Mk. I",
+            "role": "strike",
+            "number": 6
+          },
+          {
+            "printed": "Boston III",
+            "chart_type": "Boston Mk. III",
+            "role": "strike",
+            "number": 4
+          },
+          {
+            "printed": "Maryland",
+            "chart_type": "167 Maryland",
+            "role": "strike",
+            "number": 2
+          },
+          {
+            "printed": "Wellington I",
+            "chart_type": "Wellington Mk. I",
+            "role": "strike",
+            "number": 2
+          },
+          {
+            "printed": "Wellington IV",
+            "chart_type": "Wellington Mk. IV",
+            "role": "strike",
+            "number": 30
+          }
+        ],
+        "withdrawals": [
+          "2F",
+          "2B‡"
+        ]
+      },
+      {
+        "year": 1942,
+        "month": 3,
+        "label": "Mar",
+        "turns": [
+          71,
+          72,
+          73,
+          74
+        ],
+        "total": 430,
+        "planes": [
+          {
+            "printed": "Beaufighter IF",
+            "chart_type": "Beaufighter Mk. IF",
+            "role": "fighters",
+            "number": 25
+          },
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 18
+          },
+          {
+            "printed": "Hurricane IIA",
+            "chart_type": "Hurricane Mk. IIA",
+            "role": "fighters",
+            "number": 3
+          },
+          {
+            "printed": "Hurricane IIB",
+            "chart_type": "Hurricane Mk. IIB",
+            "role": "fighters",
+            "number": 38
+          },
+          {
+            "printed": "Hurricane IIC",
+            "chart_type": "Hurricane Mk. IIC",
+            "role": "fighters",
+            "number": 22
+          },
+          {
+            "printed": "Kittyhawk I",
+            "chart_type": "P-40 Kittyhawk I",
+            "role": "fighters",
+            "number": 30
+          },
+          {
+            "printed": "Kittyhawk II",
+            "chart_type": "P-40 Kittyhawk II",
+            "role": "fighters",
+            "number": 48
+          },
+          {
+            "printed": "Kittyhawk III",
+            "chart_type": "P-40 Kittyhawk III",
+            "role": "fighters",
+            "number": 30
+          },
+          {
+            "printed": "Spitfire VB",
+            "chart_type": "Spitfire Mk. VB",
+            "role": "fighters",
+            "number": 35
+          },
+          {
+            "printed": "Anson I",
+            "chart_type": "Anson Mk. I",
+            "role": "recon",
+            "number": 12
+          },
+          {
+            "printed": "Baltimore I",
+            "chart_type": "A-30 Baltimore I",
+            "role": "strike",
+            "number": 46
+          },
+          {
+            "printed": "Beaufort I",
+            "chart_type": "Beaufort Mk. I",
+            "role": "strike",
+            "number": 12
+          },
+          {
+            "printed": "Boston III",
+            "chart_type": "Boston Mk. III",
+            "role": "strike",
+            "number": 10
+          },
+          {
+            "printed": "Hudson",
+            "chart_type": "A-28 Hudson",
+            "role": "transport",
+            "number": 10
+          },
+          {
+            "printed": "Sunderland",
+            "chart_type": "Sunderland",
+            "role": "recon",
+            "number": 1
+          },
+          {
+            "printed": "Wellington I",
+            "chart_type": "Wellington Mk. I",
+            "role": "strike",
+            "number": 30
+          },
+          {
+            "printed": "Wellington IV",
+            "chart_type": "Wellington Mk. IV",
+            "role": "strike",
+            "number": 60
+          }
+        ],
+        "withdrawals": []
+      },
+      {
+        "year": 1942,
+        "month": 4,
+        "label": "Apr",
+        "turns": [
+          75,
+          76,
+          77,
+          78
+        ],
+        "total": 340,
+        "planes": [
+          {
+            "printed": "Beaufighter IF",
+            "chart_type": "Beaufighter Mk. IF",
+            "role": "fighters",
+            "number": 13
+          },
+          {
+            "printed": "Beaufighter VI",
+            "chart_type": "Beaufighter Mk. VIF",
+            "role": "fighters",
+            "number": 5
+          },
+          {
+            "printed": "Hurricane IIA",
+            "chart_type": "Hurricane Mk. IIA",
+            "role": "fighters",
+            "number": 15
+          },
+          {
+            "printed": "Hurricane IIB",
+            "chart_type": "Hurricane Mk. IIB",
+            "role": "fighters",
+            "number": 60
+          },
+          {
+            "printed": "Hurricane IIC",
+            "chart_type": "Hurricane Mk. IIC",
+            "role": "fighters",
+            "number": 36
+          },
+          {
+            "printed": "Kittyhawk II",
+            "chart_type": "P-40 Kittyhawk II",
+            "role": "fighters",
+            "number": 11
+          },
+          {
+            "printed": "Spitfire VB",
+            "chart_type": "Spitfire Mk. VB",
+            "role": "fighters",
+            "number": 61
+          },
+          {
+            "printed": "Caudron",
+            "chart_type": "C.714",
+            "role": "fighters",
+            "number": 2
+          },
+          {
+            "printed": "Anson I",
+            "chart_type": "Anson Mk. I",
+            "role": "recon",
+            "number": 4
+          },
+          {
+            "printed": "Baltimore I",
+            "chart_type": "A-30 Baltimore I",
+            "role": "strike",
+            "number": 50
+          },
+          {
+            "printed": "Beaufort I",
+            "chart_type": "Beaufort Mk. I",
+            "role": "strike",
+            "number": 5
+          },
+          {
+            "printed": "Boston III",
+            "chart_type": "Boston Mk. III",
+            "role": "strike",
+            "number": 2
+          },
+          {
+            "printed": "Hudson",
+            "chart_type": "A-28 Hudson",
+            "role": "transport",
+            "number": 13
+          },
+          {
+            "printed": "Potez",
+            "chart_type": "63.11",
+            "role": "recon",
+            "number": 2
+          },
+          {
+            "printed": "Wellington I",
+            "chart_type": "Wellington Mk. I",
+            "role": "strike",
+            "number": 16
+          },
+          {
+            "printed": "Wellington IV",
+            "chart_type": "Wellington Mk. IV",
+            "role": "strike",
+            "number": 45
+          }
+        ],
+        "withdrawals": []
+      },
+      {
+        "year": 1942,
+        "month": 5,
+        "label": "May",
+        "turns": [
+          79,
+          80,
+          81,
+          82
+        ],
+        "total": 437,
+        "planes": [
+          {
+            "printed": "Beaufighter IIF",
+            "chart_type": "Beaufighter Mk. VIF",
+            "role": "fighters",
+            "number": 3
+          },
+          {
+            "printed": "Beaufighter VI",
+            "chart_type": "Beaufighter Mk. VIF",
+            "role": "fighters",
+            "number": 17
+          },
+          {
+            "printed": "Hurricane IID",
+            "chart_type": "Hurricane Mk. IID",
+            "role": "fighters",
+            "number": 13
+          },
+          {
+            "printed": "Kittyhawk I",
+            "chart_type": "P-40 Kittyhawk I",
+            "role": "fighters",
+            "number": 16
+          },
+          {
+            "printed": "Kittyhawk III",
+            "chart_type": "P-40 Kittyhawk III",
+            "role": "fighters",
+            "number": 40
+          },
+          {
+            "printed": "Spitfire VB",
+            "chart_type": "Spitfire Mk. VB",
+            "role": "fighters",
+            "number": 96
+          },
+          {
+            "printed": "Tomahawk",
+            "chart_type": "P-40 Tomahawk",
+            "role": "fighters",
+            "number": 3
+          },
+          {
+            "printed": "Dewoitine",
+            "chart_type": "D.520",
+            "role": "fighters",
+            "number": 2
+          },
+          {
+            "printed": "Anson I",
+            "chart_type": "Anson Mk. I",
+            "role": "recon",
+            "number": 22
+          },
+          {
+            "printed": "B17D",
+            "chart_type": "B-17/D Flying Fortress",
+            "role": "strike",
+            "number": 25
+          },
+          {
+            "printed": "B24",
+            "chart_type": "B-24/PB4y Liberator III",
+            "role": "strike",
+            "number": 25
+          },
+          {
+            "printed": "Baltimore I",
+            "chart_type": "A-30 Baltimore I",
+            "role": "strike",
+            "number": 42
+          },
+          {
+            "printed": "Beaufort I",
+            "chart_type": "Beaufort Mk. I",
+            "role": "strike",
+            "number": 10
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 23
+          },
+          {
+            "printed": "Hudson",
+            "chart_type": "A-28 Hudson",
+            "role": "transport",
+            "number": 42
+          },
+          {
+            "printed": "Maryland",
+            "chart_type": "167 Maryland",
+            "role": "strike",
+            "number": 1
+          },
+          {
+            "printed": "Wellington IV",
+            "chart_type": "Wellington Mk. IV",
+            "role": "strike",
+            "number": 57
+          }
+        ],
+        "withdrawals": [
+          "1F"
+        ]
+      },
+      {
+        "year": 1942,
+        "month": 6,
+        "label": "Jun",
+        "turns": [
+          83,
+          84,
+          85,
+          86
+        ],
+        "total": 340,
+        "planes": [
+          {
+            "printed": "Beaufighter VI",
+            "chart_type": "Beaufighter Mk. VIF",
+            "role": "fighters",
+            "number": 31
+          },
+          {
+            "printed": "Hurricane IIA",
+            "chart_type": "Hurricane Mk. IIA",
+            "role": "fighters",
+            "number": 18
+          },
+          {
+            "printed": "Hurricane IIB",
+            "chart_type": "Hurricane Mk. IIB",
+            "role": "fighters",
+            "number": 36
+          },
+          {
+            "printed": "Hurricane IIC",
+            "chart_type": "Hurricane Mk. IIC",
+            "role": "fighters",
+            "number": 50
+          },
+          {
+            "printed": "Kittyhawk II",
+            "chart_type": "P-40 Kittyhawk II",
+            "role": "fighters",
+            "number": 16
+          },
+          {
+            "printed": "Kittyhawk III",
+            "chart_type": "P-40 Kittyhawk III",
+            "role": "fighters",
+            "number": 35
+          },
+          {
+            "printed": "Spitfire VB",
+            "chart_type": "Spitfire Mk. VB",
+            "role": "fighters",
+            "number": 59
+          },
+          {
+            "printed": "Spitfire VC",
+            "chart_type": "Spitfire Mk. VC",
+            "role": "fighters",
+            "number": 14
+          },
+          {
+            "printed": "Baltimore I",
+            "chart_type": "A-30 Baltimore I",
+            "role": "strike",
+            "number": 26
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 42
+          },
+          {
+            "printed": "Beaufort I",
+            "chart_type": "Beaufort Mk. I",
+            "role": "strike",
+            "number": 4
+          },
+          {
+            "printed": "Boston III",
+            "chart_type": "Boston Mk. III",
+            "role": "strike",
+            "number": 5
+          },
+          {
+            "printed": "Hudson",
+            "chart_type": "A-28 Hudson",
+            "role": "transport",
+            "number": 4
+          }
+        ],
+        "withdrawals": []
+      },
+      {
+        "year": 1942,
+        "month": 7,
+        "label": "Jul",
+        "turns": [
+          87,
+          88,
+          89,
+          90
+        ],
+        "total": 466,
+        "planes": [
+          {
+            "printed": "Beaufighter II",
+            "chart_type": "Beaufighter Mk. VIF",
+            "role": "fighters",
+            "number": 4
+          },
+          {
+            "printed": "Beaufighter VI",
+            "chart_type": "Beaufighter Mk. VIF",
+            "role": "fighters",
+            "number": 28
+          },
+          {
+            "printed": "Hurricane IIA",
+            "chart_type": "Hurricane Mk. IIA",
+            "role": "fighters",
+            "number": 18
+          },
+          {
+            "printed": "Hurricane IIB",
+            "chart_type": "Hurricane Mk. IIB",
+            "role": "fighters",
+            "number": 30
+          },
+          {
+            "printed": "Hurricane IC",
+            "chart_type": "Hurricane Mk. IIC",
+            "role": "fighters",
+            "number": 30
+          },
+          {
+            "printed": "Kittyhawk I",
+            "chart_type": "P-40 Kittyhawk I",
+            "role": "fighters",
+            "number": 23
+          },
+          {
+            "printed": "Spitfire VB",
+            "chart_type": "Spitfire Mk. VB",
+            "role": "fighters",
+            "number": 22
+          },
+          {
+            "printed": "Spitfire VC",
+            "chart_type": "Spitfire Mk. VC",
+            "role": "fighters",
+            "number": 59
+          },
+          {
+            "printed": "Anson I",
+            "chart_type": "Anson Mk. I",
+            "role": "recon",
+            "number": 4
+          },
+          {
+            "printed": "B24",
+            "chart_type": "B-24/PB4y Liberator III",
+            "role": "strike",
+            "number": 2
+          },
+          {
+            "printed": "Baltimore I",
+            "chart_type": "A-30 Baltimore I",
+            "role": "strike",
+            "number": 8
+          },
+          {
+            "printed": "Beaufort I",
+            "chart_type": "Beaufort Mk. I",
+            "role": "strike",
+            "number": 12
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 136
+          },
+          {
+            "printed": "Halifax II",
+            "chart_type": "Halifax Mk. II",
+            "role": "strike",
+            "number": 24
+          },
+          {
+            "printed": "Hudson",
+            "chart_type": "A-28 Hudson",
+            "role": "transport",
+            "number": 42
+          },
+          {
+            "printed": "Wellington I",
+            "chart_type": "Wellington Mk. I",
+            "role": "strike",
+            "number": 6
+          },
+          {
+            "printed": "Wellington IV",
+            "chart_type": "Wellington Mk. IV",
+            "role": "strike",
+            "number": 18
+          }
+        ],
+        "withdrawals": []
+      },
+      {
+        "year": 1942,
+        "month": 8,
+        "label": "Aug",
+        "turns": [
+          91,
+          92,
+          93,
+          94
+        ],
+        "total": 629,
+        "planes": [
+          {
+            "printed": "Beaufighter VI",
+            "chart_type": "Beaufighter Mk. VIF",
+            "role": "fighters",
+            "number": 49
+          },
+          {
+            "printed": "Hurricane IIA",
+            "chart_type": "Hurricane Mk. IIA",
+            "role": "fighters",
+            "number": 35
+          },
+          {
+            "printed": "Hurricane IIB",
+            "chart_type": "Hurricane Mk. IIB",
+            "role": "fighters",
+            "number": 12
+          },
+          {
+            "printed": "Hurricane IIC",
+            "chart_type": "Hurricane Mk. IIC",
+            "role": "fighters",
+            "number": 36
+          },
+          {
+            "printed": "Kittyhawk II",
+            "chart_type": "P-40 Kittyhawk II",
+            "role": "fighters",
+            "number": 36
+          },
+          {
+            "printed": "Kittyhawk III",
+            "chart_type": "P-40 Kittyhawk III",
+            "role": "fighters",
+            "number": 43
+          },
+          {
+            "printed": "Spitfire VB",
+            "chart_type": "Spitfire Mk. VB",
+            "role": "fighters",
+            "number": 30
+          },
+          {
+            "printed": "Spitfire VC",
+            "chart_type": "Spitfire Mk. VC",
+            "role": "fighters",
+            "number": 42
+          },
+          {
+            "printed": "Dewoitine",
+            "chart_type": "D.520",
+            "role": "fighters",
+            "number": 1
+          },
+          {
+            "printed": "Anson I",
+            "chart_type": "Anson Mk. I",
+            "role": "recon",
+            "number": 10
+          },
+          {
+            "printed": "B24",
+            "chart_type": "B-24/PB4y Liberator III",
+            "role": "strike",
+            "number": 15
+          },
+          {
+            "printed": "B25",
+            "chart_type": "B-25 Mitchell II",
+            "role": "strike",
+            "number": 57
+          },
+          {
+            "printed": "B26",
+            "chart_type": "B-26 Marauder",
+            "role": "strike",
+            "number": 19
+          },
+          {
+            "printed": "Beaufort I",
+            "chart_type": "Beaufort Mk. I",
+            "role": "strike",
+            "number": 22
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 101
+          },
+          {
+            "printed": "Halifax II",
+            "chart_type": "Halifax Mk. II",
+            "role": "strike",
+            "number": 2
+          },
+          {
+            "printed": "Hudson",
+            "chart_type": "A-28 Hudson",
+            "role": "transport",
+            "number": 83
+          },
+          {
+            "printed": "Tiger Moth II",
+            "chart_type": "Tiger Moth Mk. II",
+            "role": "recon",
+            "number": 1
+          },
+          {
+            "printed": "Wellington IV",
+            "chart_type": "Wellington Mk. IV",
+            "role": "strike",
+            "number": 35
+          }
+        ],
+        "withdrawals": [
+          "2F*",
+          "1B"
+        ]
+      },
+      {
+        "year": 1942,
+        "month": 9,
+        "label": "Sep",
+        "turns": [
+          95,
+          96,
+          97,
+          98
+        ],
+        "total": 601,
+        "planes": [
+          {
+            "printed": "Beaufighter IF",
+            "chart_type": "Beaufighter Mk. IF",
+            "role": "fighters",
+            "number": 1
+          },
+          {
+            "printed": "Beaufighter VI",
+            "chart_type": "Beaufighter Mk. VIF",
+            "role": "fighters",
+            "number": 51
+          },
+          {
+            "printed": "Hurricane I",
+            "chart_type": "Hurricane Mk. I",
+            "role": "fighters",
+            "number": 20
+          },
+          {
+            "printed": "Hurricane IIA",
+            "chart_type": "Hurricane Mk. IIA",
+            "role": "fighters",
+            "number": 45
+          },
+          {
+            "printed": "Hurricane IIB",
+            "chart_type": "Hurricane Mk. IIB",
+            "role": "fighters",
+            "number": 40
+          },
+          {
+            "printed": "Hurricane IIC",
+            "chart_type": "Hurricane Mk. IIC",
+            "role": "fighters",
+            "number": 58
+          },
+          {
+            "printed": "Kittyhawk I",
+            "chart_type": "P-40 Kittyhawk I",
+            "role": "fighters",
+            "number": 30
+          },
+          {
+            "printed": "Kittyhawk II",
+            "chart_type": "P-40 Kittyhawk II",
+            "role": "fighters",
+            "number": 67
+          },
+          {
+            "printed": "Kittyhawk III",
+            "chart_type": "P-40 Kittyhawk III",
+            "role": "fighters",
+            "number": 50
+          },
+          {
+            "printed": "Spitfire VB",
+            "chart_type": "Spitfire Mk. VB",
+            "role": "fighters",
+            "number": 15
+          },
+          {
+            "printed": "Spitfire VC",
+            "chart_type": "Spitfire Mk. VC",
+            "role": "fighters",
+            "number": 35
+          },
+          {
+            "printed": "Caudron",
+            "chart_type": "C.714",
+            "role": "fighters",
+            "number": 2
+          },
+          {
+            "printed": "Anson I",
+            "chart_type": "Anson Mk. I",
+            "role": "recon",
+            "number": 12
+          },
+          {
+            "printed": "B24",
+            "chart_type": "B-24/PB4y Liberator III",
+            "role": "strike",
+            "number": 1
+          },
+          {
+            "printed": "B26",
+            "chart_type": "B-26 Marauder",
+            "role": "strike",
+            "number": 30
+          },
+          {
+            "printed": "Baltimore I",
+            "chart_type": "A-30 Baltimore I",
+            "role": "strike",
+            "number": 9
+          },
+          {
+            "printed": "Beaufort I",
+            "chart_type": "Beaufort Mk. I",
+            "role": "strike",
+            "number": 11
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 51
+          },
+          {
+            "printed": "Hudson",
+            "chart_type": "A-28 Hudson",
+            "role": "transport",
+            "number": 40
+          },
+          {
+            "printed": "Maryland",
+            "chart_type": "167 Maryland",
+            "role": "strike",
+            "number": 1
+          },
+          {
+            "printed": "Wellington I",
+            "chart_type": "Wellington Mk. I",
+            "role": "strike",
+            "number": 2
+          },
+          {
+            "printed": "Wellington IV",
+            "chart_type": "Wellington Mk. IV",
+            "role": "strike",
+            "number": 30
+          }
+        ],
+        "withdrawals": []
+      },
+      {
+        "year": 1942,
+        "month": 10,
+        "label": "Oct",
+        "turns": [
+          99,
+          100,
+          101,
+          102
+        ],
+        "total": 267,
+        "planes": [
+          {
+            "printed": "Beaufighter VI",
+            "chart_type": "Beaufighter Mk. VIF",
+            "role": "fighters",
+            "number": 36
+          },
+          {
+            "printed": "Hurricane IIB",
+            "chart_type": "Hurricane Mk. IIB",
+            "role": "fighters",
+            "number": 30
+          },
+          {
+            "printed": "Hurricane IIC",
+            "chart_type": "Hurricane Mk. IIC",
+            "role": "fighters",
+            "number": 18
+          },
+          {
+            "printed": "Hurricane IID",
+            "chart_type": "Hurricane Mk. IID",
+            "role": "fighters",
+            "number": 15
+          },
+          {
+            "printed": "Kittyhawk II",
+            "chart_type": "P-40 Kittyhawk II",
+            "role": "fighters",
+            "number": 18
+          },
+          {
+            "printed": "Kittyhawk III",
+            "chart_type": "P-40 Kittyhawk III",
+            "role": "fighters",
+            "number": 40
+          },
+          {
+            "printed": "Spitfire VB",
+            "chart_type": "Spitfire Mk. VB",
+            "role": "fighters",
+            "number": 15
+          },
+          {
+            "printed": "Spitfire VC",
+            "chart_type": "Spitfire Mk. VC",
+            "role": "fighters",
+            "number": 15
+          },
+          {
+            "printed": "Anson I",
+            "chart_type": "Anson Mk. I",
+            "role": "recon",
+            "number": 6
+          },
+          {
+            "printed": "B25",
+            "chart_type": "B-25 Mitchell II",
+            "role": "strike",
+            "number": 26
+          },
+          {
+            "printed": "Beaufort I",
+            "chart_type": "Beaufort Mk. I",
+            "role": "strike",
+            "number": 3
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 15
+          },
+          {
+            "printed": "Hudson",
+            "chart_type": "A-28 Hudson",
+            "role": "transport",
+            "number": 12
+          },
+          {
+            "printed": "Wellington IV",
+            "chart_type": "Wellington Mk. IV",
+            "role": "strike",
+            "number": 18
+          }
+        ],
+        "withdrawals": []
+      },
+      {
+        "year": 1942,
+        "month": 11,
+        "label": "Nov",
+        "turns": [
+          103,
+          104,
+          105,
+          106
+        ],
+        "total": 150,
+        "planes": [
+          {
+            "printed": "Beaufighter VI",
+            "chart_type": "Beaufighter Mk. VIF",
+            "role": "fighters",
+            "number": 21
+          },
+          {
+            "printed": "Hurricane IIB",
+            "chart_type": "Hurricane Mk. IIB",
+            "role": "fighters",
+            "number": 6
+          },
+          {
+            "printed": "Hurricane IIC",
+            "chart_type": "Hurricane Mk. IIC",
+            "role": "fighters",
+            "number": 12
+          },
+          {
+            "printed": "Hurricane IID",
+            "chart_type": "Hurricane Mk. IID",
+            "role": "fighters",
+            "number": 15
+          },
+          {
+            "printed": "Kittyhawk III",
+            "chart_type": "P-40 Kittyhawk III",
+            "role": "fighters",
+            "number": 12
+          },
+          {
+            "printed": "Spitfire VC",
+            "chart_type": "Spitfire Mk. VC",
+            "role": "fighters",
+            "number": 30
+          },
+          {
+            "printed": "Anson I",
+            "chart_type": "Anson Mk. I",
+            "role": "recon",
+            "number": 6
+          },
+          {
+            "printed": "B25",
+            "chart_type": "B-25 Mitchell II",
+            "role": "strike",
+            "number": 10
+          },
+          {
+            "printed": "B26",
+            "chart_type": "B-26 Marauder",
+            "role": "strike",
+            "number": 18
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 15
+          },
+          {
+            "printed": "Hudson",
+            "chart_type": "A-28 Hudson",
+            "role": "transport",
+            "number": 5
+          }
+        ],
+        "withdrawals": [
+          "2F*"
+        ]
+      },
+      {
+        "year": 1942,
+        "month": 12,
+        "label": "Dec",
+        "turns": [
+          107,
+          108,
+          109,
+          110
+        ],
+        "total": 94,
+        "planes": [
+          {
+            "printed": "Beaufighter VI",
+            "chart_type": "Beaufighter Mk. VIF",
+            "role": "fighters",
+            "number": 2
+          },
+          {
+            "printed": "Hurricane IIB",
+            "chart_type": "Hurricane Mk. IIB",
+            "role": "fighters",
+            "number": 24
+          },
+          {
+            "printed": "Hurricane IIC",
+            "chart_type": "Hurricane Mk. IIC",
+            "role": "fighters",
+            "number": 18
+          },
+          {
+            "printed": "Kittyhawk III",
+            "chart_type": "P-40 Kittyhawk III",
+            "role": "fighters",
+            "number": 12
+          },
+          {
+            "printed": "Spitfire VC",
+            "chart_type": "Spitfire Mk. VC",
+            "role": "fighters",
+            "number": 15
+          },
+          {
+            "printed": "Blenheim IV",
+            "chart_type": "Blenheim Mk. IV",
+            "role": "strike",
+            "number": 15
+          },
+          {
+            "printed": "Wellington IV",
+            "chart_type": "Wellington Mk. IV",
+            "role": "strike",
+            "number": 8
+          }
+        ],
+        "withdrawals": []
+      }
+    ]
+  }
+}

@@ -1009,7 +1009,7 @@ def _air_facility_trucks(row: dict) -> tuple[dict, ...]:
     return (row,) if _AIR_GAME_PLAYED else ()
 
 
-def _air_facility_park(facilities, side: Side, near) -> "Coord | None":
+def _air_facility_park(facilities, side: Side, near, larders=()) -> "Coord | None":
     """WHERE a chart's "Any Air Facility" truck row is placed: the side's own air facility nearest
     `near` -- its main supply hub -- with ties broken by facility id.
 
@@ -1020,29 +1020,36 @@ def _air_facility_park(facilities, side: Side, near) -> "Coord | None":
     competing for the trains' tonnage, which is not what the chart allotted them for. None when the
     side holds no facility.
 
-    ⚠ WHAT THEY DO NOT DO YET, said plainly because the placement invites the opposite reading: they
-    do NOT restock the 36.17 larder they are standing on. That is 35.15's job (first-line trucks
-    attached to an SGSU) and 36.3's ("they can bring supplies to a flying boat basin simply by
-    bringing trucks into the hex"), and neither is built -- game.relay strips air dumps out of the
-    relay's view of state.supplies, so no truck order can select one as a delivery target at all. For
-    now these are ordinary 3rd-line Truck Points that happen to start at an airfield. See
-    engine._sgsu_upkeep's flag: the air-supply pot has no refill path in this block."""
+    AND IT IS A FACILITY WITH A SQUADRON ON IT. `larders` are the side's seeded 36.17 air dumps
+    (game.oob.air_dumps places one wherever a squadron is based), and the field is chosen from
+    among them where there are any: 35.15 attaches these lorries to an SGSU, and a park stationed
+    at an empty strip would be attached to nobody, with no larder in its hex to lift a first load
+    from and none of its side's squadrons any nearer for it. The fallback is any facility, which
+    is what a scenario that seeds no air dump at all (the Desert Fox benchmarks) gets."""
     own = [f for f in facilities if f.side == side]
-    return min(own, key=lambda f: (distance(f.hex, near), f.id)).hex if own else None
+    hexes = {s.hex for s in larders if s.side == side}
+    return min([f for f in own if f.hex in hexes] or own,
+               key=lambda f: (distance(f.hex, near), f.id)).hex if own else None
 
 
-def _truck_park(prefix: str, side: Side, hexpos, *rows: dict) -> list[TruckFormation]:
+def _truck_park(prefix: str, side: Side, hexpos, *rows: dict, line: int = 3) -> list[TruckFormation]:
     """One TruckFormation per 54.2 class, pooling the chart `rows` assigned to `hexpos`.
 
     All THREE classes are modelled, Light included: game.supply.truck_capacity carries the full 54.2
     chart, so the Light rows are honoured rather than folded away (a Light Truck Point hauls 50 Fuel
-    and 2 Ammunition, at the longest convoy reach on the chart -- CPA 40 against Medium/Heavy's 30)."""
+    and 2 Ammunition, at the longest convoy reach on the chart -- CPA 40 against Medium/Heavy's 30).
+
+    `line` is 53.13's legible label for every park but one: the "Any Air Facility" rows are seeded
+    at line 1, because [35.15] says what those particular lorries are -- "TRUCK UNITS MAY BE ATTACHED
+    TO AN SGSU AS FIRST LINE TRANSPORT. They are used to carry the supplies that the SGSU needs to
+    keep its planes fit and readied." That label is what game.relay selects the air-supply shuttle
+    on, and it is the only place in the engine where a formation's line is load-bearing."""
     pool = {cls: sum(row.get(cls, 0) for row in rows) for cls in ("light", "medium", "heavy")}
-    return [TruckFormation(f"{prefix}-{cls[0].upper()}", side, hexpos, cls, points=pts, line=3)
+    return [TruckFormation(f"{prefix}-{cls[0].upper()}", side, hexpos, cls, points=pts, line=line)
             for cls, pts in pool.items() if pts > 0]
 
 
-def _campaign_cw_trucks(supplies, facilities) -> tuple[TruckFormation, ...]:
+def _campaign_cw_trucks(supplies, facilities, larders=()) -> tuple[TruckFormation, ...]:
     """The Commonwealth 2nd/3rd-line motor-transport pool: the WHOLE [60.43] chart, 195 Truck Points
     against the 16 the campaign used to seed (140 on the non-air rows plus the 55 at Air Facilities,
     which 59.61 kept off the board only while the Air Game was abstract -- see _air_facility_trucks).
@@ -1062,22 +1069,24 @@ def _campaign_cw_trucks(supplies, facilities) -> tuple[TruckFormation, ...]:
         and the exact hex the pool binds at. Not the forward Field Supply Depots -- on Game-Turn 1
         Sollum and Sidi Barrani lie in the path of the advancing Italian 10th Army, and a staff does
         not park its lorry reserve in front of an oncoming army.
-      * "Any Air Facility" (5 L / 30 M / 20 H) -> the Commonwealth air facility nearest the railhead
+      * "Any Air Facility" (5 L / 30 M / 20 H) -> the Commonwealth SQUADRON BASE nearest the railhead
         (_air_facility_park). 59.61 suppressed this row while the Air Game was abstract; Phase 5.1
         plays it, so it is on the board -- and it goes where the chart puts it, ON a facility, now
         that rule 36 gives facilities hexes. These are not more freight lorries for the front: they
-        are the transport that keeps a squadron's 36.17 larder full (35.15), and pooling them at the
-        railhead instead measurably drained the transit node the garrison eats from. ON THE [60.5]
-        MAP THOSE TWO HEXES ARE THE SAME HEX and the tension resolves itself: the book charts an
-        AIRFIELD at Mersa Matruh D3714 and [60.7] runs the railway to D3714, so the nearest facility
-        IS the railhead. The park is at an air facility as the chart requires, and it happens to be
-        the one the trains reach -- which is the historical arrangement, not a placement fudge."""
+        are 35.15's First Line Transport, the lorries that keep a squadron's 36.17 larder full, and
+        pooling them at the railhead instead measurably drained the transit node the garrison eats
+        from. They land at D3516 -- the nearest field the trains can reach that actually HAS a
+        squadron and therefore a larder to fill. (Mersa Matruh D3714 is nearer still, and [60.7] runs
+        the railway to it, but [59.52] combines a facility's air dump with a charted field dump
+        standing on the same hex, so the airfield the railhead sits on is the one field with no air
+        larder of its own -- see oob.air_dumps. A park attached to no squadron would be attached to
+        nobody.)"""
     railhead = _campaign_cw_railhead(supplies)
     if railhead is None:
         return ()
     def ax(lbl: str):
         return coords.to_axial(coords.parse(lbl))
-    airfield = _air_facility_park(facilities, Side.ALLIED, railhead.hex)
+    airfield = _air_facility_park(facilities, Side.ALLIED, railhead.hex, larders)
     park = tuple(
         _truck_park("AL-Truck-Cairo", Side.ALLIED, ax(_CW_BASE_HEXES["Cairo"]),
                     _TRUCKS_60_43["Any hex in Cairo"])
@@ -1088,10 +1097,11 @@ def _campaign_cw_trucks(supplies, facilities) -> tuple[TruckFormation, ...]:
     if airfield is None:
         return park
     return park + tuple(_truck_park("AL-Truck-Airfield", Side.ALLIED, airfield,
-                                    *_air_facility_trucks(_TRUCKS_60_43["Any Air Facility"])))
+                                    *_air_facility_trucks(_TRUCKS_60_43["Any Air Facility"]),
+                                    line=1))
 
 
-def _campaign_axis_trucks(supplies, target, facilities) -> tuple[TruckFormation, ...]:
+def _campaign_axis_trucks(supplies, target, facilities, larders=()) -> tuple[TruckFormation, ...]:
     """The Axis 2nd/3rd-line motor-transport pool: the [60.33] chart's ON-MAP rows, 215 Truck Points,
     staged at the Benghazi port-of-arrival where the Mediterranean convoys land and where the coastal
     relay (campaign_policy.campaign_truck_orders) reloads.
@@ -1118,11 +1128,12 @@ def _campaign_axis_trucks(supplies, target, facilities) -> tuple[TruckFormation,
         return ()
     park = tuple(_truck_park("AX-Truck-Benghazi", Side.AXIS, rear.hex,
                              _TRUCKS_60_33["Anywhere in Libya"]))
-    airfield = _air_facility_park(facilities, Side.AXIS, rear.hex)
+    airfield = _air_facility_park(facilities, Side.AXIS, rear.hex, larders)
     if airfield is None:
         return park
     return park + tuple(_truck_park("AX-Truck-Airfield", Side.AXIS, airfield,
-                                    *_air_facility_trucks(_TRUCKS_60_33["Any Air Facility"])))
+                                    *_air_facility_trucks(_TRUCKS_60_33["Any Air Facility"]),
+                                    line=1))
 
 
 def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy, ...]:
@@ -1661,8 +1672,8 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         victory=campaign_victory.CampaignVictory(),      # rule 64.7 (see game.campaign_victory)
         convoys=_campaign_convoys(dumps, target, max_turns, seed),      # C3: Axis Med + CW rail (56.4/60.7)
         ports=_campaign_ports(dumps, target),                           # C3: PORT-Benghazi + PORT-Matruh
-        trucks=(_campaign_axis_trucks(dumps, target, facilities)        # C3-2: the Benghazi->front haul (53/60.33)
-                + _campaign_cw_trucks(dumps, facilities)),              # and the CW railhead->west haul (60.33)
+        trucks=(_campaign_axis_trucks(dumps, target, facilities, air_supply)   # C3-2: the Benghazi->front haul (53/60.33)
+                + _campaign_cw_trucks(dumps, facilities, air_supply)),  # and the CW railhead->west haul (60.33)
         interdictions=(_campaign_malta_interdiction(max_turns)             # C4: Malta throttles the Axis Med convoy (rule 44)
                        + _campaign_tobruk_ferry_interdiction(max_turns)    # + BOTH halves of the Tobruk sea duel
                        + _campaign_tobruk_axis_interdiction(max_turns)),   #   (30/41.6): each side can fight the other's lane
@@ -1675,5 +1686,7 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
                                                             # C6/36: the squadron bases on the map, PLUS
                                                             # rule 44's island (44.12/60.46)
         malta_planes=malta.initial_planes(),                # 60.46: the 31 aeroplanes on Malta
+        malta_strike=malta.initial_strike(),                # 60.46: 12 of them Swordfish -- the
+                                                            #   anti-shipping arm [34.86] then grows
         malta_unfit=malta.initial_unfit(),                  # 60.46: "12 Swordfish (1 SGSU) (9 ready)"
     )                                                       #   -- three of them start unserviceable

@@ -450,9 +450,18 @@ def apply(state: GameState, event: Event) -> GameState:
     if k == EventKind.MALTA_PLANES_LOST:
         # 41.36: "for every level destroyed, remove 10% of the planes on the ground". The generator
         # has already baked the survivors into `planes`, so apply stays pure and needs no chart.
-        # `unfit` rides with it because the bombs fall on the unserviceable machines too: a
-        # readiness ledger may never stand for more aeroplanes than the island still has.
-        return state.with_malta_planes(p["planes"]).with_malta_unfit(p["unfit"])
+        # `strike` rides with it because the bombs draw no distinction by type, and `unfit` because
+        # they fall on the unserviceable machines too: a readiness ledger may never stand for more
+        # aeroplanes than the island's anti-shipping arm still has.
+        return (state.with_malta_planes(p["planes"]).with_malta_strike(p["strike"])
+                .with_malta_unfit(p["unfit"]))
+
+    if k == EventKind.MALTA_REINFORCED:
+        # 34.84/34.81: this Game-Turn's share of the [34.86] schedule, both caps already applied by
+        # the generator (game.malta.reinforcement) and the arrival already split into the island's
+        # two buckets. Order matters: the total is raised first, because with_malta_strike clamps
+        # the anti-shipping bucket to the establishment it is a bucket of.
+        return state.with_malta_planes(p["planes"]).with_malta_strike(p["strike"])
 
     if k in (EventKind.MALTA_STRIKE_UNFIT, EventKind.MALTA_REFIT_RESOLVED):
         # 38.31 / 38.34 via 44.16: the two directions of ONE scalar -- how many of Malta's

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from . import campaign_claim, construction, supply, wells
+from . import air, campaign_claim, construction, supply, wells
 from .campaign_claim import STAGING
 from .events import Control, Side
 from .hexmap import Coord, distance
@@ -254,6 +254,259 @@ def _load_mix(t, dump) -> dict:
     return load
 
 
+# --- [35.15] / [36.3] / [36.17] THE AIR-SUPPLY SHUTTLE -- the faucet on the airfield larder -----
+#
+# 35.15  "TRUCK UNITS MAY BE ATTACHED TO AN SGSU AS FIRST LINE TRANSPORT. THEY ARE USED TO CARRY
+#         THE SUPPLIES THAT THE SGSU NEEDS TO KEEP ITS PLANES FIT AND READIED."
+# 36.3   "Players should note that THEY CAN BRING SUPPLIES TO A FLYING BOAT BASIN SIMPLY BY BRINGING
+#         TRUCKS INTO THE HEX; they need no other transport."
+# 36.17  "An airfield IS A SUPPLY DUMP for supplies to be used by the SGSU's on that airfield. Fuel,
+#         ammunition, stores, etc., may be stored at an airfield as if it were a dump."
+#
+# THE DRAIN HAD NO FAUCET, AND IT WAS MEASURED. [60.34] and [60.44] seed the air-facility dumps once
+# -- 850 Axis and 250 Commonwealth Fuel Points -- and until this block NOTHING on the map could put a
+# Point back. Seed 4 balanced to the last unit: 850 = 467 evaporated (49.3) + 325 spent on 35.14
+# upkeep + 58 burnt by aeroplanes (38.24). The larder emptied around Game-Turn 9-18, every SGSU then
+# read unfed (35.14: "SGSUs without the required supplies MAY NOT REPAIR THEIR PLANES"), and both air
+# forces were grounded for the remaining ninety Game-Turns. The rule doing that is correct; what was
+# missing is the three sentences above, which are the book's three ways to restock an airfield.
+#
+# WHOSE LORRIES. The [60.33] and [60.43] charts each print a row the engine already seeds and already
+# parks ON a facility -- "Any Air Facility: 10 Light, 50 Medium" for the Italians, "5 Light, 30
+# Medium, 20 Heavy" for the Commonwealth -- and 35.15 is the sentence that says what those lorries
+# ARE. They are carried as `line=1` formations (First Line Transport, attached to a squadron) and are
+# the ONLY trucks this shuttle moves; the general freight pool (campaign_truck_orders) never touches
+# an air dump, for the reason written at its own air-dump filter.
+#
+# WHAT IS NOT MODELLED, and each is named where it lands: 36.5's UNLIMITED supply at an off-map
+# facility (a fourth refill path, which needs an off-map air box before it needs a rule -- see
+# oob.charted_air_facilities); the ATTACHMENT itself as a state relation (an SGSU has no truck
+# roster, so "attached" is expressed by the formation's line and its standing at a facility, exactly
+# as a unit's first-line ceiling is expressed by its fl_* fields); and AMMUNITION, which the shuttle
+# does not carry because nothing in this engine spends an air dump's Ammo Points -- 38.4's bombs are
+# a separate commodity and a separate block, and hauling a commodity no one draws would spend 53.12
+# capacity on freight that could never be consumed.
+
+
+def _air_larders(state: GameState, side: Side) -> list:
+    """[36.17] The air-facility dumps this shuttle exists to fill, id-ordered."""
+    return sorted((s for s in state.supplies
+                   if s.side == side and s.air_dump and not s.is_dummy), key=lambda s: s.id)
+
+
+def _air_demand(state: GameState, side: Side) -> dict:
+    """[35.14]/[38.36]/[38.24] HOW FULL A LARDER IS FULL -- one Game-Turn of this side's air
+    operations, and the reason the shuttle is not simply pointed at the 54.12 terrain ceiling.
+
+    A dump's 54.12 headroom in open desert is 8,000 Fuel Points. Sized against THAT, the [60.43]
+    park's 30-Point Medium formation lifts 2,700 Fuel Points out of the Eighth Army's railhead on
+    its first trip and parks them at an airfield no land unit may draw from (36.17) -- which is not
+    a faucet, it is a second army's worth of fuel taken out of the war. So the target is the demand,
+    and every term of it is a rule with a printed rate:
+
+      * 35.14 -- one Fuel Point per SGSU per Operations Stage and one Stores Point per Game-Turn;
+      * 38.36 -- one more Stores Point for every refit ATTEMPT, and this engine attempts once per
+        squadron per Operations Stage (flagged at engine._air_maintenance);
+      * 38.24/34.17 -- and the aeroplanes' own fuel, one mission's worth for the whole
+        establishment at each type's charted Fuel Consumption Rating.
+
+    That last term is what makes the target the right SIZE rather than a guess, and the check is the
+    book's own allotment: [60.34] gives the Axis airfields 850 Fuel Points and [60.44] gives the
+    Commonwealth's 250, which is very nearly one full-force sortie apiece. The scenario seeded these
+    larders at about a Game-Turn of operations, so keeping them there is keeping them where the book
+    put them."""
+    stages = 3                                           # 48 V: three Operations Stages a Game-Turn
+    sgsus = sum(1 for u in state.living(side) if air.is_sgsu(u))
+    fuel = sgsus * air.SGSU_FUEL_PER_STAGE * stages
+    for w in state.air:
+        if w.side != side:
+            continue
+        for role in ("fighters", "strike", "recon"):
+            fuel += air.mission_fuel(side, role, getattr(w, role))
+    return {"FUEL": fuel,
+            "STORES": sgsus * (air.SGSU_STORES_PER_TURN
+                               + air.REFIT_STORES_PER_ATTEMPT * stages)}
+
+
+def _air_source(state: GameState, side: Side, hx: Coord):
+    """The dump an air-supply lorry standing on `hx` may LIFT A RUN FROM: the same test the forward
+    relay applies (a constructed dump, a seeded staging depot or a rule-57/port faucet), minus the
+    air larders themselves -- carrying supply OUT of one airfield to fill another is not a faucet."""
+    here = [s for s in state.supplies
+            if s.side == side and not s.is_dummy and s.hex == hx and not s.air_dump
+            and not wells.is_water_source(s)
+            and (s.constructed or s.base or s.id.startswith(STAGING))]
+    return max(here, key=lambda s: (s.fuel + s.stores, s.id), default=None)
+
+
+def _air_faucets(state: GameState, side: Side) -> list:
+    """The bottomless ends the shuttle may reload at: the side's ports of arrival (where its convoys
+    and its railway land) and its rule-57 strategic bases. The same set campaign_truck_orders calls
+    a faucet, minus the air larders themselves and minus the wells (52.11: geography, not a depot)."""
+    ports = {p.hex for p in state.ports if p.side == side}
+    return [s for s in state.supplies
+            if s.side == side and not s.is_dummy and not s.air_dump
+            and not wells.is_water_source(s) and (s.base or s.hex in ports)]
+
+
+# The air shuttle's own loading mix, and it is _TRUCK_LOAD_MIX's two air commodities renormalised
+# over themselves -- the SAME flagged quartermaster's opinion, not a second one. Ammunition is
+# dropped because nothing in this engine spends an air dump's Ammo Points (38.4's bombs are a
+# separate block), so its share would be capacity spent on freight no squadron could draw.
+_AIR_CARGO = ("FUEL", "STORES")
+_AIR_LOAD_MIX = {c: _TRUCK_LOAD_MIX[c] / sum(_TRUCK_LOAD_MIX[x] for x in _AIR_CARGO)
+                 for c in _AIR_CARGO}
+
+
+def air_supply_orders(state: GameState, side: Side) -> list[TruckOrder]:
+    """[35.15]/[36.17] THE AIR-SUPPLY SHUTTLE: the first-line lorries attached to a squadron, running
+    between the army's supply line and the 36.17 larder their SGSUs eat from.
+
+    One order per line-1 formation, a two-point cycle and nothing cleverer -- this is not the forward
+    relay and must not become it. The chain it feeds has exactly two ends:
+
+      * ON A LIFTABLE DUMP and empty -> LOAD Fuel and Stores against what the larder is SHORT of,
+        then deliver -- in the same order when the field is within one convoy hop, otherwise a step
+        toward it.
+      * AT THE FIELD holding a load -> UNLOAD it, keeping back the fuel the trip home costs (49.18
+        burns cargo fuel by the hop, so a lorry that gives away its last Point strands at the
+        airfield and the faucet delivers exactly once).
+      * OTHERWISE -> step toward the field with a load aboard, toward the anchor without one.
+
+    THE FIELD IT SERVES is fixed for the SIDE and not for the lorry: the neediest larder among those
+    nearest a faucet, with the tie broken on stock and then on id. Read off the faucets rather than
+    off the truck's own position so that it cannot move under a lorry mid-leg -- a shuttle that
+    re-chose its destination every hop would walk the length of the map between two fields and
+    deliver to neither. A field already holding a Game-Turn's stock drops out, so the cycle rotates
+    to the next one down the coast on its own.
+
+    Sized against the LARDER'S SHORTFALL (_air_demand), not against the truck's capacity and not
+    against the 54.12 terrain ceiling: the [60.33] Axis park alone is 60 Truck Points and a Medium
+    Point hauls 100 Fuel (54.2), so an unbounded load lifts thousands of Fuel Points out of the
+    army's own dump to feed seven Italian squadrons that spend twenty-one a Game-Turn. The target is
+    applied PER LARDER rather than per side, because 35.14's upkeep and 38.24's refuelling are both
+    IN-HEX draws: a field can only feed the squadrons standing on it, so each one has to hold a
+    Game-Turn of its own.
+
+    ⚠ ONE PARK CANNOT FEED SEVENTEEN FIELDS, and this is the shape of what it does not do. The
+    charts give each side ONE "Any Air Facility" row while [60.5] puts squadrons on a dozen fields
+    from Benghazi to Siwa, and 35.15's attachment is per SQUADRON -- so the honest model is one first-
+    line park per SGSU, which needs an attachment relation this engine has not got. What the shuttle
+    therefore does is fill the fields nearest the port of arrival and rotate to the next as each
+    reaches a Game-Turn's stock (a fed larder drops out of `room`). Measured on seed 4 over sixteen
+    Game-Turns: the three Cyrenaican fields stand at ~1,000 Fuel Points each where all seven Axis
+    fields used to stand at zero from Game-Turn 13, and AIR_REFIT_DENIED(reason='no_sgsu') falls from
+    hundreds to none -- but Ft. Maddalena and Siwa, forty hexes down the coast road from any faucet,
+    are still dry. The far fields wait on the attachment, not on this function."""
+    orders: list[TruckOrder] = []
+    larders = _air_larders(state, side)
+    faucets = _air_faucets(state, side)
+    if not larders or not faucets:
+        return orders
+    demand = _air_demand(state, side)
+
+    def _short(dump, commodity: str) -> int:
+        """How much of `commodity` this larder is short of one Game-Turn's air operations, never
+        more than its 54.12 hex ceiling will take (_air_demand says why the demand and not the
+        ceiling is the target)."""
+        return max(0, min(_room_in(state, dump, commodity),
+                          demand[commodity] - getattr(dump, commodity.lower())))
+
+    room = [s for s in larders if any(_short(s, c) > 0 for c in _AIR_CARGO)]
+    if not room:
+        return orders                                    # every field is fed: the lorries stand to
+
+    def _leg(dump) -> int:
+        """How far this field is from the nearest faucet -- the length of the run to fill it."""
+        return min(distance(dump.hex, f.hex) for f in faucets)
+
+    # THE FIELD THIS SHUTTLE SERVES, and the faucet it reloads at (see the docstring: both are read
+    # off the map and not off the lorry, so neither moves under it mid-leg).
+    dest = min(room, key=lambda s: (_leg(s), s.fuel + s.stores, s.id))
+    anchor = min(faucets, key=lambda f: (distance(f.hex, dest.hex), f.id))
+    # Two or three formations share every park (one per 54.2 class), and they plan against the SAME
+    # unmodified state -- so without a running ledger the second one orders a load the first has
+    # already taken and the engine rejects it (measured: 38 rejections in fourteen Game-Turns, and
+    # a Light formation carrying the whole run while a 50-Point Medium sat beside it).
+    taken: dict = {}
+
+    def _left(dump, commodity: str) -> int:
+        return max(0, getattr(dump, commodity.lower()) - taken.get((dump.id, commodity), 0))
+
+    def _take(dump, commodity: str, qty: int) -> None:
+        taken[(dump.id, commodity)] = taken.get((dump.id, commodity), 0) + qty
+
+    for t in state.trucks:
+        if t.side != side or t.line != 1:
+            continue
+        free = supply.free_points(state, t)              # 32.32: haul with the lorries still free
+        if free <= 0:
+            continue
+        t = replace(t, points=free)
+        reach = supply.reachable_truck_moves(state, t)
+        source = _air_source(state, side, t.hex)
+        carrying = any(getattr(t, c.lower()) > 0 for c in ("AMMO", "STORES"))
+        keep = supply.truck_move_fuel(t, distance(dest.hex, anchor.hex)) + supply.truck_move_fuel(
+            t, supply.truck_convoy_cpa(t.truck_class))
+
+        load: dict = {}
+        if source is not None and not carrying:          # standing on the line: pick a run up
+            cap = supply.truck_capacity(t.truck_class)
+            for c in _AIR_CARGO:
+                head = min(_short(dest, c),
+                           int(_AIR_LOAD_MIX[c] * t.points * cap[c]) - getattr(t, c.lower()))
+                take = min(_left(source, c), max(0, head))
+                if take > 0:
+                    load[c] = take
+                    _take(source, c, take)
+        aboard = {c: getattr(t, c.lower()) + load.get(c, 0) for c in _AIR_CARGO}
+        out = 0 if dest.hex == t.hex else supply.truck_move_fuel(t, reach.get(dest.hex, 0.0))
+
+        if dest.hex == t.hex or (dest.hex in reach and aboard["FUEL"] >= out):
+            unload = {"STORES": min(aboard["STORES"], _short(dest, "STORES")),
+                      "FUEL": min(max(0, aboard["FUEL"] - out - keep), _short(dest, "FUEL"))}
+            unload = {c: q for c, q in unload.items() if q > 0}
+            if unload:
+                orders.append(TruckOrder(t.id, load_from=source.id if load else None,
+                                         load=load or None,
+                                         to=None if dest.hex == t.hex else dest.hex,
+                                         unload_to=dest.id, unload=unload))
+                continue
+
+        # Nothing lands from here: close the gap -- toward the field with a load aboard, toward the
+        # anchor without one.
+        target = dest.hex if (carrying or load) else anchor.hex
+        step = _step_toward(reach, t.hex, target)
+        if step is None:
+            continue
+        cost = supply.truck_move_fuel(t, reach[step])
+        if aboard["FUEL"] < cost and not load:
+            # ⚠ THE BOOTSTRAP, AND IT IS THE ONE PLACE THIS SHUTTLE TOUCHES THE LARDER IT FEEDS.
+            # A [60.33]/[60.43] park is seeded DRY, standing at an airfield with no army dump under
+            # it, so on Game-Turn 1 it cannot make the first hop to the port at all and the faucet
+            # would never open. 35.15 attaches these lorries TO THE SQUADRON and 36.17 says what the
+            # squadron's dump is for -- "any SGSU at an airfield may make use of the supplies there"
+            # -- so the field's own Fuel Points are what puts its transport on the road. Taken ONLY
+            # as movement fuel (never as cargo: it is unloaded back into an air dump, so lifting it
+            # as freight would be a lorry pushing a pile round in a circle), only enough for the leg
+            # in hand, and only when there is nothing else in the hex to take it from.
+            here = next((s for s in state.supplies if s.side == side and not s.is_dummy
+                         and s.hex == t.hex and _left(s, "FUEL") > 0), None)
+            if here is None:
+                continue
+            take = min(_left(here, "FUEL"), cost + keep - t.fuel)
+            if take <= 0:
+                continue
+            _take(here, "FUEL", take)
+            load = {"FUEL": take}
+            source = here
+            aboard["FUEL"] = t.fuel + take
+        if aboard["FUEL"] >= cost:
+            orders.append(TruckOrder(t.id, load_from=source.id if load else None,
+                                     load=load or None, to=step))
+    return orders
+
+
 def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
     """The campaign's multi-hop coastal supply relay (rules 53.14 / 60.33-60.34): a stateless,
     one-order-per-truck bucket brigade that walks Benghazi's landed tonnage forward along the
@@ -346,8 +599,9 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
 
     enemy_held = Control.AXIS if side == Side.ALLIED else Control.ALLIED
     for t in state.trucks:
-        if t.side != side:
-            continue
+        if t.side != side or t.line == 1:
+            continue                                     # 35.15: a squadron's own transport is not
+                                                         # the army's freight (air_supply_orders)
         # [32.32] THE RELAY HAULS WITH THE LORRIES IT STILL HAS. A formation with Truck Points booked
         # under a desert column (supply.free_points) is a SMALLER convoy: it may lift less (53.12)
         # and it burns less getting there (49.18). Plan against the freed-up remainder, exactly as

@@ -39,10 +39,10 @@ from .state import GameState, SupplyUnit
 from .relay import (  # extracted to game.relay; re-exported so every caller and __all__ keep working
     _step_toward, _relay_source, _is_faucet, _a_link_in_the_chain, _field_dump_id,
     _forward_depot_sites, build_the_chain, _room_in, _lands_anything, _fit_to_dest,
-    _load_mix, campaign_truck_orders)
+    _load_mix, air_supply_orders, campaign_truck_orders)
 
 __all__ = ["CAMPAIGN_CW_OFFENSIVES", "CampaignAxisPolicy", "CampaignCommonwealthPolicy",
-           "OffensiveSchedule", "build_the_chain", "campaign_motorization",
+           "OffensiveSchedule", "air_supply_orders", "build_the_chain", "campaign_motorization",
            "campaign_truck_orders", "deny_dumps", "garrison_units", "hold_depots",
            "hold_garrisons", "keep_in_trace", "railhead", "take_and_hold_moves",
            "take_and_hold_supply"]
@@ -641,7 +641,9 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
         # are launched out of (game.scenario._campaign_cw_depots). The REAL state, deliberately: the
         # lorries always haul toward the front (Benghazi), never toward the assembly they start on
         # -- a relay pointed at its own railhead would find nothing forward of itself and stop.
-        return campaign_truck_orders(state, side)
+        # PLUS 35.15's air-supply shuttle (see ScriptedPolicy.truck_orders): the [60.43] "Any Air
+        # Facility" park is a squadron's own transport, not the Eighth Army's freight.
+        return campaign_truck_orders(state, side) + air_supply_orders(state, side)
 
     def _forward_view(self, state: GameState) -> GameState:
         """THE DEFENSIVE POSTURE'S VIEW OF THE WAR: BOTH objectives are THE LINE (the rail-fed
@@ -894,7 +896,10 @@ class _CampaignAxisSupplyMixin:
         return build_the_chain(state, side)
 
     def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
-        return campaign_truck_orders(state, side)
+        # ...and 35.15's air-supply shuttle beside it (see ScriptedPolicy.truck_orders): the [60.33]
+        # "Any Air Facility" park keeps the Regia Aeronautica's 36.17 larder full, and it is the only
+        # thing on the map that can.
+        return campaign_truck_orders(state, side) + air_supply_orders(state, side)
 
     def supply_orders(self, state: GameState, side: Side) -> list[SupplyMoveOrder]:
         return super().supply_orders(_without_staging(state), side)
