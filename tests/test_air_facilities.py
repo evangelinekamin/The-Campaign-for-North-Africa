@@ -321,6 +321,59 @@ def test_41_36_a_destroyed_strip_leaves_the_map_an_airfield_does_not():
             assert r.state.air_facility("F") is None
 
 
+def test_41_5_key_an_airlanding_strip_receiving_a_result_of_1_or_greater_is_eliminated():
+    """THE KEY TO THE [41.5] TABLE, PDF p.108, verbatim: "Results: An Airlanding Strip receiving a
+    result of 1 or greater is eliminated. Airfield: That number of Squadron GroundSupport Units may
+    no longer use the Airfield's Readying Capacity. Ports: Reduce the Port by that number of
+    Efficiency Levels." ONE ROW, THREE MEANINGS -- and until this pass the engine read the Ports
+    meaning, min(result, level), off every one of them.
+
+    The strip's rule is ELIMINATION, not whittling. On the map the two readings agree by arithmetic
+    accident (36.2 caps a strip at ONE level, so min() takes all of it), which is why the
+    discriminating case below is a strip standing at more levels than 36.2 prints: it is not a state
+    oob or malta can seed, and it is the only way to assert WHICH RULE IS ENCODED rather than which
+    number happens to come out."""
+    strip = _strip("S", kind=air.STRIP)                       # the map's strip: one level
+    assert air.levels_lost(strip, 0) == 0                     # No Effect leaves it standing
+    assert air.levels_lost(strip, 1) == 1 and air.levels_lost(strip, 4) == 1
+    assert air.levels_lost(replace(strip, level=3), 1) == 3   # eliminated, not reduced to two
+    # the airfield keeps 41.36's capacity-level arithmetic, and never loses more than it has
+    field = _strip("F", kind=air.AIRFIELD, level=6)
+    assert air.levels_lost(field, 0) == 0 and air.levels_lost(field, 2) == 2
+    assert air.levels_lost(replace(field, level=1), 4) == 1
+    # 36.3/36.4 make a basin and an alighting area airfields with a smaller ceiling
+    assert air.levels_lost(_strip("B", kind=air.BASIN), 1) == 1
+    assert air.levels_lost(_strip("B", kind=air.BASIN), 4) == 3
+
+
+def test_41_5_key_the_airfield_result_is_the_sgsus_denied_the_readying_capacity():
+    """[41.5 Key] "Airfield: That number of Squadron GroundSupport Units may no longer use the
+    Airfield's Readying Capacity", which 41.36 states as capacity levels and 37.24 shows to be the
+    same fact: "if there are five SGSU's on an airfield, but the capacity level of that airfield has
+    been reduced to two, only two of those SGSU's may refit and ready their planes. The other three
+    squadrons are forced to remain inactive because of the reduced field capacity."
+
+    So the Key's sentence is assertable on the engine as it stands, and this pins it: bomb a full
+    field carrying its full six mechanics and EXACTLY the charted result number of them lose the
+    readying capacity."""
+    field = _strip("FIELD", side=Side.ALLIED, kind=air.AIRFIELD, level=6)
+    sgsus = [_sgsu(f"SG{i}") for i in range(6)]               # 36.12: six may stand on the hex
+    st = replace(_mini(facilities=[field], supplies=[_air_dump(fuel=99, water=99, stores=99)],
+                       units=sgsus),
+                 air=(AirWing("LW", Side.AXIS, "LAND", fighters=9, strike=2400, recon=0),),
+                 air_superiority={"LAND": Side.AXIS.value})
+    before = len(air.functioning_sgsus(st, st.air_facility("FIELD")))
+    assert before == 6                                        # 36.13: all six work an intact field
+    r = _Run(st)
+    _air_facility_bomb(r, Side.AXIS, (0, 0), _fuelled)
+    levels = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED][0].payload["levels"]
+    after = air.functioning_sgsus(r.state, r.state.air_facility("FIELD"))
+    assert len(after) == before - levels                       # the Key's own sentence
+    denied = {u.id for u in st.units} - {u.id for u in after}
+    assert all(not air.may_refit(r.state, r.state.unit(uid)) for uid in denied)
+    assert all(air.may_refit(r.state, u) for u in after)       # 35.14 fed, 36.13 inside the level
+
+
 def test_air_missions_route_the_airfield_kind():
     """An AirMission of kind "airfield" flies through _air_support like strike/fort/port/recon."""
     field = _strip("F", side=Side.ALLIED, kind=air.AIRFIELD, level=6)

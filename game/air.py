@@ -177,6 +177,61 @@ def removed_when_destroyed(kind: str) -> bool:
     return kind != AIRFIELD
 
 
+def levels_lost(facility: AirFacility, result: int) -> int:
+    """[41.5 KEY] / [41.36] / [36.2] WHAT ONE [41.5] RESULT MEANS TO **THIS** FACILITY.
+
+    THE TABLE PRINTS ONE ROW FOR THREE TARGETS AND THE KEY GIVES THE THREE OF THEM THREE DIFFERENT
+    MEANINGS. "Airfields / Air Landing Strips / Ports" share a single block of result columns on the
+    foldout (PDF p.107), and the Key to the Air Bombardment and Secondary Barrage Targets Table on
+    the facing page (PDF p.108, rendered at 300 dpi and read with eyes) says what the number IS,
+    verbatim and in this order:
+
+        "Results: An Airlanding Strip receiving A RESULT OF 1 OR GREATER IS ELIMINATED.
+         Airfield: THAT NUMBER OF SQUADRON GROUNDSUPPORT UNITS MAY NO LONGER USE THE AIRFIELD'S
+         READYING CAPACITY.
+         Ports: Reduce the Port by that number of EFFICIENCY LEVELS."
+
+    So a Port's result is efficiency (55.1, engine._air_port's business and not this function's),
+    and the two AIR facilities are these:
+
+      * **AN AIR LANDING STRIP IS A BINARY, NOT A DIAL.** Any result at all takes the whole strip --
+        the Key says "1 or greater", and 36.2 says what that leaves: "if that capacity level is
+        destroyed, the strip is ELIMINATED AND REMOVED FROM THE GAME-MAP". It is written here as the
+        Key's own sentence rather than left to fall out of min(result, level) on a one-level counter,
+        because the two agree only by arithmetic accident and the accident is not the rule.
+
+      * **AN AIRFIELD'S RESULT IS CAPACITY LEVELS, AND A CAPACITY LEVEL *IS* AN SGSU SLOT.** 41.36:
+        "the result is THE NUMBER OF CAPACITY LEVELS that facility is reduced." The Key states the
+        same number from the other end, and 37.24 is the book's own worked example of the two being
+        one thing: "if there are five SGSU's on an airfield, but the capacity level of that airfield
+        HAS BEEN REDUCED TO TWO, only two of those SGSU's may refit and ready their planes. THE OTHER
+        THREE SQUADRONS ARE FORCED TO REMAIN INACTIVE BECAUSE OF THE REDUCED FIELD CAPACITY." 38.22
+        and 38.33 say it twice more ("the airfield or air strip simply LIMITS THE NUMBER OF SGSU's
+        that may operate there"). So the denial the Key describes is delivered by `functioning_sgsus`
+        reading the reduced level, and it lasts exactly as long as 36.14 says it does -- "until it is
+        built back up to six" (24.76 on the mainland, [44.5] on Malta). Denying named SGSUs on a
+        separate ledger would double-count that and would need a duration the book never prints.
+
+        ⚠ THE ONE PLACE THE TWO READINGS COME APART, stated because it is a reading and not a
+        coincidence: a field standing at more Capacity Levels than it has SGSUs. Read the Key alone
+        and a result of 2 grounds two of the mechanics who are actually there; read 41.36/37.24 and
+        it takes two slots off a field that had spare ones and grounds nobody. We apply 41.36 --
+        it is the RULE, the Key is the play aid's summary of it, and it is the only one of the two
+        that 36.14's rebuild and 44.13's repair have anything to act on.
+
+    A basin and an alighting area are airfields with a smaller ceiling (36.3 "the same features as an
+    airfield, with the exception that their Capacity is three squadrons"; 36.4 the same at one), so
+    they take the airfield's meaning; what happens to either AT zero is `removed_when_destroyed`'s
+    business, not this function's, and rule 44.12 overrides it for Malta alone.
+
+    Returns the Capacity Levels this facility loses -- never more than it has."""
+    if result <= 0:                                    # the table's own No Effect
+        return 0
+    if facility.kind == STRIP:                         # [41.5 Key]: 1 or greater ELIMINATES it
+        return facility.level
+    return min(result, facility.level)                 # [41.36]: that number of Capacity Levels
+
+
 def rebuilt_level(facility: AirFacility) -> "int | None":
     """[24.76] The Capacity Level `facility` stands at after ONE completed rebuild step, or None if
     it may not be rebuilt in place. "Airfields are rebuilt Capacity Level by Capacity Level... ONLY
@@ -620,15 +675,17 @@ def squadron_capacity(nationality: str, year: int, month: int) -> int:
     date outside every printed row is a ValueError rather than a nearest-row guess (the book charts
     1940-43 because that is the war; nothing should be asking for 1944).
 
-    ⚠ OWNER RULING NEEDED, WRITTEN OUT IN FULL AT squadron_capacity_35_23._owner_ruling_needed IN
-    THE DATA FILE: the book prints this chart TWICE and the two printings disagree about BOTH
+    OWNER RULING MADE 2026-07-21, WRITTEN OUT IN FULL AT squadron_capacity_35_23._owner_ruling IN
+    THE DATA FILE: the book prints this chart TWICE and the two printings disagreed about BOTH
     Commonwealth numbers -- the play aid (PDF p.105) says 12+4=16 for 1940-41 and 18+6=24 from
     1942-43; case 35.23's own table (PDF p.53) says 15+5=20 for "1940-June '41" and 18+6=24 from
     "July 41-43", with the prose "starting with July 1941 Commonwealth Squadrons increase their
-    capacity". BOTH were rendered and read with eyes. We apply the play aid pending the ruling,
-    because every other 5.3 magnitude came off that same chart box; the rule-text printing is
-    transcribed verbatim beside it under `rule_text_35_23_unapplied` and nothing reads it. The
-    Italian and German rows are identical in both printings and are not in dispute."""
+    capacity". BOTH were rendered and read with eyes, and THE OWNER RULED FOR CASE 35.23's OWN
+    TABLE: the Commonwealth squadron is 20 planes until June 1941 and 24 from JULY 1941 (the growth
+    date moves with the numbers), because the play aid's early Commonwealth row is a duplicate of
+    the German Staffel row directly above it -- a copying error. The play-aid printing is now the
+    unapplied one, transcribed verbatim beside it under `play_aid_35_23_unapplied`; nothing reads
+    it. The Italian and German rows are identical in both printings and were never in dispute."""
     key = _CAPACITY_KEY.get(nationality)
     if key is not None:
         return SQUADRON_CAPACITY[key]["total"]

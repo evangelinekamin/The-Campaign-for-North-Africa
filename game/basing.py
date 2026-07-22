@@ -42,7 +42,7 @@ key) and conserving whole aeroplanes exactly is worth more than rounding a perce
 establishment the strict way. The floor is generous to Africa by at most one aeroplane.
 
 --------------------------------------------------------------------------------------------------
-⚠⚠ OWNER RULING NEEDED -- and it is now two questions, not one. Written out in full at
+⚠ OWNER RULING NEEDED -- ONE QUESTION LEFT OF THE TWO. Written out in full at
 `typed_requirement_applies` below and at `constrained_types_43_11` in data/malta_44.json.
 
   (1) **FROM GAME-TURN 35, DOES RULE 43 BIND ON A Ju. 87B AT ALL?** 43.12's untyped sentence covers
@@ -59,14 +59,14 @@ establishment the strict way. The floor is generous to Africa by at most one aer
       rule 1: transcribe the law, let the DATA decide the magnitude. `crete_planes` returns 0 until
       a named type enters the order of battle, and the whole change is that list.
 
-  (2) **WHAT IS "FW220"?** 43.11 and 43.13 both name it. **No such aircraft exists in this game.**
-      The [4.44b] German Aircraft Characteristics Chart (PDF page 145, rendered at 300 dpi and read
-      with eyes) prints exactly eight German bombers/transports/recon types: Ar. 196, Fw. 200 C,
-      He. 111, Hs. 126, Ju. 52/3m, Ju. 87B, Ju. 87D, Ju. 88D. The nearest Focke Wulf bomber is the
-      **Fw. 200 C** (Range 205, Bomb 14). Whether 43.11's "FW220" is a misprint for it is a
-      book-internal inconsistency of the 54.17 class, so it is NOT decided here: the constrained
-      list carries the two types that map onto printed chart rows unambiguously (He. 111, Ju. 88D)
-      and the third is left UNSEEDED under `unresolved_type_43_11` in the data file.
+  (2) **WHAT IS "FW220"? -- RULED 2026-07-21: IT IS THE Fw. 200 C** ("yes thats the same
+      aircraft"). 43.11 and 43.13 both name an aeroplane no chart prints. The [4.44b] German
+      Aircraft Characteristics Chart (PDF page 145, rendered at 300 dpi and read with eyes) prints
+      exactly eight German bombers/transports/recon types: Ar. 196, Fw. 200 C, He. 111, Hs. 126,
+      Ju. 52/3m, Ju. 87B, Ju. 87D, Ju. 88D, and the nearest Focke Wulf bomber is the **Fw. 200 C**
+      (Range 205, Bomb 14). The owner ruled it the same aircraft, so the constrained list now
+      carries all three types 43.11/43.13 name. It moves nothing today -- the abstract Axis bomber
+      is a Ju. 87B and is on none of the three rows, which is question (1) and is still open.
 
   Note the names in that list are the CHART's, verbatim, periods and all -- "He. 111", not
   "He 111" -- because `typed_requirement_applies` is an exact string test against the keys of
@@ -157,11 +157,12 @@ def crete_pct(turn: int) -> int:
 def constrained_types() -> tuple[str, ...]:
     """[43.11]/[43.13] The aircraft types rule 43's TYPED cases name, given as the [4.44b] chart
     prints them (PDF page 145) so that an exact match against game.air.AIRCRAFT is possible at all:
-    "He. 111" and "Ju. 88D".
+    "Fw. 200 C", "He. 111" and "Ju. 88D".
 
-    ⚠ THE RULE NAMES A THIRD, "FW220", AND THE CHART DOES NOT PRINT IT. That is an OWNER RULING
-    (see the module docstring); it is left unseeded in data/malta_44.json rather than guessed at
-    the Fw. 200 C."""
+    THE RULE'S THIRD NAME, "FW220", IS PRINTED ON NO CHART -- and the owner ruled on 2026-07-21
+    that it IS the "Fw. 200 C", which is therefore seeded here beside the other two (the ruling is
+    written out at `_ruling_fw220_is_the_fw_200_c` in data/malta_44.json). Nothing moves today: the
+    engine's abstract Axis bomber is a Ju. 87B and matches none of the three."""
     return tuple(_basing()["constrained_types_43_11"])
 
 

@@ -40,10 +40,14 @@ plan). Rule 44 is the loop that constant was crudely approximating, and both hal
         v
     the Commonwealth repairs on the [44.5] table, one roll per facility per Game-Turn (44.13)
 
-THE ONE THING THE BOOK LEAVES GENUINELY UNSETTLED, and it is the number the whole loop turns on:
-what a torpedo is WORTH in Bomb Points when the plane carrying it may not carry bombs at all. The
-conflict is written out in full at bomb_points() and in data/malta_44.json, and it is flagged for
-an owner ruling rather than decided quietly.
+THE NUMBER THE WHOLE LOOP TURNS ON -- what a torpedo is WORTH in Bomb Points when the plane
+carrying it may not carry bombs at all -- WAS RULED BY THE OWNER ON 2026-07-21 and is no longer an
+open judgement call: the [4.44A] Swordfish row does read "-/T8" (PDF p.113, verified), and the
+[41.5] Key prints "if at least 50% of the planes attacking an Axis Naval Convoy are armed with
+Torpedos, INCREASE THE TOTAL BOMB POINTS BY 25%" (PDF p.108) -- a quarter added to nothing is
+nothing, so the chart's own Key presupposes that a torpedo plane contributes Bomb Points, and 41.74
+supplies the conversion. The evidence is written out in full at bomb_points() and in
+data/malta_44.json. Behaviour is unchanged; the reading is now the book's, not a convenience.
 
 THE THREE THINGS THIS MODULE DOES NOT MODEL, each named at its own function and each a data gap
 rather than a rule we disagree with:
@@ -257,15 +261,17 @@ def bomb_points(state: GameState) -> int:
         by 25%, ROUNDING UPWARD." Malta's strike is 100% torpedo-armed, so the modifier is always
         live; the Key reprints it under this table's own Axis-Naval-Convoys heading.
 
-    ⚠ OWNER RULING NEEDED, WRITTEN OUT IN FULL AT initial_setup_60_46.strike_weapon.
-    _owner_ruling_needed IN data/malta_44.json, AND NOT DECIDED HERE. Read 41.66 strictly and a
-    plane whose Bombload Capacity is "-" totals ZERO Bomb Points; 0 x 1.25 = 0 falls below the
-    table's [1..20] floor, and Malta's only 1940 anti-shipping aircraft cannot scratch a convoy for
-    the whole war -- against 41.71 ("torpedoes... are effective against ships") and against 44.0's
-    entire premise. We apply 41.74's conversion because it is the only reading under which the
-    chart's own footnote ("are CARRIED OUT using the Bomb Points row") and 41.73's modifier have
-    anything to act on. It is a judgement call on two printed values that disagree, and it is the
-    number this whole rule turns on."""
+    OWNER RULING MADE 2026-07-21, WRITTEN OUT IN FULL AT initial_setup_60_46.strike_weapon.
+    _owner_ruling_settled IN data/malta_44.json: THE TORPEDO READING IS CONFIRMED. Read 41.66
+    strictly and a plane whose Bombload Capacity is "-" totals ZERO Bomb Points; 0 x 1.25 = 0 falls
+    below the table's [1..20] floor, and Malta's only 1940 anti-shipping aircraft could not scratch
+    a convoy for the whole war -- against 41.71 ("torpedoes... are effective against ships") and
+    against 44.0's entire premise. THE CHART SETTLES IT FROM ITS OWN KEY: the [41.5] Key (PDF p.108,
+    read with eyes) prints "if at least 50% of the planes attacking an Axis Naval Convoy are armed
+    with Torpedos, increase the total Bomb Points by 25%", and a 25% increase of zero is meaningless
+    -- so a torpedo-armed plane MUST contribute Bomb Points, and 41.74 ("as such count as normal
+    bombs") is the only conversion the book prints. The owner verified the "-/T8" reading on
+    [4.44A] (PDF p.113) as well. So this is a ruled reading of two printed values, not a guess."""
     weapon = logistics_data.malta_setup_60_46()["strike_weapon"]
     points = strike_planes(state) * weapon["points_per_plane"]     # 41.74: the torpedo as bombs
     bonus = 100 + weapon["torpedo_increase_pct_41_73"]             # 41.73: +25%, rounding UP

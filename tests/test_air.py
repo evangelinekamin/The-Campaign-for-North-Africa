@@ -265,14 +265,17 @@ def test_port_bombing_rolls_the_41_5_ports_row():
     # committed strike Air Points pick the Bomb-Point column, and 2d6 read sequentially (41.22) give
     # the Efficiency Levels lost. This replaces the old test that pinned a flat -1 with no die.
     from game.state import Port
-    from game.engine import _port_bomb_levels
+    from game.engine import _bombardment_result
     # (a) the pure lookup, transcribed and eyes-verified from PDF p107: at 6 bomb points (column
     # 1..20) it is 0 on codes 11..62 and 1 on 63..66; a big raid (column 471+) always hurts.
-    assert _port_bomb_levels(6, 1, 1) == 0                       # code 11 -> 0
-    assert _port_bomb_levels(6, 6, 2) == 0                       # code 62 -> 0
-    assert _port_bomb_levels(6, 6, 3) == 1                       # code 63 -> 1
-    assert _port_bomb_levels(500, 1, 1) == 1 and _port_bomb_levels(500, 6, 6) == 4
-    assert _port_bomb_levels(0, 6, 6) == 0                       # below the table floor: nothing
+    # RENAMED from _port_bomb_levels: the [41.5] block is shared by Airfields / Air Landing Strips /
+    # Ports and the Key (PDF p.108) gives the three of them three different meanings, so the lookup
+    # returns the table's RESULT and only the Ports row reads it as Efficiency Levels.
+    assert _bombardment_result(6, 1, 1) == 0                     # code 11 -> 0
+    assert _bombardment_result(6, 6, 2) == 0                     # code 62 -> 0
+    assert _bombardment_result(6, 6, 3) == 1                     # code 63 -> 1
+    assert _bombardment_result(500, 1, 1) == 1 and _bombardment_result(500, 6, 6) == 4
+    assert _bombardment_result(0, 6, 6) == 0                     # below the table floor: nothing
     # (b) integration: _air_port draws two air_bombard dice, certifies them on an AIR_STRIKE_RESOLVED
     # marker, and drops the port's Efficiency by exactly the [41.5] result -- a 0 emits NO change.
     port = Port("PORT-X", Side.ALLIED, (2, 0), kind="major", max_eff=5, eff=4,
@@ -284,7 +287,7 @@ def test_port_bombing_rolls_the_41_5_ports_row():
               and e.payload.get("arena") == "PORT"]
     assert len(marker) == 1                                      # the roll is always logged
     d1, d2 = marker[0].rng_draws
-    levels = _port_bomb_levels(marker[0].payload["strength"], d1, d2)
+    levels = _bombardment_result(marker[0].payload["strength"], d1, d2)
     assert marker[0].payload["levels"] == levels
     pe = [e for e in r.events if e.kind == EventKind.PORT_EFFICIENCY_CHANGED]
     if levels > 0:

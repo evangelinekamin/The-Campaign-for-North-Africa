@@ -1105,9 +1105,10 @@
     }
   },
   "air_bombardment_41_5": {
-    "_comment": "[41.5] AIR BOMBARDMENT AND SECONDARY BARRAGE TARGETS TABLE, the PORTS row (shared with Airfields / Air Landing Strips), transcribed and eyes-verified cell-by-cell from the scanned foldout chart page 12 (PDF page 107) -- the dense grid that did NOT OCR into docs/rules/90 (only the row labels came through, lines ~1005/1025). Procedure (41.22 / 41.39B): the bombing Player totals his Bomb Points, selects the matching bomb_points column, rolls two dice reading them SEQUENTIALLY as a two-digit code (tens=first die, units=second die: 11,12..16,21..66), and reads the cross-indexed result -- the number of Efficiency LEVELS the port loses (55.1). A result of 0 is No Effect: the port lost no levels this OpStage, so 55.18 lets it regenerate. Each column's die entries partition all 36 sequential codes exactly (guarded by tests/test_air.py). hi=null on the final column is the open 471+ bracket. The Axis Naval Convoy row of this SAME chart lives in axis_naval_convoys_56.air_convoy_bombing_crt_41_66 (already transcribed and tested). SINCE PHASE 5.5 the SUPPLY DUMP row (41.35) and the TRUCKS/Flak-Suppression/Combat-Units/CW-Fleet row (41.32) are transcribed here too, from the same 300-dpi render of the same page, each column self-checked against the 36 sequential 2d6 codes. STILL NOT TRANSCRIBED, and each is named where it lands: the FORTIFICATION row (No Effect / Reduced -- 41.37 currently rides engine._batter_fort's flat one-level-per-stage), the RAILROAD and ROAD rows (41.38, no mission kind exists), and the TORPEDO-POINTS and BARRAGE-POINTS index scales printed over these same eleven result columns (41.7 torpedoes and 12.54's barrage against a secondary target).",
+    "_comment": "[41.5] AIR BOMBARDMENT AND SECONDARY BARRAGE TARGETS TABLE, the PORTS row (shared with Airfields / Air Landing Strips), transcribed and eyes-verified cell-by-cell from the scanned foldout chart page 12 (PDF page 107) -- the dense grid that did NOT OCR into docs/rules/90 (only the row labels came through, lines ~1005/1025). Procedure (41.22 / 41.39B): the bombing Player totals his Bomb Points, selects the matching bomb_points column, rolls two dice reading them SEQUENTIALLY as a two-digit code (tens=first die, units=second die: 11,12..16,21..66), and reads the cross-indexed result. WHAT THAT NUMBER MEANS DEPENDS ON THE TARGET and is the Key's business, transcribed verbatim at ports._key_41_5: Efficiency Levels for a port (55.1), elimination for an Air Landing Strip, Capacity Levels for an Airfield (41.36). A result of 0 is No Effect: the port lost no levels this OpStage, so 55.18 lets it regenerate. Each column's die entries partition all 36 sequential codes exactly (guarded by tests/test_air.py). hi=null on the final column is the open 471+ bracket. The Axis Naval Convoy row of this SAME chart lives in axis_naval_convoys_56.air_convoy_bombing_crt_41_66 (already transcribed and tested). SINCE PHASE 5.5 the SUPPLY DUMP row (41.35) and the TRUCKS/Flak-Suppression/Combat-Units/CW-Fleet row (41.32) are transcribed here too, from the same 300-dpi render of the same page, each column self-checked against the 36 sequential 2d6 codes. STILL NOT TRANSCRIBED, and each is named where it lands: the FORTIFICATION row (No Effect / Reduced -- 41.37 currently rides engine._batter_fort's flat one-level-per-stage), the RAILROAD and ROAD rows (41.38, no mission kind exists), and the TORPEDO-POINTS and BARRAGE-POINTS index scales printed over these same eleven result columns (41.7 torpedoes and 12.54's barrage against a secondary target).",
     "ports": {
-      "_row": "Airfields / Air Landing Strips / Ports -- Efficiency Levels lost (41.39B Bombing Ports)",
+      "_row": "Airfields / Air Landing Strips / Ports -- ONE shared block of result columns, and the Key gives its number three different meanings (see _key_41_5)",
+      "_key_41_5": "Key to the Air Bombardment and Secondary Barrage Targets Table, PDF page 108, rendered at 300 dpi and read with eyes, VERBATIM: \"Results: An Airlanding Strip receiving a result of 1 or greater is eliminated. Airfield: That number of Squadron GroundSupport Units may no longer use the Airfield's Readying Capacity. Ports: Reduce the Porft [Port] by that nujber [number] of Efficiency Levels.\" (The two bracketed words are the 1979 printing's own typos, left as printed.) SO ONE ROW IS NOT ONE RESULT: the Ports reading is 55.1 Efficiency Levels (engine._air_port), and the two AIR readings are game.air.levels_lost -- a strip is ELIMINATED by any result at all (36.2 removes it from the map), an airfield loses that many CAPACITY LEVELS (41.36), which is the same fact as the Key's SGSU sentence because 37.24 says so outright: \"if there are five SGSU's on an airfield, but the capacity level of that airfield has been reduced to two, only two of those SGSU's may refit and ready their planes.\" Until 2026-07-21 the engine read the PORTS meaning off all three.",
       "columns": [
         {
           "bomb_points": [
@@ -2189,8 +2190,8 @@
     }
   },
   "squadron_capacity_35_23": {
-    "_comment": "[35.23] SQUADRON CAPACITY CHART, eyes-verified off the 1979 scan (Charts and Tables page 10, PDF page 105 -- the same rendered page that carries the [24.18] Demolition Chart, the [38.37] Aircraft Refit Table and the [45.6] Pilot and Plane Recovery Table). 'Ready plus Reserve' is the number BOTH 38.23 and 38.33 cap an SGSU's work at: 'an Italian SGSU can handle refueling chores for a total of 12 planes, regardless of squadron assignment, in a given Operations Stage' (38.23), and 'each SGSU can refit up to the maximum planes the SGSU can contain (Ready plus Reserve)' (38.33). The Commonwealth squadron grows mid-war, so its row is DATED -- and the dating is transcribed HERE, in `from`/`to` [year, month] pairs read off the row labels, rather than left as a boundary literal in engine code (game.air.squadron_capacity selects the row whose span contains the Game-Turn's month).",
-    "_owner_ruling_needed": "THE BOOK PRINTS THIS CHART TWICE AND THE TWO PRINTINGS DISAGREE ABOUT THE COMMONWEALTH ROWS -- the 54.17 class, raised rather than decided in passing. BOTH were rendered at 300 dpi and read with eyes, not OCR. (i) THE PLAY-AID CHART, PDF p.105 (Charts and Tables p.10): 'Commonwealth Squadron (1940-41) 12 4 16' and 'Commonwealth Squadron (1942-43) 18 6 24'. (ii) THE RULE TEXT of case 35.23 itself, PDF p.53: 'Commonwealth Squadron (1940-June '41) 15 5 (20 total)' and 'Commonwealth Squadron (July 41-43) 18 6 (24 total)', followed by the prose 'Players will note that starting with July 1941 Commonwealth Squadrons increase their capacity.' So the two printings disagree TWICE over: the early-war Commonwealth capacity (16 total against 20) and the DATE the squadron grows (the chart's row labels put it at January 1942; the rule text says July 1941 twice, in the row label and again in prose). The Italian (9/3/12) and German (12/4/16) rows are IDENTICAL in both printings and are not in dispute. Both printings are internally consistent with 35.23's own 'a squadron can always keep 1/3 more in reserve' (12+4, 15+5, 18+6), so neither can be dismissed as an arithmetic slip; note only that the chart's 1940-41 Commonwealth row is a duplicate of the German Staffel row directly above it, which is what a copying error would look like -- evidence, not proof. UNTIL THE OWNER RULES, the engine reads printing (i), the play aid, because it is the same rendered chart box every other 5.3 magnitude was transcribed from ([38.37]'s columns, [45.6]) and reading half a box from one printing and half from another would be worse than either. Printing (ii) is transcribed verbatim below under `rule_text_35_23_unapplied` and NOTHING reads it. This binds nothing today (the engine's proxy squadrons are 1-2 aeroplanes against a charted 12-24 allowance); it becomes load-bearing the moment 34.6/59.3's real Initial Air Strengths land, which is Phase 5.4/5.5.",
+    "_comment": "[35.23] SQUADRON CAPACITY CHART. 'Ready plus Reserve' is the number BOTH 38.23 and 38.33 cap an SGSU's work at: 'an Italian SGSU can handle refueling chores for a total of 12 planes, regardless of squadron assignment, in a given Operations Stage' (38.23), and 'each SGSU can refit up to the maximum planes the SGSU can contain (Ready plus Reserve)' (38.33). THE APPLIED READING IS CASE 35.23's OWN TABLE, PDF p.53, eyes-verified off the 1979 scan -- the owner's ruling of 2026-07-21, written out below. The Italian and German rows are the same in both of the book's printings and come off the same page. The Commonwealth squadron GROWS mid-war, so its rows are DATED -- and the dating is transcribed HERE, in `from`/`to` [year, month] pairs read off the row labels ('1940-June '41', 'July 41-43'), rather than left as a boundary literal in engine code (game.air.squadron_capacity selects the row whose span contains the Game-Turn's month).",
+    "_owner_ruling": "OWNER RULING MADE 2026-07-21 (Eve): APPLY PRINTING (ii), CASE 35.23's OWN TABLE AT PDF p.53 -- Commonwealth 15 ready / 5 reserve / 20 total for 1940-June 1941, and 18/6/24 FROM JULY 1941. THE GROWTH DATE MOVES WITH THE NUMBERS: July 1941, not January 1942. THE DISPUTE, recorded because the ruling is a reading of two printings and not a discovery: the book prints this chart TWICE and the two disagree about both Commonwealth rows. BOTH were rendered at 300 dpi and read with eyes, not OCR. (i) THE PLAY-AID CHART, PDF p.105 (Charts and Tables p.10): 'Commonwealth Squadron (1940-41) 12 4 16' and 'Commonwealth Squadron (1942-43) 18 6 24'. (ii) THE RULE TEXT of case 35.23 itself, PDF p.53: 'Commonwealth Squadron (1940-June '41) 15 5 (20 total)' and 'Commonwealth Squadron (July 41-43) 18 6 (24 total)', followed by the prose 'Players will note that starting with July 1941 Commonwealth Squadrons increase their capacity.' THE OWNER READ BOTH AND RULED FOR (ii): the play aid's 1940-41 Commonwealth row is a DUPLICATE OF THE GERMAN STAFFEL ROW DIRECTLY ABOVE IT (12/4/16), which is what a copying error looks like, and printing (ii) says its dates twice -- in the row label and again in the prose. Printing (i) is now the unapplied one and is transcribed verbatim below under `play_aid_35_23_unapplied`; nothing reads it. The Italian (9/3/12) and German (12/4/16) rows are IDENTICAL in both printings and were never in dispute. This binds nothing today (the engine's proxy squadrons are 1-2 aeroplanes against a charted 12-24 allowance, so 38.23/38.33's cap never binds and no signature moves); it becomes load-bearing the moment 34.6/59.3's real Initial Air Strengths land.",
     "nationalities": {
       "italian": {
         "_row": "Italian Squadriglia",
@@ -2204,37 +2205,6 @@
         "reserve": 4,
         "total": 16
       },
-      "commonwealth_1940_41": {
-        "_row": "Commonwealth Squadron (1940-41)",
-        "ready": 12,
-        "reserve": 4,
-        "total": 16,
-        "from": [
-          1940,
-          1
-        ],
-        "to": [
-          1941,
-          12
-        ]
-      },
-      "commonwealth_1942_43": {
-        "_row": "Commonwealth Squadron (1942-43)",
-        "ready": 18,
-        "reserve": 6,
-        "total": 24,
-        "from": [
-          1942,
-          1
-        ],
-        "to": [
-          1943,
-          12
-        ]
-      }
-    },
-    "rule_text_35_23_unapplied": {
-      "_comment": "THE SECOND PRINTING, case 35.23's own table on PDF p.53, transcribed verbatim and DELIBERATELY UNREAD pending the owner ruling above. Nothing in game/ loads this key; it exists so that the disputed reading is on the record beside the applied one and the ruling is a one-line switch rather than a re-transcription.",
       "commonwealth_1940_june_41": {
         "_row": "Commonwealth Squadron (1940-June '41)",
         "ready": 15,
@@ -2257,6 +2227,37 @@
         "from": [
           1941,
           7
+        ],
+        "to": [
+          1943,
+          12
+        ]
+      }
+    },
+    "play_aid_35_23_unapplied": {
+      "_comment": "THE OTHER PRINTING -- the play-aid chart on PDF p.105 (Charts and Tables p.10) -- transcribed verbatim and DELIBERATELY UNREAD since the owner ruled for case 35.23's own table on 2026-07-21. Nothing in game/ loads this key; it exists so that the rejected reading stays on the record beside the applied one. It differs twice: 16 total against 20 for the early-war Commonwealth squadron, and January 1942 against July 1941 for the growth.",
+      "commonwealth_1940_41": {
+        "_row": "Commonwealth Squadron (1940-41)",
+        "ready": 12,
+        "reserve": 4,
+        "total": 16,
+        "from": [
+          1940,
+          1
+        ],
+        "to": [
+          1941,
+          12
+        ]
+      },
+      "commonwealth_1942_43": {
+        "_row": "Commonwealth Squadron (1942-43)",
+        "ready": 18,
+        "reserve": 6,
+        "total": 24,
+        "from": [
+          1942,
+          1
         ],
         "to": [
           1943,

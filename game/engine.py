@@ -511,9 +511,21 @@ def _malta_raid(r: _Run, policies: dict) -> None:
 
     Two dice on [44.42] then say how much of the Italy/Sicily-based force flies, and the bombs fall
     on ONE Maltese facility (44.24 assigns squadrons to specific airfields; malta.raid_target picks
-    the fullest) through the [41.5] Airfields row -- the identical resolver an African field is
-    bombed by, because 41.36 is the identical rule. 41.36's second clause then takes 10% of the
-    island's aeroplanes per level destroyed.
+    the fullest) through the [41.5] Airfields row -- the identical reading an African field is
+    bombed by (air.levels_lost), because 41.36 is the identical rule. 41.36's second clause then
+    takes 10% of the island's aeroplanes per level destroyed.
+
+    WHAT THE [41.5] KEY'S AIRFIELDS ROW ACTUALLY DOES TO THIS ISLAND, plainly: it takes Capacity
+    Levels, and on Malta a Capacity Level is NOT an SGSU slot but a ration of eighteen aeroplanes.
+    44.14 removes the mechanics from the island altogether ("the Commonwealth Player does not need --
+    nor does he use -- SGSU's on Malta... each level of air facility can handle up to 18 planes of
+    any type"), so the Key's "that number of Squadron GroundSupport Units may no longer use the
+    Airfield's Readying Capacity" has no SGSU here to bind on and 44.14's own ration is what the lost
+    level costs -- eighteen fewer aeroplanes the island may operate, straight into malta.strike_planes
+    and the Bomb Points that reach the convoy lane. The other half of the Key's Results block, "an
+    Airlanding Strip receiving a result of 1 or greater is eliminated", cannot fire on Malta twice
+    over: [44.12] prints four airfields, a flying-boat basin and an alighting area and NO strip, and
+    44.12 would override it if it ever printed one.
 
     THE BUDGET IS SPENT WHATEVER HAPPENS. A raid the chart grants no forces for (44.42's na), a
     raid on an island already flat, and a raid the Axis cancels all cost the same one Game-Turn of
@@ -544,7 +556,7 @@ def _malta_raid(r: _Run, policies: dict) -> None:
         return
     bomb_points = plan.bomb_points + _malta_africa(r, policies, plan)   # 44.21/44.25/44.27 + 39.19
     b1, b2 = r.d6("malta"), r.d6("malta")            # [41.5]: two dice, read SEQUENTIALLY (41.22)
-    levels = min(_port_bomb_levels(bomb_points, b1, b2), target.level)
+    levels = air.levels_lost(target, _bombardment_result(bomb_points, b1, b2))
     r.emit(EventKind.AIR_STRIKE_RESOLVED, Side.AXIS, actor,
            {"arena": "AIRFIELD", "target": target.id, "strength": bomb_points,
             "levels": levels, "level": target.level - levels}, rng_draws=(b1, b2))
@@ -673,7 +685,7 @@ def _crt_result(columns, bomb_points: int, d1: int, d2: int, key: str) -> int:
     """The [41.5] lookup every row of that table shares: pick the Bomb-Point column, read the two
     dice SEQUENTIALLY as a two-digit code (tens=d1, units=d2, rule 41.22), return the cell. Bomb
     Points below the table's floor find no column and score nothing -- the same answer
-    _port_bomb_levels and _convoy_loss_pct already give, now written once."""
+    _bombardment_result and _convoy_loss_pct already give, now written once."""
     code = d1 * 10 + d2
     for col in columns:
         lo, hi = col["bomb_points"]
@@ -700,15 +712,25 @@ def _convoy_loss_pct(points: int, d1: int, d2: int) -> int:
     return _crt_result(logistics_data.convoy_bombing_crt_41_66(), points, d1, d2, "pct_lost")
 
 
-def _port_bomb_levels(bomb_points: int, d1: int, d2: int) -> int:
-    """[41.39B / 41.5] resolve one harbour-bombing attack on the Air Bombardment CRT's Ports
-    row: pick the Bomb-Point column, read the two dice SEQUENTIALLY as a two-digit code
-    (tens=d1, units=d2), and return the number of Efficiency Levels the port loses (0-4).
-    Bomb Points below the table's floor lose nothing (returns 0). At the campaign's proxy
-    African contingent of ten Bomb Points (column 1..20 -- two of the five Ju. 87B rule 43 does
-    not base in Sicily) the roll is a 0 on 32 of 36 codes and a 1 on 4 --
-    which is what lets the harbour regenerate (55.18) between the bombs and makes the siege a
-    duel rather than a one-way ratchet."""
+def _bombardment_result(bomb_points: int, d1: int, d2: int) -> int:
+    """[41.5] Resolve one attack on the Air Bombardment CRT's shared "Airfields / Air Landing Strips
+    / Ports" block: pick the Bomb-Point column, read the two dice SEQUENTIALLY as a two-digit code
+    (tens=d1, units=d2, rule 41.22), and return THE RAW TABLE RESULT (0-4). Bomb Points below the
+    table's floor find no column and score nothing.
+
+    IT RETURNS A NUMBER, NOT AN EFFECT, and the rename that made that true is the whole of this
+    function's history. The three targets share one block of columns on the foldout (PDF p.107) and
+    the Key on the facing page (PDF p.108) gives the number three different meanings -- a Port loses
+    that many EFFICIENCY LEVELS (55.1), an Airlanding Strip "receiving a result of 1 or greater IS
+    ELIMINATED", and an Airfield has "that number of Squadron GroundSupport Units ... no longer use
+    the Airfield's Readying Capacity" (41.36's capacity levels; see air.levels_lost, which owns the
+    two air readings). While this was called `_port_bomb_levels` and returned "the Efficiency Levels
+    the port loses", every caller applied the Ports meaning to whatever it was pointed at.
+
+    At the campaign's proxy African contingent of ten Bomb Points (column 1..20 -- two of the five
+    Ju. 87B rule 43 does not base in Sicily) the roll is a 0 on 32 of 36 codes and a 1 on 4, which is
+    what lets a harbour regenerate (55.18) between the bombs and makes the siege a duel rather than a
+    one-way ratchet."""
     return _crt_result(logistics_data.air_port_bombing_crt_41_5(), bomb_points, d1, d2, "levels")
 
 
@@ -1871,7 +1893,8 @@ def _air_maintenance(r: _Run) -> None:
     r.go(Phase.LOGISTICS, Side.SYSTEM)                    # a SYSTEM housekeeping beat, like convoys
     # [35.23]: the Commonwealth squadron GROWS mid-war, and which row a date falls in is transcribed
     # with the chart (air.squadron_capacity), never decided here. Month as well as year, because the
-    # unapplied second printing of the chart dates the change to July 1941 -- see the owner ruling.
+    # applied printing -- case 35.23's own table, per the owner's 2026-07-21 ruling -- dates the
+    # growth to JULY 1941 rather than to a January.
     year, month = calendar.gt_to_month(r.state.turn)
     # 38.33/38.23: each SGSU's work is capped IN PLANES for the whole Operations Stage -- "each SGSU
     # can refit up to the maximum planes the SGSU can contain (Ready plus Reserve)", and 38.23 says
@@ -2102,7 +2125,10 @@ def _air_port(r: _Run, side: Side, port_id: str, fuel) -> None:
     if strength <= 0:                                    # 38.21: no fuel, no flight -- and no die
         return
     d1, d2 = r.d6("air_bombard"), r.d6("air_bombard")    # 41.22: two dice, read sequentially
-    levels = min(_port_bomb_levels(strength, d1, d2), port.eff)
+    # [41.5 Key] "Ports: Reduce the Port by that number of Efficiency Levels" -- the one target of
+    # the three whose result IS a level count of the thing bombed, which is why this line stayed put
+    # while air.levels_lost took the other two off it.
+    levels = min(_bombardment_result(strength, d1, d2), port.eff)
     new_eff = port.eff - levels
     r.emit(EventKind.AIR_STRIKE_RESOLVED, side, f"{side.value}/Air",   # certify the [41.5] CRT dice
            {"arena": "PORT", "target": port.id, "strength": strength,
@@ -2118,23 +2144,33 @@ def _air_facility_bomb(r: _Run, side: Side, tgt: Coord, fuel) -> None:
     LEVELS that facility is reduced."
 
     THE SAME CHART AS THE HARBOUR, AND THAT IS THE BOOK'S OWN DOING. The [41.5] Air Bombardment and
-    Secondary Barrage Targets Table prints ONE row for "Airfields / Air Landing Strips / Ports" and
-    denominates it in levels lost -- so this reads logistics_data.air_port_bombing_crt_41_5, the row
-    already transcribed and eyes-verified off the foldout (PDF p.107), by the identical procedure
-    _air_port uses: total the committed Bomb Points to pick the column, roll 2d6 read SEQUENTIALLY
-    as a two-digit code (41.22), cross-index.
+    Secondary Barrage Targets Table prints ONE block of result columns for "Airfields / Air Landing
+    Strips / Ports" -- so this reads logistics_data.air_port_bombing_crt_41_5, the block already
+    transcribed and eyes-verified off the foldout (PDF p.107), by the identical procedure _air_port
+    uses: total the committed Bomb Points to pick the column, roll 2d6 read SEQUENTIALLY as a
+    two-digit code (41.22), cross-index.
 
-    36.14 then says what the number means: "if bombing has reduced the capacity of an airfield from
-    six to three, that airfield may handle only three squadrons at a time, until it is built back up
-    to six... If an airfield is reduced to zero capacity, it is considered destroyed for all
-    purposes." An airfield at zero STAYS on the map (24.76 rebuilds it a level at a time); a landing
-    strip or flying-boat facility at zero is "eliminated and removed from the game-map" (36.2/24.76).
+    BUT ONE CHART ROW IS NOT ONE RESULT. The Key on the facing page (PDF p.108) gives the three
+    targets three meanings, and the two air ones are `air.levels_lost`'s business now: a STRIP
+    "receiving a result of 1 or greater IS ELIMINATED" outright, an AIRFIELD loses that many
+    CAPACITY LEVELS, which is the same fact as the Key's "that number of Squadron GroundSupport
+    Units may no longer use the Airfield's Readying Capacity" (37.24 is the book's own worked
+    example of the two being one thing, and `air.functioning_sgsus` is where the denial lands).
+    This resolver used to apply the PORTS meaning -- min(result, level) -- to every kind alike.
+
+    36.14 says how long it lasts: "if bombing has reduced the capacity of an airfield from six to
+    three, that airfield may handle only three squadrons at a time, UNTIL IT IS BUILT BACK UP TO
+    six... If an airfield is reduced to zero capacity, it is considered destroyed for all purposes."
+    An airfield at zero STAYS on the map (24.76 rebuilds it a level at a time); a landing strip or
+    flying-boat facility at zero is "eliminated and removed from the game-map" (36.2/24.76).
 
     Needs committed LAND strike Air Points scaled by the superiority gate, exactly as the harbour
     does, and never bombs a facility its OWN side holds (36.15 makes a facility the property of
     whoever occupies its hex). NOT modelled, and flagged: 41.36's second clause, "for every level
-    destroyed, remove 10% of the planes on the ground" -- there is no per-plane ledger to remove
-    from until Phase 5.3."""
+    destroyed, remove 10% of the planes on the ground" -- the 38.31 readiness ledger Phase 5.3 built
+    counts a side's aeroplanes by (arena, role) and not by the FIELD they stand on, so there is
+    still no roster at this hex to take a tenth of. engine._malta_raid has one (44.14 puts the
+    island's planes on the island itself) and does apply the clause."""
     facility = air.facility_at(r.state, tgt)
     if facility is None or air.holder(r.state, facility) == side or air.destroyed(facility):
         return
@@ -2145,7 +2181,9 @@ def _air_facility_bomb(r: _Run, side: Side, tgt: Coord, fuel) -> None:
     if strength <= 0:                                    # 38.21: no fuel, no flight -- and no die
         return
     d1, d2 = r.d6("air_bombard"), r.d6("air_bombard")    # 41.22: two dice, read sequentially
-    levels = min(_port_bomb_levels(strength, d1, d2), facility.level)
+    # [41.5 Key]: the strip is eliminated by any result at all, the airfield loses that many
+    # Capacity Levels (and with them that many SGSU slots, 37.24)
+    levels = air.levels_lost(facility, _bombardment_result(strength, d1, d2))
     new_level = facility.level - levels
     actor = f"{side.value}/Air"
     r.emit(EventKind.AIR_STRIKE_RESOLVED, side, actor,   # certify the [41.5] CRT dice

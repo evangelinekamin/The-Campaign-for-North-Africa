@@ -144,14 +144,16 @@ def test_the_constrained_types_are_the_chart_s_printed_names_not_the_rule_s_pros
     row, and fails SILENTLY rather than loudly. Every constrained type must therefore be a name the
     chart actually prints.
 
-    ⚠ OWNER RULING (2): 43.11 also names "FW220" and NO SUCH AIRCRAFT IS ON THE CHART. It is left
-    unseeded in the data file rather than guessed at the Fw. 200 C."""
+    OWNER RULING (2), MADE 2026-07-21: 43.11 also names "FW220" and NO SUCH AIRCRAFT IS ON THE
+    CHART. Eve ruled it the same aeroplane as the chart's "Fw. 200 C", so the constrained list now
+    carries all three types the rule names -- and the mechanism this test guards is unchanged: the
+    seeded name is the CHART's, so it can bind."""
     # The German half of [4.44b], as the 1979 chart prints it. The full roster is untranscribed
     # ([34.6]/[59.3] is Phase 6 work) -- only the six representative rows are in the data file --
     # so this literal is the scan reading itself, and it is what the constrained list must live in.
     printed_p145 = ("Ar. 196", "Fw. 200 C", "He. 111", "Hs. 126", "Ju. 52/3m",
                     "Ju. 87B", "Ju. 87D", "Ju. 88D")
-    assert basing.constrained_types() == ("He. 111", "Ju. 88D")
+    assert basing.constrained_types() == ("Fw. 200 C", "He. 111", "Ju. 88D")
     for name in basing.constrained_types():
         assert name in printed_p145, (name, "not a row of [4.44b] -- it could never bind")
     # ...and the rows that ARE transcribed use those same printed names, which is why an exact
@@ -159,8 +161,11 @@ def test_the_constrained_types_are_the_chart_s_printed_names_not_the_rule_s_pros
     german = [k for k, v in logistics_data.aircraft_characteristics_4_44().items()
               if v["nation"] == "german" and v["class"] != "fighter"]   # the fighters are p.144
     assert german and all(k in printed_p145 for k in german), german
-    unresolved = logistics_data.malta_italy_sicily_basing_43_1()["unresolved_type_43_11"]
-    assert unresolved == "FW220" and unresolved not in printed_p145
+    # the ruling keeps BOTH names on the record: the prose's and the chart row it was ruled to be
+    ruled = logistics_data.malta_italy_sicily_basing_43_1()["ruled_type_43_11"]
+    assert ruled["prose_name_pdf_p61"] == "FW220" and ruled["prose_name_pdf_p61"] not in printed_p145
+    assert ruled["chart_row_pdf_p145"] in printed_p145
+    assert ruled["chart_row_pdf_p145"] in basing.constrained_types()
 
 
 def test_the_crete_half_binds_the_moment_a_named_type_enters_the_order_of_battle(monkeypatch):

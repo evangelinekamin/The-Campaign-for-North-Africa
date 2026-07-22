@@ -271,12 +271,18 @@ def convoy_bombing_crt_41_66() -> list:
 
 
 def air_port_bombing_crt_41_5() -> list:
-    """[41.39B] the PORTS row of the [41.5] Air Bombardment & Secondary Barrage Targets
-    Table (shared with Airfields / Air Landing Strips): the ordered Bomb-Point columns of
-    the harbour-bombing CRT. Each column carries its bomb_points bracket [lo, hi] (hi=None
-    on the open 471+ bracket) and a `results` list of {die: [lo, hi], levels}: the engine
-    picks the column by total Bomb Points, then reads 2d6 SEQUENTIALLY as a two-digit code
-    (tens=first die, units=second) and looks up the number of Efficiency Levels lost."""
+    """[41.39B]/[41.36] the "Airfields / Air Landing Strips / Ports" block of the [41.5] Air
+    Bombardment & Secondary Barrage Targets Table -- ONE shared set of result columns for the
+    three targets. Each column carries its bomb_points bracket [lo, hi] (hi=None on the open
+    471+ bracket) and a `results` list of {die: [lo, hi], levels}: the engine picks the column
+    by total Bomb Points, then reads 2d6 SEQUENTIALLY as a two-digit code (tens=first die,
+    units=second) and looks up the RESULT.
+
+    WHAT THE RESULT MEANS IS THE TARGET'S BUSINESS, NOT THIS ACCESSOR'S -- the chart's Key
+    (transcribed verbatim beside the block under `_key_41_5`) makes it Efficiency Levels for a
+    port (55.1), elimination for an Air Landing Strip, and Capacity Levels for an Airfield
+    (41.36). game.air.levels_lost owns the two air readings; the `levels` field name is the
+    Ports one because that is the row this block was first transcribed for."""
     return _data()["air_bombardment_41_5"]["ports"]["columns"]
 
 
@@ -330,15 +336,16 @@ def aircraft_refit_table_38_37() -> dict:
 
 def squadron_capacity_35_23() -> dict:
     """[35.23] SQUADRON CAPACITY CHART, by nationality key ("italian", "german",
-    "commonwealth_1940_41", "commonwealth_1942_43"): the charted `ready` + `reserve` = `total`,
-    the dated Commonwealth rows additionally carrying the `from`/`to` [year, month] span read off
-    their own printed labels (the boundary is part of the chart, so it is transcribed with it).
-    The total is the cap 38.23 puts on an SGSU's refuelling and 38.33 on its refitting -- "each
+    "commonwealth_1940_june_41", "commonwealth_july_41_43"): the charted `ready` + `reserve` =
+    `total`, the dated Commonwealth rows additionally carrying the `from`/`to` [year, month] span
+    read off their own printed labels (the boundary is part of the chart, so it is transcribed with
+    it). The total is the cap 38.23 puts on an SGSU's refuelling and 38.33 on its refitting -- "each
     SGSU can refit up to the maximum planes the SGSU can contain (Ready plus Reserve)".
 
-    Returns only the APPLIED printing. The book prints this chart twice and the two disagree about
-    the Commonwealth rows; the unapplied one sits beside it in the data file under
-    `rule_text_35_23_unapplied` with the owner ruling written out. See air.squadron_capacity."""
+    Returns only the APPLIED printing -- case 35.23's own table on PDF p.53, per the owner ruling of
+    2026-07-21. The book prints this chart twice and the two disagree about the Commonwealth rows;
+    the rejected one sits beside it in the data file under `play_aid_35_23_unapplied` with the
+    ruling written out. See air.squadron_capacity."""
     return _data()["squadron_capacity_35_23"]["nationalities"]
 
 
@@ -410,6 +417,6 @@ def malta_italy_sicily_basing_43_1() -> dict:
     that may not raid Malta either (43.25), `mediterranean_pct`, the 43.11 TOTAL those two close on
     (transcribed for the cross-check, not read by game.basing, which adds up the two parts), the
     `constrained_types_43_11` the typed cases name AS THE [4.44b] CHART PRINTS THEM, and
-    `unresolved_type_43_11` -- the one the rule names and the chart does not, left unseeded under an
-    owner ruling."""
+    `ruled_type_43_11` -- the "FW220" the rule names against the chart row the owner ruled it to be
+    (2026-07-21: the Fw. 200 C), kept as a pair so the prose name stays on the record."""
     return _malta()["italy_sicily_basing_43_1"]

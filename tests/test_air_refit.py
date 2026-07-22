@@ -97,23 +97,29 @@ def test_38_34_the_percentage_is_of_the_planes_undergoing_refit_rounded_up():
 
 
 def test_the_squadron_capacity_chart_is_transcribed():
-    """[35.23] SQUADRON CAPACITY CHART, same scanned page: Ready + Reserve = Total, and the Total
-    is what 38.33 caps one SGSU's refitting at."""
+    """[35.23] SQUADRON CAPACITY CHART: Ready + Reserve = Total, and the Total is what 38.33 caps
+    one SGSU's refitting at.
+
+    RESTATED 2026-07-21 FOR THE OWNER'S RULING, which is a change to the chart and not to this
+    test's intent: the book prints [35.23] twice and Eve ruled for case 35.23's own table (PDF
+    p.53) over the play aid (PDF p.105). The Commonwealth squadron is therefore 15+5=20 until
+    June 1941 and 18+6=24 FROM JULY 1941 -- both the number and the growth date moved. The old
+    assertions pinned the play aid's 12+4=16 and its January-1942 boundary."""
     chart = squadron_capacity_35_23()
     assert (chart["italian"]["ready"], chart["italian"]["reserve"]) == (9, 3)
     assert (chart["german"]["ready"], chart["german"]["reserve"]) == (12, 4)
-    assert (chart["commonwealth_1940_41"]["ready"], chart["commonwealth_1940_41"]["reserve"]) \
-        == (12, 4)
-    assert (chart["commonwealth_1942_43"]["ready"], chart["commonwealth_1942_43"]["reserve"]) \
-        == (18, 6)
+    early, late = chart["commonwealth_1940_june_41"], chart["commonwealth_july_41_43"]
+    assert (early["ready"], early["reserve"]) == (15, 5)
+    assert (late["ready"], late["reserve"]) == (18, 6)
     for row in chart.values():
         assert row["ready"] + row["reserve"] == row["total"]
     # 38.33 reads the Total. The undated rows ignore the date; the Commonwealth rows are chosen by
     # the span each carries, which is transcribed WITH the chart and not decided in engine code.
     assert air.squadron_capacity("IT", 1941, 7) == 12
     assert air.squadron_capacity("GE", 1941, 7) == 16
-    assert air.squadron_capacity("CW", 1940, 9) == 16
-    assert air.squadron_capacity("CW", 1941, 12) == 16
+    assert air.squadron_capacity("CW", 1940, 9) == 20
+    assert air.squadron_capacity("CW", 1941, 6) == 20         # "1940-June '41", the printed label
+    assert air.squadron_capacity("CW", 1941, 7) == 24         # "starting with July 1941"
     assert air.squadron_capacity("CW", 1942, 1) == 24
     # off the printed spans is a loud failure, not the nearest row (the chart runs 1940-43 because
     # that is the war)
@@ -121,9 +127,9 @@ def test_the_squadron_capacity_chart_is_transcribed():
         air.squadron_capacity("CW", 1944, 1)
 
 
-def test_35_23_owner_ruling_the_book_prints_this_chart_twice_and_they_disagree():
-    """OWNER RULING NEEDED, recorded rather than decided (the 54.17 class). BOTH printings were
-    rendered at 300 dpi and read with eyes:
+def test_35_23_owner_ruled_the_book_prints_this_chart_twice_and_case_35_23_wins():
+    """OWNER RULING MADE 2026-07-21 (Eve), the 54.17 class settled. BOTH printings were rendered at
+    300 dpi and read with eyes:
 
       the play aid, PDF p.105:  Commonwealth Squadron (1940-41)       12  4  16
                                 Commonwealth Squadron (1942-43)       18  6  24
@@ -131,25 +137,29 @@ def test_35_23_owner_ruling_the_book_prints_this_chart_twice_and_they_disagree()
                                 Commonwealth Squadron (July 41-43)    18  6  (24 total)
 
     plus the rule text's own prose, "Players will note that starting with July 1941 Commonwealth
-    Squadrons increase their capacity". So the two disagree about the early-war capacity (16 v 20)
-    AND about when it grows (January 1942 v July 1941). The engine applies the play aid pending the
-    ruling; this test pins the fact that the OTHER printing is transcribed verbatim beside it and
-    that nothing reads it -- so the ruling is a switch, not a re-transcription. It binds nothing
-    today (proxy squadrons are 1-2 aeroplanes) and binds everything at 34.6/59.3."""
+    Squadrons increase their capacity". The two disagree about the early-war capacity (16 v 20) AND
+    about when it grows (January 1942 v July 1941). THE ENGINE NOW APPLIES CASE 35.23's OWN TABLE:
+    the play aid's 1940-41 Commonwealth row duplicates the German Staffel row printed directly above
+    it, which is what a copying error looks like, and the rule text states its dates twice.
+
+    RESTATED, NOT WEAKENED: this test used to pin "the play aid is applied and the rule text is
+    transcribed-but-unread". It now pins the same structural fact the other way round -- the
+    REJECTED printing stays on the record beside the applied one and nothing reads it -- so a future
+    reader can still see both readings and what was chosen."""
     from game.logistics_data import _data
-    disputed = _data()["squadron_capacity_35_23"]["rule_text_35_23_unapplied"]
-    early = disputed["commonwealth_1940_june_41"]
-    assert (early["ready"], early["reserve"], early["total"]) == (15, 5, 20)
-    assert tuple(early["to"]) == (1941, 6)              # "June '41", not December
-    late = disputed["commonwealth_july_41_43"]
+    rejected = _data()["squadron_capacity_35_23"]["play_aid_35_23_unapplied"]
+    early = rejected["commonwealth_1940_41"]
+    assert (early["ready"], early["reserve"], early["total"]) == (12, 4, 16)
+    late = rejected["commonwealth_1942_43"]
     assert (late["ready"], late["reserve"], late["total"]) == (18, 6, 24)
-    assert tuple(late["from"]) == (1941, 7)             # the prose's "starting with July 1941"
-    # the applied reading is the other one, and July 1941 is exactly where they part company
-    assert air.squadron_capacity("CW", 1941, 7) == 16 and early["total"] == 20
-    # the Italian and German rows are identical in both printings, so they are not in dispute
+    assert tuple(late["from"]) == (1942, 1)            # the play aid's January boundary
+    # ...and the applied reading is the OTHER one: July 1941 is exactly where they part company
+    assert air.squadron_capacity("CW", 1941, 7) == 24 and late["total"] == 24
+    assert air.squadron_capacity("CW", 1941, 6) == 20 and early["total"] == 16
+    # the Italian and German rows are identical in both printings, so they were never in dispute
     assert squadron_capacity_35_23()["italian"]["total"] == 12
     assert squadron_capacity_35_23()["german"]["total"] == 16
-    assert not [k for k in disputed if k.startswith(("italian", "german"))]
+    assert not [k for k in rejected if k.startswith(("italian", "german"))]
 
 
 # --- fixtures ---------------------------------------------------------------------------------
