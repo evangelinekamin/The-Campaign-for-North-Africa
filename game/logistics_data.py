@@ -64,10 +64,13 @@ def stores_rates() -> dict:
 
 def evaporation_percent() -> dict:
     """[49.3]/52.44 Fuel & Water evaporation: 6% base per Game-Turn, +5% in hot
-    weather (rounded down)."""
+    weather (rounded down) -- and the Commonwealth's own worse rate, 9% per Game-Turn from
+    September 1940 until the last Game-Turn in August 1941 (the four-gallon petrol tin, before
+    the jerrican was copied off the Afrikakorps)."""
     e = _data()["fuel_consumption"]["evaporation_49_3"]
     return {"base": e["base_percent_per_game_turn"],
-            "hot_additional": e["hot_weather_additional_percent"]}
+            "hot_additional": e["hot_weather_additional_percent"],
+            "commonwealth_1940_41": e["commonwealth_penalty_percent_sept1940_to_aug1941"]}
 
 
 def demolition_percent_54_17() -> dict:

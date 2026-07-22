@@ -2,6 +2,23 @@
 
 **Where twelve times the burn rate comes from.**
 
+> **RESOLUTION, 2026-07-22 (commit "fix(supply): the faucet, corrected to the charts").** Culprits
+> **1** (the oasis sentinel in `convoy_plan_doctrine`), **3** ([56.21]'s per-Game-Turn allowance in
+> `_campaign_convoys`) and **6** ([49.3]'s 9% Commonwealth rate in `engine._base_evaporation`) are
+> FIXED, each pinned by a test. Culprits **5** (the Tobruk lane outside the [56.5] allowance), **7**
+> (the 55.14/55.16 owner ruling) and **8** (the rule-57 base riding the wells' evaporation exemption)
+> are FLAGGED in place, unchanged. Culprit **4** is confirmed not a defect.
+>
+> Culprit **2, THE LAST MILE, IS THE WHOLE OF WHAT IS LEFT, and the measurement after the fixes says
+> which third of it to build first.** Seed 1941, before -> after: Stores LANDED 56,214 -> 261,297
+> Points, Stores DELIVERED forward by lorry 57,093 -> 58,339 (flat -- the 60/25/15 `_TRUCK_LOAD_MIX`
+> caps it), Stores EATEN 23,893 -> 19,695, stores shortfalls 8,362 -> 8,000. **Delivered stores
+> already exceed eaten stores threefold**, so the binding constraint is not the pipe but the last
+> hex: supply is drawn strictly in-hex and there is no [53.11] first-line tier to close it. Build
+> the first-line trucks; do NOT re-derive the load mix first, which would only grow the forward
+> piles. The landed/burned headline moved 12.3x -> 22.0x (seed 7: 11.1x -> 19.7x) for exactly the
+> reason this audit predicted: a correct faucet on a chain that still cannot move it.
+
 Block 2, 2026-07-22. **Measurement only — no engine behaviour was changed by this work.**
 Instrument: `scratchpad/faucet_audit.py` (read-only; folds a full 111-Game-Turn campaign and
 tallies every stage of the supply chain). Numbers below are seed 1941, 281,906 events, winner

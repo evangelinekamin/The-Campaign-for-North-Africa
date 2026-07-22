@@ -7,7 +7,7 @@
     "ammo_point_tons_approx": 4
   },
   "fuel_consumption": {
-    "_comment": "[49.19] FUEL CONSUMPTION CHART + rules 49.13/49.14. LAW: a TOE Strength Point of vehicles burns (fuel_consumption_rate) Fuel Points for every 5 CP -- or fraction -- expended IN MOVEMENT (49.13); combat CP burn no fuel (49.13). Total for a unit = rate x ceil(CP/5) x TOE_strength_points. Foot/camel/motorcycle burn nothing (49.12). The [49.19] grid below is that multiplication table (rows=CP expended, cols=rate 1..6, cell=Fuel Points per TOE point); sub-5-CP rows are fractional (0.2..4.8) and the game tracks them as fractions. ENGINE PROXY (game/supply.py fuel_rate/_FUEL_RATE_PROXY + fuel_cost): rate is a flat per-mobility-class 2(VEHICLE)/1(else), and fuel_cost = rate x ceil(CP/5) with NO x strength multiply -- so the engine (a) uses rate 2 where real tanks are 3-7, and (b) omits the per-TOE-point factor, undercharging a full-strength unit by ~strength-fold. faithful law is present; only the magnitude/units are proxy.",
+    "_comment": "[49.19] FUEL CONSUMPTION CHART + rules 49.13/49.14. LAW: a TOE Strength Point of vehicles burns (fuel_consumption_rate) Fuel Points for every 5 CP -- or fraction -- expended IN MOVEMENT (49.13); combat CP burn no fuel (49.13). Total for a unit = rate x ceil(CP/5) x TOE_strength_points. Foot/camel/motorcycle burn nothing (49.12). The [49.19] grid below is that multiplication table (rows=CP expended, cols=rate 1..6, cell=Fuel Points per TOE point); sub-5-CP rows are fractional (0.2..4.8) and the game tracks them as fractions. WIRED IN FULL (game/supply.py fuel_cost): rate x ceil(CP/5) x TOE Strength Points, with the per-model [4.47-4.49] rate carried on Unit.fuel_rate (game/logistics_data.py fuel_rate_by_model -> game/oob.py) and the flat per-mobility-class _FUEL_RATE_PROXY used only as a fallback for a unit whose model has no charted rate. The stale note this replaces said the engine omitted the x-TOE multiply and used rate 2 for every vehicle; both halves were fixed when the per-model rates landed, and the comment was not (found by the faucet audit, scratchpad/port/faucet-audit.md stage 5).",
     "rule_49_13_formula": "fuel_points = fuel_consumption_rate * ceil(cp_expended_in_movement / 5) * toe_strength_points",
     "fuel_capacity_rating_formula": "CPA * (1/5) * fuel_consumption_rate   [49.14]  -- the fuel a TOE point carries in its own tanks",
     "chart_49_19": {
@@ -181,7 +181,7 @@
         "LIGHT_TRUCK": 1,
         "MOTORCYCLE": 1
       },
-      "fuel_cost_formula": "fuel_rate(unit) * ceil(cp/5)   -- NO x strength",
+      "fuel_cost_formula": "fuel_rate(unit) * ceil(cp/5) * max(1, toe_strength_points)   -- the full 49.13 law", "_comment": "fuel_rate_by_mobility is the FALLBACK only: a unit carrying a charted per-model [4.47-4.49] rate uses that. The x-TOE multiply is present (game/supply.py fuel_cost); the note that said it was missing was stale.",
       "location": "game/supply.py _FUEL_RATE_PROXY / fuel_rate() / fuel_cost()"
     }
   },

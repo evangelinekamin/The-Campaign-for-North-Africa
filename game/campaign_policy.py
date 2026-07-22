@@ -942,6 +942,20 @@ def convoy_plan_doctrine(state: GameState, side: Side, tons: int) -> dict:
     votes for. Three equal larders split the convoy in three; an army with no ammunition ships
     ammunition.
 
+    ONLY A FINITE LARDER MAY VOTE (`_is_faucet`), AND THIS WAS MEASURED COSTING THE AXIS HIS BREAD.
+    A [52.3] oasis is seeded as an endless Stores dump (wells.UNLIMITED_WELL, 125,000,000 Points);
+    Siwa, Jalo and Giarabub put 375,000,000 Stores Points -- 375 MILLION TONS on the [54.5] chart --
+    on the Axis books, which swamped every real quantity in the comparison so completely that the
+    doctrine's output was bit-identical across two campaigns that differed in every battle: 45.02%
+    fuel / 44.97% ammunition / 10.01% stores, the flagged floor, every sailing for a hundred and
+    eleven Game-Turns (scratchpad/port/faucet-audit.md, stage 1b). The Axis shipped nine times his
+    lifetime fuel need and a fifth of his food, and better than half of all his unit-Game-Turns were
+    spent with no stores at all. A bottomless source is GEOGRAPHY, not a larder: an oasis feeds the
+    unit standing on it (52.3, drawn in-hex) and the army five hundred kilometres away cannot eat
+    Siwa's dates. So the same test the haulage layer already applies -- relay._is_faucet, "a
+    bottomless source cannot be strip-mined because it cannot be emptied" -- is applied here, and
+    only stock somebody could actually run out of informs the decision.
+
     ⚠ FLAGGED, AND THEY ARE THE ONLY TWO NUMBERS HERE. (a) The FLOOR: no commodity is allotted less
     than a tenth of the tonnage, because a convoy that starves one commodity outright for a month is
     a decision no quartermaster makes and one this engine's dumps cannot recover from (51.0 makes
@@ -950,7 +964,7 @@ def convoy_plan_doctrine(state: GameState, side: Side, tons: int) -> dict:
     both are the policy's, which is where 56.22 puts this decision."""
     stock = {c: 0 for c in supply.CONVOY_COMMODITIES}
     for su in state.supplies:
-        if su.side == side and not su.is_dummy:
+        if su.side == side and not su.is_dummy and not _is_faucet(su, None):
             for c in stock:
                 stock[c] += getattr(su, c.lower())
     for t in state.trucks:

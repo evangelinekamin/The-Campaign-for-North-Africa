@@ -19,6 +19,7 @@ is gone, because a deleted invention that comes back is worse than one that neve
 """
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 
@@ -28,6 +29,7 @@ import pytest
 
 import game.scenario as scenario
 import game.supply as supply
+from game import calendar, wells
 from game.campaign_policy import (CampaignAxisPolicy, CampaignCommonwealthPolicy,
                                   convoy_plan_doctrine)
 from game.engine import _convoy_planning, _Run, run
@@ -235,6 +237,60 @@ def test_an_army_holding_nothing_splits_the_sailing_evenly():
     bare = _state([], supplies=(_dump(),))
     plan = convoy_plan_doctrine(bare, Side.AXIS, 900)
     assert plan == {c: 300.0 for c in supply.CONVOY_COMMODITIES}
+
+
+def test_an_oasis_is_geography_and_never_votes_in_the_convoy_split():
+    """[56.22] + [52.3] THE SENTINEL THAT COST THE AXIS HIS BREAD FOR A HUNDRED AND ELEVEN GAME-TURNS.
+
+    A 52.3 oasis is seeded as an endless Stores dump (wells.UNLIMITED_WELL = 125,000,000 Points);
+    Siwa, Jalo and Giarabub between them put 375 MILLION tons of 'food' on the Axis books. Counted as
+    larder, that swamps every real quantity in the doctrine's comparison, so the quartermaster read
+    an army that would never want for stores again and shipped the flagged 10% floor -- every
+    sailing, all war, bit-identically across seeds that differed in every battle (measured:
+    45.02 / 44.97 / 10.01 on both, scratchpad/port/faucet-audit.md stage 1b).
+
+    A bottomless source is not a larder. The oasis feeds the unit standing ON it (52.3, drawn in
+    hex); the army five hundred kilometres away cannot eat Siwa's dates. So the doctrine counts only
+    stock somebody could run out of, and the plan is the one it would make if the oasis were not on
+    the map at all."""
+    field = _dump("AX-Field", fuel=80000)                       # a lake of fuel and NO food
+    oasis = SupplyUnit("AX-Well-Siwa", Side.AXIS, (1, 0), ammo=0, fuel=0,
+                       stores=wells.UNLIMITED_WELL, water=wells.UNLIMITED_WELL, base=True)
+    plan = convoy_plan_doctrine(_state([], supplies=(field, oasis)), Side.AXIS, 10000)
+    assert plan[supply.STORES] > 10000 * 0.10 + 1e-6, "the oasis voted, and the floor won"
+    assert plan[supply.STORES] > plan[supply.FUEL]              # ship what the army is out of
+    # and it is exactly the plan the same army makes with no oasis in the theatre at all
+    assert plan == convoy_plan_doctrine(_state([], supplies=(field,)), Side.AXIS, 10000)
+
+
+# --- [56.21]: the allowance is a GAME-TURN's, not a month's ---------------------------------------
+
+def test_every_game_turn_gets_its_own_56_5_allowance():
+    """[56.21] "The figures given on the Tonnage Determination Table are the tonnage of supplies
+    that the Axis may ship IN THAT GAME-TURN (for which he is planning)" -- with a worked example
+    that ships 21,000 tons on Game-Turn 55 alone (scan PDF p.75 = book p.24), and 56.22/56.24 both
+    saying "for a given Game-Turn" / "for that Game-Turn".
+
+    The engine used to roll the [56.5] die ONCE A CALENDAR MONTH and quarter the result across the
+    month's Game-Turns, which shipped 507,000 tons of a licensed 1,550,000-2,544,000 -- 24.9% of the
+    book's own faucet (faucet-audit.md stage 1a). One sailing per scheduled Game-Turn, each carrying
+    that Game-Turn's whole allowance, is what the book prints."""
+    st = campaign(seed=1941)
+    lane = {c.arrival_turn: c for c in st.convoys if c.id.startswith("axis-conv-")}
+
+    def level(gt: int) -> str:
+        year, month = calendar.gt_to_month(gt)
+        return scenario._CONVOY_LEVEL_56_4.get(str(year), {}).get(scenario._MON[month - 1], "-")
+
+    scheduled = {gt for gt in range(1, st.max_turns + 1) if level(gt) != "-"}
+    assert set(lane) == scheduled, "a convoy sails every Game-Turn the 56.4 chart schedules one"
+    for gt, c in lane.items():
+        cap = scenario._CONVOY_CAP_56_5[level(gt)]
+        fixed, var = cap["fixed_tons"], cap["variable_tons_per_die"]
+        lo = math.ceil((fixed + var * 1) / 1000) * 1000       # the die envelope of THIS Game-Turn's
+        hi = math.ceil((fixed + var * 6) / 1000) * 1000       # 56.5 row -- not a quarter of it
+        assert lo <= c.tons <= hi, (gt, level(gt), c.tons)
+    assert sum(c.tons for c in lane.values()) >= 1_550_000     # the licence's own die minimum
 
 
 # --- end to end ------------------------------------------------------------------------------------

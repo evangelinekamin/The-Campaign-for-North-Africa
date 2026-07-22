@@ -10,6 +10,40 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-22 -- CAUSE: rule [49.3], the COMMONWEALTH'S OWN EVAPORATION RATE. Exactly one
+rule moves these two logs, and it was checked rather than assumed (see below).
+
+[49.3]: "...from Sept., 1940 until the last Game-Turn (inclusive) in August, 1941, the Commonwealth
+spillage and evaporation rate is NINE PERCENT (9%) per Game-turn" -- the four-gallon petrol tin the
+Eighth Army fought its first year on, before it copied the Afrikakorps' jerrican. The number was
+transcribed into data/logistics_rates.json when chapter 49 was ported
+(`commonwealth_penalty_percent_sept1940_to_aug1941: 9`) and NOTHING EVER READ IT; engine._evaporate
+even carried a comment saying so ("the 9% Sep40-Aug41 Commonwealth container rate is deferred").
+The faucet audit (scratchpad/port/faucet-audit.md, culprit 6) found it. It is a printed number, so
+it is charged: the rate is now per SIDE (engine._base_evaporation), 9% for the Commonwealth inside
+the window and 6% for everybody otherwise. The 29.34 hot +5% slice is NOT side-conditioned -- 49.3
+gives the Commonwealth its own reading of the per-GAME-TURN rate, and the hot slice is a separate
+charge on a separate clock.
+
+Both benchmarks open inside the window (the engine's calendar anchors every scenario's Game-Turn 1
+at September 1940, and both benchmarks are historically inside Sept 1940 - Aug 1941 anyway), and
+both field Commonwealth dumps holding fuel and water, so both move.
+
+ATTRIBUTION, CHECKED: re-running both benchmarks with `engine._EVAP["commonwealth_1940_41"]` set
+back to the 6% base -- and every other change in the block left in place -- reproduces the OLD
+signatures exactly (afe73c4ba92a / 2f2133eb37fd). The block's other two rules cannot reach these
+logs and the reasons are structural: the [56.22] convoy doctrine's oasis fix is in
+campaign_policy.convoy_plan_doctrine, and the benchmarks plan their sailings through the BASE
+Policy.convoy_plan (they never call the campaign doctrine); the [56.21] per-Game-Turn shipping fix
+is in scenario._campaign_convoys, which only campaign() calls (rommels_arrival sails on
+_axis_convoy_tonnage, untouched).
+
+    rommels_arrival   afe73c4ba92a -> c7853d6ae610
+    siege_of_tobruk   2f2133eb37fd -> 812528e2b95b
+
+Each reproduced twice, byte-for-byte.
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-21 -- CAUSE: rule 56.21/56.22, the Axis Convoy Planning Phase (Phase 5.5).
 
 ONE rule moved these logs, and it is the deletion of invention I11. `scenario._CONVOY_SPLIT_56_22 =
@@ -489,8 +523,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "afe73c4ba92a"
-SIEGE_OF_TOBRUK = "2f2133eb37fd"
+ROMMELS_ARRIVAL = "c7853d6ae610"
+SIEGE_OF_TOBRUK = "812528e2b95b"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

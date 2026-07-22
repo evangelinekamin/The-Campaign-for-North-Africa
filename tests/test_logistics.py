@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from game import supply
+from game import calendar, supply
 from game.engine import _logistics, _Run
 from game.events import EventKind, Phase, Side
 from game.invariants import check
@@ -87,6 +87,41 @@ def test_hot_weather_evaporates_eleven_percent():
     d = r.state.supply("D")
     assert (d.fuel, d.water) == (89, 89)                # 6% + 5% hot = 11%
     assert _conserves(r.state)
+
+
+def _first_gt_of(year: int, month: int) -> int:
+    return next(gt for gt in range(1, 200) if calendar.gt_to_month(gt) == (year, month))
+
+
+def test_the_commonwealth_petrol_tin_spills_nine_percent_until_august_1941():
+    """[49.3] "...from Sept., 1940 until the last Game-Turn (inclusive) in August, 1941, the
+    Commonwealth spillage and evaporation rate is NINE PERCENT (9%) per Game-turn" -- the four-gallon
+    tin the Eighth Army fought its first year on, before it copied the Afrikakorps' jerrican.
+
+    The number was transcribed into data/logistics_rates.json when the chapter was ported and NOTHING
+    READ IT until the faucet audit went looking (culprit 6). It is a printed number, so it is
+    charged: the Commonwealth loses 9% a Game-Turn to the last Game-Turn of August 1941 and 6%
+    thereafter, while the Axis loses 6% throughout."""
+    def dumps():
+        return (SupplyUnit("AX", Side.AXIS, (0, 0), ammo=0, fuel=100, stores=0, water=100),
+                SupplyUnit("AL", Side.ALLIED, (1, 0), ammo=0, fuel=100, stores=0, water=100))
+
+    r = _Run(_state([], dumps()))                        # Game-Turn 1 = September 1940 (64.2)
+    _logistics(r)
+    assert (r.state.supply("AX").fuel, r.state.supply("AX").water) == (94, 94)     # 6%
+    assert (r.state.supply("AL").fuel, r.state.supply("AL").water) == (91, 91)     # 9%, the tin
+
+    last_of_august = _first_gt_of(1941, 9) - 1           # "the LAST Game-Turn (inclusive) in August"
+    st = replace(_state([], dumps()), turn=last_of_august, max_turns=last_of_august + 1)
+    r = _Run(st)
+    _logistics(r)
+    assert r.state.supply("AL").fuel == 91                # still the worse rate on the last turn
+    st = replace(st, turn=last_of_august + 1, max_turns=last_of_august + 2)
+    r = _Run(st)
+    _logistics(r)
+    assert calendar.gt_to_month(last_of_august + 1) == (1941, 9)
+    assert r.state.supply("AL").fuel == 94                # September 1941: the jerrican, 6% like everyone
+    assert r.state.supply("AX").fuel == 94
 
 
 def test_truck_cargo_evaporates_too():

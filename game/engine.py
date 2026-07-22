@@ -1318,7 +1318,7 @@ def _stores_setup(r: _Run) -> None:
     if not _models_full_logistics(r.state):
         return
     r.go(Phase.LOGISTICS, Side.SYSTEM)
-    _evaporate(r, _EVAP["base"])                    # 49.3: 6% base evaporation, once per game-turn
+    _evaporate(r, _base_evaporation(r.state))       # 49.3: the base per-Game-Turn rate, per side
     for side in (Side.AXIS, Side.ALLIED):
         _stores_stage(r, side, r.state.weather == "hot")
 
@@ -1332,7 +1332,8 @@ def _water_body(r: _Run) -> None:
     r.go(Phase.LOGISTICS, Side.SYSTEM)
     hot = r.state.weather == "hot"
     if hot:
-        _evaporate(r, _EVAP["hot_additional"])      # 49.3: +5% as soon as hot weather is determined
+        _evaporate(r, _flat_evaporation(_EVAP["hot_additional"]))   # 49.3/29.34: +5% as soon as
+        #                                                              hot weather is determined
     for side in (Side.AXIS, Side.ALLIED):
         _water_stage(r, side, hot)
 
@@ -1347,7 +1348,8 @@ def _logistics(r: _Run) -> None:
         return
     r.go(Phase.LOGISTICS, Side.SYSTEM)
     hot = r.state.weather == "hot"
-    _evaporate(r, _EVAP["base"] + (_EVAP["hot_additional"] if hot else 0))
+    hot_add = _EVAP["hot_additional"] if hot else 0
+    _evaporate(r, {s: p + hot_add for s, p in _base_evaporation(r.state).items()})
     for side in (Side.AXIS, Side.ALLIED):
         _stores_stage(r, side, hot)
         _water_stage(r, side, hot)
@@ -1374,20 +1376,55 @@ def _water_stage(r: _Run, side: Side, hot: bool) -> None:
 _EVAP = logistics_data.evaporation_percent()   # 49.3/52.44, from the rulebook
 
 
-def _evaporate(r: _Run, pct: int) -> None:
-    """49.3 / 52.44 / 29.34: on-map Fuel and Water lose `pct`% (rounded down) to evaporation &
-    spillage -- in DUMPS and in TRUCK CONVOYS alike (29.34: the hot 5% "includes water and fuel in
-    dumps as well as in trucks"; 49.3: fuel evaporates "regardless of where it is kept", only
-    convoys AT SEA exempt, and those are state.convoys, not on-map trucks). A strategic city base
-    (57) and wells/pipelines (base=True) are exempt (52.44). A SINK into consumed[] (the 9%
-    Sep40-Aug41 Commonwealth container rate is deferred). The 6% base (once per game-turn) and the
-    +5% hot slice (per Operations Stage) are charged as SEPARATE calls under the faithful clock.
-    Deterministic: sorted dumps then sorted trucks, fuel then water."""
-    if pct <= 0:
+def _petrol_tin_window(gt: int) -> bool:
+    """[49.3] Is Game-Turn `gt` inside the Commonwealth's worse-evaporation window -- "from Sept.,
+    1940 until the last Game-Turn (inclusive) in August, 1941"? The four-gallon petrol tin the
+    Eighth Army fought the first year on, before it copied the Afrikakorps' jerrican."""
+    return (1940, 9) <= calendar.gt_to_month(gt) <= (1941, 8)
+
+
+def _base_evaporation(state: GameState) -> dict:
+    """[49.3] The base per-Game-Turn evaporation rate PER SIDE -- 6% for everybody, except that the
+    Commonwealth loses NINE per cent for the first year of the war. The number was transcribed
+    (data/logistics_rates.json, `commonwealth_penalty_percent_sept1940_to_aug1941`) and, until the
+    faucet audit found it, nothing read it. It is a printed number, so it is charged.
+
+    The hot-weather slice is NOT conditioned: 49.3 makes 9% the Commonwealth's own reading of the
+    per-Game-Turn rate the 6% otherwise sets, and 29.34's +5% is a separate charge on a separate
+    clock (per Operations Stage, "as soon as the hot weather is determined")."""
+    return {Side.AXIS: _EVAP["base"],
+            Side.ALLIED: (_EVAP["commonwealth_1940_41"] if _petrol_tin_window(state.turn)
+                          else _EVAP["base"])}
+
+
+def _flat_evaporation(pct: int) -> dict:
+    """The same rate for both armies -- the 29.34 hot slice, which has no side clause."""
+    return {Side.AXIS: pct, Side.ALLIED: pct}
+
+
+def _evaporate(r: _Run, pct_by_side: dict) -> None:
+    """49.3 / 52.44 / 29.34: on-map Fuel and Water lose their owner's percentage (rounded down) to
+    evaporation & spillage -- in DUMPS and in TRUCK CONVOYS alike (29.34: the hot 5% "includes water
+    and fuel in dumps as well as in trucks"; 49.3: fuel evaporates "regardless of where it is kept",
+    only convoys AT SEA exempt, and those are state.convoys, not on-map trucks). Wells and pipelines
+    are exempt (52.44, base=True). A SINK into consumed[]. The rate is PER SIDE because 49.3 prints
+    two of them (_base_evaporation). The 6% base (once per game-turn) and the +5% hot slice (per
+    Operations Stage) are charged as SEPARATE calls under the faithful clock. Deterministic: sorted
+    dumps then sorted trucks, fuel then water.
+
+    ⚠ FLAGGED (faucet-audit culprit 8): `base=True` carries TWO meanings and only one of them is
+    exempted by a rule. 52.44 exempts a well or a pipeline; the rule-57 Cairo/Alexandria strategic
+    base is a city depot, and 49.3 evaporates fuel "regardless of where it is kept" -- it gets no
+    exemption in the book, and rides this one. Harmless TODAY because that base is bottomless (a
+    percentage of an unlimited pool changes nothing an army can notice), which is why it is flagged
+    here rather than fixed: the fix is to separate the two flags, and the day the rule-57 base holds
+    a finite stock it becomes real."""
+    if not any(pct > 0 for pct in pct_by_side.values()):
         return
     for sid in sorted(su.id for su in r.state.supplies):
-        if r.state.supply(sid).base:                    # 49.3: a strategic city depot (57) doesn't evaporate
-            continue
+        if r.state.supply(sid).base:                    # 52.44: a well or a pipeline never
+            continue                                    # evaporates (and see the flag above)
+        pct = pct_by_side.get(r.state.supply(sid).side, 0)
         for commodity in (supply.FUEL, supply.WATER):
             amt = getattr(r.state.supply(sid), commodity.lower())
             loss = amt * pct // 100
@@ -1395,6 +1432,7 @@ def _evaporate(r: _Run, pct: int) -> None:
                 r.emit(EventKind.SUPPLY_EVAPORATED, Side.SYSTEM, "SYSTEM",
                        {"supply_id": sid, "commodity": commodity, "qty": loss})
     for tid in sorted(t.id for t in r.state.trucks):    # 29.34: "as well as in trucks"
+        pct = pct_by_side.get(r.state.truck(tid).side, 0)
         for commodity in (supply.FUEL, supply.WATER):
             amt = getattr(r.state.truck(tid), commodity.lower())
             loss = amt * pct // 100

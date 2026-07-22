@@ -90,8 +90,10 @@ def month_turns(gt: int) -> tuple[int, ...]:
 
     Four of them for a whole month; TWO for September 1940, which the campaign joins at its third
     week (64.2). A monthly allotment divided "as evenly as possible amongst the weeks" (34.84, and
-    54.34's railroad month, and 56.5's convoy month) must be divided amongst the weeks THE MONTH
-    ACTUALLY HAS -- spreading September's over four would spill it into October."""
+    54.34's railroad month) must be divided amongst the weeks THE MONTH ACTUALLY HAS -- spreading
+    September's over four would spill it into October. ([56.5]'s convoy tonnage is NOT such an
+    allotment and no longer calls this: 56.21 grants the whole row PER GAME-TURN, and the month
+    only selects the row -- see scenario._campaign_convoys.)"""
     if gt < FIRST_WHOLE_MONTH_GT:
         return tuple(range(1, FIRST_WHOLE_MONTH_GT))
     first = gt - (gt - FIRST_WHOLE_MONTH_GT) % GT_PER_MONTH

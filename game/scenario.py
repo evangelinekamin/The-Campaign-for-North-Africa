@@ -779,7 +779,7 @@ def _campaign_axis_base() -> SupplyUnit:
     """The Axis port-of-arrival dump at Benghazi (A4827), where the Mediterranean convoys land
     (rule 60.34). Seeded with its 60.34 start-line stock -- the reservoir the coastal truck
     relay (game.campaign_policy.campaign_truck_orders) lifts forward leg by leg along the
-    staging dumps, and the monthly convoys top up. NOT a rule-57 base (base=False): a forward
+    staging dumps, and the [56.21] convoys top up every Game-Turn. NOT a rule-57 base (base=False): a forward
     field harbour dump evaporates like any other (49.3)."""
     return SupplyUnit("AX-Benghazi", Side.AXIS, coords.to_axial(coords.parse(_AXIS_PORT_HEX)),
                       ammo=100, fuel=250, stores=100, water=0)
@@ -1144,11 +1144,13 @@ def _campaign_axis_trucks(supplies, target, facilities, larders=()) -> tuple[Tru
 
 
 def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy, ...]:
-    """The supply source timetables. AXIS: the Mediterranean convoy (56.2/56.4), one delivery a
-    month landing at Benghazi through PORT-Benghazi's 55.14 throttle -- the tonnage piles at the
-    rear and is hauled forward by the lean truck pool (_campaign_axis_trucks), which culminates
-    as the front outruns it. COMMONWEALTH: the rail lane (rule 57 / 60.7), refilling the Mersa
-    Matruh railhead every turn so the Suez base's supply actually reaches a forward dump the
+    """The supply source timetables. AXIS: the Mediterranean convoy (56.2/56.4), one sailing every
+    Game-Turn the [56.4] chart schedules one, carrying THAT Game-Turn's whole [56.5] allowance
+    (56.21) and landing at Benghazi through PORT-Benghazi's 55.14 throttle -- which passes 2,500
+    tons an Operations Stage of it and lets the rest expire unshipped (56.27). What does get ashore
+    piles at the rear and is hauled forward by the lean truck pool (_campaign_axis_trucks), which
+    culminates as the front outruns it. COMMONWEALTH: the rail lane (rule 57 / 60.7), refilling the
+    Mersa Matruh railhead every turn so the Suez base's supply actually reaches a forward dump the
     front can trace to -- without it the inexhaustible base is stranded 34+ hexes behind the
     railhead and no westward counterattack can be sustained. The Cairo/Alexandria base itself is
     seeded inexhaustible (_campaign_cw_base) and needs no lane."""
@@ -1188,6 +1190,15 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
     # eff 2/5 -> a 680 t/OpStage SHARED tonnage budget; see _tobruk_port), and 56.15 cancels whichever of
     # them is sailing into a city the enemy now controls. They hand off automatically, in both
     # directions, for as many times as the fortress changes hands.
+    #
+    # ⚠ FLAGGED (faucet-audit culprit 5): the AXIS half of this lane carries a FIXED MANIFEST, so its
+    # ~680 t a Game-Turn sails OUTSIDE the [56.5] allowance the other lane is billed against -- about
+    # 75,000 tons over the war, landing at the front rather than at the rear. [56.25] says the tonnage
+    # is one allowance the Axis Player apportions across the lanes he sails, so the faithful shape is
+    # to draw this lane's tonnage from the same [56.21] allowance and let him plan its manifest too.
+    # Left as it stands, and flagged rather than silently corrected, because it is implementation
+    # shape and not a contradiction: it is a lane the book gives him (56.11 lane 6, Italy -> Tobruk)
+    # sailing a tonnage his own harbour caps at 680 t/OpStage anyway.
     convoys += [Convoy(f"tobruk-ferry-t{gt}", Side.ALLIED, gt, "SEA-TOBRUK", "AL-Tobruk",
                        _campaign_tobruk_cargo())     # T0-17: sized to the 55.3 harbour, not 3.5x it
                 for gt in range(1, max_turns + 1)]
@@ -1198,27 +1209,30 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
     if rear is not None:
         rng = random.Random(seed)
         for gt in range(1, max_turns + 1):
-            if not calendar.is_month_start(gt):     # compute the month's cargo on its first Game-Turn
+            # [56.21] THE ALLOWANCE IS PER GAME-TURN, AND THE ENGINE USED TO QUARTER IT ACROSS A
+            # MONTH -- shipping 507,000 tons of a licensed 1,550,000-2,544,000 (24.9%; measured,
+            # scratchpad/port/faucet-audit.md stage 1a). The book, read on the scan (PDF p.75 =
+            # book p.24): "The figures given on the Tonnage Determination Table are the tonnage of
+            # supplies that the Axis may ship IN THAT GAME-TURN (for which he is planning)", with a
+            # worked example that ships "21,000 tons of supplies and Replacement Points ... ON
+            # GAME-TURN 55", and 56.22/56.24 both saying "for a given Game-Turn" / "for that
+            # Game-Turn". The [56.4] chart is indexed BY MONTH -- that is what "Axis MONTHLY
+            # Shipping Table" means, it selects the ROW -- but the tonnage that row yields is a
+            # Game-Turn's. 56.2's own claim that the rules reflect Axis supply "as they actually
+            # occurred" settles it against history: the Axis really did ship ~2.1 million tons.
+            #
+            # So one roll per Game-Turn, each Game-Turn its own full allowance. The quay is what
+            # holds it back, which is where the book puts the constraint: Benghazi passes 2,500 t
+            # an Operations Stage (55.3), so most of a sailing now EXPIRES UNSHIPPED at the end of
+            # the Game-Turn under 56.27 (engine._unload_convoys already keeps the remainder on the
+            # manifest across the stages and lets it lapse). Each sailing carries its ALLOWANCE,
+            # not a manifest: 56.22's split is the Axis Player's, taken a Game-Turn ahead of it
+            # (engine._convoy_planning).
+            tons = _campaign_axis_tonnage(gt, rng)
+            if tons is None:                        # a '-' month on the 56.4 chart: nothing sails
                 continue
-            month_tons = _campaign_axis_tonnage(gt, rng)
-            if month_tons is None:
-                continue
-            # Quarter the month's 56.5 tonnage across its Game-Turns (56.2 "as they actually
-            # occurred"): the chart monthly total is preserved (remainder to the first week), but
-            # split so each weekly convoy lands UNDER the 55.14 port cap instead of one clipped
-            # surge -- and so Malta interdicts a convoy every turn, not once a month. Each weekly
-            # sailing carries its ALLOWANCE, not a manifest: 56.22's split is the Axis Player's and
-            # is taken a Game-Turn ahead of it (engine._convoy_planning).
-            # THE MONTH'S OWN GAME-TURNS, not four from here: September 1940 has two (64.2), and
-            # spilling its tonnage into October would double-book Game-Turns 3 and 4.
-            weeks = calendar.month_turns(gt)
-            per = month_tons // len(weeks)
-            rem = month_tons - per * len(weeks)
-            for i, wk in enumerate(weeks):
-                if wk > max_turns:
-                    break
-                convoys.append(Convoy(f"axis-conv-t{wk}", Side.AXIS, wk, "2", rear.id, {},
-                                      tons=per + (rem if i == 0 else 0)))     # 60.37 lane 2
+            convoys.append(Convoy(f"axis-conv-t{gt}", Side.AXIS, gt, "2", rear.id, {},
+                                  tons=tons))       # 60.37 lane 2
     return tuple(convoys)
 
 
