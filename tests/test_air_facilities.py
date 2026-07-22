@@ -391,10 +391,16 @@ def test_air_missions_route_the_airfield_kind():
 
 def test_the_oob_ships_facilities_as_installations_not_units():
     """Phase 3.1 stopped discarding the air counters; Phase 5.1 stops mis-modelling them. An Air
-    Landing Strip is no longer a CPA-0 Unit standing on the map."""
-    facilities = oob.air_facilities("oob_italian.json", sections="ABCDE")
-    assert facilities, "the campaign order of battle carries air facilities"
-    assert {f.kind for f in facilities} <= {air.STRIP, air.ALIGHTING}
+    Landing Strip is no longer a CPA-0 Unit standing on the map.
+
+    RESTATED for the [60.5] transcription: the campaign's facilities now come off the BOOK'S CHART
+    (oob.charted_air_facilities), not the VASSAL extraction, so the kinds assertion is no longer
+    "strips and one alighting area" -- that WAS the defect. The extraction reader is kept in the
+    second half, where it is still the Desert Fox scenarios' source and where the point of this
+    test lives: build() never materialises an air facility as a unit."""
+    facilities = oob.charted_air_facilities(sections="ABCDE")
+    assert facilities, "the campaign carries the [60.5] air facilities"
+    assert {f.kind for f in facilities} == {air.AIRFIELD, air.STRIP, air.BASIN, air.ALIGHTING}
     assert all(f.level == f.max_level == air.max_capacity(f.kind) for f in facilities)
     units, _ = oob.build(oob_file="oob_italian.json", sections="ABCDE",
                          reinforcements_file=None)
@@ -404,7 +410,7 @@ def test_the_oob_ships_facilities_as_installations_not_units():
 def test_air_dumps_split_the_charted_allotment_and_carry_the_flag():
     """[60.34] "a total of 1200 Ammo, 850 Fuel, 100 Stores and 100 Water Points which may be freely
     distributed among his airfields"; [60.44] "Ammo: 200 Fuel: 250 Stores: 50"."""
-    facilities = oob.air_facilities("oob_italian.json", sections="ABCDE")
+    facilities = oob.charted_air_facilities(sections="ABCDE")
     dumps = oob.air_dumps(facilities, oob.CAMPAIGN_AIR_POOLS)
     assert all(d.air_dump for d in dumps)
     axis = [d for d in dumps if d.side == Side.AXIS]
@@ -416,18 +422,24 @@ def test_air_dumps_split_the_charted_allotment_and_carry_the_flag():
 
 
 def test_sgsus_are_seeded_within_facility_capacity():
-    """60.42: SGSUs "may be placed at any... air facility, WITHIN THE CAPACITY OF THAT FACILITY"."""
-    facilities = oob.air_facilities("oob_italian.json", sections="ABCDE")
+    """60.42: SGSUs "may be placed at any... air facility, WITHIN THE CAPACITY OF THAT FACILITY".
+
+    RESTATED at the [60.5] transcription, and the restatement is the measurement of what the map
+    was costing: over the extraction's 11 one-level strips this seeded 11 SGSUs of the charted 53
+    ([60.32] 39 Italian + [60.42] 14 Commonwealth) because the MAP was the binder. Over the book's
+    map the POOL is the binder, which is what 60.42 says it should be -- so the assertion flips
+    from "as many as the map can hold" to "the whole charted pool, and no more"."""
+    facilities = oob.charted_air_facilities(sections="ABCDE")
     sgsus = oob.seed_sgsus(facilities, oob.CAMPAIGN_SGSU_AVAILABLE)
-    assert len(sgsus) == sum(f.level for f in facilities)
+    assert len(sgsus) <= sum(f.level for f in facilities)
     by_hex: dict = {}
     for u in sgsus:
         assert air.is_sgsu(u) and not u.is_combat and u.stacking_points == 0   # 35.12
         by_hex[u.hex] = by_hex.get(u.hex, 0) + 1
     for f in facilities:
-        assert by_hex.get(f.hex, 0) <= f.level
-    # the charted pool is a CEILING, never a target
-    assert len([u for u in sgsus if u.side == Side.AXIS]) <= oob.CAMPAIGN_SGSU_AVAILABLE[Side.AXIS]
+        assert by_hex.get(f.hex, 0) <= min(f.level, air.SGSU_HEX_LIMIT)
+    for side, pool in oob.CAMPAIGN_SGSU_AVAILABLE.items():
+        assert len([u for u in sgsus if u.side == side]) == pool   # the pool now binds, not the map
 
 
 # --- the scenarios --------------------------------------------------------------------------
@@ -593,18 +605,120 @@ def test_the_campaign_air_allotment_is_conserved_exactly():
             sum(s.stores for s in cw), sum(s.water for s in cw)) == (200, 250, 50, 0)
 
 
-def test_60_5_sollum_belongs_to_the_commonwealth():
-    """[60.5] "All facilities in Egypt belong to the Commonwealth; all those in Libya belong to the
-    Italians at the start of the game." C4021 is Sollum, in EGYPT -- the chart lists its Libyan twin
-    across the wire, Ft. Capuzzo C4020, as a separate strip. It is the ONE of the eleven extracted
-    campaign facilities standing on a hex [60.5] actually prints, so it is the one place the chart
-    can settle ownership; the extraction had it Axis."""
+# --- [60.5] THE CAMPAIGN AIR MAP -------------------------------------------------------------
+# The chart (docs/rules/60 lines 288-362; scan PDF p.79, read at 600 dpi with eyes) against the
+# data file it was transcribed into and the campaign it seeds.
+
+def _hex(label: str):
     from game import coords
-    facs = oob.air_facilities(oob_file="oob_italian.json",
-                             extra_file="oob_campaign_extra.json", sections="ABCDE")
-    sollum = coords.to_axial(coords.parse("C4021"))
-    at = [f for f in facs if f.hex == sollum]
-    assert len(at) == 1 and at[0].side == Side.ALLIED
+    return coords.to_axial(coords.parse(label))
+
+
+def test_60_5_charts_the_airfields_the_campaign_map_had_none_of():
+    """[60.5] The whole point of the transcription. The VASSAL extraction gave the campaign 10 Air
+    Landing Strips and 1 Alighting Area -- ONE-level facilities, every one of them eliminated by the
+    first bombing result it took ([41.5] Key) -- and no airfield anywhere. The chart prints 25
+    Airfield rows (20 table rows, Alexandria's being two hexes, plus the four off-map
+    Tripoli/Tunisia boxes), 31 Air Landing Strips, 3 Flying Boat Basins and 1 Alighting Area."""
+    import collections
+    from game import logistics_data
+    rows = logistics_data.air_facilities_60_5()
+    assert collections.Counter(r["kind"] for r in rows) == {
+        "airfield": 25, "strip": 31, "basin": 3, "alighting": 1}
+    on_map = oob.charted_air_facilities(sections="ABCDE")
+    assert collections.Counter(f.kind for f in on_map) == {
+        "airfield": 16, "strip": 31, "basin": 2, "alighting": 1}
+
+
+def test_60_5_the_off_map_rows_are_charted_and_not_placed():
+    """[60.5] prints six facilities "Off-Map" -- Abu Seier, Deversoir, Fayid, Ismailia, Kabrit and
+    the Port Said basin -- plus "the four Tripoli/Tunisia boxes (off-map)". Where the chart gives a
+    hex in parentheses, E(3433) / E(1833) / E4033, that is the off-map box's entry hex and not the
+    facility's location: seeding one would put an off-map installation on the playable map. They
+    are transcribed (the chart is not silently edited) and not placed (the engine has no off-map
+    air box), which is exactly how data/victory_cities.json already treats the Tripoli box."""
+    from game import logistics_data
+    off = [r for r in logistics_data.air_facilities_60_5() if not r.get("on_map", True)]
+    assert len(off) == 10 and all(r["hex"] is None for r in off)
+    assert {r["name"] for r in off if r["country"] == "Egypt"} == {
+        "Abu Seier", "Deversoir", "Fayid", "Ismailia", "Kabrit", "Port Said"}
+    placed = {f.hex for f in oob.charted_air_facilities(sections="ABCDE")}
+    for entry in ("E3433", "E1833", "E4033"):
+        assert _hex(entry) not in placed
+
+
+def test_60_5_every_printed_hex_is_a_real_hex_and_one_facility_stands_on_it():
+    """A wrong hex silently puts an airfield in the sea, so every label is parsed, resolved on the
+    real map grid and required to exist in the terrain data. The FOUR SEA READINGS ARE NAMED HERE
+    RATHER THAN SWEPT UP: Bomba B5331 is a FLYING BOAT BASIN and belongs on water, while El Agheila
+    A1816, Gazala B4933 and Matten Baggush D3520 are the known coastal colour-sampling defect of
+    the terrain extraction (game.cna_map:42, game.campaign_victory:100) -- data/wells.json
+    independently places all three VILLAGES on those same hexes, so the chart's hexes stand and the
+    terrain file is the suspect. If this list ever shrinks, the map extraction improved; if it
+    grows, a transcription is wrong."""
+    import json
+    from pathlib import Path
+    from game import coords
+    terrain = {s: json.loads((Path(__file__).resolve().parent.parent /
+                              f"data/terrain_{s}.json").read_text()) for s in "ABCDE"}
+    from game import logistics_data
+    labels = [r["hex"] for r in logistics_data.air_facilities_60_5() if r.get("on_map", True)]
+    assert len(labels) == len(set(labels)) == 50            # one facility per hex, no duplicates
+    sea = set()
+    for label in labels:
+        assert label[0] in "ABCDE"
+        coords.to_axial(coords.parse(label))                # parses on the real grid
+        assert label in terrain[label[0]], f"{label} is not a hex of map {label[0]}"
+        if terrain[label[0]][label] == "sea":
+            sea.add(label)
+    assert sea == {"B5331", "A1816", "B4933", "D3520"}
+
+
+def test_60_5_ownership_is_the_charts_own_geography_rule():
+    """[60.5] "All facilities in Egypt belong to the Commonwealth; all those in Libya belong to the
+    Italians. at the start of the game."
+
+    The chart prints its own frontier anchor -- Sollum C4021 and Ft. Capuzzo C4020, the twin posts
+    either side of the wire, listed as two separate Air Landing Strips -- and the neighbouring
+    charts corroborate both sides of the line independently: [60.34] gives the AXIS its start-line
+    dumps at Tobruk C4807, Bardia C4321 and Derna B5925, and [60.44] gives the COMMONWEALTH his at
+    Mersa Matruh D3714 and Sidi Barrani C4131. (The extraction had Sollum Axis.)"""
+    at = {f.hex: f for f in oob.charted_air_facilities(sections="ABCDE")}
+    for label, side in (("C4021", Side.ALLIED), ("C4131", Side.ALLIED), ("D3714", Side.ALLIED),
+                        ("C4020", Side.AXIS), ("C4321", Side.AXIS), ("C4807", Side.AXIS),
+                        ("B5925", Side.AXIS)):
+        assert at[_hex(label)].side == side, label
+
+
+def test_60_5_the_kinds_carry_rule_36s_capacities_into_the_campaign():
+    """[36.12]/[36.2]/[36.3]/[36.4] -- and the kind is load-bearing since the [41.5] Key: a strip is
+    eliminated by any result at all, an airfield loses that many Capacity Levels and is rebuilt one
+    at a time (24.76). Alexandria is the row that proves the chart was read and not skimmed: "Both
+    hexes, (E3613, 3714)" is TWO six-level airfields, and the E3614 basin beside them is a third
+    facility of a different kind."""
+    at = {f.hex: f for f in campaign(seed=4).air_facilities}
+    for label, kind in (("E3613", air.AIRFIELD), ("E3714", air.AIRFIELD), ("E3614", air.BASIN),
+                        ("B5925", air.ALIGHTING), ("C4021", air.STRIP), ("C4507", air.AIRFIELD)):
+        f = at[_hex(label)]
+        assert (f.kind, f.level, f.max_level) == (kind, air.max_capacity(kind),
+                                                  air.max_capacity(kind)), label
+
+
+def test_the_campaign_air_map_is_the_book_s_and_the_squadrons_have_somewhere_to_stand():
+    """The end of the [60.5] job, measured on the campaign it seeds: airfields exist (there were
+    none), and both charted SGSU pools -- [60.32] 39 Italian, [60.42] 14 Commonwealth -- are on the
+    board, where the extraction's 11 one-level strips could base 11 of the 53 between them."""
+    st = campaign(seed=4)
+    mainland = [f for f in st.air_facilities if not f.id.startswith("Malta/")]
+    assert len([f for f in mainland if f.kind == air.AIRFIELD]) == 16
+    sgsus = [u for u in st.units if air.is_sgsu(u)]
+    assert len([u for u in sgsus if u.side == Side.AXIS]) == 39
+    assert len([u for u in sgsus if u.side == Side.ALLIED]) == 14
+    # every SGSU stands on a facility its own side holds, within that facility's Capacity Level
+    for u in sgsus:
+        f = air.facility_at(st, u.hex)
+        assert f is not None and f.side == u.side
+        assert len(air.sgsus_at(st, u.hex, u.side)) <= min(f.level, air.SGSU_HEX_LIMIT)
 
 
 def test_36_17_the_observation_does_not_offer_an_air_dump_as_the_armys_supply():

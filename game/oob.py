@@ -290,29 +290,20 @@ def air_facilities(oob_file: str = "oob_desert_fox.json", sections: str | None =
     is an intact one -- 36.14's reductions are what BOMBING does to it. `sections` and `extra_file`
     filter exactly as build()'s do.
 
-    ⚠ FLAGGED, AND IT IS THE NEXT DATA JOB -- SAY THE SIZE OF IT PLAINLY. This reads the VASSAL
-    extraction, and the extraction is NOT the book's map. [60.5] (docs/rules/60, lines 288-362; scan
-    p.79) charts the campaign's real set -- 20 Airfields, 31 Air Landing Strips, 3 Flying Boat Basins
-    and 1 Alighting Area, each with its printed hex -- and the extraction ships 10 Air Landing Strips
-    and 1 Alighting Area, NO AIRFIELD AT ALL. Compared hex by hex against the chart:
+    ⚠ THIS READS THE VASSAL EXTRACTION, AND THE EXTRACTION IS NOT THE BOOK'S MAP. It is now the
+    SCENARIO reader only -- the Desert Fox pair, whose own facility charts ([61.x]) are still
+    untranscribed. THE CAMPAIGN NO LONGER COMES THROUGH HERE: it is seeded from the book's own
+    chart by charted_air_facilities() below. The extraction's campaign records (data/oob_italian.json)
+    carried 10 Air Landing Strips and 1 Alighting Area, NO AIRFIELD AT ALL, and hex by hex against
+    [60.5]: C4021 (Sollum) was the ONLY one of the eleven standing where the book prints it;
+    B4922 / C1015 / C4322 / C4420 / D3904 were one row off the charted Mechili B4921, Giarabub
+    C1014, Bardia C4321, Menastir C4419 and the blank strip D3903; B6024, the Alighting Area, was
+    one hex off the only one [60.5] charts (Derna B5925); and C4317 / C4908 / C4122 / C4230 do not
+    appear in [60.5] at all. Those records are left in the raw extraction (it is an extraction,
+    not an authored file) and nothing reads them any more.
 
-        C4021 (Sollum) is the ONLY ONE OF THE ELEVEN that stands where [60.5] prints it.
-        B4922 / C1015 / C4322 / C4420 / D3904 are one row off the charted Mechili B4921, Giarabub
-          C1014, Bardia C4321, Menastir C4419 and the blank strip D3903;
-        B6024, the Alighting Area, is one hex off the only one [60.5] charts, Derna B5925;
-        C4317, C4908, C4122 and C4230 DO NOT APPEAR IN [60.5] AT ALL.
-
-    So: ten of the eleven facilities on the campaign map stand on hexes the book does not print, and
-    everything Phase 5.1 hangs on them -- 60 Axis and 55 Commonwealth charted Truck Points, the whole
-    [60.34]/[60.44] air allotment, and every seeded SGSU -- hangs there with them. Nothing here is
-    load-bearing for the FAITHFULNESS of rules 35 and 36 (the capacity levels, the 36.17 dump and the
-    35.14 upkeep are the book's), but the MAP is a placeholder and must not be read as the book's.
-
-    Transcribing [60.5] needs one decision this extraction makes for us: the chart assigns ownership
-    by GEOGRAPHY -- "All facilities in Egypt belong to the Commonwealth; all those in Libya belong to
-    the Italians at the start of the game" -- and the Libya/Egypt frontier is in no data file we hold.
-    It is not a map-section line either: Sollum C4021 (Egypt) and Ft. Capuzzo C4020 (Libya) are
-    adjacent hexes of map C, and so are Bardia C4321 (Libya) and Sidi Barrani C4131 (Egypt)."""
+    THE SAME FLAG THEREFORE STILL STANDS OVER THE TWO DESERT FOX SCENARIOS: their two Commonwealth
+    landing strips (B4006, C4808) are the extraction's hexes, not a transcribed [61] chart."""
     out: list[AirFacility] = []
     seen: dict[str, int] = {}
     for rec in (_load(oob_file) + (_load(extra_file) if extra_file else [])):
@@ -324,6 +315,55 @@ def air_facilities(oob_file: str = "oob_desert_fox.json", sections: str | None =
         kind = rec["facility"]
         level = air.max_capacity(kind)
         out.append(AirFacility(_uid(seen, rec["counter"]),
+                               Side.AXIS if rec["side"] == "AXIS" else Side.ALLIED,
+                               coords.to_axial(coords.parse(hexlbl)),
+                               kind=kind, level=level, max_level=level))
+    return out
+
+
+def charted_air_facilities(sections: str | None = None) -> list[AirFacility]:
+    """[60.5] THE CAMPAIGN'S AIR MAP, off the chart the book prints (data/air_facilities_60_5.json,
+    read from the scan at PDF p.79). 64.3 sends the full campaign to Section 60, so this chart IS
+    the campaign's set of air facilities: 16 Airfields, 31 Air Landing Strips, 2 Flying Boat Basins
+    and 1 Alighting Area on maps A-E, where the VASSAL extraction gave it 10 strips, 1 alighting
+    area and NOT ONE AIRFIELD (see air_facilities above for the hex-by-hex comparison).
+
+    THE KIND IS THE LOAD-BEARING FIELD AND THE CHART IS WHAT SETS IT. Rule 36 gives the four kinds
+    different ceilings (36.12 airfield six / 36.2 strip one / 36.3 basin three / 36.4 alighting
+    area one) and the [41.5] Key gives them different deaths (a strip is ELIMINATED by a result of
+    1 or greater; an airfield loses that number of Capacity Levels and is rebuilt one level at a
+    time, 24.76). A map of nothing but one-level strips was therefore a map where every air facility
+    died to the first bomb that hit it. Capacity is never carried in the data file: it is
+    air.max_capacity(kind), and a facility in a scenario's initial set-up opens at that maximum
+    because 36.14's reductions are what BOMBING does to it.
+
+    THE SIDE IS [60.5]'S OWN GEOGRAPHY RULE -- "All facilities in Egypt belong to the Commonwealth;
+    all those in Libya belong to the Italians. at the start of the game" -- transcribed per row as
+    the country and the side that follows from it (data/air_facilities_60_5.json `_ownership` records
+    how the frontier was resolved and what corroborates it). It is only the SEEDED owner in any case:
+    36.15 makes a facility non-denominational and air.holder derives the current holder from control
+    of the hex.
+
+    OFF-MAP ROWS ARE NOT PLACED. Six facilities and the four Tripoli/Tunisia boxes are printed
+    "Off-Map" -- the Delta and Canal Zone fields (Abu Seier, Deversoir, Fayid, Ismailia, Kabrit),
+    the Port Said basin, and the Axis's Tripolitanian boxes. Where the chart prints a hex in
+    parentheses (E(3433), E(1833), E4033) that is the off-map box's entry hex and not the
+    facility's location, so seeding one would put an off-map installation on the playable map. The
+    engine has no off-map air box to stand them in -- the same gap data/victory_cities.json records
+    for Tripoli as a supply source -- so the Commonwealth's five rear airfields and both sides'
+    off-map bases are charted here and absent from the board. Flagged, not silent.
+
+    `sections` filters to a loaded map area exactly as build()'s does."""
+    out: list[AirFacility] = []
+    for rec in logistics_data.air_facilities_60_5():
+        if not rec.get("on_map", True):
+            continue
+        hexlbl = rec["hex"]
+        if sections is not None and hexlbl[0] not in sections:
+            continue
+        kind = rec["kind"]
+        level = air.max_capacity(kind)
+        out.append(AirFacility(f"{hexlbl}-{rec['name'] or 'blank'}",
                                Side.AXIS if rec["side"] == "AXIS" else Side.ALLIED,
                                coords.to_axial(coords.parse(hexlbl)),
                                kind=kind, level=level, max_level=level))
@@ -414,11 +454,20 @@ def seed_sgsus(facilities: list[AirFacility], available: dict) -> list[Unit]:
     out. Free placement inside a stated restriction: OUR ASSIGNMENT of it, the identical convention
     the [60.31] first-line trucks and the [60.34] dump pools are placed under.
 
-    ⚠ FLAGGED, AND IT IS THE SAME FLAG air_facilities CARRIES. The extraction gives the campaign 11
-    landing strips of capacity 1 and no airfield, so 11 of the charted 53 SGSUs find a base and the
-    rest have nowhere to stand. Transcribe [60.5]'s twenty Airfields (six squadrons each) and the
-    number rises to the charts'. The pool is a CEILING here, never a target -- we place what the map
-    can hold and no more, which is exactly what 60.42's sentence says to do.
+    THE POOL IS A CEILING, NEVER A TARGET -- we place what the map can hold and no more, which is
+    exactly what 60.42's sentence says to do. That used to be the binding constraint and it no
+    longer is: over the VASSAL extraction's 11 capacity-1 landing strips (no airfield at all) this
+    based 11 of the charted 53 squadrons and the other 42 had nowhere to stand. Over [60.5]'s real
+    map -- 16 Airfields of six squadrons apiece among 50 facilities (charted_air_facilities) -- both
+    charted pools land whole: 39 Italian ([60.32]) and 14 Commonwealth ([60.42]).
+
+    ⚠ WHICH FIELDS THEY FILL IS OUR FREE CHOICE AND IT IS NOW A GEOGRAPHIC ONE. Facility ids are
+    hex-label-based, so id order runs section by section (A..E) and west to east inside each: the
+    Axis 39 fill Cyrenaica -- Soluch, El Berca and Benina six apiece, then Barce and Martuba -- and
+    run out well before the frontier fields at Capuzzo and Bardia, while the Commonwealth 14 start
+    at the wire (Siwa, Buq Buq, Sollum, Sidi Barrani) and end at Mersa Matruh, never reaching the
+    Delta. Deterministic and inside 60.42's restriction, but it is an assignment and not a rule --
+    a player would base his squadrons where the fighting is going to be.
 
     Used by the full campaign, whose order of battle ships no SGSU counter at all. The Desert Fox
     scenarios are NOT seeded this way: their extraction ships real SGSU counters at their own

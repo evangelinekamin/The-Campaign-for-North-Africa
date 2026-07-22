@@ -1,0 +1,508 @@
+{
+  "_comment": "[60.5] AIR FACILITIES -- the campaign's air map, transcribed from the chart the book prints. Source: docs/rules/60-scenario-group-one-the-italians.md lines 288-362, VERIFIED AGAINST THE SCAN: tmp/'The Campaign for North Africa.pdf' PDF page 79 (book folio 28), rendered at 600 dpi and read hex by hex with eyes on 2026-07-22, because a hex label is exactly the class of datum OCR corrupts and a wrong hex puts an airfield in the sea. Rule 64.3 makes Section 60 the full campaign's set-up, so this chart IS the campaign's air map. It replaces the VASSAL extraction's air_facility records (data/oob_italian.json), which carried 10 Air Landing Strips and 1 Alighting Area -- NO AIRFIELD AT ALL -- of which exactly one, Sollum C4021, stood on a hex [60.5] prints. Capacity is NOT carried here: it is rule 36's, by kind (36.12 airfield six, 36.2 strip one, 36.3 basin three, 36.4 alighting area one), and game.air.MAX_CAPACITY is its one home. Consumed by game.oob.charted_air_facilities via game.logistics_data.",
+  "air_facilities_60_5": {
+    "_ownership": "[60.5] states ownership as GEOGRAPHY and nothing else: 'Players will note that Air facilities may be used by anyone who controls them. All facilities in Egypt belong to the Commonwealth; all those in Libya belong to the Italians. at the start of the game.' So each row carries the COUNTRY it is in and the side that follows from it. The Egypt/Libya frontier is in no data file this project holds, so it was resolved this way and the reasoning is recorded rather than assumed: (a) THE CHART ITSELF PRINTS THE ANCHOR -- it lists Sollum C4021 and Ft. Capuzzo C4020 as two separate Air Landing Strips, and those are the twin frontier posts either side of the wire, Sollum in Egypt and Capuzzo in Libya; (b) the real frontier is a meridian (25 degrees E), so it is a near-vertical line on this map, and every borderline facility -- Sidi Azeiz C4218, Menastir C4419, Sidi Omar C3618, Ft. Maddalena C3019 and the blank strip C4119 -- lies WEST of Ft. Capuzzo in board pixels (game.coords.to_pixel), hence in Libya; (c) the BOOK corroborates both sides of the line independently in the neighbouring charts: [60.34] gives the Axis its start-line dumps at Tobruk C4807, Bardia C4321, Derna B5925 and Benghazi, and [60.44] gives the Commonwealth his at Mersa Matruh D3714 and Sidi Barrani C4131. AirFacility.side is only the SEEDED owner in any case: 36.15 makes a facility non-denominational and game.air.holder derives the current holder from control of the hex.",
+    "_off_map": "SIX ROWS ARE PRINTED 'Off-Map' AND ARE NOT SEEDED (on_map: false), plus the four Tripoli/Tunisia boxes: Abu Seier, Deversoir, Fayid, Ismailia, Kabrit and the Port Said basin. Where the chart prints a hex in parentheses -- E(3433), E(1833), E4033 -- that is the off-map box's entry hex, not the facility's location, and all three of those hexes exist on map E; seeding a facility onto one would put an off-map installation on the playable map, which is the opposite of what the chart says. They are all Commonwealth rear fields (the Delta and the Canal Zone) except the Tripoli/Tunisia boxes, which are the Axis's. The engine has no off-map air box to stand any of them in; that is the same gap data/victory_cities.json records for Tripoli as a supply source.",
+    "_counts": "As transcribed: 25 Airfield rows (20 printed table rows -- Alexandria's row is two hexes -- plus the four Tripoli/Tunisia boxes), 31 Air Landing Strips, 3 Flying Boat Basins, 1 Flying Boat Alighting Area. ON THE PLAYABLE MAP that is 16 Airfields, 31 Air Landing Strips, 2 Flying Boat Basins and 1 Alighting Area = 50 facilities.",
+    "facilities": [
+      {
+        "name": "Abbassia",
+        "hex": "E2132",
+        "kind": "airfield",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "E2132"
+      },
+      {
+        "name": "Aboukir",
+        "hex": "E3815",
+        "kind": "airfield",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "E3815"
+      },
+      {
+        "name": "Abu Seier",
+        "hex": null,
+        "kind": "airfield",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "Off-Map E(3433)",
+        "on_map": false
+      },
+      {
+        "name": "Alexandria",
+        "hex": "E3613",
+        "kind": "airfield",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "Both hexes, (E3613, 3714)",
+        "_note": "ONE PRINTED ROW, TWO AIRFIELDS: 'Alexandria  Both hexes, (E3613, 3714)'. The row is split into its two hexes here because a facility is a per-hex installation (36.15 is captured by occupying ITS hex), and E3613/E3714 are the two hexes the city occupies -- the same pair data/victory_cities.json 'auto_win' already names for Alexandria."
+      },
+      {
+        "name": "Alexandria",
+        "hex": "E3714",
+        "kind": "airfield",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "Both hexes, (E3613, 3714)"
+      },
+      {
+        "name": "Almaza",
+        "hex": "E2133",
+        "kind": "airfield",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "E2133"
+      },
+      {
+        "name": "Amiriya",
+        "hex": "E2212",
+        "kind": "airfield",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "E2212"
+      },
+      {
+        "name": "Barce",
+        "hex": "B5504",
+        "kind": "airfield",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "B5504"
+      },
+      {
+        "name": "Benina",
+        "hex": "A4829",
+        "kind": "airfield",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "A4829"
+      },
+      {
+        "name": "Dekheila",
+        "hex": "E3512",
+        "kind": "airfield",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "E3512"
+      },
+      {
+        "name": "Deversoir",
+        "hex": null,
+        "kind": "airfield",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "Off-Map E(1833)",
+        "on_map": false,
+        "_note": "The chart prints the SAME off-map entry hex, E(1833), for Deversoir and for Kabrit. Both are Suez Canal Zone fields on the Great Bitter Lake, so one shared off-map box is a reading the chart supports; neither is seeded either way (off-map)."
+      },
+      {
+        "name": "El Adem",
+        "hex": "C4507",
+        "kind": "airfield",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "C4507"
+      },
+      {
+        "name": "El Berca",
+        "hex": "A4728",
+        "kind": "airfield",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "A4728"
+      },
+      {
+        "name": "Fayid",
+        "hex": null,
+        "kind": "airfield",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "Off-Map",
+        "on_map": false
+      },
+      {
+        "name": "Ft. Maddalena",
+        "hex": "C3019",
+        "kind": "airfield",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "C3019"
+      },
+      {
+        "name": "Ismailia",
+        "hex": null,
+        "kind": "airfield",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "Off-Map",
+        "on_map": false
+      },
+      {
+        "name": "Kabrit",
+        "hex": null,
+        "kind": "airfield",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "Off-Map E(1833)",
+        "on_map": false
+      },
+      {
+        "name": "Martuba",
+        "hex": "B5526",
+        "kind": "airfield",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "B5526"
+      },
+      {
+        "name": "Mersa Matruh",
+        "hex": "D3714",
+        "kind": "airfield",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "D3714"
+      },
+      {
+        "name": "Soluch",
+        "hex": "A4130",
+        "kind": "airfield",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "A4130"
+      },
+      {
+        "name": null,
+        "hex": "B5825",
+        "kind": "airfield",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "B5825",
+        "_note": "The chart's City/Village column is a printed em-dash: an airfield at a hex with no named settlement, not a missing name."
+      },
+      {
+        "name": "Tripoli/Tunisia box 1",
+        "hex": null,
+        "kind": "airfield",
+        "country": "Tunisia/Tripolitania",
+        "side": "AXIS",
+        "printed": "The four Tripoli/Tunisia boxes (off-map).",
+        "on_map": false,
+        "_note": "The chart closes the Airfields table with 'The four Tripoli/Tunisia boxes (off-map).' They are recorded as four off-map airfields so the chart's set is complete; the engine has no off-map air box to stand them in (the same gap data/victory_cities.json records for the Tripoli supply source), so none is seeded."
+      },
+      {
+        "name": "Tripoli/Tunisia box 2",
+        "hex": null,
+        "kind": "airfield",
+        "country": "Tunisia/Tripolitania",
+        "side": "AXIS",
+        "printed": "The four Tripoli/Tunisia boxes (off-map).",
+        "on_map": false
+      },
+      {
+        "name": "Tripoli/Tunisia box 3",
+        "hex": null,
+        "kind": "airfield",
+        "country": "Tunisia/Tripolitania",
+        "side": "AXIS",
+        "printed": "The four Tripoli/Tunisia boxes (off-map).",
+        "on_map": false
+      },
+      {
+        "name": "Tripoli/Tunisia box 4",
+        "hex": null,
+        "kind": "airfield",
+        "country": "Tunisia/Tripolitania",
+        "side": "AXIS",
+        "printed": "The four Tripoli/Tunisia boxes (off-map).",
+        "on_map": false
+      },
+      {
+        "name": "Augila",
+        "hex": "B0707",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "B0707"
+      },
+      {
+        "name": "Bardia",
+        "hex": "C4321",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "C4321"
+      },
+      {
+        "name": "Bir el Gubi",
+        "hex": "C4108",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "C4108"
+      },
+      {
+        "name": "Burg el Arab",
+        "hex": "E3109",
+        "kind": "strip",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "E3109"
+      },
+      {
+        "name": "Buq Buq",
+        "hex": "C3926",
+        "kind": "strip",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "C3926"
+      },
+      {
+        "name": "El Agheila",
+        "hex": "A1816",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "A1816",
+        "_note": "TERRAIN FLAG (the map extraction, not the book): data/terrain_A.json reads A1816 as sea. It is the known coastal colour-sampling defect already recorded at game.cna_map:42 and game.campaign_victory:100 -- data/wells.json independently places the VILLAGE of El Agheila on this same hex, and 61.43C calls it a road hex. The chart's hex is kept; the terrain file is the suspect."
+      },
+      {
+        "name": "El Hamman",
+        "hex": "E3007",
+        "kind": "strip",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "E3007"
+      },
+      {
+        "name": "Ft. Capuzzo",
+        "hex": "C4020",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "C4020"
+      },
+      {
+        "name": "Fuka",
+        "hex": "D3323",
+        "kind": "strip",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "D3323"
+      },
+      {
+        "name": "Gambut",
+        "hex": "C4414",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "C4414"
+      },
+      {
+        "name": "Gazala",
+        "hex": "B4933",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "B4933",
+        "_note": "TERRAIN FLAG: terrain_B.json reads B4933 as sea -- the same coastal sampling defect as El Agheila, and data/wells.json places the village of Gazala on this same hex."
+      },
+      {
+        "name": "Giarabub",
+        "hex": "C1014",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "C1014"
+      },
+      {
+        "name": "Maraua",
+        "hex": "B5410",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "B5410"
+      },
+      {
+        "name": "Matten Baggush",
+        "hex": "D3520",
+        "kind": "strip",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "D3520",
+        "_note": "TERRAIN FLAG: terrain_D.json reads D3520 as sea -- the same coastal sampling defect, and data/wells.json places the village of Matten Baggush on this same hex."
+      },
+      {
+        "name": "Mechili",
+        "hex": "B4921",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "B4921"
+      },
+      {
+        "name": "Menastir",
+        "hex": "C4419",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "C4419"
+      },
+      {
+        "name": "Qotifiya",
+        "hex": "D3227",
+        "kind": "strip",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "D3227"
+      },
+      {
+        "name": "Sidi Azeiz",
+        "hex": "C4218",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "C4218"
+      },
+      {
+        "name": "Sidi Barrani",
+        "hex": "C4131",
+        "kind": "strip",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "C4131"
+      },
+      {
+        "name": "Sidi Haneish",
+        "hex": "D3418",
+        "kind": "strip",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "D3418"
+      },
+      {
+        "name": "Sidi Omar",
+        "hex": "C3618",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "C3618"
+      },
+      {
+        "name": "Sollum",
+        "hex": "C4021",
+        "kind": "strip",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "C4021"
+      },
+      {
+        "name": "Siwa",
+        "hex": "C0127",
+        "kind": "strip",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "C0127"
+      },
+      {
+        "name": "Tmimi",
+        "hex": "B5229",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "B5229"
+      },
+      {
+        "name": "Tobruk",
+        "hex": "C4807",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "C4807"
+      },
+      {
+        "name": "Ztert",
+        "hex": "B5917",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "B5917"
+      },
+      {
+        "name": null,
+        "hex": "C4119",
+        "kind": "strip",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "C4119"
+      },
+      {
+        "name": null,
+        "hex": "D3231",
+        "kind": "strip",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "D3231"
+      },
+      {
+        "name": null,
+        "hex": "D3416",
+        "kind": "strip",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "D3416"
+      },
+      {
+        "name": null,
+        "hex": "D3516",
+        "kind": "strip",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "D3516"
+      },
+      {
+        "name": null,
+        "hex": "D3903",
+        "kind": "strip",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "D3903"
+      },
+      {
+        "name": "Alexandria",
+        "hex": "E3614",
+        "kind": "basin",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "E3614"
+      },
+      {
+        "name": "Bomba",
+        "hex": "B5331",
+        "kind": "basin",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "B5331",
+        "_note": "terrain_B.json reads B5331 as sea, and for a FLYING BOAT BASIN that is the right answer: Bomba is the gulf the boats alighted on. Recorded because the same reading is a flag on a LANDING STRIP three rows above -- and because of one consequence: game.scenario's standing convention is that a hex a piece stands on is land ('coastal ports colour-sample as sea'), so the basin's own 36.17 dump turns B5331 CLEAR in the built campaign. It opens no route -- the hex is a one-hex coastal pocket whose only two land neighbours, B5330 and B5430, are already adjacent to each other -- and the three flagged strips were land under that same convention already, each carrying a data/wells.json village."
+      },
+      {
+        "name": "Port Said",
+        "hex": null,
+        "kind": "basin",
+        "country": "Egypt",
+        "side": "ALLIED",
+        "printed": "Port Said (off-map E4033).",
+        "on_map": false
+      },
+      {
+        "name": "Derna",
+        "hex": "B5925",
+        "kind": "alighting",
+        "country": "Libya",
+        "side": "AXIS",
+        "printed": "B5925"
+      }
+    ]
+  }
+}

@@ -1067,7 +1067,11 @@ def _campaign_cw_trucks(supplies, facilities) -> tuple[TruckFormation, ...]:
         plays it, so it is on the board -- and it goes where the chart puts it, ON a facility, now
         that rule 36 gives facilities hexes. These are not more freight lorries for the front: they
         are the transport that keeps a squadron's 36.17 larder full (35.15), and pooling them at the
-        railhead instead measurably drained the transit node the garrison eats from."""
+        railhead instead measurably drained the transit node the garrison eats from. ON THE [60.5]
+        MAP THOSE TWO HEXES ARE THE SAME HEX and the tension resolves itself: the book charts an
+        AIRFIELD at Mersa Matruh D3714 and [60.7] runs the railway to D3714, so the nearest facility
+        IS the railhead. The park is at an air facility as the chart requires, and it happens to be
+        the one the trains reach -- which is the historical arrangement, not a placement fudge."""
     railhead = _campaign_cw_railhead(supplies)
     if railhead is None:
         return ()
@@ -1441,18 +1445,24 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     dumps = (tuple(oob_supplies) + tuple(_campaign_cw_base())
              + (_campaign_axis_base(), _campaign_tobruk_dump())
              + tuple(_campaign_staging_dumps()) + tuple(_campaign_cw_depots()))
-    # C6 / [36.0] THE AIR FACILITIES, and the dumps rule 36.17 says they ARE. The OOB has carried
-    # these counters since Phase 3.1 and discarded their meaning; they are now installations with a
+    # C6 / [36.0] THE AIR FACILITIES, and the dumps rule 36.17 says they ARE: installations with a
     # Capacity Level (36.12/36.2/36.3/36.4) that bombing takes down (36.14/41.36) and that gates how
     # many SGSUs can function (36.13). Their supply is the [60.34]/[60.44] air allotment -- 1200
     # Ammo / 850 Fuel / 100 Stores / 100 Water for the Axis, 200/250/50 for the Commonwealth -- which
     # 59.61 kept off the board while the Air Game was abstract. It is flagged air_dump, so ONLY the
     # SGSUs standing on it may eat it (35.14): it is the air force's larder, not the army's.
-    facilities = oob.air_facilities(oob_file="oob_italian.json",
-                                    extra_file="oob_campaign_extra.json", sections="ABCDE")
-    # `placed` is [59.52]: an even split would stack the Commonwealth's Sollum share on the hex its
-    # charted Sollum Field Supply Depot already occupies -- "the totals are combined and it becomes
-    # one dump" -- so that facility is skipped and its share goes to the other three.
+    #
+    # [60.5] IS NOW THE MAP THEY STAND ON. 64.3 sends the campaign to Section 60, and [60.5] charts
+    # the set with its printed hexes: 16 Airfields, 31 Air Landing Strips, 2 Flying Boat Basins and
+    # 1 Alighting Area on maps A-E (plus the off-map Delta/Canal and Tripoli boxes, which no engine
+    # map can hold). Until now this read the VASSAL extraction, which carried 10 landing strips, 1
+    # alighting area and NO AIRFIELD -- ten of the eleven on hexes the book does not print, and every
+    # one of them a ONE-level facility the first bomb eliminated ([41.5] Key). See
+    # oob.charted_air_facilities and data/air_facilities_60_5.json.
+    facilities = oob.charted_air_facilities(sections="ABCDE")
+    # `placed` is [59.52]: an even split would stack a side's air share on a hex where its own
+    # charted field depot already stands -- "the totals are combined and it becomes one dump" -- so
+    # such a facility is skipped and its share goes to that side's others.
     air_supply = tuple(oob.air_dumps(facilities, oob.CAMPAIGN_AIR_POOLS, placed=dumps))
     # [35.11]/[60.32]/[60.42] ...and the SQUADRON BASES that stand on them. The campaign order of
     # battle ships no SGSU counter at all, while [60.32] charts 39 Italian and [60.42] 14

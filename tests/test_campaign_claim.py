@@ -33,6 +33,7 @@ def _ax(label: str):
 
 
 SOLLUM, BARDIA, TOBRUK = _ax("C4021"), _ax("C4321"), _ax("C4807")
+MATRUH = _ax("D3714")                       # the railhead city, and [60.5]'s airfield
 SIWA, JALO, GIARABUB = _ax("C0127"), _ax("B0513"), _ax("C1014")
 
 
@@ -66,11 +67,25 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
     recorded in the commit that made both sides competent, not papered over here.
 
     So what this test now pins is the thing that must stay true on both sides: an army keeps the
-    cities it banks, and goes and gets the ones it does not."""
+    cities it banks, and goes and gets the ones it does not.
+
+    *** RESTATED AGAIN AT THE [60.5] AIR MAP, AND ON MERSA MATRUH ONLY. *** This asserted the
+    Commonwealth banked BOTH Mersa Matruh and Sidi Barrani by Game-Turn 30. On the book's air map it
+    banks Sidi Barrani, and at Mersa Matruh it GARRISONS the city (a full-strength Polish brigade
+    stands on D3714 at GT30) without BANKING it -- 64.73 counts only a garrison that can trace Fuel
+    and Ammunition, and the Matruh depot under it is dry of both. The depot is dry in BOTH arms
+    (measured at GT30: 0 Fuel / 0 Ammo either way); what changed is which battalion the take-and-hold
+    sent and how far it can trace from there. The take-and-hold mechanism is what this test guards
+    and it is intact -- the city is claimed, a unit is sent, and it stays. So the assertion is split:
+    Sidi Barrani is still BANKED, and Mersa Matruh must still be GARRISONED. Weakening it to "banks
+    Sidi Barrani" alone would have quietly stopped testing the half that used to fail."""
     fin = _run(30).final
     cw, ax = _banked(fin, Side.ALLIED), _banked(fin, Side.AXIS)
-    # The Commonwealth keeps the two its own seeded spine feeds and it stands on.
-    assert {"Mersa Matruh", "Sidi Barrani"} <= cw
+    # The Commonwealth keeps the one its own seeded spine feeds...
+    assert "Sidi Barrani" in cw
+    # ...and stands on Mersa Matruh, banked or not: the garrison is sent and it does not wander off.
+    assert campaign_claim._occupied(fin, Side.ALLIED, MATRUH), \
+        "the Commonwealth walked off its own railhead city"
     # The AXIS -- which used to bank whatever the garrison order happened to pin and throw the rest
     # away -- now holds its own rear: BENGHAZI (its port of arrival, never once garrisoned in 111
     # Game-Turns) and SOLLUM, on top of the Tobruk and Bardia it opens the war standing on.

@@ -420,3 +420,29 @@ def malta_italy_sicily_basing_43_1() -> dict:
     `ruled_type_43_11` -- the "FW220" the rule names against the chart row the owner ruled it to be
     (2026-07-21: the Fw. 200 C), kept as a pair so the prose name stays on the record."""
     return _malta()["italy_sicily_basing_43_1"]
+
+
+# --- [60.5] THE CAMPAIGN AIR MAP -----------------------------------------------------------------
+# A THIRD data file, on the same principle as data/malta_44.json: [60.5] is not a rate chart and it
+# is not an order of battle -- it is a MAP, fifty-odd installations with printed hexes, and it is
+# long enough that folding it into logistics_rates.json would bury both. game.oob is its only
+# reader (charted_air_facilities).
+
+_AIR_FACILITIES_PATH = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "..", "data", "air_facilities_60_5.json"))
+
+
+@lru_cache(maxsize=1)
+def _air_facilities() -> dict:
+    with open(_AIR_FACILITIES_PATH) as f:
+        return json.load(f)
+
+
+def air_facilities_60_5() -> list:
+    """[60.5] AIR FACILITIES -- the campaign's air map as the book prints it: every facility's
+    `kind` (rule 36's four), `name`, printed `hex` label, the `country` it stands in and the `side`
+    [60.5]'s geography rule gives it at the start of the game ("all facilities in Egypt belong to
+    the Commonwealth; all those in Libya belong to the Italians"). Rows printed "Off-Map" carry
+    `on_map: false` and are not placeable on maps A-E. Capacity is NOT here: it is rule 36's, by
+    kind (game.air.MAX_CAPACITY). Verified against the scan, PDF p.79."""
+    return _air_facilities()["air_facilities_60_5"]["facilities"]

@@ -228,7 +228,15 @@ def test_a_starving_unit_may_still_walk_back_to_its_supply():
     """It is never FROZEN. A dry unit may move into the trace, or strictly nearer a stocked depot --
     it just may not march on. (Written first as "a dry unit may move freely", the constraint did
     NOTHING: the proposer only ever offers hexes closer to the OBJECTIVE, so a starving unit was the
-    one unit on the map with a licence to keep marching, and the beeline came straight back.)"""
+    one unit on the map with a licence to keep marching, and the beeline came straight back.)
+
+    RESTATED at the [60.5] transcription, and the restatement is rule 36.17, not a weakening: the
+    campaign's air map went from 11 facilities to 50, and the nearest AMMUNITION on the map to the
+    nearest starving Italian gunner is now the air dump on the Soluch AIRFIELD one hex away. "LAND
+    UNITS MAY NOT USE AIRFIELD SUPPLY DUMPS", so walking to it is not walking back to supply and
+    keep_in_trace is right to refuse -- the fixture was picking a depot the unit may not draw from.
+    An air dump is excluded from `depots` here for exactly the reason campaign_victory excludes it
+    from fed_dumps and supply excludes it from the land trace."""
     from game.campaign_policy import _can_trace
     from game.hexmap import distance, neighbors
     st = campaign(seed=1941)
@@ -237,7 +245,8 @@ def test_a_starving_unit_may_still_walk_back_to_its_supply():
     if not dry:
         pytest.skip("every Axis unit is in supply at the setup")
     depots = [s.hex for s in st.supplies
-              if s.side == Side.AXIS and s.ammo > 0 and not supply_is_well(s)]
+              if s.side == Side.AXIS and s.ammo > 0 and not supply_is_well(s)
+              and not s.air_dump]                            # [36.17] not the army's to draw from
     u = min(dry, key=lambda u: min(distance(u.hex, d) for d in depots))
     near = min(depots, key=lambda d: distance(u.hex, d))
     step = min((h for h in neighbors(u.hex) if st.terrain.exists(h)),
