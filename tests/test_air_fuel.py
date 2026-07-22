@@ -124,9 +124,14 @@ def _field(fid="FIELD", side=Side.AXIS, hex_=(0, 0), kind=air.AIRFIELD, level=No
                        max_level=cap)
 
 
-def _state(*, facilities=(), supplies=(), missions=(), strike=6, fighters=0, recon=0,
+def _state(*, facilities=(), supplies=(), missions=(), strike=40, fighters=0, recon=0,
            control=None, weather="clear", stage=2) -> GameState:
     """An Axis LAND wing over an Allied stack at (1,0), based on the facilities passed in.
+
+    THE WING IS DECLARED FOUR TIMES THE FORCE THAT FLIES, and that is rule 43 (game.basing): 43.12
+    bases 75% of every German bomber pool in Italy/Sicily, so an ESTABLISHMENT of 40 Bomb Points
+    (8 Ju. 87B on the 34.14 bridge) puts two aeroplanes -- 10 Bomb Points -- over the desert, which
+    is the force these fuel bills are counted in.
 
     STAGE 2 BY DEFAULT, and that is [59.32]: "All planes (refitted or not) are considered to begin
     a scenario FUELED AND ARMED (at no cost to the supplies available)", so the scenario's opening
@@ -249,7 +254,7 @@ def test_38_21_a_larder_that_cannot_fuel_ONE_plane_grounds_the_mission():
     assert len(grounded) == 1
     p = grounded[0].payload
     assert p["kind"] == "strike" and p["role"] == "strike"
-    assert p["need"] == 2 and p["available"] == 0 and p["points"] == 6
+    assert p["need"] == 2 and p["available"] == 0 and p["points"] == 10   # 43.12's African quarter
     # nothing flew and nothing was drawn
     assert not any(e.kind == EventKind.AIR_STRIKE_RESOLVED for e in r.events)
     assert not any(e.kind == EventKind.SUPPLY_CONSUMED for e in r.events)

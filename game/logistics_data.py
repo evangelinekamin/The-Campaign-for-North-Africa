@@ -406,8 +406,10 @@ def malta_availability_44_42() -> dict:
 def malta_italy_sicily_basing_43_1() -> dict:
     """[43.11]/[43.12]/[43.13] The rule-43 basing percentages of the Axis bomber force: the share
     in Italy/Sicily -- the base [44.42]'s percentages are percentages OF (`before_turn_35_pct`,
-    `from_turn_35_pct`, meeting at `change_turn`) -- plus `mediterranean_pct`, the 43.11 share that
-    must sit in a Mediterranean base and is therefore NOT on the African battlefield, and
-    `crete_pct_from_turn_35`, the 43.13 half that may not raid Malta either (43.25). game.basing
-    reads all five."""
+    `from_turn_35_pct`, meeting at `change_turn`) -- plus `crete_pct_from_turn_35`, the 43.13 half
+    that may not raid Malta either (43.25), `mediterranean_pct`, the 43.11 TOTAL those two close on
+    (transcribed for the cross-check, not read by game.basing, which adds up the two parts), the
+    `constrained_types_43_11` the typed cases name AS THE [4.44b] CHART PRINTS THEM, and
+    `unresolved_type_43_11` -- the one the rule names and the chart does not, left unseeded under an
+    owner ruling."""
     return _malta()["italy_sicily_basing_43_1"]

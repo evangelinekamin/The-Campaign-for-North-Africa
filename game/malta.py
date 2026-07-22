@@ -314,15 +314,18 @@ def italy_sicily_planes(state: GameState, turn: int) -> int:
     percentages are percentages OF, and the reason a slice of rule 43 had to arrive with rule 44.
 
     THE WHOLE OF RULE 43 NOW LIVES IN game.basing (Phase 5.5), and this function is the one line
-    that reads it, so the raid's SIZING and the battlefield's DEDUCTION can never disagree about how
-    many bombers are where. That was not a tidying: while 43 was half-built here, the same aeroplanes
-    raided Malta in the Strategic Air Phase and bombed Tobruk in all three Operations Stages of the
-    same Game-Turn -- which is exactly what 39.19 forbids.
+    that reads it. The raid's SIZING and the battlefield's DEDUCTION are the SAME NUMBER, subtracted
+    once: basing.africa_planes is the squadron less exactly what this returns (plus Crete). That was
+    not a tidying -- while the two halves ran on different readings, three quarters of the bomber arm
+    raided Malta in the Strategic Air Phase and all of it bombed Tobruk in the three Operations Stages
+    of the same Game-Turn, which is 35 aeroplanes out of a force of 20.
 
     ⚠ THE ESTABLISHMENT IT IS A PERCENTAGE OF IS OUR PROXY, NOT THE BOOK'S, and the flag is argued
-    in full in game.basing: game.state.AirWing gives the Axis six strike Air Points -- two Ju. 87B on
-    the 34.14 Bombload bridge -- where [60.32] musters 133 SM 79s, 56 Ca 309s, 24 Ba 88s and 17 SM
-    81s, and rule 43 names three GERMAN HEAVY BOMBER types this engine does not field separately.
+    in full in game.basing: the campaign seeds the Axis two dozen strike Air Points -- five Ju. 87B
+    on the 34.14 Bombload bridge -- where [60.32] musters 133 SM 79s, 56 Ca 309s, 24 Ba 88s and 17 SM
+    81s, and 43.11/43.13 name GERMAN HEAVY BOMBER types this engine does not field separately (the
+    owner ruling, at basing.typed_requirement_applies; 43.12's untyped sentence, which is what sizes
+    this number before Game-Turn 35, needs no ruling at all).
     Until [34.6]/[59.3] is transcribed the Axis raid is a shadow of the book's raid, and the honest
     reading of any Malta measurement taken today is that the ISLAND'S half of the loop is live at
     the book's scale and the AXIS's half is live at one one-hundredth of it."""
@@ -353,12 +356,16 @@ def raid(state: GameState, level: str, dice: int, turn: int) -> Raid:
         [44.42] key "rounding fractions down (e.g., 200 = 200%, or double the number of each type
                of plane in play)."
 
-    NOT MODELLED, and it is 44.25's third term: "he may then add in -- up to the maximums he gets
-    from the Table -- any planes he wishes from Africa", bounded per type by 44.27. There is no
-    per-type roster to bound, so the African contingent is absent and this raid is smaller than the
-    book's by however much of it the Axis would have flown from Libya. 44.28's pro-rata split of
-    losses between planes that are in play and planes that are not is likewise absent, and cannot
-    matter until something shoots an aeroplane down (45/46, deferred)."""
+    THIS IS THE MEDITERRANEAN HALF OF THE RAID ONLY. 44.25's third term -- "he may then add in --
+    up to the maximums he gets from the Table -- ANY PLANES HE WISHES FROM AFRICA", bounded by
+    44.27 -- is the Axis Player's decision and is taken in engine._malta_africa (block 5.5), which
+    adds its Bomb Points to `bomb_points` before the [41.5] roll and books the aeroplanes out of the
+    desert for the rest of the Game-Turn (39.19). 44.27's per-TYPE cap is enforced at the grain we
+    have: one abstract bomber type, so the cap is the table's whole plane count.
+
+    STILL ABSENT: 44.28's pro-rata split of losses between planes that are in play and planes that
+    are not -- which cannot matter until something shoots an aeroplane down (45/46, deferred; the
+    debt is written out in full in game.basing)."""
     row = logistics_data.malta_availability_44_42()[str(dice)][level]
     if row is None:                                  # [44.42] na -- no forces available this turn
         return Raid(level, dice, 0, 0, 0, 0)

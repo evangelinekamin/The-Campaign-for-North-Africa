@@ -127,11 +127,20 @@ def test_a_loss_larger_than_the_hex_holds_takes_everything_and_no_more():
 
 # --- fixtures ----------------------------------------------------------------------------------
 
-def _state(*, missions=(), supplies=(), trucks=(), forts=None, strike=200, stage=2) -> GameState:
+def _state(*, missions=(), supplies=(), trucks=(), forts=None, strike=800, city=False,
+           stage=2) -> GameState:
     """An Axis LAND wing over an Allied logistics target at (1,0). Stage 2: [59.32] gives the
     scenario's first Operations Stage its fuel free, so a fixture that wants a fuel bill must be
     past it. The Axis is based on its own field at (0,0) with a full dump, so nothing here is
-    grounded for want of fuel and every refusal under test is the RULE's."""
+    grounded for want of fuel and every refusal under test is the RULE's.
+
+    THE WING IS DECLARED FOUR TIMES THE FORCE THAT FLIES, and that is rule 43 (game.basing): 43.12
+    bases 75% of every German bomber pool in Italy/Sicily, so an ESTABLISHMENT of 800 Bomb Points
+    (160 Ju. 87B on the 34.14 bridge) puts 40 aeroplanes -- 200 Bomb Points -- over the desert,
+    which is the [41.5] column these rows are read on.
+
+    `city` stamps the target hex a MAJOR CITY, because 41.31's and 41.32's bombing shelters are
+    written about cities and not about fortification levels (engine._city_wall)."""
     field = AirFacility("FIELD", Side.AXIS, (0, 0), kind=air.AIRFIELD, level=6, max_level=6)
     larder = SupplyUnit("AF-Sup", Side.AXIS, (0, 0), ammo=0, fuel=99, stores=99, water=0,
                         air_dump=True)
@@ -143,7 +152,8 @@ def _state(*, missions=(), supplies=(), trucks=(), forts=None, strike=200, stage
     return GameState(
         turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS, seed=3,
         weather="clear", vp=VP(),
-        terrain=TerrainMap(terrain={(0, 0): Terrain.CLEAR, (1, 0): Terrain.CLEAR},
+        terrain=TerrainMap(terrain={(0, 0): Terrain.CLEAR,
+                                    (1, 0): Terrain.MAJOR_CITY if city else Terrain.CLEAR},
                            fortifications=forts or {}),
         control={}, units=(foe,), target_hex=(1, 0), supplies=all_supplies,
         consumed={c: 0 for c in supply.COMMODITIES}, initial_supply=initial,
@@ -215,7 +225,7 @@ def test_41_35_a_hex_with_no_unattached_trucks_loses_none():
 def test_41_35_a_no_effect_roll_burns_nothing_but_is_still_a_mission_flown():
     """A 0% result leaves the dump whole. The sortie was still flown and still billed -- 39.0's
     blind mission, the same line _air_strike and _air_port already draw."""
-    st = _state(supplies=[_enemy_dump(fuel=100)], strike=10)   # 1-20 column
+    st = _state(supplies=[_enemy_dump(fuel=100)], strike=40)   # 10 Bomb Points: the 1-20 column
     r = _Run(st)
     _pin(r, 1, 1)                                        # code 11 -> 0%
     billed: list[int] = []
@@ -286,7 +296,7 @@ def test_41_32_trucks_in_a_major_city_are_sheltered_until_the_city_is_at_zero():
     Note the asymmetry with 41.31, which shelters a GARRISON only while the wall is above ONE: the
     lorries are protected by any surviving level at all. That is the book's, not ours."""
     trucks = [_truck("AL-T1", 6, side=Side.ALLIED, fuel=60)]
-    st = _state(trucks=trucks, forts={(1, 0): 1})
+    st = _state(trucks=trucks, forts={(1, 0): 1}, city=True)
     r = _Run(st)
     _pin(r, 6, 6)
     _air_truck_bomb(r, Side.AXIS, (1, 0), lambda pts: pts)
@@ -295,11 +305,27 @@ def test_41_32_trucks_in_a_major_city_are_sheltered_until_the_city_is_at_zero():
     assert resolved[0].payload["walled"] is True and resolved[0].rng_draws == ()
     assert r.state.truck("AL-T1").points == 6
     # ...and the moment the last level goes, they are bombable
-    flat = _state(trucks=trucks, forts={(1, 0): 0})
+    flat = _state(trucks=trucks, forts={(1, 0): 0}, city=True)
     r2 = _Run(flat)
     _pin(r2, 6, 6)
     _air_truck_bomb(r2, Side.AXIS, (1, 0), lambda pts: pts)
     assert r2.state.truck("AL-T1").points == 2
+
+
+def test_41_32_shelters_a_CITY_and_not_a_fortification_level():
+    """RESTATED IN THE 5.5 REPAIR PASS, and the reason is in the rule's own words: 41.32 shelters
+    "trucks in MAJOR CITIES", not trucks behind works. The test used to assert that any hex with a
+    fortification level sheltered its lorries -- true today only because every fortification in the
+    tree stands on a Major City -- which would have made a Level-1 field work in open desert (24.4,
+    unbuilt) an un-bombable lorry park by a rule that grants no such thing."""
+    trucks = [_truck("AL-T1", 6, side=Side.ALLIED, fuel=60)]
+    st = _state(trucks=trucks, forts={(1, 0): 1})        # fortified, but NOT a Major City
+    r = _Run(st)
+    _pin(r, 6, 6)
+    _air_truck_bomb(r, Side.AXIS, (1, 0), lambda pts: pts)
+    resolved = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED]
+    assert resolved[0].payload["walled"] is False
+    assert r.state.truck("AL-T1").points == 2
 
 
 def test_41_32_never_bombs_your_own_lorries():

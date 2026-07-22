@@ -1334,7 +1334,7 @@ Sizes assume **one person**. **⏱** is a working-days estimate, honestly.
 | **5.5** | **41.32 / 41.35 — bombing trucks and supply dumps** (*"+1 Truck Point lost per 10%"*). **56.21 / 56.22 — the Axis convoy planning decision** (his single most important recurring choice, currently a hardcoded 60/25/15 split, **I11**). **39.19 — one mission per plane per OpStage: Malta OR the desert.** **43 — the Aegean basing constraints** that force the Axis to keep a Malta-capable bomber force off the battlefield. | 5.4 | 10 |
 | | **DEFER, and record the debt: 40 (fighter combat), 45 (air-to-air), 46 (flak), pilots, maneuver, night, torpedoes, paradrops.** `AirWing.fighters` is a constant that never dies. **Something must eventually kill aeroplanes**, or Malta is a lever with no cost to pull. | | |
 
-#### 5.5 LANDED — 2026-07-21. What it built, what it refused to build, and the one ruling it left.
+#### 5.5 LANDED — 2026-07-21, plus the REPAIR PASS the same day. What it built, what it refused to build, and the two rulings it left.
 
 **BUILT.**
 
@@ -1359,19 +1359,61 @@ Sizes assume **one person**. **⏱** is a working-days estimate, honestly.
   the Game-Turn boundary alone. The Axis policy now has a real trade: `malta_africa_doctrine` strips
   the desert only for a raid it has paid a [44.41] budget Game-Turn for.
 * **43 is a module** (`game/basing.py`), and rule 44 reads its basing off it, so the raid's sizing and
-  the battlefield's deduction cannot drift apart. Its live effect today: **43.13 + 43.25 collapse the
-  Malta-capable force from 75% to 25% at Game-Turn 35**, because Crete takes at least half and Crete
-  may not raid Malta.
+  the battlefield's deduction are **the same number, subtracted once**: `africa_planes = the squadron
+  − (italy_sicily_planes + crete_planes)`. Its two live effects today: **43.12 keeps three quarters of
+  the Axis bomber arm off the desert until Game-Turn 35** ("75% of ALL GERMAN BOMBERS must be based in
+  Italy/Sicily" — untyped, so it binds on our abstract pool on any reading), and **43.13 + 43.25
+  collapse the Malta-capable force from 75% to 25% at Game-Turn 35**, because Crete takes at least half
+  and Crete may not raid Malta.
 
-**🔴 OWNER RULING NEEDED — the 43.11 deduction.** `game/basing.py:applies`, and asserted in
-`tests/test_basing.py`. 43.11/43.13 constrain **three named German heavy bomber types** (He 111,
-Ju88D, FW220). This engine fields **none of them**: `air.REPRESENTATIVE_AIRCRAFT` expresses the whole
-abstract Axis strike pool as the **Ju. 87B**, a Stuka, which flew from African strips and which rule
-43 does not name. The deduction is therefore coded **against the named list** and currently deducts
-nothing — the transcribe-never-invent answer, and it binds automatically the day [34.6]/[59.3] puts a
-He 111 in the order of battle. **It was measured the other way first, and that is why it is a ruling:**
-applied to the whole abstract pool, 75% of the campaign Axis's *two* aeroplanes is two aeroplanes, and
-the Luftwaffe flies **nothing** over the desert for 111 Game-Turns.
+**THE 5.5 REPAIR PASS — 2026-07-21, three adversarial verifiers.** What it found and fixed:
+
+* **THE SAME BOMBERS WERE IN SICILY AND IN AFRICA AT ONCE.** `italy_sicily_planes` applied 43.12's 75%
+  to the whole pool for the Malta raid while `africa_planes` returned the pool whole, so a 20-plane
+  force produced **35 aeroplanes of basing**, in the direction that gave the Axis both arenas. The
+  conservation identity above replaced it, and `tests/test_basing.py` pins it.
+* **THE CONSTRAINED-TYPE LIST COULD NEVER MATCH.** It was transcribed off 43.11's *prose*
+  (`"He 111"`, `"FW 220"`) and is matched **exactly** against the keys of `air.AIRCRAFT`, which are the
+  **chart's** printed names. PDF p145 rendered at 300 dpi reads `Fw. 200 C`, `He. 111`, `Hs. 126`,
+  `Ju. 52/3m`, `Ju. 87B`, `Ju. 87D`, `Ju. 88D`. Two of the three entries could never have bound, and
+  the failure was silent. Now `["He. 111", "Ju. 88D"]`, with a test that every entry is a name the
+  chart prints.
+* **THE BASING CUT NOW PRECEDES THE AIR-SUPERIORITY SCALE** (`engine._air_points`). Scaling the whole
+  establishment first and capping at rule 43's African quarter second made the loser-scale (0.5)
+  arithmetically invisible under the cap (0.25): the Axis flew the same strength whether it held the
+  sky or lost it.
+* **48's beat order.** The Convoy Planning Phase ran *before* the Strategic Air Planning Stage; 48
+  orders them I → II (Malta) → III.A (Naval Convoy Schedule). Corrected, and the Malta beats now carry
+  their own `Phase.STRATEGIC_AIR` tag instead of borrowing whichever phase happened to precede them.
+* **41.31/41.32's shelter is a MAJOR CITY test** (`engine._city_wall`), not a bare fortification level.
+  Latent today (every fortification in the tree stands on a city), live the moment 24.4 builds a field
+  work.
+* Two **dead `hasattr` guards** on methods that are defined on the base `Policy` (`malta_africa_planes`,
+  `convoy_plan`) removed — the `convoy_plan` one would have silently sailed an **empty** convoy rather
+  than failing loud (56.22 is a mandatory input).
+* **THE AXIS AIR PROXIES ARE NOW DENOMINATED IN THE ESTABLISHMENT RULE 43 SPEAKS ABOUT.** With the
+  deduction live, `AirWing.strike` for a German pool is the whole bomber arm and a quarter of it flies;
+  the campaign and Tobruk seeds were re-expressed 6 → 24 (`scenario._AXIS_AIR_STRIKE`,
+  `_TOBRUK_LW_STRIKE`), which puts **the same two Ju. 87B and the same [41.5] column over the desert as
+  before**. The Commonwealth wing is unchanged — rule 36 bases the Desert Air Force on the map. Both
+  magnitudes remain flagged proxies for the untranscribed [34.6]/[59.3]; what changed is the unit, so
+  that a basing rule cannot silently halve a scenario's designed air campaign. Every air test fixture
+  in the suite carries the same note.
+
+**🔴 OWNER RULING NEEDED — 43.11/43.13, and it is TWO questions.** `game/basing.py:typed_requirement_applies`,
+`data/malta_44.json`, and asserted in `tests/test_basing.py`.
+
+1. **From Game-Turn 35, does rule 43 bind on a Ju. 87B at all?** 43.12's untyped sentence expires there;
+   what replaces it is typed (43.11's Mediterranean 75%, 43.13's Crete 50%) and this engine fields none
+   of those types. Read strictly — which is what the code does, leaving the Crete term **unseeded** —
+   **the Luftwaffe's African bomber force TRIPLES in June 1941** (25% of the pool before GT35, 75%
+   after), a discontinuity produced by a type list rather than by the war. Read as a stand-in (our one
+   abstract bomber represents the whole German bomber arm), Crete takes its half and Africa stays at 25%
+   all war. Flipping the list in `data/malta_44.json` is the whole of the affirmative ruling.
+2. **What is "FW220"?** 43.11 and 43.13 both name it and **no such aircraft is in the game**. The
+   [4.44b] chart (PDF p145, read with eyes) prints eight German types and the nearest Focke Wulf bomber
+   is the **Fw. 200 C** (Range 205, Bomb 14). This is a book-internal inconsistency of the 54.17 class;
+   it is left unseeded under `unresolved_type_43_11` rather than guessed.
 
 **THE DEFERRED AIR DEBT IS WRITTEN DOWN IN THE CODE**, at the top of `game/basing.py` (the last module
 of Phase 5, where the next person will look). Restated here: 40, 45, 46, pilots, maneuver, night,
@@ -1383,9 +1425,16 @@ an upper bound on the Axis's ability to suppress the island and a lower bound on
 [46.3]'s Anti-Aircraft CRT (recovered, PDF p108, legible) and the [45.4]/[45.5] TacAir tables are the
 precondition for all of it.
 
-**Also deferred, and each named at its own function:** 41.32's *first-line* (attached) truck bombing,
-which needs a Truck-Point ledger on a unit that does not exist (the same roster work rule 19 and 34.72
-wait on); 43.23's four Suez OpStages a month (a tax on a Crete force that does nothing in this engine);
+**Also deferred, and each named at its own function:** **39.16** ("planes from the same squadron may not
+be divided between strategic and land support missions") — *newly reachable*, because 5.5 is what starts
+splitting the single `AXIS/LAND/strike` squadron between a Malta raid and the desert; inert under the
+shipped doctrine (which commits every available African bomber, an all-or-nothing split) and possibly
+moot under 43.22's "groups of 6 to 12 = a squadron", but written down rather than left silent; 41.32's
+*first-line* (attached) truck bombing, which needs a Truck-Point ledger on a unit that does not exist
+(the same roster work rule 19 and 34.72 wait on); **42.22's recon ban, which reads a fortification level
+where the rule says "any hex except for MAJOR CITIES" flat** (`engine._air_recon` — the sibling of the
+41.31/41.32 shelter, left alone here because correcting it drops a fort clause the rule does not print);
+43.23's four Suez OpStages a month (a tax on a Crete force that does nothing in this engine);
 43.21's fuel/ammo exemption applied to the *African* contingent, which makes that contingent slightly
 cheaper than the book's; and 41.35's silence about the cargo on a bombed-out lorry, which we destroy
 pro rata because 53.12 would otherwise be violated.

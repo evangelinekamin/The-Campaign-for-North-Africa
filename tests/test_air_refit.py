@@ -27,6 +27,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import game.air as air
+import game.basing as basing
 import game.supply as supply
 from game.apply import fold
 from game.engine import _air_maintenance, _air_points, _air_support, _Run, run
@@ -172,10 +173,15 @@ def _dump(sid="AF-Sup", side=Side.AXIS, hex_=(0, 0), fuel=99, stores=99, **kw) -
     return SupplyUnit(sid, side, hex_, fuel=fuel, stores=stores, air_dump=True, **{**base, **kw})
 
 
-def _state(*, units=None, facilities=None, supplies=None, missions=(), strike=6, recon=0,
+def _state(*, units=None, facilities=None, supplies=None, missions=(), strike=40, recon=0,
            fighters=0, stage=2, turn=1, unfit=None) -> GameState:
     """An Axis LAND wing based on an airfield at (0,0) with a fed Italian SGSU, over an Allied
-    stack at (1,0). Stage 2 by default, past [59.32]'s free opening tank."""
+    stack at (1,0). Stage 2 by default, past [59.32]'s free opening tank.
+
+    THE WING IS DECLARED FOUR TIMES THE FORCE THAT FLIES, and that is rule 43 (game.basing): 43.12
+    bases 75% of every German bomber pool in Italy/Sicily, so an ESTABLISHMENT of 40 Bomb Points
+    (8 Ju. 87B on the 34.14 bridge) puts TWO aeroplanes -- 10 Bomb Points -- over the desert, and
+    two aeroplanes is the squadron this refit ledger is told in."""
     foe = Unit("GAR", Side.ALLIED, (1, 0), (StepRecord("in", 6),), mobility=Mobility.FOOT,
                cpa=10, stacking_points=2, oca=5, dca=8)
     units = (foe,) + ((_sgsu(),) if units is None else tuple(units))
@@ -210,18 +216,28 @@ def _pin_die(r: _Run, value: int) -> None:
 AXIS_STRIKE = "AXIS/LAND/strike"
 
 
+def _ready(state) -> int:
+    """[38.31] + [43.12] The Axis bombers that MAY fly, read against the squadron that is actually
+    in Africa (basing.establishment) rather than against the whole establishment -- which is what
+    engine._air_points does, and the reason air.ready_planes takes the override at all: three
+    quarters of the pool is standing in Sicily and is no part of the desert squadron's readiness."""
+    return air.ready_planes(state, Side.AXIS, "LAND", "strike",
+                            basing.establishment(state, Side.AXIS, "LAND", "strike"))
+
+
 # --- [38.31] flying spends readiness -----------------------------------------------------------
 
 def test_38_31_a_mission_flown_leaves_its_planes_unfit():
-    """"As soon as a plane flies any mission other than transfer, it must be refitted again." Six
-    strike Air Points are two Ju 87Bs (34.14, bombload 5), so two aeroplanes come back unfit."""
+    """"As soon as a plane flies any mission other than transfer, it must be refitted again." The
+    fixture's African contingent is two Ju 87Bs (34.14, bombload 5), so two aeroplanes come back
+    unfit."""
     r = _Run(_state(missions=(AirMission(Side.AXIS, "strike", (1, 0), 1),)))
     _air_support(r, Side.AXIS, set())
     unfit = [e for e in r.events if e.kind == EventKind.AIR_SQUADRON_UNFIT]
     assert [e.payload["planes"] for e in unfit] == [2]
     assert unfit[0].payload["squadron"] == AXIS_STRIKE
     assert r.state.air_unfit == {AXIS_STRIKE: 2}
-    assert air.ready_planes(r.state, Side.AXIS, "LAND", "strike") == 0
+    assert _ready(r.state) == 0
 
 
 def test_38_31_an_unrefitted_squadron_may_fly_no_mission_even_when_fuelled():
@@ -242,9 +258,9 @@ def test_38_31_an_unrefitted_squadron_may_fly_no_mission_even_when_fuelled():
 
 def test_38_31_a_half_refitted_squadron_flies_at_its_refitted_planes_share():
     """One Ju 87B of two ready carries its own Bombload of 5 into the [41.5] column, not the
-    squadron's 6 -- the same arithmetic air.refuel uses for a part-fuelled force."""
+    African contingent's 10 -- the same arithmetic air.refuel uses for a part-fuelled force."""
     st = _state(unfit={AXIS_STRIKE: 1})
-    assert air.ready_planes(st, Side.AXIS, "LAND", "strike") == 1
+    assert _ready(st) == 1
     assert _air_points(st, Side.AXIS, "LAND", "strike") == 5
     # and flying it un-fits that ONE plane, never more than were ready
     r = _Run(replace(st, air_missions=(AirMission(Side.AXIS, "strike", (1, 0), 1),)))
@@ -279,7 +295,7 @@ def test_38_34_the_refit_roll_returns_the_tables_percentage():
     assert (p["undergoing"], p["refitted"], p["unfit"]) == (2, 1, 1)
     assert ev[0].rng_draws == (3,)                     # the die is certified in the log
     assert r.state.air_unfit == {AXIS_STRIKE: 1}
-    assert air.ready_planes(r.state, Side.AXIS, "LAND", "strike") == 1
+    assert _ready(r.state) == 1
 
 
 def test_38_34_a_full_refit_clears_the_squadron_from_the_ledger():
@@ -287,7 +303,7 @@ def test_38_34_a_full_refit_clears_the_squadron_from_the_ledger():
     _pin_die(r, 1)                                     # 1 + 2 Italian = 3 -> 70% of 2 -> 2 (round up)
     _air_maintenance(r)
     assert r.state.air_unfit == {}                     # no key means nothing unfit (38.31)
-    assert air.ready_planes(r.state, Side.AXIS, "LAND", "strike") == 2
+    assert _ready(r.state) == 2
 
 
 def test_38_36_one_stores_point_per_attempt_whether_it_succeeds_or_not():
@@ -425,7 +441,7 @@ def test_the_beat_is_silent_for_a_side_the_scenario_never_based_on_the_map():
     rule. Both sides ARE based on the map in the full campaign."""
     st = _state(facilities=[], supplies=[], units=[], unfit={AXIS_STRIKE: 2})
     assert not air.refit_modelled(st, Side.AXIS)
-    assert _air_points(st, Side.AXIS, "LAND", "strike") == 6        # ungoverned, as before 5.3
+    assert _air_points(st, Side.AXIS, "LAND", "strike") == 10       # ungoverned, as before 5.3
     r = _Run(st)
     _air_maintenance(r)
     assert r.events == []
@@ -445,7 +461,7 @@ def test_the_cycle_turns_over_stage_after_stage():
     strikes = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED]
     _air_support(r, Side.AXIS, set())                   # and the one refitted plane flies alone
     strikes2 = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED]
-    assert strikes[0].payload["strength"] == 6          # the whole squadron
+    assert strikes[0].payload["strength"] == 10         # the whole African contingent
     assert strikes2[-1].payload["strength"] == 5        # one Ju 87B's own Bombload
     assert r.state.air_unfit == {AXIS_STRIKE: 2}
     assert fold(r.initial, r.events) == r.state

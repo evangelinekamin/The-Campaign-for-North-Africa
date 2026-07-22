@@ -34,6 +34,12 @@ CONTROL_OF: dict[Side, Control] = {Side.AXIS: Control.AXIS, Side.ALLIED: Control
 
 class Phase(str, Enum):
     WEATHER = "WEATHER"
+    STRATEGIC_AIR = "STRATEGIC_AIR"
+                                   # Strategic Air Planning Stage (rule 48 II): the once-per-
+                                   # GAME-TURN beat, BEFORE the Naval Convoy Stage (48 III), in
+                                   # which the Malta duel is fought (48 II.B/II.D). SYSTEM-owned,
+                                   # and entered only where there is a Malta to raid, so no other
+                                   # scenario sees it.
     LOGISTICS = "LOGISTICS"        # naval-convoy arrival (rule 48 V.C.7/V.D); SYSTEM-owned
     ORGANIZATION = "ORGANIZATION"  # the Organization Phase proper (rule 32.32): the ONE beat of an
                                    # OpStage in which Motorization Points may be attached to or
@@ -53,7 +59,7 @@ class Phase(str, Enum):
 # System owns WEATHER, LOGISTICS and RECORD; the active side's Front Commander owns
 # MOVEMENT and COMBAT. This is the seam the orchestrator uses to decide which
 # role/agent to invoke per phase (brief §4.3).
-SYSTEM_PHASES = (Phase.WEATHER, Phase.LOGISTICS, Phase.RECORD)
+SYSTEM_PHASES = (Phase.WEATHER, Phase.STRATEGIC_AIR, Phase.LOGISTICS, Phase.RECORD)
 
 
 class EventKind(str, Enum):

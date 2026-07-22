@@ -313,9 +313,14 @@ def test_storm_floor_cracks_the_dry_garrison_but_a_timid_staff_never_does():
 
 def _storm(seed: int = 66, *, port_bomb: bool = True, raf: bool = True, lw_strike: int | None = None):
     """The scripted storm siege. `lw_strike`, when set, overrides the Axis Luftwaffe LAND strike
-    weight (a FLAGGED proxy for the deferred 34.6/59.3 Initial Air Strengths, cranked high enough to
-    clear the [41.5] Ports floor every stage and actually shut the harbour). Left None it keeps the
-    seeded six-point proxy, which cannot cut a full-Efficiency harbour."""
+    ESTABLISHMENT (a FLAGGED proxy for the deferred 34.6/59.3 Initial Air Strengths, cranked high
+    enough to clear the [41.5] Ports floor every stage and actually shut the harbour). Left None it
+    keeps the scenario's own seeded proxy, which cannot cut a full-Efficiency harbour.
+
+    IT IS AN ESTABLISHMENT AND NOT A SORTIE, which is why the number is four times the bombs that
+    fall: [43.12] bases 75% of every German bomber pool in Italy/Sicily (game.basing), so 2000 Bomb
+    Points of establishment is 400 Ju. 87B of which 100 are in Africa -- the 500 Bomb Points that
+    reach Tobruk, the [41.5] 471+ column, and the same air campaign this test has always run."""
     st = siege_of_tobruk(seed, port_bomb=port_bomb, raf=raf)
     if lw_strike is not None:
         air = tuple(replace(w, strike=lw_strike) if w.id == "LW-land" else w for w in st.air)
@@ -342,7 +347,7 @@ def test_a_sustained_air_campaign_shuts_the_harbour_and_chokes_the_ferry():
     no regen. Both were bugs; with the harbour rolling on [41.5] and regenerating (55.18), only a real
     air campaign can shut it, and a sea-fed fortress survives the clock."""
     from game.state import Control
-    st, r = _storm(lw_strike=500)
+    st, r = _storm(lw_strike=2000)
     target = st.target_hex
 
     # (1) the sustained campaign bombs the harbour to Efficiency 0: it clears the [41.5] Ports floor
@@ -377,7 +382,7 @@ def test_a_sustained_air_campaign_shuts_the_harbour_and_chokes_the_ferry():
     assert r.winner == Side.ALLIED
 
     # deterministic + replay-exact
-    _, again = _storm(lw_strike=500)
+    _, again = _storm(lw_strike=2000)
     assert determinism_signature(r.events) == determinism_signature(again.events)
     assert fold(r.initial, r.events) == r.final
 

@@ -166,12 +166,16 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
     while not done:
         recalled = _rommel_recall(r)                    # 31 Berlin recall (the ONLY new RNG) -- BEFORE initiative
         _initiative(r, axis_recalled=recalled)          # 5.2 I / 7.14: who holds Initiative this game-turn
-        _convoy_planning(r, policies)                   # 48 III / 56.21/56.22: the Axis decides what
-                                                        # to ship, ONE GAME-TURN AHEAD of the sailing
+        if malta.in_play(r.state):                      # 48 II: the STRATEGIC AIR PLANNING STAGE, whose
+            r.go(Phase.STRATEGIC_AIR, Side.SYSTEM)      # only beats today are the Malta duel's two
         _malta_construction(r)                          # 44.13/[44.5]: the CW patches the island, once per GT
-        _malta_raid(r, policies)                        # 33 II.B / 44.24: the Axis Strategic Air Phase --
+        _malta_raid(r, policies)                        # 48 II.B/II.D / 44.24: the Axis Strategic Air Phase --
                                                         # ONE raid per Game-Turn, out of a finite [44.41]
                                                         # budget, ahead of the turn's convoy traffic (41.0)
+        _convoy_planning(r, policies)                   # 48 III.A / 56.21/56.22: the Naval Convoy Schedule
+                                                        # Phase -- AFTER the Strategic Air Planning Stage,
+                                                        # as 48 orders them -- where the Axis decides what
+                                                        # to ship, ONE GAME-TURN AHEAD of the sailing
         _stores_setup(r)                                # 48 IV: Stores Expenditure + 6% base evaporation
         for stage in (1, 2, 3):
             r.ports_bombed_this_stage = set()            # 55.18: this stage's bomb ledger starts empty
@@ -594,10 +598,8 @@ def _malta_africa(r: _Run, policies: dict, plan) -> int:
     Billing it would need the 38.24 draw to be made from the African field they left, which is the
     same pooled-larder proxy air.refuel already carries; it is deliberately not guessed at here, and
     it makes this contingent slightly cheaper than the book's."""
-    axis = policies[Side.AXIS]
-    if not hasattr(axis, "malta_africa_planes"):
-        return 0
-    arena, role = basing.LAND_ARENA, basing.BOMBER_ROLE
+    axis = policies[Side.AXIS]                          # Policy.malta_africa_planes: every policy
+    arena, role = basing.LAND_ARENA, basing.BOMBER_ROLE  # has a seat, and the base one sends none
     squadron = air.squadron(Side.AXIS, arena, role)
     standing = air.ready_planes(r.state, Side.AXIS, arena, role,
                                 basing.establishment(r.state, Side.AXIS, arena, role))
@@ -703,7 +705,8 @@ def _port_bomb_levels(bomb_points: int, d1: int, d2: int) -> int:
     row: pick the Bomb-Point column, read the two dice SEQUENTIALLY as a two-digit code
     (tens=d1, units=d2), and return the number of Efficiency Levels the port loses (0-4).
     Bomb Points below the table's floor lose nothing (returns 0). At the campaign's proxy
-    six strike Air Points (column 1..20) the roll is a 0 on 32 of 36 codes and a 1 on 4 --
+    African contingent of ten Bomb Points (column 1..20 -- two of the five Ju. 87B rule 43 does
+    not base in Sicily) the roll is a 0 on 32 of 36 codes and a 1 on 4 --
     which is what lets the harbour regenerate (55.18) between the bombs and makes the siege a
     duel rather than a one-way ratchet."""
     return _crt_result(logistics_data.air_port_bombing_crt_41_5(), bomb_points, d1, d2, "levels")
@@ -1028,7 +1031,8 @@ def _convoy_planning(r: _Run, policies: dict) -> None:
     r.go(Phase.LOGISTICS, Side.SYSTEM)
     for c in sorted(due, key=lambda c: (c.arrival_turn, c.id)):
         pol = policies[c.side]
-        plan = pol.convoy_plan(r.state, c.side, c.tons) if hasattr(pol, "convoy_plan") else {}
+        plan = pol.convoy_plan(r.state, c.side, c.tons)  # Policy.convoy_plan: 56.22 is a MANDATORY
+                                                         # input, so this is called, never probed
         tons_by = {k: float(v) for k, v in plan.items()
                    if k in supply.CONVOY_COMMODITIES and v > 0}     # 56.22: the three, and no other
         total = sum(tons_by.values())
@@ -1717,26 +1721,31 @@ _REFITTABLE_ROLES: tuple[str, ...] = ("recon", "strike")
 
 def _air_points(state: GameState, side: Side, arena: str, role: str) -> int:
     """Committed Air Points of `role` ("strike"|"recon") `side` can put over `arena` this OpStage,
-    after THREE gates: the 40/45/46 superiority contest scales the LOSER down
-    (AIR_SUPERIORITY_LOSER_SCALE); rule 43 and rule 39.19 take out the aeroplanes that are not in
+    after THREE gates, IN THIS ORDER: rule 43 and rule 39.19 take out the aeroplanes that are not in
     Africa or have already flown this Game-Turn's Strategic Phase (game.basing.available_points);
-    and 38.31's REFIT ledger caps whatever is left at what the squadron's refitted aeroplanes can
-    carry -- "a plane that is not refitted may fly no mission other than transfer, even if it is
+    the 40/45/46 superiority contest then scales the LOSER down (AIR_SUPERIORITY_LOSER_SCALE); and
+    38.31's REFIT ledger caps whatever is left at what the squadron's refitted aeroplanes can carry
+    -- "a plane that is not refitted may fly no mission other than transfer, even if it is
     refueled". The winner of a contested sky still flies only the machines that are on the right
     continent, have not already been to Malta today, and that its mechanics got back into the air.
 
-    THE BASING CUT COMES BEFORE THE REFIT CAP, and the refit cap then reads the CUT establishment
-    (_establishment): otherwise the Mediterranean contingent would act as a readiness buffer for
-    aeroplanes that are not in Africa, and the African squadron would fly on the serviceability of
-    a force based a thousand miles away.
+    THE BASING CUT COMES FIRST, AND THAT ORDER IS LOAD-BEARING. The sky over the desert is contested
+    by the aeroplanes IN the desert: scaling the whole establishment first and then capping it at
+    rule 43's African quarter would let the Sicilian contingent absorb the entire loss of air
+    superiority, and a loser-scale of 0.5 above a cap of 0.25 would be arithmetically invisible --
+    the Axis would fly the same strength whether it held the sky or lost it.
+
+    THE REFIT CAP COMES LAST and reads the CUT establishment (basing.establishment): otherwise the
+    Mediterranean contingent would act as a readiness buffer for aeroplanes that are not in Africa,
+    and the African squadron would fly on the serviceability of a force based a thousand miles away.
 
     All three gates are read at MISSION time and none draws anything; the fuel bill (38.24) comes
     after, on whatever survives them."""
     victor = state.air_superiority.get(arena)
     scale = 1.0 if victor is None or victor == side.value else AIR_SUPERIORITY_LOSER_SCALE
     total = sum(getattr(w, role) for w in state.air if w.side == side and w.arena == arena)
-    points = int(total * scale)
-    points = basing.available_points(state, side, arena, role, points)   # 43.11 + 39.19
+    points = basing.available_points(state, side, arena, role, total)   # 43.11/43.12 + 39.19
+    points = int(points * scale)
     if role not in _REFITTABLE_ROLES:                    # the fighter arm is outside the ledger
         return points
     return air.ready_points(state, side, arena, role, points,
@@ -1987,6 +1996,23 @@ def _air_support(r: _Run, side: Side, pinned: set[str]) -> None:
             _air_recon(r, side, tuple(m.target), fuel)
 
 
+def _city_wall(state: GameState, tgt: Coord) -> int:
+    """[41.31]/[41.32] The MAJOR CITY wall standing over `tgt`, and 0 anywhere that is not a Major
+    City. Both bombing shelters are written about cities and nothing else -- 41.31 "units in MAJOR
+    CITIES may not be bombed unless and until the fortification level OF THE CITY is reduced to one
+    (1) or less", 41.32 "trucks in MAJOR CITIES may not be bombed by air until THE CITY is reduced
+    to zero" -- so the terrain is half the test.
+
+    It reads as a plain fort level today because every fortification in the tree stands on a Major
+    City (scenario._apply_major_cities is the only thing that seeds terrain.fortifications). The
+    conjunct is here so that it keeps reading as one: the day 24.4 lets a player build a field work
+    in open desert, a Level-1 scrape must not make the lorries behind it un-bombable by a rule that
+    shelters cities."""
+    if state.terrain.terrain.get(tgt) != Terrain.MAJOR_CITY:
+        return 0
+    return state.fort_level(tgt)
+
+
 def _air_strike(r: _Run, side: Side, tgt: Coord, pinned: set[str], fuel) -> None:
     """41.31 B-CU: the committed strike Air Points pin the strongest enemy combat unit in the hex
     (blind assignment, 39.11) -- but a Major-City garrison is UN-STRIKABLE behind an intact wall
@@ -2000,7 +2026,7 @@ def _air_strike(r: _Run, side: Side, tgt: Coord, pinned: set[str], fuel) -> None
     strength = fuel(committed)                           # 38.24: however many planes were fuelled
     if committed > 0 and strength <= 0:                  # 38.21: no fuel, no flight
         return
-    walled = r.state.fort_level(tgt) > 1                 # 41.31: intact Major-City wall shields it
+    walled = _city_wall(r.state, tgt) > 1                # 41.31: intact Major-City wall shields it
     victim = None if walled else _barrage_target(r.state.enemies_at(tgt, side))
     actor = f"{side.value}/Air"
     pin_ids: list[str] = []
@@ -2263,7 +2289,9 @@ def _air_truck_bomb(r: _Run, side: Side, tgt: Coord, fuel) -> None:
     THE CITY WALL IS THE SIEGE MIRROR OF 41.31'S. A garrison behind an intact Major-City wall is
     un-strikable at fort_level > 1; the lorries in the same city are protected further still, "until
     the city is REDUCED TO ZERO" -- so any surviving fortification level shelters them. That is the
-    printed asymmetry, not a typo of ours.
+    printed asymmetry, not a typo of ours. Both shelters are read through engine._city_wall, which
+    is a MAJOR CITY test as well as a level test: a field fortification is not a city and does not
+    hide a lorry park.
 
     ⚠ FIRST-LINE TRUCKS ARE NOT BOMBED HERE, AND IT IS A DATA GAP RATHER THAN A DISAGREEMENT.
     41.32's last sentence adds the ATTACHED first-line lorries as a target for 'D'-capable planes
@@ -2273,7 +2301,7 @@ def _air_truck_bomb(r: _Run, side: Side, tgt: Coord, fuel) -> None:
     with the same roster work rule 19 and 34.72 wait on."""
     owner = _other(side)
     formations = [t for t in r.state.trucks_at(tgt) if t.side == owner and t.points > 0]
-    walled = r.state.fort_level(tgt) > 0                 # 41.32: sheltered until the city is at zero
+    walled = _city_wall(r.state, tgt) > 0                # 41.32: sheltered until the city is at zero
     strength = _air_points(r.state, side, "LAND", "strike")
     if strength <= 0:                                    # no committed strike / lost the sky
         return

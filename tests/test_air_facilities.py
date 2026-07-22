@@ -271,7 +271,10 @@ def test_sgsus_are_exempt_from_the_land_stores_and_water_beats():
 
 # --- [41.36] bombing an air facility --------------------------------------------------------
 
-def _bomb_state(level, strike=600, side=Side.AXIS):
+# 43.12 bases three quarters of a German bomber pool in Italy/Sicily (game.basing), so an
+# ESTABLISHMENT of 2400 Bomb Points is what puts the [41.5] table's top column -- 600 Bomb Points,
+# 120 Ju. 87B -- over the target. Every fixture below is declared in establishment, not in sorties.
+def _bomb_state(level, strike=2400, side=Side.AXIS):
     field = _strip("FIELD", side=Side.ALLIED, kind=air.AIRFIELD, level=level)
     st = _mini(facilities=[field])
     return replace(st, air=(AirWing("LW", side, "LAND", fighters=9, strike=strike, recon=0),),
@@ -306,7 +309,7 @@ def test_41_36_a_destroyed_strip_leaves_the_map_an_airfield_does_not():
     for kind, still_there in ((air.STRIP, False), (air.AIRFIELD, True)):
         field = _strip("F", side=Side.ALLIED, kind=kind, level=1)
         st = replace(_mini(facilities=[field]),
-                     air=(AirWing("LW", Side.AXIS, "LAND", 9, 600, 0),),
+                     air=(AirWing("LW", Side.AXIS, "LAND", 9, 2400, 0),),
                      air_superiority={"LAND": Side.AXIS.value})
         # roll until the CRT actually takes the level (the 471+ column is 1-4 levels on every code)
         r = _Run(st)
@@ -322,7 +325,7 @@ def test_air_missions_route_the_airfield_kind():
     """An AirMission of kind "airfield" flies through _air_support like strike/fort/port/recon."""
     field = _strip("F", side=Side.ALLIED, kind=air.AIRFIELD, level=6)
     st = replace(_mini(facilities=[field]),
-                 air=(AirWing("LW", Side.AXIS, "LAND", 9, 600, 0),),
+                 air=(AirWing("LW", Side.AXIS, "LAND", 9, 2400, 0),),
                  air_missions=(AirMission(Side.AXIS, "airfield", (0, 0), 1),),
                  air_superiority={"LAND": Side.AXIS.value})
     from game.engine import _air_support

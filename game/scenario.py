@@ -627,7 +627,14 @@ def _rommel_trucks(supplies, target) -> tuple[TruckFormation, ...]:
 # the siege (later start-turn, sparser cadence, a stronger contesting RAF) into a race against
 # the 12-turn clock.
 _TOBRUK_LW_FIGHTERS = 8              # F: the Axis LAND fighter pool contesting the sky
-_TOBRUK_LW_STRIKE = 6               # S: the Axis LAND strike points that batter the harbour
+# S: the Axis LAND bomber ESTABLISHMENT -- and the unit changed under it in the 5.5 repair pass.
+# [43.12] bases 75% of every German bomber pool in Italy/Sicily (game.basing), so the number that
+# batters the harbour is a QUARTER of this: 24 points is 5 Ju. 87B, of which rule 43 leaves 2 in
+# Africa, which is the same two aeroplanes and the same [41.5] 1-20 column this scenario has always
+# flown. The magnitude is a flagged proxy either way ([34.6]/[59.3] is untranscribed); what the
+# repair fixed is that it is now denominated in the establishment rule 43 speaks about, so a basing
+# rule cannot silently halve a scenario's designed air campaign.
+_TOBRUK_LW_STRIKE = 24              # S: the Axis LAND bomber establishment (a quarter of it flies)
 _TOBRUK_DAF_FIGHTERS = 3           # G: the Commonwealth LAND fighter pool (only when raf=True)
 _TOBRUK_PORTBOMB_START = 1         # first game-turn the harbour is bombed
 _TOBRUK_PORTBOMB_CADENCE = 1       # bomb every N-th turn from the start
@@ -1233,13 +1240,20 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
 
 # --- C4: the air war over the harbours (rules 40-46 at the abstract 32.0/58.0 grain) ----------
 # FLAGGED PROXY: the 34.6/59.3 Initial Air Strengths chart is untranscribed (see state.AirWing,
-# which says so of its own magnitudes), so these Air Points are proxies. They are deliberately
-# SYMMETRIC -- neither side is handed the sky by fiat -- because this is the UNTUNED structural
-# baseline: the 40/45/46 superiority roll should decide who flies, not the seeding. Period-varying
+# which says so of its own magnitudes), so these Air Points are proxies. The forces that FLY are
+# deliberately SYMMETRIC -- neither side is handed the sky by fiat -- because this is the UNTUNED
+# structural baseline: the 40/45/46 superiority roll should decide who flies, not the seeding. What
+# is asymmetric is the ESTABLISHMENT each is declared in, and that is rule 43 (below). Period-varying
 # strengths (the Luftwaffe's 1941-42 ascendancy, the Desert Air Force's 1942 revival) are the
 # obvious calibration lever, and deliberately NOT pulled here.
 _AIR_FIGHTERS = 8          # F: the fighter pool contesting air superiority each Operations Stage
-_AIR_STRIKE = 6            # S: the strike points that batter a harbour (41.39B)
+_AIR_STRIKE = 6            # S: the strike points that batter a harbour (41.39B) -- the force FLYING
+# THE AXIS FIGURE IS AN ESTABLISHMENT, NOT A SORTIE, and the asymmetry is rule 43's, not a thumb on
+# the scale: [43.12] "75% of ALL GERMAN BOMBERS must be based in Italy/Sicily", so the Luftwaffe
+# needs four times the pool to put _AIR_STRIKE's worth of bombers over the desert (24 points = 5
+# Ju. 87B, of which game.basing leaves 2 in Africa). The Commonwealth's basing is rule 36's and is
+# entirely on the map, so its wing is declared in sorties. Both magnitudes remain flagged proxies.
+_AXIS_AIR_STRIKE = 24      # S: the German bomber ESTABLISHMENT rule 43 takes its Mediterranean cut of
 
 
 def _campaign_air() -> tuple[AirWing, ...]:
@@ -1253,7 +1267,7 @@ def _campaign_air() -> tuple[AirWing, ...]:
     Efficiency down ([41.5], _air_port) actually chokes a sea lane, and the harbour regenerates
     (55.18) between the bombs, so it takes a sustained air campaign to keep it shut."""
     return (AirWing("LW-land", Side.AXIS, "LAND",
-                    fighters=_AIR_FIGHTERS, strike=_AIR_STRIKE, recon=0),
+                    fighters=_AIR_FIGHTERS, strike=_AXIS_AIR_STRIKE, recon=0),
             AirWing("DAF-land", Side.ALLIED, "LAND",
                     fighters=_AIR_FIGHTERS, strike=_AIR_STRIKE, recon=0))
 

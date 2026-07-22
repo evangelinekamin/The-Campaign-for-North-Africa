@@ -6,15 +6,13 @@ Panzerarmee's bombers raided Malta in the Strategic Air Phase (rule 44, block 5.
 Tobruk in all three Operations Stages of the same Game-Turn, with the SAME aeroplanes, and neither
 sortie cost the other anything. Two printed rules forbid that, one structurally and one temporally:
 
-  * **[43.11] THE STRUCTURAL HALF -- 75% OF THE BOMBERS ARE NOT IN AFRICA.** "At least 75% of all
-    German He 111's, Ju88D's and FW220's must be based in Mediterranean Bases." 43.12 puts all of
-    that in Italy/Sicily until Game-Turn 35; 43.13 then requires at least half of the whole force
-    in **Crete**, "the remaining 25% may be based in Sicily/Italy or in Crete". A bomber standing
-    on a Sicilian field is not available to fly a Land Support mission over the desert -- and, from
-    Game-Turn 35, a bomber standing on Crete is not available to raid Malta either, because 43.25
-    licenses only the Italy/Sicily half ("bombers based in Italy/Sicily... may also be used in raids
-    on Malta"). So the Axis is REQUIRED to keep a Malta-capable bomber force off the battlefield,
-    and required to keep half of it where it can do neither job.
+  * **[43.12] THE STRUCTURAL HALF -- THREE QUARTERS OF THE BOMBERS ARE NOT IN AFRICA.** "Until 1/35
+    Game-Turn 1941, 75% OF ALL GERMAN BOMBERS must be based in Italy/Sicily." That sentence names
+    no type: it is every German bomber in the game, which is exactly the one abstract Axis LAND
+    strike pool this engine fields. A bomber standing on a Sicilian field is not available to fly a
+    Land Support mission over the desert -- and it is the same bomber rule 44 sizes the Malta raid
+    from, so it may not be counted in both places. From Game-Turn 35 that sentence EXPIRES and what
+    is left is typed: see THE OWNER RULING below.
 
   * **[39.19] THE TEMPORAL HALF -- MALTA OR THE DESERT, NOT BOTH.** "Generally, a plane may fly only
     one mission per Operations Stage or Strategic Phase... A PLANE FLYING A MISSION IN AN OPERATIONS
@@ -25,22 +23,55 @@ sortie cost the other anything. Two printed rules forbid that, one structurally 
     Malta is one that does not fly over the desert for the rest of that Game-Turn. That is the
     choice, it is the Axis Player's, and it is now his to make (Policy.malta_africa_planes).
 
-⚠⚠ OWNER RULING NEEDED, AND IT IS THE ONE JUDGEMENT IN THIS BLOCK. WRITTEN OUT IN FULL AT `applies`
-BELOW AND AT `constrained_types_43_11` IN data/malta_44.json. In short: 43.11 constrains THREE NAMED
-AIRCRAFT TYPES -- "all German He 111's, Ju88D's and FW220's" -- and this engine fields none of them.
-game.air expresses the whole abstract Axis strike pool as the **Ju. 87B**, the Stuka: a dive bomber,
-not on 43's list, and precisely the type that did fly from African fields. So the deduction is
-implemented here against the NAMED LIST and currently deducts nothing, which is the transcribe-
-never-invent answer: the law is written once and the DATA decides whether it binds. It was measured
-the other way first, and the measurement is why the ruling is being asked for rather than taken --
-applied to the whole abstract pool, 75% of two aeroplanes is two aeroplanes, and the Luftwaffe flies
-NOTHING over the desert for a hundred and eleven Game-Turns.
+--------------------------------------------------------------------------------------------------
+THE ONE ARITHMETIC THIS MODULE ENFORCES: **AN AEROPLANE IS IN EXACTLY ONE PLACE.**
 
-WHAT RULE 43 THEREFORE STILL DOES, TODAY, WITH NO RULING: it shrinks the Malta raid on schedule.
-Before Game-Turn 35 the Malta-capable force is 75% of the establishment; from Game-Turn 35, 43.13
-sends at least half of it to CRETE and 43.25 does not license Crete to raid Malta, so the raidable
-share falls to 25%. That is the "Malta-capable bomber force kept off the battlefield" arriving as a
-number the Axis cannot spend, and it is already what rule 44 sizes its raids from.
+    africa_planes = the squadron - (the planes rule 43 bases in Italy/Sicily + those it bases in
+                                    Crete)
+
+and `italy_sicily_planes` is the SAME function rule 44 sizes its raid from (game.malta). Before this
+repair the two halves ran on different readings at once -- 75% of the pool was in Sicily raiding
+Malta AND 100% of it was in Africa flying Land Support, 35 aeroplanes of basing out of a 20-plane
+force, in the direction that gave the Axis both arenas at once. Whatever is disputed below, that
+was not: it was a double count, and the identity above is what replaced it.
+
+⚠ THE ROUNDING DIRECTION IS A FLAGGED JUDGEMENT CALL. 43.11 says "AT LEAST 75%", which points at
+rounding the Mediterranean requirement UP; the Mediterranean share here is floored, because it is
+the same floored number [44.42] sizes the raid from ("rounding fractions down" is that table's own
+key) and conserving whole aeroplanes exactly is worth more than rounding a percentage of a proxy
+establishment the strict way. The floor is generous to Africa by at most one aeroplane.
+
+--------------------------------------------------------------------------------------------------
+⚠⚠ OWNER RULING NEEDED -- and it is now two questions, not one. Written out in full at
+`typed_requirement_applies` below and at `constrained_types_43_11` in data/malta_44.json.
+
+  (1) **FROM GAME-TURN 35, DOES RULE 43 BIND ON A Ju. 87B AT ALL?** 43.12's untyped sentence covers
+      Game-Turns 1-34 and then expires. What replaces it is TYPED: 43.11 "at least 75% of all
+      German He 111's, Ju88D's and FW220's must be based in Mediterranean Bases" and 43.13 "at
+      least 50% of all He111's, Ju88's, and FW220's must be based in Crete". This engine fields
+      none of those: game.air expresses the whole abstract Axis strike pool as the **Ju. 87B**, a
+      dive bomber, and precisely the type that did fly from African fields. Read strictly, the
+      Crete requirement therefore binds on nothing, and THE LUFTWAFFE'S AFRICAN BOMBER FORCE
+      TRIPLES IN JUNE 1941 (25% of the pool before Game-Turn 35, 75% after) -- a discontinuity
+      produced by a type list, not by the war. Read as a stand-in (our one abstract bomber
+      represents the whole German bomber arm), Crete takes its 50% and Africa stays at 25% all war.
+      The code takes the STRICT reading and leaves the Crete term unseeded, which is this project's
+      rule 1: transcribe the law, let the DATA decide the magnitude. `crete_planes` returns 0 until
+      a named type enters the order of battle, and the whole change is that list.
+
+  (2) **WHAT IS "FW220"?** 43.11 and 43.13 both name it. **No such aircraft exists in this game.**
+      The [4.44b] German Aircraft Characteristics Chart (PDF page 145, rendered at 300 dpi and read
+      with eyes) prints exactly eight German bombers/transports/recon types: Ar. 196, Fw. 200 C,
+      He. 111, Hs. 126, Ju. 52/3m, Ju. 87B, Ju. 87D, Ju. 88D. The nearest Focke Wulf bomber is the
+      **Fw. 200 C** (Range 205, Bomb 14). Whether 43.11's "FW220" is a misprint for it is a
+      book-internal inconsistency of the 54.17 class, so it is NOT decided here: the constrained
+      list carries the two types that map onto printed chart rows unambiguously (He. 111, Ju. 88D)
+      and the third is left UNSEEDED under `unresolved_type_43_11` in the data file.
+
+  Note the names in that list are the CHART's, verbatim, periods and all -- "He. 111", not
+  "He 111" -- because `typed_requirement_applies` is an exact string test against the keys of
+  game.air.AIRCRAFT, which are the chart's printed names. A list transcribed off the RULE's prose
+  instead ("He 111", "FW 220") could never match a transcribed row, and would have failed silently.
 
 --------------------------------------------------------------------------------------------------
 THE DEFERRED DEBT OF THE WHOLE AIR GAME, RECORDED HERE BECAUSE THIS IS THE LAST BLOCK OF PHASE 5
@@ -69,6 +100,15 @@ Concretely, as of the end of Phase 5:
   * **Night (41.4), torpedoes as a weapon scale (41.7), paradrops (42.4) and pilot points** are all
     unbuilt. The [41.5] table's Torpedo-Points and Barrage-Points index scales are likewise still
     untranscribed, which is what 41.7 and 12.54 wait on.
+  * **[39.16] "PLANES FROM THE SAME SQUADRON MAY NOT BE DIVIDED between strategic and land support
+    missions"** is NOT implemented, and this block is what makes it reachable: engine._malta_africa
+    sends `planes <= available` out of the single AXIS/LAND/strike squadron and leaves the
+    remainder free to fly the desert, which 39.16 forbids at squadron grain. It is inert under the
+    shipped doctrine (campaign_policy.malta_africa_doctrine commits every available African bomber,
+    an all-or-nothing split), and 43.22's "divide all bombers in a given area into GROUPS OF 6 TO 12,
+    considering each such group a squadron" may well make it moot once a real roster exists -- our
+    whole abstract pool is smaller than one of the book's squadrons. Written down rather than left
+    silent, because 5.5 is the block that opened the door.
 
 Until something kills aeroplanes, every Malta measurement this engine produces is an upper bound on
 the Axis's ability to suppress the island and a lower bound on what it costs him to try.
@@ -89,20 +129,13 @@ def _basing() -> dict:
     return logistics_data.malta_italy_sicily_basing_43_1()
 
 
-def mediterranean_pct(turn: int) -> int:
-    """[43.11] The percentage of the Axis bomber force that must be based in a Mediterranean base
-    -- Italy, Sicily or Crete -- and is therefore not on the African battlefield. Seventy-five,
-    for the whole war: 43.12 and 43.13 redistribute that force between the three bases, they never
-    change its size. `turn` is taken for symmetry with the two functions below (and because a
-    scenario that ever charts a different figure will want it); the printed answer does not move."""
-    return _basing()["mediterranean_pct"]
-
-
 def italy_sicily_pct(turn: int) -> int:
-    """[43.12]/[43.13] The percentage based in ITALY/SICILY -- the only part of the Mediterranean
-    force 43.25 lets raid Malta. 75 until Game-Turn 35, 25 from it (the printed ceiling on 43.13's
-    permissive "the remaining 25% MAY be based in Sicily/Italy or in Crete"; the choice of the
-    ceiling over the floor is the flagged policy call recorded in data/malta_44.json)."""
+    """[43.12]/[43.13] The percentage of the Axis bomber force based in ITALY/SICILY -- the only
+    part of the Mediterranean force 43.25 lets raid Malta. 75 until Game-Turn 35 ("75% of all
+    German bombers", untyped), 25 from it (the printed ceiling on 43.13's permissive "the remaining
+    25% MAY be based in Sicily/Italy or in Crete"; the choice of the ceiling over the floor is the
+    flagged policy call recorded in data/malta_44.json, made where the alternative -- 0 -- would
+    silently end the Malta war in June 1941)."""
     b = _basing()
     return b["before_turn_35_pct"] if turn < b["change_turn"] else b["from_turn_35_pct"]
 
@@ -111,81 +144,77 @@ def crete_pct(turn: int) -> int:
     """[43.13] The percentage based in CRETE -- nothing until Game-Turn 35, at least half the force
     from it. These bombers may not raid Malta (43.25 grants that to the Italy/Sicily half alone) and
     they are not in Africa, so from Game-Turn 35 the Axis is holding half his bomber arm where it
-    can do neither job. 43.23's four Suez OpStages a month are a further tax on a force that already
-    does nothing in this engine, and are therefore not modelled (see the module docstring)."""
+    can do neither job. It is also the printed remainder of 43.11's Mediterranean total: 75 less
+    43.13's own 25 left in Sicily/Italy (data/malta_44.json carries all three numbers and a test
+    checks the book's arithmetic closes).
+
+    43.23's four Suez OpStages a month are a further tax on the Crete contingent and are not
+    modelled: it flies no mission in this engine to be taxed out of (see the module docstring)."""
     b = _basing()
     return 0 if turn < b["change_turn"] else b["crete_pct_from_turn_35"]
 
 
-def africa_pct(turn: int) -> int:
-    """[43.11] What is left for the desert: the whole minus the Mediterranean requirement."""
-    return 100 - mediterranean_pct(turn)
-
-
-def _pool(state: GameState, side: Side) -> int:
-    """`side`'s whole LAND-arena bomber establishment in Air Points, before any of 43's cuts."""
-    return air.squadron_points(state, side, LAND_ARENA, BOMBER_ROLE)
-
-
 def constrained_types() -> tuple[str, ...]:
-    """[43.11]/[43.13] The three aircraft types rule 43 names, transcribed: "all German HE 111's,
-    JU88D's and FW220's". 43.13 repeats the same three. No other aircraft in the game is required to
-    be based in the Mediterranean by any case of rule 43."""
+    """[43.11]/[43.13] The aircraft types rule 43's TYPED cases name, given as the [4.44b] chart
+    prints them (PDF page 145) so that an exact match against game.air.AIRCRAFT is possible at all:
+    "He. 111" and "Ju. 88D".
+
+    ⚠ THE RULE NAMES A THIRD, "FW220", AND THE CHART DOES NOT PRINT IT. That is an OWNER RULING
+    (see the module docstring); it is left unseeded in data/malta_44.json rather than guessed at
+    the Fw. 200 C."""
     return tuple(_basing()["constrained_types_43_11"])
 
 
-def applies(state: GameState, side: Side) -> bool:
-    """Does rule 43's Mediterranean basing requirement bind on the force `side` flies as its LAND
-    bombers? Three conditions, and the third is the ruling.
+def typed_requirement_applies(state: GameState, side: Side) -> bool:
+    """Does 43.11/43.13's TYPED Mediterranean requirement -- the one that survives Game-Turn 35 and
+    sends half the bomber arm to Crete -- bind on the force `side` flies as its LAND bombers?
 
       * THE GERMAN PLAYER, and only him: 43.1 is headed "AXIS MEDITERRANEAN BOMBER BASE
         REQUIREMENTS" and every case in it names German aircraft. The Commonwealth's basing is rule
         36's and is entirely on the map.
       * There must be a LAND bomber pool for it to bind on -- so every air-less scenario, and every
         scenario whose Axis flies no strike, is untouched.
-      * AND THE TYPE MUST BE ONE OF THE THREE THE RULE NAMES (constrained_types).
+      * AND THE TYPE MUST BE ONE OF THE ONES THE RULE NAMES (constrained_types).
 
-    ⚠⚠ OWNER RULING NEEDED -- scan: rule 43.11 and 43.13, docs/rules/43-axis-italian-aegean-air-
-    bases.md; the aircraft charts at PDF pages 144-145.
+    ⚠⚠ OWNER RULING NEEDED, question (1) of the module docstring -- scan: rule 43.11 and 43.13 at
+    PDF page 61, the [4.44b] aircraft chart at PDF page 145.
 
-    THE THIRD CONDITION IS FALSE TODAY, so this function returns False and rule 43 deducts nothing
-    from the African battlefield. game.air.REPRESENTATIVE_AIRCRAFT expresses the Axis LAND strike
-    pool as the **Ju. 87B** -- a Stuka, which 43 does not name and which historically operated from
-    forward African strips. The alternative reading, that 43's percentages apply to the whole
-    abstract Axis bomber arm because that arm STANDS IN for a force which includes He 111s, was
-    built and MEASURED FIRST, and it is why this is a ruling and not a decision: the campaign's Axis
-    fields six strike Air Points -- two Ju. 87B on the 34.14 Bombload bridge -- and 25% of two
-    aeroplanes, floored, is NONE. Every Axis Land Support mission in the war is grounded, by a rule
-    written about three bomber types the engine does not own.
+    THE THIRD CONDITION IS FALSE TODAY, so this returns False and `crete_planes` stays zero: from
+    Game-Turn 35 no CRETE requirement is laid on a Ju. 87B, and the African contingent rises from
+    25% of the pool to 75%. It is NOT the whole of rule 43 going quiet. 43.12's untyped "75% of all
+    German bombers must be based in Italy/Sicily" governs Game-Turns 1-34 on any reading and is
+    applied; and from Game-Turn 35 the Axis still keeps 43.13's printed 25% ceiling in Italy/Sicily
+    (the flagged 5.4 policy choice that keeps a Malta war at all), which is deducted from Africa
+    like any other aeroplane standing on a Sicilian field.
 
-    So the deduction is coded against the NAMED LIST and left to the data, which is this project's
-    own rule 1: transcribe the law, let the chart decide the magnitude. The day [34.6]/[59.3]'s
-    Initial Air Strengths roster is transcribed and a He 111 or Ju 88D enters the Axis order of
-    battle, three quarters of it leaves the desert with no further code.
-
-    THE OWNER'S CHOICE, stated plainly, is between (a) this -- 43 is silent until the roster names
-    a type it constrains -- and (b) treating our one abstract Axis bomber as a stand-in for the
-    whole Luftwaffe bomber arm, in which case its Land Support must be cut by 75% and, at the
-    present proxy scale, extinguished."""
-    if side != Side.AXIS or _pool(state, side) <= 0:
+    THE OWNER'S CHOICE, stated plainly, is between (a) this -- the typed cases are silent until the
+    roster names a type they constrain, and the Luftwaffe's desert bomber force triples in June 1941
+    -- and (b) treating our one abstract Axis bomber as a stand-in for the whole Luftwaffe bomber
+    arm, in which case Crete takes its 50% and the African contingent stays at 25% for the whole
+    war. Flipping data/malta_44.json's constrained list is the whole of (b)."""
+    if side != Side.AXIS:
+        return False
+    if air.squadron_points(state, side, LAND_ARENA, BOMBER_ROLE) <= 0:
         return False
     return air.REPRESENTATIVE_AIRCRAFT[(side, BOMBER_ROLE)] in constrained_types()
 
 
 def italy_sicily_planes(state: GameState, turn: int) -> int:
     """[43.12]/[43.13]/[43.25] The Axis bombers based in Italy/Sicily -- the force [44.42]'s two
-    percentages are percentages OF (rule 44 reads this, and reads it from here so that the raid's
-    sizing and the battlefield's deduction can never disagree).
+    percentages are percentages OF (rule 44 reads this, and reads it from here, so that the raid's
+    sizing and the battlefield's deduction are literally the same number).
 
-    THIS IS RULE 43'S LIVE EFFECT ON THE CAMPAIGN TODAY. Whatever the owner rules about the African
-    deduction (see `applies`), the raidable share falls from 75% to 25% at Game-Turn 35, because
-    43.13 sends at least half the force to Crete and 43.25 lets only the Italy/Sicily half raid
-    Malta. The Axis's Malta war gets structurally harder in June 1941, by a printed rule.
+    THIS IS RULE 43'S LARGEST EFFECT ON THE CAMPAIGN. The raidable share falls from 75% to 25% at
+    Game-Turn 35, because 43.13 sends at least half the force to Crete and 43.25 lets only the
+    Italy/Sicily half raid Malta. The Axis's Malta war gets structurally harder in June 1941, by a
+    printed rule -- and until then three quarters of his bomber arm is in Sicily and NOT over the
+    desert (africa_planes).
 
     ⚠ THE ESTABLISHMENT IT IS A PERCENTAGE OF IS A PROXY, flagged here, at malta.italy_sicily_planes
-    and in data/malta_44.json: 44.22's Malta force is aircraft "based permanently in Italy and
-    Sicily AND OTHERWISE NOT AVAILABLE TO THE AXIS PLAYER", which no counter in this order of battle
-    represents, so its SIZE is read off the one Axis bomber pool the engine does field.
+    and in data/malta_44.json: [60.32] musters the real Regia Aeronautica in the hundreds where the
+    campaign seeds the Axis two dozen strike Air Points (scenario._AXIS_AIR_STRIKE -- five Ju. 87B,
+    of which this leaves three in Sicily), because [34.6]/[59.3]'s Initial Air Strengths roster is
+    untranscribed. The RATIOS above are the book's; the force they divide is ours.
 
     Taken in PLANES, not in Air Points, because that is what the [44.42] table counts and what
     44.27 bounds the African contingent by."""
@@ -193,31 +222,38 @@ def italy_sicily_planes(state: GameState, turn: int) -> int:
 
 
 def crete_planes(state: GameState, turn: int) -> int:
-    """[43.13] The Axis bombers required to sit in Crete: off the battlefield AND barred from Malta."""
+    """[43.13] The Axis bombers required to sit in Crete: off the battlefield AND barred from Malta.
+
+    ⚠⚠ ZERO TODAY, AND THAT IS THE UNSEEDED HALF OF THE OWNER RULING (question (1) of the module
+    docstring): 43.13's requirement is written about NAMED heavy bomber types and the engine fields
+    a Ju. 87B. The moment a named type enters the order of battle, half the bomber arm goes
+    to Crete and `africa_planes` falls back to a quarter of the force for the rest of the war."""
+    if not typed_requirement_applies(state, Side.AXIS):
+        return 0
     return air.squadron_planes(state, Side.AXIS, LAND_ARENA, BOMBER_ROLE) * crete_pct(turn) // 100
 
 
-def africa_points(state: GameState, side: Side, arena: str, role: str, points: int) -> int:
-    """[43.11] `points` of committed Air Points capped by what rule 43 leaves in AFRICA.
+def mediterranean_planes(state: GameState, turn: int) -> int:
+    """[43.11] The Axis bombers rule 43 bases OFF the African battlefield: Italy/Sicily plus Crete.
 
-    The cap is a percentage of the side's whole establishment (43's percentages are of the FORCE,
-    not of a tasking), and it binds only on the Axis LAND bomber pool -- every other side, arena and
-    role passes through untouched, so nothing but the Luftwaffe's Land Support changes.
-
-    Rounded DOWN, which is the direction 43.11's "AT LEAST 75%" points: a fraction of an aeroplane
-    left over in Africa is one the Mediterranean requirement claims."""
-    if arena != LAND_ARENA or role != BOMBER_ROLE or not applies(state, side):
-        return points
-    return min(points, _pool(state, side) * africa_pct(state.turn) // 100)
+    43.11 prints the total directly -- "at least 75% ... must be based in Mediterranean Bases" --
+    and the engine never reads that number: it adds up 43.12's and 43.13's own two parts, which
+    close on it exactly under the reading where all three cases bind (75 + 0 before Game-Turn 35,
+    25 + 50 from it). Where they do not close, the missing part is the flagged one."""
+    return italy_sicily_planes(state, turn) + crete_planes(state, turn)
 
 
 def africa_planes(state: GameState, side: Side, turn: int) -> int:
-    """[43.11] The aeroplanes rule 43 leaves in Africa -- the establishment less the Mediterranean
-    requirement, in the same PLANE unit 44.27 and 39.19 are denominated in. Zero for any side rule
-    43 does not bind."""
-    if not applies(state, side):
-        return air.squadron_planes(state, side, LAND_ARENA, BOMBER_ROLE)
-    return air.squadron_planes(state, side, LAND_ARENA, BOMBER_ROLE) * africa_pct(turn) // 100
+    """[43.11]/[43.12] The aeroplanes rule 43 leaves in AFRICA -- the squadron less the ones it
+    bases in the Mediterranean, in the same PLANE unit 44.27 and 39.19 are denominated in.
+
+    THE WHOLE SQUADRON for any side rule 43 does not speak about: 43.1 is the German player's, so
+    the Commonwealth's Desert Air Force passes through untouched (its basing is rule 36's, and
+    entirely on the map)."""
+    squadron = air.squadron_planes(state, side, LAND_ARENA, BOMBER_ROLE)
+    if side != Side.AXIS:
+        return squadron
+    return max(0, squadron - mediterranean_planes(state, turn))
 
 
 # --- [39.19] ONE MISSION PER PLANE PER GAME-TURN: MALTA OR THE DESERT ----------------------------
@@ -242,16 +278,15 @@ def strategic_planes(state: GameState, side: Side, arena: str, role: str) -> int
 
 
 def available_points(state: GameState, side: Side, arena: str, role: str, points: int) -> int:
-    """[43.11] + [39.19] `points` capped by BOTH: what rule 43 leaves in Africa, and what 39.19
-    leaves un-flown after the Strategic Phase took its share.
+    """[43.11]/[43.12] + [39.19] `points` capped by BOTH of rule 43's and rule 39.19's answers to
+    the same question -- how many aeroplanes of this squadron are on this continent and have not
+    already flown today -- read back out in the rating those Air Points are denominated in (34.13
+    TacAir / 34.14 Bombload).
 
     This is the one function engine._air_points calls, so the two rules can never be applied in
     only one of the places a mission is sized from. A side rule 43 does not bind, with nothing
-    committed to the Strategic Phase, gets its points back verbatim -- so every scenario without an
-    Axis Malta raid stays byte-identical."""
-    capped = africa_points(state, side, arena, role, points)
-    flown = strategic_planes(state, side, arena, role)
-    if flown <= 0:
-        return capped
-    left = max(0, establishment(state, side, arena, role) - flown)
-    return min(capped, left * air.points_per_plane(side, role))
+    committed to the Strategic Phase, gets its points back verbatim: its whole squadron of planes
+    carries at least the Air Points the same squadron was totted up from."""
+    left = max(0, establishment(state, side, arena, role)
+               - strategic_planes(state, side, arena, role))
+    return min(points, left * air.points_per_plane(side, role))

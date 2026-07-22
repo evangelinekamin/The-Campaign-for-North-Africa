@@ -32,13 +32,23 @@ the same order it always did.
 The other four rules in Phase 5.5 do NOT move these two logs and it is worth saying why, because each
 is genuinely inert here rather than accidentally so: 41.32/41.35 add two AIR MISSION KINDS no scenario
 schedules; 39.19's ledger is written only by an Axis Malta raid, and neither benchmark seeds Malta;
-and rule 43's basing deduction is coded against the three aircraft types 43.11 names, none of which
-this engine fields (the OWNER RULING at game/basing.py:applies).
+and rule 43 speaks only about a BOMBER FORCE, which neither benchmark fields -- both run air=() by
+default (scenario.rommels_arrival has no air at all; siege_of_tobruk takes its wings only under
+port_bomb/raf), so there is no squadron for the Mediterranean basing to take a share of.
 
     rommels_arrival   b805053d4d26 -> afe73c4ba92a
     siege_of_tobruk   5c02a1f22398 -> 2f2133eb37fd
 
 Each reproduced twice, byte-for-byte.
+
+NOT RE-BASELINED BY THE 5.5 REPAIR PASS (same day), AND THAT WAS CHECKED RATHER THAN ASSUMED. The
+repair made rule 43 deduct from Africa exactly what it bases in the Mediterranean (game.basing --
+before it, the same bombers were counted in Sicily for the Malta raid AND in Africa for Land
+Support), moved the basing cut ahead of the air-superiority scale, and reordered the Convoy Planning
+Phase behind the Strategic Air Planning Stage as 48 orders them. Both signatures were recomputed
+twice each on the repaired tree and are UNCHANGED -- the basing arithmetic has no squadron to bite
+on here, and the beat reorder swaps the convoy phase with two Malta beats that emit nothing when
+there is no Malta in the scenario.
 
 --------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-21 (earlier the same day) -- CAUSE: the 5.1 REPAIR PASS. 36.17 held in one scan
