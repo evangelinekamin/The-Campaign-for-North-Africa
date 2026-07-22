@@ -193,13 +193,13 @@ def test_campaign_railhead_port_uses_the_chart_tonnage():
 
 def test_campaign_malta_throttles_the_axis_convoy():
     # C4 counterweight: RULE 44, the island itself (game.malta) -- the Axis Mediterranean convoy
-    # (60.37 lane "2") is under a standing Maltese strike, so it no longer lands its full tonnage
+    # ([56.11] lane "3", Italy -> Benghazi) is under a standing Maltese strike, so it no longer lands its full tonnage
     # uncontested; each arrival is skimmed on the [41.5] CRT. The schedule used to carry a
     # hand-typed strength per Game-Turn (the deleted _malta_bomb_points calendar); it now carries
     # source="malta" and the strength is read off the island's live Capacity Levels and surviving
     # Swordfish at the moment the convoy sails. See tests/test_malta.py for the loop itself.
     st = campaign(seed=CAMPAIGN_SEED, max_turns=24)
-    assert any(o.lane == "2" for o in st.interdictions)          # Malta is seeded on the Axis lane
+    assert any(o.lane == "3" for o in st.interdictions)          # Malta is seeded on the Axis lane
     res = run(campaign(seed=CAMPAIGN_SEED, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     assert [e for e in res.events if e.kind.name == "CONVOY_INTERDICTED"]   # the convoy is skimmed
 

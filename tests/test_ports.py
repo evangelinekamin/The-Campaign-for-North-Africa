@@ -160,6 +160,57 @@ def test_port_unloaded_beat_is_emitted_with_tons_and_eff():
     assert ammo_beat.payload["tons"] == supply.points_to_tons(ammo_beat.payload["qty"], "AMMO")
 
 
+def _land_over_the_turn(port: Port, cargo: dict, order=None) -> int:
+    """Land one convoy's manifest across the Game-Turn's three Operations Stages (48 V.D) through
+    `port`, optionally under an air-interdiction `order`, and return the total Fuel Points landed.
+    The harbour stands on a Major City (56.28: like Benghazi) so the built-in dump's 54.12 ceiling
+    is unlimited and the 55.3 tonnage quay is the only throttle on the road."""
+    from dataclasses import replace
+    dump = SupplyUnit("D", port.side, port.hex, ammo=0, fuel=0, stores=0, water=0)
+    conv = Convoy("c", port.side, 1, "L", "D", dict(cargo))
+    st = _port_state(port, dump, [conv])
+    st = replace(st, terrain=TerrainMap(terrain={port.hex: Terrain.MAJOR_CITY}, fortifications={}))
+    if order is not None:
+        st = replace(st, interdictions=(order,))
+    r = _Run(st)
+    for stage in (1, 2, 3):
+        r.state = replace(r.state, stage=stage)
+        _naval_convoys(r)
+    return r.state.supply("D").fuel
+
+
+def test_convoy_interdiction_reduces_landed_supply_only_once_the_manifest_fits_the_quay():
+    """[41.6]/[44]/[56.25] THE REPAIR, IN ONE TEST. Air interdiction skims the manifest AT SEA
+    (engine._interdict) BEFORE the 55.3 quay throttle. Whether that skim reaches LANDED supply
+    depends entirely on whether the manifest was sized to the quay or several times it:
+
+      * When the Axis lane sailed its whole [56.5] allowance into one harbour (the faucet-fix bug,
+        56.27 misread as the sink for the overflow), the manifest was ~2-3x the quay's Game-Turn
+        throughput. Interdiction came off the surplus the quay would have expired anyway, so LANDED
+        supply did not move -- Malta's 6-7% cut was arithmetically inert (faucet-audit problem 3).
+      * With the manifest sized to the harbour's Game-Turn throughput (56.25: the balance sails other
+        lanes), the skim is tonnage that never lands. Interdiction reduces LANDED supply directly.
+
+    So this pins BOTH regimes on the SAME interdiction, which is the whole of why the repair matters:
+    the island can only bite once the pipe is full rather than overflowing."""
+    from game.state import InterdictionOrder
+    port = Port("B", Side.AXIS, (0, 0), "major", max_eff=3, eff=3, cap_tons=2500,
+                cap_ammo=supply._UNLIMITED, cap_fuel=supply._UNLIMITED,
+                cap_stores=supply._UNLIMITED, cap_water=supply._UNLIMITED)
+    gt_capacity_pts = supply.tons_to_points(3 * supply.port_tonnage_budget(port), "FUEL")   # 60,000
+    order = InterdictionOrder("L", 1, 500)               # 41.66 top column: every 2d6 code skims >= 20%
+
+    # (1) manifest SIZED TO THE QUAY -- interdiction reaches landed supply
+    quay_sized = {"FUEL": gt_capacity_pts}
+    assert _land_over_the_turn(port, quay_sized) == gt_capacity_pts          # lands in full, uncut
+    assert _land_over_the_turn(port, quay_sized, order) < gt_capacity_pts    # the island now bites
+
+    # (2) manifest THREE TIMES THE QUAY (the pre-repair overflow) -- interdiction is inert on landings
+    oversized = {"FUEL": 3 * gt_capacity_pts}
+    assert _land_over_the_turn(port, oversized) == gt_capacity_pts           # quay-bound either way
+    assert _land_over_the_turn(port, oversized, order) == gt_capacity_pts    # the skim came off surplus
+
+
 def test_throttle_ignored_without_a_port():
     # A dump with NO port lands the full cargo (the CHUNK-1/2 behaviour is preserved).
     dump = SupplyUnit("D", Side.ALLIED, (0, 0), ammo=0, fuel=0, stores=0, water=0)

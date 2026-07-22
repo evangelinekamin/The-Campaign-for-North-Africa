@@ -19,6 +19,39 @@
 > piles. The landed/burned headline moved 12.3x -> 22.0x (seed 7: 11.1x -> 19.7x) for exactly the
 > reason this audit predicted: a correct faucet on a chain that still cannot move it.
 
+> **REPAIR, 2026-07-22 (commit "fix(supply): the faucet repair").** Three adversarial verifiers read
+> the resolution commit and found that the RANK-3 fix, correct in reading the [56.5] allowance as a
+> Game-Turn's, then sailed the WHOLE allowance -- the licence for all six [56.11] lanes -- into the
+> ONE modelled harbour and let the overflow expire, citing [56.27]. **[56.27] is an ADVISORY to the
+> planner; [56.25] is the operative rule** ("the Axis Player ... ALLOCATES his available tonnage to
+> the lanes -- and ports -- he wants them to use"). Fixed: the Benghazi lane now carries
+> `min(allowance, Benghazi's Game-Turn throughput = 3 x 2,500 t)` and the balance sails the
+> Tripoli/Bizerta lanes this engine does not model -- planned around, not annihilated. **This is what
+> makes 41.6/44 convoy interdiction able to reduce Axis LANDED supply again**: with the manifest at
+> the quay's size rather than 2-3x it, tonnage skimmed at sea no longer comes off a surplus the quay
+> would have expired anyway. Measured, seed 1941, Malta live vs neutralised: **AFTER the repair the
+> island denies 47,108 Fuel Points over the campaign (2,664,528 vs 2,711,636); BEFORE it, +4,322 of
+> random sign -- inert**, which is precisely this audit's "clincher". The faucet itself is NOT
+> reduced: with Malta off, landed Fuel is 2,711,636 after the repair vs 2,716,544 before -- the clip
+> is landed-neutral, and what the Axis EATS is unchanged (138,862 Points), because the last mile
+> (culprit 2) is still the binding constraint. Full campaign, seed 1941 (resolution -> repair):
+> shipped 2,113,429 -> 899,929 t (Benghazi's 56.25 share), landed Fuel 2,716,544 -> 2,664,528, Ammo
+> 71,500 -> 70,325, Stores 261,297 -> 256,510, evaporated 2,142,319 -> 2,094,868, landed/burned
+> 21.96x -> 21.54x (seed 7: -> 19.19x).
+>
+> **CONSEQUENCE STATED (the verifiers' problem 2), which the resolution left unsaid:** because the
+> licence almost always exceeds one harbour's Game-Turn throughput, the [56.4]/[56.5] month-to-month
+> variation ABOVE that throughput does not reach LANDED tonnage on the single modelled lane -- it is
+> absorbed by the 56.25 allocation to the unmodelled lanes. The charts still decide which Game-Turns
+> sail at all and the total licence; the harbour is the binding gate on what lands, which is
+> hypothesis (f). Also in the repair: `_evaporate` now INDEXES its per-side rate (KeyError on an
+> unknown side, not a silent .get-default exemption -- the verifiers' problem 5); [49.3]'s hot-slice
+> stacking is raised as an **OWNER RULING** in `_base_evaporation` rather than decided silently
+> (problem 4, scan PDF p.67 = book p.20); and the Benghazi lane, mislabelled "2" (Sicily -> Tripoli)
+> against the [56.11] chart, is corrected to "3" (Italy -> Benghazi) in lockstep with its Malta
+> interdiction order (problem 6 -- a labelling fix, since malta.interdiction_points reads no distance
+> yet). The two benchmark signatures are BYTE-IDENTICAL through all of it.
+
 Block 2, 2026-07-22. **Measurement only — no engine behaviour was changed by this work.**
 Instrument: `scratchpad/faucet_audit.py` (read-only; folds a full 111-Game-Turn campaign and
 tallies every stage of the supply chain). Numbers below are seed 1941, 281,906 events, winner

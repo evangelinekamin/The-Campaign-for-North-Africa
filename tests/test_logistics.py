@@ -14,8 +14,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import pytest
+
 from game import calendar, supply
-from game.engine import _logistics, _Run
+from game.engine import _evaporate, _logistics, _Run
 from game.events import EventKind, Phase, Side
 from game.invariants import check
 from game.movement import TerrainMap
@@ -87,6 +89,19 @@ def test_hot_weather_evaporates_eleven_percent():
     d = r.state.supply("D")
     assert (d.fuel, d.water) == (89, 89)                # 6% + 5% hot = 11%
     assert _conserves(r.state)
+
+
+def test_evaporation_fails_loud_on_a_dump_of_no_known_side():
+    """[49.3] game.invariants' whole posture is to fail LOUD -- a misencoded rule must raise, never
+    run 'confidently wrong for 111 turns'. _evaporate INDEXES its per-side rate dict (pct_by_side)
+    rather than .get(side, 0)-ing it, so a dump belonging to neither AXIS nor ALLIED -- which no
+    minting site produces today (apply.py:198/207 carry a real side) -- is a KeyError, not a silent
+    EXEMPTION of that dump from a printed evaporation rate. The wrong failure mode would leak fuel
+    that never evaporates; the right one stops the run."""
+    ghost = SupplyUnit("G", Side.SYSTEM, (0, 0), ammo=0, fuel=100, stores=0, water=100)
+    r = _Run(_state([], [ghost]))
+    with pytest.raises(KeyError):
+        _evaporate(r, {Side.AXIS: 6, Side.ALLIED: 9})
 
 
 def _first_gt_of(year: int, month: int) -> int:

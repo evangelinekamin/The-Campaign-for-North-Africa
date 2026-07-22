@@ -1222,9 +1222,25 @@ def _unload_convoys(r: _Run, due: list) -> None:
     the line at once, in the turn's first stage. A SEA convoy unloads over the harbour quay, capped
     by the port's per-OpStage tonnage budget (55.16, ceil(cap_tons * eff/max_eff)); whatever will
     not fit this stage stays on the manifest for the next one, at the Efficiency Level the port
-    then has -- bombed down or regenerated -- which is the whole siege duel. The un-landed remainder
-    is not annihilated (the old code silently dropped it): it simply waits for a later stage or, at
-    end of turn, expires unshipped (56.27, may not ship over capacity)."""
+    then has -- bombed down or regenerated -- which is the whole siege duel.
+
+    THE MANIFEST IS SIZED TO THE QUAY UPSTREAM, not annihilated here. The Axis lane is scheduled
+    with at most a Game-Turn's worth of harbour throughput (scenario._campaign_convoys, [56.25]:
+    the Player allocates his tonnage across the lanes and ports he sails, and does not send a
+    harbour more than it can land), so at full Efficiency a manifest lands in full over the turn's
+    three stages and nothing expires. A remainder is left over only when the harbour has been
+    BOMBED below its planned throughput (55.1), and that remainder expires unshipped at end of turn
+    (56.27, may not ship over capacity). This is also why 41.6/44 convoy interdiction can reduce
+    Axis LANDED supply: with the manifest at the quay's size rather than several times it, tonnage
+    skimmed at sea (engine._interdict, upstream) is tonnage that never lands -- it is no longer
+    coming off a surplus the quay would have expired regardless.
+
+    CONSEQUENCE, flagged honestly: because the allowance almost always exceeds one harbour's
+    Game-Turn throughput, the month-to-month variation the [56.4]/[56.5] charts encode above that
+    throughput does not reach LANDED tonnage on this single modelled lane -- it is absorbed by the
+    56.25 allocation to the lanes this engine does not sail. The charts still decide WHICH Game-Turns
+    sail at all (a '-' month sails nothing) and the size of the total licence; the harbour is the
+    binding gate on what lands, which is the faucet audit's hypothesis (f)."""
     port_landed: dict[tuple[str, str], int] = {}        # 55.14: per-commodity sub-cap, per-port-per-OpStage
     port_tons: dict[str, float] = {}                    # 55.3: the ONE shared tonnage budget per port per OpStage
     for c in sorted(due, key=lambda c: c.id):           # deterministic arrival order
@@ -1385,13 +1401,26 @@ def _petrol_tin_window(gt: int) -> bool:
 
 def _base_evaporation(state: GameState) -> dict:
     """[49.3] The base per-Game-Turn evaporation rate PER SIDE -- 6% for everybody, except that the
-    Commonwealth loses NINE per cent for the first year of the war. The number was transcribed
-    (data/logistics_rates.json, `commonwealth_penalty_percent_sept1940_to_aug1941`) and, until the
-    faucet audit found it, nothing read it. It is a printed number, so it is charged.
+    Commonwealth loses NINE per cent for the first year of the war (the four-gallon petrol tin before
+    the jerrican). The 9% was transcribed (data/logistics_rates.json,
+    `commonwealth_penalty_percent_sept1940_to_aug1941`) and, until the faucet audit found it, nothing
+    read it. It is a printed number, so it is charged. What is UNDISPUTED and implemented here: in a
+    non-hot Game-Turn inside the window the Commonwealth loses 9% and the Axis 6%.
 
-    The hot-weather slice is NOT conditioned: 49.3 makes 9% the Commonwealth's own reading of the
-    per-Game-Turn rate the 6% otherwise sets, and 29.34's +5% is a separate charge on a separate
-    clock (per Operations Stage, "as soon as the hot weather is determined")."""
+    OWNER RULING NEEDED -- does the +5% hot slice STACK on the Commonwealth's 9%? (scan PDF p.67 =
+    book p.20; docs/rules/49-fuel.md:42-44). 49.3 reads: 6% base, then "if the weather ... is 'hot
+    weather', an additional reduction of five per-cent (5%) is taken ... THERE IS ONE EXCEPTION TO
+    THESE RATES [plural]: ... the Commonwealth spillage and evaporation rate is nine percent (9%) per
+    Game-turn." Two readings, materially different for the Eighth Army's first year:
+      (A) 9% replaces only the 6% per-Game-Turn base; the separate 29.34 per-Operations-Stage hot 5%
+          still applies, so a hot Commonwealth Game-Turn loses 9% + up to 15% = up to 24%.
+      (B) "these rates" is PLURAL -- the exception replaces BOTH the 6% and the +5% with a single
+          flat 9% per Game-Turn, so the Commonwealth loses 9% in the window, hot or not.
+    The engine currently runs reading (A) -- the hot slice is NOT side-conditioned (see
+    _flat_evaporation), which is the more literal stacking of two separately-printed rules. It is
+    LEFT running provisionally rather than switched, because switching to (B) would be deciding the
+    other way just as silently. This is the single rule the faucet-fix credited with moving both
+    benchmark signatures and inverting the Mersa Matruh pin, so it is load-bearing and Eve rules."""
     return {Side.AXIS: _EVAP["base"],
             Side.ALLIED: (_EVAP["commonwealth_1940_41"] if _petrol_tin_window(state.turn)
                           else _EVAP["base"])}
@@ -1421,10 +1450,15 @@ def _evaporate(r: _Run, pct_by_side: dict) -> None:
     a finite stock it becomes real."""
     if not any(pct > 0 for pct in pct_by_side.values()):
         return
+    # pct_by_side is indexed, not .get-with-a-default: _base_evaporation / _flat_evaporation always
+    # return BOTH sides' rates, and every dump and truck carries a real side (AXIS or ALLIED, minted
+    # at apply.py:198/207 and their truck twins). A side that is neither is a misencoded rule, and
+    # this file's policy is to fail LOUD (game.invariants) -- a .get(side, 0) default would silently
+    # EXEMPT such a dump from a printed evaporation rate, which is the wrong failure mode. KeyError.
     for sid in sorted(su.id for su in r.state.supplies):
         if r.state.supply(sid).base:                    # 52.44: a well or a pipeline never
             continue                                    # evaporates (and see the flag above)
-        pct = pct_by_side.get(r.state.supply(sid).side, 0)
+        pct = pct_by_side[r.state.supply(sid).side]
         for commodity in (supply.FUEL, supply.WATER):
             amt = getattr(r.state.supply(sid), commodity.lower())
             loss = amt * pct // 100
@@ -1432,7 +1466,7 @@ def _evaporate(r: _Run, pct_by_side: dict) -> None:
                 r.emit(EventKind.SUPPLY_EVAPORATED, Side.SYSTEM, "SYSTEM",
                        {"supply_id": sid, "commodity": commodity, "qty": loss})
     for tid in sorted(t.id for t in r.state.trucks):    # 29.34: "as well as in trucks"
-        pct = pct_by_side.get(r.state.truck(tid).side, 0)
+        pct = pct_by_side[r.state.truck(tid).side]
         for commodity in (supply.FUEL, supply.WATER):
             amt = getattr(r.state.truck(tid), commodity.lower())
             loss = amt * pct // 100

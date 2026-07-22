@@ -20,6 +20,7 @@ is gone, because a deleted invention that comes back is worse than one that neve
 from __future__ import annotations
 
 import math
+import random
 import sys
 from pathlib import Path
 
@@ -265,32 +266,56 @@ def test_an_oasis_is_geography_and_never_votes_in_the_convoy_split():
 
 # --- [56.21]: the allowance is a GAME-TURN's, not a month's ---------------------------------------
 
-def test_every_game_turn_gets_its_own_56_5_allowance():
+def test_every_game_turn_gets_its_own_56_5_allowance_and_benghazi_takes_its_share():
     """[56.21] "The figures given on the Tonnage Determination Table are the tonnage of supplies
     that the Axis may ship IN THAT GAME-TURN (for which he is planning)" -- with a worked example
     that ships 21,000 tons on Game-Turn 55 alone (scan PDF p.75 = book p.24), and 56.22/56.24 both
-    saying "for a given Game-Turn" / "for that Game-Turn".
+    saying "for a given Game-Turn" / "for that Game-Turn". The engine used to roll the [56.5] die
+    ONCE A CALENDAR MONTH and quarter it -- 507,000 tons of a licensed 1,550,000-2,544,000 (24.9%,
+    faucet-audit.md stage 1a); the per-Game-Turn licence is what the book prints, and this test
+    reads it at its true layer, _campaign_axis_tonnage (the ROLL).
 
-    The engine used to roll the [56.5] die ONCE A CALENDAR MONTH and quarter the result across the
-    month's Game-Turns, which shipped 507,000 tons of a licensed 1,550,000-2,544,000 -- 24.9% of the
-    book's own faucet (faucet-audit.md stage 1a). One sailing per scheduled Game-Turn, each carrying
-    that Game-Turn's whole allowance, is what the book prints."""
+    [56.25] "The Axis Player then, at the same time, ALLOCATES his available tonnage to the lanes --
+    AND PORTS -- he wants them to use." The licence is for all six [56.11] lanes together; no player
+    sails a harbour more than it can land, so the ONE modelled lane (Italy -> Benghazi) carries
+    min(licence, Benghazi's Game-Turn throughput) and the balance sails the lanes into Tripoli and
+    Bizerta this engine does not model. The repair: the whole licence used to be sailed into
+    Benghazi and the overflow annihilated at the quay (56.27 misread as its sink), which made
+    convoy interdiction unable to reduce landed supply. It is now PLANNED AROUND, not annihilated."""
     st = campaign(seed=1941)
     lane = {c.arrival_turn: c for c in st.convoys if c.id.startswith("axis-conv-")}
+    beng = next(p for p in st.ports if p.id == "PORT-Benghazi")
+    gt_capacity = scenario._OPSTAGES_PER_GAME_TURN * supply.port_tonnage_budget(beng)   # 3 x 2,500
 
     def level(gt: int) -> str:
         year, month = calendar.gt_to_month(gt)
         return scenario._CONVOY_LEVEL_56_4.get(str(year), {}).get(scenario._MON[month - 1], "-")
 
+    # replay the scenario's own convoy rng to recover the per-Game-Turn licence roll exactly
+    rng = random.Random(1941)
+    licence = {}
+    for gt in range(1, st.max_turns + 1):
+        t = scenario._campaign_axis_tonnage(gt, rng)
+        if t is not None:
+            licence[gt] = t
+
     scheduled = {gt for gt in range(1, st.max_turns + 1) if level(gt) != "-"}
     assert set(lane) == scheduled, "a convoy sails every Game-Turn the 56.4 chart schedules one"
+    assert set(licence) == scheduled
     for gt, c in lane.items():
         cap = scenario._CONVOY_CAP_56_5[level(gt)]
         fixed, var = cap["fixed_tons"], cap["variable_tons_per_die"]
         lo = math.ceil((fixed + var * 1) / 1000) * 1000       # the die envelope of THIS Game-Turn's
-        hi = math.ceil((fixed + var * 6) / 1000) * 1000       # 56.5 row -- not a quarter of it
-        assert lo <= c.tons <= hi, (gt, level(gt), c.tons)
-    assert sum(c.tons for c in lane.values()) >= 1_550_000     # the licence's own die minimum
+        hi = math.ceil((fixed + var * 6) / 1000) * 1000       # 56.5 row -- a whole roll, not a quarter
+        assert lo <= licence[gt] <= hi, (gt, level(gt), licence[gt])   # rank-3: the full licence
+        assert c.tons == min(licence[gt], gt_capacity)        # 56.25: Benghazi's share of it
+        assert c.tons <= gt_capacity                          # never more than the quay can land
+    assert sum(licence.values()) >= 1_550_000                 # the licence's own die minimum
+    # the clip BINDS -- the licence overruns one harbour's Game-Turn throughput in the vast majority
+    # of Game-Turns, which is why the [56.4]/[56.5] variation above it cannot reach this lane's
+    # landed tonnage (flagged in engine._unload_convoys), and why the surplus goes to other ports
+    assert any(c.tons == gt_capacity for c in lane.values())
+    assert sum(c.tons for c in lane.values()) < sum(licence.values())
 
 
 # --- end to end ------------------------------------------------------------------------------------

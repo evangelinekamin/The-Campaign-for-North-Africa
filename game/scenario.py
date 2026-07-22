@@ -1143,17 +1143,38 @@ def _campaign_axis_trucks(supplies, target, facilities, larders=()) -> tuple[Tru
                                     line=1))
 
 
+# [48 VI/VII] A Game-Turn is three Operations Stages (engine.run repeats all facets of the First
+# Operations Stage in the Second and Third), so a harbour's per-OpStage 55.3 tonnage budget lands
+# three times a Game-Turn. The Commonwealth railway already reads this fact (_campaign_rail_cargo).
+_OPSTAGES_PER_GAME_TURN = 3
+
+
+def _benghazi_port(rear) -> Port:
+    """[55.3] The forward Mediterranean harbour the Axis convoy lane lands at -- Benghazi, at full
+    Efficiency (55.14 throttles by efficiency; the campaign's bottleneck is the port-to-front haul,
+    not the harbour). The ONE place its chart row is read, shared by _campaign_ports, which PLACES
+    the harbour, and _campaign_convoys, which sizes the lane to what the harbour can land in a
+    Game-Turn (56.25) so no tonnage is sailed into a quay it cannot cross."""
+    chart = _PORT_TONS.get("benghazi", _PORT_TONS["tripoli"])   # 55.3: Benghazi Efficiency Level 3
+    eff = chart["efficiency_level"]
+    return Port("PORT-Benghazi", Side.AXIS, rear.hex, "major", max_eff=eff, eff=eff,
+                **_caps_tonnage(chart["tons"]))
+
+
 def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy, ...]:
     """The supply source timetables. AXIS: the Mediterranean convoy (56.2/56.4), one sailing every
-    Game-Turn the [56.4] chart schedules one, carrying THAT Game-Turn's whole [56.5] allowance
-    (56.21) and landing at Benghazi through PORT-Benghazi's 55.14 throttle -- which passes 2,500
-    tons an Operations Stage of it and lets the rest expire unshipped (56.27). What does get ashore
-    piles at the rear and is hauled forward by the lean truck pool (_campaign_axis_trucks), which
-    culminates as the front outruns it. COMMONWEALTH: the rail lane (rule 57 / 60.7), refilling the
-    Mersa Matruh railhead every turn so the Suez base's supply actually reaches a forward dump the
-    front can trace to -- without it the inexhaustible base is stranded 34+ hexes behind the
-    railhead and no westward counterattack can be sustained. The Cairo/Alexandria base itself is
-    seeded inexhaustible (_campaign_cw_base) and needs no lane."""
+    Game-Turn the [56.4] chart schedules one, carrying Benghazi's SHARE of that Game-Turn's [56.5]
+    allowance (56.21/56.25) and landing at Benghazi through PORT-Benghazi's 55.14 throttle. The
+    allowance is a Game-Turn's whole licence across ALL six [56.11] lanes; 56.25 has the Axis Player
+    allocate it to the lanes and ports he sails, and no player sends a harbour more than it can
+    receive, so this ONE modelled lane carries at most what Benghazi can land in a Game-Turn
+    (3 x 2,500 t) and the balance sails the lanes into Tripoli/Bizerta this engine does not model.
+    What gets ashore piles at the rear and is hauled forward by the lean truck pool
+    (_campaign_axis_trucks), which culminates as the front outruns it. COMMONWEALTH: the rail lane
+    (rule 57 / 60.7), refilling the Mersa Matruh railhead every turn so the Suez base's supply
+    actually reaches a forward dump the front can trace to -- without it the inexhaustible base is
+    stranded 34+ hexes behind the railhead and no westward counterattack can be sustained. The
+    Cairo/Alexandria base itself is seeded inexhaustible (_campaign_cw_base) and needs no lane."""
     convoys = []
     railhead = _campaign_cw_railhead(supplies)
     if railhead is not None:
@@ -1208,31 +1229,34 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
     rear = _axis_rear(supplies, target)
     if rear is not None:
         rng = random.Random(seed)
+        # [56.25] Benghazi's Game-Turn throughput -- 3 Operations Stages of the 55.3 quay (2,500 t
+        # each at full Efficiency). The lane carries at most this; the balance of the allowance is
+        # allocated to other lanes and ports (56.25), which this engine does not model.
+        gt_capacity = _OPSTAGES_PER_GAME_TURN * port_tonnage_budget(_benghazi_port(rear))
         for gt in range(1, max_turns + 1):
-            # [56.21] THE ALLOWANCE IS PER GAME-TURN, AND THE ENGINE USED TO QUARTER IT ACROSS A
-            # MONTH -- shipping 507,000 tons of a licensed 1,550,000-2,544,000 (24.9%; measured,
-            # scratchpad/port/faucet-audit.md stage 1a). The book, read on the scan (PDF p.75 =
+            # [56.21] THE ALLOWANCE IS PER GAME-TURN (the RANK-3 fix), and the engine used to quarter
+            # it across a month -- shipping 507,000 tons of a licensed 1,550,000-2,544,000 (24.9%;
+            # measured, scratchpad/port/faucet-audit.md stage 1a). The book, on the scan (PDF p.75 =
             # book p.24): "The figures given on the Tonnage Determination Table are the tonnage of
             # supplies that the Axis may ship IN THAT GAME-TURN (for which he is planning)", with a
-            # worked example that ships "21,000 tons of supplies and Replacement Points ... ON
-            # GAME-TURN 55", and 56.22/56.24 both saying "for a given Game-Turn" / "for that
-            # Game-Turn". The [56.4] chart is indexed BY MONTH -- that is what "Axis MONTHLY
-            # Shipping Table" means, it selects the ROW -- but the tonnage that row yields is a
-            # Game-Turn's. 56.2's own claim that the rules reflect Axis supply "as they actually
-            # occurred" settles it against history: the Axis really did ship ~2.1 million tons.
-            #
-            # So one roll per Game-Turn, each Game-Turn its own full allowance. The quay is what
-            # holds it back, which is where the book puts the constraint: Benghazi passes 2,500 t
-            # an Operations Stage (55.3), so most of a sailing now EXPIRES UNSHIPPED at the end of
-            # the Game-Turn under 56.27 (engine._unload_convoys already keeps the remainder on the
-            # manifest across the stages and lets it lapse). Each sailing carries its ALLOWANCE,
-            # not a manifest: 56.22's split is the Axis Player's, taken a Game-Turn ahead of it
-            # (engine._convoy_planning).
-            tons = _campaign_axis_tonnage(gt, rng)
-            if tons is None:                        # a '-' month on the 56.4 chart: nothing sails
+            # worked example that ships "21,000 tons ... ON GAME-TURN 55", and 56.22/56.24 saying
+            # "for a given Game-Turn". The [56.4] chart is indexed BY MONTH only to select the ROW.
+            allowance = _campaign_axis_tonnage(gt, rng)
+            if allowance is None:                   # a '-' month on the 56.4 chart: nothing sails
                 continue
-            convoys.append(Convoy(f"axis-conv-t{gt}", Side.AXIS, gt, "2", rear.id, {},
-                                  tons=tons))       # 60.37 lane 2
+            # [56.25] "The Axis Player then, at the same time, allocates his available tonnage to the
+            # lanes -- and ports -- he wants them to use." The allowance is the licence for ALL six
+            # [56.11] lanes together, not a manifest for this one. No player sails a harbour more
+            # than it can land in a Game-Turn, so Benghazi's lane carries min(allowance, its
+            # Game-Turn throughput) and the balance goes to the Tripoli/Bizerta lanes this engine
+            # does not model -- it is PLANNED AROUND, not sailed into a quay to be annihilated. This
+            # is why 41.6/44 convoy interdiction can once again reduce Axis LANDED supply: with the
+            # manifest sized to the quay rather than several times it, tonnage skimmed at sea is
+            # tonnage that never lands (before this, Malta's cut came off a surplus the quay would
+            # have expired anyway). See the repair note in scratchpad/port/faucet-audit.md.
+            tons = min(allowance, gt_capacity)
+            convoys.append(Convoy(f"axis-conv-t{gt}", Side.AXIS, gt, "3", rear.id, {},
+                                  tons=tons))       # [56.11] lane 3, Italy -> Benghazi
     return tuple(convoys)
 
 
@@ -1262,10 +1286,7 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
     ports = []
     rear = _axis_rear(supplies, target)
     if rear is not None:
-        chart = _PORT_TONS.get("benghazi", _PORT_TONS["tripoli"])   # 55.3: Benghazi Efficiency Level 3
-        eff = chart["efficiency_level"]
-        ports.append(Port("PORT-Benghazi", Side.AXIS, rear.hex, "major", max_eff=eff, eff=eff,
-                          **_caps_tonnage(chart["tons"])))
+        ports.append(_benghazi_port(rear))              # 55.3, the ONE place its chart row is read
     railhead = _campaign_cw_railhead(supplies)
     if railhead is not None:
         chart = _PORT_TONS.get("mersa_matruh", _PORT_TONS["tripoli"])   # 55.3: Mersa Matruh Efficiency Level 1
@@ -1389,8 +1410,8 @@ _MALTA_LEVELS = logistics_data.malta_setup_60_46()["capacity_levels"]
 
 
 def _campaign_malta_interdiction(max_turns: int) -> tuple[InterdictionOrder, ...]:
-    """[44.0] Malta's standing strike at the Axis Mediterranean convoy lane (60.37 lane '2') -- one
-    order per Game-Turn, EVERY Game-Turn, carrying no strength of its own.
+    """[44.0] Malta's standing strike at the Axis Mediterranean convoy lane ([56.11] lane '3',
+    Italy -> Benghazi) -- one order per Game-Turn, EVERY Game-Turn, carrying no strength of its own.
 
     THE NUMBER THAT USED TO BE HERE IS GONE, AND ITS DELETION IS THE POINT OF THIS BLOCK. Until
     rule 44 landed, this schedule was generated from `_malta_bomb_points(gt)` -- a hand-typed
@@ -1411,16 +1432,20 @@ def _campaign_malta_interdiction(max_turns: int) -> tuple[InterdictionOrder, ...
     deliberate: an order that is sometimes absent is a die sometimes not drawn, which is exactly
     the conditional-draw hazard game.dice exists to contain. The dice now fall every turn and the
     island's strength decides what they mean."""
-    return tuple(InterdictionOrder("2", t, 0, source="malta")
+    return tuple(InterdictionOrder("3", t, 0, source="malta")
                  for t in range(1, max_turns + 1))
 
 
 _TOBRUK = "C4807"    # the fortress (a 64.73 victory hex); the sea lifeline that lets a siege hold
-# [56.18] the Axis naval-convoy lane Italy -> Tobruk. The Convoy Air Distance chart names all six
+# [56.11]/[56.18] the Axis naval-convoy lanes. The Convoy Air Distance chart names all six
 # (1 Sicily->Bizerta, 2 Sicily->Tripoli, 3 Italy->Benghazi, 4 Greece->Benghazi, 5 Greece->Tobruk,
-# 6 Italy->Tobruk), so the Axis run into the harbour it holds is the rulebook's own lane, not an
-# invented one. (Benghazi's lane is labelled "2" above -- a pre-existing mislabel against this
-# chart, which reads 3/4 for Benghazi. Left alone: the label is the Malta interdiction's key.)
+# 6 Italy->Tobruk), so the Axis runs into the harbours it holds are the rulebook's own lanes, not
+# invented ones. The Mediterranean lane into Benghazi is now correctly labelled "3" (Italy ->
+# Benghazi) -- it used to carry the label "2" (Sicily -> Tripoli), a mislabel against this chart,
+# and the label is the Malta interdiction's coupling key, so the convoy and _campaign_malta_
+# interdiction were corrected together. The [56.18] range-modification (35 hexes on lane 2 vs 50 on
+# lane 3) is NOT yet read by the engine -- malta.interdiction_points is distance-independent -- so
+# the correction is a faithfulness/legibility fix today and becomes load-bearing when 56.18 lands.
 _AXIS_TOBRUK_LANE = "6"
 # Historically-correct September-1940 ownership. The 56.15 gate cancels a convoy whose destination
 # hex is ENEMY-controlled, but control_of defaults NEUTRAL and _naval_convoys runs before the first

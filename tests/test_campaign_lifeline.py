@@ -331,7 +331,7 @@ def test_the_axis_ends_the_war_holding_benghazi():
     assert fin.victory._occupier(fin, beng) == Side.AXIS
     assert fin.control_of(beng) == Control.AXIS
     cancelled = [e for e in res.events
-                 if e.kind == EventKind.CONVOY_CANCELLED and e.payload["lane"] == "2"]
+                 if e.kind == EventKind.CONVOY_CANCELLED and e.payload["lane"] == "3"]
     assert not cancelled, "the Commonwealth still switches off the Axis Mediterranean convoy"
 
 

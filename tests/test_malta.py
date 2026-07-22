@@ -37,7 +37,7 @@ def test_every_malta_interdiction_order_is_live_sourced_and_carries_no_typed_str
     st = campaign(seed=1, max_turns=6)
     malta_orders = [o for o in st.interdictions if o.source == "malta"]
     assert malta_orders, "the campaign must still put Malta over the Axis convoy lane"
-    assert {o.lane for o in malta_orders} == {"2"}
+    assert {o.lane for o in malta_orders} == {"3"}          # [56.11] lane 3, Italy -> Benghazi
     assert all(o.bomb_points == 0 for o in malta_orders), "strength is read from the island, not typed"
     # one per Game-Turn: an order that is sometimes absent is a die sometimes not drawn
     assert sorted(o.turn for o in malta_orders) == list(range(1, 7))
@@ -367,7 +367,7 @@ def test_the_whole_loop_turns_over_a_short_campaign():
     assert set(r.final.malta_raids) <= set(malta.LEVELS)
     assert all(malta.spent(r.final, lvl) <= (malta.budget()[lvl] or 10) for lvl in malta.LEVELS)
     cut = [e for e in r.events if e.kind == EventKind.CONVOY_INTERDICTED
-           and e.payload["lane"] == "2"]
+           and e.payload["lane"] == "3"]
     assert cut
     # 11: the log certifies the strength that produced the result, not the order's empty field
     assert all(e.payload["bomb_points"] > 0 for e in cut)
