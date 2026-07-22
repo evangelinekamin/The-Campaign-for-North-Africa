@@ -2418,7 +2418,9 @@
       "water": 400
     },
     "axis_air_facility_pool_60_34": {
-      "_comment": "[60.34] (docs/rules/60 line 139), verbatim: \"In addition the Axis Player receives a total of 1200 Ammo, 850 Fuel, 100 Stores and 100 Water Points which may be FREELY DISTRIBUTED AMONG HIS AIRFIELDS.\" A separate pool from the field dumps above: it lands in the rule-36.17 air-facility dumps (SupplyUnit.air_dump), which only an SGSU may draw from (35.14) and the land army may not. 59.61 -- \"ignore all Trucks and supplies available at/for Air facilities in the initial set-ups\" -- suppressed this row while the Air Game was abstract; it is in force from Phase 5.1. Free placement among the facilities is the Player's; game.oob.air_dumps splits it evenly (remainder to the earliest facility by id), the same authored convention as the field-dump split.",
+      "_comment": "[60.34] (docs/rules/60 line 139), verbatim: \"In addition the Axis Player receives a total of 1200 Ammo, 850 Fuel, 100 Stores and 100 Water Points which may be FREELY DISTRIBUTED AMONG HIS AIRFIELDS.\" A separate pool from the field dumps above: it lands in the rule-36.17 air-facility dumps (SupplyUnit.air_dump), which only an SGSU may draw from (35.14) and the land army may not. 59.61 -- \"ignore all Trucks and supplies available at/for Air facilities in the initial set-ups\" -- suppressed this row while the Air Game was abstract; it is in force from Phase 5.1. Free placement among the eligible facilities is the Player's; game.oob.air_dumps splits it evenly (remainder to the earliest facility by id), the same authored convention as the field-dump split.",
+      "facility_kinds": ["airfield"],
+      "_facility_kinds_comment": "THE ROW NAMES AIRFIELDS AND ONLY AIRFIELDS, and since [60.5] gave the campaign a map with four KINDS of air facility on it, that word is load-bearing: the Axis pool may not be placed on a landing strip, a flying boat basin or an alighting area. Re-read on the scan (PDF p.78, left-centre column, 2026-07-22) to be sure it is not an OCR contraction: it prints \"...which may be freely distributed among his air-fields\" over a line break. The BOOK ITSELF DRAWS THE DISTINCTION IN THE FACING ROW -- [60.44] (below) says \"Distribute amongst Air Facilities as desired\" for the Commonwealth -- and it draws it a third time in the same section's abstract-game appendix, [60.9] B/C: \"placed on any Axis airfields(s)\" against \"any Commonwealth air facilities\" (cited ONLY as a witness to the author's wording; 60.9 is the ABSTRACT game and is not in force here). The Desert Fox pools take no restriction for the same reason: [61.44] and [61.36] both say Air Facilities.",
       "ammo": 1200,
       "fuel": 850,
       "stores": 100,
@@ -2426,6 +2428,8 @@
     },
     "commonwealth_air_facility_pool_60_44": {
       "_comment": "[60.44] (docs/rules/60 lines 233-239), verbatim: \"Air Supply (Distribute amongst Air Facilities as desired) Ammo: 200 Fuel: 250 Stores: 50\". The chart lists NO air Water for the Commonwealth (as 60.44 lists no dump Water either -- CW water is the 52.7 wells and the 54.3 pipeline).",
+      "facility_kinds": null,
+      "_facility_kinds_comment": "NULL = UNRESTRICTED, and that is the chart's own word, not an omission: this row reads AIR FACILITIES where the Axis row facing it ([60.34], above) reads AIRFIELDS. Verified on the scan at PDF p.79 (left column, 2026-07-22). So the Commonwealth allotment may stand on a landing strip or a flying boat basin and the Axis one may not -- the asymmetry is the book's.",
       "ammo": 200,
       "fuel": 250,
       "stores": 50

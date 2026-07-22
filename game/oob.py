@@ -66,6 +66,15 @@ CAMPAIGN_AIR_POOLS = {
     Side.AXIS:   logistics_data.axis_air_pool_60_34(),     # [60.34] 1200/850/100/100
     Side.ALLIED: logistics_data.cw_air_pool_60_44(),       # [60.44] 200 Ammo / 250 Fuel / 50 Stores
 }
+# ...and WHICH FACILITIES each of those two pools may be placed on, which is NOT the same question
+# and not the same answer. [60.34] gives the Axis pool to "his AIRFIELDS"; [60.44] gives the
+# Commonwealth's to "Air Facilities". The asymmetry is the book's, it is transcribed in
+# data/logistics_rates.json beside the magnitudes, and it only began to bite when [60.5] gave the
+# campaign a map with four KINDS on it -- before that the campaign had no airfield at all, so an
+# even split over "all facilities" and over "all airfields" were the same empty distinction.
+# The Desert Fox pools carry no restriction because [61.44] and [61.36] both say Air Facilities.
+CAMPAIGN_AIR_POOL_KINDS = {Side[name]: kinds
+                           for name, kinds in logistics_data.campaign_air_pool_kinds().items()}
 
 # --- [60.31]/[60.41] & [61.43]/[61.31] FIRST-LINE TRUCK ALLOTMENTS (rule 53.11) ----------------
 # The per-side first-line Truck-Point totals by 54.2 class, transcribed cell-by-cell off the 1979
@@ -274,8 +283,8 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
     return units, supplies
 
 
-def air_facilities(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
-                   extra_file: str | None = None) -> list[AirFacility]:
+def air_facilities(oob_file: str = "oob_desert_fox.json",
+                   sections: str | None = None) -> list[AirFacility]:
     """[36.0] Lift the OOB's air-facility records onto the map as AirFacility installations.
 
     An air facility is NOT a unit and this is the seam that says so. It has no TOE, no supply
@@ -287,8 +296,9 @@ def air_facilities(oob_file: str = "oob_desert_fox.json", sections: str | None =
 
     Each record names its `facility` kind; the Capacity Level opens at that kind's charted maximum
     (36.12 six / 36.2 one / 36.3 three / 36.4 one) because a facility in a scenario's initial set-up
-    is an intact one -- 36.14's reductions are what BOMBING does to it. `sections` and `extra_file`
-    filter exactly as build()'s do.
+    is an intact one -- 36.14's reductions are what BOMBING does to it. `sections` filters exactly
+    as build()'s does. (The `extra_file` parameter this used to take went with the campaign: the
+    only caller that passed it was the campaign's, and the campaign now reads the book's chart.)
 
     ⚠ THIS READS THE VASSAL EXTRACTION, AND THE EXTRACTION IS NOT THE BOOK'S MAP. It is now the
     SCENARIO reader only -- the Desert Fox pair, whose own facility charts ([61.x]) are still
@@ -306,7 +316,7 @@ def air_facilities(oob_file: str = "oob_desert_fox.json", sections: str | None =
     landing strips (B4006, C4808) are the extraction's hexes, not a transcribed [61] chart."""
     out: list[AirFacility] = []
     seen: dict[str, int] = {}
-    for rec in (_load(oob_file) + (_load(extra_file) if extra_file else [])):
+    for rec in _load(oob_file):
         if rec.get("kind") != "air_facility":
             continue
         hexlbl = rec["hex"]
@@ -324,7 +334,7 @@ def air_facilities(oob_file: str = "oob_desert_fox.json", sections: str | None =
 def charted_air_facilities(sections: str | None = None) -> list[AirFacility]:
     """[60.5] THE CAMPAIGN'S AIR MAP, off the chart the book prints (data/air_facilities_60_5.json,
     read from the scan at PDF p.79). 64.3 sends the full campaign to Section 60, so this chart IS
-    the campaign's set of air facilities: 16 Airfields, 31 Air Landing Strips, 2 Flying Boat Basins
+    the campaign's set of air facilities: 15 Airfields, 31 Air Landing Strips, 2 Flying Boat Basins
     and 1 Alighting Area on maps A-E, where the VASSAL extraction gave it 10 strips, 1 alighting
     area and NOT ONE AIRFIELD (see air_facilities above for the hex-by-hex comparison).
 
@@ -344,14 +354,30 @@ def charted_air_facilities(sections: str | None = None) -> list[AirFacility]:
     36.15 makes a facility non-denominational and air.holder derives the current holder from control
     of the hex.
 
-    OFF-MAP ROWS ARE NOT PLACED. Six facilities and the four Tripoli/Tunisia boxes are printed
-    "Off-Map" -- the Delta and Canal Zone fields (Abu Seier, Deversoir, Fayid, Ismailia, Kabrit),
-    the Port Said basin, and the Axis's Tripolitanian boxes. Where the chart prints a hex in
-    parentheses (E(3433), E(1833), E4033) that is the off-map box's entry hex and not the
-    facility's location, so seeding one would put an off-map installation on the playable map. The
-    engine has no off-map air box to stand them in -- the same gap data/victory_cities.json records
-    for Tripoli as a supply source -- so the Commonwealth's five rear airfields and both sides'
-    off-map bases are charted here and absent from the board. Flagged, not silent.
+    OFF-MAP ROWS ARE NOT PLACED, AND [36.5] IS THE RULE THAT IS BEING DEFERRED. Six facilities and
+    the four Tripoli/Tunisia boxes are printed "Off-Map" -- the Delta and Canal Zone fields (Abu
+    Seier, Deversoir, Fayid, Ismailia, Kabrit), the Port Said basin, and the Axis's Tripolitanian
+    boxes. Where the chart prints a hex in parentheses (E(3433), E(1833), E4033) that is the off-map
+    box's entry hex and not the facility's location, so seeding one would put an off-map
+    installation on the playable map. The engine has no off-map air box to stand them in -- the same
+    gap data/victory_cities.json records for Tripoli as a supply source.
+
+    THE BOOK IS NOT SILENT ABOUT HOW THEY WORK, THOUGH, AND WHAT IT SAYS BEARS DIRECTLY ON PHASE 5'S
+    HEADLINE FINDING. [36.5] OFF-MAP AIR FACILITIES (docs/rules/36 lines 46-56, and 36.12
+    cross-references it) names Deversoir itself and says they "are treated the same as other, on-map
+    facilities" with three exceptions: (a) "there are UNLIMITED SUPPLIES for airplane maintenance and
+    repair"; (b) they may exceed the SGSU limit up to the limit listed on the field; (c) they may
+    never be destroyed by bombing (though they may be reduced to zero, and are rebuilt off the Malta
+    Air Facility Construction Table). [61.44] says the same thing of the other side in passing --
+    "remember, Tripoli/Tunisia air facilities have unlimited Fuel and Ammo".
+
+    So 36.5(a) IS A REFILL PATH, and Gate 5's conclusion that "nothing refills an air dump" is
+    incomplete without it: the Commonwealth has five rear Delta/Canal airfields plus Port Said whose
+    maintenance and repair supply the book makes unlimited, and this deferral is what denies him
+    them. It belongs beside 36.3 (trucks to a flying boat basin), 35.15 (first-line trucks attached
+    to an SGSU) and the [60.33]/[60.43] air-facility lorry rows on the list of unbuilt faucets --
+    with the difference that this one needs an off-map box before it needs a rule. Flagged, not
+    silent; the rows are transcribed so the chart is not edited, and none is placed.
 
     `sections` filters to a loaded map area exactly as build()'s does."""
     out: list[AirFacility] = []
@@ -370,7 +396,8 @@ def charted_air_facilities(sections: str | None = None) -> list[AirFacility]:
     return out
 
 
-def air_dumps(facilities: list[AirFacility], pools: dict, placed=()) -> list[SupplyUnit]:
+def air_dumps(facilities: list[AirFacility], pools: dict, placed=(), kinds=None,
+              squadrons=()) -> list[SupplyUnit]:
     """[36.17] Give each side's air facilities the supply dump the rule says they ARE: "an airfield
     is a supply dump for supplies to be used by the SGSU's on that airfield. Fuel, ammunition,
     stores, etc., may be stored at an airfield AS IF IT WERE A DUMP."
@@ -378,30 +405,77 @@ def air_dumps(facilities: list[AirFacility], pools: dict, placed=()) -> list[Sup
     `pools` is the scenario's charted air-supply allotment keyed by Side ([60.34] 1200 Ammo / 850
     Fuel / 100 Stores / 100 Water for the campaign Axis, [60.44] 200/250/50 for the Commonwealth;
     [61.44] 50/50 and [61.36] 250/180/50 for the Desert Fox). Every one of those charts grants FREE
-    PLACEMENT -- "freely distributed among his airfields", "distribute amongst Air Facilities as
-    desired" -- so the even split below (remainder to the earliest facility by id, clipped to the
+    PLACEMENT, so the even split below (remainder to the earliest facility by id, clipped to the
     54.12 Other-Terrain ceilings) is OUR ASSIGNMENT of that free choice, the identical convention
-    _place_dumps uses for the field dumps.
+    _place_dumps uses for the field dumps. The choice is free WITHIN THE WORDS OF THE ROW, and the
+    three filters below are those words and our reading of them, applied in that order.
 
     These dumps carry air_dump=True, which is the whole point: game.supply hides them from the land
     army's trace and in-hex draw and shows them only to an SGSU's 35.14 upkeep. Without the flag the
     Axis's 850 charted air Fuel Points would simply be 850 more Fuel Points for the Panzerarmee.
 
-    [59.52] IS WHY `placed` EXISTS, AND IT IS THE ONE CONSTRAINT THE FREE CHOICE HAS. "Air facilities
+    (1) `kinds` IS THE ROW'S OWN RESTRICTION, AND IT IS NOT THE SAME ON BOTH SIDES. [60.34] gives the
+    campaign Axis pool to "his AIRFIELDS"; [60.44] gives the Commonwealth's to "Air Facilities"; the
+    abstract-game appendix [60.9] B/C draws the identical distinction in the identical words (cited
+    as a witness to the wording only -- 60.9 is the ABSTRACT game and is not in force). So the Axis
+    pool may not stand on a landing strip, a basin or an alighting area, and the Commonwealth's may.
+    This was inert until [60.5] landed: the extraction's campaign map had NO AIRFIELD AT ALL, so
+    "all facilities" and "all airfields" were the same empty distinction, and an even split over the
+    Axis's 27 facilities put ~63% of the charted pool where the printed row does not allow it. Both
+    Desert Fox pools are unrestricted ([61.44]/[61.36] say Air Facilities), so `kinds` defaults to
+    None and those two scenarios are untouched.
+
+    (2) `squadrons` IS THE FREE CHOICE A QUARTERMASTER WOULD ACTUALLY MAKE: the pool goes to the
+    facilities that have aeroplanes on them. Nothing in the book says this -- it is our assignment,
+    stated as such -- but the alternative is not neutral, it is WRONG IN A MEASURABLE WAY. 35.14's
+    Fuel and Stores legs are an IN-HEX draw (engine._sgsu_upkeep) and no code path ever moves an
+    SGSU, so a Fuel Point placed on a facility with no squadron on it is stranded for the whole war
+    by OUR placement and not by the book. Over [60.5]'s map that was half the larder: measured at
+    campaign(seed=4) set-up before this filter, the Axis had 24 air dumps of which 12 held a
+    squadron (430 of 850 Fuel and 600 of 1200 Ammo stranded) and the Commonwealth 18 of which 9 did
+    (126 of 250 Fuel, 101 of 200 Ammo). Two free-choice conventions -- this even split and
+    seed_sgsus's fill-in-id-order -- were harmless while the map had 11 facilities and 11 squadrons,
+    and collided the moment the real map arrived. Pass the seeded SGSUs and the collision is gone.
+    With `squadrons` empty (no squadron information) the filter selects nothing and falls through to
+    the full list, which is what the Desert Fox call does.
+
+    (3) [59.52] IS THE ONE CONSTRAINT THE FREE CHOICE HAS, and `placed` is it. "Air facilities
     automatically possess a supply dump. IF A PLAYER PLACES SUPPLIES AVAILABLE AT A SUPPLY DUMP IN THE
     SAME LOCATION AS THOSE AVAILABLE AT AN AIR FACILITY, THE TOTALS ARE COMBINED AND IT BECOMES ONE
     DUMP (see Case 36.17)." Two Supply Units on one hex is exactly what the engine's one-dump-per-hex
     law forbids (engine._dump_on: our dump IS that hex's 54.12 Supply Dump Capacity, not a counter),
-    so the placement must not create the case -- and a quartermaster would not create it anyway. The
-    campaign walks straight into it: the Commonwealth's charted Sollum Field Supply Depot stands on
-    the Sollum landing strip's hex, in the path of the September-1940 Italian advance, so an even
-    split would stack the RAF's larder on a depot that is overrun on Game-Turn 1. `placed` is the
-    dumps already on the board; a facility sharing a hex with its OWN side's real dump is skipped, and
-    its share goes to that side's other facilities (the squadron there is not starved by the skip --
-    36.17 restricts LAND units from an airfield's pile, it does not restrict an SGSU from an ordinary
-    dump under its feet, so the depot it stands on feeds it: supply.colocated_dumps). If skipping
-    would leave a side no facility at all, nothing is skipped -- charted supply is never dropped to
-    honour a placement convention.
+    so the placement does not create the case. `placed` is the dumps already on the board; a facility
+    sharing a hex with its OWN side's real dump is skipped and its share goes to that side's others.
+    Each filter falls back to the list before it rather than empty: charted supply is never dropped
+    to honour a placement convention. (3) is applied BEFORE (2) for exactly that reason -- the
+    59.52 fall-back is the wider list, so a side whose every squadron sits on a field depot lands
+    its pool at its other legal facilities instead of stacking two dumps on one hex.
+
+    WHAT THE SPLIT STILL DOES NOT DO is weight a facility's share by HOW MANY squadrons stand on it:
+    six squadrons at an airfield share one share, one squadron at a landing strip has a share to
+    itself. That is the same flat convention _place_dumps uses and it is left flat deliberately --
+    weighting it would be a second authored rule on top of an authored placement -- but it is worth
+    knowing when reading an air-fuel measurement, because it is the whole of the difference between
+    "the Italian air force is grounded on Game-Turn 8" and "most of it is grounded on Game-Turn 3
+    and a lucky handful fly all year". Neither is in the book; only the 850 Fuel Points are.
+
+    ⚠⚠ OWNER RULING NEEDED -- WHAT FEEDS THE SQUADRON ON A SKIPPED FACILITY, AND IT IS NOW THE
+    CAMPAIGN'S DOMINANT AIR-SUPPLY FLOW. [60.5] puts landing strips on Sollum C4021 and Sidi Barrani
+    C4131 and an airfield on Mersa Matruh D3714 -- the exact hexes of the [60.44] Commonwealth Field
+    Supply Depots -- so three Commonwealth squadron bases are skipped here and their 35.14 upkeep is
+    drawn off the ARMY's depots instead (measured over 30 Game-Turns of campaign(seed=4): 273 Fuel
+    and 121 Stores). That flow rests on a reading this file does not get to make on its own:
+    supply.colocated_dumps lets an SGSU draw from any friendly dump under its feet purely because
+    nothing forbids it -- 36.17 designates the airfield as the squadron's dump and restricts only
+    the reverse direction (land units out of the air pile), and 35.14 names no source at all. The
+    book's own answer to co-location is the sentence quoted above: COMBINE the two piles into one
+    dump. We do not, because the direction of the combination is exactly what is unstated -- a
+    combined dump that follows 36.17 would take the Commonwealth's field depots away from the
+    Commonwealth ARMY, and one that does not would put the air allotment in the army's tanks -- and
+    either reading rewrites a campaign's logistics off one ambiguous cross-reference. Placement
+    avoids creating the case, which is a legal exercise of the free choice; the SGSU-eats-the-army's
+    -depot flow that results is a JUDGEMENT CALL, flagged here and at supply.colocated_dumps, not a
+    transcribed rule. Scan p.79 ([59.52] is quoted in docs/rules/59, and 36.17 in docs/rules/36).
 
     ⚠ A SIDE WITH NO FACILITY GETS NO DUMP, AND ITS CHARTED POOL IS DROPPED. The split is over the
     facilities passed in, so a pool keyed to a side that holds none simply does not land -- and the
@@ -413,13 +487,19 @@ def air_dumps(facilities: list[AirFacility], pools: dict, placed=()) -> list[Sup
     rather than silent, because charted supply that does not appear is a fact about the scenario."""
     taken = {(s.side, s.hex) for s in placed
              if not (s.is_dummy or s.air_dump or wells.is_water_source(s))}
+    based = {(u.side, u.hex) for u in squadrons if air.is_sgsu(u)}
     out: list[SupplyUnit] = []
     by_side: dict[Side, list[AirFacility]] = {}
     for f in sorted(facilities, key=lambda f: f.id):
         by_side.setdefault(f.side, []).append(f)
     for side, all_of_them in by_side.items():
         pool = pools.get(side, {})
-        lst = [f for f in all_of_them if (side, f.hex) not in taken] or all_of_them   # 59.52
+        allowed = (kinds or {}).get(side)
+        lst = all_of_them
+        if allowed is not None:
+            lst = [f for f in lst if f.kind in allowed] or lst        # (1) [60.34] "his airfields"
+        lst = [f for f in lst if (side, f.hex) not in taken] or lst   # (3) [59.52]
+        lst = [f for f in lst if (side, f.hex) in based] or lst       # (2) where the squadrons are
         n = len(lst)
         for i, f in enumerate(lst):
             amt = {c: min(_share(pool.get(c, 0), n, i), _OTHER_CAP[c]) for c in _COMMODITIES}
@@ -443,7 +523,7 @@ def _sgsu_available() -> dict:
 CAMPAIGN_SGSU_AVAILABLE = _sgsu_available()
 
 
-def seed_sgsus(facilities: list[AirFacility], available: dict) -> list[Unit]:
+def seed_sgsus(facilities: list[AirFacility], available: dict, kinds=None) -> list[Unit]:
     """[35.11]/[60.32]/[60.42] Base each side's Squadron Ground Support Units at its air facilities.
 
     35.11: "Each SGSU counter is placed on the game-map to indicate where that squadron is located.
@@ -458,16 +538,33 @@ def seed_sgsus(facilities: list[AirFacility], available: dict) -> list[Unit]:
     exactly what 60.42's sentence says to do. That used to be the binding constraint and it no
     longer is: over the VASSAL extraction's 11 capacity-1 landing strips (no airfield at all) this
     based 11 of the charted 53 squadrons and the other 42 had nowhere to stand. Over [60.5]'s real
-    map -- 16 Airfields of six squadrons apiece among 50 facilities (charted_air_facilities) -- both
+    map -- 15 Airfields of six squadrons apiece among 49 facilities (charted_air_facilities) -- both
     charted pools land whole: 39 Italian ([60.32]) and 14 Commonwealth ([60.42]).
 
     ⚠ WHICH FIELDS THEY FILL IS OUR FREE CHOICE AND IT IS NOW A GEOGRAPHIC ONE. Facility ids are
     hex-label-based, so id order runs section by section (A..E) and west to east inside each: the
-    Axis 39 fill Cyrenaica -- Soluch, El Berca and Benina six apiece, then Barce and Martuba -- and
-    run out well before the frontier fields at Capuzzo and Bardia, while the Commonwealth 14 start
-    at the wire (Siwa, Buq Buq, Sollum, Sidi Barrani) and end at Mersa Matruh, never reaching the
-    Delta. Deterministic and inside 60.42's restriction, but it is an assignment and not a rule --
-    a player would base his squadrons where the fighting is going to be.
+    Commonwealth 14 start at the wire (Siwa, Buq Buq, Sollum, Sidi Barrani), run east along the
+    coastal strips and end at Mersa Matruh, never reaching the Delta. Deterministic and inside
+    60.42's restriction, but it is an assignment and not a rule -- a player would base his squadrons
+    where the fighting is going to be.
+
+    `kinds` IS THE ONE PLACE THAT ORDER IS BENT, AND IT IS BENT TO MATCH THE SUPPLY CHART. [60.34]
+    lets the Axis put its air allotment on AIRFIELDS ONLY (see air_dumps), so a squadron based on an
+    Italian landing strip has no charted supply source at all -- and by id order alone, nine of the
+    39 Italian squadrons landed on strips, permanently dry from Game-Turn 1 by our placement rather
+    than by the book. Facilities the side's own pool may legally stand on are therefore filled
+    first: the Axis 39 fill seven Cyrenaican and frontier AIRFIELDS (Soluch, El Berca, Benina,
+    Barce, Martuba, the blank B5825 and Ft. Maddalena), all of them supplied. The Commonwealth's
+    pool is unrestricted ([60.44] says Air Facilities), so `kinds` selects nothing for him and his
+    order is exactly as before.
+
+    THE SQUADRON PLACEMENT IS THE SENIOR OF THE TWO FREE CHOICES, and air_dumps now follows it
+    rather than crossing it. Where the squadrons stand decides where the [60.34]/[60.44] air supply
+    is of any use at all, because 35.14's Fuel and Stores legs are an in-hex draw and no code path
+    ever moves an SGSU; so the campaign seeds the bases FIRST and hands them to air_dumps, which
+    puts each side's pool on the facilities that got a squadron. Placed the other way round -- two
+    independent conventions over the same map -- half of each side's charted larder stood on empty
+    fields for the whole war.
 
     Used by the full campaign, whose order of battle ships no SGSU counter at all. The Desert Fox
     scenarios are NOT seeded this way: their extraction ships real SGSU counters at their own
@@ -497,7 +594,13 @@ def seed_sgsus(facilities: list[AirFacility], available: dict) -> list[Unit]:
     seen: dict[str, int] = {}
     left = dict(available)
     out: list[Unit] = []
-    for f in sorted(facilities, key=lambda f: f.id):
+
+    def _first(f: AirFacility) -> tuple:
+        """Facilities the side's charted air pool MAY stand on come first (see `kinds` above)."""
+        allowed = (kinds or {}).get(f.side)
+        return (0 if allowed is None or f.kind in allowed else 1, f.id)
+
+    for f in sorted(facilities, key=_first):
         nat = "IT" if f.side == Side.AXIS else "CW"
         # [36.12] "There may never be more than SIX SGSU's in a given airfield hex" -- the STACKING
         # ceiling, a different number from the Capacity Level (36.14 lets six stand at a battered

@@ -1453,23 +1453,33 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     # SGSUs standing on it may eat it (35.14): it is the air force's larder, not the army's.
     #
     # [60.5] IS NOW THE MAP THEY STAND ON. 64.3 sends the campaign to Section 60, and [60.5] charts
-    # the set with its printed hexes: 16 Airfields, 31 Air Landing Strips, 2 Flying Boat Basins and
+    # the set with its printed hexes: 15 Airfields, 31 Air Landing Strips, 2 Flying Boat Basins and
     # 1 Alighting Area on maps A-E (plus the off-map Delta/Canal and Tripoli boxes, which no engine
     # map can hold). Until now this read the VASSAL extraction, which carried 10 landing strips, 1
     # alighting area and NO AIRFIELD -- ten of the eleven on hexes the book does not print, and every
     # one of them a ONE-level facility the first bomb eliminated ([41.5] Key). See
     # oob.charted_air_facilities and data/air_facilities_60_5.json.
     facilities = oob.charted_air_facilities(sections="ABCDE")
-    # `placed` is [59.52]: an even split would stack a side's air share on a hex where its own
-    # charted field depot already stands -- "the totals are combined and it becomes one dump" -- so
-    # such a facility is skipped and its share goes to that side's others.
-    air_supply = tuple(oob.air_dumps(facilities, oob.CAMPAIGN_AIR_POOLS, placed=dumps))
     # [35.11]/[60.32]/[60.42] ...and the SQUADRON BASES that stand on them. The campaign order of
     # battle ships no SGSU counter at all, while [60.32] charts 39 Italian and [60.42] 14
     # Commonwealth "available" for placement "at any air facility, within the capacity of that
     # facility" -- so without this the whole of rule 35 would be inert in the campaign and the air
-    # supply above would have no one to feed. Each facility takes SGSUs up to its Capacity Level.
-    units += oob.seed_sgsus(facilities, oob.CAMPAIGN_SGSU_AVAILABLE)
+    # supply below would have no one to feed. Each facility takes SGSUs up to its Capacity Level.
+    #
+    # THE BASES ARE SEEDED FIRST BECAUSE THE SUPPLY FOLLOWS THEM. 35.14's Fuel and Stores legs are
+    # an in-hex draw and nothing ever moves an SGSU, so a Point placed on a facility with no
+    # squadron on it is stranded for the whole war by our own free-placement convention.
+    sgsus = oob.seed_sgsus(facilities, oob.CAMPAIGN_SGSU_AVAILABLE,
+                           kinds=oob.CAMPAIGN_AIR_POOL_KINDS)
+    # `kinds` is the row's own restriction -- [60.34] gives the Axis pool to "his AIRFIELDS" where
+    # [60.44] gives the Commonwealth's to "Air Facilities" -- and `placed` is [59.52]: an even split
+    # would stack a side's air share on a hex where its own charted field depot already stands
+    # ("the totals are combined and it becomes one dump"), so such a facility is skipped and its
+    # share goes to that side's others. See oob.air_dumps for all three filters and for the flagged
+    # judgement call that skipping leaves behind (what feeds the squadron on the skipped hex).
+    air_supply = tuple(oob.air_dumps(facilities, oob.CAMPAIGN_AIR_POOLS, placed=dumps,
+                                     kinds=oob.CAMPAIGN_AIR_POOL_KINDS, squadrons=sgsus))
+    units += sgsus
     # C5: THE WELLS (rules 52.1-52.3) -- the water SOURCES. Water is found in wells and only
     # wells (52.11), so without these the armies drink from nothing: the demand side (52.4) and
     # the 52.53 attrition were both live while total Axis water income across the whole campaign

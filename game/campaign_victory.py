@@ -225,11 +225,14 @@ class CampaignVictory:
         Point from an airfield's pile ("LAND UNITS MAY NOT USE AIRFIELD SUPPLY DUMPS"), so no air dump
         is the Supply Dump this rule is asking for: a division that traced 90 Truck Movement Points to
         a landing strip's larder would arrive at supplies it may not touch. Phase 5.1 put eleven such
-        piles on the campaign map and the [60.5] transcription put forty-two -- RE-MEASURED at seed
-        4's set-up on the book's air map: the Axis has 13 fed_dumps hexes and 24 air-facility dumps
-        standing inside the same flood, the Commonwealth 10 and 18. So counting them would nearly
-        TREBLE both sides' supply-dump count and quietly widen 64.71 (the Axis auto-win) and 64.72
-        (the Commonwealth instant-win); the exclusion carries three times the weight it did.
+        piles on the campaign map and the [60.5] transcription put fourteen -- RE-MEASURED at seed
+        4's set-up on the book's air map: the Axis has 13 fed_dumps hexes and 5 air-facility dumps
+        standing inside the same flood, the Commonwealth 10 and 9. So counting them would still add
+        half again to both sides' supply-dump count and quietly widen 64.71 (the Axis auto-win) and
+        64.72 (the Commonwealth instant-win). (The forty-two this used to say was measured before
+        the air allotment was placed to the words of its own chart: [60.34] restricts the Axis pool
+        to AIRFIELDS, and both pools now follow the squadrons rather than spreading over every
+        facility on the map -- see oob.air_dumps. Fewer piles, none of them stranded.)
 
         THE WELLS ARE THE LOAD-BEARING EXCLUSION, and they are not hypothetical. game.wells models
         a water source as a SupplyUnit -- a flagged proxy for geography -- and it seeds

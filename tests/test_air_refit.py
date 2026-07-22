@@ -510,7 +510,7 @@ def test_the_campaign_refits_and_the_ledger_is_replayable():
     # these three turns. That was never the schedule -- it was the MAP. The campaign's air facilities
     # were the VASSAL extraction's 11 capacity-1 landing strips, seven of them Axis and none of them
     # an airfield, so the Italian ground crews had almost nowhere to stand and every Axis refit came
-    # back AIR_REFIT_DENIED. On the book's map ([60.5]: 16 Airfields, six squadrons apiece) the
+    # back AIR_REFIT_DENIED. On the book's map ([60.5]: 15 Airfields, six squadrons apiece) the
     # Regia Aeronautica has fed SGSUs from Game-Turn 1 and rolls its own refits -- at the Italian +2,
     # which is the flagged missing-German-SGSU counter (game.oob.seed_sgsus), not a printed fact
     # about the Luftwaffe.

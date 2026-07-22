@@ -78,7 +78,17 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
     sent and how far it can trace from there. The take-and-hold mechanism is what this test guards
     and it is intact -- the city is claimed, a unit is sent, and it stays. So the assertion is split:
     Sidi Barrani is still BANKED, and Mersa Matruh must still be GARRISONED. Weakening it to "banks
-    Sidi Barrani" alone would have quietly stopped testing the half that used to fail."""
+    Sidi Barrani" alone would have quietly stopped testing the half that used to fail.
+
+    *** AND THE REASON IT IS NOT BANKED IS PINNED HERE TOO, BECAUSE NOTHING ELSE PINS IT. *** The
+    restatement above is factually true and it still let a capability out of the suite: after it,
+    NO test asserts anything about the Commonwealth being able to trace Fuel and Ammunition at its
+    own railhead city. So the deficiency itself is the assertion -- AL-Stage-Matruh dry of both at
+    GT30, with a live garrison standing on it. This is a characterisation pin on a KNOWN GAP (the
+    unbuilt supply faucet the Phase 5 audit names: 36.3, 35.15, 36.5(a) and the [60.33]/[60.43]
+    lorry rows), not an assertion that the gap is correct. WHEN THE FAUCET LANDS THIS TEST MUST FAIL
+    AND MUST BE INVERTED to "the railhead is wet and Mersa Matruh is banked" -- which is the whole
+    point of pinning it: it fails loudly on the day the engine gets better."""
     fin = _run(30).final
     cw, ax = _banked(fin, Side.ALLIED), _banked(fin, Side.AXIS)
     # The Commonwealth keeps the one its own seeded spine feeds...
@@ -86,6 +96,11 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
     # ...and stands on Mersa Matruh, banked or not: the garrison is sent and it does not wander off.
     assert campaign_claim._occupied(fin, Side.ALLIED, MATRUH), \
         "the Commonwealth walked off its own railhead city"
+    # ...and the 64.73 half it fails is the RAILHEAD BEING DRY, not the garrison wandering off.
+    matruh = [s for s in fin.supplies if s.id == "AL-Stage-Matruh"]
+    assert len(matruh) == 1 and matruh[0].hex == MATRUH
+    assert (matruh[0].fuel, matruh[0].ammo) == (0, 0), \
+        "the railhead has FUEL or AMMO again -- invert this assertion and re-bank Mersa Matruh"
     # The AXIS -- which used to bank whatever the garrison order happened to pin and throw the rest
     # away -- now holds its own rear: BENGHAZI (its port of arrival, never once garrisoned in 111
     # Game-Turns) and SOLLUM, on top of the Tobruk and Bardia it opens the war standing on.

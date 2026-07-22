@@ -133,7 +133,15 @@ def test_italian_oob_builds_with_it_stats_and_roles():
     # tests/test_air_facilities.py; what is asserted here is that they are GONE FROM THE MUSTER,
     # not that they are gone from the game.
     assert not [u for u in muster if u.steps[0].label in ("air", "sgsu")]
-    assert len(oob.air_facilities("oob_italian.json", sections="ABCDE")) == 11   # 8 Axis + 3 CW
+    # RESTATED AGAIN at the [60.5] transcription. This used to pin the extraction's own air-facility
+    # count here ("== 11  # 8 Axis + 3 CW"), which was a live assertion over data NO CODE PATH READS
+    # any more: the campaign takes its air map from the book's chart (oob.charted_air_facilities),
+    # and oob.air_facilities is now the Desert Fox reader only. data/oob_italian.json keeps its 11
+    # records because it is a raw extraction and we do not edit those; what this line asserts is the
+    # thing that is still true and still worth guarding -- whatever that file carries, build() puts
+    # none of it in the muster. The [60.5] counts are pinned in tests/test_air_facilities.py.
+    assert not [rec for rec in oob.air_facilities("oob_italian.json", sections="ABCDE")
+                if rec.id in {u.id for u in units}]
     assert all(u.cpa > 0 for u in muster)                             # Italian chart CPA, not the GE fallback
     roles = {sr.label for u in muster for sr in u.steps}
     # The 10th Army fields infantry / artillery / MG / tank (the Libyan Tank Command) and AA

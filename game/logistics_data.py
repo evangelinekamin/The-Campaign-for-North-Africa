@@ -221,6 +221,23 @@ def cw_air_pool_60_44() -> dict:
     return {"AMMO": p["ammo"], "FUEL": p["fuel"], "STORES": p["stores"]}
 
 
+def campaign_air_pool_kinds() -> dict:
+    """[60.34]/[60.44] WHICH KINDS OF AIR FACILITY each side's campaign air allotment may stand on.
+
+    The two rows do not say the same thing and the difference is the book's: the Axis pool is
+    "freely distributed among his AIRFIELDS" while the Commonwealth's is "distribute amongst AIR
+    FACILITIES as desired". That was inert while the campaign's air map was the VASSAL extraction
+    (which carried no airfield at all, so the restriction had nothing to select); [60.5] put 15
+    Airfields, 31 Air Landing Strips, 2 Basins and 1 Alighting Area on the board and made the word
+    load-bearing. Returned by SIDE NAME (the caller keys it to Side), each value a tuple of
+    game.air kind strings or None for unrestricted."""
+    s = _scenario_60()
+    rows = {"AXIS": s["axis_air_facility_pool_60_34"],
+            "ALLIED": s["commonwealth_air_facility_pool_60_44"]}
+    return {side: None if row["facility_kinds"] is None else tuple(row["facility_kinds"])
+            for side, row in rows.items()}
+
+
 def italian_sgsu_available_60_32() -> int:
     """[60.32] "Italian SGSU Available: 39" -- the last line of the Italian Air Strengths chart."""
     return _scenario_60()["italian_sgsu_available_60_32"]["sgsu"]

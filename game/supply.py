@@ -967,7 +967,23 @@ def colocated_dumps(state: GameState, unit: Unit):
     source for an SGSU standing on it and for nobody else -- which is what keeps the 60.34/60.44 air
     allotment (1200 Ammo / 850 Fuel for the Axis alone) out of the land army's fuel tanks. The rule's
     "emergency" escape is explicitly the Player's judgement ("exactly what constitutes an emergency
-    is left to the Player") and is deliberately unmodelled: there is no non-arbitrary trigger."""
+    is left to the Player") and is deliberately unmodelled: there is no non-arbitrary trigger.
+
+    ⚠⚠ OWNER RULING NEEDED -- THE REVERSE DIRECTION IS OURS, NOT THE BOOK'S, and since [60.5] it is
+    the campaign's dominant air-supply flow. `air_ok` opens EVERY friendly dump under an SGSU's feet
+    to it, including the ARMY's ordinary field depots, purely because no rule forbids it: 36.17
+    designates the airfield as the squadron's dump and restricts only land units out of the air
+    pile, and 35.14 names no source at all. That was a corner case while the campaign's air map was
+    the VASSAL extraction. [60.5] puts landing strips on Sollum C4021 and Sidi Barrani C4131 and an
+    airfield on Mersa Matruh D3714 -- the exact hexes of the [60.44] Commonwealth Field Supply
+    Depots -- so three Commonwealth squadron bases get no air dump of their own (oob.air_dumps
+    honours [59.52] by not stacking two dumps on one hex) and eat the army's instead: measured over
+    30 Game-Turns of campaign(seed=4), 273 Fuel and 121 Stores. The book's own answer to that
+    co-location is to COMBINE the two piles into one dump ([59.52], "the totals are combined and it
+    becomes one dump (see Case 36.17)"), and what it does not say is which pile's RESTRICTION the
+    combined dump then carries -- 36.17's, which would take the Commonwealth's field depots away
+    from the Commonwealth army, or none, which would put the air allotment in its tanks. Until that
+    is ruled, this reading stands and is flagged in both places (see oob.air_dumps)."""
     air_ok = air.is_sgsu(unit)
     return sorted((su for su in state.active_supplies(unit.side)
                    if su.hex == unit.hex and (air_ok or not su.air_dump)),
