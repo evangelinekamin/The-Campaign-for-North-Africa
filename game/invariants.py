@@ -91,6 +91,10 @@ def _check_truck_pools(t) -> None:
         qty = getattr(t, attr)
         if qty < 0:
             raise InvariantViolation(f"truck {t.id} has negative {commodity} cargo {qty}")
+    # [53.0] A formation may be bombed down to nothing (41.32/41.35) but never past it -- a
+    # negative Truck Point count is a mis-encoded loss, not a debt.
+    if t.points < 0:
+        raise InvariantViolation(f"truck {t.id} has negative Truck Points {t.points}")
 
 
 def _check_port(p) -> None:
@@ -272,12 +276,13 @@ _DUMP_ID_KINDS = frozenset({
     EventKind.SUPPLY_ARRIVED, EventKind.SUPPLY_CAPTURED, EventKind.SUPPLY_CONSUMED,
     EventKind.SUPPLY_DUMP_ESTABLISHED, EventKind.SUPPLY_DUMP_CONSTRUCTED, EventKind.SUPPLY_MOVED,
     EventKind.TRUCK_LOADED, EventKind.TRUCK_UNLOADED,
+    EventKind.AIR_DUMP_BOMBED,      # 41.35 B-SD: bombs eliminate a percentage of the dump
     EventKind.UNIT_REFILLED})       # 48 V.C.6 dump->unit top-up drains a dump (Phase 4)
 
 # Events that change a truck's cargo, resolved by p["truck_id"].
 _TRUCK_ID_KINDS = frozenset({
     EventKind.TRUCK_LOADED, EventKind.TRUCK_UNLOADED, EventKind.TRUCK_EVAPORATED,
-    EventKind.TRUCK_MOVED})
+    EventKind.TRUCK_MOVED, EventKind.TRUCK_POINTS_DESTROYED})   # 41.32/41.35 bombed lorries
 
 # Events that move supply between pools / the ledger: conservation of the change is checked.
 _CONSERVATION_KINDS = frozenset({
@@ -285,6 +290,7 @@ _CONSERVATION_KINDS = frozenset({
     EventKind.SUPPLY_DUMP_BLOWN, EventKind.SUPPLY_ARRIVED, EventKind.SUPPLY_CAPTURED,
     EventKind.SUPPLY_CONSUMED, EventKind.TRUCK_LOADED, EventKind.TRUCK_UNLOADED,
     EventKind.TRUCK_MOVED, EventKind.RAIL_HAULED, EventKind.SUPPLY_DUMP_ESTABLISHED,
+    EventKind.AIR_DUMP_BOMBED, EventKind.TRUCK_POINTS_DESTROYED,  # 41.35/41.32 air-delivered sinks
     EventKind.UNIT_REFILLED, EventKind.UNIT_SUPPLY_CONSUMED})    # Phase 4 unit-pool moves
 
 

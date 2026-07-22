@@ -59,9 +59,16 @@ AND THREE MORE, NAMED HERE BECAUSE THEY ARE EASY TO MISTAKE FOR BUILT:
     Points) and data/logistics_rates.json transcribes only bomb_points -- but 12.54 sends the barrage
     at a facility to the Bombload column, so the facility path needs no new transcription. The
     Barrage-Points scale is owed to the OTHER target rows of that table.
-  * **NO SCENARIO OR POLICY GENERATES AN 'airfield' AIR MISSION** -- still true of the LAND SUPPORT
-    channel. engine._air_facility_bomb is the 41.36 resolver for a tactical B-AF mission and the
-    only caller in the tree is its test. What 5.4 built instead is the STRATEGIC one: engine.
+  * **NO SCENARIO OR POLICY GENERATES AN 'airfield', 'dump' OR 'trucks' AIR MISSION** -- still true
+    of the LAND SUPPORT channel, and 5.5 added two more resolvers to the list rather than shortening
+    it. engine._air_facility_bomb (41.36), _air_dump_bomb (41.35) and _air_truck_bomb (41.32) are
+    faithful resolvers whose only callers in the tree are their tests: the LAND air schedule is
+    static (game.scenario) and seeds only strike/fort/port/recon, and no Policy seat has an air hook
+    at all. **The 41.35/41.32 missions are the two that most obviously want one** -- bombing dumps
+    and lorries is how an air force attacks a logistics game -- and giving the air seat a real
+    mission column (39.1/40.21) is the same unbuilt thing engine._air_superiority's flagged free CAP
+    is waiting on. Until then this rule is built and unexercised, which is a different defect from
+    unbuilt and a smaller one. What 5.4 built instead is the STRATEGIC one: engine.
     _malta_raid resolves 44.21's raid on the same [41.5] Airfields row and the same 41.36 rule, but
     it may not route through _air_facility_bomb, because that function sizes its attack from
     _air_points (the LAND arena's committed strike points, gated by air superiority and paid for
@@ -676,13 +683,22 @@ def unfit_planes(state: GameState, side: Side, arena: str, role: str) -> int:
     return state.air_unfit.get(squadron(side, arena, role), 0)
 
 
-def ready_planes(state: GameState, side: Side, arena: str, role: str) -> int:
-    """[38.31] The squadron's planes that MAY fly a mission: its establishment less its unfit."""
-    return max(0, squadron_planes(state, side, arena, role)
-               - unfit_planes(state, side, arena, role))
+def ready_planes(state: GameState, side: Side, arena: str, role: str,
+                 establishment: "int | None" = None) -> int:
+    """[38.31] The squadron's planes that MAY fly a mission: its establishment less its unfit.
+
+    `establishment` overrides what the ledger is measured against, and it exists for exactly one
+    caller: rule 43 bases three quarters of the Axis bomber force in the Mediterranean (game.basing),
+    so the squadron flying Land Support in Africa is the remaining quarter and its readiness must be
+    read against THAT force, not against the whole establishment -- otherwise the Mediterranean
+    contingent would silently act as a readiness buffer for aeroplanes that are not in Africa.
+    Default None keeps the whole squadron, which is every other caller and every other side."""
+    est = squadron_planes(state, side, arena, role) if establishment is None else establishment
+    return max(0, est - unfit_planes(state, side, arena, role))
 
 
-def ready_points(state: GameState, side: Side, arena: str, role: str, points: int) -> int:
+def ready_points(state: GameState, side: Side, arena: str, role: str, points: int,
+                 establishment: "int | None" = None) -> int:
     """[38.31] `points` capped by what the squadron's REFITTED planes can carry: "a plane that is
     not refitted may fly no mission other than transfer, EVEN IF IT IS REFUELED."
 
@@ -697,10 +713,13 @@ def ready_points(state: GameState, side: Side, arena: str, role: str, points: in
     caller reads its commitment off the same pool, so points > 0 implies an establishment.)"""
     if points <= 0 or not refit_modelled(state, side):
         return points
-    return min(points, ready_planes(state, side, arena, role) * points_per_plane(side, role))
+    return min(points, ready_planes(state, side, arena, role, establishment)
+               * points_per_plane(side, role))
 
 
-def flying_planes(state: GameState, side: Side, arena: str, role: str, points: int) -> int:
+def flying_planes(state: GameState, side: Side, arena: str, role: str, points: int,
+                  establishment: "int | None" = None) -> int:
     """[38.31] The planes `points` of a flown mission put in the air, never more than the squadron
     had refitted -- the count that goes UNFIT the moment the mission is flown."""
-    return min(planes_flying(side, role, points), ready_planes(state, side, arena, role))
+    return min(planes_flying(side, role, points),
+               ready_planes(state, side, arena, role, establishment))

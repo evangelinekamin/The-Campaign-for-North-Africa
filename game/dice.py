@@ -41,9 +41,11 @@ import random
 
 # Every die the engine rolls, routed to its own stream. Adding a die to the engine means
 # adding its subsystem here: DiceBox rejects an unknown name rather than inventing a stream
-# for a typo. (The scenario builders' convoy-cargo dice -- scenario._axis_convoy_cargo,
-# scenario._campaign_axis_cargo -- are already independent random.Random instances drawn to
-# completion at BUILD time, before the engine rolls anything, so they cannot desync it.)
+# for a typo. (The scenario builders' [56.5] convoy-TONNAGE dice -- scenario._axis_convoy_tonnage,
+# scenario._campaign_axis_tonnage -- are already independent random.Random instances drawn to
+# completion at BUILD time, before the engine rolls anything, so they cannot desync it. What is
+# LOADED into that tonnage is no longer decided there at all: 56.22 makes it the Axis Player's, and
+# engine._convoy_planning takes it from a Policy, drawing no die of any kind.)
 SUBSYSTEMS: tuple[str, ...] = (
     "initiative",         # [7.14] Initiative Determination, and its tie rerolls
     "rommel",             # [31.5] the Berlin recall

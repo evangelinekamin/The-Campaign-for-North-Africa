@@ -6,7 +6,8 @@ project supply forward. The base StaffPolicy truck relay is left verbatim for st
 """
 from __future__ import annotations
 
-from .campaign_policy import _CampaignAxisSupplyMixin, hold_garrisons, malta_raid_doctrine
+from .campaign_policy import (_CampaignAxisSupplyMixin, convoy_plan_doctrine, hold_garrisons,
+                              malta_africa_doctrine, malta_raid_doctrine)
 from .events import Side
 from .policy import MoveOrder
 from .staff_policy import StaffPolicy
@@ -26,8 +27,22 @@ class CampaignStaffPolicy(_CampaignAxisSupplyMixin, StaffPolicy):
         live-staff campaign inherited Policy.malta_raid's "I" and never touched the [44.41] budget,
         so the project's watchable-campaign path and its scripted twin diverged on the one rule
         Phase 5 exists to build. Which LEVEL to spend is a judgement an LLM seat could make, and
-        when 39.19's desert opportunity cost lands (block 5.5) it becomes worth asking one."""
+        and now that 39.19's desert opportunity cost has landed (block 5.5) it is worth asking
+        one -- the trade the seat would be weighing is written out in malta_africa_doctrine."""
         return malta_raid_doctrine(state)
+
+    def malta_africa_planes(self, state: GameState, available: int, level: str) -> int:
+        """[44.25]/[39.19] THE SAME AFRICAN-CONTINGENT DOCTRINE THE SCRIPTED CAMPAIGN AXIS FLIES,
+        for the same reason: it is a strategic-air decision on a scripted seat, and the two campaign
+        variants must not diverge on the one rule Phase 5 exists to build."""
+        return malta_africa_doctrine(state, available, level)
+
+    def convoy_plan(self, state: GameState, side: Side, tons: int) -> dict:
+        """[56.22] THE SAME CONVOY DOCTRINE THE SCRIPTED CAMPAIGN AXIS FLIES. This one belongs to
+        the QUARTERMASTER seat, which is scripted in this staff (game.staff_policy) -- and it is the
+        Axis Player's single most important recurring choice, so it is the most obvious candidate in
+        the whole engine for promotion to a live seat once the QM seat is LLM-driven."""
+        return convoy_plan_doctrine(state, side, tons)
 
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
         # THE STANDING GARRISON ORDER APPLIES TO THE LIVE STAFF TOO (rule 64.73, campaign_claim):

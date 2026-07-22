@@ -37,6 +37,11 @@ FUEL = "FUEL"
 STORES = "STORES"
 WATER = "WATER"
 COMMODITIES = (AMMO, FUEL, STORES, WATER)
+# [56.22] The three commodities an Axis naval convoy may carry: "the Axis Player may now plan to
+# ship any amounts (within the limits of allowable tonnage) of FUEL, AMMUNITION, AND STORES that he
+# wishes." Water is NOT among them -- it comes out of the ground (52.7 wells) and off the railway,
+# never off a ship -- so the Convoy Planning Phase re-validates a plan against this tuple.
+CONVOY_COMMODITIES = (AMMO, FUEL, STORES)
 
 # 54.12 Supply Dump Capacity Chart (points). THREE of the chart's rows are live here: a major
 # city (and the Tunis/Tripoli off-map boxes) holds an unlimited amount; a VILLAGE holds

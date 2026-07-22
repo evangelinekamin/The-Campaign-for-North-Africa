@@ -83,6 +83,19 @@ class EventKind(str, Enum):
     # to IDENTITY -- the load-bearing change rides the paired, already-reduced SUPPLY_ARRIVED
     # (the skimmed supply simply never enters the system, so conservation holds untouched).
     CONVOY_INTERDICTED = "CONVOY_INTERDICTED"
+    # [56.21]/[56.22] THE AXIS CONVOY PLANNING PHASE (48 III) -- "convoys are planned one Game-Turn
+    # in advance". CONVOY_PLANNED {convoy_id, lane, dest, tons, allowed_tons, cargo, tons_by} folds
+    # the Axis Player's own decision about WHAT to ship into GameState.convoy_plans, one Game-Turn
+    # before the sailing it belongs to. The charts fix the tonnage (56.21: the Convoy Capacity Table
+    # sends him to the month's Tonnage Determination Table and he rolls); 56.22 hands him the split:
+    # "having determined the allowable tonnage for a given Game-Turn, the Axis Player MAY NOW PLAN TO
+    # SHIP ANY AMOUNTS (within the limits of allowable tonnage) OF FUEL, AMMUNITION, AND STORES THAT
+    # HE WISHES. They are available (for game purposes) in unlimited quantities in Europe."
+    # This is the fold that deleted invention I11 -- a hard-coded 60/25/15 commodity split that was
+    # the Axis's single most important recurring decision made once, in a constant, at scenario
+    # construction. It folds ONLY the plan; the supply itself still enters the system through the
+    # ordinary SUPPLY_ARRIVED when the convoy lands, so conservation is untouched.
+    CONVOY_PLANNED = "CONVOY_PLANNED"
     # Full-logistics consumption (rules 49-52). SUPPLY_EVAPORATED (49.3/52.44: 6% of
     # on-map fuel + water per game-turn, +5% hot) folds like a consume -- it drains the
     # dump and adds to consumed[], so it "left the system" and conservation stays exact.
@@ -327,6 +340,28 @@ class EventKind(str, Enum):
     # (rng_draws = the per-unit noise) for the camera. Both emit ONLY when a side fields air.
     AIR_STRIKE_RESOLVED = "AIR_STRIKE_RESOLVED"
     AIR_RECON_RESOLVED = "AIR_RECON_RESOLVED"
+    # [41.35] B-SD BOMBING SUPPLY DUMPS and [41.32] B-TC BOMBING TRUCK CONVOYS -- the two [41.5]
+    # rows transcribed in Phase 5.5, and the first time in this engine that air can touch the
+    # logistics game it was flown to interdict. The [41.5] roll itself rides the existing
+    # AIR_STRIKE_RESOLVED (arena='DUMP' / 'TRUCKS'), so the CRT dice are certified in the log by
+    # exactly the path the harbour and the airfield already use; these two kinds carry the damage.
+    #
+    # AIR_DUMP_BOMBED {supply_id, pct, destroyed:{commodity: qty}} is 41.35 -- the chart Key,
+    # verbatim: "Supply Dump: ELIMINATE THAT PERCENTAGE OF ALL SUPPLIES IN THAT DUMP." It folds
+    # exactly like SUPPLY_DUMP_BLOWN (drain each commodity, credit consumed[]), a pure SINK, so
+    # on_hand+consumed==initial holds. It is the enemy's version of 54.14: the same dump, the same
+    # arithmetic, the bombs falling from outside instead of the owner striking a match.
+    #
+    # TRUCK_POINTS_DESTROYED {truck_id, points, left, cargo:{commodity: qty}, rule} is the lorry
+    # loss, and it has TWO producers because the book gives it two. 41.32's own row destroys "that
+    # number of Truck Points AND THEIR CARGO" outright; 41.35's second clause bills the dump's
+    # neighbours -- "if there are any UNATTACHED trucks in the hex, FOR EVERY 10% OF SUPPLIES
+    # DESTROYED, ONE TRUCK POINT IS LOST, choice of defender, dividing losses as evenly as
+    # possible." `rule` names which fired. The cargo rides into consumed[] like every other sink;
+    # the Truck Points themselves are not a conservation surface (they are vehicles, not supply),
+    # so a formation reduced to zero Points simply stands empty and hauls nothing.
+    AIR_DUMP_BOMBED = "AIR_DUMP_BOMBED"
+    TRUCK_POINTS_DESTROYED = "TRUCK_POINTS_DESTROYED"
     # [34.17]/[38.21]/[38.24] AIRCRAFT BURN FUEL. "This is the number of Fuel Points a plane requires
     # to perform any mission... all Fuel Points are consumed during a mission, regardless of the type
     # or distance" (34.17); "the fuel is subtracted from the total supply in the air facility"
@@ -432,7 +467,20 @@ class EventKind(str, Enum):
     #
     # All four are absent from every scenario that seeds no island (state.malta_planes defaults to 0
     # and game.malta.in_play is False), which is what keeps the two benchmarks byte-identical.
+    # [44.21]/[44.25]/[44.27] + [39.19] THE AFRICAN CONTINGENT. MALTA_RAID_REINFORCED {squadron,
+    # arena, role, planes, bomb_points, cap, strategic} is the Axis Player's decision to add
+    # African-based bombers to the raid -- "Axis bombers based in Italy/Sicily AS WELL AS ANY
+    # AFRICAN-BASED AXIS PLANES THAT CAN REACH THE ISLAND can raid Malta" (44.21), bounded by 44.27
+    # ("in no case may the Axis Player assign more planes of any one type from map bases than are
+    # assigned from the Availability Tables"). It folds onto GameState.air_strategic, which 39.19
+    # then keeps out of the Land Support arena for the REST OF THAT GAME-TURN: "a plane flying a
+    # mission in an Operations Stage may not fly in the Strategic Phase of that Game-Turn and vice
+    # versa." The readiness those planes spend rides the existing AIR_SQUADRON_UNFIT (38.31 makes no
+    # distinction between a strategic sortie and a tactical one), and the bombs they carry ride the
+    # AIR_STRIKE_RESOLVED the raid already rolls. Emitted only when the Axis actually sends some, so
+    # every scenario without an African contingent stays byte-identical.
     MALTA_RAID_ORDERED = "MALTA_RAID_ORDERED"
+    MALTA_RAID_REINFORCED = "MALTA_RAID_REINFORCED"
     MALTA_PLANES_LOST = "MALTA_PLANES_LOST"
     MALTA_STRIKE_UNFIT = "MALTA_STRIKE_UNFIT"
     MALTA_REFIT_RESOLVED = "MALTA_REFIT_RESOLVED"

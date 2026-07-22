@@ -720,7 +720,7 @@ class StaffPolicy(ScriptedPolicy):
         for c in state.convoys:
             if c.side == side and c.arrival_turn == state.turn:
                 per = incoming.setdefault(c.dest, {})
-                for k, v in c.cargo.items():
+                for k, v in state.convoy_cargo(c).items():
                     per[k] = per.get(k, 0) + v
         out: list[tuple[str, str, int]] = []
         for dump_id in sorted(incoming):

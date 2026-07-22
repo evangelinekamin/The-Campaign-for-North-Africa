@@ -85,6 +85,42 @@ def apply(state: GameState, event: Event) -> GameState:
             consumed[commodity] = consumed.get(commodity, 0) + qty
         return replace(state.with_supply(su), consumed=consumed)
 
+    if k == EventKind.AIR_DUMP_BOMBED:
+        # 41.35 B-SD: "Eliminate that percentage of all Supplies in that Dump." The engine baked
+        # the destroyed amounts off the [41.5] roll (the roll is a fact, not a re-derivation), so
+        # this folds exactly like SUPPLY_DUMP_BLOWN -- drain each commodity, credit consumed[] --
+        # and on_hand+consumed==initial holds.
+        su = state.supply(p["supply_id"])
+        consumed = dict(state.consumed)
+        for commodity, qty in p["destroyed"].items():
+            attr = commodity.lower()
+            su = replace(su, **{attr: getattr(su, attr) - qty})
+            consumed[commodity] = consumed.get(commodity, 0) + qty
+        return replace(state.with_supply(su), consumed=consumed)
+
+    if k == EventKind.TRUCK_POINTS_DESTROYED:
+        # 41.32 / 41.35: Truck Points and their cargo destroyed by bombing. The POINTS are vehicles
+        # and leave no ledger behind them; the CARGO is supply and folds like every other sink
+        # (drain the truck, credit consumed[]), so on_hand+consumed==initial holds.
+        tf = state.truck(p["truck_id"])
+        consumed = dict(state.consumed)
+        for commodity, qty in p["cargo"].items():
+            attr = commodity.lower()
+            tf = replace(tf, **{attr: getattr(tf, attr) - qty})
+            consumed[commodity] = consumed.get(commodity, 0) + qty
+        return replace(state.with_truck(replace(tf, points=p["left"])), consumed=consumed)
+
+    if k == EventKind.CONVOY_PLANNED:
+        # 56.21/56.22: the Axis Player's decision about what to load into a sailing whose tonnage
+        # the charts fixed, taken one Game-Turn in advance. Folds the plan alone -- the supply
+        # enters the system later, through the ordinary SUPPLY_ARRIVED.
+        return state.with_convoy_plan(p["convoy_id"], p["cargo"])
+
+    if k == EventKind.MALTA_RAID_REINFORCED:
+        # 44.21/44.25/44.27 + 39.19: the African bombers the Axis added to his Malta raid are
+        # committed to the STRATEGIC PHASE of this Game-Turn and may fly nothing else in it.
+        return state.with_air_strategic(p["squadron"], p["strategic"])
+
     if k == EventKind.SUPPLY_ARRIVED:
         # Faucet, the dual of SUPPLY_CONSUMED (cargo is ALREADY post-cap -- the engine
         # baked the landed amounts, per the event-sourcing rule that outcomes are facts).
@@ -503,8 +539,11 @@ def apply(state: GameState, event: Event) -> GameState:
         # not carry over; 21.25 — BP + the 21.26 re-check gate are cumulative within a stage
         # only), bump the game-turn, and re-open at stage 1. broken_down persists (21.44). The
         # per-OpStage air-superiority gate clears too (a fresh sky is contested each stage).
+        # [39.19]'s Strategic-Phase ledger clears HERE and only here: "a plane flying a mission in
+        # an Operations Stage may not fly in the Strategic Phase of THAT GAME-TURN and vice versa",
+        # so the exclusion spans all three Operations Stages and expires with the Game-Turn.
         return replace(state, turn=p["turn"], stage=1, units=_reset_opstage(state.units),
-                       air_superiority={}, air_sighted=frozenset(),
+                       air_superiority={}, air_sighted=frozenset(), air_strategic={},
                        naval=_refit_naval(state.naval))
 
     if k == EventKind.REINFORCEMENT_DELAYED:

@@ -302,7 +302,16 @@ class Convoy:
     which rates what a HARBOUR can land from ships. Mersa Matruh is both a 250-ton harbour (55.3)
     and the Western Desert Railway terminus (60.7); without this flag the engine put the whole
     railway through the quayside cranes and clipped it to a twenty-fourth of its charted capacity.
-    Default False = every existing convoy is a ship, so every scenario stays byte-identical."""
+    Default False = every existing convoy is a ship, so every scenario stays byte-identical.
+
+    `tons` is [56.21]'s ALLOWABLE TONNAGE for this sailing -- what the Axis Convoy Capacity Table
+    and the month's Tonnage Determination Table rolled up to, before anybody decided what to put in
+    it. A convoy carrying tons > 0 sails EMPTY until the Axis Player plans it: 56.22 gives him the
+    split ("he may now plan to ship any amounts... of fuel, ammunition, and stores that he wishes"),
+    the engine takes it in the Convoy Planning Phase one Game-Turn ahead (56.15/56.21), and the
+    result lands in GameState.convoy_plans. Default 0 means the cargo is fixed by the schedule --
+    the Tobruk ferry, the Commonwealth railway, every hand-built test convoy -- so nothing that does
+    not opt in changes."""
     id: str
     side: Side
     arrival_turn: int
@@ -311,6 +320,7 @@ class Convoy:
     cargo: dict
     retarget: tuple[str, ...] = ()
     rail: bool = False
+    tons: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -573,6 +583,15 @@ class GameState:
     # without a seeded schedule stays byte-identical (the engine skims a lane's cargo only
     # when an InterdictionOrder matches an arriving convoy's lane+turn; game.engine.interdict).
     interdictions: tuple[InterdictionOrder, ...] = ()
+    # [56.21]/[56.22] THE AXIS CONVOY PLAN -- convoy id -> {commodity: Points}, the cargo the Axis
+    # Player DECIDED to load into a sailing whose allowable TONNAGE the [56.4]x[56.5] charts fixed
+    # ("having determined the allowable tonnage for a given Game-Turn, the Axis Player may now plan
+    # to ship ANY AMOUNTS -- within the limits of allowable tonnage -- of fuel, ammunition, and
+    # stores THAT HE WISHES"). Folded by CONVOY_PLANNED in the Convoy Planning Phase, ONE GAME-TURN
+    # before the convoy sails (56.21). A convoy with no entry here sails with its scheduled
+    # Convoy.cargo, so every fixed-cargo lane -- the Tobruk ferry, the Commonwealth railway -- and
+    # every scenario that plans nothing stays byte-identical.
+    convoy_plans: dict = field(default_factory=dict)
     # Abstract air (rules 33-46 at the 32.0/58.0 grain). `air` is the per-side force pool by
     # arena; `air_superiority` is the per-OpStage gate result (arena -> victor Side value | None),
     # rolled by the SYSTEM air beat (game.engine._air_superiority) and CLEARED at every OpStage
@@ -588,6 +607,15 @@ class GameState:
     # rule's own opening state ("at the start of a Scenario, all planes are considered refitted"),
     # so the default {} is byte-identical for every scenario that never flies.
     air_unfit: dict = field(default_factory=dict)
+    # [39.19] THE STRATEGIC-PHASE LEDGER -- squadron key (game.air.squadron) -> the number of that
+    # squadron's aeroplanes that flew in the STRATEGIC PHASE of the current Game-Turn: for us, the
+    # African-based bombers the Axis added to his Malta raid (44.21/44.25). "A plane flying a
+    # mission in an Operations Stage may not fly in the Strategic Phase of that Game-Turn AND VICE
+    # VERSA", so those planes are out of the Land Support arena until the Game-Turn ends -- which is
+    # why, unlike air_superiority (an OpStage gate) and unlike air_unfit (a stock that only a refit
+    # roll clears), this ledger is cleared at the GAME-TURN boundary alone. game.basing reads it.
+    # Default {} commits nothing, so every scenario without an Axis Malta raid is byte-identical.
+    air_strategic: dict = field(default_factory=dict)
     # Air missions (rules 41/42) + the recon fog-lift. `air_missions` is the per-side LAND
     # tasking schedule (game.engine._air_support). `air_sighted` is the per-OpStage recon lift:
     # a set of (recon_side_value, hex) pairs observation.py reads ALONGSIDE _sighted_hexes (42.2),
@@ -910,6 +938,30 @@ class GameState:
         sup = dict(self.air_superiority)
         sup[arena] = victor
         return replace(self, air_superiority=sup)
+
+    def with_air_strategic(self, squadron: str, planes: int) -> "GameState":
+        """[39.19] Set how many of `squadron`'s aeroplanes have flown in the Strategic Phase of this
+        Game-Turn. Zero drops the key rather than recording a zero, exactly as with_air_unfit does,
+        so "no key" keeps its one meaning."""
+        flown = dict(self.air_strategic)
+        if planes > 0:
+            flown[squadron] = planes
+        else:
+            flown.pop(squadron, None)
+        return replace(self, air_strategic=flown)
+
+    def convoy_cargo(self, convoy: "Convoy") -> dict:
+        """What a convoy is actually carrying: the Axis Player's [56.22] plan for it if one was
+        made, otherwise its scheduled Convoy.cargo. THE ONE PLACE the two are reconciled -- the
+        interdiction skim, the arrival manifest and the Quartermaster's projection all come through
+        here, so a planned convoy can never be reported as an empty one."""
+        return dict(self.convoy_plans.get(convoy.id, convoy.cargo))
+
+    def with_convoy_plan(self, convoy_id: str, cargo: dict) -> "GameState":
+        """[56.22] Record the cargo the Axis Player planned into one convoy (see convoy_plans)."""
+        plans = dict(self.convoy_plans)
+        plans[convoy_id] = dict(cargo)
+        return replace(self, convoy_plans=plans)
 
     def with_air_unfit(self, squadron: str, planes: int) -> "GameState":
         """[38.31] Set how many of `squadron`'s aeroplanes stand UNREFITTED (mirrors

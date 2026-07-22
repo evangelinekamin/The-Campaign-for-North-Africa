@@ -280,6 +280,33 @@ def air_port_bombing_crt_41_5() -> list:
     return _data()["air_bombardment_41_5"]["ports"]["columns"]
 
 
+def air_dump_bombing_crt_41_35() -> list:
+    """[41.35] the SUPPLY DUMP row of the [41.5] Air Bombardment & Secondary Barrage Targets
+    Table: the ordered Bomb-Point columns of the dump-bombing CRT. Same procedure as every other
+    row -- pick the column by total Bomb Points, read 2d6 SEQUENTIALLY as a two-digit code -- and
+    the result is `pct`, the percentage of EVERY supply in that dump eliminated (0/10/20/30/40/50/
+    75). Transcribed and eyes-verified off the 1979 foldout, PDF page 107."""
+    return _data()["air_bombardment_41_5"]["supply_dump"]["columns"]
+
+
+def air_dump_truck_loss_per_pct_41_35() -> int:
+    """[41.35] "In addition, if there are any unattached trucks in the hex, FOR EVERY 10% OF
+    SUPPLIES DESTROYED, ONE TRUCK POINT IS LOST, choice of defender, dividing losses as evenly as
+    possible." The chart's own Key says the same in fewer words ("lose 1 Truck Point for each 10%,
+    if possible, defender's choice"). This is the 10."""
+    return _data()["air_bombardment_41_5"]["supply_dump"]["truck_points_lost_per_pct"]
+
+
+def air_truck_bombing_crt_41_32() -> list:
+    """[41.32] the TRUCKS / Flak Suppression / Combat Units / Commonwealth Fleet row of the [41.5]
+    table: the ordered Bomb-Point columns, each `results` entry carrying the number result `points`
+    (0..7). Read as TRUCK POINTS destroyed, which is the chart Key's own word for it and the unit
+    TruckFormation.points is denominated in. The row's other three readings (flak suppression,
+    combat-unit pinning, Commonwealth Fleet damage) are the same numbers and are not wired -- see
+    the data file's `_deferred`. Transcribed and eyes-verified off the 1979 foldout, PDF page 107."""
+    return _data()["air_bombardment_41_5"]["trucks"]["columns"]
+
+
 def aircraft_characteristics_4_44() -> dict:
     """[4.44A/b/c] AIRCRAFT CHARACTERISTICS CHARTS, by aircraft name: the charted `tacair`
     (34.13), `bombload` (34.14), `fuel` Consumption Rating (34.17/38.21 -- "the number of Fuel
@@ -377,7 +404,10 @@ def malta_availability_44_42() -> dict:
 
 
 def malta_italy_sicily_basing_43_1() -> dict:
-    """[43.12]/[43.13] The percentage of the Axis bomber force based in Italy/Sicily -- the base
-    [44.42]'s percentages are percentages OF. Carries `before_turn_35_pct`, `from_turn_35_pct` and
-    the `change_turn` the two printed cases meet at."""
+    """[43.11]/[43.12]/[43.13] The rule-43 basing percentages of the Axis bomber force: the share
+    in Italy/Sicily -- the base [44.42]'s percentages are percentages OF (`before_turn_35_pct`,
+    `from_turn_35_pct`, meeting at `change_turn`) -- plus `mediterranean_pct`, the 43.11 share that
+    must sit in a Mediterranean base and is therefore NOT on the African battlefield, and
+    `crete_pct_from_turn_35`, the 43.13 half that may not raid Malta either (43.25). game.basing
+    reads all five."""
     return _malta()["italy_sicily_basing_43_1"]

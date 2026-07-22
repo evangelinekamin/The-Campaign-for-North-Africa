@@ -501,21 +501,27 @@ def _rommel_ports(supplies, target) -> tuple[Port, ...]:
 _RACE_MONTHS_1941 = ("mar", "apr", "may", "jun", "jul", "aug")
 _CONVOY_LEVEL_56_4 = logistics_data.convoy_level_56_4()
 _CONVOY_CAP_56_5 = logistics_data.convoy_capacity_56_5()
-# [56.22] the Axis Player's tonnage allocation across commodities (a player knob, defaulted
-# here); Water is NOT a convoy commodity (56.22) -- it comes from wells (52.7) and rail.
-_CONVOY_SPLIT_56_22 = {"FUEL": 0.60, "AMMO": 0.25, "STORES": 0.15}
+# [56.22] THE COMMODITY SPLIT IS NO LONGER HERE, AND THAT IS THE POINT OF BLOCK 5.5.
+# `_CONVOY_SPLIT_56_22 = {FUEL 0.60, AMMO 0.25, STORES 0.15}` used to stand on this line: a
+# constant, applied at scenario construction, to every Axis convoy of a hundred and eleven
+# Game-Turns. 56.22 makes it the Axis Player's decision ("he may now plan to ship ANY AMOUNTS --
+# within the limits of allowable tonnage -- of fuel, ammunition, and stores THAT HE WISHES"), and
+# the port plan calls it invention I11 and calls the decision it replaced "his single most important
+# recurring choice". The Convoy Planning Phase now takes it, one Game-Turn ahead of the sailing
+# (engine._convoy_planning -> Policy.convoy_plan); this module's job is only the TONNAGE, which is
+# the charts' (56.4 x 56.5 x a die). Water is still not a convoy commodity (supply.CONVOY_COMMODITIES
+# -- it comes from wells, 52.7, and off the railway).
 
 
-def _axis_convoy_cargo(turn: int, rng: random.Random) -> dict:
-    """[56.4]x[56.5]x[54.5] Axis naval-convoy cargo for `turn`. The month's Convoy Level
-    (56.4) sets the 56.5 tonnage = fixed + variable x die (die from the seeded rng, rounded
-    UP to the nearest 1000 t); the 56.22 split apportions it across fuel/ammo/stores by
-    tonnage; 54.5 crosses each to supply Points. Real-scale, deterministic per seed."""
+def _axis_convoy_tonnage(turn: int, rng: random.Random) -> int:
+    """[56.4]x[56.5] The allowable tonnage of the Axis naval convoy sailing on `turn`: the month's
+    Convoy Level (56.4) picks the 56.5 row, tonnage = fixed + variable x die (die from the seeded
+    rng, rounded UP to the nearest 1000 t). Real-scale, deterministic per seed. WHAT is loaded into
+    it is the Axis Player's (56.22), taken in the Convoy Planning Phase."""
     month = _RACE_MONTHS_1941[min((turn - 1) // 2, len(_RACE_MONTHS_1941) - 1)]
     cap = _CONVOY_CAP_56_5[_CONVOY_LEVEL_56_4["1941"][month]]
     die = rng.randint(1, 6)
-    tonnage = math.ceil((cap["fixed_tons"] + cap["variable_tons_per_die"] * die) / 1000) * 1000
-    return {c: tons_to_points(tonnage * frac, c) for c, frac in _CONVOY_SPLIT_56_22.items()}
+    return math.ceil((cap["fixed_tons"] + cap["variable_tons_per_die"] * die) / 1000) * 1000
 
 
 def _rommel_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy, ...]:
@@ -551,7 +557,10 @@ def _rommel_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Convoy
     rear = _axis_rear(supplies, target)
     if rear is not None:
         rng = random.Random(seed)                    # seed-driven 56.5 die (deterministic)
-        convoys += [Convoy(f"axis-l1-t{t}", Side.AXIS, t, "1", rear.id, _axis_convoy_cargo(t, rng))
+        # 56.21/56.22: the sailing carries an allowable TONNAGE and no manifest -- the Axis Player
+        # plans what goes in it one Game-Turn ahead (engine._convoy_planning).
+        convoys += [Convoy(f"axis-l1-t{t}", Side.AXIS, t, "1", rear.id, {},
+                           tons=_axis_convoy_tonnage(t, rng))
                     for t in range(2, max_turns + 1, 2)]
     return tuple(convoys)
 
@@ -798,21 +807,23 @@ def _campaign_staging_dumps() -> list[SupplyUnit]:
     ]
 
 
-def _campaign_axis_cargo(gt: int, rng: random.Random) -> dict | None:
-    """[56.4]x[56.5]x[54.5] Axis naval-convoy cargo for Game-Turn `gt`, calendar-driven across
-    the whole GT1..111 span (calendar.gt_to_month) -- the generalization of _axis_convoy_cargo,
-    which hardcodes the six Race-for-Tobruk months. The month's 56.4 Convoy Level sets the 56.5
-    tonnage (fixed + variable x die), the 56.22 split apportions it across fuel/ammo/stores, and
-    54.5 crosses each to supply Points. Returns None for a month the 56.4 chart lists no convoy
-    (a '-' -- e.g. before September 1940, when the desert lanes had not yet opened)."""
+def _campaign_axis_tonnage(gt: int, rng: random.Random) -> "int | None":
+    """[56.4]x[56.5] The allowable tonnage of the Axis naval convoy for Game-Turn `gt`,
+    calendar-driven across the whole GT1..111 span (calendar.gt_to_month) -- the generalization of
+    _axis_convoy_tonnage, which hardcodes the six Race-for-Tobruk months. The month's 56.4 Convoy
+    Level picks the 56.5 row and the tonnage is fixed + variable x die. Returns None for a month the
+    56.4 chart lists no convoy (a '-' -- e.g. before September 1940, when the desert lanes had not
+    yet opened).
+
+    WHAT IS SHIPPED IN IT IS NOT DECIDED HERE any more (56.22, block 5.5): the Axis Player plans the
+    commodity split in the Convoy Planning Phase, one Game-Turn before the sailing."""
     year, month = calendar.gt_to_month(gt)
     level = _CONVOY_LEVEL_56_4[str(year)][_MON[month - 1]]
     if level == "-":
         return None
     cap = _CONVOY_CAP_56_5[level]
     die = rng.randint(1, 6)
-    tonnage = math.ceil((cap["fixed_tons"] + cap["variable_tons_per_die"] * die) / 1000) * 1000
-    return {c: tons_to_points(tonnage * frac, c) for c, frac in _CONVOY_SPLIT_56_22.items()}
+    return math.ceil((cap["fixed_tons"] + cap["variable_tons_per_die"] * die) / 1000) * 1000
 
 
 # [24.9] The OOB's own field dumps -- the mobile supply that rides with a division (32.3) and
@@ -1160,21 +1171,23 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
         for gt in range(1, max_turns + 1):
             if (gt - 1) % calendar.GT_PER_MONTH != 0:  # compute the month's cargo on its first Game-Turn
                 continue
-            month_cargo = _campaign_axis_cargo(gt, rng)
-            if month_cargo is None:
+            month_tons = _campaign_axis_tonnage(gt, rng)
+            if month_tons is None:
                 continue
             # Quarter the month's 56.5 tonnage across its Game-Turns (56.2 "as they actually
             # occurred"): the chart monthly total is preserved (remainder to the first week), but
             # split so each weekly convoy lands UNDER the 55.14 port cap instead of one clipped
-            # surge -- and so Malta interdicts a convoy every turn, not once a month.
-            per = {c: v // calendar.GT_PER_MONTH for c, v in month_cargo.items()}
-            rem = {c: v - per[c] * calendar.GT_PER_MONTH for c, v in month_cargo.items()}
+            # surge -- and so Malta interdicts a convoy every turn, not once a month. Each weekly
+            # sailing carries its ALLOWANCE, not a manifest: 56.22's split is the Axis Player's and
+            # is taken a Game-Turn ahead of it (engine._convoy_planning).
+            per = month_tons // calendar.GT_PER_MONTH
+            rem = month_tons - per * calendar.GT_PER_MONTH
             for i in range(calendar.GT_PER_MONTH):
                 wk = gt + i
                 if wk > max_turns:
                     break
-                cargo = {c: per[c] + (rem[c] if i == 0 else 0) for c in month_cargo}
-                convoys.append(Convoy(f"axis-conv-t{wk}", Side.AXIS, wk, "2", rear.id, cargo))  # 60.37 lane 2
+                convoys.append(Convoy(f"axis-conv-t{wk}", Side.AXIS, wk, "2", rear.id, {},
+                                      tons=per + (rem if i == 0 else 0)))     # 60.37 lane 2
     return tuple(convoys)
 
 

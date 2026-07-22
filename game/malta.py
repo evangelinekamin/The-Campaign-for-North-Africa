@@ -57,15 +57,18 @@ rather than a rule we disagree with:
   * **NOTHING DEFENDS THE ISLAND.** 45.0 air-to-air and 46.0 flak are deferred by the port plan, so
     Malta's 19 fighters and 17 AA Points (60.46) are transcribed and unused, and every Axis raid
     arrives unopposed. That makes the Axis raid STRONGER than the book's, not weaker.
-  * **THE RAID COSTS THE AXIS NO AIRFRAMES OVER THE DESERT.** 39.19's "one mission per plane per
-    Game-Turn -- Malta OR the desert" is block 5.5. The BUDGET is finite and does deplete, so the
-    strategic choice exists; the opportunity cost in the desert does not yet.
+  * **THE RAID COSTS THE AXIS NO AIRFRAMES.** Nothing in this engine shoots an aeroplane down (45.0
+    air-to-air and 46.0 flak are deferred), so 44.28's whole apparatus -- the pro-rata split of
+    losses between planes in play and planes that are not -- has nothing to split. What the raid
+    DOES now cost him is sorties: 39.19 and rule 43 arrived in block 5.5 (game.basing), so the
+    Mediterranean-based bomber force is off the African battlefield and every African bomber he adds
+    to a raid (44.21/44.25/44.27) flies nothing over the desert for the rest of that Game-Turn.
 """
 from __future__ import annotations
 
 from typing import NamedTuple
 
-from . import air, coords, logistics_data
+from . import air, basing, coords, logistics_data
 from .events import Side
 from .state import AirFacility, GameState
 
@@ -310,25 +313,20 @@ def italy_sicily_planes(state: GameState, turn: int) -> int:
     """[43.12]/[43.13] The Axis bomber force based in Italy/Sicily -- the force [44.42]'s two
     percentages are percentages OF, and the reason a slice of rule 43 had to arrive with rule 44.
 
-    43.12: "Until 1/35 Game-Turn 1941, 75% of all German bombers must be based in Italy/Sicily."
-    43.13: from that Game-Turn on, at least half of the heavy bombers must sit in Crete and "the
-    remaining 25% MAY be based in Sicily/Italy or in Crete" -- and 43.25 lets only the Italy/Sicily
-    half raid Malta. So the printed basing is 75% before Game-Turn 35 and up to 25% after it.
+    THE WHOLE OF RULE 43 NOW LIVES IN game.basing (Phase 5.5), and this function is the one line
+    that reads it, so the raid's SIZING and the battlefield's DEDUCTION can never disagree about how
+    many bombers are where. That was not a tidying: while 43 was half-built here, the same aeroplanes
+    raided Malta in the Strategic Air Phase and bombed Tobruk in all three Operations Stages of the
+    same Game-Turn -- which is exactly what 39.19 forbids.
 
-    ⚠ FLAGGED TWICE, AND BOTH FLAGS ARE ABOUT SIZE, NOT ABOUT LAW. (a) The post-Game-Turn-35 figure
-    is a permission, not a requirement; we take the printed ceiling, because the alternative reading
-    (nothing based in Italy/Sicily) silently ends the Malta war in June 1941 -- a policy choice, and
-    it is recorded in the data file. (b) THE ESTABLISHMENT IT IS A PERCENTAGE OF IS OUR PROXY, NOT
-    THE BOOK'S: game.state.AirWing gives the Axis six strike Air Points -- two Ju. 87B on the
-    34.14 Bombload bridge -- where [60.32] musters 133 SM 79s, 56 Ca 309s, 24 Ba 88s and 17 SM 81s.
-    Until that roster is transcribed the Axis raid is a shadow of the book's raid, and the honest
+    ⚠ THE ESTABLISHMENT IT IS A PERCENTAGE OF IS OUR PROXY, NOT THE BOOK'S, and the flag is argued
+    in full in game.basing: game.state.AirWing gives the Axis six strike Air Points -- two Ju. 87B on
+    the 34.14 Bombload bridge -- where [60.32] musters 133 SM 79s, 56 Ca 309s, 24 Ba 88s and 17 SM
+    81s, and rule 43 names three GERMAN HEAVY BOMBER types this engine does not field separately.
+    Until [34.6]/[59.3] is transcribed the Axis raid is a shadow of the book's raid, and the honest
     reading of any Malta measurement taken today is that the ISLAND'S half of the loop is live at
     the book's scale and the AXIS's half is live at one one-hundredth of it."""
-    planes = air.squadron_planes(state, Side.AXIS, "LAND", "strike")
-    basing = logistics_data.malta_italy_sicily_basing_43_1()
-    pct = (basing["before_turn_35_pct"] if turn < basing["change_turn"]
-           else basing["from_turn_35_pct"])
-    return planes * pct // 100
+    return basing.italy_sicily_planes(state, turn)
 
 
 class Raid(NamedTuple):

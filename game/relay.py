@@ -8,7 +8,6 @@ from .campaign_claim import STAGING
 from .events import Control, Side
 from .hexmap import Coord, distance
 from .policy import BuildOrder, TruckOrder
-from .scenario import _CONVOY_SPLIT_56_22
 from .state import GameState, SupplyUnit
 
 
@@ -229,14 +228,25 @@ def _fit_to_dest(state, load: dict, t, dest) -> dict:
     return fitted
 
 
-def _load_56_22(t, dump) -> dict:
-    """A fresh load off `dump`, apportioned by the 56.22 fuel/ammo/stores tonnage split and sized
-    against the truck's REMAINING 54.2 capacity -- a truck home from a run still holds its return
+# ⚠ THE LORRY'S OWN LOADING MIX, AND IT IS A FLAGGED POLICY CONSTANT, NOT A CHART. How a truck
+# apportions its 54.2 capacity between fuel, ammunition and stores is a quartermaster's choice; the
+# rulebook prints no split for it (53.12 gives only the Point ceiling the mix must satisfy). These
+# three numbers were borrowed from `scenario._CONVOY_SPLIT_56_22` when that constant existed -- they
+# were never the same decision, and block 5.5 deleted the convoy one (56.22 makes it the Axis
+# Player's, taken per sailing in the Convoy Planning Phase). They stay here, under their own name
+# and their own flag, because changing what a lorry loads is a separate question from what a ship
+# carries and would move both byte-locked benchmarks for no rule.
+_TRUCK_LOAD_MIX = {"FUEL": 0.60, "AMMO": 0.25, "STORES": 0.15}
+
+
+def _load_mix(t, dump) -> dict:
+    """A fresh load off `dump`, apportioned by the truck's own loading mix (_TRUCK_LOAD_MIX) and
+    sized against its REMAINING 54.2 capacity -- a truck home from a run still holds its return
     reserve, so loading a full share on top of it would overrun the 53.12 Point ceiling and the
     engine would reject the order."""
     cap = supply.truck_capacity(t.truck_class)
     load: dict = {}
-    for c, frac in _CONVOY_SPLIT_56_22.items():
+    for c, frac in _TRUCK_LOAD_MIX.items():
         room = int(frac * t.points * cap[c]) - getattr(t, c.lower())
         take = min(getattr(dump, c.lower()), max(0, room))
         if take > 0:
@@ -440,7 +450,7 @@ def campaign_truck_orders(state: GameState, side: Side) -> list[TruckOrder]:
         # finish and must never stop to pick up MORE. It now falls through to the return leg
         # instead of `continue`-ing, so that guard has to be stated here rather than implied.
         if not carrying and colocated is not None and colocated.fuel > 0 and (in_reach or forward):
-            load = _load_56_22(t, colocated)
+            load = _load_mix(t, colocated)
             if in_reach:
                 # A forward dump within one convoy hop -- LOAD + MOVE + UNLOAD in one order, but
                 # ONLY when the truck can afford the move and still keep its return reserve (the

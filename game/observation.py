@@ -255,7 +255,7 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
         # rationing fuel now vs the next arrival is an actionable decision.
         "pending_convoys": [
             {"lane": c.lane, "eta": c.arrival_turn - state.turn,
-             "dest": c.dest, "cargo": dict(c.cargo)}
+             "dest": c.dest, "cargo": state.convoy_cargo(c)}
             for c in sorted(state.convoys, key=lambda c: (c.arrival_turn, c.id))
             if c.side == side and c.arrival_turn >= state.turn
         ][:REACH_LIMIT],

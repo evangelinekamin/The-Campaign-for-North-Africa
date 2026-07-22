@@ -10,7 +10,38 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
-RE-BASELINED 2026-07-21 (second time this day) -- CAUSE: the 5.1 REPAIR PASS. 36.17 held in one scan
+RE-BASELINED 2026-07-21 -- CAUSE: rule 56.21/56.22, the Axis Convoy Planning Phase (Phase 5.5).
+
+ONE rule moved these logs, and it is the deletion of invention I11. `scenario._CONVOY_SPLIT_56_22 =
+{FUEL 0.60, AMMO 0.25, STORES 0.15}` was a constant applied at scenario construction to every Axis
+convoy in the game. 56.22 makes it the Axis Player's decision -- "having determined the allowable
+tonnage for a given Game-Turn, the Axis Player MAY NOW PLAN TO SHIP ANY AMOUNTS (within the limits
+of allowable tonnage) OF FUEL, AMMUNITION, AND STORES THAT HE WISHES" -- and 56.0 makes him take it
+ONE GAME-TURN IN ADVANCE. So the scenario now schedules only the [56.4]x[56.5] TONNAGE, and the new
+Convoy Planning Phase (engine._convoy_planning, at the top of each Game-Turn) asks Policy.convoy_plan
+what to load.
+
+BOTH benchmarks sail the Axis lane "1" on that tonnage -- they always did; the constant merely split
+it at construction -- so both move, and they move for two compounding reasons: the split is now the
+base Policy's (still 60/25/15, so the ARITHMETIC is unchanged) but it is applied to each sailing's own
+allowance rather than folded in at build time, and the CONVOY_PLANNED events themselves are new
+entries in the log the signature hashes. Nothing about the tonnage, the lanes, the ports or the dice
+changed: `_axis_convoy_tonnage` draws the same 56.5 die off the same seeded `random.Random(seed)` in
+the same order it always did.
+
+The other four rules in Phase 5.5 do NOT move these two logs and it is worth saying why, because each
+is genuinely inert here rather than accidentally so: 41.32/41.35 add two AIR MISSION KINDS no scenario
+schedules; 39.19's ledger is written only by an Axis Malta raid, and neither benchmark seeds Malta;
+and rule 43's basing deduction is coded against the three aircraft types 43.11 names, none of which
+this engine fields (the OWNER RULING at game/basing.py:applies).
+
+    rommels_arrival   b805053d4d26 -> afe73c4ba92a
+    siege_of_tobruk   5c02a1f22398 -> 2f2133eb37fd
+
+Each reproduced twice, byte-for-byte.
+
+--------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-21 (earlier the same day) -- CAUSE: the 5.1 REPAIR PASS. 36.17 held in one scan
 and leaked in three others, and 35.14's water was held to a stricter standard than the whole army's.
 
 Three of the repairs move these logs, and each is a rule, not a tuning:
@@ -379,8 +410,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "b805053d4d26"
-SIEGE_OF_TOBRUK = "5c02a1f22398"
+ROMMELS_ARRIVAL = "afe73c4ba92a"
+SIEGE_OF_TOBRUK = "2f2133eb37fd"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

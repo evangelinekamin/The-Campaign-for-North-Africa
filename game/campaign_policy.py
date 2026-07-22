@@ -39,7 +39,7 @@ from .state import GameState, SupplyUnit
 from .relay import (  # extracted to game.relay; re-exported so every caller and __all__ keep working
     _step_toward, _relay_source, _is_faucet, _a_link_in_the_chain, _field_dump_id,
     _forward_depot_sites, build_the_chain, _room_in, _lands_anything, _fit_to_dest,
-    _load_56_22, campaign_truck_orders)
+    _load_mix, campaign_truck_orders)
 
 __all__ = ["CAMPAIGN_CW_OFFENSIVES", "CampaignAxisPolicy", "CampaignCommonwealthPolicy",
            "OffensiveSchedule", "build_the_chain", "campaign_motorization",
@@ -908,6 +908,88 @@ class _CampaignAxisSupplyMixin:
                                      view=_without_staging(state))
 
 
+# ⚠ THE ONE CONSTANT LEFT IN THE 56.22 DECISION, and it is the policy's, not the book's: the share
+# of a sailing no commodity is ever allotted less than. See convoy_plan_doctrine's flag (a).
+_CONVOY_FLOOR_SHARE = 0.10
+
+
+def convoy_plan_doctrine(state: GameState, side: Side, tons: int) -> dict:
+    """[56.22] THE AXIS QUARTERMASTER'S CONVOY DECISION: ship what the army in Africa is SHORT OF.
+
+    56.22 gives the Axis Player free choice of what to load into the tonnage the charts allow him,
+    and calls the three commodities unlimited in Europe. So the only thing that can inform the
+    choice is the state of his own dumps -- which is exactly what a quartermaster planning next
+    week's convoy looks at, and exactly what the constant this replaces (invention I11's fixed
+    60/25/15) could not see.
+
+    Deliberately NOT a calendar. The thing Phase 5 exists to delete is a hand-typed month table;
+    a doctrine that shipped ammunition in November because Crusader opened in November would be the
+    same mistake wearing a different hat.
+
+    THE COMMON UNIT IS THE BOOK'S OWN. Fuel, Ammunition and Stores Points are not comparable to each
+    other -- one Ammunition Point weighs 4 tons and one Fuel Point an eighth of a ton (54.5) -- so
+    the stocks are converted to TONNAGE on the [54.5] Equivalent Weight Chart before they are
+    compared, which is the same chart the convoy's own allowance is denominated in. No rate, no
+    weighting and no constant of ours enters the comparison.
+
+    Each commodity's share of the sailing is then proportional to the tonnage of the OTHER two
+    already ashore: a commodity the army is out of is the one every other commodity's abundance
+    votes for. Three equal larders split the convoy in three; an army with no ammunition ships
+    ammunition.
+
+    ⚠ FLAGGED, AND THEY ARE THE ONLY TWO NUMBERS HERE. (a) The FLOOR: no commodity is allotted less
+    than a tenth of the tonnage, because a convoy that starves one commodity outright for a month is
+    a decision no quartermaster makes and one this engine's dumps cannot recover from (51.0 makes
+    Stores a per-Game-Turn upkeep with no organic pool to ride out a gap on). (b) An army holding
+    NOTHING has no proportions to reason from and splits the sailing evenly. Neither is in the book;
+    both are the policy's, which is where 56.22 puts this decision."""
+    stock = {c: 0 for c in supply.CONVOY_COMMODITIES}
+    for su in state.supplies:
+        if su.side == side and not su.is_dummy:
+            for c in stock:
+                stock[c] += getattr(su, c.lower())
+    for t in state.trucks:
+        if t.side == side:
+            for c in stock:
+                stock[c] += getattr(t, c.lower())
+    ashore = {c: supply.points_to_tons(stock[c], c) for c in stock}   # 54.5: the common unit
+    total = sum(ashore.values())
+    if total <= 0:                                       # nothing ashore to reason from (flag b)
+        return {c: tons / len(stock) for c in stock}
+    weight = {c: total - ashore[c] for c in ashore}      # what the OTHER larders vote for
+    floor = tons * _CONVOY_FLOOR_SHARE                   # the flagged tenth (flag a)
+    span = sum(weight.values()) or 1.0
+    rest = tons - floor * len(weight)                    # every commodity gets its floor FIRST,
+    return {c: floor + rest * w / span for c, w in weight.items()}   # then the rest by the vote
+
+
+def malta_africa_doctrine(state: GameState, available: int, level: str) -> int:
+    """[44.25]/[44.27] + [39.19] How many AFRICAN bombers the Axis adds to this Game-Turn's Malta
+    raid -- and, by 39.19, withdraws from the desert for the rest of it.
+
+    THE TRADE IS THE POINT OF BLOCK 5.5, so the doctrine is written as a trade and not as a
+    schedule. The signal it reads is THE AXIS'S OWN COMMITMENT, `level`: the [44.41] Availability
+    Level he has just spent on this raid, which 44.26 says is exactly what he knows at this moment
+    ("the Axis Player always assigns his map-based planes AFTER determining how many planes he will
+    get from the tables").
+
+      * ON A HEAVY LEVEL (II, III or IV) he has spent one of a finite and printed budget -- 25, 12
+        and 12 Game-Turns of the whole campaign -- and a Game-Turn of that budget is worth more than
+        one Operations Stage of harbour bombing. He reinforces with everything 44.27 allows.
+      * ON LEVEL I -- unlimited, and 44.25's own do-nothing answer -- he has committed nothing, so
+        there is nothing for the desert to be stripped for. His bombers stay in Africa.
+
+    There is no half measure in the book to take: the cap is already the Availability Table's own
+    (44.27), and a bomber held back from a raid he has decided to fly flies nothing at all that
+    Game-Turn anyway.
+
+    A DOCTRINE, NOT A CALENDAR -- the same discipline malta_raid_doctrine is written under, and for
+    the same reason: the thing Phase 5 exists to delete is a hand-typed month table."""
+    if available <= 0 or level == malta.DEFAULT_LEVEL:
+        return 0
+    return available
+
+
 def malta_raid_doctrine(state: GameState) -> str:
     """[44.23] Spend the heaviest Availability Level still in the budget while Malta is at
     full health; drop to the unlimited Level I once the island is already damaged.
@@ -963,6 +1045,15 @@ class CampaignAxisPolicy(_CampaignAxisSupplyMixin, ScriptedPolicy):
         # [44.23] The Axis Malta doctrine, shared verbatim with the LIVE-staff campaign
         # (game.campaign_staff) so the two campaign variants cannot diverge on rule 44.
         return malta_raid_doctrine(state)
+
+    def malta_africa_planes(self, state: GameState, available: int, level: str) -> int:
+        # [44.25]/[39.19] The African contingent, shared with the live-staff campaign.
+        return malta_africa_doctrine(state, available, level)
+
+    def convoy_plan(self, state: GameState, side: Side, tons: int) -> dict:
+        # [56.22] The convoy split, shared with the live-staff campaign -- the Axis Player's single
+        # most important recurring choice, made from the board rather than from a constant.
+        return convoy_plan_doctrine(state, side, tons)
 
     def retreat_before_assault(self, state: GameState, side: Side,
                                pinned: frozenset[str]) -> list[MoveOrder]:

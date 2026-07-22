@@ -15,7 +15,7 @@ import math
 from dataclasses import dataclass, replace
 from typing import Protocol
 
-from . import (air, calendar, combat, combat_tables, construction, cp_costs, initiative,
+from . import (air, basing, calendar, combat, combat_tables, construction, cp_costs, initiative,
                logistics_data, malta, stacking, supply, tactics, weather, wells)
 from .apply import apply
 from .dice import DiceBox
@@ -166,6 +166,8 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
     while not done:
         recalled = _rommel_recall(r)                    # 31 Berlin recall (the ONLY new RNG) -- BEFORE initiative
         _initiative(r, axis_recalled=recalled)          # 5.2 I / 7.14: who holds Initiative this game-turn
+        _convoy_planning(r, policies)                   # 48 III / 56.21/56.22: the Axis decides what
+                                                        # to ship, ONE GAME-TURN AHEAD of the sailing
         _malta_construction(r)                          # 44.13/[44.5]: the CW patches the island, once per GT
         _malta_raid(r, policies)                        # 33 II.B / 44.24: the Axis Strategic Air Phase --
                                                         # ONE raid per Game-Turn, out of a finite [44.41]
@@ -536,16 +538,17 @@ def _malta_raid(r: _Run, policies: dict) -> None:
             "cancelled": plan.planes <= 0 or target is None}, rng_draws=(d1, d2))
     if plan.planes <= 0 or target is None:           # 44.42 na, or nothing left standing to bomb
         return
+    bomb_points = plan.bomb_points + _malta_africa(r, policies, plan)   # 44.21/44.25/44.27 + 39.19
     b1, b2 = r.d6("malta"), r.d6("malta")            # [41.5]: two dice, read SEQUENTIALLY (41.22)
-    levels = min(_port_bomb_levels(plan.bomb_points, b1, b2), target.level)
+    levels = min(_port_bomb_levels(bomb_points, b1, b2), target.level)
     r.emit(EventKind.AIR_STRIKE_RESOLVED, Side.AXIS, actor,
-           {"arena": "AIRFIELD", "target": target.id, "strength": plan.bomb_points,
+           {"arena": "AIRFIELD", "target": target.id, "strength": bomb_points,
             "levels": levels, "level": target.level - levels}, rng_draws=(b1, b2))
     if levels <= 0:
         return
     r.emit(EventKind.AIR_FACILITY_LEVEL_CHANGED, Side.AXIS, actor,
            {"facility_id": target.id, "level": target.level - levels,
-            "strength": plan.bomb_points})
+            "strength": bomb_points})
     lost = malta.planes_lost(r.state, levels)        # 41.36: 10% of the planes on the ground / level
     if lost > 0:
         left = r.state.malta_planes - lost
@@ -555,6 +558,67 @@ def _malta_raid(r: _Run, policies: dict) -> None:
                     malta.strike_establishment(replace(r.state, malta_planes=left)))
         r.emit(EventKind.MALTA_PLANES_LOST, Side.AXIS, actor,
                {"lost": lost, "planes": left, "levels": levels, "unfit": unfit})
+
+
+def _malta_africa(r: _Run, policies: dict, plan) -> int:
+    """[44.21]/[44.25]/[44.27] + [39.19] THE AXIS AIR FORCE MUST CHOOSE -- the African bombers he
+    adds to this Game-Turn's Malta raid, and the Land Support missions that costs him.
+
+        44.21 "Axis bombers based in Italy/Sicily AS WELL AS ANY AFRICAN-BASED AXIS PLANES THAT CAN
+               REACH THE ISLAND can raid Malta."
+        44.25 "In addition to the planes he receives from this Table HE MAY THEN ADD IN -- up to the
+               maximums he gets from the Table -- ANY PLANES HE WISHES FROM AFRICA."
+        44.27 "In no case may the Axis Player assign MORE PLANES OF ANY ONE TYPE FROM MAP BASES THAN
+               ARE ASSIGNED FROM THE AVAILABILITY TABLES... Furthermore, IF A PLANE IS NOT ASSIGNED
+               FROM THE TABLE IT MAY NOT BE ASSIGNED FROM THE MAP."
+        39.19 "A PLANE FLYING A MISSION IN AN OPERATIONS STAGE MAY NOT FLY IN THE STRATEGIC PHASE OF
+               THAT GAME-TURN AND VICE VERSA."
+
+    Returns the Bomb Points the African contingent adds. THREE ceilings, each a printed rule, and
+    the smallest binds: what the Axis Player ASKS for (Policy.malta_africa_planes -- his decision,
+    and the base policy sends none), 44.27's cap at the number the [44.42] table itself granted,
+    and what is actually standing serviceable in Africa this Game-Turn (rule 43's African
+    contingent less 38.31's unfit and less anything already committed to the Strategic Phase).
+
+    44.27's second sentence is why this is called only after the raid survives its own early
+    returns: a raid the table granted no planes for, and a raid on an island already flat, take
+    nothing from the map either (44.29 says the same of a cancelled one).
+
+    WHAT IT COSTS. The planes fly a mission, so 38.31 un-refits them exactly as a Land Support
+    sortie would (AIR_SQUADRON_UNFIT -- the book draws no distinction), and 39.19 books them into
+    GameState.air_strategic, which game.basing keeps out of the LAND arena until the Game-Turn ends.
+    They draw NO fuel here, and that is 43.21 rather than an omission -- Mediterranean-based bombers
+    "do not need SGSUs. All their requirements are met by the specific Box they are in, including
+    fuel and ammunition." ⚠ FLAGGED: that exemption is written for planes based in the Med, and
+    these are flying FROM AFRICA to join them, where 34.17 would price the sortie like any other.
+    Billing it would need the 38.24 draw to be made from the African field they left, which is the
+    same pooled-larder proxy air.refuel already carries; it is deliberately not guessed at here, and
+    it makes this contingent slightly cheaper than the book's."""
+    axis = policies[Side.AXIS]
+    if not hasattr(axis, "malta_africa_planes"):
+        return 0
+    arena, role = basing.LAND_ARENA, basing.BOMBER_ROLE
+    squadron = air.squadron(Side.AXIS, arena, role)
+    standing = air.ready_planes(r.state, Side.AXIS, arena, role,
+                                basing.establishment(r.state, Side.AXIS, arena, role))
+    available = max(0, min(plan.planes, standing - basing.strategic_planes(
+        r.state, Side.AXIS, arena, role)))
+    if available <= 0:
+        return 0
+    planes = max(0, min(int(axis.malta_africa_planes(r.state, available, plan.level)), available))
+    if planes <= 0:
+        return 0
+    bombload = logistics_data.aircraft_characteristics_4_44()[
+        air.REPRESENTATIVE_AIRCRAFT[(Side.AXIS, role)]]["bombload"]
+    r.emit(EventKind.MALTA_RAID_REINFORCED, Side.AXIS, "AXIS/Malta",
+           {"squadron": squadron, "arena": arena, "role": role, "planes": planes,
+            "bomb_points": planes * bombload, "cap": plan.planes,
+            "strategic": basing.strategic_planes(r.state, Side.AXIS, arena, role) + planes})
+    if air.refit_modelled(r.state, Side.AXIS):       # 38.31: they have flown -- and the ledger is
+        r.emit(EventKind.AIR_SQUADRON_UNFIT, Side.AXIS, "AXIS/Air",   # only kept where 38.3 governs
+               {"squadron": squadron, "arena": arena, "role": role, "planes": planes,
+                "unfit": air.unfit_planes(r.state, Side.AXIS, arena, role) + planes})
+    return planes * bombload
 
 
 def _reinforcements(r: _Run) -> None:
@@ -603,6 +667,22 @@ def _interdiction_for(state: GameState, convoy):
     return None
 
 
+def _crt_result(columns, bomb_points: int, d1: int, d2: int, key: str) -> int:
+    """The [41.5] lookup every row of that table shares: pick the Bomb-Point column, read the two
+    dice SEQUENTIALLY as a two-digit code (tens=d1, units=d2, rule 41.22), return the cell. Bomb
+    Points below the table's floor find no column and score nothing -- the same answer
+    _port_bomb_levels and _convoy_loss_pct already give, now written once."""
+    code = d1 * 10 + d2
+    for col in columns:
+        lo, hi = col["bomb_points"]
+        if bomb_points >= lo and (hi is None or bomb_points <= hi):
+            for entry in col["results"]:
+                dlo, dhi = entry["die"]
+                if dlo <= code <= dhi:
+                    return entry[key]
+    return 0
+
+
 def _convoy_loss_pct(points: int, d1: int, d2: int) -> int:
     """[41.66] resolve one convoy attack on the [41.5] Air Bombardment CRT: pick the column, read
     the two dice SEQUENTIALLY as a two-digit code (tens=d1, units=d2), and return the tens-of-
@@ -615,15 +695,7 @@ def _convoy_loss_pct(points: int, d1: int, d2: int) -> int:
     Ports or AXIS NAVAL CONVOYS are carried out using the Bomb Points row (see Case 41.7)". So
     Malta's Swordfish (rule 44) enters here on the same scale as any bomber; what its torpedoes are
     WORTH in Bomb Points is 41.73/41.74's business and is settled in game.malta.bomb_points."""
-    code = d1 * 10 + d2
-    for col in logistics_data.convoy_bombing_crt_41_66():
-        lo, hi = col["bomb_points"]
-        if points >= lo and (hi is None or points <= hi):
-            for entry in col["results"]:
-                dlo, dhi = entry["die"]
-                if dlo <= code <= dhi:
-                    return entry["pct_lost"]
-    return 0
+    return _crt_result(logistics_data.convoy_bombing_crt_41_66(), points, d1, d2, "pct_lost")
 
 
 def _port_bomb_levels(bomb_points: int, d1: int, d2: int) -> int:
@@ -634,15 +706,7 @@ def _port_bomb_levels(bomb_points: int, d1: int, d2: int) -> int:
     six strike Air Points (column 1..20) the roll is a 0 on 32 of 36 codes and a 1 on 4 --
     which is what lets the harbour regenerate (55.18) between the bombs and makes the siege a
     duel rather than a one-way ratchet."""
-    code = d1 * 10 + d2
-    for col in logistics_data.air_port_bombing_crt_41_5():
-        lo, hi = col["bomb_points"]
-        if bomb_points >= lo and (hi is None or bomb_points <= hi):
-            for entry in col["results"]:
-                dlo, dhi = entry["die"]
-                if dlo <= code <= dhi:
-                    return entry["levels"]
-    return 0
+    return _crt_result(logistics_data.air_port_bombing_crt_41_5(), bomb_points, d1, d2, "levels")
 
 
 def _apply_convoy_loss(cargo: dict, pct: int) -> tuple[dict, int]:
@@ -673,13 +737,14 @@ def _interdict(convoy, state: GameState, rng):
     moment you DID bomb one. Malta was measured through that and pronounced inert. Whether this
     function draws or not must now be invisible to every other subsystem, and tests/test_dice.py
     holds that line."""
+    cargo = state.convoy_cargo(convoy)                  # 56.22: what the Axis planned, if he planned
     order = _interdiction_for(state, convoy)
     if order is None:
-        return dict(convoy.cargo), None, 0, 0, (), 0
+        return cargo, None, 0, 0, (), 0
     points = malta.interdiction_points(state, order)    # 41.66/44: the LIVE strength, not the field
     d1, d2 = rng.randint(1, 6), rng.randint(1, 6)      # 41.66: two dice, read sequentially
     pct = _convoy_loss_pct(points, d1, d2)
-    reduced, tons_lost = _apply_convoy_loss(convoy.cargo, pct)
+    reduced, tons_lost = _apply_convoy_loss(cargo, pct)
     return reduced, order, pct, tons_lost, (d1, d2), points
 
 
@@ -915,6 +980,66 @@ def _rail_station(r: _Run, convoy, stop):
     r.emit(EventKind.SUPPLY_DUMP_ESTABLISHED, convoy.side, "SYSTEM",
            {"supply_id": sid, "side": convoy.side.value, "hex": list(stop)})
     return r.state.supply(sid)
+
+
+def _convoy_planning(r: _Run, policies: dict) -> None:
+    """[48 III] / [56.21] / [56.22] THE AXIS CONVOY PLANNING PHASE, once per Game-Turn, planning the
+    NEXT Game-Turn's sailings -- and the beat that deleted invention I11.
+
+        56.0   "Convoys are planned ONE GAME-TURN IN ADVANCE and the route of the convoy (the
+                shipping lane it will use) is also chosen at that time."
+        56.21  "The Axis Convoy Capacity Table refers the Axis Player, by month and year, to the
+                Tonnage Capacity Table for that particular month. The figures given on the Tonnage
+                Determination Table are the tonnage of supplies that the Axis may ship in that
+                Game-Turn (FOR WHICH HE IS PLANNING)."
+        56.22  "Having determined the allowable tonnage for a given Game-Turn, THE AXIS PLAYER MAY
+                NOW PLAN TO SHIP ANY AMOUNTS (within the limits of allowable tonnage) OF FUEL,
+                AMMUNITION, AND STORES THAT HE WISHES. They are available (for game purposes) in
+                unlimited quantities in Europe."
+
+    WHAT WAS THERE BEFORE. `scenario._CONVOY_SPLIT_56_22 = {FUEL 0.60, AMMO 0.25, STORES 0.15}` --
+    a constant, applied at scenario construction, to every convoy of a hundred and eleven
+    Game-Turns. The port plan calls it invention I11 and calls the decision it replaced "the Axis
+    Player's single most important recurring choice". The tonnage is still the charts' (56.4 x 56.5
+    x a die, in game.scenario, where the timetable lives); the SPLIT is now his, taken here, one
+    Game-Turn ahead, through Policy.convoy_plan.
+
+    THE ORDER IS RE-VALIDATED AT THIS BOUNDARY like every other order in this engine: only 56.22's
+    three commodities may be shipped (Water is not a convoy commodity -- it comes from wells, 52.7,
+    and 56.22 names fuel, ammunition and stores), nothing negative, and the total is clipped to the
+    allowable tonnage by 56.27 ("ports have maximum capacities; they may not receive supplies over
+    that capacity") and 56.21's own "within the limits". 54.5's Equivalent Weight Chart crosses
+    each commodity's tonnage to supply Points.
+
+    A convoy with tons == 0 is not planned at all: the Tobruk ferry, the Commonwealth railway and
+    every hand-built test convoy carry a fixed manifest, and a scenario that plans nothing emits
+    nothing here -- byte-identical.
+
+    THE FIRST GAME-TURN PLANS TWICE. A scenario opens in the middle of a war whose first sailing was
+    planned the week before it starts, so the opening Game-Turn plans both its own convoys and the
+    next one's; every Game-Turn after that plans one turn ahead, as 56.0 requires."""
+    turns = [r.state.turn + 1]
+    if r.state.turn == r.initial.turn:
+        turns.insert(0, r.state.turn)                    # the sailing planned before the curtain rose
+    due = [c for c in r.state.convoys
+           if c.arrival_turn in turns and c.tons > 0 and c.id not in r.state.convoy_plans]
+    if not due:
+        return                                           # unplanned scenarios stay byte-identical
+    r.go(Phase.LOGISTICS, Side.SYSTEM)
+    for c in sorted(due, key=lambda c: (c.arrival_turn, c.id)):
+        pol = policies[c.side]
+        plan = pol.convoy_plan(r.state, c.side, c.tons) if hasattr(pol, "convoy_plan") else {}
+        tons_by = {k: float(v) for k, v in plan.items()
+                   if k in supply.CONVOY_COMMODITIES and v > 0}     # 56.22: the three, and no other
+        total = sum(tons_by.values())
+        if total > c.tons:                               # 56.21/56.27: within the allowable tonnage
+            tons_by = {k: v * c.tons / total for k, v in tons_by.items()}
+        cargo = {k: supply.tons_to_points(v, k) for k, v in tons_by.items()}
+        cargo = {k: q for k, q in cargo.items() if q > 0}
+        r.emit(EventKind.CONVOY_PLANNED, c.side, f"{c.side.value}/QM",
+               {"convoy_id": c.id, "lane": c.lane, "dest": c.dest, "tons": c.tons,
+                "allowed_tons": c.tons, "cargo": cargo,
+                "tons_by": {k: round(v, 3) for k, v in sorted(tons_by.items())}})
 
 
 def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
@@ -1592,21 +1717,30 @@ _REFITTABLE_ROLES: tuple[str, ...] = ("recon", "strike")
 
 def _air_points(state: GameState, side: Side, arena: str, role: str) -> int:
     """Committed Air Points of `role` ("strike"|"recon") `side` can put over `arena` this OpStage,
-    after TWO gates: the 40/45/46 superiority contest scales the LOSER down
-    (AIR_SUPERIORITY_LOSER_SCALE), and 38.31's REFIT ledger caps whatever is left at what the
-    squadron's refitted aeroplanes can carry -- "a plane that is not refitted may fly no mission
-    other than transfer, even if it is refueled". The winner of a contested sky still flies only the
-    machines its mechanics got back into the air.
+    after THREE gates: the 40/45/46 superiority contest scales the LOSER down
+    (AIR_SUPERIORITY_LOSER_SCALE); rule 43 and rule 39.19 take out the aeroplanes that are not in
+    Africa or have already flown this Game-Turn's Strategic Phase (game.basing.available_points);
+    and 38.31's REFIT ledger caps whatever is left at what the squadron's refitted aeroplanes can
+    carry -- "a plane that is not refitted may fly no mission other than transfer, even if it is
+    refueled". The winner of a contested sky still flies only the machines that are on the right
+    continent, have not already been to Malta today, and that its mechanics got back into the air.
 
-    Both gates are read at MISSION time and neither draws anything; the fuel bill (38.24) comes
+    THE BASING CUT COMES BEFORE THE REFIT CAP, and the refit cap then reads the CUT establishment
+    (_establishment): otherwise the Mediterranean contingent would act as a readiness buffer for
+    aeroplanes that are not in Africa, and the African squadron would fly on the serviceability of
+    a force based a thousand miles away.
+
+    All three gates are read at MISSION time and none draws anything; the fuel bill (38.24) comes
     after, on whatever survives them."""
     victor = state.air_superiority.get(arena)
     scale = 1.0 if victor is None or victor == side.value else AIR_SUPERIORITY_LOSER_SCALE
     total = sum(getattr(w, role) for w in state.air if w.side == side and w.arena == arena)
     points = int(total * scale)
+    points = basing.available_points(state, side, arena, role, points)   # 43.11 + 39.19
     if role not in _REFITTABLE_ROLES:                    # the fighter arm is outside the ledger
         return points
-    return air.ready_points(state, side, arena, role, points)
+    return air.ready_points(state, side, arena, role, points,
+                            basing.establishment(state, side, arena, role))
 
 
 def _air_unfit(r: _Run, side: Side, arena: str, role: str, points: int) -> None:
@@ -1616,7 +1750,8 @@ def _air_unfit(r: _Run, side: Side, arena: str, role: str, points: int) -> None:
     grounded or never ordered."""
     if points <= 0 or role not in _REFITTABLE_ROLES or not air.refit_modelled(r.state, side):
         return
-    planes = air.flying_planes(r.state, side, arena, role, points)
+    planes = air.flying_planes(r.state, side, arena, role, points,
+                               basing.establishment(r.state, side, arena, role))
     if planes <= 0:
         return
     unfit = air.unfit_planes(r.state, side, arena, role) + planes
@@ -1799,7 +1934,10 @@ def _air_support(r: _Run, side: Side, pinned: set[str]) -> None:
     `pinned` set the barrage feeds) -- UN-STRIKABLE behind an intact Major-City wall (fort_level>1,
     41.31); FORT bombing batters a wall one level/OpStage (reusing FORT_REDUCED); PORT bombing knocks
     a harbour's Efficiency Level down one (reusing PORT_EFFICIENCY_CHANGED, 41.39B); AIRFIELD bombing
-    takes an air facility's Capacity Level down (41.36/36.14); RECON lifts the fog over a hex (42.2). Each mission is grounded when its OWN target hex lies under a Sandstorm/
+    takes an air facility's Capacity Level down (41.36/36.14); DUMP bombing eliminates a percentage
+    of every supply in the hex's dumps and costs the defender a Truck Point per 10% (41.35); TRUCKS
+    bombing destroys Truck Points and their cargo outright (41.32); RECON lifts the fog over a hex
+    (42.2). Each mission is grounded when its OWN target hex lies under a Sandstorm/
     Rainstorm (29.43/29.52, keyed on the 29.7 section it flies over), so a storm confined to 2-3
     sections no longer grounds the whole air force; an air-less segment stays byte-identical."""
     if not r.state.air:
@@ -1841,6 +1979,10 @@ def _air_support(r: _Run, side: Side, pinned: set[str]) -> None:
             _air_port(r, side, m.target, fuel)
         elif m.kind == "airfield":
             _air_facility_bomb(r, side, tuple(m.target), fuel)
+        elif m.kind == "dump":
+            _air_dump_bomb(r, side, tuple(m.target), fuel)
+        elif m.kind == "trucks":
+            _air_truck_bomb(r, side, tuple(m.target), fuel)
         elif m.kind == "recon":
             _air_recon(r, side, tuple(m.target), fuel)
 
@@ -1990,6 +2132,167 @@ def _air_facility_bomb(r: _Run, side: Side, tgt: Coord, fuel) -> None:
     if new_level <= 0 and air.removed_when_destroyed(facility.kind):
         r.emit(EventKind.AIR_FACILITY_DESTROYED, side, actor,
                {"facility_id": facility.id, "kind": facility.kind})
+
+
+def _divide_truck_loss(formations, points: int) -> list[tuple[object, int]]:
+    """[41.32]/[41.35] "The defending Player must DIVIDE THE LOSSES AS EVENLY AS POSSIBLE amongst
+    type of trucks and types of cargo" (41.32); "choice of defender, DIVIDING LOSSES AS EVENLY AS
+    POSSIBLE" (41.35). One Truck Point at a time, round-robin over the formations that still have
+    one, in id order -- which is as even as a division gets, and deterministic.
+
+    The choice is the defender's in the book; id order is OUR deterministic reading of it, the same
+    convention the first-line truck split, the blind barrage pick and the functioning-SGSU choice
+    already use. Returns [(formation, points_lost)] for the formations that lost any."""
+    lost: dict[str, int] = {}
+    live = sorted(formations, key=lambda t: t.id)
+    remaining = points
+    while remaining > 0 and any(t.points - lost.get(t.id, 0) > 0 for t in live):
+        for t in live:
+            if remaining <= 0:
+                break
+            if t.points - lost.get(t.id, 0) > 0:
+                lost[t.id] = lost.get(t.id, 0) + 1
+                remaining -= 1
+    return [(t, lost[t.id]) for t in live if lost.get(t.id, 0) > 0]
+
+
+def _kill_truck_points(r: _Run, side: Side, formations, points: int, rule: str) -> int:
+    """[41.32]/[41.35] Destroy `points` Truck Points across `formations`, "as evenly as possible",
+    and the cargo that rode on them. Returns the Truck Points actually destroyed (fewer than asked
+    when the hex holds fewer -- 41.35's own "if possible").
+
+    THE CARGO GOES WITH THE LORRIES. 41.32's row says so outright -- the chart Key reads "that
+    number of Truck Points AND THEIR CARGO destroyed" -- and it is charged pro rata, each commodity
+    losing the destroyed share of the formation's load, rounded UP the way 41.67 rounds a convoy's
+    loss. ⚠ FLAGGED for 41.35's clause, where the book says only that a Truck Point is lost and says
+    nothing about what was on it: leaving a full load on a formation that no longer has the lorries
+    to carry it would break 53.12's own admissibility rule, so the same pro rata applies. It is our
+    reading of a silence, and it makes bombing a dump slightly more destructive than the printed
+    sentence alone."""
+    killed = 0
+    for tf, n in _divide_truck_loss(formations, points):
+        cargo = {c: -(-getattr(tf, c.lower()) * n // tf.points)      # ceil, in integers
+                 for c in supply.COMMODITIES if getattr(tf, c.lower()) > 0}
+        r.emit(EventKind.TRUCK_POINTS_DESTROYED, side, f"{side.value}/Air",
+               {"truck_id": tf.id, "points": n, "left": tf.points - n,
+                "cargo": {c: q for c, q in cargo.items() if q > 0}, "rule": rule})
+        killed += n
+    return killed
+
+
+def _air_dump_bomb(r: _Run, side: Side, tgt: Coord, fuel) -> None:
+    """[41.35] / [41.5] B-SD BOMBING SUPPLY DUMPS -- the mission that lets air reach into the
+    logistics game it was flown to interdict.
+
+        41.35 "Bombing Supply Dumps (B-SD): THE RESULT IS THE PERCENTAGE OF EACH TYPE OF SUPPLY IN
+               THAT DUMP THAT IS DESTROYED. In addition, if there are any UNATTACHED TRUCKS in the
+               hex, FOR EVERY 10% OF SUPPLIES DESTROYED, ONE TRUCK POINT IS LOST, choice of
+               defender, dividing losses as evenly as possible."
+        [41.5] Key "Supply Dump: Eliminate that percentage of all Supplies in that Dump. In
+               addition, lose 1 Truck Point for each 10%, if possible, defender's choice."
+
+    The Supply Dump row of the [41.5] table was transcribed for this (PDF page 107, eyes-verified,
+    every column self-checked against the 36 sequential 2d6 codes): 0/10/20/30/40/50/75 percent,
+    and the 75 sits alone in the 471+ column on a 65-66.
+
+    ONE ROLL, ALL THE DUMPS IN THE HEX. The rule says "that dump", and our supply layer routinely
+    puts several SupplyUnits on one hex (the campaign's staging chains, the air-facility pile beside
+    a field dump). Rolling once and applying the printed percentage to each is the reading that
+    keeps the DICE from depending on how many counters happen to be stacked there -- the conditional
+    -draw hazard game.dice exists to contain -- and it is what "eliminate that percentage of all
+    Supplies in that Dump" says when the hex is the dump.
+
+    THERE IS NO STRUCTURAL REFUSAL HERE, and that is 39.0's own note rather than an omission: unlike
+    a harbour or an airfield -- places, whose owner a player can read off the map, and which
+    _air_port and _air_facility_bomb therefore refuse to bomb when they are his own -- A SUPPLY DUMP
+    IS HIDDEN (3.6). "Often players may not know precisely what is in a hex, but will have to assign
+    missions BLINDLY, and only find out what target are present when the planes arrive." So every
+    tasked B-SD is flown and billed, and finds what it finds: an enemy dump, an empty desert, or a
+    hex holding nothing but his own supply."""
+    dumps = tuple(sorted((su for su in r.state.supplies
+                          if su.side != side and not su.is_dummy and not su.empty
+                          and su.hex == tgt), key=lambda su: su.id))
+    strength = _air_points(r.state, side, "LAND", "strike")
+    if strength <= 0:                                    # no committed strike / lost the sky
+        return
+    strength = fuel(strength)                            # 38.24: however many planes were fuelled
+    if strength <= 0:                                    # 38.21: no fuel, no flight -- and no die
+        return
+    if not dumps:                                        # 39.0: flown blind; billed, no die drawn
+        r.emit(EventKind.AIR_STRIKE_RESOLVED, side, f"{side.value}/Air",
+               {"arena": "DUMP", "target": list(tgt), "strength": strength, "pct": 0, "dumps": []})
+        return
+    d1, d2 = r.d6("air_bombard"), r.d6("air_bombard")    # 41.22: two dice, read sequentially
+    pct = _crt_result(logistics_data.air_dump_bombing_crt_41_35(), strength, d1, d2, "pct")
+    actor = f"{side.value}/Air"
+    r.emit(EventKind.AIR_STRIKE_RESOLVED, side, actor,   # certify the [41.5] CRT dice
+           {"arena": "DUMP", "target": list(tgt), "strength": strength, "pct": pct,
+            "dumps": [su.id for su in dumps]}, rng_draws=(d1, d2))
+    if pct <= 0:                                         # a No-Effect leaves the hex as it stood
+        return
+    for su in dumps:
+        destroyed = {c: -(-getattr(su, c.lower()) * pct // 100)      # ceil, as 41.67 rounds a loss
+                     for c in supply.COMMODITIES if getattr(su, c.lower()) > 0}
+        destroyed = {c: q for c, q in destroyed.items() if q > 0}
+        if destroyed:
+            r.emit(EventKind.AIR_DUMP_BOMBED, side, actor,
+                   {"supply_id": su.id, "pct": pct, "destroyed": destroyed})
+    # 41.35's second clause: the lorries parked beside the dump pay a Truck Point per 10%.
+    per = logistics_data.air_dump_truck_loss_per_pct_41_35()
+    owner = _other(side)
+    _kill_truck_points(r, side, [t for t in r.state.trucks_at(tgt) if t.side == owner and t.points > 0],
+                       pct // per, "41.35")
+
+
+def _air_truck_bomb(r: _Run, side: Side, tgt: Coord, fuel) -> None:
+    """[41.32] / [41.5] B-TC BOMBING TRUCK CONVOYS -- trucks are the scarcest thing on this board
+    and until now no bomb in the engine could touch one.
+
+        41.32 "Bombing Truck Convoys (B-TC): THE RESULTS ARE GIVEN IN THE NUMBER OF TRUCK UNITS
+               DESTROYED. The defending Player must divide the losses as evenly as possible amongst
+               type of trucks and types of cargo. TRUCKS IN MAJOR CITIES MAY NOT BE BOMBED BY AIR
+               UNTIL THE CITY IS REDUCED TO ZERO ('0'). In addition, FIRST LINE TRUCKS (ATTACHED)
+               may be bombed in similar fashion, EXCEPT THAT FIRST LINE TRUCKS MAY BE BOMBED ONLY BY
+               PLANES WITH A 'D' CAPABILITY."
+        [41.5] Key "Trucks: That number of Truck Points and their cargo destroyed."
+
+    THE RESULT IS IN TRUCK POINTS, on the chart Key's own word, and TruckFormation.points is
+    denominated in exactly that (1 Point = 10 trucks, 53.0). Rule 41.32's prose says "truck units";
+    the chart is the arbiter of its own result column.
+
+    THE CITY WALL IS THE SIEGE MIRROR OF 41.31'S. A garrison behind an intact Major-City wall is
+    un-strikable at fort_level > 1; the lorries in the same city are protected further still, "until
+    the city is REDUCED TO ZERO" -- so any surviving fortification level shelters them. That is the
+    printed asymmetry, not a typo of ours.
+
+    ⚠ FIRST-LINE TRUCKS ARE NOT BOMBED HERE, AND IT IS A DATA GAP RATHER THAN A DISAGREEMENT.
+    41.32's last sentence adds the ATTACHED first-line lorries as a target for 'D'-capable planes
+    (and both sides' representative bombers carry D or B -- game.air.mission_capable). But a
+    first-line truck in this engine is a UNIT flag (state.is_first_line_truck), not a Truck-Point
+    ledger a loss can be taken out of, so there is nothing of the right shape to destroy. It lands
+    with the same roster work rule 19 and 34.72 wait on."""
+    owner = _other(side)
+    formations = [t for t in r.state.trucks_at(tgt) if t.side == owner and t.points > 0]
+    walled = r.state.fort_level(tgt) > 0                 # 41.32: sheltered until the city is at zero
+    strength = _air_points(r.state, side, "LAND", "strike")
+    if strength <= 0:                                    # no committed strike / lost the sky
+        return
+    strength = fuel(strength)                            # 38.24: however many planes were fuelled
+    if strength <= 0:                                    # 38.21: no fuel, no flight -- and no die
+        return
+    if walled or not formations:                         # 39.0: flown blind; billed, no die drawn
+        r.emit(EventKind.AIR_STRIKE_RESOLVED, side, f"{side.value}/Air",
+               {"arena": "TRUCKS", "target": list(tgt), "strength": strength,
+                "points": 0, "walled": walled})
+        return
+    d1, d2 = r.d6("air_bombard"), r.d6("air_bombard")    # 41.22: two dice, read sequentially
+    result = _crt_result(logistics_data.air_truck_bombing_crt_41_32(), strength, d1, d2, "points")
+    killed = min(result, sum(t.points for t in formations))
+    r.emit(EventKind.AIR_STRIKE_RESOLVED, side, f"{side.value}/Air",   # certify the [41.5] CRT dice
+           {"arena": "TRUCKS", "target": list(tgt), "strength": strength,
+            "points": killed, "result": result, "walled": False}, rng_draws=(d1, d2))
+    if killed > 0:
+        _kill_truck_points(r, side, formations, killed, "41.32")
 
 
 def _air_recon(r: _Run, side: Side, tgt: Coord, fuel) -> None:

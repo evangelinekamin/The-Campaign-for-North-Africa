@@ -1207,7 +1207,7 @@ The four-cell matrix:
 | **I8** | `_air_recon` reveals **everything** in the hex | `engine.py:1086-1099` | **42.23**: roll 1d6 on the [42.27] table; the result is the **number** of battalion-equivalents revealed (0–8). We are strictly more generous than the rulebook. |
 | **I9** | `_barrage_target` returns the **strongest** unit in the hex | `engine.py:2286-2290` | **12.23/12.24: barrage is BLIND.** The defender states only the target's **class**. The firer currently gets perfect information and always hits the biggest thing. |
 | **I10** | Wells are minted **once per side** — `AX-Well-X` *and* `AL-Well-X` on the same hex, each with the full pool | `wells.py` | The map holds **2× the charted water** (504,000 points where the geography holds 252,000), and both armies can drink the same well dry independently. Flagged in-module; still a mint. |
-| **I11** | `_CONVOY_SPLIT_56_22 = {FUEL 0.60, AMMO 0.25, STORES 0.15}` — a fixed split | `scenario.py:406` | **56.22**: the Axis splits his tonnage **as he wishes**. It is his single most important recurring decision. |
+| **I11** | ~~`_CONVOY_SPLIT_56_22 = {FUEL 0.60, AMMO 0.25, STORES 0.15}` — a fixed split~~ **✅ DELETED, Phase 5.5.** The constant is gone; the scenario schedules only the 56.4 × 56.5 **tonnage** and `engine._convoy_planning` takes the split from `Policy.convoy_plan` one Game-Turn ahead (56.0/56.21). | ~~`scenario.py:406`~~ | **56.22**: the Axis splits his tonnage **as he wishes**. It is his single most important recurring decision. *(The base `Policy` still defaults to 60/25/15 — flagged in place as an opinion a commander may hold, not a law of the world; the campaign Axis overrides it with a board-reading doctrine. `relay._TRUCK_LOAD_MIX` keeps the same three numbers for the unrelated question of how a **lorry** apportions its own capacity, under its own name and its own flag.)* |
 | **I12** | The **largest**-unit cohesion | `engine.py:2569` ✅ | **6.27: AVERAGE all equally-largest units.** = T0-5. |
 | **I13** | `_CW_WATER_PROXY = 1600` | `oob.py:41` ✅ | **[60.44] grants no water at all.** |
 | **I14** | `water_cost = base + 1` when hot | `supply.py:200` ✅ | **29.35: DOUBLED.** = T0-7. |
@@ -1333,6 +1333,62 @@ Sizes assume **one person**. **⏱** is a working-days estimate, honestly.
 | **5.4** | 🔴 **44 — MALTA AS A PLACE.** Both halves of the loop: facility **levels** → **18 planes per level (44.14)** → bomb points → the [41.5] CRT → % of the Axis convoy destroyed; and back the other way, the Axis spends from a **finite budget** (64.52 → [44.41] campaign row: **I unlimited / II × 25 GT / III × 12 / IV × 12**) to **raid Malta** (44.21/41.36) and knock its levels down, while the CW rebuilds them on the [44.5] table. **DELETE `_malta_bomb_points`.** | 5.3 | 10 |
 | **5.5** | **41.32 / 41.35 — bombing trucks and supply dumps** (*"+1 Truck Point lost per 10%"*). **56.21 / 56.22 — the Axis convoy planning decision** (his single most important recurring choice, currently a hardcoded 60/25/15 split, **I11**). **39.19 — one mission per plane per OpStage: Malta OR the desert.** **43 — the Aegean basing constraints** that force the Axis to keep a Malta-capable bomber force off the battlefield. | 5.4 | 10 |
 | | **DEFER, and record the debt: 40 (fighter combat), 45 (air-to-air), 46 (flak), pilots, maneuver, night, torpedoes, paradrops.** `AirWing.fighters` is a constant that never dies. **Something must eventually kill aeroplanes**, or Malta is a lever with no cost to pull. | | |
+
+#### 5.5 LANDED — 2026-07-21. What it built, what it refused to build, and the one ruling it left.
+
+**BUILT.**
+
+* **The [41.5] Supply Dump and Trucks rows are transcribed** (PDF p107 at 300 dpi, rotated, cropped
+  and read row by row; the Key on p108 gives the semantics verbatim). Every one of the twenty-two
+  columns partitions all 36 sequential 2d6 codes exactly, which is the self-check they were accepted
+  on. That leaves **four** rows of the eight still untranscribed — Fortification, Railroad, Road, and
+  the Torpedo-Points / Barrage-Points index scales — each named in the data file's own `_comment`.
+* **41.35 B-SD and 41.32 B-TC are missions.** `AirMission(kind="dump"|"trucks")`, resolved in
+  `engine._air_dump_bomb` / `_air_truck_bomb`, fuelled and un-refitted through the identical seam
+  every other bombing mission uses. With them, **for the first time in this engine a bomb can destroy
+  a lorry** — which is what Phase 6.1's "now that Phase 5 exists, air can kill a lorry too" was
+  waiting for.
+* **56.21/56.22 — invention I11 is deleted.** `scenario._CONVOY_SPLIT_56_22` is gone. The scenario
+  builder now schedules an **allowance** (`Convoy.tons`, the 56.4 × 56.5 × die tonnage) and the
+  **Convoy Planning Phase** (`engine._convoy_planning`, once per Game-Turn, planning one Game-Turn
+  ahead per 56.0) asks `Policy.convoy_plan` what to put in it. `campaign_policy.convoy_plan_doctrine`
+  reads the army's own larders, compared in the book's own common unit (the [54.5] Equivalent Weight
+  Chart), and ships what it is shortest of.
+* **39.19 binds.** `GameState.air_strategic` books the African bombers the Axis adds to a Malta raid
+  (44.21/44.25, capped by 44.27) out of the LAND arena for the **rest of that Game-Turn**, cleared at
+  the Game-Turn boundary alone. The Axis policy now has a real trade: `malta_africa_doctrine` strips
+  the desert only for a raid it has paid a [44.41] budget Game-Turn for.
+* **43 is a module** (`game/basing.py`), and rule 44 reads its basing off it, so the raid's sizing and
+  the battlefield's deduction cannot drift apart. Its live effect today: **43.13 + 43.25 collapse the
+  Malta-capable force from 75% to 25% at Game-Turn 35**, because Crete takes at least half and Crete
+  may not raid Malta.
+
+**🔴 OWNER RULING NEEDED — the 43.11 deduction.** `game/basing.py:applies`, and asserted in
+`tests/test_basing.py`. 43.11/43.13 constrain **three named German heavy bomber types** (He 111,
+Ju88D, FW220). This engine fields **none of them**: `air.REPRESENTATIVE_AIRCRAFT` expresses the whole
+abstract Axis strike pool as the **Ju. 87B**, a Stuka, which flew from African strips and which rule
+43 does not name. The deduction is therefore coded **against the named list** and currently deducts
+nothing — the transcribe-never-invent answer, and it binds automatically the day [34.6]/[59.3] puts a
+He 111 in the order of battle. **It was measured the other way first, and that is why it is a ruling:**
+applied to the whole abstract pool, 75% of the campaign Axis's *two* aeroplanes is two aeroplanes, and
+the Luftwaffe flies **nothing** over the desert for 111 Game-Turns.
+
+**THE DEFERRED AIR DEBT IS WRITTEN DOWN IN THE CODE**, at the top of `game/basing.py` (the last module
+of Phase 5, where the next person will look). Restated here: 40, 45, 46, pilots, maneuver, night,
+torpedoes and paradrops are unbuilt; **nothing on the African mainland can be shot down**; the only
+channel that permanently removes aircraft anywhere is 41.36's 10%-per-level, on **Malta alone**; so
+44.28's loss apportionment has nothing to apportion and Malta's 19 fighters and 17 AA Points ([60.46],
+transcribed) never fire. **Until something kills aeroplanes, every Malta number this engine produces is
+an upper bound on the Axis's ability to suppress the island and a lower bound on what it costs him.**
+[46.3]'s Anti-Aircraft CRT (recovered, PDF p108, legible) and the [45.4]/[45.5] TacAir tables are the
+precondition for all of it.
+
+**Also deferred, and each named at its own function:** 41.32's *first-line* (attached) truck bombing,
+which needs a Truck-Point ledger on a unit that does not exist (the same roster work rule 19 and 34.72
+wait on); 43.23's four Suez OpStages a month (a tax on a Crete force that does nothing in this engine);
+43.21's fuel/ammo exemption applied to the *African* contingent, which makes that contingent slightly
+cheaper than the book's; and 41.35's silence about the cargo on a bombed-out lorry, which we destroy
+pro rata because 53.12 would otherwise be violated.
 
 ---
 

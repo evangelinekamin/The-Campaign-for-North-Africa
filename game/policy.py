@@ -156,6 +156,41 @@ class Policy:
         doctrine spends nothing it cannot afford; the engine re-validates against the budget."""
         return "I"
 
+    def malta_africa_planes(self, state: GameState, available: int, level: str) -> int:
+        """[44.21]/[44.25]/[44.27] + [39.19] How many AFRICAN-based bombers to add to this
+        Game-Turn's Malta raid, of the `available` the engine has already bounded by 44.27's cap
+        (never more from the map than the [44.42] table itself granted) and by what is standing
+        serviceable in Africa. `level` is the [44.41] Availability Level he has just committed --
+        44.26 assigns the map-based planes AFTER the table is consulted, so it is information he
+        has.
+
+        THIS IS THE 39.19 DECISION AND IT IS A REAL ONE: "a plane flying a mission in an Operations
+        Stage may not fly in the Strategic Phase of that Game-Turn and vice versa", so every bomber
+        sent to Malta is one that flies nothing over the desert until the next Game-Turn. The base
+        sends NONE -- the raid then consists of the Mediterranean-based force alone, which is the
+        Axis's default posture under rule 43 and keeps every scenario without a Malta doctrine
+        byte-identical."""
+        return 0
+
+    def convoy_plan(self, state: GameState, side: Side, tons: int) -> dict:
+        """[56.22] THE AXIS CONVOY PLANNING DECISION -- what to load into a sailing whose allowable
+        TONNAGE (`tons`) the [56.4]x[56.5] charts have already fixed. Returns {commodity: tons},
+        over 56.22's three commodities alone (FUEL / AMMO / STORES; Water is not shipped). The
+        engine clips the total to the allowance and crosses each to supply Points on 54.5.
+
+        "Having determined the allowable tonnage for a given Game-Turn, the Axis Player may now plan
+        to ship ANY AMOUNTS (within the limits of allowable tonnage) of fuel, ammunition, and stores
+        THAT HE WISHES. They are available (for game purposes) in unlimited quantities in Europe."
+
+        THE BASE SPLIT IS 60/25/15, AND IT IS HERE UNDER PROTEST -- it is the constant the port plan
+        calls invention I11, and moving it out of `scenario._CONVOY_SPLIT_56_22` into a policy
+        DEFAULT is what makes it an opinion a commander can hold instead of a law of the world. A
+        policy with a real quartermaster overrides it (game.campaign_policy.convoy_plan_doctrine
+        reads the army's own shortages); a policy with none ships the historical-ish mix rather than
+        nothing, because a convoy that sails empty would be a different invention wearing the same
+        hat. Nothing in the rulebook prints these three numbers."""
+        return {supply.FUEL: tons * 0.60, supply.AMMO: tons * 0.25, supply.STORES: tons * 0.15}
+
 
 class ScriptedPolicy(Policy):
     """Simple desert doctrine: the attacker presses toward the objective along the

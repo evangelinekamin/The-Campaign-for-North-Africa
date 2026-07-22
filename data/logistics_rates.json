@@ -1105,7 +1105,7 @@
     }
   },
   "air_bombardment_41_5": {
-    "_comment": "[41.5] AIR BOMBARDMENT AND SECONDARY BARRAGE TARGETS TABLE, the PORTS row (shared with Airfields / Air Landing Strips), transcribed and eyes-verified cell-by-cell from the scanned foldout chart page 12 (PDF page 107) -- the dense grid that did NOT OCR into docs/rules/90 (only the row labels came through, lines ~1005/1025). Procedure (41.22 / 41.39B): the bombing Player totals his Bomb Points, selects the matching bomb_points column, rolls two dice reading them SEQUENTIALLY as a two-digit code (tens=first die, units=second die: 11,12..16,21..66), and reads the cross-indexed result -- the number of Efficiency LEVELS the port loses (55.1). A result of 0 is No Effect: the port lost no levels this OpStage, so 55.18 lets it regenerate. Each column's die entries partition all 36 sequential codes exactly (guarded by tests/test_air.py). hi=null on the final column is the open 471+ bracket. The Axis Naval Convoy row of this SAME chart lives in axis_naval_convoys_56.air_convoy_bombing_crt_41_66 (already transcribed and tested); the remaining land rows (Supply Dump, Fortification, Railroad, Road, Trucks/Combat Units) are the broader T0-10 job and are not transcribed here.",
+    "_comment": "[41.5] AIR BOMBARDMENT AND SECONDARY BARRAGE TARGETS TABLE, the PORTS row (shared with Airfields / Air Landing Strips), transcribed and eyes-verified cell-by-cell from the scanned foldout chart page 12 (PDF page 107) -- the dense grid that did NOT OCR into docs/rules/90 (only the row labels came through, lines ~1005/1025). Procedure (41.22 / 41.39B): the bombing Player totals his Bomb Points, selects the matching bomb_points column, rolls two dice reading them SEQUENTIALLY as a two-digit code (tens=first die, units=second die: 11,12..16,21..66), and reads the cross-indexed result -- the number of Efficiency LEVELS the port loses (55.1). A result of 0 is No Effect: the port lost no levels this OpStage, so 55.18 lets it regenerate. Each column's die entries partition all 36 sequential codes exactly (guarded by tests/test_air.py). hi=null on the final column is the open 471+ bracket. The Axis Naval Convoy row of this SAME chart lives in axis_naval_convoys_56.air_convoy_bombing_crt_41_66 (already transcribed and tested). SINCE PHASE 5.5 the SUPPLY DUMP row (41.35) and the TRUCKS/Flak-Suppression/Combat-Units/CW-Fleet row (41.32) are transcribed here too, from the same 300-dpi render of the same page, each column self-checked against the 36 sequential 2d6 codes. STILL NOT TRANSCRIBED, and each is named where it lands: the FORTIFICATION row (No Effect / Reduced -- 41.37 currently rides engine._batter_fort's flat one-level-per-stage), the RAILROAD and ROAD rows (41.38, no mission kind exists), and the TORPEDO-POINTS and BARRAGE-POINTS index scales printed over these same eleven result columns (41.7 torpedoes and 12.54's barrage against a secondary target).",
     "ports": {
       "_row": "Airfields / Air Landing Strips / Ports -- Efficiency Levels lost (41.39B Bombing Ports)",
       "columns": [
@@ -1432,6 +1432,653 @@
                 66
               ],
               "levels": 4
+            }
+          ]
+        }
+      ]
+    },
+    "supply_dump": {
+      "_row": "Supply Dump -- the percentage of EVERY supply in that dump eliminated (41.35 B-SD)",
+      "_key_41_5": "Key to the Air Bombardment and Secondary Barrage Targets Table, PDF page 108, verbatim: \"Supply Dump: Eliminate that percentage of all Supplies in that Dump. In addition, lose 1 Truck Point for each 10%, if possible, defender's choice.\"",
+      "_transcription": "Eyes-verified cell by cell off the 1979 foldout, PDF page 107 rendered at 300 dpi and cropped (scratchpad/p55/dump.png). Every one of the eleven columns partitions all 36 sequential 2d6 codes exactly, which is the self-check the transcription was accepted on.",
+      "truck_points_lost_per_pct": 10,
+      "columns": [
+        {
+          "bomb_points": [
+            1,
+            20
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                62
+              ],
+              "pct": 0
+            },
+            {
+              "die": [
+                63,
+                66
+              ],
+              "pct": 10
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            21,
+            40
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                56
+              ],
+              "pct": 0
+            },
+            {
+              "die": [
+                61,
+                66
+              ],
+              "pct": 10
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            41,
+            80
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                46
+              ],
+              "pct": 0
+            },
+            {
+              "die": [
+                51,
+                66
+              ],
+              "pct": 10
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            81,
+            120
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                34
+              ],
+              "pct": 0
+            },
+            {
+              "die": [
+                35,
+                64
+              ],
+              "pct": 10
+            },
+            {
+              "die": [
+                65,
+                66
+              ],
+              "pct": 20
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            121,
+            160
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                16
+              ],
+              "pct": 0
+            },
+            {
+              "die": [
+                21,
+                56
+              ],
+              "pct": 10
+            },
+            {
+              "die": [
+                61,
+                66
+              ],
+              "pct": 20
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            161,
+            200
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                46
+              ],
+              "pct": 10
+            },
+            {
+              "die": [
+                51,
+                64
+              ],
+              "pct": 20
+            },
+            {
+              "die": [
+                65,
+                66
+              ],
+              "pct": 30
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            201,
+            260
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                34
+              ],
+              "pct": 10
+            },
+            {
+              "die": [
+                35,
+                56
+              ],
+              "pct": 20
+            },
+            {
+              "die": [
+                61,
+                66
+              ],
+              "pct": 30
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            261,
+            320
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                16
+              ],
+              "pct": 10
+            },
+            {
+              "die": [
+                21,
+                46
+              ],
+              "pct": 20
+            },
+            {
+              "die": [
+                51,
+                64
+              ],
+              "pct": 30
+            },
+            {
+              "die": [
+                65,
+                66
+              ],
+              "pct": 40
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            321,
+            390
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                34
+              ],
+              "pct": 20
+            },
+            {
+              "die": [
+                35,
+                56
+              ],
+              "pct": 30
+            },
+            {
+              "die": [
+                61,
+                66
+              ],
+              "pct": 40
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            391,
+            470
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                16
+              ],
+              "pct": 20
+            },
+            {
+              "die": [
+                21,
+                46
+              ],
+              "pct": 30
+            },
+            {
+              "die": [
+                51,
+                64
+              ],
+              "pct": 40
+            },
+            {
+              "die": [
+                65,
+                66
+              ],
+              "pct": 50
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            471,
+            null
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                34
+              ],
+              "pct": 30
+            },
+            {
+              "die": [
+                35,
+                56
+              ],
+              "pct": 40
+            },
+            {
+              "die": [
+                61,
+                64
+              ],
+              "pct": 50
+            },
+            {
+              "die": [
+                65,
+                66
+              ],
+              "pct": 75
+            }
+          ]
+        }
+      ]
+    },
+    "trucks": {
+      "_row": "Trucks / Flak Suppression / Combat Units / Commonwealth Fleet -- the number result (41.32 B-TC: Truck Points destroyed)",
+      "_key_41_5": "Key to the Air Bombardment and Secondary Barrage Targets Table, PDF page 108, verbatim: \"Trucks: That number of Truck Points and their cargo destroyed. Flak Suppression: That number of TOE Strength Points eliminated. Combat Units: That number of Battalion-equivalents (and then Company-equivalents) Pinned (see Case 41.9). Commonwealth Fleet: That number of Damage Points.\" The Key says TRUCK POINTS where rule 41.32 says \"truck units\"; the chart's own Key is the unit this engine reads, and TruckFormation.points is denominated in exactly it (1 Point = 10 trucks, 53.0).",
+      "_transcription": "Eyes-verified cell by cell off the 1979 foldout, PDF page 107 rendered at 300 dpi and cropped (scratchpad/p55/trucks.png). Every one of the eleven columns partitions all 36 sequential 2d6 codes exactly.",
+      "_deferred": "Only the TRUCKS reading of this row is consumed. Flak Suppression (41.33), Combat-Unit pinning (41.31) and Commonwealth Fleet damage (41.34) read the SAME numbers off the SAME row and are not wired: 41.31's pin currently rides engine._air_strike's flat AIR_STRIKE_STEP_SEVERITY dial, and 46.0 flak is deferred by the port plan.",
+      "columns": [
+        {
+          "bomb_points": [
+            1,
+            20
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                62
+              ],
+              "points": 0
+            },
+            {
+              "die": [
+                63,
+                66
+              ],
+              "points": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            21,
+            40
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                46
+              ],
+              "points": 0
+            },
+            {
+              "die": [
+                51,
+                66
+              ],
+              "points": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            41,
+            80
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                16
+              ],
+              "points": 0
+            },
+            {
+              "die": [
+                21,
+                66
+              ],
+              "points": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            81,
+            120
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                12
+              ],
+              "points": 0
+            },
+            {
+              "die": [
+                13,
+                42
+              ],
+              "points": 1
+            },
+            {
+              "die": [
+                43,
+                66
+              ],
+              "points": 2
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            121,
+            160
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                24
+              ],
+              "points": 1
+            },
+            {
+              "die": [
+                25,
+                46
+              ],
+              "points": 2
+            },
+            {
+              "die": [
+                51,
+                66
+              ],
+              "points": 3
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            161,
+            200
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                36
+              ],
+              "points": 2
+            },
+            {
+              "die": [
+                41,
+                62
+              ],
+              "points": 3
+            },
+            {
+              "die": [
+                63,
+                66
+              ],
+              "points": 4
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            201,
+            260
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                16
+              ],
+              "points": 2
+            },
+            {
+              "die": [
+                21,
+                46
+              ],
+              "points": 3
+            },
+            {
+              "die": [
+                51,
+                66
+              ],
+              "points": 4
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            261,
+            320
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                34
+              ],
+              "points": 3
+            },
+            {
+              "die": [
+                35,
+                64
+              ],
+              "points": 4
+            },
+            {
+              "die": [
+                65,
+                66
+              ],
+              "points": 5
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            321,
+            390
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                16
+              ],
+              "points": 3
+            },
+            {
+              "die": [
+                21,
+                56
+              ],
+              "points": 4
+            },
+            {
+              "die": [
+                61,
+                64
+              ],
+              "points": 5
+            },
+            {
+              "die": [
+                65,
+                66
+              ],
+              "points": 6
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            391,
+            470
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                46
+              ],
+              "points": 4
+            },
+            {
+              "die": [
+                51,
+                56
+              ],
+              "points": 5
+            },
+            {
+              "die": [
+                61,
+                66
+              ],
+              "points": 6
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            471,
+            null
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                16
+              ],
+              "points": 4
+            },
+            {
+              "die": [
+                21,
+                46
+              ],
+              "points": 5
+            },
+            {
+              "die": [
+                51,
+                64
+              ],
+              "points": 6
+            },
+            {
+              "die": [
+                65,
+                66
+              ],
+              "points": 7
             }
           ]
         }
