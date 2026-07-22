@@ -820,12 +820,16 @@ def _campaign_axis_tonnage(gt: int, rng: random.Random) -> "int | None":
     _axis_convoy_tonnage, which hardcodes the six Race-for-Tobruk months. The month's 56.4 Convoy
     Level picks the 56.5 row and the tonnage is fixed + variable x die. Returns None for a month the
     56.4 chart lists no convoy (a '-' -- e.g. before September 1940, when the desert lanes had not
-    yet opened).
+    yet opened), and for a month the chart does not reach at all: it runs September 1940 to December
+    1942 and the campaign's last Game-Turn, GT111, falls one week past its last column into January
+    1943 (64.2 opens the war in the THIRD week of September 1940, so the calendar's whole months run
+    from GT3 -- see game.calendar). A month off the end of the chart is the same fact as a '-' on it:
+    the chart schedules no convoy, so none sails.
 
     WHAT IS SHIPPED IN IT IS NOT DECIDED HERE any more (56.22, block 5.5): the Axis Player plans the
     commodity split in the Convoy Planning Phase, one Game-Turn before the sailing."""
     year, month = calendar.gt_to_month(gt)
-    level = _CONVOY_LEVEL_56_4[str(year)][_MON[month - 1]]
+    level = _CONVOY_LEVEL_56_4.get(str(year), {}).get(_MON[month - 1], "-")
     if level == "-":
         return None
     cap = _CONVOY_CAP_56_5[level]
@@ -955,7 +959,7 @@ def _campaign_rail_cargo(gt: int) -> dict:
     trains against the Axis convoy's charted thousands. Measured over the full campaign, the
     Commonwealth landed 55,500 Fuel to the Axis's 1,770,000."""
     stages = list(_RAIL_STAGE_COMMODITIES)
-    if (gt - 1) % calendar.GT_PER_MONTH == 0:           # 54.34: one OpStage a month carries water
+    if calendar.is_month_start(gt):                     # 54.34: one OpStage a month carries water
         stages.remove("STORES")
     cargo = {c: 0 for c in COMMODITIES}
     for c in stages:
@@ -1111,7 +1115,10 @@ def _campaign_axis_trucks(supplies, target, facilities, larders=()) -> tuple[Tru
     Axis air facility nearest Benghazi (_air_facility_park): 59.61 kept that row off the board only
     while the Air Game was abstract, Phase 5.1 plays it, and rule 36 now gives it a facility hex to
     stand on -- the chart allotted these lorries to an airfield, not to the Panzerarmee's freight run.
-    (They do not yet RESUPPLY the 36.17 larder they stand on; see _air_facility_park's flag.)
+    They are 35.15's First Line Transport and they DO resupply the 36.17 larder they stand on
+    (relay.air_supply_orders), which is the Commonwealth twin's arrangement exactly. (This paragraph
+    used to end "they do not yet RESUPPLY the 36.17 larder they stand on"; that stopped being true
+    when the shuttle landed and the sentence was left behind -- corrected 2026-07-22.)
 
     *** THE TRIPOLI ROW IS NOT SEEDED, AND THAT IS NOT A CONCESSION -- IT IS THE AXIS'S WAR. *** The
     chart's largest row by a wide margin -- 25 Light / 140 Medium / 40 Heavy, 205 of the Italian
@@ -1191,7 +1198,7 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
     if rear is not None:
         rng = random.Random(seed)
         for gt in range(1, max_turns + 1):
-            if (gt - 1) % calendar.GT_PER_MONTH != 0:  # compute the month's cargo on its first Game-Turn
+            if not calendar.is_month_start(gt):     # compute the month's cargo on its first Game-Turn
                 continue
             month_tons = _campaign_axis_tonnage(gt, rng)
             if month_tons is None:
@@ -1202,10 +1209,12 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
             # surge -- and so Malta interdicts a convoy every turn, not once a month. Each weekly
             # sailing carries its ALLOWANCE, not a manifest: 56.22's split is the Axis Player's and
             # is taken a Game-Turn ahead of it (engine._convoy_planning).
-            per = month_tons // calendar.GT_PER_MONTH
-            rem = month_tons - per * calendar.GT_PER_MONTH
-            for i in range(calendar.GT_PER_MONTH):
-                wk = gt + i
+            # THE MONTH'S OWN GAME-TURNS, not four from here: September 1940 has two (64.2), and
+            # spilling its tonnage into October would double-book Game-Turns 3 and 4.
+            weeks = calendar.month_turns(gt)
+            per = month_tons // len(weeks)
+            rem = month_tons - per * len(weeks)
+            for i, wk in enumerate(weeks):
                 if wk > max_turns:
                     break
                 convoys.append(Convoy(f"axis-conv-t{wk}", Side.AXIS, wk, "2", rear.id, {},

@@ -470,6 +470,31 @@ def test_the_34_86_schedule_is_transcribed_whole_and_its_row_totals_add_up():
     assert sum(r["total"] for r in rows) == 6691            # the whole Commonwealth arrival
 
 
+def test_the_chart_rows_carry_the_names_the_scan_prints():
+    """THE REGRESSION TEST FOR THE THREE CELLS THE FIRST TRANSCRIPTION GOT WRONG, 2026-07-22.
+
+    docs/rules/90's OCR of this chart misreads four aircraft names, and the first pass carried three
+    of them through -- 1942 May "Beaufighter IIF", 1942 Jul "Beaufighter II" and 1942 Jul "Hurricane
+    IC" -- while recording, in the data file that exists to be the arbiter, that the book prints
+    those names and that none of them is on the [4.44A] chart. The scan (PDF p.143, 300 dpi, read at
+    8x) prints Beaufighter IF, Beaufighter IF and Hurricane IIC, and all three ARE on [4.44A]. The
+    tell is exactly that: a name absent from the aircraft chart is a misread until the scan says
+    otherwise, so no row may carry one."""
+    rows = logistics_data.cw_air_reinforcements_34_86()
+    printed = {p["printed"] for r in rows for p in r["planes"]}
+    assert not printed & {"Beaufighter IIF", "Beaufighter II", "Hurricane IC", "Hurricane IIIC"}
+    by_turn = {t: r for r in rows for t in r["turns"]}
+    may42 = {p["printed"]: p["number"] for p in by_turn[79]["planes"]}
+    jul42 = {p["printed"]: p["number"] for p in by_turn[87]["planes"]}
+    assert may42["Beaufighter IF"] == 3 and jul42["Beaufighter IF"] == 4
+    assert jul42["Hurricane IIC"] == 30
+    assert {p["printed"]: p["number"] for p in by_turn[31]["planes"]}["Beaufighter IF"] == 16
+    # ...and each correction is on the record, which is the other half of what went wrong.
+    trail = " ".join(logistics_data._air_reinforcements()["_ocr_corrections"])
+    for cell in ("1941 May", "1942 May", "1942 Jul", "1942 Sep", "1942 Nov"):
+        assert cell in trail, f"{cell} correction is not in the file's own audit trail"
+
+
 def test_34_81A_caps_maltas_share_at_a_tenth_of_the_month_rounded_down():
     """[34.81A] "No more than 10% of a month's airplane reinforcements may be sent to Malta." A
     CEILING, so the share rounds DOWN -- and a month whose whole arrival is four aeroplanes (Nov II
@@ -490,78 +515,146 @@ def test_a_months_allotment_is_divided_amongst_its_weeks():
     assert [w.planes for w in weeks] == [2, 1, 1, 1] and sum(w.planes for w in weeks) == 5
 
 
+def _at_levels(st, levels: int):
+    """The same campaign with Malta standing at `levels` total Capacity Levels -- what an Axis raid
+    (41.36) or a run of [44.5] construction dice leaves behind."""
+    mainland = tuple(f for f in st.air_facilities if not malta.is_malta(f))
+    return replace(st, air_facilities=mainland + tuple(malta.seed_facilities(levels)))
+
+
 def test_34_81B_stops_the_island_filling_past_what_it_can_operate():
     """[34.81B]/[44.14] "No airplane reinforcements may be sent... in excess of the facility's
     current squadron capacity", and a Capacity Level operates eighteen planes. An island already
-    holding 18 x its levels takes nothing, however large the month's ceiling."""
-    st = campaign(seed=1, max_turns=4)
+    holding 18 x its levels takes nothing, however large the month's ceiling.
+
+    RESTATED 2026-07-22, NOT WEAKENED. It used to bomb-proof the island at 18 x its FIVE printed
+    levels -- ninety aeroplanes -- which no longer isolates 34.81B, because the establishment the
+    book prints for the date (55 in this month) now bites first and would carry the assertion on its
+    own. So the island is knocked down to two Capacity Levels, where 44.14's thirty-six is the
+    binding number and 34.81B is the only cap under test."""
+    st = _at_levels(campaign(seed=1, max_turns=4), 2)
     per_level = logistics_data.malta_planes_per_level_44_14()
-    full = replace(st, malta_planes=per_level * malta.capacity(st))
+    operable = per_level * malta.capacity(st)              # 2 levels x 18 = 36, under the book's 55
+    assert operable == 36 < malta.planned_planes(1940, 12)
+    full = replace(st, malta_planes=operable)
     assert malta.reinforcement(full, 11).headroom == 0
     assert malta.reinforcement(full, 11).planes == 0
-    one_seat = replace(full, malta_planes=per_level * malta.capacity(st) - 1)
+    one_seat = replace(full, malta_planes=operable - 1)
     assert malta.reinforcement(one_seat, 11).planes == 1    # and exactly the one seat that is free
 
 
-def test_the_anti_shipping_arm_grows_only_with_anti_shipping_arrivals():
-    """[34.86]/[4.44A] The composition is pro rata over the month's own types, and the roles are the
-    chart's. October 1940 is 30 Blenheim Mk. Is (a bomber, capability B) and 6 Skua Mk. IIs (printed
-    on the FIGHTERS table), so five sixths of the island's share is strike; September 1940 is three
-    Fulmars and two Hurricanes and none of it is."""
+def test_34_81_also_stops_at_the_establishment_the_book_prints_for_the_date():
+    """THE THIRD BOUND, and the one that usually governs: 34.81 leaves the DIVISION of a month's
+    arrivals wholly to the Commonwealth Player, and our assignment of that free choice aims at the
+    establishment the book prints for Malta -- [61.34]'s 55 aeroplanes until March 1941, then
+    [62.36]'s 74, then [63.37]'s 118 (game.malta.planned_planes). An island already at the figure it
+    is building toward takes nothing even with capacity to spare."""
+    st = campaign(seed=1, max_turns=4)                     # five levels: ninety operable
+    assert malta.planned_planes(1940, 12) == 55            # the next printed snapshot ahead of Dec
+    assert malta.planned_planes(1941, 3) == 74             # ...and once March 1941 is reached
+    assert malta.planned_planes(1942, 11) == 118           # ...and the last one stands thereafter
+    at_plan = replace(st, malta_planes=55)
+    assert malta.capacity(at_plan) * logistics_data.malta_planes_per_level_44_14() == 90
+    assert malta.reinforcement(at_plan, 11).planes == 0    # room to fly them, no plan to send them
+
+
+def test_the_torpedo_arm_grows_only_with_torpedo_arrivals():
+    """[34.86]/[4.44A] The composition is pro rata over the month's own types, and the bucket that
+    sets Malta's Bomb Points admits only the aircraft the chart lets carry a torpedo.
+
+    RESTATED AND RENAMED 2026-07-22, NOT WEAKENED. It used to assert that October 1940's thirty
+    Blenheim Mk. Is put two aeroplanes into that bucket, which enshrined the defect: the bucket is
+    priced at the Swordfish's Torpedo Capacity of 8 with 41.73's +25% on top, and [4.44A] gives the
+    Blenheim Mk. I a Bombload of 5 and no torpedo at all. 41.73's modifier is a CONDITION -- "at
+    least 50% of the planes are carrying torpedoes" -- so a bucket of Blenheims was being paid a
+    quarter more for torpedoes it did not carry, on top of a rating it did not have. The bucket is
+    now the three /T rows of the chart (Albacore, Beaufort Mk. I, Swordfish Mk. I), so October 1940
+    -- thirty Blenheim Mk. Is and six Skua Mk. IIs, not a torpedo between them -- adds none."""
     st = campaign(seed=1, max_turns=4)
-    oct40 = malta.reinforcement(st, 3)
-    assert (oct40.planes, oct40.strike) == (3, 2)          # 3 x 30/36 floored
+    oct40 = malta.reinforcement(st, 3)                     # "Oct I (GT 3)", the chart's own label
+    assert (oct40.planes, oct40.strike) == (3, 0)          # a tenth of 36, and no torpedo aircraft
     assert malta.reinforcement(st, 2).planes == 0          # Sept IV: 5 aeroplanes, a tenth is zero
+    jul41 = malta.reinforcement(st, 39)                    # 12 Albacores in a month of 205
+    assert any(p["chart_type"] == "Albacore" for p in malta.month_row(39)["planes"])
+    assert jul41.strike == 1        # a tenth of twelve, floored -- and the arm is landed FIRST out
+    #                                 of what headroom there is (44.0: Malta hinders the convoys)
 
 
 def test_the_island_actually_gains_aeroplanes_over_a_campaign():
     """The whole point of the block, end to end: run the schedule out and Malta's establishment
-    RISES, its anti-shipping arm with it, where before [34.86] the only writer of either was 41.36
-    and it only ever subtracted."""
+    RISES, where before [34.86] the only writer of it was 41.36 and it only ever subtracted.
+
+    RESTATED 2026-07-22, NOT WEAKENED: it also asserted that the anti-shipping arm rises with the
+    establishment, which was only true while that arm counted every bomber the schedule sent. It
+    counts the aircraft [4.44A] lets carry a torpedo, the schedule musters 116 of those against
+    6,691 aeroplanes, and a tenth of a month floored is none -- so Malta's torpedo arm never grows
+    and only 41.36 moves it. That is the book's own shape ([60.46] 12 torpedo aircraft, [61.34] 10,
+    [62.36] 3) and it is argued at malta.reinforcement; what is asserted here is that the arm stays
+    a HONEST BUCKET of the establishment however either of them moves."""
     st = campaign(seed=4, max_turns=12)
     r = run(st, axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
     got = [e for e in r.events if e.kind == EventKind.MALTA_REINFORCED]
     assert got, "the [34.86] schedule delivered nothing in twelve Game-Turns"
     assert all(e.payload["arrived"] > 0 for e in got)
     assert r.final.malta_planes > st.malta_planes
-    assert r.final.malta_strike > st.malta_strike
     assert r.final.malta_strike <= r.final.malta_planes     # the invariant, from the outside
 
 
 def test_the_growth_lands_inside_the_books_own_printed_snapshots():
-    """THE ACCEPTANCE TEST data/malta_44.json has carried unused since rule 44 landed: the book
-    prints Malta's establishment in four scenarios -- 31 aeroplanes in September 1940, 55 in March
-    1941, 74 in November 1941, 118 in October 1942. Run the schedule with no Axis raid at all (the
-    upper bound on our growth) and the island passes through 58 in March 1941 and saturates at 90:
-    inside the printed band, and reached from below.
+    """THE ACCEPTANCE TEST data/malta_44.json carried unused since rule 44 landed, and which the
+    engine now aims at: the book prints Malta's establishment in four scenarios -- 31 aeroplanes and
+    5 Capacity Levels in September 1940, 55 and 8 in March 1941, 74 and 14 in November 1941, 118 and
+    28 in October 1942. Run the [34.86] schedule out with no Axis raid at all (the upper bound on
+    our growth), letting 44.13's construction stand at its ceiling, and the island tracks that curve
+    from below.
 
-    This is what makes the free choice at malta.repair_ceiling reviewable rather than asserted --
-    if a later block lets the capacity run to twenty-eight levels, this test says what it costs."""
+    RESTATED 2026-07-22. It used to assert saturation at ninety aeroplanes and five Capacity Levels
+    for the whole war, which was the fixed point malta.repair_ceiling collapsed to -- numerically
+    the invented ceiling the block said it had deleted."""
     st = campaign(seed=4, max_turns=111)
-    march41 = november41 = None
+    seen = {}
     for turn in range(1, 112):
+        st = replace(st, turn=turn)
+        st = _at_levels(st, malta.repair_ceiling(st))       # 44.13 built up to its dated ceiling
         got = malta.reinforcement(st, turn)
         if got.planes:
             st = replace(st, malta_planes=st.malta_planes + got.planes,
                          malta_strike=st.malta_strike + got.strike)
-        if turn == 26:
-            march41 = st.malta_planes                       # end of March 1941
-        if turn == 58:
-            november41 = st.malta_planes
-    assert 31 < march41 <= 60 and abs(march41 - 55) <= 5    # [61.34]: the book prints 55
-    assert 55 <= november41 <= 95                           # [62.36]: the book prints 74
-    assert st.malta_planes == 90 == logistics_data.malta_planes_per_level_44_14() * 5
-    assert st.malta_strike < st.malta_planes // 2           # and it is mostly FIGHTERS, as the
+        seen[turn] = (st.malta_planes, malta.capacity(st))
+    # Each pair is (aeroplanes, Capacity Levels) at the end of the month the book photographs.
+    assert seen[26] == (58, 8)          # March 1941: [61.34] prints 55 and 8
+    assert seen[54] == (74, 8)          # October 1941, a month EARLY on [62.36]'s 74; capacity
+    #                                     waits for November, which is the date the book prints it
+    assert seen[58] == (93, 14)         # November 1941: [62.36] prints 74 and 14 -- the aeroplanes
+    #                                     run ahead as soon as the next printed target (118) opens
+    assert seen[98] == (118, 14)        # September 1942, a month early on [63.37]'s 118
+    assert seen[102] == (118, 28)       # October 1942: [63.37] prints 118 and 28 exactly
+    assert st.malta_strike == malta.initial_strike()        # the torpedo arm: no raid, no decay,
+    #                                                         and no replacement (see reinforcement)
+    assert st.malta_strike < st.malta_planes // 2           # and Malta is mostly FIGHTERS, as the
     #                                                         book's own snapshots are ([63.37]: 3
     #                                                         Swordfish and 54 Spitfire VBs)
 
 
-def test_the_build_ceiling_follows_the_aeroplanes_and_stops_at_the_standard_levels():
-    """[44.13] "It may be increased -- up to the standard levels". Our Commonwealth builds the
-    capacity his aeroplanes need (44.14's eighteen a level), never below what [60.46] printed and
-    never past the twenty-eight the six printed facilities can stand at."""
+def test_the_build_ceiling_follows_the_books_own_dated_snapshots():
+    """[44.13] "It may be increased -- up to the standard levels", one free die per facility per
+    Game-Turn with no supplies expended. Nothing in the book meters that but the player's judgement,
+    so our Commonwealth builds Malta to the capacity the book prints for the date -- [60.46]'s five,
+    [61.34]'s eight from March 1941, [62.36]'s fourteen from November 1941, [63.37]'s twenty-eight
+    from October 1942 -- and never past the twenty-eight the six printed facilities can stand at.
+
+    REPLACES test_the_build_ceiling_follows_the_aeroplanes..., 2026-07-22, and the reason is in the
+    old test's own two assertions: it pinned repair_ceiling == 6 at 91 aeroplanes and == 28 at
+    10,000, states the engine could not produce, because reinforcement admitted planes only up to
+    18 x capacity. ceil(planes / 18) could therefore never exceed capacity and the ceiling could
+    never rise above five. The suite read green over dead code."""
     st = campaign(seed=1, max_turns=4)
     assert malta.structural_capacity(st) == 28
-    assert malta.repair_ceiling(st) == 5                    # 31 aeroplanes need 2; the floor is 5
-    assert malta.repair_ceiling(replace(st, malta_planes=91)) == 6
-    assert malta.repair_ceiling(replace(st, malta_planes=10_000)) == 28
+    assert malta.repair_ceiling(replace(st, turn=1)) == 5            # September 1940: [60.46]
+    assert malta.repair_ceiling(replace(st, turn=22)) == 5           # February 1941, still [60.46]
+    assert malta.repair_ceiling(replace(st, turn=23)) == 8           # March 1941: [61.34]
+    assert malta.repair_ceiling(replace(st, turn=55)) == 14          # November 1941: [62.36]
+    assert malta.repair_ceiling(replace(st, turn=99)) == 28          # October 1942: [63.37]
+    assert malta.repair_ceiling(replace(st, turn=111)) == 28         # and never past the standard
+    # ...and it does not move with the aeroplanes at all any more, which is what broke it before.
+    assert malta.repair_ceiling(replace(st, turn=1, malta_planes=10_000)) == 5

@@ -405,12 +405,33 @@ def air_supply_orders(state: GameState, side: Side) -> list[TruckOrder]:
         return orders
     demand = _air_demand(state, side)
 
+    # THE CROSS-FORMATION LEDGERS. Two or three formations share every park (one per 54.2 class)
+    # and they all plan against the SAME unmodified state, so every quantity this function computes
+    # from that state has to be netted against what the formations planned before it -- on BOTH
+    # sides of the run. `taken` is the load side (see below); `dropped` is the unload side.
+    taken: dict = {}
+    dropped: dict = {}
+
     def _short(dump, commodity: str) -> int:
         """How much of `commodity` this larder is short of one Game-Turn's air operations, never
         more than its 54.12 hex ceiling will take (_air_demand says why the demand and not the
-        ceiling is the target)."""
+        ceiling is the target), and never more than the lorries already ordered here this beat have
+        not already covered.
+
+        ⚠ THE `dropped` TERM WAS MISSING AND THE SHUTTLE OVERSHOT, fixed 2026-07-22. Each formation
+        sized its drop against the same untouched dump, so a park could take a full Game-Turn's
+        demand from every one of them in the same beat: measured on seed 4, Game-Turn 2 stage 3,
+        AX-Truck-Airfield-L unloaded 299 Fuel Points and AX-Truck-Airfield-M unloaded 770 into
+        A4728 El Berca against a side-wide air demand of 936, and 18 of 34 air-dump deliveries over
+        fourteen Game-Turns were multi-lorry beats. Nothing broke -- 54.12's hex room still bounded
+        the pile -- but the shuttle was NOT "sized to one Game-Turn of demand" as this function
+        claims to be, which is the whole reason it does not simply fill to the terrain ceiling."""
+        landed = dropped.get((dump.id, commodity), 0)
         return max(0, min(_room_in(state, dump, commodity),
-                          demand[commodity] - getattr(dump, commodity.lower())))
+                          demand[commodity] - getattr(dump, commodity.lower())) - landed)
+
+    def _drop(dump, commodity: str, qty: int) -> None:
+        dropped[(dump.id, commodity)] = dropped.get((dump.id, commodity), 0) + qty
 
     room = [s for s in larders if any(_short(s, c) > 0 for c in _AIR_CARGO)]
     if not room:
@@ -424,11 +445,9 @@ def air_supply_orders(state: GameState, side: Side) -> list[TruckOrder]:
     # off the map and not off the lorry, so neither moves under it mid-leg).
     dest = min(room, key=lambda s: (_leg(s), s.fuel + s.stores, s.id))
     anchor = min(faucets, key=lambda f: (distance(f.hex, dest.hex), f.id))
-    # Two or three formations share every park (one per 54.2 class), and they plan against the SAME
-    # unmodified state -- so without a running ledger the second one orders a load the first has
+    # The load side of the same ledger: without it the second formation orders a load the first has
     # already taken and the engine rejects it (measured: 38 rejections in fourteen Game-Turns, and
     # a Light formation carrying the whole run while a 50-Point Medium sat beside it).
-    taken: dict = {}
 
     def _left(dump, commodity: str) -> int:
         return max(0, getattr(dump, commodity.lower()) - taken.get((dump.id, commodity), 0))
@@ -467,6 +486,8 @@ def air_supply_orders(state: GameState, side: Side) -> list[TruckOrder]:
                       "FUEL": min(max(0, aboard["FUEL"] - out - keep), _short(dest, "FUEL"))}
             unload = {c: q for c, q in unload.items() if q > 0}
             if unload:
+                for c, q in unload.items():
+                    _drop(dest, c, q)          # book it, so the next lorry sizes on what is left
                 orders.append(TruckOrder(t.id, load_from=source.id if load else None,
                                          load=load or None,
                                          to=None if dest.hex == t.hex else dest.hex,
@@ -484,12 +505,17 @@ def air_supply_orders(state: GameState, side: Side) -> list[TruckOrder]:
             # ⚠ THE BOOTSTRAP, AND IT IS THE ONE PLACE THIS SHUTTLE TOUCHES THE LARDER IT FEEDS.
             # A [60.33]/[60.43] park is seeded DRY, standing at an airfield with no army dump under
             # it, so on Game-Turn 1 it cannot make the first hop to the port at all and the faucet
-            # would never open. 35.15 attaches these lorries TO THE SQUADRON and 36.17 says what the
-            # squadron's dump is for -- "any SGSU at an airfield may make use of the supplies there"
-            # -- so the field's own Fuel Points are what puts its transport on the road. Taken ONLY
-            # as movement fuel (never as cargo: it is unloaded back into an air dump, so lifting it
-            # as freight would be a lorry pushing a pile round in a circle), only enough for the leg
-            # in hand, and only when there is nothing else in the hex to take it from.
+            # would never open. THE SENTENCE THAT PERMITS IT IS 36.17'S EMERGENCY CLAUSE, verbatim:
+            # "LAND UNITS MAY NOT USE AIRFIELD SUPPLY DUMPS UNLESS IT IS AN EMERGENCY. (Exactly what
+            # constitutes an emergency is left to the Player.)" A lorry parked at a dry field with no
+            # other pile in the hex, unable to move at all, is that emergency, and the book leaves
+            # the judgement to the player by name. (CITATION CORRECTED 2026-07-22: this used to cite
+            # the NEXT sentence -- "any SGSU at an airfield may make use of the supplies there" --
+            # which governs an SGSU MAINTAINING ITS PLANES, not a lorry filling its tank, and so
+            # claimed a permission 36.17 does not give.) Taken ONLY as movement fuel (never as cargo:
+            # it is unloaded back into an air dump, so lifting it as freight would be a lorry pushing
+            # a pile round in a circle), only enough for the leg in hand, and only when there is
+            # nothing else in the hex to take it from.
             here = next((s for s in state.supplies if s.side == side and not s.is_dummy
                          and s.hex == t.hex and _left(s, "FUEL") > 0), None)
             if here is None:

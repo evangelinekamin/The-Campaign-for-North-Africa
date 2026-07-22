@@ -56,10 +56,14 @@ rule we disagree with -- the first of the three is now struck through, because t
     Airplane Reinforcement and Squadron Withdrawal Schedule, is transcribed whole
     (data/air_reinforcements_34_86.json) and 34.81's two caps are applied: no more than a tenth of a
     month's arrival to Malta (34.81A) and never past what its Capacity Levels can operate (34.81B at
-    44.14's eighteen a level). The island grows from 31 aeroplanes to 90 and its anti-shipping arm
-    from 12 to 38 -- inside the band the book's own four scenario snapshots print (31 / 55 / 74 /
-    118, recorded in data/malta_44.json), reached from below. See reinforcement and repair_ceiling
-    for the two places this is a free choice rather than a transcription. STILL NOT WIRED, and
+    44.14's eighteen a level), and a third bound the book prints outright: the establishment its
+    own later scenarios show the island holding at four dates. Malta grows 5 -> 8 -> 14 -> 28
+    Capacity Levels and 31 -> 55 -> 74 -> 118 aeroplanes, reached from below at the rate the
+    schedule and 44.13's construction die allow, and knocked back by every raid that lands, while
+    its TORPEDO arm only falls -- which is the shape [61.34]/[62.36]/[63.37] print for it too
+    (12 -> 10 -> 3 -> 6 torpedo aircraft against 31 -> 55 -> 74 -> 118 aeroplanes). See
+    reinforcement and repair_ceiling for the two places this is a free choice rather than a
+    transcription, and for the fixed point the first version of it collapsed to. STILL NOT WIRED, and
     deliberately: the MAINLAND ninety per cent of that schedule, which waits on [34.87]'s Axis twin
     so that the two air forces grow together or neither does; and 34.85's squadron withdrawals,
     which the Key lets the Commonwealth take from anywhere and which have no mainland ledger to come
@@ -78,7 +82,7 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from . import air, basing, coords, logistics_data
+from . import air, basing, calendar, coords, logistics_data
 from .events import Side
 from .state import AirFacility, GameState
 
@@ -96,6 +100,13 @@ LEVELS: tuple[str, ...] = ("I", "II", "III", "IV")
 # USED LEVEL I (which is unlimited)." So there is no such thing as not consulting the chart, and
 # Level I is the do-nothing choice as well as the cheapest raid.
 DEFAULT_LEVEL = "I"
+
+
+def _date(state: GameState) -> tuple[int, int]:
+    """The (year, month) this Game-Turn falls in (64.2 via game.calendar). Malta is seeded by the
+    campaign scenario alone, so the campaign's calendar is the only clock this island ever reads --
+    and it is the same one the [34.86] schedule's own printed Game-Turn labels follow."""
+    return calendar.gt_to_month(state.turn)
 
 
 def is_malta(facility: AirFacility) -> bool:
@@ -167,15 +178,23 @@ def initial_planes() -> int:
     return sum(row["number"] for row in logistics_data.malta_setup_60_46()["planes"])
 
 
+def _is_torpedo(chart_type: str) -> bool:
+    """[4.44A] Does this aircraft's chart row carry an "/T"? -- the chart's own test for whether it
+    may carry a torpedo at all, and the whole membership rule for Malta's anti-shipping bucket."""
+    return chart_type in logistics_data.torpedo_chart_types_4_44a()
+
+
 def initial_strike() -> int:
-    """[60.46] Malta's anti-shipping arm at the campaign's start: the printed Swordfish row, twelve
+    """[60.46] Malta's torpedo arm at the campaign's start: the printed Swordfish row, twelve
     aeroplanes of the island's thirty-one."""
     return sum(r["number"] for r in logistics_data.malta_setup_60_46()["planes"]
-               if r["role"] == "strike")
+               if _is_torpedo(r["type"]))
 
 
 def strike_establishment(state: GameState) -> int:
-    """[60.46]/[34.86] The anti-shipping aircraft still standing on the island, serviceable or not.
+    """[60.46]/[34.86]/[4.44A] THE TORPEDO AIRCRAFT still standing on the island, serviceable or not
+    -- Malta's anti-shipping arm, and the only aeroplanes on it this engine puts over the convoy
+    lane.
 
     A TRACKED COUNT, NOT A FRACTION, AND THE [34.86] SCHEDULE IS WHY. Until Malta's replacement flow
     was transcribed this was `malta_planes x 12/31` -- the strike share of the September-1940 roster,
@@ -183,10 +202,30 @@ def strike_establishment(state: GameState) -> int:
     of it and a fraction of a shrinking whole is the same fraction. The moment reinforcements arrive
     that stops being true: the [34.86] schedule sends Malta Hurricanes and Spitfires by the hundred
     and Swordfish never again (it musters none in twenty-eight months), so an island growing at a
-    fixed 38.7% anti-shipping share would have manufactured torpedo bombers out of fighters. The
-    book's own later scenarios say so outright -- [61.34] 10 Swordfish of 55 aeroplanes, [62.36] 3 of
-    74, [63.37] 3 Swordfish and 3 Albacores of 118. So `malta_strike` is carried beside
-    `malta_planes` and each arrival is booked to the bucket its [4.44A] chart row puts it in."""
+    fixed 38.7% anti-shipping share would have manufactured torpedo bombers out of fighters.
+
+    ⚠ THE BUCKET IS THE /T ROWS AND NOTHING ELSE, NARROWED 2026-07-22. It first admitted every type
+    the [4.44A] BOMBERS table gives a B capability -- Blenheims, Wellingtons, Baltimores -- and then
+    priced each of them at the Swordfish's Torpedo Capacity of 8 with 41.73's +25% on top. Both
+    halves of that were wrong against the printed page: the chart gives the Blenheim Mk. IV a
+    Bombload of 6 and the Mk. I a 5, so 8 OVER-read the two most numerous arrivals by half; and
+    41.73's modifier is a CONDITION -- "at least 50% of the planes are carrying torpedoes" -- which
+    a force about 5% torpedo-armed does not meet. [4.44A] carries an "/T" on exactly three
+    Commonwealth rows and all three at Torpedo Capacity 8 (Albacore 8/T8, Beaufort Mk. I -/T8,
+    Swordfish Mk. I -/T8, read off both tables at 400 dpi), so a bucket of just those three is
+    priced at a number printed on every aeroplane in it and satisfies 41.73 by construction.
+
+    THE BOOK'S OWN LATER SCENARIOS ARE THE ACCEPTANCE TEST, and they print this bucket rather than
+    the wider one: [60.46] 12 Swordfish of 31, [61.34] 10 Swordfish of 55, [62.36] 3 Swordfish of
+    74, [63.37] 3 Swordfish and 3 Albacores of 118. Malta's torpedo arm SHRINKS as the island grows.
+
+    ⚠ WHAT IS GIVEN UP, and it is an under-read in the AXIS'S favour: the Blenheims and Wellingtons
+    Malta receives are real bombers that really did fly against convoys, and here they sit in
+    `malta_planes` contributing no Bomb Points at all. Pricing them needs the per-type [4.44A] Bomb
+    column, and three of those rows print two or three alternative loadouts (Wellington Mk. I "5 or
+    23", Mk. IV "6 or 17 or 23") -- a readying CHOICE the Commonwealth Player makes each mission,
+    which is the 34.72 Squadron Composition Sheet this engine does not have and an owner ruling when
+    it does."""
     return state.malta_strike
 
 
@@ -200,8 +239,8 @@ def initial_unfit() -> int:
     [38.37] Refit Table (game.air), and until this pass Malta was exempt from it -- the island put
     its whole surviving strike force over the lane every Game-Turn for 111 turns, which is exactly
     the "one wing flies the same points forever" defect block 5.3 exists to kill."""
-    row = next(r for r in logistics_data.malta_setup_60_46()["planes"] if r["role"] == "strike")
-    return row["number"] - row["ready"]
+    return sum(r["number"] - r["ready"] for r in logistics_data.malta_setup_60_46()["planes"]
+               if _is_torpedo(r["type"]))
 
 
 def ready_strike(state: GameState) -> int:
@@ -239,11 +278,11 @@ def strike_planes(state: GameState) -> int:
         can operate at most 18 x its current total Capacity Level. AN ISLAND AT ZERO CAPACITY FLIES
         NOTHING, which is the Axis's whole objective and the thing the invented calendar used to
         hand him free for four months of 1942.
-      * 60.46 -- and it cannot fly more anti-shipping aircraft than it has. The strike share of the
-        surviving establishment, from the printed roster.
+      * 60.46/[4.44A] -- and it cannot fly more torpedo aircraft than it has (strike_establishment:
+        the /T rows of the chart, which is what an Axis Naval Convoy attack is priced from).
       * 38.31 via 44.16 -- and of those, only the ones that have been REFIT.
 
-    The capacity is spent on the strike aircraft FIRST (a Commonwealth player's free choice, and
+    The capacity is spent on the torpedo aircraft FIRST (a Commonwealth player's free choice, and
     the obvious one -- 44.0's Malta exists to hinder the convoys). At the campaign's five levels
     that is moot: 90 slots against 31 aeroplanes. It binds when the Axis has bombed the island down
     to one level, and it bites absolutely at zero."""
@@ -271,8 +310,13 @@ def bomb_points(state: GameState) -> int:
         [4.44A] row IS its Bomb Points for this attack.
       * 41.73 -- "When Commonwealth planes fly against Axis convoys and AT LEAST 50% OF THE PLANES
         ARE CARRYING TORPEDOES, in determining the level (Case 41.66), increase the bombing tonnage
-        by 25%, ROUNDING UPWARD." Malta's strike is 100% torpedo-armed, so the modifier is always
-        live; the Key reprints it under this table's own Axis-Naval-Convoys heading.
+        by 25%, ROUNDING UPWARD." The Key reprints it under this table's own Axis-Naval-Convoys
+        heading. THE CONDITION IS TESTED, NOT ASSUMED -- see strike_establishment. The bucket
+        priced here admits only the three [4.44A] rows that carry an "/T" (Albacore, Beaufort Mk. I,
+        Swordfish Mk. I), so 100% of the planes flying carry torpedoes and the modifier is live on
+        every mission by construction. That sentence was an assumption until 2026-07-22, and the
+        [34.86] schedule had already made it false: the wider bucket it briefly stood for was about
+        5% torpedo-armed, well under 41.73's printed half.
 
     OWNER RULING MADE 2026-07-21, WRITTEN OUT IN FULL AT initial_setup_60_46.strike_weapon.
     _owner_ruling_settled IN data/malta_44.json: THE TORPEDO READING IS CONFIRMED. Read 41.66
@@ -441,10 +485,58 @@ def repair_levels(die: int) -> int:
 
 def may_construct(year: int, month: int) -> bool:
     """[60.46] "Construction on increasing the capacity of Malta Air Facilities may begin in
-    October, 1940." The campaign opens in the third week of September 1940, so the island spends
-    its first fortnight unable to repair anything the Axis knocks off it."""
+    October, 1940." The campaign opens in the THIRD WEEK of September 1940 (64.2), so the island
+    spends its first fortnight -- Game-Turns 1 and 2, and no more -- unable to repair anything the
+    Axis knocks off it, and October I is Game-Turn 3.
+
+    That sentence used to be false in the engine even though it was true in the book: this gate
+    reads game.calendar, which mapped four Game-Turns to September and so refused construction until
+    Game-Turn 5 while this island's own [34.86] reinforcement rows called Game-Turn 3 October. The
+    calendar now implements 64.2's two-week September and the two clocks are one."""
     begins = logistics_data.malta_setup_60_46()["construction_begins"]
     return (year, month) >= tuple(begins)
+
+
+def establishment(year: int, month: int) -> dict:
+    """THE BOOK'S OWN SNAPSHOT OF MALTA IN FORCE AT THIS DATE -- `capacity_levels`, total `planes`
+    and `torpedo_planes`, the latest of the four printed sets whose date has arrived.
+
+    ([60.46] Sept 1940 5/31/12, [61.34] Mar 1941 8/55/10, [62.36] Nov 1941 14/74/3, [63.37] Oct 1942
+    28/118/6.) These are the only statements the book makes about how big the island actually was,
+    and between two of them THE EARLIER ONE STANDS -- a step function of printed values, never an
+    interpolation, because a number between two printed numbers is one the book does not print.
+
+    THIS IS THE AIMING POINT FOR THE HALF OF MALTA'S GROWTH THE BOOK DOES NOT METER: 44.13 gives the
+    Commonwealth a free construction die per facility per Game-Turn with no cost and no limit but
+    the standard levels, so an engine aiming anywhere ahead of the printed date would simply BE
+    ahead of the book. See `planned_planes` for the other half, which the book meters itself."""
+    now = (year, month)
+    snaps = logistics_data.malta_establishment_snapshots()
+    reached = [s for s in snaps if tuple(s["date"]) <= now]
+    return reached[-1] if reached else snaps[0]
+
+
+def planned_planes(year: int, month: int) -> int:
+    """The AEROPLANE establishment the Commonwealth is building Malta toward at this date: the NEXT
+    printed snapshot ahead of it, or the last one once they are all behind.
+
+    THE ASYMMETRY WITH `establishment` IS THE BOOK'S, NOT A PREFERENCE. 34.81's airplane flow is
+    METERED BY THE BOOK -- a printed 28-row schedule, of which Malta may take at most a tenth of any
+    month (34.81A) -- so the aiming point here need only be a CEILING, and the ceiling that lets the
+    book's own rate do the work is the establishment he is heading for rather than the one he has
+    already passed. Aim at the snapshot already in force and the island freezes between printed
+    dates, receiving nothing at all for the twenty-two Game-Turns from September 1940 to March 1941
+    and then filling in a burst; aim at the next one and it grows continuously at the schedule's own
+    pace. 44.13's construction has no such meter, which is why `establishment` does not do this.
+
+    THE CEILING BARELY BINDS, and that is the evidence it is the right one: run the schedule out
+    with no Axis raid at all and 34.81A's own tenth carries Malta to 58 aeroplanes by the end of
+    March 1941 against [61.34]'s printed 55. The book's rate and the book's establishment agree to
+    within a handful of aircraft without either being fitted to the other."""
+    now = (year, month)
+    snaps = logistics_data.malta_establishment_snapshots()
+    ahead = [s for s in snaps if tuple(s["date"]) > now]
+    return (ahead[0] if ahead else snaps[-1])["planes"]
 
 
 def structural_capacity(state: GameState) -> int:
@@ -455,47 +547,41 @@ def structural_capacity(state: GameState) -> int:
 
 
 def repair_ceiling(state: GameState) -> int:
-    """[44.13]/[34.81B] The total Capacity Level the Commonwealth builds Malta UP TO -- his half of
-    the island's growth, and the number 34.81B's reinforcement cap is taken at 44.14's rate over.
+    """[44.13] The total Capacity Level the Commonwealth builds Malta UP TO -- his half of the
+    island's growth, and the number the [44.5] construction table is rolled toward.
 
     44.13 sets the law and leaves the decision: capacity "MAY be increased -- up to the standard
     levels -- by using the Maltese Air Facility Construction Table", one roll per facility per
     Game-Turn, and "NO SUPPLIES NEED BE EXPENDED". Nothing in the book meters that beyond the
     player's judgement, so an engine that simply ran the table would stand at twenty-eight levels by
-    Game-Turn five for the rest of the war -- and an island at twenty-eight levels may hold 504
-    aeroplanes (44.14), which turns 34.81B off and hands the whole flow to 34.81A's ten per cent.
-    The schedule below that ten per cent is 6,691 aeroplanes: the Commonwealth would ship 669 of
-    them to an island the book's own four scenarios show holding 31, 55, 74 and 118.
+    Game-Turn five and hold there for the rest of the war.
 
-    OUR ASSIGNMENT OF THAT FREE CHOICE, and it is the same one the deleted 5-level ceiling was
-    reaching for, now coupled to the aeroplanes instead of frozen at September 1940: THE
-    COMMONWEALTH BUILDS THE CAPACITY HIS AEROPLANES NEED. That is 44.14's eighteen planes per level,
-    floored at the capacity [60.46] printed (he never lets the island fall below the establishment
-    he started with) and capped at the standard levels. It needs no number the book does not print,
-    and it makes the island's two halves one system: planes come in only as far as capacity holds
-    them (34.81B), capacity is built only as far as the planes need it (44.13).
+    OUR ASSIGNMENT OF THAT FREE CHOICE: THE COMMONWEALTH BUILDS MALTA TO THE SIZE THE BOOK PRINTS
+    FOR THE DATE -- five Capacity Levels from [60.46], eight from March 1941 ([61.34]), fourteen
+    from November 1941 ([62.36]), twenty-eight from October 1942 ([63.37]), never past the standard
+    levels the six printed facilities can stand at. Every number is one the book prints and the
+    island still has to ROLL for it, one die per facility per Game-Turn, so it climbs at 44.13's
+    rate and every raid that lands knocks it back down.
 
-    ⚠ WHAT IT COSTS, stated because it is a divergence from four printed snapshots and not a
-    rounding: the book's Malta grows to 8 levels by March 1941, 14 by November 1941 and 28 by
-    October 1942, while ours holds the printed five for as long as ninety aeroplanes fit inside
-    them. Spare capacity is ARMOUR -- 41.36 takes Capacity Levels, and an island with twenty-three
-    levels of slack absorbs raids ours has to repair -- so the divergence runs in the AXIS's favour,
-    which is the direction a flagged judgement call should run. It is one commander's decision and
-    it belongs to a Commonwealth air seat this engine does not have; the four snapshots are recorded
-    in data/malta_44.json as the measurement, and the reasoning in full in
-    data/air_reinforcements_34_86.json under `_our_assignment`."""
-    printed = logistics_data.malta_setup_60_46()["capacity_levels"]
-    per_level = logistics_data.malta_planes_per_level_44_14()
-    needed = -(-state.malta_planes // per_level)             # ceil: the levels his planes need
-    return min(structural_capacity(state), max(printed, needed))
+    ⚠ WHAT THIS REPLACES, RECORDED BECAUSE IT WAS PRESENTED AS A LIVE MECHANISM AND WAS NOT ONE.
+    The first version read "the Commonwealth builds the capacity his aeroplanes need" --
+    max(printed 5, ceil(malta_planes / 18)) -- while reinforcement admitted planes only up to
+    18 x capacity. The two capped each other into a FIXED POINT: planes could never exceed
+    18 x capacity, so ceil(planes / 18) could never exceed capacity, so the ceiling never rose above
+    [60.46]'s five and Malta was pinned at 5 levels and 90 aeroplanes for the whole war --
+    numerically identical to the invented 5-level ceiling the commit said it had deleted. The
+    growth branch was unreachable from any campaign state and the tests that exercised it did so by
+    hand-setting `malta_planes` to values the engine could not produce."""
+    return min(structural_capacity(state), establishment(*_date(state))["capacity_levels"])
 
 
 # --- [34.86] / [34.81] MALTA'S REPLACEMENT FLOW -------------------------------------------------
 
 class Reinforcement(NamedTuple):
     """[34.86] one Game-Turn's Commonwealth airplane reinforcement to Malta: `planes` aeroplanes
-    of which `strike` are anti-shipping, out of the `allotted` the month's 34.81A ceiling gave the
-    island (`month_total` being the month's whole arrival) and against the `headroom` 34.81B left."""
+    of which `strike` are torpedo-armed, out of the `allotted` the month's 34.81A ceiling gave the
+    island (`month_total` being the month's whole arrival) and against the `headroom` the island's
+    capacity (34.81B) and the book's own establishment for the date leave between them."""
     planes: int
     strike: int
     allotted: int
@@ -535,44 +621,63 @@ def reinforcement(state: GameState, turn: int) -> Reinforcement:
     Both caps are the book's and both are applied: the month's allotment is a tenth of the month's
     printed arrival, rounded DOWN (34.81A is a ceiling, and a ceiling rounded up is not one), and
     what lands is bounded by the aeroplanes the island's current Capacity Levels can operate.
-    Between the two, 34.81B is what actually governs -- see repair_ceiling for why, and for the one
-    free choice in this whole path.
+
+    ...AND BY THE ESTABLISHMENT THE BOOK PRINTS FOR THE DATE, which is the third bound and the one
+    that usually bites. 34.81 leaves the DIVISION of a month's arrivals entirely to the Commonwealth
+    Player -- 34.81A's tenth of this schedule is 669 aeroplanes over the campaign, onto an island
+    the book's own four scenarios never show holding more than 118 -- so the free choice needs an
+    aiming point, and `planned_planes` takes the book's own: the island is built toward the NEXT
+    establishment the book prints for it -- 55 until March 1941, then 74, then 118. See
+    repair_ceiling for the same assignment made over Capacity Levels (where the book meters nothing,
+    so it aims at the snapshot already in force instead) and for the no-op it replaced.
 
     THE COMPOSITION IS PRO RATA OVER THE MONTH'S OWN TYPES, which is the most neutral exercise of
     34.81's "in any distribution the Commonwealth Player chooses" available: Malta's share of a
-    month looks like that month. The anti-shipping bucket takes the FLOOR of its proportional share
-    (the remainder goes to the fighters), so the arm that sets the island's Bomb Points is never
-    rounded up. Where the 34.81B headroom bites, the strike aircraft are landed FIRST -- the same
-    free choice, made the same way and for the same reason, as strike_planes' spending of the 44.14
-    capacity: 44.0's Malta exists to hinder the convoys.
+    month looks like that month. The torpedo bucket takes the FLOOR of its proportional share (the
+    remainder goes to the rest), so the arm that sets the island's Bomb Points is never rounded up.
+    Where the headroom bites, the torpedo aircraft are landed FIRST -- the same free choice, made
+    the same way and for the same reason as strike_planes' spending of the 44.14 capacity: 44.0's
+    Malta exists to hinder the convoys.
+
+    ⚠ WHAT THE FLOOR ACTUALLY DOES TO THE TORPEDO ARM, STATED PLAINLY BECAUSE IT IS AN EDGE AND NOT
+    A ROUNDING. This schedule musters 116 torpedo aircraft against 6,691 in all -- 1.7% -- and they
+    arrive a handful at a time (12 Albacores in a month of 205, 7 Beauforts in one of 217). A tenth
+    of that, floored, is ZERO in twelve of the sixteen months that carry any and one or two in the
+    rest: SIX aeroplanes over the whole war against a true pro-rata share of about twelve. And
+    because the island is usually sitting at the establishment it is building toward, the headroom
+    is nil on most of those months and the six do not land either -- measured over the full campaign
+    on seed 4, Malta receives NO replacement torpedo aircraft at all and its arm only ever decays
+    under 41.36.
+
+    THAT UNDER-READ IS KEPT, AND THE BOOK'S OWN SNAPSHOTS ARE WHY: [60.46] 12 torpedo aircraft,
+    [61.34] 10, [62.36] 3, [63.37] 6. Malta's torpedo arm FALLS through the war in the book even as
+    the island grows 31 -> 55 -> 74 -> 118 aeroplanes, and a decaying twelve tracks 10 and 3 closely;
+    what it will not reproduce is [63.37]'s small recovery to 6. The alternative -- rounding the arm
+    UP, or landing the month's torpedo aircraft on Malta first -- would put Bomb Points over the
+    convoy lane that no printed number supports, and 41.73's +25% multiplies every one of them. An
+    under-read here runs in the AXIS's favour, which is the direction a flagged edge should run.
 
     ⚠ THE ARRIVALS ARE REFITTED. [59.32] makes a scenario's planes arrive fuelled and armed and
     38.31 makes every plane refitted until it flies, and the schedule prints no readiness column at
     all (unlike [60.46]/[61.34]/[62.36], which do) -- so a new aeroplane joins the establishment
     without joining `malta_unfit`. The engine's own [38.37] governor then wears it down like every
-    other.
-
-    ⚠ PRICED AS SWORDFISH. A strike aeroplane arriving here counts toward Malta's Bomb Points at the
-    island's printed anti-shipping type ([60.46]'s Swordfish, Torpedo Capacity 8 -- see bomb_points),
-    whatever it actually is. That is an UNDER-read for a Wellington (Bombload 20) and an over-read
-    for nothing on the chart, and it is what keeps 41.73's +25% coherent: every aeroplane in the
-    bucket is counted as the torpedo aircraft the +25% is granted for. It dissolves when the [4.44A]
-    rows for the reinforcement types are transcribed and Malta's establishment becomes a per-type
-    ledger -- the same 34.72 Squadron Composition Sheet the whole air game's proxies wait on."""
+    other."""
     row = month_row(turn)
     if row is None or not in_play(state):
         return Reinforcement(0, 0, 0, 0, 0)
     total = row["total"]
     allotted = total * logistics_data.malta_share_pct_34_81a() // 100   # 34.81A, rounded DOWN
-    strike_total = sum(p["number"] for p in row["planes"] if p["role"] == "strike")
-    strike_month = allotted * strike_total // total          # pro rata, the strike arm floored
+    torpedo_total = sum(p["number"] for p in row["planes"] if _is_torpedo(p["chart_type"]))
+    strike_month = allotted * torpedo_total // total         # pro rata, the torpedo arm floored
     turns = row["turns"]
     i = turns.index(turn)
     strike = _share(strike_month, len(turns), i)             # 34.84: evenly amongst the weeks
     other = _share(allotted - strike_month, len(turns), i)
-    room = max(0, logistics_data.malta_planes_per_level_44_14() * capacity(state)
-               - state.malta_planes)                         # 34.81B at 44.14's rate
-    strike = min(strike, room)                               # 44.0: the anti-shipping arm first
+    # The date is read off the ARGUMENT, not off state.turn: this function is asked what a given
+    # Game-Turn brings and the caller may ask about one the state has not reached.
+    room = max(0, min(logistics_data.malta_planes_per_level_44_14() * capacity(state),
+                      planned_planes(*calendar.gt_to_month(turn))) - state.malta_planes)
+    strike = min(strike, room)                               # 44.0: the torpedo arm first
     other = min(other, room - strike)
     return Reinforcement(strike + other, strike, allotted, total, room)
 

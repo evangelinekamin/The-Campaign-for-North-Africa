@@ -366,7 +366,10 @@ def check_event(pre: GameState, post: GameState, event: Event) -> None:
     elif kind in (EventKind.AIR_SQUADRON_UNFIT, EventKind.AIR_REFIT_RESOLVED):
         _check_squadron_unfit(post, p["squadron"], post.air_unfit.get(p["squadron"], 0))
     elif kind in (EventKind.MALTA_STRIKE_UNFIT, EventKind.MALTA_REFIT_RESOLVED,
-                  EventKind.MALTA_PLANES_LOST):
+                  EventKind.MALTA_PLANES_LOST, EventKind.MALTA_REINFORCED):
+        # [34.86] belongs on this list as much as the three that take the island's air force DOWN:
+        # MALTA_REINFORCED writes BOTH malta_planes and malta_strike, so a mis-split arrival is a
+        # bad slice and must be caught on the touched slice rather than at the next boundary sweep.
         _check_malta_unfit(post)
     elif kind == EventKind.FORT_REDUCED:
         _check_fort(tuple(p["hex"]), p["level"])

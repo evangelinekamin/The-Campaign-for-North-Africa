@@ -921,3 +921,33 @@ def test_the_shuttle_is_sized_to_the_demand_and_not_to_the_terrain_ceiling():
             st, next(s.hex for s in st.supplies if s.air_dump))["FUEL"]
         assert ceiling > 5 * want["FUEL"], "the 54.12 ceiling is nowhere near a bound on this"
         assert 0.3 * charted <= want["FUEL"] <= 3 * charted     # the book's own allotment, near
+
+
+def test_no_beat_drops_more_than_one_game_turn_of_demand_into_one_larder():
+    """...AND THE SIZING HOLDS ACROSS THE WHOLE BEAT, not just per lorry. Two or three formations
+    share every [60.33]/[60.43] park (one per 54.2 class) and they all plan against the same
+    unmodified state, so each used to size its drop against a larder none of the others had filled
+    yet: measured on seed 4, Game-Turn 2 stage 3, one Axis formation unloaded 299 Fuel Points into
+    A4728 El Berca and another 770 in the same beat, 1,069 against a side-wide demand of 936, and 18
+    of 34 air-dump deliveries over fourteen Game-Turns were multi-lorry beats. The load side of that
+    ledger was built and the unload side was not (relay.air_supply_orders._short). Nothing broke --
+    54.12's hex room still bounded the pile -- but the shuttle was not sized to the demand, which is
+    the whole reason it does not simply fill to the terrain ceiling."""
+    from game import relay
+    st = campaign(seed=4, max_turns=14)
+    r = run(st, axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
+    air_dumps = {s.id: s.side for s in st.supplies if s.air_dump}
+    demand = {side: relay._air_demand(st, side) for side in (Side.AXIS, Side.ALLIED)}
+    beat: dict = {}
+    for e in r.events:
+        if e.kind != EventKind.TRUCK_UNLOADED or e.payload["supply_id"] not in air_dumps:
+            continue
+        for commodity, qty in e.payload["cargo"].items():
+            key = (e.turn, e.stage, e.payload["supply_id"], commodity)
+            beat[key] = beat.get(key, 0) + qty
+    assert beat, "no lorry ever reached an airfield larder"
+    for (turn, stage, dump_id, commodity), landed in beat.items():
+        want = demand[air_dumps[dump_id]][commodity]
+        assert landed <= want, (
+            f"GT{turn}.{stage} put {landed} {commodity} into {dump_id} against one Game-Turn's "
+            f"demand of {want}")

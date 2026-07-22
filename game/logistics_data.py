@@ -404,6 +404,17 @@ def malta_setup_60_46() -> dict:
     return _malta()["initial_setup_60_46"]
 
 
+def malta_establishment_snapshots() -> list:
+    """The book's four printed snapshots of Malta -- [60.46] September 1940, [61.34] March 1941,
+    [62.36] November 1941, [63.37] October 1942 -- each with its `date`, `capacity_levels`, total
+    `planes` and the `torpedo_planes` of that roster, in date order.
+
+    These are the only statements the book makes about how big the island actually was, and they
+    are the aiming point 34.81's free choice and 44.13's unmetered construction "may" are assigned
+    to (game.malta.establishment). The data file's own `_comment` argues the assignment."""
+    return _malta()["later_scenario_establishments"]["snapshots"]
+
+
 def malta_planes_lost_pct_41_36() -> int:
     """[41.36] "For every level destroyed, REMOVE 10% OF THE PLANES ON THE GROUND (e.g., 2 levels,
     20% planes)", rounded down."""
@@ -523,3 +534,15 @@ def cw_air_reinforcements_34_86() -> list:
 def malta_share_pct_34_81a() -> int:
     """[34.81A] "No more than 10% of a month's airplane reinforcements may be sent to Malta." """
     return _air_reinforcements()["malta_share_34_81a"]["pct"]
+
+
+def torpedo_chart_types_4_44a() -> frozenset:
+    """[4.44A] The Commonwealth aircraft that MAY CARRY A TORPEDO -- the chart's `chart_type` names.
+
+    The chart key: "Only planes possessing an '/T' may carry torpedos. The number to the right of
+    the T is the Torpedo Capacity." Read off both of its tables end to end at 400 dpi, exactly three
+    rows carry one (Albacore 8/T8, Beaufort Mk. I -/T8, Swordfish Mk. I -/T8) and all three at the
+    same capacity -- which is what lets Malta's anti-shipping arm stay a single count instead of a
+    per-type ledger, and what makes 41.73's "at least 50% of the planes are carrying torpedoes"
+    true of that arm by construction."""
+    return frozenset(_air_reinforcements()["torpedo_types_4_44a"]["chart_types"])

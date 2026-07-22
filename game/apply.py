@@ -459,8 +459,9 @@ def apply(state: GameState, event: Event) -> GameState:
     if k == EventKind.MALTA_REINFORCED:
         # 34.84/34.81: this Game-Turn's share of the [34.86] schedule, both caps already applied by
         # the generator (game.malta.reinforcement) and the arrival already split into the island's
-        # two buckets. Order matters: the total is raised first, because with_malta_strike clamps
-        # the anti-shipping bucket to the establishment it is a bucket of.
+        # two buckets. Order matters: the total is raised FIRST, because with_malta_strike now
+        # REFUSES a torpedo arm larger than the establishment it is a bucket of rather than
+        # clamping it -- write the two the other way round and a legal arrival raises.
         return state.with_malta_planes(p["planes"]).with_malta_strike(p["strike"])
 
     if k in (EventKind.MALTA_STRIKE_UNFIT, EventKind.MALTA_REFIT_RESOLVED):

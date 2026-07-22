@@ -990,10 +990,19 @@ class GameState:
         return replace(self, malta_planes=max(0, planes))
 
     def with_malta_strike(self, planes: int) -> "GameState":
-        """[41.36]/[34.86] Set how many of Malta's aeroplanes are its anti-shipping arm. Bounded
-        above by the island's whole establishment -- a bucket may never hold more than the total it
-        is a bucket of -- and below by zero."""
-        return replace(self, malta_strike=max(0, min(planes, self.malta_planes)))
+        """[41.36]/[34.86] Set how many of Malta's aeroplanes are its torpedo arm.
+
+        FAILS LOUD RATHER THAN CLAMPING, corrected 2026-07-22. It used to be
+        `max(0, min(planes, self.malta_planes))`, which silently truncated a bucket bigger than the
+        whole it is a bucket of -- so a generator that mis-split an arrival, or wrote the two fields
+        in the wrong order, produced a plausible state instead of a stack trace, and
+        invariants._check_malta_unfit's "strike <= planes" guard was close to unfalsifiable through
+        apply. A bucket over its whole is a misencoded rule, and this port fails loud on those."""
+        if not 0 <= planes <= self.malta_planes:
+            raise ValueError(
+                f"malta_strike={planes} out of [0, malta_planes={self.malta_planes}]: the torpedo "
+                f"arm is a bucket of the island's establishment and may not exceed it (34.86/41.36)")
+        return replace(self, malta_strike=planes)
 
     def with_malta_raid(self, level: str) -> "GameState":
         """[44.23]/[44.29] Book one Game-Turn of Axis Strategic Bombardment of Malta against an

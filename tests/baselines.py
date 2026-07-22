@@ -41,6 +41,29 @@ port_bomb/raf), so there is no squadron for the Mediterranean basing to take a s
 
 Each reproduced twice, byte-for-byte.
 
+NOT RE-BASELINED BY [34.86] MALTA REINFORCEMENT + THE AIR-LARDER FAUCET (2026-07-22) OR BY ITS
+REPAIR PASS THE SAME DAY, AND THAT WAS CHECKED RATHER THAN ASSUMED -- BOTH SIGNATURES RECOMPUTED ON
+THE TREE, UNCHANGED.
+
+This one is worth spelling out, because unlike the three air blocks before it, it DID touch the
+byte-locked base relay and the campaign map: ScriptedPolicy.truck_orders now returns
+campaign_truck_orders + relay.air_supply_orders (game/policy.py), and the campaign's [60.43]
+Commonwealth air-facility lorry park moved from D3714 to D3516 (game/scenario.py). Neither reaches
+these two logs, and the reasons are structural rather than lucky:
+
+  * air_supply_orders returns [] on its first two lines unless the scenario seeds BOTH an air-dump
+    larder and a faucet to reload at. Neither benchmark seeds an air dump at all, so the shuttle
+    never gets as far as looking at a lorry, and truck_orders' other half is unchanged.
+  * the [60.43] park hex is built by scenario._campaign_cw_trucks, which only the campaign calls.
+  * the repair pass's unload ledger (relay.air_supply_orders._short) lives inside that same
+    early-returning function; its Malta half needs facilities neither benchmark seeds; and its
+    game.calendar correction -- 64.2's two-Game-Turn September, which moved the campaign's month map
+    two turns and CAMPAIGN_SEASON_OFFSET 24 -> 26 -- is read by nothing outside a campaign scenario
+    (the two benchmarks stamp no season_offset and run on the local weather clock).
+
+The CAMPAIGN log moves under all of it, and the campaign is not signature-pinned (see CAMPAIGN_SEED
+below, which pins a SEED and a set of narrative assertions, not a hash).
+
 NOT RE-BASELINED BY THE [34.6]/[59.3] INITIAL AIR STRENGTHS (2026-07-22) OR BY ITS REPAIR PASS THE
 SAME DAY, AND THAT WAS CHECKED RATHER THAN ASSUMED -- TWICE, for two different sets of changes.
 
