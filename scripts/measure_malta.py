@@ -47,7 +47,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from game import malta                                              # noqa: E402
+from game import logistics_data, malta                              # noqa: E402
 from game.campaign_policy import (CampaignAxisPolicy,               # noqa: E402
                                   CampaignCommonwealthPolicy)
 from game.campaign_victory import CampaignVictory                   # noqa: E402
@@ -59,6 +59,17 @@ from game.state import InterdictionOrder                            # noqa: E402
 SEEDS = (1941, 7, 2026, 1, 99)
 MALTA_LANE = "2"        # scenario._campaign_malta_interdiction: the Axis Mediterranean convoy lane
 OFF, LIVE = "off", "live"
+
+
+def _seed_the_open_ruling(pct: int) -> None:
+    """Answer the OPEN [60.32]-versus-[44.21] Italy/Sicily basing ruling FOR THIS RUN ONLY -- the
+    same knob, with the same warning, as scripts/measure_air.py `--discretionary-pct`. Nothing is
+    written; the engine still ships unseeded, which means the shipped Axis raids Malta with NOTHING
+    and this A/B measures an island nobody is suppressing. Reporting either posture without the
+    other is reporting a decision as a measurement."""
+    real = logistics_data.malta_italy_sicily_basing_43_1()
+    seeded = {**real, "axis_discretionary_italy_sicily_pct_43_1": pct}
+    logistics_data.malta_italy_sicily_basing_43_1 = lambda: seeded
 
 
 def _arm(state, arm: str):
@@ -115,7 +126,26 @@ def _lowest_total_capacity(start, events) -> int:
     return lowest
 
 
-def _play(seed: int, arm: str) -> dict:
+def _highest_total_capacity(start, events) -> int:
+    """The island's HIGH-WATER total Capacity Level -- the twin of the low-water reading above, and
+    the one [34.86] moved: the book grows Malta 5 -> 8 -> 14 -> 28 levels, so an end-of-war total
+    tells you only where the last raid left it, never whether it ever climbed."""
+    level = {f.id: f.level for f in malta.facilities(start)}
+    highest = sum(level.values())
+    for e in events:
+        if e.kind is not EventKind.AIR_FACILITY_LEVEL_CHANGED:
+            continue
+        fid = str(e.payload["facility_id"])
+        if not fid.startswith(malta.PREFIX):
+            continue
+        level[fid] = e.payload["level"]
+        highest = max(highest, sum(level.values()))
+    return highest
+
+
+def _play(seed: int, arm: str, pct: int | None = None) -> dict:
+    if pct is not None:                    # seeded in the WORKER, so no fork assumption
+        _seed_the_open_ruling(pct)
     start = campaign(seed=seed)
     res = run(_arm(start, arm), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     axis, cwlth = _score(res.final)
@@ -126,7 +156,24 @@ def _play(seed: int, arm: str) -> dict:
     raids = [e for e in res.events if e.kind is EventKind.MALTA_RAID_ORDERED]
     hits = [e for e in res.events if e.kind is EventKind.MALTA_PLANES_LOST]
     flown = [e for e in res.events if e.kind is EventKind.MALTA_STRIKE_UNFIT]
+    # GATE 5.6: the raid's DELIVERY, not just its count. Gate 5 found 84 of 111 raids landing zero
+    # Bomb Points because the Axis strike force was a 3-plane proxy and a percentage of 3 rounds to
+    # nothing; with [34.6]/[59.3] transcribed this is the census that says whether that is fixed.
+    armed = [e for e in raids if not e.payload.get("cancelled")]
+    bombs = [e.payload.get("bomb_points", 0) for e in armed]
+    grew = [e for e in res.events if e.kind is EventKind.MALTA_REINFORCED]
     return {"seed": seed, "arm": arm, "axis": axis, "allied": cwlth,
+            "raids_armed": len(armed),
+            "raids_bombing": sum(1 for b in bombs if b > 0),
+            "bomb_min": min(bombs, default=0), "bomb_max": max(bombs, default=0),
+            "bomb_total": sum(bombs),
+            "raid_planes": sum(e.payload.get("planes", 0) for e in armed),
+            "levels_max": _highest_total_capacity(start, res.events),
+            "planes_max": max([start.malta_planes]
+                              + [e.payload["planes"] for e in grew]
+                              + [e.payload["planes"] for e in hits]),
+            "reinforcements": len(grew),
+            "planes_arrived": sum(e.payload["arrived"] for e in grew),
             "winner": None if res.winner is None else res.winner.value,
             "reason": res.reason, "tons_denied": denied, "dice": dice,
             # rule 44's own trajectory: does the island move, and does the budget run down?
@@ -144,13 +191,21 @@ def _play(seed: int, arm: str) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, nargs="+", default=list(SEEDS))
+    ap.add_argument("--discretionary-pct", type=int, default=None,
+                    help="answer the OPEN 43.1 Italy/Sicily posture for this run "
+                         "(10 = [63.46]'s printed ceiling). Shipped: unseeded = the "
+                         "Axis raids Malta with nothing.")
     args = ap.parse_args()
 
     jobs = [(s, b) for s in args.seeds for b in (OFF, LIVE)]
     with ProcessPoolExecutor() as pool:                    # 16 threads: one campaign per worker
-        out = list(pool.map(_play, [j[0] for j in jobs], [j[1] for j in jobs]))
+        out = list(pool.map(_play, [j[0] for j in jobs], [j[1] for j in jobs],
+                            [args.discretionary_pct] * len(jobs)))
     by = {(r["seed"], r["arm"]): r for r in out}
 
+    if args.discretionary_pct is not None:
+        print(f"\n*** the OPEN Italy/Sicily basing ruling is SEEDED AT "
+              f"{args.discretionary_pct}% for this run (shipped: unseeded = no raid) ***")
     print("\nMALTA A/B -- the island SILENCED (flat-0% column) vs the island LIVE (rule 44)")
     print("the full 111-turn campaign, CampaignAxisPolicy vs CampaignCommonwealthPolicy\n")
     hdr = f"{'seed':>5} | {'MALTA SILENCED':^30} | {'MALTA LIVE (rule 44)':^30} | {'swing':>18}"
@@ -177,11 +232,16 @@ def main() -> None:
     for s in args.seeds:
         m = by[(s, LIVE)]
         budget = " ".join(f"{k}x{v}" for k, v in sorted(m["budget"].items())) or "-"
-        print(f"  seed {s:>5}: levels {m['levels_start']}->{m['levels_end']} (low {m['levels_min']}) "
-              f"| planes {m['planes_start']}->{m['planes_end']} (-{m['planes_killed']}) "
-              f"| raids {m['raids']:>3d}  budget spent: {budget}")
+        print(f"  seed {s:>5}: levels {m['levels_start']}->{m['levels_end']} "
+              f"(low {m['levels_min']}, high {m['levels_max']}) "
+              f"| planes {m['planes_start']}->{m['planes_end']} "
+              f"(high {m['planes_max']}, +{m['planes_arrived']} in {m['reinforcements']} convoys, "
+              f"-{m['planes_killed']} bombed) | raids {m['raids']:>3d}  budget spent: {budget}")
         print(f"         44.16 refit: {m['sorties']:>3d} strikes flown, "
               f"{m['flown_min']}-{m['flown_max']} Swordfish per sortie (12 on the island)")
+        print(f"         the raid DELIVERS: {m['raids_bombing']:>3d} of {m['raids_armed']:>3d} "
+              f"armed raids carried Bomb Points ({m['bomb_min']}-{m['bomb_max']} per raid, "
+              f"{m['bomb_total']} total, {m['raid_planes']} plane-sorties flown at the island)")
     print("\n(the arms diverge in draw COUNT once sunk cargo changes the war -- that is the signal,")
     print(" not the noise. Five seeds is not a distribution: read the sign, not one seed.)\n")
 
