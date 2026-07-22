@@ -2294,7 +2294,7 @@
         ]
       },
       "Sunderland": {
-        "_readying_34_12": "TWO ROWS, NEITHER OF THEM A TRANSFER ROW (no '**'), so 34.12's free choice is real here: 'Sunderland 238 (5) 7 - 4 . ! . . Short' -- the long-ranged RECONNAISSANCE readying, applied below -- or '176 (5) 11 9 4 . . ! .', the same flying boat readied as a bomber. The chart's own Notes say 'The Sunderland is a flying boat', so 34.4 confines it to a flying boat basin or alighting area. The applied row is the first printed one, which is the capability [60.42]'s eighteen Sunderlands are fielded for (game.establishment gives them the recon role).",
+        "_readying_34_12": "TWO ROWS, NEITHER OF THEM A TRANSFER ROW (no '**'), so 34.12's free choice is real here: 'Sunderland 238 (5) 7 - 4 . ! . . Short' -- the long-ranged RECONNAISSANCE readying, applied below -- or '176 (5) 11 9 4 . . ! .', the same flying boat readied as a bomber. The chart's own Notes say 'The Sunderland is a flying boat', so 34.4 confines it to a flying boat basin or alighting area. The applied row is the first printed one, which is the capability [60.42]'s eighteen Sunderlands are fielded for (game.roster gives them the recon role).",
         "nation": "commonwealth",
         "class": "flying_boat",
         "range": 238,
@@ -2317,7 +2317,7 @@
         ]
       },
       "63.11": {
-        "_printed_name": "THE CHART PRINTS THIS ROW'S NAME AS '63.11', with 'Potez' in the Manufacturer column (PDF p.113, read with eyes). [60.42] lists the same aeroplane as 'Potez 63/11*'. The KEY of this data file is the CHART's printed name, because that is what game.basing and game.establishment match on; the scenario's spelling is carried beside the muster row in data/air_establishments.json under `printed`.",
+        "_printed_name": "THE CHART PRINTS THIS ROW'S NAME AS '63.11', with 'Potez' in the Manufacturer column (PDF p.113, read with eyes). [60.42] lists the same aeroplane as 'Potez 63/11*'. The KEY of this data file is the CHART's printed name, because that is what game.basing and game.roster match on; the scenario's spelling is carried beside the muster row in data/air_establishments.json under `printed`.",
         "nation": "commonwealth",
         "class": "reconnaissance",
         "range": 75,
@@ -2334,7 +2334,7 @@
         }
       },
       "Gladiator Mk. II": {
-        "_fuel_misprint_4_44A": "THE BOOK PRINTS A DASH IN THIS ROW'S FUEL COLUMN and the chart's own key gives '-' a meaning only in the Bomb column ('\"-\" = May not carry bombs'). 34.17 gives EVERY plane a Fuel Consumption Rating -- 'the number of Fuel Points a plane requires to perform any mission' -- so a dash there is a misprint of the same class as the 54.17 demolition table, not a rating of zero and not a permission to fly free. It is transcribed as null rather than guessed. The Sea Gladiator -- the same airframe, navalised, on the row eleven lines below -- prints Fuel 1, which is the obvious repair and is exactly why it is the OWNER's to make and not ours. NOTHING READS IT TODAY: fuel is billed by 38.24 only for the strike and recon roles (engine._REFITTABLE_ROLES / _air_fuel), the Gladiator is a fighter, and game.establishment.fuel_per_plane averages over the types that print a rating and says so.",
+        "_fuel_misprint_4_44A": "THE BOOK PRINTS A DASH IN THIS ROW'S FUEL COLUMN and the chart's own key gives '-' a meaning only in the Bomb column ('\"-\" = May not carry bombs'). 34.17 gives EVERY plane a Fuel Consumption Rating -- 'the number of Fuel Points a plane requires to perform any mission' -- so a dash there is a misprint of the same class as the 54.17 demolition table, not a rating of zero and not a permission to fly free. It is transcribed as null rather than guessed. The Sea Gladiator -- the same airframe, navalised, on the row eleven lines below -- prints Fuel 1, which is the obvious repair and is exactly why it is the OWNER's to make and not ours. NOTHING READS IT TODAY: fuel is billed by 38.24 only for the strike and recon roles (engine._REFITTABLE_ROLES / _air_fuel), the Gladiator is a fighter, and game.roster.fuel_per_plane averages over the types that print a rating and says so.",
         "nation": "commonwealth",
         "class": "fighter",
         "range": 44,

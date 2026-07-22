@@ -120,6 +120,14 @@ def _chart(name: str) -> dict:
     return logistics_data.aircraft_characteristics_4_44()[name]
 
 
+def nation(name: str) -> str:
+    """[4.44A/b/c] The nationality the chart prints against a type. It is read because ONE rule in
+    this port has a NATIONALITY for its subject rather than a type: [43.12] "75% of ALL GERMAN
+    BOMBERS must be based in Italy/Sicily" (game.basing.german_bombers), which is a strictly wider
+    population than 43.11/43.13's three named heavies."""
+    return _chart(name)["nation"]
+
+
 def rating(name: str, role: str) -> int:
     """[34.13]/[34.14] The Air Points ONE aeroplane of `name` carries in `role`: its charted TacAir
     for a fighter, its charted Bombload for a strike, and 1 for recon (the flagged scale)."""

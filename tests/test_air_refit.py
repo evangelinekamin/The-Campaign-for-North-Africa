@@ -334,6 +334,31 @@ def test_38_36_one_stores_point_per_attempt_whether_it_succeeds_or_not():
         assert r.state.supply("AF-Sup").stores == 98
 
 
+def test_59_36_no_maintenance_at_all_in_the_first_operations_stage():
+    """[59.36] "Maintenance may not be performed on planes during the FIRST OPSTAGE of a Scenario",
+    and [60.32] prints the Axis half of the same window under its own muster -- "The Italian Player
+    may not attempt to refit planes until GAME-TURN 1, OPSTAGE 2".
+
+    BUILT 2026-07-22, AND IT HAD TO BE. engine._air_maintenance used to claim it honoured 59.36 for
+    free, on the argument that nothing has flown in the first stage so 38.31 leaves nothing
+    undergoing refit. That argument died with the [59.32] Refitted column: the campaign is seeded
+    with 267 of the Axis's 385 aeroplanes already in the hangars, so without the gate both sides
+    would spend a 38.36 Stores Point and roll the [38.37] table in the one stage two printed
+    sentences forbid it in. The same fixture one stage later does all three things."""
+    barred = _Run(_state(unfit={AXIS_STRIKE: 2}, turn=1, stage=1))
+    _pin_die(barred, 1)                                # a 100% roll, so a refit could not be missed
+    _air_maintenance(barred)
+    assert barred.events == []                         # no die, no Stores, no phase marker
+    assert barred.state.air_unfit == {AXIS_STRIKE: 2}
+    assert barred.state.supply("AF-Sup").stores == 99
+    # ...and it is the STAGE that bars it, not the turn or an empty ledger
+    allowed = _Run(_state(unfit={AXIS_STRIKE: 2}, turn=1, stage=2))
+    _pin_die(allowed, 1)
+    _air_maintenance(allowed)
+    assert allowed.state.air_unfit.get(AXIS_STRIKE, 0) == 0
+    assert allowed.state.supply("AF-Sup").stores == 98
+
+
 def test_38_36_the_choice_not_to_refit_is_not_modelled_and_that_is_our_default():
     """FLAGGED JUDGEMENT CALL, recorded in a test rather than in a comment alone. Case 38.36 does
     not end at the Stores Point -- its second sentence is "A PLAYER IS NOT REQUIRED TO TRY TO REFIT

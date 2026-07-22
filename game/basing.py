@@ -16,6 +16,14 @@ sortie cost the other anything. Two printed rules forbid that, one structurally 
     may not be counted in both places. From Game-Turn 35 that sentence EXPIRES and what is left is
     typed (43.11/43.13), which is `constrained_planes` below.
 
+    ⚠ **SO RULE 43'S SUBJECT CHANGES AT GAME-TURN 35, AND `required_planes` IS WHERE.** Corrected
+    2026-07-22: the first shipping of this module applied 43.12's percentage to `constrained_
+    planes` -- the three NAMED heavies -- which narrowed an untyped sentence to a typed one and
+    dropped every other German bomber ([4.44b] also prints the Ju. 87B, the Ju. 87D and the
+    Ju. 52/3m, and the transcribed rows already carry their nationality) into the discretionary
+    term. Before Game-Turn 35 the population is EVERY GERMAN BOMBER; from it, the three types
+    43.11/43.13 name. The rule as written was expressible with the data in hand and now is.
+
   * **[39.19] THE TEMPORAL HALF -- MALTA OR THE DESERT, NOT BOTH.** "Generally, a plane may fly only
     one mission per Operations Stage or Strategic Phase... A PLANE FLYING A MISSION IN AN OPERATIONS
     STAGE MAY NOT FLY IN THE STRATEGIC PHASE OF THAT GAME-TURN AND VICE VERSA." This binds on the
@@ -71,16 +79,26 @@ BOTH OF THE 2026-07-21 OWNER RULINGS ARE IN, AND THE FIRST ONE DISSOLVED RATHER 
   type names, which are the chart's printed names. A list transcribed off the RULE's prose
   instead ("He 111", "FW 220") could never match a transcribed row, and would have failed silently.
 
-⚠⚠ AND ONE NEW OWNER RULING, WHICH THE REAL MUSTER CREATED. **[60.32] PRINTS "NO PLANES START THE
-GAME IN ITALY/SICILY", AND [44.21]/[44.25]/[44.27] MAKE PLANES BASED IN ITALY/SICILY THE
-PRECONDITION FOR ANY AXIS RAID ON MALTA AT ALL** -- while [64.52] and [44.41]'s campaign row hand
-the Axis unlimited Level-I raids and 25 Level-II Game-Turns. The bridge the book intends is 43.1's
-free basing choice ("the Axis Player may base any portion of his airforce at Italy/Sicily", 61.42)
-and a rule-37 transfer, and this engine has an order channel for neither. Seeding zero there is not
-neutrality; it silently repeals rule 44. `discretionary_pct` therefore takes [63.46]'s printed 10%
-ceiling on the Axis's Italy/Sicily basing -- the only number the book prints for that posture -- and
-says, in the data file and at the function, that it is a transplant from the El Alamein scenario
-group. The whole of the alternative ruling is that one integer.
+⚠⚠ AND ONE NEW OWNER RULING, WHICH THE REAL MUSTER CREATED, AND WHICH IS **OPEN AND UNSEEDED**.
+**[60.32] PRINTS "NO PLANES START THE GAME IN ITALY/SICILY", AND [44.21]/[44.25]/[44.27] MAKE
+PLANES BASED IN ITALY/SICILY THE PRECONDITION FOR ANY AXIS RAID ON MALTA AT ALL** -- while [64.52]
+and [44.41]'s campaign row hand the Axis unlimited Level-I raids and 25 Level-II Game-Turns. The
+bridge the book intends is 43.1's free basing choice ("the Axis Player may base any portion of his
+airforce at Italy/Sicily", 61.42) and a rule-37 transfer, and this engine has an order channel for
+neither.
+
+CORRECTED 2026-07-22. This module first shipped with `discretionary_pct` seeded at [63.46]'s
+printed 10% -- an El Alamein (October 1942) ceiling, transplanted whole onto September 1940 against
+[60.32]'s plain printed sentence. `italy_sicily_planes` is the ONLY force rule 44 sizes its raid
+from, so that one transplanted integer produced the entire Malta result the block reported: it was
+a measurement of [63.46], not of [60.32]. That is deciding an owner ruling by transplant, which is
+the invention this port exists to stop, so **the posture is now UNSEEDED**: the data key is null,
+`discretionary_pct` answers 0, and the Axis bases in Italy/Sicily exactly what rule 43 REQUIRES him
+to (nothing, until [34.87] brings a German bomber). The consequence is stated rather than hidden --
+**the campaign Axis raids Malta with nothing while the ruling is open** -- and it is attributable
+to an unbuilt order channel (the rule-37 transfer) rather than to a repealed rule. [63.46]'s 10% is
+transcribed verbatim beside the null key under a name nothing reads, exactly as the unapplied
+[35.23] printing is; answering the ruling is seeding one integer.
 
 --------------------------------------------------------------------------------------------------
 THE DEFERRED DEBT OF THE WHOLE AIR GAME, RECORDED HERE BECAUSE THIS IS THE LAST BLOCK OF PHASE 5
@@ -99,10 +117,16 @@ Concretely, as of the end of Phase 5:
     40/45/46 into one die that SCALES a side's commitment for one Operations Stage; nothing folds a
     loss. The only channel in the engine that permanently removes aircraft is 41.36's "10% of the
     planes on the ground per level destroyed", and it exists on MALTA ALONE (malta.planes_lost).
-  * **So the Axis raid on Malta is free of airframes.** 44.28's pro-rata split of losses between
-    planes in play and planes not in play (the whole point of that case) has nothing to split, and
-    Malta's 19 fighters and 17 AA Points ([60.46], transcribed) never fire. The raid is stronger
-    than the book's raid, and the Commonwealth's only reply is the [44.5] repair table.
+  * **So the Axis raid on Malta is free of airframes, AGAINST THE PRINTED CASE.** [44.24] is
+    explicit that the raid is not a free hit -- "the raid is conducted NORMALLY -- including
+    air-to-air and AA/flak" -- and none of the three is built: 44.28's pro-rata split of losses
+    between planes in play and planes not in play (the whole point of that case) has nothing to
+    split, and Malta's 19 fighters and 17 AA Points ([60.46], transcribed) never fire. The raid is
+    stronger than the book's raid, and the Commonwealth's only reply is the [44.5] repair table.
+    THIS GOT SHARPER, NOT SOFTER, WITH THE [59.3] ESTABLISHMENTS: the raid used to be sized off a
+    four-aeroplane proxy, so a missing loss channel cost the Commonwealth almost nothing; sized off
+    [60.32]'s 184 bombers it is the difference between an air force that can be worn down and one
+    that cannot. It is the first thing to build after the Italy/Sicily basing ruling is answered.
   * **[46.3]'s Anti-Aircraft CRT and the [45.4]/[45.5] TacAir tables are untranscribed** (the audit
     recovered [46.3] from PDF page 108 and it is legible). Transcribing them is the precondition for
     any of the above.
@@ -133,17 +157,23 @@ from .state import GameState
 BOMBER_ROLE = "strike"
 LAND_ARENA = "LAND"
 
+# [43.12] "75% of all GERMAN bombers" -- the nationality the [4.44b] chart prints, which is the
+# subject of that sentence and the reason it is not `constrained_types` (see german_bombers).
+GERMAN = "german"
+
 
 def _basing() -> dict:
     return logistics_data.malta_italy_sicily_basing_43_1()
 
 
 def italy_sicily_pct(turn: int) -> int:
-    """[43.12]/[43.13] The percentage of the CONSTRAINED (German) Axis bomber force that rule 43
-    REQUIRES to be based in ITALY/SICILY -- the only part of the Mediterranean force 43.25 lets raid
-    Malta. What the Axis chooses to base there of everything else is discretionary_pct. 75 until Game-Turn 35 ("75% of all
-    German bombers", untyped), 25 from it (the printed ceiling on 43.13's permissive "the remaining
-    25% MAY be based in Sicily/Italy or in Crete"; the choice of the ceiling over the floor is the
+    """[43.12]/[43.13] The percentage of the REQUIRED Axis bomber force (`required_planes` -- every
+    German bomber before Game-Turn 35, the three named heavies from it) that rule 43 compels to be
+    based in ITALY/SICILY, the only part of the Mediterranean force 43.25 lets raid Malta. What the
+    Axis CHOOSES to base there of everything else is discretionary_pct. 75 until Game-Turn 35 ("75%
+    of all German bombers", untyped), 25 from it (the printed ceiling on 43.13's permissive "the
+    remaining 25% MAY be based in Sicily/Italy or in Crete"; the choice of the ceiling over the
+    floor is the
     flagged policy call recorded in data/malta_44.json, made where the alternative -- 0 -- would
     silently end the Malta war in June 1941)."""
     b = _basing()
@@ -178,32 +208,50 @@ def constrained_types() -> tuple[str, ...]:
 
 
 def discretionary_pct() -> int:
-    """[43.1] / [63.46] THE SHARE OF HIS UNCONSTRAINED BOMBERS THE AXIS CHOOSES TO BASE IN
-    ITALY/SICILY -- and it is a DECISION, not a requirement, which is why it has its own name, its
-    own data key and its own owner ruling (data/malta_44.json, `_owner_ruling_needed_60_32_vs_44_21`).
+    """[43.1] / [63.46] THE SHARE OF HIS UNREQUIRED BOMBERS THE AXIS CHOOSES TO BASE IN
+    ITALY/SICILY -- a DECISION, not a requirement, which is why it has its own name, its own data
+    key and its own owner ruling (data/malta_44.json, `_owner_ruling_needed_60_32_vs_44_21`).
 
-    Rule 43 compels a percentage only of NAMED GERMAN HEAVY BOMBERS. Every other aeroplane the Axis
-    owns he bases where he likes: [61.42] says so in the scenario set-ups' own words -- "the Axis
-    Player MAY BASE ANY PORTION OF HIS AIRFORCE AT ITALY/SICILY within the minimum German plane
-    restrictions of Case 43.1" -- and 44.27's own worked example has him keeping Italian types there
-    ("He has, based in Italy and Sicily, 12 SM 79's, 6 BR 20's, 16 CR 42's, and 4 CR 32's").
+    Rule 43 compels a percentage only of GERMAN bombers. Every other aeroplane the Axis owns he
+    bases where he likes: [61.42] says so in the scenario set-ups' own words -- "the Axis Player MAY
+    BASE ANY PORTION OF HIS AIRFORCE AT ITALY/SICILY within the minimum German plane restrictions of
+    Case 43.1" -- and 44.27's own worked example has him keeping Italian types there ("He has, based
+    in Italy and Sicily, 12 SM 79's, 6 BR 20's, 16 CR 42's, and 4 CR 32's").
 
-    THIS ENGINE HAS NO ORDER CHANNEL FOR THAT CHOICE (no 37/39 transfer mission, no basing seat), so
-    the posture is seeded from the only ceiling the book ever prints on it: [63.46], "The Axis Player
-    may transfer 10% of his available force to Italy or Sicily but no more. HE MAY NOT HAVE MORE THAN
-    10% OF HIS AIR POWER IN ITALY OR SICILY." That is an El Alamein scenario rule and using it for
-    the whole campaign is a TRANSPLANT -- flagged, in the data file and here."""
-    return _basing()["axis_discretionary_italy_sicily_pct_43_1"]
+    **THE POSTURE IS UNSEEDED AND THIS RETURNS ZERO** (data key null). This engine has no order
+    channel for the choice -- no 37/39 transfer mission, no basing seat -- and the only number the
+    book ever prints for it, [63.46]'s "he may not have more than 10% of his air power in Italy or
+    Sicily", is written for El Alamein in October 1942 and for a scenario whose very next sentence
+    reads "Strategic air attacks against Malta may be made only in the Long Retreat scenario". This
+    module shipped once with that 10 transplanted onto September 1940, and because
+    `italy_sicily_planes` is the only force rule 44 sizes a raid from, that single integer WAS the
+    Malta result. It is withdrawn until the owner rules (the escalation protocol: implement what is
+    safe, leave the disputed part unseeded). Zero here is not a reading of [60.32] either -- it is
+    the absence of a transfer order, and the raid it produces (none) is reported as such."""
+    pct = _basing()["axis_discretionary_italy_sicily_pct_43_1"]
+    return 0 if pct is None else pct
+
+
+def _share(state: GameState, side: Side, keep) -> int:
+    """The aeroplanes of `side`'s LAND bomber squadron whose [59.3] muster rows satisfy `keep`,
+    taken as the establishment's own share of itself -- an AirWing is Air Points and not a roster
+    of aeroplanes (game.roster), so what fraction of the bomber arm a population is on the printed
+    muster is the fraction of the wing in play it is."""
+    squadron = air.squadron_planes(state, side, LAND_ARENA, BOMBER_ROLE)
+    if squadron <= 0:
+        return 0
+    establishment = roster.planes(side, BOMBER_ROLE)
+    charted = sum(m.available for m in roster.by_role(side, BOMBER_ROLE) if keep(m))
+    return squadron * charted // establishment
 
 
 def constrained_planes(state: GameState, side: Side) -> int:
-    """[43.11]/[43.13] How many of `side`'s LAND bombers are of the types rule 43's TYPED cases
-    NAME -- the He. 111, the Ju. 88D and (by the owner's ruling of 2026-07-21) the Fw. 200 C.
+    """[43.11]/[43.13] How many of `side`'s LAND bombers are of the TYPES rule 43's typed cases
+    NAME -- the He. 111, the Ju. 88D and (by the owner's ruling of 2026-07-21) the Fw. 200 C. This
+    is the population from Game-Turn 35, when 43.12's wider untyped sentence expires.
 
-    Taken as the establishment's own share: the [59.3] muster says what fraction of the bomber arm
-    those types are, and the wing in play is that fraction of it. Zero for anybody but the Axis --
-    43.1 is headed "AXIS MEDITERRANEAN BOMBER BASE REQUIREMENTS" and the Commonwealth's basing is
-    rule 36's, entirely on the map.
+    Zero for anybody but the Axis -- 43.1 is headed "AXIS MEDITERRANEAN BOMBER BASE REQUIREMENTS"
+    and the Commonwealth's basing is rule 36's, entirely on the map.
 
     ⚠⚠ ZERO IN THE CAMPAIGN TODAY, AND THE REASON HAS CHANGED. It used to be zero because the engine
     expressed the whole Axis bomber arm as ONE abstract Ju. 87B, which rule 43 does not name -- an
@@ -214,13 +262,38 @@ def constrained_planes(state: GameState, side: Side) -> int:
     written here once, in the book's own types, and the DATA decides when it binds."""
     if side != Side.AXIS:
         return 0
-    squadron = air.squadron_planes(state, side, LAND_ARENA, BOMBER_ROLE)
-    if squadron <= 0:
-        return 0
     named = frozenset(constrained_types())
-    establishment = roster.planes(side, BOMBER_ROLE)
-    charted = sum(m.available for m in roster.by_role(side, BOMBER_ROLE) if m.type in named)
-    return squadron * charted // establishment
+    return _share(state, side, lambda m: m.type in named)
+
+
+def german_bombers(state: GameState, side: Side) -> int:
+    """[43.12] How many of `side`'s LAND bombers are GERMAN -- the subject of the one clause of
+    rule 43 that names a NATIONALITY and no type at all: "Until 1/35 Game-Turn 1941, 75% of ALL
+    GERMAN BOMBERS must be based in Italy/Sicily."
+
+    A strictly wider population than `constrained_planes`: [4.44b] prints the Ju. 87B, the Ju. 87D
+    and the Ju. 52/3m beside the three heavies 43.11/43.13 name, and a Stuka is a German bomber
+    whether or not 43.11 lists it. Read off the chart's own `nation` cell (game.roster.nation), so
+    the sentence binds on exactly the aeroplanes it is written about.
+
+    Zero in the campaign for the same reason `constrained_planes` is -- [60.32] musters no German
+    aeroplane -- but zero for a WIDER reason, which is the whole of the 2026-07-22 correction."""
+    if side != Side.AXIS:
+        return 0
+    return _share(state, side, lambda m: roster.nation(m.type) == GERMAN)
+
+
+def required_planes(state: GameState, side: Side, turn: int) -> int:
+    """WHICH POPULATION RULE 43'S ITALY/SICILY REQUIREMENT IS A PERCENTAGE OF, at `turn` -- because
+    the rule changes its own subject at Game-Turn 35 and the percentage alone does not say so.
+
+    Until then it is 43.12's untyped-but-nationed "all German bombers"; from then that sentence has
+    expired ("UNTIL 1/35 Game-Turn 1941") and what remains is 43.11/43.13's three named heavies.
+    Everything outside the population of the moment is the Axis Player's free choice, which is
+    `discretionary_pct`'s (unseeded) business and not this function's."""
+    if turn < _basing()["change_turn"]:
+        return german_bombers(state, side)
+    return constrained_planes(state, side)
 
 
 def typed_requirement_applies(state: GameState, side: Side) -> bool:
@@ -237,11 +310,13 @@ def italy_sicily_planes(state: GameState, turn: int) -> int:
 
     TWO TERMS, AND THEY ARE DIFFERENT KINDS OF THING:
 
-      * **THE REQUIREMENT.** 43.12's untyped "75% of all German bombers must be based in
+      * **THE REQUIREMENT.** 43.12's untyped "75% of ALL GERMAN BOMBERS must be based in
         Italy/Sicily" until Game-Turn 35, and 43.13's printed 25% ceiling from it (the flagged
-        choice of ceiling over floor recorded in data/malta_44.json), applied to the bombers rule 43
-        actually NAMES. Zero in the campaign today -- there is no German aeroplane in [60.32].
-      * **THE CHOICE.** Everything else he owns, at `discretionary_pct` -- [63.46]'s printed 10%.
+        choice of ceiling over floor recorded in data/malta_44.json) applied to the three types
+        rule 43 NAMES, once 43.12 has expired. `required_planes` is that changing subject. Zero in
+        the campaign today -- there is no German aeroplane in [60.32].
+      * **THE CHOICE.** Everything else he owns, at `discretionary_pct` -- **UNSEEDED, and so zero**
+        while the [60.32]-versus-[44.21] owner ruling is open.
 
     THE FIRST TERM IS RULE 43'S LARGEST EFFECT ON THE CAMPAIGN THE DAY THE LUFTWAFFE ARRIVES: the
     raidable share of a German bomber force falls from 75% to 25% at Game-Turn 35, because 43.13
@@ -251,9 +326,9 @@ def italy_sicily_planes(state: GameState, turn: int) -> int:
     Taken in PLANES, not in Air Points, because that is what the [44.42] table counts and what
     44.27 bounds the African contingent by."""
     squadron = air.squadron_planes(state, Side.AXIS, LAND_ARENA, BOMBER_ROLE)
-    constrained = constrained_planes(state, Side.AXIS)
-    return (constrained * italy_sicily_pct(turn) // 100
-            + (squadron - constrained) * discretionary_pct() // 100)
+    required = required_planes(state, Side.AXIS, turn)
+    return (required * italy_sicily_pct(turn) // 100
+            + (squadron - required) * discretionary_pct() // 100)
 
 
 def crete_planes(state: GameState, turn: int) -> int:

@@ -23,8 +23,15 @@ was ONE abstract Ju. 87B, so the Crete half bound on nothing for a reason that w
 real muster transcribed (game.roster) the answer is flatter and needs no ruling at all -- **[60.32]
 MUSTERS NO GERMAN AEROPLANE**, so every clause of rule 43, typed and untyped alike, has nothing to
 base until the untranscribed [34.87] reinforcement schedule brings the Luftwaffe to Africa. The
-tests below therefore assert the LAW against a doctored establishment that does field a named type,
-and assert separately that the campaign's own establishment does not.
+tests below therefore assert the LAW against a doctored establishment that does field a German
+bomber, and assert separately that the campaign's own establishment does not.
+
+AND RULE 43 HAS **TWO** SUBJECTS, WHICH IS THE 2026-07-22 REPAIR. 43.12 is untyped but nationed
+("all GERMAN bombers") and expires at Game-Turn 35; 43.11/43.13 name three types and take over
+from it. The doctored fixture below is parameterised on the type for exactly that reason: seeded
+only with He. 111s -- German AND named -- no assertion in this file could tell the two readings
+apart, and the guard test named after the distinction was passing through the type match. The
+Ju. 87B cases are the ones that hold the nationality reading honest.
 """
 from __future__ import annotations
 
@@ -53,20 +60,45 @@ from game.terrain import Terrain
 AXIS_STRIKE = "AXIS/LAND/strike"
 
 
-def _with_german_bombers(monkeypatch, available=100):
-    """Put a type rule 43 NAMES into the Axis bomber establishment -- the chart's own "He. 111", so
-    the exact string match binds -- and keep it the whole of that establishment, so the percentages
-    below are percentages of a force the rule governs entire. This is what [34.87]'s Axis Airplane
-    Reinforcement Schedule will do for real; until it is transcribed, a monkeypatch is the only way
-    to exercise a law the campaign cannot yet reach."""
+def _with_german_bombers(monkeypatch, available=100, type_="He. 111"):
+    """Put a GERMAN bomber into the Axis bomber establishment -- a name the [4.44b] chart actually
+    prints, so the exact string match can bind -- and keep it the whole of that establishment, so
+    the percentages below are percentages of a force the rule governs entire. This is what [34.87]'s
+    Axis Airplane Reinforcement Schedule will do for real; until it is transcribed, a monkeypatch is
+    the only way to exercise a law the campaign cannot yet reach.
+
+    `type_` IS A PARAMETER BECAUSE RULE 43 HAS TWO DIFFERENT SUBJECTS AND THE DEFAULT ONLY EXERCISES
+    ONE OF THEM. "He. 111" is both German AND on 43.11/43.13's named list, so a fixture that only
+    ever seeds it passes through the TYPE test and can never tell a nationality reading of 43.12
+    from a type reading of it -- which is exactly the bug this file's own
+    test_43_12_is_untyped_but_it_is_not_un_nationed was written to catch and, seeded that way,
+    could not. Pass "Ju. 87B" (German, a bomber, and named by NO clause of rule 43) to exercise the
+    nationality on its own."""
     real = roster._establishments()
     kept = [r for r in real["campaign_64"]["AXIS"]["planes"] if r["role"] != "strike"]
     axis = {**real["campaign_64"]["AXIS"],
-            "planes": kept + [{"type": "He. 111", "printed": "He 111", "available": available,
+            "planes": kept + [{"type": type_, "printed": type_, "available": available,
                                "refitted": available, "role": "strike"}]}
     patched = {**real,
                "campaign_64": {**real["campaign_64"], "AXIS": axis}}
     monkeypatch.setattr(roster, "_establishments", lambda: patched)
+
+
+def _with_a_sicilian_contingent(monkeypatch):
+    """Give the Axis somebody in Italy/Sicily, by seeding the OPEN owner ruling's own candidate
+    value -- [63.46]'s 10%, which data/malta_44.json transcribes beside the null key under
+    `axis_discretionary_italy_sicily_pct_63_46_unapplied` and which nothing in game/ reads.
+
+    IT IS SEEDED HERE AND NOWHERE ELSE, AND THAT IS DELIBERATE. Rules 44.25 and 44.27 are about
+    what the Axis may ADD from Africa to a raid the [44.42] table has already granted him planes
+    for; with the posture unseeded the table grants nothing, the 44.27 cap is zero, and the tests
+    below would pass while exercising no rule at all -- the vacuous-green failure mode. So the
+    magnitude is supplied at the test boundary, where it is visibly a fixture, instead of in the
+    data file, where it would be a shipped decision the owner has not made."""
+    real = logistics_data.malta_italy_sicily_basing_43_1()
+    seeded = {**real, "axis_discretionary_italy_sicily_pct_43_1":
+              real["axis_discretionary_italy_sicily_pct_63_46_unapplied"]}
+    monkeypatch.setattr(logistics_data, "malta_italy_sicily_basing_43_1", lambda: seeded)
 
 
 def _mini(*, strike=6, turn=1, missions=(), unfit=None, strategic=None) -> GameState:
@@ -133,10 +165,38 @@ def test_43_12_is_untyped_but_it_is_not_un_nationed(monkeypatch):
     is the book's. Given a German bomber force it takes three quarters of it off the desert; given
     [60.32]'s Regia Aeronautica it takes nothing.
 
-    RESTATED 2026-07-22 (rule 5: the old assertion enshrined the proxy, not the rule -- it read
-    "twenty Stukas, fifteen in Sicily, five in Africa" of an establishment that never existed)."""
+    THE SUBJECT IS **EVERY** GERMAN BOMBER, WHICH IS THE ASSERTION THIS TEST EXISTS FOR AND DID NOT
+    MAKE (restated 2026-07-22, rule 5). It was seeded with He. 111s -- a type that is both German
+    AND on 43.11/43.13's named list -- so it passed through the TYPE match and never touched the
+    nationality it is named after, and it could not have failed on the day the code narrowed 43.12
+    to the three named heavies. It was so narrowed, and this is the case that catches it: a
+    JU. 87B is a German bomber that NO clause of rule 43 names, and 43.12 bases three quarters of
+    it in Sicily all the same.
+
+    (Its own second half is the counterpart the first shipping got right by accident: from
+    Game-Turn 35 the untyped sentence has EXPIRED -- "until 1/35 Game-Turn 1941" -- so the Stuka
+    force comes home entire, while a named heavy stays constrained by 43.11/43.13. Two populations,
+    one changing subject, and basing.required_planes is the switch.)"""
+    _with_german_bombers(monkeypatch, type_="Ju. 87B")
+    st = _mini(strike=500)                                           # 100 Ju. 87B at Bombload 5
+    assert air.squadron_planes(st, Side.AXIS, "LAND", "strike") == 100
+    assert basing.german_bombers(st, Side.AXIS) == 100               # 43.12's subject: the nation
+    assert basing.constrained_planes(st, Side.AXIS) == 0             # 43.11/43.13's: not this type
+    assert basing.italy_sicily_planes(st, 1) == 75                   # ...and 43.12 binds anyway
+    assert basing.africa_planes(st, Side.AXIS, 1) == 25
+    assert basing.africa_planes(st, Side.AXIS, 34) == 25
+    assert basing.africa_planes(st, Side.AXIS, 35) == 100            # 43.12 has expired; 43.13
+    assert basing.crete_planes(st, 35) == 0                          # names no Stuka
+
+
+def test_43_11_s_named_heavies_are_the_subject_only_from_game_turn_35(monkeypatch):
+    """The other half of the same switch, on a type that IS named: an He. 111 force is 75% in
+    Italy/Sicily under 43.12 before Game-Turn 35 and, from it, 50% in Crete plus at most 25% in
+    Italy/Sicily under 43.13 -- the same quarter left in Africa by two different rules with two
+    different subjects."""
     _with_german_bombers(monkeypatch)
-    st = _mini(strike=2700)                                          # 100 He. 111
+    st = _mini(strike=2700)                                          # 100 He. 111 at Bombload 27
+    assert basing.german_bombers(st, Side.AXIS) == basing.constrained_planes(st, Side.AXIS) == 100
     assert basing.africa_planes(st, Side.AXIS, 1) == 25
     assert basing.establishment(st, Side.AXIS, "LAND", "strike") == 25
     assert basing.available_points(st, Side.AXIS, "LAND", "strike", 2700) == 675  # 25 x Bombload 27
@@ -145,6 +205,7 @@ def test_43_12_is_untyped_but_it_is_not_un_nationed(monkeypatch):
                                             fighters=0, strike=382, recon=0),))
     assert basing.africa_planes(daf, Side.ALLIED, 1) == air.squadron_planes(
         daf, Side.ALLIED, "LAND", "strike") == 56
+    assert basing.german_bombers(daf, Side.ALLIED) == 0
     assert basing.available_points(daf, Side.ALLIED, "LAND", "strike", 382) == 382
     assert basing.available_points(st, Side.AXIS, "LAND", "recon", 2) == 2
     assert basing.available_points(daf, Side.ALLIED, "SEA", "strike", 0) == 0
@@ -168,11 +229,42 @@ def test_the_campaign_musters_no_german_aeroplane_at_all():
     assert all(chart[m.type]["nation"] == "italian" for m in roster.roster(Side.AXIS))
     st = _mini(strike=100)
     assert basing.constrained_planes(st, Side.AXIS) == 0
+    assert basing.german_bombers(st, Side.AXIS) == 0          # 43.12's WIDER subject: also empty
     assert not basing.typed_requirement_applies(st, Side.AXIS)
     assert basing.crete_planes(st, 35) == 0
     pool = air.squadron_planes(st, Side.AXIS, "LAND", "strike")
     assert basing.africa_planes(st, Side.AXIS, 34) == pool    # 43.12 has nothing to base
     assert basing.africa_planes(st, Side.AXIS, 35) == pool    # nor do 43.11/43.13
+
+
+def test_the_italy_sicily_posture_is_left_UNSEEDED_while_the_owner_ruling_is_open():
+    """THE OTHER OWNER RULING, AND IT IS OPEN. [60.32] prints "no planes start the game in
+    Italy/Sicily"; [44.21]/[44.25]/[44.27] make an Italy/Sicily base the precondition for any Axis
+    raid on Malta; [64.52] and [44.41]'s campaign row give him unlimited Level-I raids. The bridge
+    is 43.1's free basing choice plus a rule-37 transfer and this engine has an order channel for
+    neither, so the posture is a magnitude only the owner may seed.
+
+    IT SHIPPED SEEDED ONCE, at [63.46]'s printed 10% -- an El Alamein (October 1942) ceiling whose
+    very next sentence bars Malta raiding altogether -- and because basing.italy_sicily_planes is
+    the only force rule 44 sizes a raid from, that single transplanted integer was the whole of the
+    campaign's Malta result. It is withdrawn: the data key is null, discretionary_pct answers 0, and
+    [63.46]'s number is transcribed beside it under a name NOTHING READS, in the same idiom as the
+    unapplied [35.23] printing. This test pins the withdrawal, so that re-seeding it is a deliberate
+    act with a failing test attached and not a quiet edit."""
+    printed = logistics_data.malta_italy_sicily_basing_43_1()
+    assert printed["axis_discretionary_italy_sicily_pct_43_1"] is None
+    assert basing.discretionary_pct() == 0
+    assert printed["axis_discretionary_italy_sicily_pct_63_46_unapplied"] == 10
+    # ...so the campaign Axis bases nothing in Italy/Sicily and rule 44 raids with nothing, at every
+    # Game-Turn and on both sides of 43.12's Game-Turn-35 expiry. THAT IS THE OPEN RULING'S COST,
+    # asserted rather than left for a measurement to discover.
+    st = campaign(seed=7, max_turns=3)
+    for turn in (1, 34, 35, 111):
+        assert basing.italy_sicily_planes(st, turn) == 0
+        assert malta.raid(st, "IV", 5, turn).bomb_points == 0
+    # and the whole bomber arm is therefore in Africa, where 39.19 can still trade it away
+    assert basing.africa_planes(st, Side.AXIS, 1) == air.squadron_planes(
+        st, Side.AXIS, "LAND", "strike") == 184
 
 
 def test_the_constrained_types_are_the_chart_s_printed_names_not_the_rule_s_prose():
@@ -279,10 +371,17 @@ def _campaign_run(policy):
     return r
 
 
-def test_44_25_the_axis_may_add_african_bombers_and_they_carry_their_bombload():
+def test_44_25_the_axis_may_add_african_bombers_and_they_carry_their_bombload(monkeypatch):
     """"He may then add in -- up to the maximums he gets from the Table -- ANY PLANES HE WISHES FROM
     AFRICA." The raid grows by their [34.14] Bombload, and the same event books them out of the
-    desert for the rest of the Game-Turn (39.19)."""
+    desert for the rest of the Game-Turn (39.19).
+
+    RESTATED 2026-07-22 (rule 5), NOT WEAKENED: 44.25's African contingent is bounded by 44.27 at
+    what the [44.42] table granted, and the table grants a percentage of the Italy/Sicily-based
+    force -- which is zero while the [60.32]-versus-[44.21] owner ruling is unseeded. So the test
+    supplies that one integer itself (_with_a_sicilian_contingent) rather than asserting a rule
+    against a force of nobody. What is asserted is unchanged, and it is the rule."""
+    _with_a_sicilian_contingent(monkeypatch)
     r = _campaign_run(_SendEverything())
     sent = [e for e in r.events if e.kind == EventKind.MALTA_RAID_REINFORCED]
     assert sent, "the Axis policy asked for African planes and got none"
@@ -301,10 +400,12 @@ def test_44_25_the_axis_may_add_african_bombers_and_they_carry_their_bombload():
     assert strike.payload["strength"] == ordered.payload["bomb_points"] + p["bomb_points"]
 
 
-def test_44_27_the_map_contingent_may_never_exceed_what_the_table_granted():
+def test_44_27_the_map_contingent_may_never_exceed_what_the_table_granted(monkeypatch):
     """"IN NO CASE may the Axis Player assign more planes of any one type FROM MAP BASES than are
     assigned from the Availability Tables." A greedy policy is clamped at the boundary, exactly as
-    every other order in this engine is re-validated rather than trusted."""
+    every other order in this engine is re-validated rather than trusted. (Same fixture and same
+    reason as the test above: the cap is a cap on a granted force, so there must be one.)"""
+    _with_a_sicilian_contingent(monkeypatch)
     r = _campaign_run(_SendTooMany())
     sent = [e for e in r.events if e.kind == EventKind.MALTA_RAID_REINFORCED]
     ordered = [e for e in r.events if e.kind == EventKind.MALTA_RAID_ORDERED][0]

@@ -1437,30 +1437,79 @@ the Commonwealth one was**, folding the header into the C.R. 32 row. `game/roste
 role ← the printed Mission Capability cells, Air Points ← Σ available × charted rating, and the
 points↔planes conversion is now the *establishment's* own exact ratio instead of one hand-picked
 type's. `scenario._campaign_air` seeds both wings from it (Axis 405/2147/66, Commonwealth 157/382/32
-fighters/strike/recon) and `air_unfit` from **[59.32]'s Refitted column** — three quarters of both air
-forces start in the hangars, which 38.31's blanket "all planes are considered refitted" had been
-overriding.
+fighters/strike/recon) and `air_unfit` from **[59.32]'s Refitted column**, which 38.31's blanket "all
+planes are considered refitted" had been overriding — and the two columns are **lopsided**: the Axis
+opens with 267 of 385 unserviceable (69%), the Commonwealth with 38 of 143 (27%).
 
 **MEASURED** (`scripts/measure_air.py`). Axis 385 aeroplanes (135 fighters / 184 bombers / 66 recon),
 Commonwealth 143 (55 / 56 / 32) — **and the same at Game-Turn 35, which is the finding**: [34.86] and
 [34.87], the two monthly Airplane Reinforcement Schedules, are untranscribed, so nothing enters this
-war after the set-up and nothing outside Malta leaves it. Rule 43 bases 18 of the 184 bombers in
-Italy/Sicily and none in Crete, at every Game-Turn, for the reasons above. **Malta raids delivering
-bomb points, over the full 111-turn campaign: 27 of 111 → 92 / 91 / 82 of 111 on seeds 4 / 1941 / 7**
-(median 151 Bomb Points a raid, max 968; 19–22 Maltese capacity levels knocked down and 24–26
-aeroplanes destroyed on the ground, where the old proxy could barely scratch the island). The raids
-that still deliver nothing are [44.42]'s own `na` cells and the Game-Turns Malta is already flat.
+war after the set-up and nothing outside Malta leaves it. **Malta raids delivering bomb points, over
+the full 111-turn campaign: 27 of 111 → 92 / 91 / 82 of 111 on seeds 4 / 1941 / 7** (18 of the 184
+bombers in Italy/Sicily and none in Crete; median 151 Bomb Points a raid, max 968; 19–22 Maltese
+capacity levels knocked down and 24–26 aeroplanes destroyed on the ground). **⚠ READ THAT NUMBER
+WITH THE REPAIR PASS BELOW: it is what the 10% transplant produced, and the transplant is
+withdrawn** — as shipped the posture is unseeded and the count is 0 / 0 / 0.
 
 **🔴 ONE NEW OWNER RULING, and it is the interesting one.** **[60.32] prints "no planes start the game
 in Italy/Sicily", and [44.21]/[44.25]/[44.27] make an Italy/Sicily base the precondition for any Axis
 raid on Malta** — while [64.52] and [44.41]'s campaign row give him unlimited Level-I raids. The
 bridge the book intends is 43.1's free basing choice plus a rule-37 transfer, and this engine has an
-order channel for neither. **Seeding zero is not neutral — it silently repeals rule 44** — so
-`basing.discretionary_pct` takes **[63.46]'s printed 10% ceiling**, the only number the book prints
-for that posture, flagged as a transplant from the El Alamein group. Also: **[60.32]'s ninth row reads
+order channel for neither. *(The block resolved this by transplanting **[63.46]'s printed 10%
+ceiling** into `basing.discretionary_pct`, on the argument that seeding zero silently repeals rule
+44. **THE REPAIR PASS BELOW WITHDREW IT** — the ruling is the owner's and it is now unseeded.)*
+Also: **[60.32]'s ninth row reads
 "2S01"** and no chart prints it (the Cant Z. 501 Gabbiano is the only candidate) — transcribed, **left
 unseeded**, nine aeroplanes; and **[4.44A] prints a DASH in the Gladiator Mk. II's Fuel column**, where
 the key gives that glyph no meaning — transcribed as null.
+
+**THE [59.3] REPAIR PASS — 2026-07-22, three adversarial verifiers.** What it found, and what the
+paragraphs above must now be read through:
+
+* **🔴 THE 10% WAS WITHDRAWN AND THE POSTURE IS UNSEEDED.** `basing.italy_sicily_planes` is the only
+  force rule 44 sizes a raid from, so [63.46]'s transplanted integer *was* the whole Malta result
+  reported above — a measurement of an October-1942 El Alamein rule presented as a measurement of
+  [60.32]. Worse, [63.46]'s **very next sentence** reads "Strategic air attacks against Malta may be
+  made only in the Long Retreat scenario": the ceiling is printed for a posture in which Malta raiding
+  is *barred*. The escalation protocol is to implement what is safe and leave the disputed part
+  unseeded, so the data key is now `null`, `discretionary_pct` answers 0, and **the campaign Axis
+  raids Malta with nothing while the ruling is open** — which is attributable to the unbuilt rule-37
+  transfer channel and not to a repealed rule 44. [63.46]'s 10 is transcribed beside the null under a
+  name nothing reads. **MEASURED BOTH WAYS** (`scripts/measure_air.py --discretionary-pct 10`, added
+  so they are never again reported apart), Malta raids delivering bomb points over 111 Game-Turns on
+  seeds 4 / 1941 / 7: **unseeded 0 / 0 / 0** (0 of 184 bombers in Sicily); **at 10% → 92 / 91 / 82**
+  (18 in Sicily, median 151 Bomb Points, max 968). The second line reproduces the block's headline
+  exactly — which is the demonstration that the headline *was* the transplant. (Also corrected: the
+  ruling cited [63.46] to PDF p.88; it is **p.87** — p.88 is [63.92]/[64.0].)
+* **43.12 WAS MISENCODED AS TYPED.** The sentence is *"75% of ALL GERMAN BOMBERS"* — untyped but
+  **nationed** — and the code applied it to `constrained_planes`, the three named heavies, dropping
+  every other German bomber ([4.44b] also prints the Ju. 87B, Ju. 87D and Ju. 52/3m) into the
+  discretionary term. **Rule 43 has two subjects and changes between them at Game-Turn 35**, which is
+  now `basing.required_planes`: every German bomber until 35, the three named types from it. Inert
+  today (no German aeroplane in [60.32]) but it falsified the block's central claim that rule 43
+  "will bind on its own the day that schedule lands". **The guard test enshrined it** — the fixture
+  seeded He. 111s, a type that is both German *and* named, so it passed through the *type* match and
+  could never fail; it is parameterised now and the nationality is exercised on a Ju. 87B.
+* **[59.36] / [60.32] "no maintenance in the first OpStage" BUILT.** `engine._air_maintenance`
+  claimed to honour it "for free — nothing has flown yet"; seeding `air_unfit` from the Refitted
+  column is exactly what stopped that being true. One gate, one line.
+* **Prose corrections, no behaviour:** `air.points_per_plane` was dead code with zero callers *and*
+  floored where every live conversion is exact — deleted; `refit_percent` cited a symbol this block
+  had deleted; `data/logistics_rates.json` cited a module `game.establishment` that ships as
+  `game/roster.py`; the `_role_assignment` argument gave the Ghibli's and Ro 37bis's Bomb Points in
+  the wrong order and put the Sunderland in the strike pool it is not in; `data/malta_44.json` still
+  described the deleted Ju. 87B proxy and pointed at an owner ruling this block dissolved; and
+  `scenario._campaign_air_unfit` said "both air forces open the war with three quarters of their
+  strength in the hangars" when the columns are **lopsided** — Axis 267 of 385 unfit (69%),
+  Commonwealth 38 of 143 (27%, i.e. three quarters *ready*).
+* **AND THE DESERT HALF MOVED THE OTHER WAY, WHICH THE BLOCK DID NOT REPORT.** A/B of
+  `campaign(seed=4, max_turns=20)`: `AIR_MISSION_GROUNDED` **0 → 48** (all Commonwealth) and the
+  Commonwealth's Tobruk-harbour strikes **13 → 4**. Scaling the establishment from ~4 aeroplanes to
+  real musters bills the [60.34]/[60.44] air larder — 850 Axis and **250 Commonwealth** Fuel Points,
+  **with no faucet** (Gate-5 root cause #1, still unfixed) — at `fuel_per_plane × planes`, so 38.21/
+  38.24 now ground land-support missions wholesale. That is the rule doing what it says to an air
+  force nobody resupplies, and **36.3 / 35.15 / the [60.33]/[60.43] lorry rows are the fix**; but it
+  is a real regression in the desert air war and it belongs beside the Malta number, not under it.
 
 **THE DEFERRED AIR DEBT IS WRITTEN DOWN IN THE CODE**, at the top of `game/basing.py` (the last module
 of Phase 5, where the next person will look). Restated here: 40, 45, 46, pilots, maneuver, night,

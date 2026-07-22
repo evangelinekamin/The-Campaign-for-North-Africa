@@ -41,7 +41,23 @@ port_bomb/raf), so there is no squadron for the Mediterranean basing to take a s
 
 Each reproduced twice, byte-for-byte.
 
-NOT RE-BASELINED BY THE 5.5 REPAIR PASS (same day), AND THAT WAS CHECKED RATHER THAN ASSUMED. The
+NOT RE-BASELINED BY THE [34.6]/[59.3] INITIAL AIR STRENGTHS (2026-07-22) OR BY ITS REPAIR PASS THE
+SAME DAY, AND THAT WAS CHECKED RATHER THAN ASSUMED -- TWICE, for two different sets of changes.
+
+The establishment block replaced game.air's representative-aircraft proxy with [60.32]/[60.42]'s real
+musters and seeded GameState.air_unfit from [59.32]'s Refitted column; the repair pass then made
+43.12 bind on a NATIONALITY rather than on three named types (basing.german_bombers), withdrew the
+transplanted [63.46] Italy/Sicily posture to unseeded (basing.discretionary_pct answers 0), and BUILT
+[59.36]/[60.32]'s "no maintenance in the first OpStage" as a gate at the top of engine.
+_air_maintenance. NONE of it reaches these two logs, and the reason is one fact: NEITHER BENCHMARK
+FIELDS AN AirWing (`scenario.rommels_arrival` has no air at all; `siege_of_tobruk` takes its wings
+only under port_bomb/raf). With `state.air` empty, _air_maintenance returns before its new gate,
+rule 43 has no squadron to take a share of, and no roster conversion is ever asked for. The CAMPAIGN
+log does move -- that is the point of the block -- and the campaign is not signature-pinned (see
+CAMPAIGN_SEED below, which pins a SEED and a set of narrative assertions, not a hash).
+
+NOT RE-BASELINED BY THE 5.5 REPAIR PASS (2026-07-21), AND THAT WAS ALSO CHECKED RATHER THAN ASSUMED.
+The
 repair made rule 43 deduct from Africa exactly what it bases in the Mediterranean (game.basing --
 before it, the same bombers were counted in Sicily for the Malta raid AND in Africa for Land
 Support), moved the basing cut ahead of the air-superiority scale, and reordered the Convoy Planning

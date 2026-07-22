@@ -1837,10 +1837,20 @@ def _air_maintenance(r: _Run) -> None:
     IV.F.7); this fires at the TOP of the Operations Stage instead, readying for the missions about
     to be flown. It is the same one attempt per squadron per stage, one beat earlier -- the identical
     displacement, for the identical reason, that _air_fuel already documents for the refuelling half:
-    there is no per-plane readiness ledger to carry between the two halves of a stage. It also honours
-    59.36 ("maintenance may not be performed on planes during the first OpStage of a Scenario") for
-    free: on the first stage nothing has flown, 38.31 says every plane is already refitted, and a
-    squadron with nothing undergoing refit attempts nothing and spends no Stores.
+    there is no per-plane readiness ledger to carry between the two halves of a stage.
+
+    **[59.36] AND [60.32]: NO MAINTENANCE IN THE FIRST OPERATIONS STAGE, AND IT IS NOW A GATE
+    RATHER THAN AN ACCIDENT.** "Maintenance may not be performed on planes during the first OpStage
+    of a Scenario" (59.36); [60.32] prints the Axis half of the same window under its own muster,
+    "The Italian Player may not attempt to refit planes until Game-Turn 1, OpStage 2". This
+    docstring used to claim the rule was honoured FOR FREE -- "on the first stage nothing has flown,
+    38.31 says every plane is already refitted, so nothing is undergoing refit" -- and that stopped
+    being true the moment the [59.32] Refitted column was transcribed and seeded (game.scenario.
+    _campaign_air_unfit): the campaign now OPENS with 267 of the Axis's 385 aeroplanes and 38 of the
+    Commonwealth's 143 in the hangars, so without this gate both sides would spend Stores and roll
+    the [38.37] table in the very stage two printed sentences forbid it in. Written as one line
+    because it is one line, and stated because a rule that was free and is not any more is exactly
+    the kind of thing a seeding change breaks silently.
 
     NOT gated on weather: 29.43/29.52 ground FLIGHT into or out of a storm, and this is work done on
     the ground. 38.37's own sandstorm clause -- "twenty percent of all refitted planes in a hex on
@@ -1876,6 +1886,8 @@ def _air_maintenance(r: _Run) -> None:
     Italian +2 where a German Staffel would take +1 under either reading of the rule. Two owner
     rulings, both written out at game.air.refit_drm and in the data file."""
     if not r.state.air:
+        return
+    if r.state.turn == 1 and r.state.stage == 1:         # [59.36] / [60.32], see the docstring
         return
     # gather first, emit second: a stage in which no squadron has anything to refit must emit
     # nothing at all, not even a phase marker (so every scenario that never flies stays identical)

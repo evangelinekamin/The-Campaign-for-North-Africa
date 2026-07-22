@@ -1292,9 +1292,18 @@ def _campaign_air_unfit() -> dict:
 
     This OVERRIDES 38.31's blanket "at the start of a Scenario, all planes are considered
     refitted": the scenario's own muster is the more specific rule, and it is the same reading
-    data/malta_44.json already applies to [60.46]'s "12 Swordfish (1 SGSU) (9 ready)". So both air
-    forces open the war with three quarters of their strength in the hangars, and the [38.37] Refit
-    Table -- not a seeding decision -- governs how fast it comes out.
+    data/malta_44.json already applies to [60.46]'s "12 Swordfish (1 SGSU) (9 ready)".
+
+    AND THE TWO SIDES DO NOT OPEN THE WAR IN THE SAME STATE -- the printed columns are LOPSIDED, and
+    that is the finding, not a symmetry. Measured off the shipped data: the Axis begins with 267 of
+    his 385 aeroplanes unserviceable (69%, and 137 of the 184 bombers), the Commonwealth with 38 of
+    143 (27% -- he opens with nearly three quarters of his strength READY). So the Regia
+    Aeronautica's three-to-one advantage in airframes is very much less than three to one in
+    aeroplanes that can fly this Game-Turn, and the [38.35] Italian +2 refit modifier then compounds
+    it every Operations Stage after. (Corrected 2026-07-22: this docstring read "both air forces
+    open the war with three quarters of their strength in the hangars", which is true of the Axis,
+    exactly inverted for the Commonwealth, and contradicted by its own figures three lines above.)
+    The [38.37] Refit Table -- not a seeding decision -- governs how fast either comes out.
 
     THE FIGHTER ROWS ARE SEEDED AND INERT, deliberately. engine._REFITTABLE_ROLES leaves the fighter
     arm outside the ledger (our air-superiority contest is an always-on abstraction, not an ORDERED
@@ -1658,9 +1667,10 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
                        + _campaign_tobruk_ferry_interdiction(max_turns)    # + BOTH halves of the Tobruk sea duel
                        + _campaign_tobruk_axis_interdiction(max_turns)),   #   (30/41.6): each side can fight the other's lane
         air=_campaign_air(),                                # C4: BOTH air forces at their [59.3]
-        air_unfit=_campaign_air_unfit(),                    # Initial Air Strengths, three quarters of
-                                                            # each in the hangars (59.32) -- without
-        air_missions=_campaign_air_missions(max_turns),     # them no harbour can ever be cut (41.39B)
+        air_unfit=_campaign_air_unfit(),                    # Initial Air Strengths, 69% of the Axis
+                                                            # in the hangars against 27% of the CW
+                                                            # (59.32) -- and without any air at all
+        air_missions=_campaign_air_missions(max_turns),     # no harbour can ever be cut (41.39B)
         air_facilities=tuple(facilities) + tuple(malta.seed_facilities(_MALTA_LEVELS)),
                                                             # C6/36: the squadron bases on the map, PLUS
                                                             # rule 44's island (44.12/60.46)

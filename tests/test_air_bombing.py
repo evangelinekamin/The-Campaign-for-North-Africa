@@ -137,10 +137,11 @@ def _state(*, missions=(), supplies=(), trucks=(), forts=None, strike=200, city=
     THE WHOLE WING FLIES, AND THAT CHANGED WITH THE [59.3] TRANSCRIPTION (2026-07-22). The
     establishment used to be declared four times the force that flew, because rule 43 was applied to
     the whole abstract Axis bomber pool; 43.11/43.12/43.13 speak about GERMAN bombers and [60.32]
-    musters none, so what rule 43 REQUIRES to be based off the desert is nothing. What is still
-    based away is 43.1's DISCRETIONARY basing -- the flagged [63.46] 10% at basing.discretionary_pct
-    -- which takes ONE of these 18 aeroplanes ([60.32]'s bombers, game.roster) and leaves 198 Bomb
-    Points over the target: the same [41.5] 161-200 column these rows have always been read on.
+    musters none, so what rule 43 REQUIRES to be based off the desert is nothing. Nor does anything
+    go to Sicily by CHOICE: 43.1's discretionary posture is an open owner ruling and is left
+    UNSEEDED (basing.discretionary_pct answers 0 -- it shipped briefly at [63.46]'s transplanted
+    10%, which took one of these 18 aeroplanes and left 198). So all 200 Bomb Points of [60.32]'s
+    bombers are over the target: the same [41.5] 161-200 column these rows have always been read on.
 
     `city` stamps the target hex a MAJOR CITY, because 41.31's and 41.32's bombing shelters are
     written about cities and not about fortification levels (engine._city_wall)."""
@@ -251,7 +252,7 @@ def test_41_35_a_dump_is_hidden_so_the_sortie_is_flown_blind_and_never_hits_your
     r = _Run(st)
     billed: list[int] = []
     _air_dump_bomb(r, Side.AXIS, (1, 0), lambda pts: billed.append(pts) or pts)
-    assert billed == [198]                               # flown blind over a hex holding nothing his
+    assert billed == [200]                               # flown blind over a hex holding nothing his
     assert not [e for e in r.events if e.kind == EventKind.AIR_DUMP_BOMBED]
     resolved = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED][0]
     assert resolved.payload["dumps"] == [] and resolved.rng_draws == ()

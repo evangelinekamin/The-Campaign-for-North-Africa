@@ -373,15 +373,15 @@ def mission_capable(side: Side, role: str) -> bool:
     return roster.mission_capable(side, role)
 
 
-def points_per_plane(side: Side, role: str) -> int:
-    """The Air Points ONE aeroplane of `side`'s `role` establishment carries, on average: 34.13
-    TacAir for a fighter, 34.14 Bombload for a strike, and 1 for recon (flagged -- no rating on the
-    chart is denominated in "recon points", so one Air Point is one aeroplane).
-
-    A REPORTING read, and the only rounded one. Every conversion the engine actually makes goes
-    through planes_flying / points_of_planes, which do the arithmetic in exact integers over the
-    whole establishment and never through this floor."""
-    return roster.points(side, role) // roster.planes(side, role)
+# DELETED 2026-07-22: `points_per_plane(side, role)`. It was the last survivor of the
+# representative-aircraft proxy -- one averaged, FLOORED rating per side and role -- and when the
+# [34.6]/[59.3] establishments landed, all five of its call sites (refuel, ready_points,
+# basing.available_points, engine._malta_africa, malta.raid) were converted to the exact-integer
+# `points_of_planes`. It was left behind with no caller anywhere in game/, tests/ or scripts/ and a
+# docstring calling it "a REPORTING read", which is a description of a function nothing reports
+# through. The hazard was not the dead line but the NAME: it floors where every live conversion in
+# this module is exact over the whole establishment (34.13/34.14), so the next caller reaching for
+# the obvious-looking name would have got a silently different answer. Use points_of_planes.
 
 
 def fuel_per_plane(side: Side, role: str) -> int:
@@ -609,8 +609,10 @@ def refit_percent(roll: int) -> int:
 
     One d6 plus the chart's own modifiers spans exactly the printed 1..9 (6 + 2 Italian + 1 foreign
     = 9), so no roll can fall outside the table. A roll that somehow did is a ValueError, NOT a
-    clamp: this file's house rule twenty lines from its top is that an unknown key fails loud rather
-    than silently answering (see _POINTS_PER_PLANE_RATING, read with [] and never .get()). The
+    clamp: the house rule of the air-points bridge is that an unknown key fails loud rather than
+    silently answering (game.roster.RATING_FOR_ROLE, read with [] and never .get() -- this docstring
+    cited that table under its old name here, `_POINTS_PER_PLANE_RATING`, which moved to
+    game/roster.py with the [59.3] establishments and no longer exists in this module). The
     clamp this replaces would have answered 33% to a roll of 10 the day 35.17/38.33's +1
     foreign-squadron modifier lands and pushes the span past the printed table."""
     for col in REFIT_TABLE["columns"]:

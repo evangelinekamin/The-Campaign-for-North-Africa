@@ -332,10 +332,15 @@ def italy_sicily_planes(state: GameState, turn: int) -> int:
     whole of why a Malta raid can now deliver Bomb Points at all. The previous note here said "the
     AXIS's half is live at one one-hundredth" of the island's; that is fixed.
 
-    ⚠ WHAT IS STILL A JUDGEMENT IS THE BASING FRACTION, not the force. [60.32] prints "no planes
-    start the game in Italy/Sicily" while rule 44 requires some to be there, and the number that
-    resolves it is the flagged [63.46] 10% at basing.discretionary_pct -- an OWNER RULING, written
-    out in full at `_owner_ruling_needed_60_32_vs_44_21` in data/malta_44.json."""
+    ⚠⚠ AND THE BASING FRACTION IS AN OPEN OWNER RULING, LEFT UNSEEDED -- WHICH IS WHY THIS RETURNS
+    ZERO IN THE CAMPAIGN AND THE AXIS RAIDS MALTA WITH NOTHING. [60.32] prints "no planes start the
+    game in Italy/Sicily" while [44.21]/[44.25]/[44.27] make an Italy/Sicily base the precondition
+    for any raid at all; the bridge the book intends is 43.1's free basing choice plus a rule-37
+    transfer, and this engine has an order channel for neither. basing.discretionary_pct therefore
+    answers 0 while the ruling is open (it shipped once at [63.46]'s transplanted 10%, which made
+    the whole Malta result a measurement of an October-1942 scenario rule). The force is the book's;
+    what is missing is the transfer mission. Written out in full at
+    `_owner_ruling_needed_60_32_vs_44_21` in data/malta_44.json."""
     return basing.italy_sicily_planes(state, turn)
 
 
