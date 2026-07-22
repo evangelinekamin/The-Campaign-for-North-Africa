@@ -105,9 +105,14 @@ def test_interdict_reduces_when_ordered():
     conv = Convoy("c1", Side.ALLIED, 1, "SEA-TOBRUK", "D", {"AMMO": 1000})
     order = InterdictionOrder("SEA-TOBRUK", 1, 500)         # top column, 20..50%
     s = _mini(SupplyUnit("D", Side.ALLIED, (0, 0), ammo=0, fuel=0), [conv], [order])
-    cargo, o, pct, tons, dice = _interdict(conv, s, random.Random(3))
+    cargo, o, pct, tons, dice, points = _interdict(conv, s, random.Random(3))
     assert o is order and pct >= 20 and cargo["AMMO"] < 1000 and tons > 0
     assert len(dice) == 2 and all(1 <= d <= 6 for d in dice)   # the 41.66 CRT dice ride out
+    # the RESOLVED strength rides out too, so the CONVOY_INTERDICTED marker can certify the
+    # number that actually produced the result. A static order is its own printed Bomb Points;
+    # a rule-44 order carries 0 in the field and gets its weight from the island (malta.
+    # interdiction_points), and the log used to record that 0 beside a convoy it had just sunk.
+    assert points == 500
 
 
 # --- _naval_convoys emits CONVOY_INTERDICTED, conserves ----------------------

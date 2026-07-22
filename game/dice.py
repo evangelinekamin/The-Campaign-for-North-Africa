@@ -54,7 +54,8 @@ SUBSYSTEMS: tuple[str, ...] = (
     "interdiction",       # [41.66] convoy bombing at sea -- THE conditional drawer (Malta)
     "air_bombard",        # [41.5] land air bombardment (41.39B harbour bombing rolls the Ports row)
     "air_refit",          # [38.37] the Aircraft Refit Table -- one die per squadron per OpStage
-    "malta",              # [44.42]/[41.5]/[44.5] rule 44: the Axis Malta raid and the CW's repair
+    "malta",              # [44.42]/[41.5]/[44.5]/[38.37] rule 44: the Axis Malta raid, the CW's
+                          #   repair, and 44.16's refit of the island's own strike aircraft
                           #   -- its own stream because BOTH halves draw conditionally (a raid is
                           #   ordered or not; a facility below its ceiling is rolled for or not)
     "breakdown",          # [21.38] the vehicle Breakdown Table

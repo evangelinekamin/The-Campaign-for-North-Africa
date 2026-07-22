@@ -414,7 +414,16 @@ def apply(state: GameState, event: Event) -> GameState:
     if k == EventKind.MALTA_PLANES_LOST:
         # 41.36: "for every level destroyed, remove 10% of the planes on the ground". The generator
         # has already baked the survivors into `planes`, so apply stays pure and needs no chart.
-        return state.with_malta_planes(p["planes"])
+        # `unfit` rides with it because the bombs fall on the unserviceable machines too: a
+        # readiness ledger may never stand for more aeroplanes than the island still has.
+        return state.with_malta_planes(p["planes"]).with_malta_unfit(p["unfit"])
+
+    if k in (EventKind.MALTA_STRIKE_UNFIT, EventKind.MALTA_REFIT_RESOLVED):
+        # 38.31 / 38.34 via 44.16: the two directions of ONE scalar -- how many of Malta's
+        # anti-shipping aircraft stand unrefitted. Flying the convoy lane spends readiness, a
+        # [38.37] Refit Table die returns a percentage of it, and the generator has baked the
+        # resulting count into `unfit` so apply stays pure. The exact twin of the air_unfit pair.
+        return state.with_malta_unfit(p["unfit"])
 
     if k == EventKind.SGSU_UNSUPPLIED:
         # 35.14: the SGSU could not draw its own upkeep this Operations Stage, so it "may not repair

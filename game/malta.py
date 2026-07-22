@@ -16,9 +16,12 @@ plan). Rule 44 is the loop that constant was crudely approximating, and both hal
     Maltese air-facility LEVELS (44.12/44.13, six printed facilities, 28 levels maximum)
         |  18 planes per level (44.14)
         v
-    the strike planes that reach the Axis convoy lane -- 60.46's twelve Swordfish, each carrying
-    a Torpedo Capacity of 8 ([4.44A]; it may not carry bombs at all)
-        |  the [41.5] table's TORPEDO POINTS index
+    the strike planes that reach the Axis convoy lane -- 60.46's twelve Swordfish (nine of them
+    READY at the campaign's start, the rest refit on the [38.37] table like every other plane,
+    44.16), each carrying a Torpedo Capacity of 8 ([4.44A]; it may not carry bombs at all)
+        |  the [41.5] table's BOMB POINTS index -- the chart's footnote (a) sends a torpedo-armed
+        |  plane attacking an Axis Naval Convoy to that row and away from the Torpedo row, 41.74
+        |  counts the torpedo "as normal bombs", and 41.73 adds 25% for a torpedo-armed strike
         v
     2d6 -> the percentage of the Axis convoy's cargo destroyed (41.66/41.67)
 
@@ -32,10 +35,15 @@ plan). Rule 44 is the loop that constant was crudely approximating, and both hal
         |  41.36: "the result is the number of capacity levels that facility is reduced. In
         |  addition, FOR EVERY LEVEL DESTROYED, REMOVE 10% OF THE PLANES ON THE GROUND"
         v
-    fewer levels AND fewer planes -> fewer torpedo points -> more Axis supply lands
+    fewer levels AND fewer planes -> fewer Bomb Points -> more Axis supply lands
         |
         v
     the Commonwealth repairs on the [44.5] table, one roll per facility per Game-Turn (44.13)
+
+THE ONE THING THE BOOK LEAVES GENUINELY UNSETTLED, and it is the number the whole loop turns on:
+what a torpedo is WORTH in Bomb Points when the plane carrying it may not carry bombs at all. The
+conflict is written out in full at bomb_points() and in data/malta_44.json, and it is flagged for
+an owner ruling rather than decided quietly.
 
 THE THREE THINGS THIS MODULE DOES NOT MODEL, each named at its own function and each a data gap
 rather than a rule we disagree with:
@@ -156,16 +164,64 @@ def _strike_fraction() -> float:
     return strike / sum(r["number"] for r in setup["planes"])
 
 
-def strike_planes(state: GameState) -> int:
-    """[44.14]/[60.46] How many of Malta's surviving aeroplanes fly the convoy lane this Game-Turn.
+def strike_establishment(state: GameState) -> int:
+    """[60.46] The anti-shipping aircraft still standing on the island -- the strike share of what
+    has survived the Axis raids, whether or not it is serviceable."""
+    return int(state.malta_planes * _strike_fraction())
 
-    Two limits, and the rule each comes from:
+
+def initial_unfit() -> int:
+    """[60.46]/[44.16] The Swordfish that are UNSERVICEABLE at the campaign's start: the printed
+    roster count less the printed READY count, "12 Swordfish (1 SGSU) (9 ready)" -- three of them.
+
+    44.16 is why the ready column is a magnitude rather than colour: "Planes based on Malta do not
+    need fuel or ammo; they are automatically refueled and rearmed each Stage. HOWEVER, THEY MUST BE
+    REFIT LIKE ALL OTHER PLANES, USING THE SAME METHOD AS ALL OTHER PLANES." The same method is the
+    [38.37] Refit Table (game.air), and until this pass Malta was exempt from it -- the island put
+    its whole surviving strike force over the lane every Game-Turn for 111 turns, which is exactly
+    the "one wing flies the same points forever" defect block 5.3 exists to kill."""
+    row = next(r for r in logistics_data.malta_setup_60_46()["planes"] if r["role"] == "strike")
+    return row["number"] - row["ready"]
+
+
+def ready_strike(state: GameState) -> int:
+    """[38.31] The anti-shipping aircraft that MAY fly: the establishment less the unserviceable.
+    "In order to fly any mission other than a transfer, a plane must be refitted."
+
+    state.malta_unfit can never exceed the establishment -- 41.36's bombs fall on the unserviceable
+    machines too, so MALTA_PLANES_LOST carries the ledger down with the aeroplanes -- and
+    invariants._check_malta_unfit fails loud if it ever does, rather than a max() here quietly
+    papering over a rule that had come unstuck."""
+    return strike_establishment(state) - state.malta_unfit
+
+
+def refitted(undergoing: int, die: int) -> int:
+    """[38.34]/[38.37] How many of `undergoing` unserviceable Swordfish one die refits, rounding up.
+
+    THE DIE IS UNMODIFIED, and that is 44.14 rather than a favour: [38.35]'s serviceability
+    modifiers are the refitting SGSU's (+2 Italian, +1 German, none Commonwealth) and "the
+    Commonwealth Player does not need -- nor does he use -- SGSU's on Malta". So the island rolls
+    the bare Commonwealth row of the same table every other squadron reads.
+
+    ⚠ FLAGGED: [38.36]'s Stores Point per refit attempt is NOT charged here. It is charged for
+    every other squadron in the engine (engine._refit_stores_dump), but it attaches to the SGSU
+    attempting the refit -- the counter 44.14 removes from this island -- and Malta has no supply
+    dump on the map at all: 44.16 exempts its planes from fuel and ammunition and no rule in 44
+    puts Stores on the island. Charging one would mean inventing a Maltese dump."""
+    return air.refitted_planes(undergoing, die)
+
+
+def strike_planes(state: GameState) -> int:
+    """[44.14]/[60.46]/[38.31] How many of Malta's aeroplanes fly the convoy lane this Game-Turn.
+
+    Three limits, and the rule each comes from:
       * 44.14 -- "each level of air facility can handle up to 18 planes of any type", so the island
         can operate at most 18 x its current total Capacity Level. AN ISLAND AT ZERO CAPACITY FLIES
         NOTHING, which is the Axis's whole objective and the thing the invented calendar used to
         hand him free for four months of 1942.
       * 60.46 -- and it cannot fly more anti-shipping aircraft than it has. The strike share of the
         surviving establishment, from the printed roster.
+      * 38.31 via 44.16 -- and of those, only the ones that have been REFIT.
 
     The capacity is spent on the strike aircraft FIRST (a Commonwealth player's free choice, and
     the obvious one -- 44.0's Malta exists to hinder the convoys). At the campaign's five levels
@@ -174,21 +230,55 @@ def strike_planes(state: GameState) -> int:
     if not in_play(state):
         return 0
     operable = logistics_data.malta_planes_per_level_44_14() * capacity(state)
-    return min(int(state.malta_planes * _strike_fraction()), operable)
+    return min(ready_strike(state), operable)
 
 
-def torpedo_points(state: GameState) -> int:
-    """[41.66]/[4.44A] The Torpedo Points Malta puts over the Axis convoy lane this Game-Turn: its
-    flying strike aircraft times the Torpedo Capacity printed on their row.
+def bomb_points(state: GameState) -> int:
+    """[41.66]/[41.73]/[41.74] The BOMB POINTS Malta puts over the Axis convoy lane this Game-Turn.
 
-    THE WEAPON IS NOT A BOMB AND THE COLUMN IS NOT THE BOMB COLUMN. The Swordfish Mk. I's Bombload
-    Capacity on [4.44A] is "-" -- "may not carry bombs" -- against a Torpedo Capacity of 8, so
-    Malta's attack on the convoy reads the [41.5] table through its TORPEDO POINTS index (a second
-    set of column boundaries over the same eleven result columns; see the data file). 41.17 permits
-    it: "torpedoes may be used only against ships and ports."
-    """
-    setup = logistics_data.malta_setup_60_46()["strike_weapon"]
-    return strike_planes(state) * setup["points_per_plane"]
+    THE COLUMN IS THE BOMB POINTS COLUMN, AND THE CHART ITSELF SAYS SO. Footnote (a) of the [41.5]
+    table -- the superscript on its "Torpedo Points" header row (PDF p.107), spelled out in the Key
+    on the facing page (PDF p.108) and read there with eyes -- is verbatim: "Use only when attacking
+    ships of the Commonwealth Fleet. Attacks consisting of Bomb and Torpedo Points are performed as
+    two attacks. ATTACKS BY PLANES ARMED WITH TORPEDOS AGAINST PORTS OR AXIS NAVAL CONVOYS ARE
+    CARRIED OUT USING THE BOMB POINTS ROW (see Case 41.7)." Commonwealth Swordfish against an Axis
+    Naval Convoy is precisely the case the footnote excludes from the Torpedo scale, and 41.72
+    confirms the scope from the other side ("this refers to AXIS PLANE VS. COMMONWEALTH FLEET").
+
+    Two magnitudes then enter that column:
+      * 41.74 -- "Torpedoes may be used against port facilities, but AS SUCH COUNT AS NORMAL BOMBS",
+        which is the only conversion the book prints: the Torpedo Capacity of 8 on the Swordfish's
+        [4.44A] row IS its Bomb Points for this attack.
+      * 41.73 -- "When Commonwealth planes fly against Axis convoys and AT LEAST 50% OF THE PLANES
+        ARE CARRYING TORPEDOES, in determining the level (Case 41.66), increase the bombing tonnage
+        by 25%, ROUNDING UPWARD." Malta's strike is 100% torpedo-armed, so the modifier is always
+        live; the Key reprints it under this table's own Axis-Naval-Convoys heading.
+
+    ⚠ OWNER RULING NEEDED, WRITTEN OUT IN FULL AT initial_setup_60_46.strike_weapon.
+    _owner_ruling_needed IN data/malta_44.json, AND NOT DECIDED HERE. Read 41.66 strictly and a
+    plane whose Bombload Capacity is "-" totals ZERO Bomb Points; 0 x 1.25 = 0 falls below the
+    table's [1..20] floor, and Malta's only 1940 anti-shipping aircraft cannot scratch a convoy for
+    the whole war -- against 41.71 ("torpedoes... are effective against ships") and against 44.0's
+    entire premise. We apply 41.74's conversion because it is the only reading under which the
+    chart's own footnote ("are CARRIED OUT using the Bomb Points row") and 41.73's modifier have
+    anything to act on. It is a judgement call on two printed values that disagree, and it is the
+    number this whole rule turns on."""
+    weapon = logistics_data.malta_setup_60_46()["strike_weapon"]
+    points = strike_planes(state) * weapon["points_per_plane"]     # 41.74: the torpedo as bombs
+    bonus = 100 + weapon["torpedo_increase_pct_41_73"]             # 41.73: +25%, rounding UP
+    return -(-points * bonus // 100)
+
+
+def interdiction_points(state: GameState, order) -> int:
+    """The [41.5] Bomb-Point column an InterdictionOrder is resolved on -- the ONE place the
+    engine, the naval staff seat and the event log all read a convoy attack's strength from.
+
+    A plain scheduled order carries its own Bomb Points. A MALTA-sourced one (rule 44) has none to
+    carry, because the strength of the Maltese effort is a LIVE fact about the island: its current
+    Capacity Levels, 18 planes per level (44.14), the strike aircraft that survive and have been
+    refit, and the torpedoes they carry counted as bombs (41.74) with 41.73's 25%. This one branch
+    is the whole difference between a Malta that is a rule and the calendar it replaced."""
+    return bomb_points(state) if order.source == "malta" else order.bomb_points
 
 
 # --- [44.2] / [44.4] THE AXIS RAID --------------------------------------------------------------
@@ -298,7 +388,8 @@ def planes_lost(state: GameState, levels: int) -> int:
     our Malta has no plane-to-field assignment to take a share of (34.72's Squadron Composition
     Sheet again). That is the one place this reading is more generous to the Axis than the book,
     and it is also the only channel by which Malta's air force can be permanently reduced."""
-    return state.malta_planes * 10 * levels // 100
+    pct = logistics_data.malta_planes_lost_pct_41_36()      # 41.36's 10%, from the data file
+    return state.malta_planes * pct * levels // 100
 
 
 def repair_levels(die: int) -> int:
@@ -346,8 +437,3 @@ def repairable(state: GameState) -> tuple[AirFacility, ...]:
     return tuple(f for f in facilities(state) if f.level < f.max_level)
 
 
-def convoy_column_points(state: GameState) -> tuple[int, str]:
-    """What Malta sends against this Game-Turn's Axis convoy, as (points, weapon) -- the pair
-    game.engine._interdict reads its [41.5] column boundaries with. Kept here rather than at the
-    seam so that the whole of rule 44 is in one file."""
-    return torpedo_points(state), logistics_data.malta_setup_60_46()["strike_weapon"]["weapon"]

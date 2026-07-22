@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from itertools import chain
 
-from . import adjudication, air, stacking, supply
+from . import adjudication, air, malta, stacking, supply
 from .events import Event, EventKind, Side
 from .state import GameState
 
@@ -119,6 +119,17 @@ def _check_squadron_unfit(state: GameState, squadron: str, unfit: int) -> None:
     if not 0 <= unfit <= total:
         raise InvariantViolation(
             f"squadron {squadron} unfit={unfit} out of [0, planes={total}]")
+
+
+def _check_malta_unfit(state: GameState) -> None:
+    # [38.31] via [44.16] Malta's unrefitted aeroplanes are a count of REAL machines out of the
+    # island's own anti-shipping arm: never negative, never more than are standing on the island.
+    # The exact twin of _check_squadron_unfit, for the one air force with no squadron key -- and
+    # it is what holds the ledger honest across 41.36, which kills planes the ledger stands for.
+    total = malta.strike_establishment(state)
+    if not 0 <= state.malta_unfit <= total:
+        raise InvariantViolation(
+            f"Malta unfit={state.malta_unfit} out of [0, strike planes={total}]")
 
 
 def _check_fort(coord, level: int) -> None:
@@ -222,6 +233,7 @@ def check(state: GameState) -> None:
         _check_air_facility(f)
     for squadron, unfit in state.air_unfit.items():
         _check_squadron_unfit(state, squadron, unfit)
+    _check_malta_unfit(state)
     for coord, level in state.fort_levels.items():
         _check_fort(coord, level)
     for c in adjudication.stacking_violations(state):
@@ -340,5 +352,8 @@ def check_event(pre: GameState, post: GameState, event: Event) -> None:
         _check_air_facility(post.air_facility(p["facility_id"]))
     elif kind in (EventKind.AIR_SQUADRON_UNFIT, EventKind.AIR_REFIT_RESOLVED):
         _check_squadron_unfit(post, p["squadron"], post.air_unfit.get(p["squadron"], 0))
+    elif kind in (EventKind.MALTA_STRIKE_UNFIT, EventKind.MALTA_REFIT_RESOLVED,
+                  EventKind.MALTA_PLANES_LOST):
+        _check_malta_unfit(post)
     elif kind == EventKind.FORT_REDUCED:
         _check_fort(tuple(p["hex"]), p["level"])

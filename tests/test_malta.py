@@ -15,8 +15,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import pytest
+
 import game.scenario as scenario
-from game import logistics_data, malta
+from game import air, logistics_data, malta
 from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy
 from game.engine import _convoy_loss_pct, _malta_construction, _malta_raid, _Run, run
 from game.events import EventKind, Side
@@ -74,48 +76,68 @@ def test_malta_opens_with_its_printed_establishment_of_aeroplanes():
     assert st.malta_planes == 31 == malta.initial_planes()      # 60.46: 15 + 12 + 3 + 1
 
 
-# --- the Commonwealth half: levels -> 18 planes -> torpedo points -> the [41.5] CRT --------------
+# --- the Commonwealth half: levels -> 18 planes -> BOMB points -> the [41.5] CRT ------------------
+#
+# RESTATED, NOT WEAKENED (rules of this port, 5). The four tests below used to assert that Malta's
+# strike reads the [41.5] table through its TORPEDO POINTS index, because [4.44A] gives the
+# Swordfish Mk. I a Bombload Capacity of "-". The chart forbids exactly that: footnote (a), printed
+# on the Torpedo Points header row itself (PDF p.107) and spelled out in the Key on the facing page
+# (PDF p.108, rendered at 300 dpi and read with eyes), says VERBATIM "Use only when attacking ships
+# of the Commonwealth Fleet... Attacks by planes armed with Torpedos against Ports or Axis Naval
+# Convoys are carried out using the BOMB POINTS ROW (see Case 41.7)". 41.72 scopes the torpedo line
+# to "Axis plane vs. Commonwealth Fleet" from the other side, 41.74 counts a torpedo "as normal
+# bombs", and 41.73 adds 25% when at least half the attacking planes carry torpedoes. So these now
+# assert the Bomb-Points row with 41.73's modifier -- which is a WEAKER attack than the tests used
+# to pin, and that is the correction, not a concession.
 
-def test_malta_strikes_with_torpedoes_because_the_swordfish_may_not_carry_bombs():
-    """[4.44A] Swordfish Mk. I Bomb '-/T8': Bombload Capacity "-" (may not carry bombs), Torpedo
-    Capacity 8. Twelve of them (60.46) is 96 Torpedo Points, and the [41.5] table is entered
-    through its Torpedo-Points index, not its Bomb-Points one."""
+def test_malta_enters_the_crt_on_the_bomb_points_row_with_41_73s_twenty_five_percent():
+    """[41.66]/[41.73]/[41.74] Nine READY Swordfish (60.46 prints "12 Swordfish (1 SGSU) (9 ready)")
+    at a Torpedo Capacity of 8 counted as normal bombs is 72 Bomb Points; 100% of them carry
+    torpedoes, so 41.73's +25% rounding upward makes 90."""
     st = campaign(seed=1, max_turns=4)
-    points, weapon = malta.convoy_column_points(st)
-    assert weapon == "torpedo"
-    assert malta.strike_planes(st) == 12
-    assert points == 96
+    assert malta.strike_planes(st) == 9                  # 60.46: three of the twelve start unfit
+    assert malta.bomb_points(st) == 90
+    full = replace(st, malta_unfit=0)                    # ...and once they are all refit, twelve
+    assert malta.strike_planes(full) == 12
+    assert malta.bomb_points(full) == 120                # 96 x 1.25, exactly on the column boundary
 
 
-def test_the_torpedo_index_is_a_different_column_of_the_same_table():
-    """96 points is the 81-120 TORPEDO column -- the same result cells the 161-200 BOMB column
-    reads -- so the identical dice give a harder result than 96 Bomb Points would."""
+def test_the_torpedo_index_exists_in_the_data_and_nothing_reads_it():
+    """[41.5] footnote (a) / [41.72]: the Torpedo-Points scale is transcribed against the day an
+    AXIS torpedo strike on the Commonwealth Fleet is built, and the convoy path must never enter
+    through it. The two scales are genuinely different columns of one grid -- 96 points is the
+    6th torpedo bracket and only the 4th bomb bracket -- so reading the wrong one is worth real
+    cargo, which is why this pins that the convoy resolver has no torpedo door at all."""
+    columns = logistics_data.convoy_bombing_crt_41_66()
+    assert [c["torpedo_points"] for c in columns][:4] == [[1, 5], [6, 12], [13, 24], [25, 50]]
+    assert [c["bomb_points"] for c in columns][:4] == [[1, 20], [21, 40], [41, 80], [81, 120]]
+    with pytest.raises(TypeError):                       # no `weapon` argument to switch scales
+        _convoy_loss_pct(96, 1, 1, "torpedo")
     codes = [(d1, d2) for d1 in range(1, 7) for d2 in range(1, 7)]
-    torp = sum(_convoy_loss_pct(96, d1, d2, "torpedo") for d1, d2 in codes)
-    bomb = sum(_convoy_loss_pct(96, d1, d2, "bomb") for d1, d2 in codes)
-    assert torp > bomb > 0
-    assert _convoy_loss_pct(96, 1, 1, "torpedo") == _convoy_loss_pct(200, 1, 1, "bomb")
+    # the whole magnitude of the defect: the same strike on the row the book names is milder
+    assert sum(_convoy_loss_pct(120, d1, d2) for d1, d2 in codes) \
+        < sum(_convoy_loss_pct(200, d1, d2) for d1, d2 in codes)
 
 
 def test_a_flattened_malta_sends_nothing_and_that_is_the_earned_1942_blitz():
     """[44.14] 18 planes per level: an island at zero total capacity operates no aeroplane, so it
-    puts no torpedo over the lane. The invented calendar handed the Axis exactly this for four
+    puts no bomb over the lane. The invented calendar handed the Axis exactly this for four
     months of 1942 for free; now he has to bomb it."""
     st = campaign(seed=1, max_turns=4)
     flat = replace(st, air_facilities=tuple(
         replace(f, level=0) if malta.is_malta(f) else f for f in st.air_facilities))
     assert malta.capacity(flat) == 0
     assert malta.strike_planes(flat) == 0
-    points, weapon = malta.convoy_column_points(flat)
-    assert points == 0
-    assert max(_convoy_loss_pct(points, d1, d2, weapon)
+    assert malta.bomb_points(flat) == 0
+    assert max(_convoy_loss_pct(malta.bomb_points(flat), d1, d2)
                for d1 in range(1, 7) for d2 in range(1, 7)) == 0
 
 
 def test_one_level_binds_the_44_14_capacity_below_the_strike_establishment():
-    """[44.14] one level handles 18 planes; the strike aircraft are served first, so 12 Swordfish
-    still fly at one level -- and every plane the raids have killed is one that does not."""
-    st = campaign(seed=1, max_turns=4)
+    """[44.14] one level handles 18 planes; the strike aircraft are served first, so all twelve
+    Swordfish still fly at one level -- and every plane the raids have killed is one that does
+    not. Taken with the readiness ledger cleared, because 44.16's refit is the OTHER limit."""
+    st = replace(campaign(seed=1, max_turns=4), malta_unfit=0)
     one = replace(st, air_facilities=tuple(
         replace(f, level=1 if f.id.endswith("Hal Far") else 0) if malta.is_malta(f) else f
         for f in st.air_facilities))
@@ -123,6 +145,35 @@ def test_one_level_binds_the_44_14_capacity_below_the_strike_establishment():
     assert malta.strike_planes(one) == 12
     halved = replace(one, malta_planes=15)
     assert malta.strike_planes(halved) == int(15 * 12 / 31) == 5
+
+
+# --- 44.16: Malta refits like all other planes ---------------------------------------------------
+
+def test_the_printed_ready_column_is_the_opening_readiness_ledger():
+    """[60.46]/[44.16] "12 Swordfish (1 SGSU) (9 ready)" -- three unserviceable at the campaign's
+    start, and 44.16 says they "must be refit like all other planes, USING THE SAME METHOD AS ALL
+    OTHER PLANES". Before this the island flew its whole surviving force every Game-Turn forever."""
+    st = campaign(seed=1, max_turns=4)
+    assert malta.initial_unfit() == 3
+    assert st.malta_unfit == 3
+    assert malta.strike_establishment(st) == 12 and malta.ready_strike(st) == 9
+
+
+def test_the_strike_spends_readiness_and_the_38_37_table_gives_it_back():
+    """[38.31]/[38.34] via [44.16]: flying the convoy lane makes those planes unfit, and one
+    unmodified die on the Refit Table returns the charted percentage of them (44.14 removes the
+    SGSU whose nationality would modify it, and the Commonwealth row carries no modifier anyway)."""
+    st = campaign(seed=7, max_turns=4)
+    r = run(st, axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
+    flown = [e for e in r.events if e.kind == EventKind.MALTA_STRIKE_UNFIT]
+    refits = [e for e in r.events if e.kind == EventKind.MALTA_REFIT_RESOLVED]
+    assert flown and refits
+    assert all(e.payload["unfit"] == e.payload["planes"] + (e.payload["unfit"] - e.payload["planes"])
+               for e in flown)
+    for e in refits:
+        assert e.payload["refitted"] == air.refitted_planes(e.payload["undergoing"], e.payload["die"])
+        assert len(e.rng_draws) == 1                     # 38.34: ONE die per attempt, certified
+    assert 0 <= r.final.malta_unfit <= malta.strike_establishment(r.final)
 
 
 # --- the Axis half: the finite budget, the [44.42] roll, 41.36 -----------------------------------
@@ -238,15 +289,60 @@ def test_repair_restores_bomb_damage_up_to_the_printed_establishment_and_no_furt
 # --- the loop, end to end ------------------------------------------------------------------------
 
 def test_the_whole_loop_turns_over_a_short_campaign():
-    """Both halves fire, the budget depletes, the island loses levels and aeroplanes, and the
-    convoy is still being interdicted by whatever Malta has left."""
+    """Both halves fire, the budget depletes down a REAL ledger, and the convoy is still being
+    interdicted at a strength the island's own state produced.
+
+    RESTATED (rules of this port, 5). This test used to promise "the island loses levels and
+    aeroplanes, the budget depletes" and then assert only that ten Game-Turns booked ten raids
+    (trivially true -- 44.24 gives exactly one per turn) and that malta_planes never rose (vacuous
+    -- 41.36 is its only writer and it only subtracts). Neither claim could fail. What is actually
+    worth pinning is that the budget lands on the LEVELS the doctrine chose (not just any ten) and
+    that the lane's certified strength equals what game.malta says the island could send."""
     st = campaign(seed=7, max_turns=10)
     r = run(st, axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
     raids = [e for e in r.events if e.kind == EventKind.MALTA_RAID_ORDERED]
     assert len(raids) == 10                            # 44.24: exactly one raid per Game-Turn
     assert sum(r.final.malta_raids.values()) == 10
-    assert r.final.malta_planes <= st.malta_planes     # 41.36 only ever takes planes away
-    assert [e for e in r.events if e.kind == EventKind.CONVOY_INTERDICTED]
+    assert set(r.final.malta_raids) <= set(malta.LEVELS)
+    assert all(malta.spent(r.final, lvl) <= (malta.budget()[lvl] or 10) for lvl in malta.LEVELS)
+    cut = [e for e in r.events if e.kind == EventKind.CONVOY_INTERDICTED
+           and e.payload["lane"] == "2"]
+    assert cut
+    # 11: the log certifies the strength that produced the result, not the order's empty field
+    assert all(e.payload["bomb_points"] > 0 for e in cut)
+    # every certified strength is n READY Swordfish x T8 counted as bombs, +25% rounding up
+    assert {e.payload["bomb_points"] for e in cut} <= {-(-n * 8 * 125 // 100) for n in range(1, 13)}
+
+
+def test_a_sustained_axis_raid_drives_the_islands_TOTAL_capacity_to_zero():
+    """[41.36]/[44.14] THE PROPERTY THE WHOLE BLOCK TURNS ON, and nothing pinned it before: enough
+    Axis bombing takes Malta's TOTAL capacity -- summed over all six facilities, not one of them --
+    down to nothing, and an island at zero flies nothing at all.
+
+    It is asserted here rather than read off a campaign because at the campaign's own proxy Axis
+    bomber establishment (six strike Air Points, flagged at malta.italy_sicily_planes) the raid is
+    a hundredth of the book's and the island's low-water mark over 111 Game-Turns is 4 of 5. So the
+    mechanism is pinned directly, with a raid the size the book's [60.32] muster would give it."""
+    st = campaign(seed=3, max_turns=6)
+    assert malta.capacity(st) == 5
+    r = _Run(st)
+
+    class _Heavy(CampaignAxisPolicy):
+        def malta_raid(self, state):
+            return "I"                                  # unlimited, so the budget cannot stop us
+
+    heavy = {Side.AXIS: _Heavy(), Side.ALLIED: CampaignCommonwealthPolicy()}
+    for _ in range(60):
+        # [44.42] the raid's size is a percentage of the Italy/Sicily-based force; give it the
+        # bombers [60.32] actually musters instead of the engine's six proxy Air Points.
+        r.state = replace(r.state, air=tuple(
+            replace(w, strike=w.strike * 40) if w.side == Side.AXIS and w.arena == "LAND" else w
+            for w in r.state.air))
+        _malta_raid(r, heavy)
+    assert malta.capacity(r.state) == 0                 # 44.12: reduced to zero, never destroyed
+    assert len(malta.facilities(r.state)) == 6
+    assert malta.strike_planes(r.state) == 0 and malta.bomb_points(r.state) == 0
+    assert r.state.malta_planes < st.malta_planes       # 41.36's second clause bit as well
 
 
 def test_malta_never_leaves_the_map_however_hard_it_is_bombed():
@@ -269,4 +365,33 @@ def test_no_island_no_rule_44_and_the_small_scenarios_stay_untouched():
     r = run(st, axis=__import__("game.policy", fromlist=["ScriptedPolicy"]).ScriptedPolicy(Side.AXIS),
             allied=__import__("game.policy", fromlist=["ScriptedPolicy"]).ScriptedPolicy(Side.AXIS))
     assert not [e for e in r.events if e.kind in (EventKind.MALTA_RAID_ORDERED,
-                                                  EventKind.MALTA_PLANES_LOST)]
+                                                  EventKind.MALTA_PLANES_LOST,
+                                                  EventKind.MALTA_STRIKE_UNFIT,
+                                                  EventKind.MALTA_REFIT_RESOLVED)]
+
+
+def test_the_maltese_hexes_can_never_alias_an_african_one():
+    """[44.11] "The map of Malta represented on GameMap 'A' is not in the same scale as the African
+    portions of the game-maps, nor is it in scale in terms of geographic location" -- it is an
+    OFF-SCALE BOX drawn inside section A's corner of the board image, so its raw VASSAL grid indices
+    are section A's indices over again.
+
+    That is not cosmetic and this test is not decoration: the engine keys air facilities, hex
+    control and air-facility dumps BY HEX (air.facility_at / air.holder / air.facility_dumps), so an
+    unshifted Malta means an Axis unit standing on a clear hex of section A silently becomes the
+    holder of a Maltese airfield -- and every one of those paths would have failed SILENTLY.
+    game.coords translates off-scale sections into their own disjoint slice of the axial space;
+    this pins that they land there, that the island stays a connected patch of its own, and that
+    the four labels that used to collide (A5504/A5405/A5306/A5507) no longer do."""
+    from game import air, coords
+    st = campaign(seed=1, max_turns=2)
+    island = {f.hex for f in malta.facilities(st)}
+    assert len(island) == 6
+    assert not island & set(st.terrain.terrain)           # no Maltese hex is a hex of the map
+    for label in ("A5504", "A5405", "A5306", "A5507"):    # the four that used to alias
+        african = coords.to_axial(coords.parse(label))
+        assert african not in island
+        assert air.facility_at(st, african) is None
+    for label in ("M0505", "M0805"):                      # and the labels still round-trip
+        assert coords.from_axial("M", *coords.to_axial(coords.parse(label))).label == label
+    assert coords.distance(coords.parse("M0505"), coords.parse("M0506")) == 1

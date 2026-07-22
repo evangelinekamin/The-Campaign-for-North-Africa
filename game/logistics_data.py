@@ -351,6 +351,12 @@ def malta_setup_60_46() -> dict:
     return _malta()["initial_setup_60_46"]
 
 
+def malta_planes_lost_pct_41_36() -> int:
+    """[41.36] "For every level destroyed, REMOVE 10% OF THE PLANES ON THE GROUND (e.g., 2 levels,
+    20% planes)", rounded down."""
+    return _malta()["planes_on_the_ground_41_36"]["pct_per_level"]
+
+
 def malta_construction_table_44_5() -> dict:
     """[44.5] MALTESE AIR FACILITY CONSTRUCTION TABLE: die face (as a string) -> the number of
     Capacity Levels repaired and/or constructed. One roll per Malta facility per Game-Turn."""

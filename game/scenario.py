@@ -1296,8 +1296,9 @@ def _campaign_malta_interdiction(max_turns: int) -> tuple[InterdictionOrder, ...
 
     What replaces it is the island (game.malta): every order is `source="malta"`, and its weight is
     read at the moment the convoy sails from Malta's CURRENT Capacity Levels, the 18 planes each
-    level operates (44.14), the strike aircraft that have survived the Axis raids, and the Torpedo
-    Capacity of 8 those Swordfish actually carry ([4.44A]). A Malta bombed flat sends nothing --
+    level operates (44.14), the strike aircraft that have survived the Axis raids and been refit
+    (44.16), and the torpedoes those Swordfish carry -- counted as Bomb Points (41.74) with 41.73's
+    25% for a torpedo-armed strike. A Malta bombed flat sends nothing --
     which is the 1942 blitz, EARNED by the Axis raid budget instead of written into an `if`.
 
     The order is seeded for every turn rather than only for turns Malta is strong, and that is
@@ -1583,4 +1584,5 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
                                                             # C6/36: the squadron bases on the map, PLUS
                                                             # rule 44's island (44.12/60.46)
         malta_planes=malta.initial_planes(),                # 60.46: the 31 aeroplanes on Malta
-    )
+        malta_unfit=malta.initial_unfit(),                  # 60.46: "12 Swordfish (1 SGSU) (9 ready)"
+    )                                                       #   -- three of them start unserviceable

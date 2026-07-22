@@ -6,7 +6,7 @@ project supply forward. The base StaffPolicy truck relay is left verbatim for st
 """
 from __future__ import annotations
 
-from .campaign_policy import _CampaignAxisSupplyMixin, hold_garrisons
+from .campaign_policy import _CampaignAxisSupplyMixin, hold_garrisons, malta_raid_doctrine
 from .events import Side
 from .policy import MoveOrder
 from .staff_policy import StaffPolicy
@@ -18,6 +18,16 @@ class CampaignStaffPolicy(_CampaignAxisSupplyMixin, StaffPolicy):
     (the multi-hop coastal haul + staging-dump-aware leapfrog, see _CampaignAxisSupplyMixin). The
     Commonwealth fields no trucks, so the mixin is a no-op on that side and the one class serves both
     mirrors of the two-staff campaign. Constructed exactly like StaffPolicy (client, side, ...)."""
+
+    def malta_raid(self, state: GameState) -> str:
+        """[44.23] THE SAME MALTA DOCTRINE THE SCRIPTED CAMPAIGN AXIS FLIES. The Availability Level
+        is a strategic-air decision, and the strategic-air seat of this staff is scripted -- exactly
+        as the Quartermaster, naval and air seats already are (game.staff_policy). Without this the
+        live-staff campaign inherited Policy.malta_raid's "I" and never touched the [44.41] budget,
+        so the project's watchable-campaign path and its scripted twin diverged on the one rule
+        Phase 5 exists to build. Which LEVEL to spend is a judgement an LLM seat could make, and
+        when 39.19's desert opportunity cost lands (block 5.5) it becomes worth asking one."""
+        return malta_raid_doctrine(state)
 
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
         # THE STANDING GARRISON ORDER APPLIES TO THE LIVE STAFF TOO (rule 64.73, campaign_claim):

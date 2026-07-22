@@ -421,10 +421,21 @@ class EventKind(str, Enum):
     # remove 10% of the planes on the ground", folding onto GameState.malta_planes alone. There is
     # no counter and no TOE in it, so conservation, stacking and supply are untouched.
     #
-    # Both are absent from every scenario that seeds no island (state.malta_planes defaults to 0
+    # MALTA_STRIKE_UNFIT {planes, unfit} and MALTA_REFIT_RESOLVED {undergoing, die, percent,
+    # refitted, unfit} (rng_draws=(die,)) are 44.16's half of rule 38.3 -- "planes based on Malta do
+    # not need fuel or ammo... HOWEVER, THEY MUST BE REFIT LIKE ALL OTHER PLANES, USING THE SAME
+    # METHOD AS ALL OTHER PLANES". The two directions of one scalar, GameState.malta_unfit, exactly
+    # as AIR_SQUADRON_UNFIT / AIR_REFIT_RESOLVED are of air_unfit: the strike that flies the convoy
+    # lane spends readiness (38.31) and a [38.37] Refit Table die returns a percentage of it (38.34).
+    # They are their own kinds rather than the air_unfit pair because the island has no squadron key
+    # to hang on -- 44.14 removes the SGSU that every other refit is worked and modified by.
+    #
+    # All four are absent from every scenario that seeds no island (state.malta_planes defaults to 0
     # and game.malta.in_play is False), which is what keeps the two benchmarks byte-identical.
     MALTA_RAID_ORDERED = "MALTA_RAID_ORDERED"
     MALTA_PLANES_LOST = "MALTA_PLANES_LOST"
+    MALTA_STRIKE_UNFIT = "MALTA_STRIKE_UNFIT"
+    MALTA_REFIT_RESOLVED = "MALTA_REFIT_RESOLVED"
     # Commonwealth off-shore naval bombardment (rule 30.2). NAVAL_BOMBARDMENT {ship_id, target,
     # actual, target_class, target_unit, pinned, loss, half} (rng_draws=(d1,d2)) feeds a ship's
     # Gun Rating as Actual Barrage Points into the 12.6 CRT with NO ammo draw (30.22): the Pin

@@ -89,6 +89,32 @@ def _score(state) -> tuple[int, int]:
     return axis, cwlth
 
 
+def _lowest_total_capacity(start, events) -> int:
+    """The island's LOW-WATER TOTAL Capacity Level over the whole war -- summed across all six
+    Maltese facilities, which is the number both halves of rule 44 turn on (44.14's 18 planes per
+    level is read off the total, and 44.12 says a facility may be reduced to zero but never
+    destroyed).
+
+    THIS FUNCTION EXISTS BECAUSE THE OBVIOUS ONE-LINER WAS WRONG AND THE ERROR WAS REPORTED AS A
+    RESULT. The first version of this script minned the island's TOTAL capacity against the
+    per-FACILITY levels carried in AIR_FACILITY_LEVEL_CHANGED (apply.py sets ONE facility's level
+    from that payload), so a single field dropping to 0 while the other five stood full printed
+    "levels 5->5 (low 0)" and the block report read it as an island driven flat. The true low-water
+    on the same seed was 4 of 5. Replaying the per-facility ledger is the only honest way to get
+    it: carry each facility's level and sum after every change."""
+    level = {f.id: f.level for f in malta.facilities(start)}
+    lowest = sum(level.values())
+    for e in events:
+        if e.kind is not EventKind.AIR_FACILITY_LEVEL_CHANGED:
+            continue
+        fid = str(e.payload["facility_id"])
+        if not fid.startswith(malta.PREFIX):
+            continue
+        level[fid] = e.payload["level"]
+        lowest = min(lowest, sum(level.values()))
+    return lowest
+
+
 def _play(seed: int, arm: str) -> dict:
     start = campaign(seed=seed)
     res = run(_arm(start, arm), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
@@ -99,18 +125,20 @@ def _play(seed: int, arm: str) -> dict:
                  and e.payload["lane"] == MALTA_LANE for d in e.rng_draws)
     raids = [e for e in res.events if e.kind is EventKind.MALTA_RAID_ORDERED]
     hits = [e for e in res.events if e.kind is EventKind.MALTA_PLANES_LOST]
+    flown = [e for e in res.events if e.kind is EventKind.MALTA_STRIKE_UNFIT]
     return {"seed": seed, "arm": arm, "axis": axis, "allied": cwlth,
             "winner": None if res.winner is None else res.winner.value,
             "reason": res.reason, "tons_denied": denied, "dice": dice,
             # rule 44's own trajectory: does the island move, and does the budget run down?
             "raids": len(raids), "budget": dict(res.final.malta_raids),
             "levels_start": malta.capacity(start), "levels_end": malta.capacity(res.final),
-            "levels_min": min([malta.capacity(start)]
-                              + [e.payload["level"] for e in res.events
-                                 if e.kind is EventKind.AIR_FACILITY_LEVEL_CHANGED
-                                 and str(e.payload["facility_id"]).startswith(malta.PREFIX)]),
+            "levels_min": _lowest_total_capacity(start, res.events),
             "planes_start": start.malta_planes, "planes_end": res.final.malta_planes,
-            "planes_killed": sum(e.payload["lost"] for e in hits)}
+            "planes_killed": sum(e.payload["lost"] for e in hits),
+            # 44.16: does the [38.37] refit governor actually bind on the island's sortie rate?
+            "sorties": len(flown),
+            "flown_min": min((e.payload["planes"] for e in flown), default=0),
+            "flown_max": max((e.payload["planes"] for e in flown), default=0)}
 
 
 def main() -> None:
@@ -152,6 +180,8 @@ def main() -> None:
         print(f"  seed {s:>5}: levels {m['levels_start']}->{m['levels_end']} (low {m['levels_min']}) "
               f"| planes {m['planes_start']}->{m['planes_end']} (-{m['planes_killed']}) "
               f"| raids {m['raids']:>3d}  budget spent: {budget}")
+        print(f"         44.16 refit: {m['sorties']:>3d} strikes flown, "
+              f"{m['flown_min']}-{m['flown_max']} Swordfish per sortie (12 on the island)")
     print("\n(the arms diverge in draw COUNT once sunk cargo changes the war -- that is the signal,")
     print(" not the noise. Five seeds is not a distribution: read the sign, not one seed.)\n")
 

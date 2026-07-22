@@ -187,6 +187,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                                                          # the turn's manifest unloads across the stages
             _air_superiority(r)                          # 40/45/46: contest the sky this OpStage (per arena)
             _air_maintenance(r)                          # 33 IV.F.7 / 38.3: ready the planes that flew
+            _malta_refit(r)                              # 44.16: and Malta's, "like all other planes"
             for side in (first, second):                # 7.16: Player A (first) then Player B (last)
                 _debrief(side)                          # enemy portion + own last combat
                 _organization(r, policies[side], side)  # 32.32: the ONE beat MP may be attached to
@@ -396,6 +397,56 @@ def _rommel_move(r: _Run, policy: Policy, side: Side) -> None:
 
 # --- phases ------------------------------------------------------------------
 
+def _malta_strike_flown(r: _Run, flew: bool) -> None:
+    """[38.31] via [44.16] The convoy strike Malta just flew is no longer refitted.
+
+        44.16 "Planes based on Malta do not need fuel or ammo; they are automatically refueled and
+               rearmed each Stage. HOWEVER, THEY MUST BE REFIT LIKE ALL OTHER PLANES, USING THE
+               SAME METHOD AS ALL OTHER PLANES."
+        38.31 "As soon as a plane flies any mission other than transfer, IT MUST BE REFITTED AGAIN."
+
+    The exact twin of _air_unfit for a squadron that has no squadron key, and the reason the island
+    cannot simply put its whole surviving strike force over the lane 111 times: what flew this
+    Game-Turn must be readied by _malta_refit before it flies the next one.
+
+    A Game-Turn with no Axis convoy on the lane costs nothing, and that is 41.65C rather than an
+    optimisation: "if no convoys have been located, THE PLANES NEVER TAKE OFF and therefore do not
+    have to undergo readying"."""
+    if not flew:
+        return
+    planes = malta.strike_planes(r.state)
+    if planes <= 0:
+        return
+    r.emit(EventKind.MALTA_STRIKE_UNFIT, Side.ALLIED, "ALLIED/Malta",
+           {"planes": planes, "unfit": r.state.malta_unfit + planes})
+
+
+def _malta_refit(r: _Run) -> None:
+    """[38.3] / [38.37] via [44.16] THE MALTESE HALF OF THE TACTICAL MAINTENANCE SEGMENT, once per
+    Operations Stage -- the same beat, the same table and the same displacement in the sequence as
+    _air_maintenance, for the one air force in the game that has no SGSU to work it (44.14: "the
+    Commonwealth Player does not need -- nor does he use -- SGSU's on Malta").
+
+    One die, unmodified (38.35's serviceability modifiers are the SGSU's, and the Commonwealth's
+    own row carries none), against the planes standing unserviceable; the table returns the
+    percentage refit, rounded up (38.34). What 38.36's Stores Point would be charged against is
+    flagged at malta.refitted: there is no Maltese SGSU and no Maltese dump to charge it to."""
+    undergoing = r.state.malta_unfit if malta.in_play(r.state) else 0
+    if undergoing <= 0:
+        return
+    r.go(Phase.LOGISTICS, Side.SYSTEM)                   # a SYSTEM housekeeping beat, like convoys
+    # THE DIE COMES OFF MALTA'S OWN STREAM, not the air_refit one _air_maintenance draws from,
+    # and that is game/dice.py's whole reason for existing: this draw is conditional on the island
+    # being in the scenario AND on something having flown, so sharing a stream would mean whether
+    # Malta put a strike up last Game-Turn silently reshuffled the Luftwaffe's serviceability for
+    # the rest of the war. Rule 44's dice move nothing outside rule 44.
+    die = r.d6("malta")
+    back = malta.refitted(undergoing, die)
+    r.emit(EventKind.MALTA_REFIT_RESOLVED, Side.ALLIED, "ALLIED/Malta",
+           {"undergoing": undergoing, "die": die, "percent": air.refit_percent(die),
+            "refitted": back, "unfit": undergoing - back}, rng_draws=(die,))
+
+
 def _malta_construction(r: _Run) -> None:
     """[44.13] / [44.5] THE COMMONWEALTH HALF OF THE MALTA DUEL, once per GAME-TURN.
 
@@ -470,8 +521,7 @@ def _malta_raid(r: _Run, policies: dict) -> None:
     that the [44.5] table can build back."""
     if not malta.in_play(r.state):
         return
-    policy = policies[Side.AXIS]
-    level = getattr(policy, "malta_raid", lambda *_: malta.DEFAULT_LEVEL)(r.state)
+    level = policies[Side.AXIS].malta_raid(r.state)   # Policy.malta_raid: every policy has a seat
     if level not in malta.LEVELS or not malta.available(r.state, level):
         level = malta.DEFAULT_LEVEL                  # 44.23: the budget is a hard ceiling
     d1, d2 = r.d6("malta"), r.d6("malta")            # [44.42]: two dice, ADDED (2..12)
@@ -498,8 +548,13 @@ def _malta_raid(r: _Run, policies: dict) -> None:
             "strength": plan.bomb_points})
     lost = malta.planes_lost(r.state, levels)        # 41.36: 10% of the planes on the ground / level
     if lost > 0:
+        left = r.state.malta_planes - lost
+        # The bombs fall on the unserviceable machines too: the 38.31 ledger may never stand for
+        # more aeroplanes than the island still has (malta.strike_establishment of the survivors).
+        unfit = min(r.state.malta_unfit,
+                    malta.strike_establishment(replace(r.state, malta_planes=left)))
         r.emit(EventKind.MALTA_PLANES_LOST, Side.AXIS, actor,
-               {"lost": lost, "planes": r.state.malta_planes - lost, "levels": levels})
+               {"lost": lost, "planes": left, "levels": levels, "unfit": unfit})
 
 
 def _reinforcements(r: _Run) -> None:
@@ -548,21 +603,21 @@ def _interdiction_for(state: GameState, convoy):
     return None
 
 
-def _convoy_loss_pct(points: int, d1: int, d2: int, weapon: str = "bomb") -> int:
+def _convoy_loss_pct(points: int, d1: int, d2: int) -> int:
     """[41.66] resolve one convoy attack on the [41.5] Air Bombardment CRT: pick the column, read
     the two dice SEQUENTIALLY as a two-digit code (tens=d1, units=d2), and return the tens-of-
     percent of cargo lost. Points below the table's floor never damage a convoy (returns 0).
 
-    `weapon` chooses WHICH INDEX SCALE the same eleven result columns are entered through. The
-    foldout prints three side by side -- Torpedo Points, Barrage Points, Bomb Points -- and the
-    choice is a property of the aircraft, not of the target: [4.44A] gives the Swordfish Mk. I that
-    flies Malta's convoy strike a Bombload Capacity of "-" and a Torpedo Capacity of 8, so its
-    attack has no reading at all on the Bomb-Point scale (41.17 permits the torpedo: "torpedoes may
-    be used only against ships and ports")."""
-    key = f"{weapon}_points"
+    THE COLUMN IS ALWAYS THE BOMB-POINT COLUMN, INCLUDING FOR A TORPEDO STRIKE. The foldout prints
+    three index scales over the same eleven result columns -- Torpedo Points, Barrage Points, Bomb
+    Points -- and its footnote (a), printed on the Torpedo header row itself, restricts that scale
+    to "attacking ships of the Commonwealth Fleet": "attacks by planes armed with Torpedos against
+    Ports or AXIS NAVAL CONVOYS are carried out using the Bomb Points row (see Case 41.7)". So
+    Malta's Swordfish (rule 44) enters here on the same scale as any bomber; what its torpedoes are
+    WORTH in Bomb Points is 41.73/41.74's business and is settled in game.malta.bomb_points."""
     code = d1 * 10 + d2
     for col in logistics_data.convoy_bombing_crt_41_66():
-        lo, hi = col[key]
+        lo, hi = col["bomb_points"]
         if points >= lo and (hi is None or points <= hi):
             for entry in col["results"]:
                 dlo, dhi = entry["die"]
@@ -603,21 +658,9 @@ def _apply_convoy_loss(cargo: dict, pct: int) -> tuple[dict, int]:
     return reduced, tons_lost
 
 
-def _interdiction_strength(state: GameState, order) -> tuple[int, str]:
-    """How hard this interdiction hits, and with what -- (points, weapon) for the [41.5] column
-    lookup. A plain scheduled order carries its own Bomb Points; a MALTA-sourced one (rule 44)
-    has none to carry, because the strength of the Maltese effort is a LIVE fact about the island:
-    its current Capacity Levels, 18 planes per level (44.14), the strike aircraft that survive on
-    it, and the Torpedo Capacity of 8 those aircraft actually fly with ([4.44A]). This one branch
-    is the whole difference between a Malta that is a rule and the calendar it replaced."""
-    if order.source == "malta":
-        return malta.convoy_column_points(state)
-    return order.bomb_points, "bomb"
-
-
 def _interdict(convoy, state: GameState, rng):
     """The interdiction worker shared by interdict() and _naval_convoys: returns
-    (reduced_cargo, order|None, pct_lost, tons_lost, dice). Draws the two [41.66] CRT dice on
+    (reduced_cargo, order|None, pct_lost, tons_lost, dice, points). Draws the two [41.66] CRT dice on
     `rng` ONLY when an InterdictionOrder covers this lane+turn; an interdiction-free lane draws
     nothing and returns the cargo verbatim with dice=(). The dice ride out so the
     CONVOY_INTERDICTED marker can certify them in the log.
@@ -632,12 +675,12 @@ def _interdict(convoy, state: GameState, rng):
     holds that line."""
     order = _interdiction_for(state, convoy)
     if order is None:
-        return dict(convoy.cargo), None, 0, 0, ()
-    points, weapon = _interdiction_strength(state, order)
+        return dict(convoy.cargo), None, 0, 0, (), 0
+    points = malta.interdiction_points(state, order)    # 41.66/44: the LIVE strength, not the field
     d1, d2 = rng.randint(1, 6), rng.randint(1, 6)      # 41.66: two dice, read sequentially
-    pct = _convoy_loss_pct(points, d1, d2, weapon)
+    pct = _convoy_loss_pct(points, d1, d2)
     reduced, tons_lost = _apply_convoy_loss(convoy.cargo, pct)
-    return reduced, order, pct, tons_lost, (d1, d2)
+    return reduced, order, pct, tons_lost, (d1, d2), points
 
 
 def interdict(convoy, state: GameState, rng) -> dict:
@@ -909,6 +952,7 @@ def _schedule_convoys(r: _Run, due: list, policies: dict | None) -> None:
     allocation; a policy without a naval seat stages nothing, so the interdiction stays as ambient
     as before -- byte-identical."""
     r.convoy_manifest = {}
+    malta_flew = False                                  # did rule 44's island put a strike up?
     if policies is not None:                            # the naval command loop (early-return-guarded)
         for side in (Side.AXIS, Side.ALLIED):
             pol = policies[side]
@@ -923,8 +967,11 @@ def _schedule_convoys(r: _Run, due: list, policies: dict | None) -> None:
             r.convoy_manifest[c.id] = {"dest": None, "cargo": {}, "rail": False}
             continue
         # 41.6/32.66: skim the CRT loss at sea BEFORE landing (identity + no rng if unbombed)
-        cargo, itd_order, pct_lost, tons_lost, itd_dice = _interdict(
+        cargo, itd_order, pct_lost, tons_lost, itd_dice, itd_points = _interdict(
             c, r.state, r.dice.stream("interdiction"))
+        if itd_order is not None and itd_order.source == "malta":
+            malta_flew = True                           # 39.13: ONE strategic sortie, however many
+                                                        # convoys it engages -- billed once, below
         # [54.3] a RAILWAY delivery is not a ship: it lands its whole 54.32 haul along the line at
         # once (_rail_deliver / _rail_stops), so it is flagged to unload only in the turn's 1st stage.
         rail = bool(c.rail and r.state.terrain.rails)
@@ -933,15 +980,16 @@ def _schedule_convoys(r: _Run, due: list, policies: dict | None) -> None:
             interdictor = _other(c.side)
             r.emit(EventKind.CONVOY_INTERDICTED, interdictor, "SYSTEM",
                    {"lane": c.lane, "convoy_id": c.id, "interdictor": interdictor.value,
-                    "bomb_points": itd_order.bomb_points, "pct_lost": pct_lost,
+                    "bomb_points": itd_points, "pct_lost": pct_lost,
                     "tons_lost": tons_lost}, rng_draws=itd_dice)   # 41.66: certify the CRT dice
             # Route the cut ALSO through a SEA-arena air strike so a convoy interdiction is legibly
             # air-sourced (41.6) -- but ONLY when the interdictor fields SEA air, so an air-less
             # interdiction scenario (siege_of_tobruk) stays byte-identical.
             if any(w.side == interdictor and w.arena == "SEA" for w in r.state.air):
                 r.emit(EventKind.AIR_STRIKE_RESOLVED, interdictor, "SYSTEM",
-                       {"arena": "SEA", "target": c.lane, "strength": itd_order.bomb_points,
+                       {"arena": "SEA", "target": c.lane, "strength": itd_points,
                         "pinned": [], "loss": 0})
+    _malta_strike_flown(r, malta_flew)                  # 38.31 via 44.16: the sortie spends readiness
 
 
 def _unload_convoys(r: _Run, due: list) -> None:

@@ -22,17 +22,22 @@
     "_rule": "[60.46] the campaign's own Malta set-up (64.3 sends the full campaign to Section 60 for every initial deployment). Verbatim: 'Planes: 15 Hurricane MkI's, 12 Swordfish, 3 Gladiators, 1 Sea Gladiator. AA: 17 AA Points. State of Air facilities: The Malta bases have an initial capacity of five SGSU's. These may be spread amongst the Malta facilities as the player wishes. Construction on increasing the capacity of Malta Air Facilities may begin in October, 1940.'",
     "capacity_levels": 5,
     "construction_begins": [1940, 10],
+    "_ready_comment": "[60.46] prints a READY column beside each squadron and it is a live magnitude, not decoration: 44.16 'Planes based on Malta do not need fuel or ammo; they are automatically refueled and rearmed each Stage. HOWEVER, THEY MUST BE REFIT LIKE ALL OTHER PLANES, USING THE SAME METHOD AS ALL OTHER PLANES' -- i.e. the [38.37] Refit Table, which is what block 5.3 built. The printed rows, verbatim: '15 Hurricane MkI's (2 SGSU's) (12 Ready) | 12 Swordfish (1 SGSU) (9 ready) | 3 Gladiators (1 SGSU) (all ready) | 1 Sea Gladiator (1 SGSU) (all ready)'. So the campaign opens with three of Malta's twelve Swordfish unserviceable, and the island's strike force is a governed sortie rate rather than twelve aeroplanes over the lane every Game-Turn for 111 turns. The SGSU counts are transcribed because the book prints them, and nothing reads them: 44.14 says the Commonwealth 'does not need -- nor does he use -- SGSU's on Malta', and 60.46's parenthetical is 44.14's own 'for the sake of play ease... group his planes as if they were squadrons'.",
     "planes": [
-      {"type": "Hurricane Mk. I", "number": 15, "role": "fighter"},
-      {"type": "Swordfish Mk. I", "number": 12, "role": "strike"},
-      {"type": "Gladiator", "number": 3, "role": "fighter"},
-      {"type": "Sea Gladiator", "number": 1, "role": "fighter"}
+      {"type": "Hurricane Mk. I", "number": 15, "ready": 12, "sgsus": 2, "role": "fighter"},
+      {"type": "Swordfish Mk. I", "number": 12, "ready": 9, "sgsus": 1, "role": "strike"},
+      {"type": "Gladiator", "number": 3, "ready": 3, "sgsus": 1, "role": "fighter"},
+      {"type": "Sea Gladiator", "number": 1, "ready": 1, "sgsus": 1, "role": "fighter"}
     ],
     "strike_weapon": {
-      "_comment": "[4.44A] Swordfish Mk. I, read with eyes off the scanned Commonwealth Bombers/Flying Boats/Transports/Reconnaissance chart (PDF p.113): Range 48, TacAir (1), Maneuver 7, Bomb '-/T8', Fuel 1, mission capability B. The chart's own key: 'Bomb = Bombload Capacity and torpedo carrying capability, if any, in points. -- = May not carry bombs. Only planes possessing an /T may carry torpedos. The number to the left of the stroke is the Bombload Capacity. The number to the right of the T is the Torpedo Capacity.' So Malta's only anti-shipping aircraft in 1940 CANNOT CARRY BOMBS AT ALL: it attacks the convoy with torpedoes, on the [41.5] table's TORPEDO POINTS index (see logistics_rates.json air_convoy_bombing_crt_41_66.columns[].torpedo_points), not its Bomb Points index. B = 'Axis Naval Convoy and Land Support Bombing missions' -- the mission capability this use needs, printed on the row.",
+      "_comment": "[4.44A] Swordfish Mk. I, read with eyes off the scanned Commonwealth Bombers/Flying Boats/Transports/Reconnaissance chart (PDF p.113, re-rendered at 400 dpi for this repair): Range 48, TacAir (1), Maneuver 7, Bomb '-/T8', Fuel 1, mission capability B. (The row directly above it -- 'or 176 (5) 11 9 4' -- is the SUNDERLAND's second readying option, NOT a Swordfish bomber loadout; it was checked, because a Swordfish that could carry 9 Bomb Points would settle the ruling below.) The chart's own key: 'Bomb = Bombload Capacity and torpedo carrying capability, if any, in points. -- = May not carry bombs. Only planes possessing an /T may carry torpedos. The number to the left of the stroke is the Bombload Capacity. The number to the right of the T is the Torpedo Capacity.' B = 'Axis Naval Convoy and Land Support Bombing missions' -- the mission capability this use needs, printed on the row.",
+      "_index_scale_41_66": "THE COLUMN IS THE BOMB POINTS COLUMN, AND THE CHART SAYS SO ITSELF. Footnote (a) of the [41.5] table -- the superscript printed on the 'Torpedo Points' header row on the foldout (PDF p.107) and spelled out in the Key on its sibling page (PDF p.108), rendered at 300 dpi and read with eyes -- is VERBATIM: 'a = Use only when attacking ships of the Commonwealth Fleet. Attacks consisting of Bomb and Torpedo Points are performed as two attacks. Attacks by planes armed with Torpedos against Ports or Axis Naval Convoys are carried out using the Bomb Points row (see Case 41.7).' Malta's Swordfish attacking an Axis Naval Convoy is exactly the case the footnote excludes from the Torpedo Points scale. The rule text agrees three ways: [41.72] scopes the torpedo line to 'Axis plane vs. Commonwealth Fleet'; [41.74] 'Torpedoes may be used against port facilities, but AS SUCH COUNT AS NORMAL BOMBS'; [41.66] the Commonwealth 'totals his attacking bomb points, MODIFYING FOR TORPEDOS IF NECESSARY (see Case 41.7)'. The modification is [41.73]: 'When Commonwealth planes fly against Axis convoys and at least 50% of the planes are carrying torpedoes, in determining the level (Case 41.66), INCREASE THE BOMBING TONNAGE BY 25%, ROUNDING UPWARD' -- printed a second time on the Key as 'Modications: If at least 50% of the planes attacking an Axis Naval Convoy are armed with Torpedos, increase the total Bomb Points by 25%.' Malta's strike is 100% torpedo-armed, so the modifier is always live.",
+      "_owner_ruling_needed": "OWNER RULING NEEDED -- WHAT NUMBER ENTERS THE BOMB POINTS ROW WHEN THE PLANE'S BOMBLOAD CAPACITY IS '-'. This is the 54.17 / Benghazi-hex class: two printed things that cannot both be honoured. (a) [41.66] read strictly totals 'attacking bomb points', and [4.44A] gives the Swordfish Mk. I a Bombload Capacity of '-' = 0, so twelve of them deliver 0 x 1.25 = 0 Bomb Points, land below the table's [1..20] floor, and Malta's only 1940 anti-shipping aircraft cannot scratch a convoy -- which contradicts [41.71] ('torpedoes... are effective against ships') and the whole of 44.0's commentary ('an excellent position from which to hinder the transport of Axis supplies'). (b) [41.74] says a torpedo 'as such counts as normal bombs', which supplies the only conversion the book prints: the Torpedo Capacity IS the plane's Bomb Points for this attack. WE APPLY (b), BECAUSE IT IS THE ONLY READING UNDER WHICH THE CHART'S OWN FOOTNOTE HAS CONTENT -- 'attacks by planes armed with Torpedos against Ports or Axis Naval Convoys ARE CARRIED OUT using the Bomb Points row' presupposes an attack with a strength -- and the only one under which 41.73's +25% modifies anything. It is a JUDGEMENT CALL and it is load-bearing: reading (a) makes rule 44's Commonwealth half a flat 0% every Game-Turn of the war. Scan pages: PDF p.107 (the [41.5] foldout and its three index scales), PDF p.108 (the Key and footnote a), PDF p.113 ([4.44A], the Swordfish row). Rule text: docs/rules/41-bombing-missions.md 41.66/41.71-41.75.",
       "type": "Swordfish Mk. I",
       "weapon": "torpedo",
-      "points_per_plane": 8
+      "index_scale": "bomb_points",
+      "points_per_plane": 8,
+      "torpedo_increase_pct_41_73": 25
     }
   },
 
@@ -44,6 +49,11 @@
       {"scenario": "62.36 Crusader", "date": [1941, 11], "capacity_levels": 14, "planes": 74},
       {"scenario": "63.37 El Alamein", "date": [1942, 10], "capacity_levels": 28, "planes": 118}
     ]
+  },
+
+  "planes_on_the_ground_41_36": {
+    "_rule": "[41.36] 'The result is the number of capacity levels that facility is reduced. In addition, FOR EVERY LEVEL DESTROYED, REMOVE 10% OF THE PLANES ON THE GROUND (e.g., 2 levels, 20% planes), rounded down.' The magnitude lives here rather than inline in game/malta.py for the same reason every other chart number in this port does: code reads magnitudes from data, never from literals.",
+    "pct_per_level": 10
   },
 
   "construction_table_44_5": {

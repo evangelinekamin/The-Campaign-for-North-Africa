@@ -71,6 +71,27 @@ def _load_sections() -> dict[str, Section]:
 
 SECTIONS: dict[str, Section] = _load_sections()
 
+# [44.11] MALTA IS AN OFF-SCALE BOX, NOT A CONTINUATION OF THE HEX GRID. "The map of Malta
+# represented on GameMap 'A' is not in the same scale as the African portions of the game-maps, nor
+# is it in scale in terms of geographic location vis-a-vis the African coast." The VASSAL redraw
+# prints that box inside section A's own corner of the board image (its bbox 40,78..692,764 sits
+# INSIDE A's 44,447..2863,4557), so the raw grid indices the box numbers its hexes with are section
+# A's indices over again: M0802 and A5504 both raw-index to (7,0), M0704 and A5405 to (8,1), M0604
+# and A5306 to (9,1), M0805 and A5507 to (7,3). The module docstring's "raw grid indices are
+# continuous across the whole board" is true of A-E, which abut; it was never true of this box.
+#
+# The aliasing is not cosmetic: the engine keys air facilities, control and dumps BY HEX
+# (air.facility_at, air.holder, air.facility_dumps), so an unshifted Malta means an Axis unit
+# standing on a clear hex of section A silently becomes the holder of a Maltese airfield. Off-scale
+# sections are therefore translated into their own disjoint slice of the global axial space. The
+# shift is DERIVED from the grid data, not chosen: one past the largest column index any mainland
+# section can number (nx = gMR + hOff at XX=0), so it can never meet the board however the redraw
+# is re-measured. It is a key-space disambiguation and nothing else -- distances and neighbours
+# WITHIN the box are untouched (every M hex moves by the same amount), and no rule reads a
+# map distance between Malta and Africa: 44.11 puts those on the Malta Box's own printed list.
+OFF_SCALE: frozenset[str] = frozenset({"M"})
+_OFF_SCALE_Q = max(s.gMR + s.hOff for k, s in SECTIONS.items() if k not in OFF_SCALE) + 1
+
 
 @dataclass(frozen=True, slots=True)
 class Hex:
@@ -108,11 +129,12 @@ def from_raw(section: str, nx: int, ny: int) -> Hex:
 
 def to_axial(h: Hex) -> tuple[int, int]:
     nx, ny = to_raw(h)
-    return nx, ny - (nx - (nx & 1)) // 2
+    q = nx + (_OFF_SCALE_Q if h.section in OFF_SCALE else 0)   # 44.11: the off-scale box, disjoint
+    return q, ny - (nx - (nx & 1)) // 2
 
 
 def from_axial(section: str, q: int, r: int) -> Hex:
-    nx = q
+    nx = q - (_OFF_SCALE_Q if section in OFF_SCALE else 0)
     ny = r + (nx - (nx & 1)) // 2
     return from_raw(section, nx, ny)
 

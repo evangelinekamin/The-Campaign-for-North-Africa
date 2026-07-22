@@ -328,10 +328,10 @@ class InterdictionOrder:
 
     `source` names a LIVE producer for the attack's strength, and the only one is "malta":
     rule 44 makes the Maltese effort a function of the island's current Capacity Levels and
-    surviving aeroplanes (game.malta), not of a number typed into a schedule, and its weapon
-    is the torpedo rather than the bomb ([4.44A]: the Swordfish may not carry bombs), so it
-    reads the [41.5] table through a different index scale. An order with no source is a
-    static one and uses `bomb_points` as printed; a sourced order ignores that field."""
+    surviving, refit aeroplanes (game.malta), not of a number typed into a schedule. An order
+    with no source is a static one and uses `bomb_points` as printed; a sourced order ignores
+    that field, and EVERY reader must go through malta.interdiction_points rather than read it
+    -- the log, the engine and the naval staff seat alike."""
     lane: str
     turn: int
     bomb_points: int
@@ -607,10 +607,16 @@ class GameState:
     # not here: they are ordinary AirFacility Capacity Levels carried in air_facilities above, which
     # is what lets 36.14, 41.36 and the invariants apply to Malta unchanged.
     # `malta_raids` is the Axis's [44.41] ledger -- Availability Level ("I".."IV") -> the Game-Turns
-    # he has spent it on, counted for a raid he cancels as well (44.29). Defaults (0, {}) put no
-    # island in the scenario and spend no budget, so every non-campaign scenario is byte-identical.
+    # he has spent it on, counted for a raid he cancels as well (44.29).
+    # `malta_unfit` is 38.31's readiness ledger for the island's anti-shipping arm, which 44.16
+    # subjects to the [38.37] Refit Table like every other squadron ("they must be refit like all
+    # other planes, using the same method as all other planes") even though 44.16 exempts them from
+    # fuel and ammunition. It opens at 60.46's printed shortfall -- "12 Swordfish (1 SGSU) (9
+    # ready)" -- so three of the twelve start unserviceable. Defaults (0, {}, 0) put no island in
+    # the scenario and spend no budget, so every non-campaign scenario is byte-identical.
     malta_planes: int = 0
     malta_raids: dict = field(default_factory=dict)
+    malta_unfit: int = 0
     # Commonwealth Mediterranean Fleet (rule 30): the off-shore naval-bombardment fire support.
     # Default () fields no ship, so every naval-less scenario stays byte-identical -- the CW
     # Fleet-Assignment beat fires only when a side carries naval (game.engine._naval_bombardment).
@@ -928,6 +934,12 @@ class GameState:
         raids = dict(self.malta_raids)
         raids[level] = raids.get(level, 0) + 1
         return replace(self, malta_raids=raids)
+
+    def with_malta_unfit(self, planes: int) -> "GameState":
+        """[38.31]/[44.16] Set how many of Malta's anti-shipping aircraft stand unrefitted. The
+        exact twin of with_air_unfit, one scalar with two ends: flying spends readiness and a
+        [38.37] roll returns a percentage of it. Never below zero."""
+        return replace(self, malta_unfit=max(0, planes))
 
     def air_superiority_of(self, arena: str) -> "str | None":
         """The Side value that holds the sky in `arena` this OpStage, or None (contested /

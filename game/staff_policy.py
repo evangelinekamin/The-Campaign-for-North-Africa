@@ -32,7 +32,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from . import supply, tactics
+from . import malta, supply, tactics
 from .adjudication import validate_batch
 from .events import EventKind, Side
 from .hexmap import distance
@@ -699,9 +699,14 @@ class StaffPolicy(ScriptedPolicy):
         destination dump's headroom (the historic Tripoli overflow) -- what lands is favored,
         the overflow is lost. Each stages a Chief STAFF_ADJUDICATION + the officer's DISSENT."""
         sea_strike = sum(w.strike for w in state.air if w.side == side and w.arena == "SEA")
-        demand = sum(o.bomb_points for o in committed)
+        # [41.66]/[44] The strength of a lane's attack is malta.interdiction_points, NOT the
+        # order's own field: a rule-44 order carries bomb_points=0 by construction and gets its
+        # weight from the island at the moment the convoy sails. Reading the raw field scored
+        # Malta's lane at zero demand and sorted it last in the Chief's own scarcity ruling.
+        points = {o.lane: malta.interdiction_points(state, o) for o in committed}
+        demand = sum(points.values())
         if sea_strike > 0 and len(committed) >= 2 and demand > sea_strike:
-            order = sorted(committed, key=lambda o: (-o.bomb_points, o.lane))
+            order = sorted(committed, key=lambda o: (-points[o.lane], o.lane))
             self._naval_ruling("oversubscribed-sorties", order[0].lane, order[-1].lane,
                                f"{order[0].lane} flies first; {order[-1].lane} waits on the SEA sortie budget")
         for dump_id, commodity, over in self._tonnage_overflows(state, side):
