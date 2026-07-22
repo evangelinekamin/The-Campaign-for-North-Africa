@@ -40,6 +40,13 @@ sortie cost the other anything. Two printed rules forbid that, one structurally 
     same beat, and charging both would take them off the desert twice. Flagged where it is decided
     (engine._air_transfer).
 
+    ⚠⚠ AND THE SENTENCE'S SECOND HALF BINDS ON THE MEDITERRANEAN CONTINGENT TOO, WHICH IS THE
+    2026-07-22 REPAIR. "...AND VICE VERSA": a plane that flew the Malta raid in the Strategic Phase
+    may fly nothing in that Game-Turn's Operations Stages -- and the flight home is a [42.1]
+    mission flown in one (42.15). Until the repair only the AFRICAN half of the raid was booked,
+    so the bombers based in Sicily raided Malta and were back over the desert the same Game-Turn.
+    `mediterranean_strategic` is the ledger; engine._air_transfer is where it binds.
+
 --------------------------------------------------------------------------------------------------
 THE ONE ARITHMETIC THIS MODULE ENFORCES: **AN AEROPLANE IS IN EXACTLY ONE PLACE.**
 
@@ -165,7 +172,7 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from . import air, coords, logistics_data, roster
+from . import air, calendar, coords, logistics_data, roster
 from .events import Side
 from .state import GameState
 
@@ -173,6 +180,15 @@ from .state import GameState
 # fighters (they are 40/45's business) and nothing about army-cooperation reconnaissance.
 BOMBER_ROLE = "strike"
 LAND_ARENA = "LAND"
+
+# [36.5]/[43.1] The off-map Italy/Sicily boxes, as a squadron key of their own (air.squadron) --
+# NOT an AirWing arena: nothing seeds air there and squadron_planes over it is zero by construction.
+# It exists so that [39.19]'s Strategic-Phase ledger can name the MEDITERRANEAN contingent
+# separately from the African one, which it must, because those are two different populations of
+# aeroplane and the African key is subtracted from the African establishment. 43.22 is the book
+# doing exactly this bookkeeping -- "divide all bombers IN A GIVEN AREA into groups of 6 to 12,
+# considering each such group a squadron" -- so a Mediterranean squadron is the book's own object.
+MEDITERRANEAN_ARENA = "MEDITERRANEAN"
 
 # [43.12] "75% of all GERMAN bombers" -- the nationality the [4.44b] chart prints, which is the
 # subject of that sentence and the reason it is not `constrained_types` (see german_bombers).
@@ -263,31 +279,86 @@ def transfer_distance(place: str) -> "int | None":
 
 class Departure(NamedTuple):
     """One legal starting point for a [42.1] transfer to the Mediterranean: the [37.4] chart's
-    `place`, the air `facility` standing at it that this side holds, and the printed `distance`."""
+    `place`, the air `facility` standing at it that this side holds, the printed `distance`, and
+    [37.24]'s `capacity` -- the most aeroplanes that may fly out of (or into) that field in one
+    Operations Stage."""
     place: str
     facility: str
     distance: int
+    capacity: int
+
+
+def facility_planes(state: GameState, side: Side, role: str, facility) -> int:
+    """[37.24] + [36.12]/[36.2]/[36.3]/[36.4] + [35.23] HOW MANY AEROPLANES MAY FLY FROM THIS FIELD
+    IN ONE OPERATIONS STAGE -- its Capacity Level read as the ceiling the rule says it is.
+
+        37.24 "NO PLANES MAY FLY IN EXCESS OF THE AIR FACILITY'S CAPABILITY LEVEL... Likewise, an
+               Italian squadron (for example) could send no more than nine planes on a mission,
+               regardless of how many planes it has ready (as reserves)."
+        36.12 an airfield "may handle a maximum of SIX SQUADRONS (regardless of squadron size)",
+              36.2 one for a landing strip, 36.3 three for a basin, 36.4 one for an alighting area
+              -- and 36.14 makes the CURRENT level the live number, "if bombing has reduced the
+              capacity of an airfield from six to three, that airfield may handle only three".
+        35.23 a squadron holds a charted number of aeroplanes, which is what turns a capacity in
+              SQUADRONS into a capacity in AEROPLANES: twelve in an Italian Squadriglia.
+
+    ADDED 2026-07-22. The first shipping of the [42.1] transfer read AirFacility.level only as a
+    HELD/DESTROYED flag and flew the whole serviceable bomber arm out of one field: measured single
+    flights of 74, 105 and 116 aeroplanes out of A4728-El Berca, a level-6 airfield whose printed
+    ceiling is 72. The rule was already expressible with the data in hand -- the level and the
+    [35.23] chart were both here -- and now it binds.
+
+    THE PER-SQUADRON SIZE IS THE SMALLEST ONE THIS ROLE'S ESTABLISHMENT FIELDS, which is the
+    conservative direction and the same one range_per_plane and the serviceability bound take: our
+    AirWing is a pool over a mixed roster (34.72), so a flight out of a field is drawn from every
+    nationality in the role at once and the field is credited with the tightest of their squadron
+    sizes. Italian entire in the [60.32] muster, so it is twelve today and 36.12's six squadrons
+    make an airfield seventy-two aeroplanes.
+
+    ⚠ WHAT THIS DOES NOT BOUND, named rather than left silent: 36.13's OCCUPANCY ("if an airfield
+    is landing six squadrons planes in a given Operations Stage, it may not receive any more
+    airplanes"). 37.24 is a bound on a FLIGHT and that is what this is; how many aeroplanes are
+    already standing on a field is a per-field roster question, and there is no per-field roster
+    until [34.72]'s Squadron Composition Sheet lands."""
+    nations = {roster.nation(m.type) for m in roster.by_role(side, role)}
+    year, month = calendar.gt_to_month(max(1, state.turn))
+    per = min(air.squadron_capacity(n, year, month) for n in nations)
+    return max(0, facility.level) * per
 
 
 def departures(state: GameState, side: Side, role: str) -> tuple[Departure, ...]:
-    """[42.11]/[37.12] THE AIR FACILITIES THIS SIDE MAY FLY A TRANSFER TO ITALY/SICILY FROM, in
-    printed order -- and the reason the Axis's Malta option has a geography at all.
+    """[42.11]/[37.12] THE AIR FACILITIES THIS SIDE MAY FLY A TRANSFER TO ITALY/SICILY FROM -- and,
+    read the other way, the ones it may fly HOME TO -- in printed order, and the reason the Axis's
+    Malta option has a geography at all.
 
         42.11 "A transfer mission is flying a plane FROM ONE AIR FACILITY TO ANOTHER."
         37.12 "the Player notes the location of the target hex... and counts the distance in hexes,
                using any path he wishes, FROM THE BASE/AIR FACILITY to the target hex. If the number
                of hexes FALLS WITHIN THE RANGE of the plane, the plane may be flown to that hex."
 
-    Three conditions, each printed. The [37.4] chart must print a distance from the place at all
+    FOUR conditions, each printed. The [37.4] chart must print a distance from the place at all
     (Tobruk and Bardia are P -- a bomber standing at Tobruk may not fly to Sicily however much fuel
-    it has); that distance must fall within the transfer range (42.13's doubled Range); and the side
+    it has); that distance must fall within the transfer range (42.13's doubled Range); the side
     must actually HOLD an undestroyed air facility there (36.15 -- a facility belongs to whoever
-    holds its hex, and 36.14's zero-capacity field "is considered destroyed for all purposes").
+    holds its hex, and 36.14's zero-capacity field "is considered destroyed for all purposes"); and
+    **THE AEROPLANES FLYING MUST BE ABLE TO USE A FACILITY OF THAT KIND AT ALL** (34.4 one way,
+    36.3/36.4 the other -- roster.role_may_base).
 
-    SO THE AXIS'S MALTA OPTION LIVES AT BENGHAZI. The chart prints exactly two African departure
-    points, Benghazi and Derna, and every other African point it prints is prohibited: lose
-    Cyrenaica and the Regia Aeronautica cannot reach Sicily from Africa at all. That is not a
-    balancing decision, it is [37.4] section B read across [60.5]'s facility list, and the
+    ⚠⚠ THAT FOURTH CONDITION WAS MISSING UNTIL 2026-07-22, AND IT MATTERED. [37.4] prints two
+    African departure places, Benghazi and Derna; [60.5] puts two airfields at Benghazi (El Berca
+    and Benina) and, at Derna, ONE facility -- B5925-Derna, A FLYING BOAT ALIGHTING AREA. With no
+    kind filter this function offered it as a legal departure for the LAND strike squadron, i.e. for
+    S.M. 79 bombers, which 36.3's "flying boat basins MAY NOT BE USED FOR NORMAL AIRCRAFT" and
+    36.4's extension of it to alighting areas both forbid -- while roster.deployment, shipped in the
+    same commit, refused to PLACE a landplane there. The two halves contradicted each other, and the
+    reachable consequence was the sharp one: an Axis who had lost El Berca and Benina but held Derna
+    could still redeploy his whole bomber arm to Sicily off a seaplane mooring.
+
+    SO THE AXIS'S MALTA OPTION LIVES AT BENGHAZI, AND NOW LITERALLY. The chart prints exactly two
+    African departure points and prohibits every other African point it prints; of those two,
+    Derna's only facility is water and his bombers are landplanes. Lose the two fields at Benghazi
+    and the Regia Aeronautica cannot reach Sicily from Africa at all. That is not a balancing
+    decision, it is [37.4] section B read across [60.5]'s facility list under 36.3, and the
     resolution from the chart's PLACES to [60.5]'s FACILITIES is recorded (with the hexes that
     evidence it) in data/malta_44.json under transfer_42_1._departure_points."""
     reach = transfer_range(side, role)
@@ -299,8 +370,10 @@ def departures(state: GameState, side: Side, role: str) -> tuple[Departure, ...]
             continue
         for fac in point["facilities"]:
             f = held.get(coords.to_axial(coords.parse(fac["hex"])))
-            if f is not None:
-                out.append(Departure(point["place"], f.id, distance))
+            if f is None or not roster.role_may_base(side, role, f.kind):
+                continue                           # 36.3/36.4: a bomber may not use the water
+            out.append(Departure(point["place"], f.id, distance,
+                                 facility_planes(state, side, role, f)))
     return tuple(out)
 
 
@@ -477,6 +550,35 @@ def strategic_planes(state: GameState, side: Side, arena: str, role: str) -> int
     from the ledger means none, and the ledger is cleared at the Game-Turn boundary (39.19 is a
     per-GAME-TURN exclusion, not a per-Operations-Stage one; state.air_strategic says so)."""
     return state.air_strategic.get(air.squadron(side, arena, role), 0)
+
+
+def mediterranean_squadron(side: Side, role: str) -> str:
+    """[43.22]/[39.19] The squadron key the Italy/Sicily contingent's Strategic-Phase commitment is
+    booked under -- the Mediterranean twin of air.squadron(side, LAND_ARENA, role)."""
+    return air.squadron(side, MEDITERRANEAN_ARENA, role)
+
+
+def mediterranean_strategic(state: GameState, side: Side, role: str) -> int:
+    """[39.19] HOW MANY OF THE ITALY/SICILY-BASED BOMBERS FLEW THIS GAME-TURN'S MALTA RAID -- and
+    are therefore forbidden to fly anything else in it, INCLUDING THE FLIGHT HOME.
+
+        39.19 "A PLANE FLYING A MISSION IN AN OPERATIONS STAGE MAY NOT FLY IN THE STRATEGIC PHASE
+               OF THAT GAME-TURN AND VICE VERSA."
+
+    ⚠⚠ THE SECOND HALF OF THAT SENTENCE IS THE BINDING ONE HERE, AND IT WAS NEITHER APPLIED NOR
+    FLAGGED UNTIL 2026-07-22. The Malta raid IS the Strategic Phase (44.24). engine._malta_africa
+    books the AFRICAN contingent into the same ledger and always did -- but nothing booked the
+    based contingent that actually flew the raid, so the campaign measured (seed 4, Game-Turn 2) 56
+    bombers bombing Malta in the Strategic Phase, transferring home in the SAME Game-Turn, and then
+    flying Land Support over the desert in its Operations Stages. That is precisely the double
+    arena this whole module exists to forbid, and it made the transfer beat's own headline claim --
+    "a bomber in Sicily is a bomber not over the desert" -- false in the one turn it mattered, since
+    the doctrine's return trigger fires BECAUSE the raid just knocked Malta down.
+
+    The rule is applied at the one place it can bite: engine._air_transfer will not fly these
+    aeroplanes home. They sit in the box until the Game-Turn ends and the ledger clears, which is
+    what 39.19 asks for -- the raid costs the desert a Game-Turn of the force that flew it."""
+    return state.air_strategic.get(mediterranean_squadron(side, role), 0)
 
 
 def available_points(state: GameState, side: Side, arena: str, role: str, points: int) -> int:

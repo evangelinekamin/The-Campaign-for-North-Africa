@@ -125,6 +125,26 @@ def _check_squadron_unfit(state: GameState, squadron: str, unfit: int) -> None:
             f"squadron {squadron} unfit={unfit} out of [0, planes={total}]")
 
 
+def _check_squadron_mediterranean(state: GameState, squadron: str, based: int) -> None:
+    # [42.1]/[43.11] A squadron's Italy/Sicily contingent is a count of REAL AEROPLANES out of its
+    # own establishment -- "an aeroplane is in exactly one place" is the whole arithmetic of
+    # game.basing -- so it has the same two hard ends as the readiness ledger beside it.
+    #
+    # ⚠ WHY THIS EXISTS BEFORE IT CAN FIRE. game.basing CLAMPS both ends silently today:
+    # italy_sicily_planes returns min(squadron, required + flown) and africa_planes floors at zero.
+    # Nothing can shoot an Axis bomber down yet (rules 40/45/46 are the named debt), so the
+    # establishment never shrinks under the ledger and the clamps never bite. The day they land,
+    # a Mediterranean contingent larger than the squadron it is drawn from would be absorbed
+    # without a word -- the desert force reading zero and the Sicilian one quietly truncated. This
+    # project fails loud instead: it means the transfer ledger and the loss channel disagree about
+    # how many aeroplanes exist, which is a misencoded rule and not a rounding.
+    side_value, arena, role = squadron.split("/")
+    total = air.squadron_planes(state, Side(side_value), arena, role)
+    if not 0 <= based <= total:
+        raise InvariantViolation(
+            f"squadron {squadron} based in the Mediterranean={based} out of [0, planes={total}]")
+
+
 def _check_malta_unfit(state: GameState) -> None:
     # [38.31] via [44.16] Malta's unrefitted aeroplanes are a count of REAL machines out of the
     # island's own anti-shipping arm: never negative, never more than are standing on the island.
@@ -244,6 +264,8 @@ def check(state: GameState) -> None:
         _check_air_facility(f)
     for squadron, unfit in state.air_unfit.items():
         _check_squadron_unfit(state, squadron, unfit)
+    for squadron, based in state.air_mediterranean.items():
+        _check_squadron_mediterranean(state, squadron, based)
     _check_malta_unfit(state)
     for coord, level in state.fort_levels.items():
         _check_fort(coord, level)
@@ -365,6 +387,9 @@ def check_event(pre: GameState, post: GameState, event: Event) -> None:
         _check_air_facility(post.air_facility(p["facility_id"]))
     elif kind in (EventKind.AIR_SQUADRON_UNFIT, EventKind.AIR_REFIT_RESOLVED):
         _check_squadron_unfit(post, p["squadron"], post.air_unfit.get(p["squadron"], 0))
+    elif kind == EventKind.AIR_TRANSFERRED:                 # 42.1: an aeroplane is in one place
+        _check_squadron_mediterranean(post, p["squadron"],
+                                      post.air_mediterranean.get(p["squadron"], 0))
     elif kind in (EventKind.MALTA_STRIKE_UNFIT, EventKind.MALTA_REFIT_RESOLVED,
                   EventKind.MALTA_PLANES_LOST, EventKind.MALTA_REINFORCED):
         # [34.86] belongs on this list as much as the three that take the island's air force DOWN:

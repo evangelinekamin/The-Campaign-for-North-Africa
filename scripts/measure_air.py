@@ -17,15 +17,16 @@ THREE REPORTS:
   3. **HOW MANY OF THE CAMPAIGN'S 111 MALTA RAIDS DELIVER BOMB POINTS.** Before the transcription the
      Axis strike establishment was a ~4-plane proxy and percentages of it rounded to zero: 27 of 111.
 
-     ⚠ AND THAT NUMBER IS GOVERNED BY AN OPEN OWNER RULING, WHICH IS WHY `--discretionary-pct`
-     EXISTS. [44.42] sizes the raid as a percentage of the Axis's ITALY/SICILY-based force; [60.32]
-     prints "no planes start the game in Italy/Sicily"; the bridge is 43.1's basing choice plus a
-     rule-37 transfer and this engine has an order channel for neither. The posture is therefore
-     left UNSEEDED (data/malta_44.json `_owner_ruling_needed_60_32_vs_44_21`), which is what the
-     script measures by default -- the Axis raids Malta with nothing. Pass
-     `--discretionary-pct 10` to measure the ruling's other candidate, [63.46]'s printed El Alamein
-     ceiling. Reporting one of those two numbers without the other is reporting a decision as a
-     measurement, and this block did it once.
+     THE OWNER RULING THAT GOVERNED THIS NUMBER IS ANSWERED, AND THE KNOB THAT STOOD IN FOR IT IS
+     GONE. [44.42] sizes the raid as a percentage of the Axis's ITALY/SICILY-based force; [60.32]
+     prints "no planes start the game in Italy/Sicily"; for two blocks the bridge was a percentage
+     in a data file and this script carried a `--discretionary-pct` flag to seed it for a run. The
+     owner ruled on 2026-07-22 that [60.32] is a SET-UP rule and the bridge is a [42.1] TRANSFER
+     MISSION, so the posture is now a DECISION a policy takes (Policy.air_transfer, the
+     GameState.air_mediterranean ledger) and no percentage exists to seed. The flag was deleted on
+     2026-07-22 rather than left: `axis_discretionary_italy_sicily_pct_43_1` was removed from
+     data/malta_44.json by the ruling's own commit, which never touched scripts/, so the flag had
+     been dying with a KeyError. To measure a different posture now, vary the POLICY.
 """
 from __future__ import annotations
 
@@ -36,7 +37,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from game import basing, logistics_data, roster
+from game import basing, roster
 from game.engine import run
 from game.events import EventKind, Side
 from game.logistics_data import aircraft_characteristics_4_44
@@ -92,27 +93,30 @@ def _malta_raids(seed: int, turns: int) -> None:
     lost = [e.payload for e in res.events if e.kind == EventKind.MALTA_PLANES_LOST]
     print(f"  Maltese capacity levels knocked down: {sum(p['levels'] for p in lost)}, "
           f"aeroplanes destroyed on the ground: {sum(p['lost'] for p in lost)}")
+    _transfers(res)
 
 
-def _seed_the_open_ruling(pct: int) -> None:
-    """Answer the open [60.32]-versus-[44.21] basing ruling FOR THIS RUN ONLY, so its cost can be
-    measured instead of guessed. Nothing is written; the engine still ships unseeded."""
-    real = logistics_data.malta_italy_sicily_basing_43_1()
-    seeded = {**real, "axis_discretionary_italy_sicily_pct_43_1": pct}
-    logistics_data.malta_italy_sicily_basing_43_1 = lambda: seeded
-    print(f"\n*** the open Italy/Sicily basing ruling is SEEDED AT {pct}% for this run "
-          f"(shipped: unseeded, {real['axis_discretionary_italy_sicily_pct_43_1']}) ***")
+def _transfers(res) -> None:
+    """[42.1] The posture the `--discretionary-pct` knob used to seed, MEASURED instead of asserted:
+    what the Axis policy actually flew to Sicily, out of which fields, and at what [37.24] ceiling."""
+    moved = [e.payload for e in res.events if e.kind == EventKind.AIR_TRANSFERRED]
+    out = [p for p in moved if p["to_mediterranean"]]
+    home = [p for p in moved if not p["to_mediterranean"]]
+    fields = Counter(p["departure"] for p in out)
+    print(f"  [42.1] transfers to Italy/Sicily: {len(out)} flights, "
+          f"{sum(p['planes'] for p in out)} aeroplanes, {sum(p['fuel'] for p in out)} Fuel Points; "
+          f"home {len(home)} flights, {sum(p['planes'] for p in home)} aeroplanes")
+    for fid, n in fields.items():
+        cap = next(p["capacity"] for p in out if p["departure"] == fid)
+        biggest = max(p["planes"] for p in out if p["departure"] == fid)
+        print(f"    out of {fid}: {n} flights, largest {biggest}, [37.24] ceiling {cap}")
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, nargs="*", default=[4])
     ap.add_argument("--turns", type=int, default=111)
-    ap.add_argument("--discretionary-pct", type=int, default=None,
-                    help="seed the OPEN 43.1 Italy/Sicily posture (10 = [63.46]'s ceiling)")
     args = ap.parse_args()
-    if args.discretionary_pct is not None:
-        _seed_the_open_ruling(args.discretionary_pct)
     _establishment_table()
     _basing_table(campaign(seed=args.seeds[0], max_turns=1))
     for seed in args.seeds:

@@ -603,9 +603,18 @@ def test_the_torpedo_arm_grows_only_with_torpedo_arrivals():
     #                                 of what headroom there is (44.0: Malta hinders the convoys)
 
 
-def test_the_island_actually_gains_aeroplanes_over_a_campaign():
-    """The whole point of the block, end to end: run the schedule out and Malta's establishment
-    RISES, where before [34.86] the only writer of it was 41.36 and it only ever subtracted.
+def test_the_islands_establishment_is_exactly_what_arrived_less_what_the_raid_took():
+    """The whole point of the block, end to end: run the schedule out and Malta's establishment is
+    accounted for on both sides, where before [34.86] the only writer of it was 41.36 and it only
+    ever subtracted.
+
+    RENAMED 2026-07-22, because the name outlived the assertion. It was
+    `test_the_island_actually_gains_aeroplanes_over_a_campaign` while the body asserted
+    `final.malta_planes > initial`; the body was restated to the accounting identity below (for the
+    reason two paragraphs down) and the old name went on promising a property nothing checked --
+    the shape a future reader mistakes for coverage. The direction is still a fact and is still
+    measured: a 111-turn seed-7 run ends the island at 61 aeroplanes against 31 at set-up. It is not
+    ASSERTED here because it is a fact about a war, not about the schedule this test is for.
 
     RESTATED 2026-07-22, NOT WEAKENED: it also asserted that the anti-shipping arm rises with the
     establishment, which was only true while that arm counted every bomber the schedule sent. It

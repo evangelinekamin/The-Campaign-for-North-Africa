@@ -101,15 +101,21 @@ def test_42_13_the_transfer_range_is_the_charted_range_doubled():
 
 # --- [37.12] where he may fly it from -----------------------------------------------------------
 
-def test_the_departure_points_are_benghazi_and_derna_and_he_must_hold_them():
-    """[37.12]/[36.15] Three conditions and each is printed: the chart must print a distance at all,
-    it must fall within the transfer range, and the side must HOLD an undestroyed air facility
-    there ("air facilities may be used by anyone who controls them", 60.5)."""
+def test_the_departure_points_are_benghazis_two_airfields_and_he_must_hold_them():
+    """[37.12]/[36.15] FOUR conditions and each is printed: the chart must print a distance at all,
+    it must fall within the transfer range, the side must HOLD an undestroyed air facility there
+    ("air facilities may be used by anyone who controls them", 60.5), and the aeroplanes flying
+    must be able to use a facility of that KIND (36.3/36.4 -- the next test).
+
+    RESTATED 2026-07-22, NOT WEAKENED. It asserted a third departure, ("Derna", "B5925-Derna",
+    105), which was wrong on the book: [60.5] puts exactly one facility at Derna and it is a FLYING
+    BOAT ALIGHTING AREA, which 36.3/36.4 forbid to normal aircraft. The assertion enshrined the
+    defect. Derna stays a transcribed departure PLACE -- the [37.4] chart prints its distance -- and
+    the rule, not the transcription, is what refuses the flight."""
     st = campaign(seed=7, max_turns=3)
     got = basing.departures(st, Side.AXIS, "strike")
     assert [(d.place, d.facility, d.distance) for d in got] == [
-        ("Benghazi", "A4728-El Berca", 96), ("Benghazi", "A4829-Benina", 96),
-        ("Derna", "B5925-Derna", 105)]
+        ("Benghazi", "A4728-El Berca", 96), ("Benghazi", "A4829-Benina", 96)]
     # 36.14: a field at zero Capacity Level "is considered destroyed for all purposes"
     gone = {d.facility for d in got}
     flat = replace(st, air_facilities=tuple(
@@ -117,6 +123,65 @@ def test_the_departure_points_are_benghazi_and_derna_and_he_must_hold_them():
     assert basing.departures(flat, Side.AXIS, "strike") == ()
     # ...and with nowhere to fly from, no transfer happens however loudly the policy asks
     assert not _run_transfer(flat, 40).events
+
+
+def test_36_3_a_bomber_may_not_take_off_from_a_flying_boat_alighting_area():
+    """[36.3] "FLYING BOAT BASINS MAY NOT BE USED FOR NORMAL AIRCRAFT", and [36.4] "Alighting Areas
+    are the same as flying boat basins" but for capacity and artillery immunity. [34.4] is the
+    mirror clause, and the pair is two-way: the boat is confined to water and the water is closed
+    to the landplane.
+
+    THIS IS THE REGRESSION THE 2026-07-22 REVIEW FOUND. B5925-Derna is an alighting area; the
+    [37.4] chart prints 105 hexes from Derna to Sicily, well inside the doubled range; and with no
+    facility-KIND filter the transfer beat offered it to the S.M. 79s. It bit exactly where the
+    block advertised its sharpest consequence -- lose Benghazi's two fields and the Axis was
+    supposed to have no way to Sicily at all, which was false while Derna still answered."""
+    st = campaign(seed=7, max_turns=3)
+    derna = next(f for f in st.air_facilities if f.id == "B5925-Derna")
+    assert derna.kind == "alighting"
+    assert not roster.role_may_base(Side.AXIS, "strike", "alighting")   # 36.3/36.4
+    assert not roster.role_may_base(Side.AXIS, "strike", "basin")
+    assert roster.role_may_base(Side.AXIS, "strike", "airfield")
+    assert "B5925-Derna" not in {d.facility for d in basing.departures(st, Side.AXIS, "strike")}
+    # ...so losing Benghazi really does end the Malta option, which is what the block claims
+    benghazi = ("A4728-El Berca", "A4829-Benina")
+    lost = replace(st, air_facilities=tuple(
+        replace(f, level=0) if f.id in benghazi else f for f in st.air_facilities))
+    assert basing.departures(lost, Side.AXIS, "strike") == ()
+    assert not _run_transfer(lost, 40).events
+    # and the mirror, from the chart's own class cell: the Cant Z. 501 is refused the airfield
+    assert roster.may_base("Cant Z. 501 Gabbiano", "basin")
+    assert not roster.may_base("Cant Z. 501 Gabbiano", "airfield")
+    assert not roster.may_base("S.M. 79 Sparviero", "basin")
+
+
+def test_37_24_no_more_planes_fly_from_a_field_than_its_capacity_level_allows():
+    """[37.24] "NO PLANES MAY FLY IN EXCESS OF THE AIR FACILITY'S CAPABILITY LEVEL." [36.12] fixes
+    an airfield at six squadrons and [35.23] an Italian Squadriglia at twelve aeroplanes, so a
+    level-6 field launches seventy-two and no more; 36.14 makes the CURRENT level the live number.
+
+    MEASURED BEFORE THIS BOUND (campaign seed 4): single AIR_TRANSFERRED events of 74, 105 and 116
+    aeroplanes out of A4728-El Berca, 1.6x its printed ceiling -- the code held both the level and
+    the chart and read the level only as a held/destroyed flag."""
+    # [59.32]'s Refitted column stands only 47 of the 184 bombers up at set-up, which is fewer than
+    # one field's ceiling -- so the whole establishment is made serviceable here (38.31's blanket
+    # "at the start of a Scenario, all planes are considered refitted") to put the FIELD in front of
+    # the readiness bound. Otherwise this test would pass on 38.31 and prove nothing about 37.24.
+    st = replace(campaign(seed=7, max_turns=3), air_unfit={})
+    got = basing.departures(st, Side.AXIS, "strike")
+    assert [d.capacity for d in got] == [72, 72]           # two level-6 fields, 6 x 12
+    # a redeployment bigger than one field spills to the next, one mission per field (42.11)
+    r = _run_transfer(st, 100)
+    moved = [e.payload for e in r.events if e.kind == EventKind.AIR_TRANSFERRED]
+    assert [(p["departure"], p["planes"]) for p in moved] == [
+        ("A4728-El Berca", 72), ("A4829-Benina", 28)]
+    assert moved[-1]["based"] == 100
+    # 36.14: bomb the field down and the ceiling comes down with it, in whole squadrons
+    hurt = replace(st, air_facilities=tuple(
+        replace(f, level=2) if f.id == "A4728-El Berca" else f for f in st.air_facilities))
+    assert basing.departures(hurt, Side.AXIS, "strike")[0].capacity == 24
+    assert [e.payload["planes"] for e in _run_transfer(hurt, 100).events
+            if e.kind == EventKind.AIR_TRANSFERRED] == [24, 72]
 
 
 def test_the_commonwealth_has_no_mediterranean_box_to_transfer_to():
@@ -152,20 +217,85 @@ def test_the_outbound_transfer_draws_38_24_fuel_and_moves_the_bombers_off_the_de
     assert malta.raid(r.state, "IV", 5, 1).bomb_points > 0              # 44.42 has a force at last
 
 
-def test_the_return_transfer_is_free_because_43_21_feeds_the_box():
-    """[43.21] "German Bombers based in Italy/Sicily and Crete DO NOT NEED SGSU's. All their
-    requirements are met by the specific Box they are in, INCLUDING FUEL AND AMMUNITION. The Axis
-    Player does not expend fuel or ammo for these planes." So the flight home costs nothing, and
-    the asymmetry is the book's."""
+def test_the_return_transfer_is_free_because_36_5_feeds_the_box():
+    """[36.5](a) An off-map air facility -- which the Italy/Sicily boxes are -- has "UNLIMITED
+    SUPPLIES FOR AIRPLANE MAINTENANCE AND REPAIR". So the flight home draws nothing from an African
+    dump, and 42.14's unconditional "transfer missions consume fuel" is still honoured: the fuel
+    comes out of a box the book says cannot run out.
+
+    RESTATED 2026-07-22, AND THE RESTATEMENT IS THE FINDING. This test and the code both cited
+    [43.21] -- "GERMAN Bombers based in Italy/Sicily and Crete do not need SGSU's... The Axis
+    Player does not expend fuel or ammo for these planes" -- whose printed subject is a
+    NATIONALITY. The campaign force is Italian to the last aeroplane ([60.32] musters no German
+    type), so 43.21 had nothing to exempt: it was the same nationality-blindness the sibling block
+    corrected for 43.12 one commit earlier. 36.5(a) binds on the FACILITY, which is what he is
+    flying out of, and is the citation that should have been given. The behaviour is unchanged and
+    the reason for it is now the right one.
+
+    THE FLIGHT HOME IS ALSO A FLIGHT, which is the other half of the repair: it is tested against
+    the same [37.4] chart, the same 42.13 range and the same [37.24] ceiling as the outbound leg,
+    and it names the field it lands at. Before, it named none and was tested against nothing."""
     st = campaign(seed=7, max_turns=3).with_air_mediterranean(AXIS_STRIKE, 30)
     r = _run_transfer(st, -12)
     moved = [e for e in r.events if e.kind == EventKind.AIR_TRANSFERRED]
     assert not [e for e in r.events if e.kind == EventKind.SUPPLY_CONSUMED]
     assert moved[0].payload["planes"] == 12 and not moved[0].payload["to_mediterranean"]
     assert moved[0].payload["based"] == 18 and moved[0].payload["fuel"] == 0
+    # 37.12/37.24: the landing field is named, and it is one the chart and the rule both admit
+    assert moved[0].payload["departure"] == "A4728-El Berca"
+    assert moved[0].payload["distance"] == 96 and moved[0].payload["capacity"] == 72
     assert basing.italy_sicily_planes(r.state, 1) == 18
     # ...and he may never bring home more than he sent
-    assert _run_transfer(st, -500).events[-1].payload["based"] == 0
+    assert sum(e.payload["planes"] for e in _run_transfer(st, -500).events
+               if e.kind == EventKind.AIR_TRANSFERRED) == 30
+    # ...nor land anywhere at all once [37.4]/[36.3] leave him no field in Africa to land at
+    benghazi = ("A4728-El Berca", "A4829-Benina")
+    lost = replace(st, air_facilities=tuple(
+        replace(f, level=0) if f.id in benghazi else f for f in st.air_facilities))
+    assert not _run_transfer(lost, -12).events
+
+
+def test_39_19_the_bombers_that_raided_malta_may_not_fly_home_the_same_game_turn():
+    """[39.19] "A plane flying a mission in an Operations Stage may not fly in the Strategic Phase
+    of that Game-Turn AND VICE VERSA." The Malta raid IS the Strategic Phase (44.24) and the flight
+    home is a [42.1] mission flown in an Operations Stage (42.15), so the aeroplanes that bombed the
+    island stay in the box until the Game-Turn ends.
+
+    THIS IS THE BLOCK'S OWN CENTRAL TRADE, AND IT LEAKED. engine._malta_africa booked the AFRICAN
+    contingent into GameState.air_strategic and always did; nothing booked the ITALY/SICILY force
+    that actually flew the raid. Measured on campaign seed 4, Game-Turn 2: MALTA_RAID_ORDERED with
+    56 based bombers and 1,960 Bomb Points, then AIR_TRANSFERRED bringing all 56 home in the SAME
+    Game-Turn, then two AIR_STRIKE_RESOLVED and an AIR_SQUADRON_UNFIT of ten over the desert. The
+    doctrine's return trigger fires precisely BECAUSE the raid knocked Malta down, so the leak was
+    not a corner case -- it was the turn the raid happened, every time."""
+    st = campaign(seed=7, max_turns=3).with_air_mediterranean(AXIS_STRIKE, 30)
+    med = basing.mediterranean_squadron(Side.AXIS, "strike")
+    assert basing.mediterranean_strategic(st, Side.AXIS, "strike") == 0
+    flew = st.with_air_strategic(med, 30)                  # the whole box raided Malta this turn
+    assert basing.mediterranean_strategic(flew, Side.AXIS, "strike") == 30
+    assert not _run_transfer(flew, -30).events             # ...so not one of them comes home
+    # ...and a raid that used only part of the box leaves the rest free to fly (39.19 is per plane)
+    part = st.with_air_strategic(med, 18)
+    assert [e.payload["planes"] for e in _run_transfer(part, -30).events
+            if e.kind == EventKind.AIR_TRANSFERRED] == [12]
+
+
+def test_39_19_binds_end_to_end_on_the_campaign_the_review_measured():
+    """The same rule from the outside, on the run the defect was found in: in no Game-Turn does the
+    Axis both raid Malta with his based bombers and fly those same bombers home."""
+    st = campaign(seed=4, max_turns=6)
+    r = run(st, axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
+    raided = {e.turn: e.payload["med_strategic"] for e in r.events
+              if e.kind == EventKind.MALTA_RAID_ORDERED and not e.payload["cancelled"]}
+    assert any(v > 0 for v in raided.values()), "no raid ever flew, so nothing was tested"
+    home = [e for e in r.events
+            if e.kind == EventKind.AIR_TRANSFERRED and not e.payload["to_mediterranean"]]
+    assert home, "the Axis never brought anybody home, so nothing was tested"
+    for e in home:
+        # `based` is the box AFTER the flight: whatever 39.19 committed must still be standing in it
+        assert e.payload["based"] >= raided.get(e.turn, 0), (
+            f"GT{e.turn}: {raided.get(e.turn)} bombers raided Malta and the box is down to "
+            f"{e.payload['based']}")
 
 
 def test_the_order_is_revalidated_against_38_31_and_39_19_like_every_other():
@@ -228,11 +358,15 @@ def test_the_whole_60_32_muster_fits_the_air_facilities_it_is_placed_at():
         at[p.facility] = at.get(p.facility, 0) + p.planes
     assert all(at[fid] <= room[fid] for fid in at)             # 36.12/36.2/36.3/36.4
     # [34.4] a flying boat "may not be based in, take off from, or land in airfields or air landing
-    # strips" -- the nine Cant Z. 501s are at the Bomba basin and the Derna alighting area
+    # strips" -- and [36.3]/[36.4] close the water to everybody else, which is the OTHER direction
+    # and is equally printed ("flying boat basins may not be used for normal aircraft"). CORRECTED
+    # 2026-07-22: this comment said the nine Cant Z. 501s stand "at the Bomba basin and the Derna
+    # alighting area", and they do not -- Bomba is three squadrons of room to Derna's one, and the
+    # first in id order takes the whole row. All nine are at B5331-Bomba.
     boats = [p for p in placed if p.type == "Cant Z. 501 Gabbiano"]
     assert sum(p.planes for p in boats) == 9
-    assert {p.kind for p in boats} <= {"basin", "alighting"}
-    assert all(p.kind not in ("basin", "alighting") for p in placed
+    assert [(p.facility, p.kind, p.planes) for p in boats] == [("B5331-Bomba", "basin", 9)]
+    assert all(p.kind not in roster.WATER_FACILITIES for p in placed
                if p.type != "Cant Z. 501 Gabbiano")
 
 

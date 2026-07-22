@@ -47,7 +47,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from game import logistics_data, malta                              # noqa: E402
+from game import malta                                             # noqa: E402
 from game.campaign_policy import (CampaignAxisPolicy,               # noqa: E402
                                   CampaignCommonwealthPolicy)
 from game.campaign_victory import CampaignVictory                   # noqa: E402
@@ -61,15 +61,17 @@ MALTA_LANE = "2"        # scenario._campaign_malta_interdiction: the Axis Medite
 OFF, LIVE = "off", "live"
 
 
-def _seed_the_open_ruling(pct: int) -> None:
-    """Answer the OPEN [60.32]-versus-[44.21] Italy/Sicily basing ruling FOR THIS RUN ONLY -- the
-    same knob, with the same warning, as scripts/measure_air.py `--discretionary-pct`. Nothing is
-    written; the engine still ships unseeded, which means the shipped Axis raids Malta with NOTHING
-    and this A/B measures an island nobody is suppressing. Reporting either posture without the
-    other is reporting a decision as a measurement."""
-    real = logistics_data.malta_italy_sicily_basing_43_1()
-    seeded = {**real, "axis_discretionary_italy_sicily_pct_43_1": pct}
-    logistics_data.malta_italy_sicily_basing_43_1 = lambda: seeded
+# [42.1] THE `--discretionary-pct` KNOB IS DELETED, 2026-07-22, AND ITS DELETION IS THE POINT.
+# It monkeypatched `axis_discretionary_italy_sicily_pct_43_1` into the rule-43 basing block to
+# answer the then-open [60.32]-versus-[44.21] owner ruling for one run. The owner answered that
+# ruling on 2026-07-22 -- [60.32] is a SET-UP rule, the bridge to Sicily is a [42.1] TRANSFER
+# MISSION -- and the percentage was deleted from data/malta_44.json with it. NOTHING IN game/ HAS
+# READ THAT KEY SINCE: the posture lives in GameState.air_mediterranean, written by a policy's
+# transfer order. So the knob still patched a key, still printed "the OPEN Italy/Sicily basing
+# ruling is SEEDED AT 10% for this run", and CHANGED NOT ONE DIE -- a driver announcing a posture
+# it did not apply, which is worse than the sibling driver's honest KeyError and is exactly the
+# failure mode the [63.46] transplant was withdrawn for. To measure a different Axis air posture
+# now, vary the POLICY (campaign_policy.air_transfer_doctrine) and say which one ran.
 
 
 def _arm(state, arm: str):
@@ -143,9 +145,7 @@ def _highest_total_capacity(start, events) -> int:
     return highest
 
 
-def _play(seed: int, arm: str, pct: int | None = None) -> dict:
-    if pct is not None:                    # seeded in the WORKER, so no fork assumption
-        _seed_the_open_ruling(pct)
+def _play(seed: int, arm: str) -> dict:
     start = campaign(seed=seed)
     res = run(_arm(start, arm), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     axis, cwlth = _score(res.final)
@@ -191,21 +191,13 @@ def _play(seed: int, arm: str, pct: int | None = None) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, nargs="+", default=list(SEEDS))
-    ap.add_argument("--discretionary-pct", type=int, default=None,
-                    help="answer the OPEN 43.1 Italy/Sicily posture for this run "
-                         "(10 = [63.46]'s printed ceiling). Shipped: unseeded = the "
-                         "Axis raids Malta with nothing.")
     args = ap.parse_args()
 
     jobs = [(s, b) for s in args.seeds for b in (OFF, LIVE)]
     with ProcessPoolExecutor() as pool:                    # 16 threads: one campaign per worker
-        out = list(pool.map(_play, [j[0] for j in jobs], [j[1] for j in jobs],
-                            [args.discretionary_pct] * len(jobs)))
+        out = list(pool.map(_play, [j[0] for j in jobs], [j[1] for j in jobs]))
     by = {(r["seed"], r["arm"]): r for r in out}
 
-    if args.discretionary_pct is not None:
-        print(f"\n*** the OPEN Italy/Sicily basing ruling is SEEDED AT "
-              f"{args.discretionary_pct}% for this run (shipped: unseeded = no raid) ***")
     print("\nMALTA A/B -- the island SILENCED (flat-0% column) vs the island LIVE (rule 44)")
     print("the full 111-turn campaign, CampaignAxisPolicy vs CampaignCommonwealthPolicy\n")
     hdr = f"{'seed':>5} | {'MALTA SILENCED':^30} | {'MALTA LIVE (rule 44)':^30} | {'swing':>18}"

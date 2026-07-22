@@ -1012,6 +1012,15 @@ def air_transfer_doctrine(state: GameState, based: int, available: int) -> int:
         take Game-Turns to undo it. Bombers held in Sicily against a flattened island are bombers
         not bombing the Eighth Army, so they come home.
 
+    ⚠ AND THE RETURN IS NOT GRANTED THE TURN HE ASKS FOR IT, WHICH IS [39.19] AND NOT A BUG. "A
+    plane flying a mission in an Operations Stage may not fly in the Strategic Phase of that
+    Game-Turn AND VICE VERSA": the bombers that raided Malta this Game-Turn may not also fly the
+    [42.1] mission home in it, so engine._air_transfer refuses them and the doctrine's order is
+    honoured on the NEXT Game-Turn. That bites exactly when the doctrine asks -- the return trigger
+    fires because the raid just knocked the island down -- and it is the point: the raid costs the
+    desert a Game-Turn of the force that flew it. Until 2026-07-22 it cost nothing, and the same 56
+    bombers bombed Malta and flew Land Support in one Game-Turn.
+
     A DOCTRINE, NOT A CALENDAR -- the same discipline the rest of this module is written under. It
     oscillates on purpose: surge, raid, return, and surge again when the island is repaired. That
     is a commander reading the position, it costs 34.17 fuel every time he does it, and it is the

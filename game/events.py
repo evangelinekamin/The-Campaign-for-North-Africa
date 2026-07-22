@@ -450,23 +450,33 @@ class EventKind(str, Enum):
     AIR_REFIT_DENIED = "AIR_REFIT_DENIED"
     # [42.1] THE TRANSFER MISSION -- "flying a plane from one air facility to another" (42.11), and
     # the only way an aeroplane ever changes base. AIR_TRANSFERRED {squadron, arena, role, planes,
-    # to_mediterranean, based, departure, distance, range, fuel, draws} folds onto
-    # GameState.air_mediterranean (the Italy/Sicily basing ledger) and, when the flight is
-    # outbound, onto the air-facility dumps it drew its fuel from -- "transfer missions consume
+    # to_mediterranean, based, departure, distance, capacity, range, fuel, draws, need, available}
+    # folds onto GameState.air_mediterranean (the Italy/Sicily basing ledger) and, when the flight
+    # is outbound, onto the air-facility dumps it drew its fuel from -- "transfer missions consume
     # fuel" (42.14), at 34.17's Fuel Consumption Rating like any other sortie. `planes` is the
-    # number that changed base and `to_mediterranean` its direction; `departure` is the [37.4] Air
-    # Distance Chart point it flew from and `distance`/`range` the two numbers 37.12 compares
-    # (the plane's charted Range DOUBLED for a transfer, 42.13). A RETURN flight draws nothing:
-    # 43.21 meets every requirement of a Mediterranean-based plane "including fuel and ammunition"
-    # out of the box it sits in. Emitted only when a policy actually moves aeroplanes, so every
-    # scenario that flies no transfer stays byte-identical.
+    # number that changed base and `to_mediterranean` its direction; `departure` is the AIR FACILITY
+    # it flew from (or home to -- 42.11 makes a transfer a flight between two of them), `distance`
+    # /`range` the two numbers 37.12 compares (the plane's charted Range DOUBLED for a transfer,
+    # 42.13), and `capacity` [37.24]'s ceiling on that field, "no planes may fly in excess of the
+    # air facility's capability level". ONE EVENT PER FIELD: a redeployment larger than one field's
+    # Capacity Level is several missions and the log says so. A RETURN flight draws no fuel from
+    # Africa -- [36.5](a), an off-map facility has "unlimited supplies for airplane maintenance and
+    # repair", which is the citation that replaced 43.21's on 2026-07-22 (43.21's printed subject is
+    # GERMAN bombers, and the campaign force is Italian entire). Emitted only when a policy actually
+    # moves aeroplanes, so every scenario that flies no transfer stays byte-identical.
     AIR_TRANSFERRED = "AIR_TRANSFERRED"
     # [44.0] MALTA -- the island as a place with health (game.malta), once per GAME-TURN.
     #
     # MALTA_RAID_ORDERED {level, dice, in_play_pct, strategic_pct, planes, bomb_points, based,
-    # target, cancelled} (rng_draws=(d1,d2)) is the Axis's [44.42] consultation and the ONLY fold
-    # onto GameState.malta_raids: it books one Game-Turn against the Availability Level he
-    # committed, spent "regardless of whether he cancels or not" (44.29). What the raid then DOES
+    # target, cancelled, med_squadron, med_strategic} (rng_draws=(d1,d2)) is the Axis's [44.42]
+    # consultation and the ONLY fold onto GameState.malta_raids: it books one Game-Turn against the
+    # Availability Level he committed, spent "regardless of whether he cancels or not" (44.29).
+    # `med_strategic` is 39.19's other half, added 2026-07-22: the Italy/Sicily-based bombers that
+    # FLEW the raid, booked into GameState.air_strategic under `med_squadron` (43.22's own
+    # bookkeeping -- a group of bombers in an area is a squadron) so that a plane which flew in the
+    # Strategic Phase may not also fly a [42.1] transfer home in an Operations Stage of that
+    # Game-Turn. Zero when the raid is cancelled: 44.29 spends the table, not the airframes.
+    # What the raid then DOES
     # to the island rides on the events rule 41.36 already has -- AIR_STRIKE_RESOLVED with
     # arena="AIRFIELD" for the [41.5] roll and AIR_FACILITY_LEVEL_CHANGED for the levels lost --
     # so the Maltese fields are damaged by exactly the same path as an African one.

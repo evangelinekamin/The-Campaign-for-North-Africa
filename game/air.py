@@ -576,7 +576,14 @@ SQUADRON_CAPACITY = logistics_data.squadron_capacity_35_23()
 # modifier for at all.
 _REFIT_DRM_KEY: dict[str, str] = {"IT": "italian_sgsu", "GE": "german_sgsu"}
 
-_CAPACITY_KEY: dict[str, str] = {"IT": "italian", "GE": "german"}
+# [35.23] The undated rows, under BOTH names the engine ever asks for them by: the nationality
+# game.oob stamped on an SGSU counter ("IT"/"GE") and the nationality the [4.44b] Aircraft
+# Characteristics Chart prints against a TYPE ("italian"/"german", game.roster.nation) -- which is
+# what [37.24]'s per-field ceiling in aeroplanes is looked up by (game.basing.facility_planes).
+# "commonwealth" is deliberately absent from both halves: its squadron GROWS, so the chart's own
+# dated rows below must select it, and a key here would silently freeze it at one size.
+_CAPACITY_KEY: dict[str, str] = {"IT": "italian", "GE": "german",
+                                 "italian": "italian", "german": "german"}
 
 # [38.36] "For every squadron undergoing an attempted refit -- whether successful or not -- the
 # Player must have present and actually EXPEND ONE STORES POINT." The rule's own quantity, named

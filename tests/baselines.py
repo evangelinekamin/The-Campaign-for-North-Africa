@@ -64,6 +64,21 @@ these two logs, and the reasons are structural rather than lucky:
 The CAMPAIGN log moves under all of it, and the campaign is not signature-pinned (see CAMPAIGN_SEED
 below, which pins a SEED and a set of narrative assertions, not a hash).
 
+NOT RE-BASELINED BY THE [60.32] TRANSFER REPAIR PASS (2026-07-22, later the same day), AND THAT WAS
+CHECKED RATHER THAN ASSUMED -- both signatures recomputed on the repaired tree.
+
+Three adversarial reviews of the transfer block found real rule errors and they are fixed: 36.3/36.4
+now refuse a landplane bomber the Derna flying-boat ALIGHTING AREA as a departure (it was offered,
+and roster.deployment refused the same facility for placement in the same commit); [37.24] now caps
+what may fly from one field at its Capacity Level in aeroplanes, so a redeployment spreads across
+the fields he holds instead of flying 116 machines off a 72-plane airfield; the flight home is
+tested against the same [37.4] chart and the same ceiling and names the field it lands at, and its
+free fuel is cited to [36.5](a) rather than to 43.21, whose printed subject is GERMAN bombers;
+and 39.19's second sentence now binds on the Mediterranean contingent, so the bombers that raid
+Malta in the Strategic Phase may not fly home in an Operations Stage of that Game-Turn. NONE of it
+reaches these two logs, for the reason the block itself did not: neither benchmark fields an
+AirWing, so engine._air_transfer returns at its first guard and _malta_raid never runs.
+
 NOT RE-BASELINED BY [60.32]'s MUSTER, THE [42.1] TRANSFER MISSION OR THE NINTH ITALIAN ROW
 (2026-07-22), AND THAT WAS CHECKED RATHER THAN ASSUMED -- both signatures recomputed on the tree.
 

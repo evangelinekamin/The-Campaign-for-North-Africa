@@ -232,6 +232,55 @@ def range_per_plane(side: Side, role: str, scenario: str = SCENARIO) -> int:
     return sum(m.available * _chart(m.type)["range"] for m in rows) // total_planes
 
 
+# [36.3]/[36.4] The two air-facility kinds that are WATER (game.air's AirFacility.kind vocabulary):
+# a flying boat basin and a flying boat alighting area, which 36.4 makes "the same as flying boat
+# basins" but for capacity and artillery immunity.
+WATER_FACILITIES = ("basin", "alighting")
+
+
+def flying_boat(name: str) -> bool:
+    """[4.44b] Is this charted type a flying boat? Read off the chart's own `class` cell, so the
+    only aeroplane in the [60.32] muster that 34.4 confines to water is the one the book says is
+    one -- the Cant Z. 501 Gabbiano."""
+    return _chart(name)["class"] == "flying_boat"
+
+
+def may_base(name: str, kind: str) -> bool:
+    """[34.4] + [36.3]/[36.4] MAY AN AEROPLANE OF THIS TYPE BE BASED AT -- AND THEREFORE FLY FROM --
+    AN AIR FACILITY OF THIS KIND? The book prints the exclusion in BOTH directions and they are two
+    different sentences in two different rules, which is why this is one predicate and not a
+    flying-boat test with a comment:
+
+        [34.4] "Flying boats... MAY NOT BE BASED IN, TAKE OFF FROM, OR LAND IN airfields or air
+          landing strips. They must use flying boat basins or flying boat alighting areas."
+        [36.3] "Flying boat basins are 'airfields' for flying boat seaplanes... FLYING BOAT BASINS
+          MAY NOT BE USED FOR NORMAL AIRCRAFT."
+        [36.4] "Alighting Areas are the same as flying boat basins, except that they have a capacity
+          of one Squadron and they are immune to artillery barrage."
+
+    CORRECTED 2026-07-22, and the correction is a rule statement rather than a behaviour: this
+    predicate's first shipping was described in the source beside it as "34.4, ONE WAY: a boat needs
+    water, a landplane is refused nothing". That is not what the book prints -- 36.3's last sentence
+    is the mirror clause, and 36.4 extends it to the alighting area. The CODE was always two-way;
+    the transcribed reading beside it was wrong, and it was the same wrong reading that licensed a
+    landplane bomber to fly a [42.1] transfer out of the Derna alighting area (game.basing.
+    departures, fixed in the same pass). 34.4 confines the boat; 36.3/36.4 confine the water."""
+    return flying_boat(name) == (kind in WATER_FACILITIES)
+
+
+def role_may_base(side: Side, role: str, kind: str, scenario: str = SCENARIO) -> bool:
+    """[34.4]/[36.3]/[36.4] May the aeroplanes `side` flies in `role` use an air facility of `kind`?
+
+    ALL of them, not any of them, and that is the conservative direction chosen on purpose: our
+    AirWing is a POOL of Air Points over a mixed establishment (34.72's Squadron Composition Sheet
+    is the debt), so a flight drawn from it is drawn from every type in the role at once. Where a
+    role mixes landplanes and flying boats, `all` refuses the whole facility to the whole pool
+    rather than let the pool launder a bomber out of a basin on a seaplane's permission -- the same
+    trade, in the same direction, as the serviceability bound in engine._air_transfer. It costs
+    nothing today: the Axis bomber arm [60.32] musters is landplanes entire."""
+    return all(may_base(m.type, kind) for m in by_role(side, role, scenario))
+
+
 class Placement(NamedTuple):
     """One line of a scenario's [59.31] air set-up: `planes` aeroplanes of `type` standing at the
     air facility `facility` (its id), which is `kind`."""
@@ -256,8 +305,12 @@ def deployment(side: Side, facilities, per_squadron: int,
           in an Italian Squadriglia), which is what turns a capacity in SQUADRONS into a capacity in
           AEROPLANES.
         [34.4] "flying boats... may not be based in, take off from, or land in airfields or air
-          landing strips. THEY MUST USE flying boat basins or flying boat alighting areas." Note the
-          rule is ONE-WAY: it confines the flying boat, and forbids no landplane a basin.
+          landing strips. THEY MUST USE flying boat basins or flying boat alighting areas."
+        [36.3] "FLYING BOAT BASINS MAY NOT BE USED FOR NORMAL AIRCRAFT" -- and 36.4 makes an
+          alighting area "the same as flying boat basins" but for capacity and artillery immunity.
+          THE EXCLUSION IS TWO-WAY, and this docstring said otherwise until 2026-07-22 ("note the
+          rule is ONE-WAY: it confines the flying boat, and forbids no landplane a basin"). The
+          predicate below was always two-way; the rule statement beside it was wrong. See may_base.
 
     `facilities` is the sequence of AirFacility records the side may place on (the caller filters --
     60.32's "any ITALIAN" facility is a fact about the ground, and rule 36.15 makes that the hex's
@@ -270,12 +323,17 @@ def deployment(side: Side, facilities, per_squadron: int,
     air.refuel's pooled larder and 34.11's unenforced mission ranges are waiting on. What this
     function IS: the transcription of [60.32]'s placement sentence, the answer to "where does the
     Regia Aeronautica stand on Game-Turn 1", and the check that the muster FITS the map at all
-    (tests/test_deployment.py asserts every line against its facility's charted capacity, and a
-    muster that overflowed the chart would be a finding about the transcription).
+    (tests/test_transfer.py, under "[60.32] the muster on the map", asserts every line against its
+    facility's charted capacity, and a muster that overflowed the chart would be a finding about
+    the transcription). NOTHING IN game/ CALLS IT: the running engine flies Air Points out of a
+    pool, so this placement is a derived assertion about the set-up and not state the campaign
+    reads -- said plainly here because a commit message once said "the muster on the map" of it.
 
-    ⚠ AND ONE CONSEQUENCE IS FLAGGED RATHER THAN FIXED: the nine Cant Z. 501 flying boats land at
-    the Axis's two water facilities (the Bomba basin and the Derna alighting area) because 34.4
-    allows them nowhere else -- and game.oob.seed_sgsus, which places the [60.32] SGSU counters,
+    ⚠ AND ONE CONSEQUENCE IS FLAGGED RATHER THAN FIXED: all nine Cant Z. 501 flying boats land at
+    the Bomba basin -- the Axis's water facilities are Bomba (36.3, three squadrons, thirty-six
+    aeroplanes of room) and the Derna alighting area (36.4, one squadron), and the first in id
+    order swallows the row -- because 34.4 allows them nowhere else. And game.oob.seed_sgsus, which
+    places the [60.32] SGSU counters,
     fills AIRFIELDS ONLY (a free choice made to follow [60.34]'s airfields-only air supply row). So
     the flying boats stand at fields with no ground crew to refit them (35.17). Nothing reads that
     today -- our recon Air Points are a pool -- and it is written down rather than papered over,
@@ -284,15 +342,13 @@ def deployment(side: Side, facilities, per_squadron: int,
     room = {f.id: max(0, f.level) * per_squadron for f in facilities}
     by_id = {f.id: f for f in facilities}
     for m in roster(side, scenario):
-        boat = _chart(m.type)["class"] == "flying_boat"
-        water = ("basin", "alighting")             # 36.3/36.4, the two flying-boat kinds (game.air)
         left = m.available
         for fid in sorted(room):
             if left <= 0:
                 break
             f = by_id[fid]
-            if boat != (f.kind in water):          # 34.4, one way: a boat needs water, a
-                continue                           # landplane is refused nothing
+            if not may_base(m.type, f.kind):       # 34.4 confines the boat; 36.3/36.4 confine
+                continue                           # the water. Both ways, and both printed.
             take = min(left, room[fid])
             if take > 0:
                 out.append(Placement(fid, f.kind, m.type, take))

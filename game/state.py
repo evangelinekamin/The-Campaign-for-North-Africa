@@ -611,8 +611,12 @@ class GameState:
     # so the default {} is byte-identical for every scenario that never flies.
     air_unfit: dict = field(default_factory=dict)
     # [39.19] THE STRATEGIC-PHASE LEDGER -- squadron key (game.air.squadron) -> the number of that
-    # squadron's aeroplanes that flew in the STRATEGIC PHASE of the current Game-Turn: for us, the
-    # African-based bombers the Axis added to his Malta raid (44.21/44.25). "A plane flying a
+    # squadron's aeroplanes that flew in the STRATEGIC PHASE of the current Game-Turn. TWO
+    # SQUADRONS carry a key here, one for each half of the Malta raid, and they must stay separate
+    # because they are different aeroplanes in different places: the AFRICAN bombers the Axis added
+    # (44.21/44.25, under the LAND arena key, subtracted from the African establishment) and the
+    # ITALY/SICILY-BASED bombers that flew it (under game.basing.MEDITERRANEAN_ARENA, which forbids
+    # them the [42.1] flight home in the same Game-Turn). "A plane flying a
     # mission in an Operations Stage may not fly in the Strategic Phase of that Game-Turn AND VICE
     # VERSA", so those planes are out of the Land Support arena until the Game-Turn ends -- which is
     # why, unlike air_superiority (an OpStage gate) and unlike air_unfit (a stock that only a refit

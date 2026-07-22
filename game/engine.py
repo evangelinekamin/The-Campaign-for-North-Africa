@@ -550,6 +550,16 @@ def _malta_raid(r: _Run, policies: dict) -> None:
     the do-nothing choice as well ("if, at any time, the Axis Player does not wish to bomb Malta he
     is considered to have used Level I").
 
+    ⚠ [60.36] DOES NOT BIND HERE, AND IT WAS CHECKED (2026-07-22, raised by review). It reads "the
+    Axis Player's Strategic attacks on Malta are restricted to forces called for by Availability
+    Level I" -- but it is a case of SECTION 60.3, the Axis set-up of Scenario Group One (the
+    Italians), sitting between 60.35's coastal shipping and 60.37's September convoy plan, and this
+    is Scenario Group Five. [64.52] gives the campaign its own instruction and it is the opposite
+    one: "the Axis Player's Malta Air Availability is determined using the APPROPRIATE CAMPAIGN GAME
+    ROW on the Axis Strategic Airforce Commitment Chart" -- a row that prints a finite budget for
+    Levels II, III and IV, which would be dead print under a Level-I restriction. So the campaign
+    flies the levels its own row grants. Written down because a reader meeting 60.36 will ask.
+
     Two dice on [44.42] then say how much of the Italy/Sicily-based force flies, and the bombs fall
     on ONE Maltese facility (44.24 assigns squadrons to specific airfields; malta.raid_target picks
     the fullest) through the [41.5] Airfields row -- the identical reading an African field is
@@ -572,6 +582,14 @@ def _malta_raid(r: _Run, policies: dict) -> None:
     raid on an island already flat, and a raid the Axis cancels all cost the same one Game-Turn of
     that Availability Level -- which is what makes the choice of WHEN a real one.
 
+    AND THE AIRFRAMES ARE SPENT TOO, WHICH THEY WERE NOT UNTIL 2026-07-22. [39.19] "a plane flying a
+    mission in an Operations Stage may not fly in the Strategic Phase of that Game-Turn AND VICE
+    VERSA" binds on BOTH halves of this raid, not just the African one _malta_africa books: the
+    Italy/Sicily bombers that fly it are committed for the rest of the Game-Turn, which is exactly
+    what stops them flying home in an Operations Stage and being over the desert the same turn they
+    bombed Malta. Measured before the guard, campaign seed 4 Game-Turn 2: 56 bombers raided the
+    island in the Strategic Phase, transferred home in the same Game-Turn, and flew Land Support.
+
     NOTE WHAT IS DELIBERATELY ABSENT: no AIR_FACILITY_DESTROYED is ever emitted here, however far
     down a Maltese facility is driven. 36.2/24.76 take an African landing strip or flying-boat
     facility OFF THE MAP at zero, and 44.12 overrides that for this island alone -- "they are
@@ -587,13 +605,25 @@ def _malta_raid(r: _Run, policies: dict) -> None:
     plan = malta.raid(r.state, level, d1 + d2, r.state.turn)
     target = malta.raid_target(r.state)
     actor = "AXIS/Malta"
+    based = malta.italy_sicily_planes(r.state, r.state.turn)
+    cancelled = plan.planes <= 0 or target is None
+    # [39.19] "A plane flying a mission in an Operations Stage may not fly in the Strategic Phase of
+    # that Game-Turn AND VICE VERSA." The raid IS the Strategic Phase (44.24), so the Italy/Sicily
+    # bombers that fly it are committed for the rest of the Game-Turn -- which is what forbids them
+    # the flight home (engine._air_transfer reads basing.mediterranean_strategic). Booked in PLANES
+    # IN PLAY: [44.42]'s first column is a percentage OF the based force and its second conjures
+    # aeroplanes "not actually in play", which no ledger of ours stands for, so the commitment is
+    # capped at the aeroplanes that were there to commit. Zero on a cancelled raid -- 44.29 spends
+    # the Availability Level, not the airframes.
+    strategic = 0 if cancelled else min(based, based * plan.in_play_pct // 100)
     r.emit(EventKind.MALTA_RAID_ORDERED, Side.AXIS, actor,
            {"level": plan.level, "dice": plan.dice, "in_play_pct": plan.in_play_pct,
             "strategic_pct": plan.strategic_pct, "planes": plan.planes,
-            "bomb_points": plan.bomb_points, "based": malta.italy_sicily_planes(r.state, r.state.turn),
-            "target": target.id if target else None,
-            "cancelled": plan.planes <= 0 or target is None}, rng_draws=(d1, d2))
-    if plan.planes <= 0 or target is None:           # 44.42 na, or nothing left standing to bomb
+            "bomb_points": plan.bomb_points, "based": based,
+            "target": target.id if target else None, "cancelled": cancelled,
+            "med_squadron": basing.mediterranean_squadron(Side.AXIS, basing.BOMBER_ROLE),
+            "med_strategic": strategic}, rng_draws=(d1, d2))
+    if cancelled:                                    # 44.42 na, or nothing left standing to bomb
         return
     bomb_points = plan.bomb_points + _malta_africa(r, policies, plan)   # 44.21/44.25/44.27 + 39.19
     b1, b2 = r.d6("malta"), r.d6("malta")            # [41.5]: two dice, read SEQUENTIALLY (41.22)
@@ -1750,16 +1780,40 @@ def _air_transfer(r: _Run, policies: dict) -> None:
     map. THE BOMBER ARM ALONE, for the same reason -- rule 43 speaks about bombers, and [43.25]'s
     Malta permission is a bomber's.
 
-    EACH LEG IS VALIDATED AGAINST THE PRINTED RULE, never trusted from the policy:
+    EACH LEG IS VALIDATED AGAINST THE PRINTED RULE, never trusted from the policy, and BOTH LEGS
+    ARE VALIDATED AGAINST THE SAME RULES -- which is the 2026-07-22 repair, because the first
+    shipping validated only the outbound one:
       * OUTBOUND he may send no more aeroplanes than stand serviceable in Africa (38.31) and are
         not already committed to this Game-Turn's Strategic Phase (39.19); he must hold an air
         facility the [37.4] Air Distance Chart prints a non-prohibited distance to Sicily or Italy
-        from, within 42.13's doubled range (basing.departures -- in practice Benghazi or Derna);
-        and 42.14's fuel comes out of the 36.17 larder at 34.17's rate, one plane at a time, so a
-        dry air force cannot redeploy. A leg that can fuel nobody flies nobody.
-      * INBOUND he may bring home only what is there, and it costs nothing: 43.21 meets every
-        requirement of a Mediterranean-based plane "including fuel and ammunition" out of the box
-        it sits in, so the Axis Player expends none for it. The asymmetry is the book's.
+        from, within 42.13's doubled range, that his aeroplanes may use at all (36.3/36.4 -- a
+        bomber may not take off from a flying boat basin or alighting area, so the [60.5] facility
+        at Derna is not a departure and the Malta option lives at Benghazi); no more out of any one
+        field than [37.24] lets fly from it ("no planes may fly in excess of the air facility's
+        capability level"), so a redeployment larger than one field spreads across the fields he
+        holds, one AIR_TRANSFERRED per field, or does not fly at all; and 42.14's fuel comes out of
+        the 36.17 larder at 34.17's rate, one plane at a time, so a dry air force cannot redeploy.
+        A leg that can fuel nobody flies nobody.
+      * INBOUND he may bring home only what is there, may not bring home the aeroplanes that flew
+        this Game-Turn's Malta raid (39.19 -- see below), must land them at a field the same [37.4]
+        chart, the same range and the same 36.3/36.4 kind test admit, and may land no more at any
+        one field than [37.24] lets fly into it. IT COSTS HIM NO FUEL, and the citation for that is
+        **[36.5](a)**, not 43.21: an off-map air facility has "unlimited supplies for airplane
+        maintenance and repair", and the Italy/Sicily boxes are off-map facilities.
+        ⚠ CORRECTED 2026-07-22. This was justified by [43.21] until a review read its subject:
+        "GERMAN Bombers based in Italy/Sicily and Crete do not need SGSU's... The Axis Player does
+        not expend fuel or ammo FOR THESE PLANES." The campaign force is Italian to the last
+        aeroplane ([60.32] musters no German type), so 43.21 -- a clause that binds on a
+        NATIONALITY, exactly like the 43.12 error this module's sibling corrected a block ago --
+        had nothing to exempt here. 36.5(a) does the work instead, and it binds on the FACILITY,
+        which is what the Axis is flying out of. 42.14's "transfer missions consume fuel" is
+        unconditional and is still honoured: the fuel is consumed, out of a box the book says
+        cannot run out, so no African dump is billed. The asymmetry is the book's, but it is
+        36.5's asymmetry and not 43.21's.
+        ⚠ AND [42.13]'s "transfer planes do not (cannot) return to their base of origin" does not
+        forbid this leg. Each transfer is its own one-way flight; the base of origin of the flight
+        home is the Sicily BOX, and it is not flown back to. What the clause forbids is a round
+        trip within one mission, which is not what either leg is.
 
     ⚠ AND ONE CLAUSE IS APPLIED MORE STRICTLY THAN THE BOOK, DELIBERATELY. 42.14/37.15 let an
     UNREFITTED plane fly a transfer ("planes flying transfer need not be refitted to fly"), and this
@@ -1779,8 +1833,17 @@ def _air_transfer(r: _Run, policies: dict) -> None:
         would pay for the redeployment twice. The Mediterranean contingent's own refit is 43.22's
         (six-to-twelve-plane groups in the box), which is unbuilt.
       * 39.19's "a plane may fly only one mission per Operations Stage" -- same double-count, same
-        reason (game.basing's docstring carries the flag from the other end).
-    Both make a transfer slightly cheaper than the book's. Both dissolve with 34.72."""
+        reason (game.basing's docstring carries the flag from the other end). NOTE THIS IS THE
+        SENTENCE'S FIRST HALF ONLY; its second half ("...and vice versa") IS now applied, on the
+        inbound leg, and it is the sharper of the two.
+    Both make a transfer slightly cheaper than the book's. Both dissolve with 34.72.
+
+    ⚠ AND ONE PRINTED BOUND HAS NO CHART TO READ: [36.5](b) gives an off-map facility a capacity
+    "up to the limit listed on the field", and the Italy/Sicily boxes' limits are printed on the
+    game-map, which this port does not have and no transcribed chart repeats. So the ARRIVAL side of
+    an outbound transfer is unbounded -- the African departure field is bounded by 37.24 and the box
+    is not. That is a transcription gap, named here rather than guessed at: nothing in data/ carries
+    a number for it and nothing should until the map's box is read."""
     side = Side.AXIS                                     # 43.1: the Mediterranean boxes are his
     arena, role = basing.LAND_ARENA, basing.BOMBER_ROLE
     if not r.state.air or not air.based_on_map(r.state, side):
@@ -1793,32 +1856,60 @@ def _air_transfer(r: _Run, policies: dict) -> None:
     asked = int(policies[side].air_transfer(r.state, based, available))
     if asked == 0:
         return
-    if asked < 0:                                        # 43.21: coming home costs him nothing
-        planes = min(-asked, based)
-        if planes <= 0:
-            return
-        r.emit(EventKind.AIR_TRANSFERRED, side, f"{side.value}/Air",
-               {"squadron": squadron, "arena": arena, "role": role, "planes": planes,
-                "to_mediterranean": False, "based": based - planes, "departure": None,
-                "distance": None, "range": basing.transfer_range(side, role), "fuel": 0,
-                "draws": [], "need": 0, "available": 0})
-        return
-    departures = basing.departures(r.state, side, role)   # 37.12/42.13: from where, and how far
-    if not departures:
+    fields = basing.departures(r.state, side, role)      # 37.12/42.13/36.3: from where, and how far
+    if not fields:
         return                                           # [37.4] prints P from everything he holds
-    wanted = min(asked, available)
-    funded, draws, need, larder = air.fuel_planes(r.state, side, role, wanted)
-    if funded <= 0:
-        return                                           # 37.15: no plane may fly unless fueled
-    for sid, qty in draws:                               # 42.14 through 38.24: out of the larder
-        r.emit(EventKind.SUPPLY_CONSUMED, side, f"{side.value}/Air",
-               {"supply_id": sid, "commodity": supply.FUEL, "qty": qty})
-    r.emit(EventKind.AIR_TRANSFERRED, side, f"{side.value}/Air",
-           {"squadron": squadron, "arena": arena, "role": role, "planes": funded,
-            "to_mediterranean": True, "based": based + funded,
-            "departure": departures[0].facility, "distance": departures[0].distance,
-            "range": basing.transfer_range(side, role), "fuel": sum(q for _, q in draws),
-            "draws": [list(d) for d in draws], "need": need, "available": larder})
+    if asked < 0:
+        # 39.19: the bombers that flew this Game-Turn's Malta raid from the box may not fly home in
+        # its Operations Stages. 36.5(a): the flight itself costs the Axis Player no African fuel.
+        home = max(0, based - basing.mediterranean_strategic(r.state, side, role))
+        _transfer_leg(r, side, arena, role, squadron, fields, min(-asked, home), False)
+        return
+    _transfer_leg(r, side, arena, role, squadron, fields, min(asked, available), True)
+
+
+def _transfer_leg(r: _Run, side: Side, arena: str, role: str, squadron: str,
+                  fields: tuple, wanted: int, outbound: bool) -> None:
+    """[42.11]/[37.24] ONE DIRECTION OF THE TRANSFER, FIELD BY FIELD -- because 42.11 makes a
+    transfer a flight "from ONE air facility to another" and 37.24 caps what may fly from one:
+    "no planes may fly in excess of the air facility's capability level". A redeployment bigger than
+    a single field is therefore several missions, and the log says so -- one AIR_TRANSFERRED per
+    field, in the [37.4] chart's printed order, each naming the field it flew from (or home to) and
+    the distance it covered. Before this repair the whole force flew out of `departures[0]`
+    whatever its Capacity Level was: measured single flights of 74, 105 and 116 aeroplanes out of a
+    level-6 airfield whose printed ceiling is 72.
+
+    The OUTBOUND leg pays 42.14's fuel out of the 36.17 larder, per plane (38.24), and stops the
+    moment the larder cannot fund another aeroplane (37.15). The INBOUND leg pays nothing --
+    36.5(a), "there are unlimited supplies for airplane maintenance and repair" at an off-map
+    facility -- but is bounded by the same chart, the same range and the same 37.24 ceiling, which
+    is the half the first shipping left out entirely."""
+    for field in fields:
+        if wanted <= 0:
+            return
+        flying = min(wanted, field.capacity)             # 37.24: this field's Capacity Level
+        if flying <= 0:
+            continue
+        draws: list = []
+        if outbound:
+            flying, draws, need, larder = air.fuel_planes(r.state, side, role, flying)
+            if flying <= 0:
+                return                                   # 37.15: no plane may fly unless fueled
+            for sid, qty in draws:                       # 42.14 through 38.24: out of the larder
+                r.emit(EventKind.SUPPLY_CONSUMED, side, f"{side.value}/Air",
+                       {"supply_id": sid, "commodity": supply.FUEL, "qty": qty})
+        else:
+            need, larder = 0, 0
+        based = basing.transferred_planes(r.state, side, arena, role)
+        r.emit(EventKind.AIR_TRANSFERRED, side, f"{side.value}/Air",
+               {"squadron": squadron, "arena": arena, "role": role, "planes": flying,
+                "to_mediterranean": outbound,
+                "based": based + flying if outbound else based - flying,
+                "departure": field.facility, "distance": field.distance,
+                "capacity": field.capacity, "range": basing.transfer_range(side, role),
+                "fuel": sum(q for _, q in draws), "draws": [list(d) for d in draws],
+                "need": need, "available": larder})
+        wanted -= flying
 
 
 def _air_superiority(r: _Run) -> None:

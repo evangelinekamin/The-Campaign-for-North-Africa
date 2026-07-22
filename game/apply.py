@@ -451,9 +451,14 @@ def apply(state: GameState, event: Event) -> GameState:
 
     if k == EventKind.MALTA_RAID_ORDERED:
         # 44.23 / 44.29: one Game-Turn of Axis Strategic Bombardment booked against the Availability
-        # Level he consulted the [44.42] table with -- spent whether he raided or cancelled. A pure
-        # scalar fold onto malta_raids; the damage the raid does rides on 41.36's own events.
-        return state.with_malta_raid(p["level"])
+        # Level he consulted the [44.42] table with -- spent whether he raided or cancelled. The
+        # damage the raid does rides on 41.36's own events.
+        # 39.19: and the Italy/Sicily bombers that FLEW it are committed to this Game-Turn's
+        # Strategic Phase, under their own squadron key (43.22 makes a Mediterranean group a
+        # squadron of its own), so they may not also fly a [42.1] transfer home in an Operations
+        # Stage of it. Zero on a cancelled raid, which with_air_strategic drops rather than records.
+        return (state.with_malta_raid(p["level"])
+                .with_air_strategic(p["med_squadron"], p["med_strategic"]))
 
     if k == EventKind.MALTA_PLANES_LOST:
         # 41.36: "for every level destroyed, remove 10% of the planes on the ground". The generator

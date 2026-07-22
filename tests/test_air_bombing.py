@@ -138,10 +138,14 @@ def _state(*, missions=(), supplies=(), trucks=(), forts=None, strike=200, city=
     establishment used to be declared four times the force that flew, because rule 43 was applied to
     the whole abstract Axis bomber pool; 43.11/43.12/43.13 speak about GERMAN bombers and [60.32]
     musters none, so what rule 43 REQUIRES to be based off the desert is nothing. Nor does anything
-    go to Sicily by CHOICE: 43.1's discretionary posture is an open owner ruling and is left
-    UNSEEDED (basing.discretionary_pct answers 0 -- it shipped briefly at [63.46]'s transplanted
-    10%, which took one of these 18 aeroplanes and left 198). So all 200 Bomb Points of [60.32]'s
-    bombers are over the target: the same [41.5] 161-200 column these rows have always been read on.
+    go to Sicily by CHOICE: since the owner ruled 43.1's posture on 2026-07-22 there is no
+    percentage at all -- an aeroplane reaches Sicily only by flying a [42.1] TRANSFER MISSION, which
+    writes GameState.air_mediterranean, and this fixture flies none. (RESTATED 2026-07-22: this
+    paragraph described the withdrawn model, "basing.discretionary_pct answers 0 -- it shipped
+    briefly at [63.46]'s transplanted 10%, which took one of these 18 aeroplanes and left 198".
+    That function no longer exists; tests/test_basing.py asserts its absence.) So all 200 Bomb
+    Points of [60.32]'s bombers are over the target: the same [41.5] 161-200 column these rows have
+    always been read on.
 
     `city` stamps the target hex a MAJOR CITY, because 41.31's and 41.32's bombing shelters are
     written about cities and not about fortification levels (engine._city_wall)."""

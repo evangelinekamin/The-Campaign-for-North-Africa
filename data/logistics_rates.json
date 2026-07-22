@@ -2548,7 +2548,7 @@
         }
       },
       "Cant Z. 501 Gabbiano": {
-        "_note": "Transcribed because it is the only candidate reading of [60.32]'s garbled '2S01' row, which is NOT seeded -- see the unresolved_type_60_32 block in data/air_establishments.json. The chart's own Notes: 'The German Ar. 196 and Italian Cant Z.506B Airone and Cant Z.501 Gabbiano are flying boats', so 34.4 confines it to a flying boat basin or alighting area.",
+        "_note": "Transcribed because it is the only candidate reading of [60.32]'s garbled '2S01' row -- and the owner RULED on 2026-07-22 that it is this aeroplane, so that row IS seeded (data/air_establishments.json, the ninth `planes` row of the campaign_64 AXIS muster, nine aircraft, role recon). CORRECTED 2026-07-22: this note previously said the row 'is NOT seeded -- see the unresolved_type_60_32 block in data/air_establishments.json', and both halves went stale in the same commit that seeded it -- that block was DELETED (tests/test_establishment.py asserts its absence). A data note pointing at a deleted block reads the ruling backwards, which is why it is restated rather than dropped. The chart's own Notes: 'The German Ar. 196 and Italian Cant Z.506B Airone and Cant Z.501 Gabbiano are flying boats', so 34.4 confines it to a flying boat basin or alighting area -- and 36.3/36.4 confine those to it (game.roster.may_base).",
         "nation": "italian",
         "class": "flying_boat",
         "range": 130,
