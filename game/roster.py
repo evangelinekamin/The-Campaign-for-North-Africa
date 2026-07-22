@@ -213,6 +213,97 @@ def fuel_per_plane(side: Side, role: str, scenario: str = SCENARIO) -> int:
     return -(-total_fuel // total_planes)                              # ceil, in integers
 
 
+def range_per_plane(side: Side, role: str, scenario: str = SCENARIO) -> int:
+    """[34.11]/[37.11] How far ONE aeroplane of this establishment may be flown in any one
+    direction -- "a plane's range is the maximum distance, in hexes, that it may be flown to a hex
+    to perform a mission" -- as the establishment's own average, rounded DOWN.
+
+    THE ROUNDING IS THE CONSERVATIVE DIRECTION and it is chosen, not inherited: this number gates
+    whether a flight is legal at all (game.basing's [42.1] transfer to the Mediterranean bases,
+    measured on the [37.4] Air Distance Chart), so a force is never credited with reach it does not
+    have. Averaged for the same reason every other per-plane rating here is: an AirWing is Air
+    Points and not a roster of named aeroplanes (34.72). It bites where the establishment is mixed
+    -- the Regia Aeronautica's bomber arm runs from the Ba 65's 55 hexes to the S.M. 79's 120, and
+    at the average of 110 the short-ranged tenth of it flies to Sicily on the Sparviero's legs."""
+    rows = by_role(side, role, scenario)
+    total_planes = sum(m.available for m in rows)
+    if total_planes <= 0:
+        raise ValueError(f"[34.11] {side.value} fields no {role} establishment to range")
+    return sum(m.available * _chart(m.type)["range"] for m in rows) // total_planes
+
+
+class Placement(NamedTuple):
+    """One line of a scenario's [59.31] air set-up: `planes` aeroplanes of `type` standing at the
+    air facility `facility` (its id), which is `kind`."""
+    facility: str
+    kind: str
+    type: str
+    planes: int
+
+
+def deployment(side: Side, facilities, per_squadron: int,
+               scenario: str = SCENARIO) -> tuple[Placement, ...]:
+    """[60.32]/[59.31] + [36.0] THE MUSTER ON THE MAP: where each of `side`'s printed aeroplanes
+    stands at Game-Turn 1, within the capacities of the facilities it stands at.
+
+        [60.32] "The following planes MAY BE PLACED AT ANY Italian airfields, landing strips,
+          flying boat basins, etc., WITHIN THE CAPACITIES OF THOSE FACILITIES. However, no planes
+          start the game in Italy/Sicly. Crete is unavailable (it is still British)."
+        [36.12] "Each Airfield has a capacity level of six (maximum). This means that it may handle
+          a maximum of six SQUADRONS (regardless of squadron size) at any one time" -- 36.2 one for
+          a landing strip, 36.3 three for a flying boat basin, 36.4 one for an alighting area.
+        [35.23]/[38.33] a squadron holds `per_squadron` aeroplanes ("Ready plus Reserve" -- twelve
+          in an Italian Squadriglia), which is what turns a capacity in SQUADRONS into a capacity in
+          AEROPLANES.
+        [34.4] "flying boats... may not be based in, take off from, or land in airfields or air
+          landing strips. THEY MUST USE flying boat basins or flying boat alighting areas." Note the
+          rule is ONE-WAY: it confines the flying boat, and forbids no landplane a basin.
+
+    `facilities` is the sequence of AirFacility records the side may place on (the caller filters --
+    60.32's "any ITALIAN" facility is a fact about the ground, and rule 36.15 makes that the hex's
+    control); each is walked in id order, so the placement is deterministic and, ids being
+    hex-labelled, geographic. Rows are walked in the order the book prints them.
+
+    ⚠ THIS IS A DERIVED READING, NOT A LEDGER IN GameState, and the distinction is the honest one:
+    game.state.AirWing is Air Points by (side, arena, role) with no hex, so there is nowhere for a
+    per-field roster to live until [34.72]'s Squadron Composition Sheet lands -- the same debt
+    air.refuel's pooled larder and 34.11's unenforced mission ranges are waiting on. What this
+    function IS: the transcription of [60.32]'s placement sentence, the answer to "where does the
+    Regia Aeronautica stand on Game-Turn 1", and the check that the muster FITS the map at all
+    (tests/test_deployment.py asserts every line against its facility's charted capacity, and a
+    muster that overflowed the chart would be a finding about the transcription).
+
+    ⚠ AND ONE CONSEQUENCE IS FLAGGED RATHER THAN FIXED: the nine Cant Z. 501 flying boats land at
+    the Axis's two water facilities (the Bomba basin and the Derna alighting area) because 34.4
+    allows them nowhere else -- and game.oob.seed_sgsus, which places the [60.32] SGSU counters,
+    fills AIRFIELDS ONLY (a free choice made to follow [60.34]'s airfields-only air supply row). So
+    the flying boats stand at fields with no ground crew to refit them (35.17). Nothing reads that
+    today -- our recon Air Points are a pool -- and it is written down rather than papered over,
+    because the fix is a supply chart's, not a placement's."""
+    out: list[Placement] = []
+    room = {f.id: max(0, f.level) * per_squadron for f in facilities}
+    by_id = {f.id: f for f in facilities}
+    for m in roster(side, scenario):
+        boat = _chart(m.type)["class"] == "flying_boat"
+        water = ("basin", "alighting")             # 36.3/36.4, the two flying-boat kinds (game.air)
+        left = m.available
+        for fid in sorted(room):
+            if left <= 0:
+                break
+            f = by_id[fid]
+            if boat != (f.kind in water):          # 34.4, one way: a boat needs water, a
+                continue                           # landplane is refused nothing
+            take = min(left, room[fid])
+            if take > 0:
+                out.append(Placement(fid, f.kind, m.type, take))
+                room[fid] -= take
+                left -= take
+        if left > 0:
+            raise ValueError(f"[60.32] {left} of {m.available} {m.type} do not fit the capacities "
+                             f"of {side.value}'s air facilities")
+    return tuple(out)
+
+
 def mission_capable(side: Side, role: str, scenario: str = SCENARIO) -> bool:
     """[4.44A/b/c] Does EVERY type `side` fields in `role` possess the charted Mission Capability
     that role's missions need? True of the whole transcribed establishment, and asserted by

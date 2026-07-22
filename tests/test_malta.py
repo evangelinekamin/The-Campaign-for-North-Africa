@@ -199,26 +199,32 @@ def test_an_availability_level_runs_out_and_level_one_never_does():
     assert malta.available(replace(st, malta_raids={"I": 999}), "I")
 
 
-def _with_a_sicilian_contingent(monkeypatch):
-    """Seed the OPEN [60.32]-versus-[44.21] owner ruling's own candidate value ([63.46]'s 10%,
-    transcribed unapplied in data/malta_44.json) so that the Axis has somebody in Italy/Sicily for
-    the [44.42] table to take a percentage OF. Shipped, that posture is null and
-    basing.discretionary_pct answers 0 -- the campaign Axis raids Malta with nothing while the
-    ruling is open -- and a table test taken against a force of zero asserts nothing at all."""
-    seeded = {**logistics_data.malta_italy_sicily_basing_43_1(),
-              "axis_discretionary_italy_sicily_pct_43_1": 10}
-    monkeypatch.setattr(logistics_data, "malta_italy_sicily_basing_43_1", lambda: seeded)
+SICILIAN_CONTINGENT = 18
 
 
-def test_the_44_42_table_reads_both_percentages_and_honours_na(monkeypatch):
+def _with_a_sicilian_contingent(state):
+    """Put a bomber contingent in the Italy/Sicily boxes THE WAY THE ENGINE DOES -- the [42.1]
+    transfer ledger (GameState.air_mediterranean, written by engine._air_transfer) -- so that the
+    [44.42] table has a based force to take a percentage OF. A table test taken against a force of
+    zero asserts nothing at all.
+
+    RESTATED 2026-07-22, NOT WEAKENED: this used to monkeypatch [63.46]'s 10% into the rule-43
+    basing data, standing in for an unbuilt order channel while the [60.32]-versus-[44.21] owner
+    ruling was open. The ruling is answered ([60.32] is a SET-UP rule; the Axis flies his bombers
+    to Sicily), the percentage is deleted, and the fixture now seeds the same state a transfer
+    mission produces."""
+    return state.with_air_mediterranean(air.squadron(Side.AXIS, "LAND", "strike"),
+                                        SICILIAN_CONTINGENT)
+
+
+def test_the_44_42_table_reads_both_percentages_and_honours_na():
     """[44.42] dice 5 / Level IV is 100/300 -- the in-play percentage plus the strategic one, both
     of the Italy/Sicily-based force. Dice 4 / Level I is the chart's na: no forces available.
 
     RESTATED 2026-07-22 (rule 5): the percentages are read off the chart either way, but "planes ==
     400% of the based force" is only an assertion about the table if the based force is not zero,
-    and shipped it is (see _with_a_sicilian_contingent)."""
-    _with_a_sicilian_contingent(monkeypatch)
-    st = campaign(seed=1, max_turns=4)
+    and a scenario's opening state has nobody there ([60.32]: no plane STARTS in Italy/Sicily)."""
+    st = _with_a_sicilian_contingent(campaign(seed=1, max_turns=4))
     based = malta.italy_sicily_planes(st, 1)
     assert based > 0
     plan = malta.raid(st, "IV", 5, 1)
@@ -227,18 +233,26 @@ def test_the_44_42_table_reads_both_percentages_and_honours_na(monkeypatch):
     assert malta.raid(st, "I", 4, 1).planes == 0                    # na
 
 
-def test_the_43_1_basing_fraction_is_the_printed_one_and_falls_at_game_turn_35(monkeypatch):
-    """The printed percentages are transcription facts and are asserted unconditionally; the FALL
-    at Game-Turn 35 needs a force to fall, so it is asserted on the doctored posture (same reason,
-    same fixture) and on an establishment rule 43 governs -- [60.32] musters no German aeroplane,
-    so 43.12's requirement term is zero and only the discretionary term is left to move."""
-    basing = logistics_data.malta_italy_sicily_basing_43_1()
-    assert (basing["before_turn_35_pct"], basing["from_turn_35_pct"], basing["change_turn"]) \
-        == (75, 25, 35)
-    assert basing["axis_discretionary_italy_sicily_pct_43_1"] is None    # the ruling is OPEN
-    _with_a_sicilian_contingent(monkeypatch)
-    st = campaign(seed=1, max_turns=4)
-    assert malta.italy_sicily_planes(st, 34) >= malta.italy_sicily_planes(st, 35) > 0
+def test_the_43_1_basing_fraction_is_the_printed_one_and_the_transferred_force_does_not_fall():
+    """The printed percentages are transcription facts and are asserted unconditionally.
+
+    RESTATED 2026-07-22 (rule 5), AND THE RESTATEMENT IS THE 2026-07-22 RULING. This test used to
+    assert that the Italy/Sicily force FALLS at Game-Turn 35, which is 43.12/43.13's law about the
+    REQUIREMENT -- 75% of the German bombers before it, 25% of three named heavies after. [60.32]
+    musters no German aeroplane at all, so that term is zero at every turn of this campaign and the
+    fall was being read off a percentage of the ITALIAN force that rule 43 never governed. What is
+    true, and is asserted instead: a bomber the Axis FLEW to Sicily under [42.1] stays there --
+    Game-Turn 35 moves a requirement, not a transfer ledger -- and the requirement term itself is
+    zero on both sides of the boundary while the muster is Italian."""
+    from game import basing as basing_mod
+    b = logistics_data.malta_italy_sicily_basing_43_1()
+    assert (b["before_turn_35_pct"], b["from_turn_35_pct"], b["change_turn"]) == (75, 25, 35)
+    assert "axis_discretionary_italy_sicily_pct_43_1" not in b       # the percentage is DELETED
+    st = _with_a_sicilian_contingent(campaign(seed=1, max_turns=4))
+    assert basing_mod.required_planes(st, Side.AXIS, 34) == 0        # [60.32] musters no German
+    assert basing_mod.required_planes(st, Side.AXIS, 35) == 0
+    assert malta.italy_sicily_planes(st, 34) == malta.italy_sicily_planes(st, 35) \
+        == SICILIAN_CONTINGENT
 
 
 def test_41_36_takes_ten_percent_of_the_planes_on_the_ground_per_level():
@@ -334,7 +348,17 @@ def test_the_whole_loop_turns_over_a_short_campaign():
     over 1..12 Swordfish, which was the whole island's establishment only while nothing replaced it.
     [34.86] does now, so the bound ranges over the anti-shipping arm the island actually ends with --
     and the assertion that a raid's Bomb Points are ALWAYS some whole number of aeroplanes at
-    torpedo-8 plus 41.73's quarter is exactly as tight as it was."""
+    torpedo-8 plus 41.73's quarter is exactly as tight as it was.
+
+    RESTATED A THIRD TIME 2026-07-22 (the [60.32] transfer block), NOT WEAKENED. It asserted
+    `final.malta_strike >= malta.initial_strike()` -- "34.81A: the island GAINED aircraft" -- which
+    was never a claim about the faucet at all: [34.86] sends the island no torpedo aircraft (a tenth
+    of a month of them, floored, is none), so the ONLY writer of that bucket is 41.36, and the
+    inequality held because the Axis had no way to fly a raid. He has one now ([42.1], to Benghazi's
+    fields and on to Sicily), so the arm falls when he lands one. What is pinned instead is the
+    bucket's true law -- it never grows, it falls exactly when a raid takes planes off the ground --
+    and the strengths certified DURING the run are bounded by the arm at its largest, which for the
+    same reason is the one the island started with."""
     st = campaign(seed=7, max_turns=10)
     r = run(st, axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
     raids = [e for e in r.events if e.kind == EventKind.MALTA_RAID_ORDERED]
@@ -349,9 +373,11 @@ def test_the_whole_loop_turns_over_a_short_campaign():
     assert all(e.payload["bomb_points"] > 0 for e in cut)
     # every certified strength is n READY anti-shipping aircraft x T8 counted as bombs, +25%
     # rounding up -- n bounded by the arm [34.86] has grown the island to by the last Game-Turn
-    assert r.final.malta_strike >= malta.initial_strike()      # 34.81A: the island GAINED aircraft
+    lost = [e for e in r.events if e.kind == EventKind.MALTA_PLANES_LOST]
+    assert r.final.malta_strike <= malta.initial_strike()      # [34.86] sends this arm nothing:
+    assert (r.final.malta_strike < malta.initial_strike()) == bool(lost)   # 41.36 is its one writer
     assert {e.payload["bomb_points"] for e in cut} <= {
-        -(-n * 8 * 125 // 100) for n in range(1, r.final.malta_strike + 1)}
+        -(-n * 8 * 125 // 100) for n in range(1, malta.initial_strike() + 1)}
 
 
 def test_a_sustained_axis_raid_drives_the_islands_TOTAL_capacity_to_zero(monkeypatch):
@@ -359,22 +385,19 @@ def test_a_sustained_axis_raid_drives_the_islands_TOTAL_capacity_to_zero(monkeyp
     Axis bombing takes Malta's TOTAL capacity -- summed over all six facilities, not one of them --
     down to nothing, and an island at zero flies nothing at all.
 
-    It is asserted here rather than read off a campaign because THE CAMPAIGN AXIS CANNOT REACH
-    MALTA AT ALL TODAY: [44.42] sizes his raid as a percentage of his Italy/Sicily-based force,
-    [60.32] prints "no planes start the game in Italy/Sicily", and the posture that resolves that
-    against [44.21] is an open owner ruling left UNSEEDED (basing.discretionary_pct answers 0 --
-    see data/malta_44.json `_owner_ruling_needed_60_32_vs_44_21`). So this test seeds the ruling's
-    own candidate value itself, at the boundary and visibly, and pins the MECHANISM the day the
-    force exists.
+    It is asserted here rather than read off a campaign because it is a property of the MECHANISM
+    at its limit -- sixty consecutive raids by a bomber arm forty times the establishment's -- and
+    no campaign the doctrine actually flies puts that much over the island at once.
 
-    RESTATED 2026-07-22, and the reason is recorded because it moved twice: the note here used to
-    say the raid was "a hundredth of the book's" because the establishment was a six-Air-Point
-    proxy. That proxy is gone -- the Axis musters 184 real bombers -- and what is missing now is
-    not the force but the transfer mission that would put any of it in Sicily."""
-    seeded = {**logistics_data.malta_italy_sicily_basing_43_1(),
-              "axis_discretionary_italy_sicily_pct_43_1": 10}     # [63.46], transcribed unapplied
-    monkeypatch.setattr(logistics_data, "malta_italy_sicily_basing_43_1", lambda: seeded)
+    RESTATED 2026-07-22 (the [60.32] transfer block), NOT WEAKENED, and the reason is that its
+    set-up became real. It used to monkeypatch a percentage into the rule-43 basing data
+    (`axis_discretionary_italy_sicily_pct_43_1`, the stand-in for an unbuilt order channel) because
+    "the campaign Axis cannot reach Malta at all today". He can: the owner ruled [60.32] a set-up
+    rule on 2026-07-22 and [42.1]'s transfer mission is built, so the Italy/Sicily force is a
+    LEDGER, and this test now seeds it the way the engine does -- state.with_air_mediterranean, the
+    same field engine._air_transfer writes. The deleted key is gone with the percentage."""
     st = campaign(seed=3, max_turns=6)
+    st = st.with_air_mediterranean(air.squadron(Side.AXIS, "LAND", "strike"), 18)   # [42.1] flown
     assert malta.capacity(st) == 5
     r = _Run(st)
 
@@ -590,13 +613,27 @@ def test_the_island_actually_gains_aeroplanes_over_a_campaign():
     6,691 aeroplanes, and a tenth of a month floored is none -- so Malta's torpedo arm never grows
     and only 41.36 moves it. That is the book's own shape ([60.46] 12 torpedo aircraft, [61.34] 10,
     [62.36] 3) and it is argued at malta.reinforcement; what is asserted here is that the arm stays
-    a HONEST BUCKET of the establishment however either of them moves."""
+    a HONEST BUCKET of the establishment however either of them moves.
+
+    RESTATED AGAIN 2026-07-22 (the [60.32] transfer block), AND THE REASON IS THE OTHER SIDE OF THE
+    LEDGER STARTING TO WORK. It used to assert `final.malta_planes > initial` -- the island's
+    establishment strictly RISES over twelve Game-Turns -- and that was true only while the Axis
+    raid delivered nothing: [60.32] bases every Axis aeroplane in Africa, the engine had no [42.1]
+    transfer mission, so 44.42's percentages were percentages of zero and the only writer of this
+    number was the faucet. The Axis can now fly his bombers to Sicily and raid, so BOTH writers are
+    live and the net direction is a fact about the war rather than about the engine. What is
+    asserted is therefore the ACCOUNTING, which is the thing this block put on the map and is
+    strictly more than the old inequality: every arrival is positive, the schedule delivers, and the
+    island's final establishment is exactly what arrived less what 41.36 took."""
     st = campaign(seed=4, max_turns=12)
     r = run(st, axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
     got = [e for e in r.events if e.kind == EventKind.MALTA_REINFORCED]
     assert got, "the [34.86] schedule delivered nothing in twelve Game-Turns"
     assert all(e.payload["arrived"] > 0 for e in got)
-    assert r.final.malta_planes > st.malta_planes
+    arrived = sum(e.payload["arrived"] for e in got)
+    lost = sum(e.payload["lost"] for e in r.events if e.kind == EventKind.MALTA_PLANES_LOST)
+    assert arrived > 0
+    assert r.final.malta_planes == st.malta_planes + arrived - lost
     assert r.final.malta_strike <= r.final.malta_planes     # the invariant, from the outside
 
 

@@ -6,8 +6,9 @@ project supply forward. The base StaffPolicy truck relay is left verbatim for st
 """
 from __future__ import annotations
 
-from .campaign_policy import (_CampaignAxisSupplyMixin, convoy_plan_doctrine, hold_garrisons,
-                              malta_africa_doctrine, malta_raid_doctrine)
+from .campaign_policy import (_CampaignAxisSupplyMixin, air_transfer_doctrine,
+                              convoy_plan_doctrine, hold_garrisons, malta_africa_doctrine,
+                              malta_raid_doctrine)
 from .events import Side
 from .policy import MoveOrder
 from .staff_policy import StaffPolicy
@@ -36,6 +37,13 @@ class CampaignStaffPolicy(_CampaignAxisSupplyMixin, StaffPolicy):
         for the same reason: it is a strategic-air decision on a scripted seat, and the two campaign
         variants must not diverge on the one rule Phase 5 exists to build."""
         return malta_africa_doctrine(state, available, level)
+
+    def air_transfer(self, state: GameState, based: int, available: int) -> int:
+        """[42.1]/[43.1] THE SAME BASING DOCTRINE THE SCRIPTED CAMPAIGN AXIS FLIES -- the redeploy
+        half of rule 44's decision, on the same scripted strategic-air seat as the other two. It is
+        the most obviously LLM-shaped choice of the three: sending the bomber arm to Sicily buys a
+        raid on Malta and costs the desert its air support until it is flown back."""
+        return air_transfer_doctrine(state, based, available)
 
     def convoy_plan(self, state: GameState, side: Side, tons: int) -> dict:
         """[56.22] THE SAME CONVOY DOCTRINE THE SCRIPTED CAMPAIGN AXIS FLIES. This one belongs to

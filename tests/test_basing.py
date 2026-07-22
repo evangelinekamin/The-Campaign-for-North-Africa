@@ -84,21 +84,24 @@ def _with_german_bombers(monkeypatch, available=100, type_="He. 111"):
     monkeypatch.setattr(roster, "_establishments", lambda: patched)
 
 
-def _with_a_sicilian_contingent(monkeypatch):
-    """Give the Axis somebody in Italy/Sicily, by seeding the OPEN owner ruling's own candidate
-    value -- [63.46]'s 10%, which data/malta_44.json transcribes beside the null key under
-    `axis_discretionary_italy_sicily_pct_63_46_unapplied` and which nothing in game/ reads.
+SICILIAN_CONTINGENT = 18
 
-    IT IS SEEDED HERE AND NOWHERE ELSE, AND THAT IS DELIBERATE. Rules 44.25 and 44.27 are about
-    what the Axis may ADD from Africa to a raid the [44.42] table has already granted him planes
-    for; with the posture unseeded the table grants nothing, the 44.27 cap is zero, and the tests
-    below would pass while exercising no rule at all -- the vacuous-green failure mode. So the
-    magnitude is supplied at the test boundary, where it is visibly a fixture, instead of in the
-    data file, where it would be a shipped decision the owner has not made."""
-    real = logistics_data.malta_italy_sicily_basing_43_1()
-    seeded = {**real, "axis_discretionary_italy_sicily_pct_43_1":
-              real["axis_discretionary_italy_sicily_pct_63_46_unapplied"]}
-    monkeypatch.setattr(logistics_data, "malta_italy_sicily_basing_43_1", lambda: seeded)
+
+def _with_a_sicilian_contingent(state: GameState) -> GameState:
+    """Give the Axis somebody in Italy/Sicily, THE WAY THE ENGINE DOES: the [42.1] transfer ledger
+    (GameState.air_mediterranean), which engine._air_transfer writes when the Axis Player flies his
+    bombers from Benghazi to Sicily.
+
+    RESTATED 2026-07-22, NOT WEAKENED. This fixture used to monkeypatch [63.46]'s 10% into the
+    rule-43 basing data, because the posture was an open owner ruling with no order channel behind
+    it. The owner answered it -- [60.32] is a SET-UP rule, "no planes START the game in
+    Italy/Sicily", and the bridge to 44.21 is the transfer mission -- so the percentage is deleted
+    and a Sicilian contingent is now simply a state the engine can reach. Rules 44.25 and 44.27 are
+    about what the Axis may ADD FROM AFRICA to a raid the [44.42] table has already granted him
+    planes for, so without one the cap is zero and the tests below would exercise no rule at all:
+    the vacuous-green failure mode."""
+    return state.with_air_mediterranean(air.squadron(Side.AXIS, "LAND", "strike"),
+                                        SICILIAN_CONTINGENT)
 
 
 def _mini(*, strike=6, turn=1, missions=(), unfit=None, strategic=None) -> GameState:
@@ -237,34 +240,38 @@ def test_the_campaign_musters_no_german_aeroplane_at_all():
     assert basing.africa_planes(st, Side.AXIS, 35) == pool    # nor do 43.11/43.13
 
 
-def test_the_italy_sicily_posture_is_left_UNSEEDED_while_the_owner_ruling_is_open():
-    """THE OTHER OWNER RULING, AND IT IS OPEN. [60.32] prints "no planes start the game in
+def test_the_italy_sicily_posture_is_a_TRANSFER_LEDGER_and_no_longer_a_percentage():
+    """THE OWNER RULING OF 2026-07-22, PINNED. [60.32] prints "no planes start the game in
     Italy/Sicily"; [44.21]/[44.25]/[44.27] make an Italy/Sicily base the precondition for any Axis
-    raid on Malta; [64.52] and [44.41]'s campaign row give him unlimited Level-I raids. The bridge
-    is 43.1's free basing choice plus a rule-37 transfer and this engine has an order channel for
-    neither, so the posture is a magnitude only the owner may seed.
+    raid on Malta; [64.52] and [44.41]'s campaign row give him unlimited Level-I raids. The owner
+    ruled that [60.32] is a PLACEMENT rule with two exclusions -- a fact about GAME-TURN 1, not a
+    repeal of rule 44 -- and that the bridge between them is the one the book prints: [42.1]'s
+    transfer mission.
 
-    IT SHIPPED SEEDED ONCE, at [63.46]'s printed 10% -- an El Alamein (October 1942) ceiling whose
-    very next sentence bars Malta raiding altogether -- and because basing.italy_sicily_planes is
-    the only force rule 44 sizes a raid from, that single transplanted integer was the whole of the
-    campaign's Malta result. It is withdrawn: the data key is null, discretionary_pct answers 0, and
-    [63.46]'s number is transcribed beside it under a name NOTHING READS, in the same idiom as the
-    unapplied [35.23] printing. This test pins the withdrawal, so that re-seeding it is a deliberate
-    act with a failing test attached and not a quiet edit."""
+    RESTATED, NOT WEAKENED (rules of this port, 5). This test used to pin the WITHDRAWAL of a
+    seeded percentage (`axis_discretionary_italy_sicily_pct_43_1` null, discretionary_pct 0) so
+    that re-seeding it would be a deliberate act with a failing test attached. The percentage is
+    now DELETED rather than null, and what is pinned is the shape that replaced it: the posture is
+    a ledger the Axis Player writes by flying, the scenario opens with it empty exactly as [60.32]
+    says, and [63.46]'s 10% is still transcribed beside it under a name nothing reads."""
     printed = logistics_data.malta_italy_sicily_basing_43_1()
-    assert printed["axis_discretionary_italy_sicily_pct_43_1"] is None
-    assert basing.discretionary_pct() == 0
+    assert "axis_discretionary_italy_sicily_pct_43_1" not in printed
+    assert not hasattr(basing, "discretionary_pct")
     assert printed["axis_discretionary_italy_sicily_pct_63_46_unapplied"] == 10
-    # ...so the campaign Axis bases nothing in Italy/Sicily and rule 44 raids with nothing, at every
-    # Game-Turn and on both sides of 43.12's Game-Turn-35 expiry. THAT IS THE OPEN RULING'S COST,
-    # asserted rather than left for a measurement to discover.
+    # [60.32]: the campaign OPENS with every Axis aeroplane in Africa, at every Game-Turn the
+    # ledger is empty for, and on both sides of 43.12's Game-Turn-35 expiry (no German is mustered)
     st = campaign(seed=7, max_turns=3)
     for turn in (1, 34, 35, 111):
         assert basing.italy_sicily_planes(st, turn) == 0
         assert malta.raid(st, "IV", 5, turn).bomb_points == 0
-    # and the whole bomber arm is therefore in Africa, where 39.19 can still trade it away
     assert basing.africa_planes(st, Side.AXIS, 1) == air.squadron_planes(
         st, Side.AXIS, "LAND", "strike") == 184
+    # ...and one flown transfer is the whole of the difference: those bombers raid Malta and are
+    # gone from the desert, which is the trade the ruling bought (39.19/43.11).
+    flown = _with_a_sicilian_contingent(st)
+    assert basing.italy_sicily_planes(flown, 1) == SICILIAN_CONTINGENT
+    assert basing.africa_planes(flown, Side.AXIS, 1) == 184 - SICILIAN_CONTINGENT
+    assert malta.raid(flown, "IV", 5, 1).bomb_points > 0
 
 
 def test_the_constrained_types_are_the_chart_s_printed_names_not_the_rule_s_prose():
@@ -365,13 +372,14 @@ class _SendTooMany(Policy):
         return 999
 
 
-def _campaign_run(policy):
-    r = _Run(campaign(seed=7, max_turns=3))
+def _campaign_run(policy, sicily=False):
+    st = campaign(seed=7, max_turns=3)
+    r = _Run(_with_a_sicilian_contingent(st) if sicily else st)
     _malta_raid(r, {Side.AXIS: policy, Side.ALLIED: Policy()})
     return r
 
 
-def test_44_25_the_axis_may_add_african_bombers_and_they_carry_their_bombload(monkeypatch):
+def test_44_25_the_axis_may_add_african_bombers_and_they_carry_their_bombload():
     """"He may then add in -- up to the maximums he gets from the Table -- ANY PLANES HE WISHES FROM
     AFRICA." The raid grows by their [34.14] Bombload, and the same event books them out of the
     desert for the rest of the Game-Turn (39.19).
@@ -380,9 +388,11 @@ def test_44_25_the_axis_may_add_african_bombers_and_they_carry_their_bombload(mo
     what the [44.42] table granted, and the table grants a percentage of the Italy/Sicily-based
     force -- which is zero while the [60.32]-versus-[44.21] owner ruling is unseeded. So the test
     supplies that one integer itself (_with_a_sicilian_contingent) rather than asserting a rule
-    against a force of nobody. What is asserted is unchanged, and it is the rule."""
-    _with_a_sicilian_contingent(monkeypatch)
-    r = _campaign_run(_SendEverything())
+    against a force of nobody. What is asserted is unchanged, and it is the rule.
+
+    RESTATED AGAIN 2026-07-22: the fixture is now the [42.1] transfer LEDGER rather than a
+    monkeypatched percentage, because the Axis can fly his bombers to Sicily."""
+    r = _campaign_run(_SendEverything(), sicily=True)
     sent = [e for e in r.events if e.kind == EventKind.MALTA_RAID_REINFORCED]
     assert sent, "the Axis policy asked for African planes and got none"
     p = sent[0].payload
@@ -400,13 +410,12 @@ def test_44_25_the_axis_may_add_african_bombers_and_they_carry_their_bombload(mo
     assert strike.payload["strength"] == ordered.payload["bomb_points"] + p["bomb_points"]
 
 
-def test_44_27_the_map_contingent_may_never_exceed_what_the_table_granted(monkeypatch):
+def test_44_27_the_map_contingent_may_never_exceed_what_the_table_granted():
     """"IN NO CASE may the Axis Player assign more planes of any one type FROM MAP BASES than are
     assigned from the Availability Tables." A greedy policy is clamped at the boundary, exactly as
     every other order in this engine is re-validated rather than trusted. (Same fixture and same
     reason as the test above: the cap is a cap on a granted force, so there must be one.)"""
-    _with_a_sicilian_contingent(monkeypatch)
-    r = _campaign_run(_SendTooMany())
+    r = _campaign_run(_SendTooMany(), sicily=True)
     sent = [e for e in r.events if e.kind == EventKind.MALTA_RAID_REINFORCED]
     ordered = [e for e in r.events if e.kind == EventKind.MALTA_RAID_ORDERED][0]
     if sent:                                             # a turn the [44.42] table granted forces

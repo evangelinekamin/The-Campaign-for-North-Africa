@@ -64,6 +64,21 @@ these two logs, and the reasons are structural rather than lucky:
 The CAMPAIGN log moves under all of it, and the campaign is not signature-pinned (see CAMPAIGN_SEED
 below, which pins a SEED and a set of narrative assertions, not a hash).
 
+NOT RE-BASELINED BY [60.32]'s MUSTER, THE [42.1] TRANSFER MISSION OR THE NINTH ITALIAN ROW
+(2026-07-22), AND THAT WAS CHECKED RATHER THAN ASSUMED -- both signatures recomputed on the tree.
+
+That block did three things a signature could plausibly notice, and none of them reaches these two
+logs. (a) It added a new per-Operations-Stage beat, engine._air_transfer, which asks
+Policy.air_transfer -- the base answers 0, ScriptedPolicy does not override it, and a zero emits no
+event at all, so both benchmark logs gain nothing. (b) It seeded [60.32]'s ninth row, the Cant
+Z. 501 Gabbiano ruled 2026-07-22, which moves the AXIS RECON establishment from 66 aeroplanes to 75
+and so moves every roster ratio taken over it -- but NEITHER BENCHMARK FIELDS A RECON WING (both run
+air=() by default; siege_of_tobruk's optional wings are fighters and strike), and the Gabbiano's
+charted Fuel of 2 is the same as the two types it joins, so even the averaged 34.17 rate is
+unchanged. (c) It replaced basing.discretionary_pct with the GameState.air_mediterranean ledger,
+which is rule 43's business and rule 43 has no squadron to bite on here -- the same reason the 5.5
+repair pass below did not move them either.
+
 NOT RE-BASELINED BY THE [34.6]/[59.3] INITIAL AIR STRENGTHS (2026-07-22) OR BY ITS REPAIR PASS THE
 SAME DAY, AND THAT WAS CHECKED RATHER THAN ASSUMED -- TWICE, for two different sets of changes.
 

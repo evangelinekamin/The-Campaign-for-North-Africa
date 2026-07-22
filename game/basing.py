@@ -20,8 +20,9 @@ sortie cost the other anything. Two printed rules forbid that, one structurally 
     2026-07-22: the first shipping of this module applied 43.12's percentage to `constrained_
     planes` -- the three NAMED heavies -- which narrowed an untyped sentence to a typed one and
     dropped every other German bomber ([4.44b] also prints the Ju. 87B, the Ju. 87D and the
-    Ju. 52/3m, and the transcribed rows already carry their nationality) into the discretionary
-    term. Before Game-Turn 35 the population is EVERY GERMAN BOMBER; from it, the three types
+    Ju. 52/3m, and the transcribed rows already carry their nationality) into the DISCRETIONARY
+    term -- the one the Axis Player flies for himself. Before Game-Turn 35 the population is EVERY
+    GERMAN BOMBER; from it, the three types
     43.11/43.13 name. The rule as written was expressible with the data in hand and now is.
 
   * **[39.19] THE TEMPORAL HALF -- MALTA OR THE DESERT, NOT BOTH.** "Generally, a plane may fly only
@@ -32,6 +33,12 @@ sortie cost the other anything. Two printed rules forbid that, one structurally 
     bases than are assigned from the Availability Tables", 44.27). Every African bomber he sends to
     Malta is one that does not fly over the desert for the rest of that Game-Turn. That is the
     choice, it is the Axis Player's, and it is now his to make (Policy.malta_africa_planes).
+
+    ⚠ 39.19's OTHER clause -- "generally, a plane may fly only ONE MISSION PER OPERATIONS STAGE" --
+    is what would also make a [42.1] transfer cost an Operations Stage of Land Support. We do not
+    bill that, because the transfer moves those aeroplanes OUT of the African establishment in the
+    same beat, and charging both would take them off the desert twice. Flagged where it is decided
+    (engine._air_transfer).
 
 --------------------------------------------------------------------------------------------------
 THE ONE ARITHMETIC THIS MODULE ENFORCES: **AN AEROPLANE IS IN EXACTLY ONE PLACE.**
@@ -79,26 +86,34 @@ BOTH OF THE 2026-07-21 OWNER RULINGS ARE IN, AND THE FIRST ONE DISSOLVED RATHER 
   type names, which are the chart's printed names. A list transcribed off the RULE's prose
   instead ("He 111", "FW 220") could never match a transcribed row, and would have failed silently.
 
-⚠⚠ AND ONE NEW OWNER RULING, WHICH THE REAL MUSTER CREATED, AND WHICH IS **OPEN AND UNSEEDED**.
-**[60.32] PRINTS "NO PLANES START THE GAME IN ITALY/SICILY", AND [44.21]/[44.25]/[44.27] MAKE
-PLANES BASED IN ITALY/SICILY THE PRECONDITION FOR ANY AXIS RAID ON MALTA AT ALL** -- while [64.52]
-and [44.41]'s campaign row hand the Axis unlimited Level-I raids and 25 Level-II Game-Turns. The
-bridge the book intends is 43.1's free basing choice ("the Axis Player may base any portion of his
-airforce at Italy/Sicily", 61.42) and a rule-37 transfer, and this engine has an order channel for
-neither.
+⚠⚠ AND THE THIRD RULING IS ANSWERED (2026-07-22), WHICH IS WHY THIS MODULE NO LONGER HOLDS A
+PERCENTAGE FOR THE AXIS'S ITALY/SICILY POSTURE. It held one twice: [63.46]'s printed 10%,
+transplanted from an El Alamein scenario onto September 1940, and then a null, while the ruling
+stood open and the campaign Axis raided Malta with nothing.
 
-CORRECTED 2026-07-22. This module first shipped with `discretionary_pct` seeded at [63.46]'s
-printed 10% -- an El Alamein (October 1942) ceiling, transplanted whole onto September 1940 against
-[60.32]'s plain printed sentence. `italy_sicily_planes` is the ONLY force rule 44 sizes its raid
-from, so that one transplanted integer produced the entire Malta result the block reported: it was
-a measurement of [63.46], not of [60.32]. That is deciding an owner ruling by transplant, which is
-the invention this port exists to stop, so **the posture is now UNSEEDED**: the data key is null,
-`discretionary_pct` answers 0, and the Axis bases in Italy/Sicily exactly what rule 43 REQUIRES him
-to (nothing, until [34.87] brings a German bomber). The consequence is stated rather than hidden --
-**the campaign Axis raids Malta with nothing while the ruling is open** -- and it is attributable
-to an unbuilt order channel (the rule-37 transfer) rather than to a repealed rule. [63.46]'s 10% is
-transcribed verbatim beside the null key under a name nothing reads, exactly as the unapplied
-[35.23] printing is; answering the ruling is seeding one integer.
+**THE QUESTION WAS:** [60.32] prints "no planes start the game in Italy/Sicily" while
+[44.21]/[44.25]/[44.27] make planes based in Italy/Sicily the precondition for any Axis raid on
+Malta at all -- and [64.52] with [44.41]'s campaign row hand the Axis unlimited Level-I raids and 25
+Level-II Game-Turns. **THE OWNER'S ANSWER DISSOLVED IT RATHER THAN PICKING A SIDE:** [60.32] is a
+PLACEMENT rule with two exclusions, not a statement that the Axis has no air force. Its planes are
+placed at any Italian air facility within its rule-36 capacity; none START in Italy/Sicily; none on
+Crete, which is British in 1940. **So the two rules were never in conflict.** A raid needs bombers
+based in Italy/Sicily; [60.32] says only that none are based there ON GAME-TURN 1. The Axis gets
+them there the way the book moves any aeroplane -- **by flying a [42.1] TRANSFER MISSION** -- and
+every bomber he sends to Sicily is a bomber not over the desert (39.19 above, and 43.11's own
+arithmetic). That is his central recurring air decision, and a percentage in a data file is the
+wrong shape for it: a percentage is a posture, the book prints a choice.
+
+**SO THE SECOND TERM OF `italy_sicily_planes` IS NOW A LEDGER, NOT A RATE.** `transferred_planes`
+reads GameState.air_mediterranean, which engine._air_transfer writes when a policy actually flies
+the mission, bounded by three printed things: 42.13's doubled range, the [37.4] Air Distance Chart
+(the only place the book prints a distance from Africa to Sicily -- 96 hexes from Benghazi, 105
+from Derna, and **P from Tobruk, Bardia, Mersa Matruh and Alexandria**), and 36.15's rule that a
+facility belongs to whoever holds its hex. The consequence is worth stating plainly because it is
+the sharpest thing the ruling bought: **THE AXIS'S MALTA OPTION LIVES AT BENGHAZI.** Lose Cyrenaica
+and the chart prints prohibited from everything he has left. [63.46]'s 10% survives in the data
+file under a name nothing reads, as the unapplied [35.23] printing does -- it is a later scenario's
+CEILING on the same decision, and the natural shape of one if the campaign ever needs it.
 
 --------------------------------------------------------------------------------------------------
 THE DEFERRED DEBT OF THE WHOLE AIR GAME, RECORDED HERE BECAUSE THIS IS THE LAST BLOCK OF PHASE 5
@@ -148,7 +163,9 @@ the Axis's ability to suppress the island and a lower bound on what it costs him
 """
 from __future__ import annotations
 
-from . import air, logistics_data, roster
+from typing import NamedTuple
+
+from . import air, coords, logistics_data, roster
 from .events import Side
 from .state import GameState
 
@@ -170,12 +187,11 @@ def italy_sicily_pct(turn: int) -> int:
     """[43.12]/[43.13] The percentage of the REQUIRED Axis bomber force (`required_planes` -- every
     German bomber before Game-Turn 35, the three named heavies from it) that rule 43 compels to be
     based in ITALY/SICILY, the only part of the Mediterranean force 43.25 lets raid Malta. What the
-    Axis CHOOSES to base there of everything else is discretionary_pct. 75 until Game-Turn 35 ("75%
-    of all German bombers", untyped), 25 from it (the printed ceiling on 43.13's permissive "the
-    remaining 25% MAY be based in Sicily/Italy or in Crete"; the choice of the ceiling over the
-    floor is the
-    flagged policy call recorded in data/malta_44.json, made where the alternative -- 0 -- would
-    silently end the Malta war in June 1941)."""
+    Axis CHOOSES to base there of everything else he FLIES there ([42.1], transferred_planes).
+    75 until Game-Turn 35 ("75% of all German bombers", untyped), 25 from it (the printed ceiling on
+    43.13's permissive "the remaining 25% MAY be based in Sicily/Italy or in Crete"; the choice of
+    the ceiling over the floor is the flagged policy call recorded in data/malta_44.json, made where
+    the alternative -- 0 -- would silently end the Malta war in June 1941)."""
     b = _basing()
     return b["before_turn_35_pct"] if turn < b["change_turn"] else b["from_turn_35_pct"]
 
@@ -207,29 +223,103 @@ def constrained_types() -> tuple[str, ...]:
     return tuple(_basing()["constrained_types_43_11"])
 
 
-def discretionary_pct() -> int:
-    """[43.1] / [63.46] THE SHARE OF HIS UNREQUIRED BOMBERS THE AXIS CHOOSES TO BASE IN
-    ITALY/SICILY -- a DECISION, not a requirement, which is why it has its own name, its own data
-    key and its own owner ruling (data/malta_44.json, `_owner_ruling_needed_60_32_vs_44_21`).
+# --- [42.1] THE TRANSFER MISSION: HOW AN AEROPLANE EVER REACHES SICILY --------------------------
+#
+# [42.13] "Planes flying transfer missions MAY DOUBLE THEIR RANGE. Transfer is a one-way flight."
+TRANSFER_RANGE_DOUBLING = 2
 
-    Rule 43 compels a percentage only of GERMAN bombers. Every other aeroplane the Axis owns he
-    bases where he likes: [61.42] says so in the scenario set-ups' own words -- "the Axis Player MAY
-    BASE ANY PORTION OF HIS AIRFORCE AT ITALY/SICILY within the minimum German plane restrictions of
-    Case 43.1" -- and 44.27's own worked example has him keeping Italian types there ("He has, based
-    in Italy and Sicily, 12 SM 79's, 6 BR 20's, 16 CR 42's, and 4 CR 32's").
 
-    **THE POSTURE IS UNSEEDED AND THIS RETURNS ZERO** (data key null). This engine has no order
-    channel for the choice -- no 37/39 transfer mission, no basing seat -- and the only number the
-    book ever prints for it, [63.46]'s "he may not have more than 10% of his air power in Italy or
-    Sicily", is written for El Alamein in October 1942 and for a scenario whose very next sentence
-    reads "Strategic air attacks against Malta may be made only in the Long Retreat scenario". This
-    module shipped once with that 10 transplanted onto September 1940, and because
-    `italy_sicily_planes` is the only force rule 44 sizes a raid from, that single integer WAS the
-    Malta result. It is withdrawn until the owner rules (the escalation protocol: implement what is
-    safe, leave the disputed part unseeded). Zero here is not a reading of [60.32] either -- it is
-    the absence of a transfer order, and the raid it produces (none) is reported as such."""
-    pct = _basing()["axis_discretionary_italy_sicily_pct_43_1"]
-    return 0 if pct is None else pct
+def _transfer() -> dict:
+    return _basing()["transfer_42_1"]
+
+
+def mediterranean_areas() -> tuple[str, ...]:
+    """[43.25]/[44.21] The [37.4] chart's names for the boxes a transfer may put a bomber in and
+    still have it raid Malta: Sicily and Italy. Crete is the OTHER Mediterranean base and rule
+    43.25 pointedly withholds the raid from it ("bombers based in Italy/Sicily... may also be used
+    in raids on Malta"), so it is not here."""
+    return tuple(_transfer()["mediterranean_areas"])
+
+
+def transfer_range(side: Side, role: str) -> int:
+    """[42.13]/[34.11] How far these aeroplanes may fly a TRANSFER: their charted Range, doubled.
+    Averaged over the establishment and floored (game.roster.range_per_plane), which is the
+    conservative direction for a test that decides whether a flight is legal at all."""
+    return roster.range_per_plane(side, role) * TRANSFER_RANGE_DOUBLING
+
+
+def transfer_distance(place: str) -> "int | None":
+    """[37.4] The shortest printed air distance from `place` to any Mediterranean base a Malta raid
+    may be flown from -- or None where the chart prints P for all of them ("prohibited; NOT POSSIBLE
+    to traverse air distance directly between indicated points").
+
+    Section B of the chart is the whole of the book's answer to "how far is Sicily from Africa", and
+    it answers for six African points: Benghazi 96 to Sicily and 138 to Italy, Derna 105 and 147,
+    and P from Tobruk, Bardia, Mersa Matruh, Alexandria and el Nofilia."""
+    row = logistics_data.air_distance_37_4()["n_mediterranean_off_map_areas_B"].get(place, {})
+    printed = [row[a] for a in mediterranean_areas() if row.get(a) is not None]
+    return min(printed) if printed else None
+
+
+class Departure(NamedTuple):
+    """One legal starting point for a [42.1] transfer to the Mediterranean: the [37.4] chart's
+    `place`, the air `facility` standing at it that this side holds, and the printed `distance`."""
+    place: str
+    facility: str
+    distance: int
+
+
+def departures(state: GameState, side: Side, role: str) -> tuple[Departure, ...]:
+    """[42.11]/[37.12] THE AIR FACILITIES THIS SIDE MAY FLY A TRANSFER TO ITALY/SICILY FROM, in
+    printed order -- and the reason the Axis's Malta option has a geography at all.
+
+        42.11 "A transfer mission is flying a plane FROM ONE AIR FACILITY TO ANOTHER."
+        37.12 "the Player notes the location of the target hex... and counts the distance in hexes,
+               using any path he wishes, FROM THE BASE/AIR FACILITY to the target hex. If the number
+               of hexes FALLS WITHIN THE RANGE of the plane, the plane may be flown to that hex."
+
+    Three conditions, each printed. The [37.4] chart must print a distance from the place at all
+    (Tobruk and Bardia are P -- a bomber standing at Tobruk may not fly to Sicily however much fuel
+    it has); that distance must fall within the transfer range (42.13's doubled Range); and the side
+    must actually HOLD an undestroyed air facility there (36.15 -- a facility belongs to whoever
+    holds its hex, and 36.14's zero-capacity field "is considered destroyed for all purposes").
+
+    SO THE AXIS'S MALTA OPTION LIVES AT BENGHAZI. The chart prints exactly two African departure
+    points, Benghazi and Derna, and every other African point it prints is prohibited: lose
+    Cyrenaica and the Regia Aeronautica cannot reach Sicily from Africa at all. That is not a
+    balancing decision, it is [37.4] section B read across [60.5]'s facility list, and the
+    resolution from the chart's PLACES to [60.5]'s FACILITIES is recorded (with the hexes that
+    evidence it) in data/malta_44.json under transfer_42_1._departure_points."""
+    reach = transfer_range(side, role)
+    held = {f.hex: f for f in air.facilities_of(state, side) if not air.destroyed(f)}
+    out: list[Departure] = []
+    for point in _transfer()["departure_points"]:
+        distance = transfer_distance(point["place"])
+        if distance is None or distance > reach:
+            continue
+        for fac in point["facilities"]:
+            f = held.get(coords.to_axial(coords.parse(fac["hex"])))
+            if f is not None:
+                out.append(Departure(point["place"], f.id, distance))
+    return tuple(out)
+
+
+def transferred_planes(state: GameState, side: Side, arena: str, role: str) -> int:
+    """[42.1]/[43.1] How many of this squadron's aeroplanes the Axis Player has FLOWN to the
+    Italy/Sicily boxes -- the ledger engine._air_transfer writes and rule 44 raids Malta with.
+
+    THIS REPLACED A SEEDED PERCENTAGE, and the replacement is the whole of the 2026-07-22 owner
+    ruling. Rule 43 compels a share of the GERMAN bombers to sit in the Mediterranean and computes
+    it from the establishment (`required_planes`); every other aeroplane the Axis owns he bases
+    where he likes -- [61.42] in the set-ups' own words, "the Axis Player MAY BASE ANY PORTION OF
+    HIS AIRFORCE AT ITALY/SICILY within the minimum German plane restrictions of Case 43.1", and
+    44.27's worked example has him keeping Italian types there ("He has, based in Italy and Sicily,
+    12 SM 79's, 6 BR 20's, 16 CR 42's, and 4 CR 32's"). That is a DECISION, and this module used to
+    express it as a constant: `discretionary_pct`, shipped once at [63.46]'s transplanted 10% and
+    then withdrawn to zero with the ruling left open. The owner's answer was that [60.32] never
+    forbade the posture -- it is a SET-UP rule, "no planes START the game in Italy/Sicily" -- so the
+    percentage was the wrong shape for the thing entirely. The Axis flies them there."""
+    return state.air_mediterranean.get(air.squadron(side, arena, role), 0)
 
 
 def _share(state: GameState, side: Side, keep) -> int:
@@ -290,7 +380,7 @@ def required_planes(state: GameState, side: Side, turn: int) -> int:
     Until then it is 43.12's untyped-but-nationed "all German bombers"; from then that sentence has
     expired ("UNTIL 1/35 Game-Turn 1941") and what remains is 43.11/43.13's three named heavies.
     Everything outside the population of the moment is the Axis Player's free choice, which is
-    `discretionary_pct`'s (unseeded) business and not this function's."""
+    `transferred_planes`'s business -- a [42.1] mission he flies -- and not this function's."""
     if turn < _basing()["change_turn"]:
         return german_bombers(state, side)
     return constrained_planes(state, side)
@@ -315,8 +405,14 @@ def italy_sicily_planes(state: GameState, turn: int) -> int:
         choice of ceiling over floor recorded in data/malta_44.json) applied to the three types
         rule 43 NAMES, once 43.12 has expired. `required_planes` is that changing subject. Zero in
         the campaign today -- there is no German aeroplane in [60.32].
-      * **THE CHOICE.** Everything else he owns, at `discretionary_pct` -- **UNSEEDED, and so zero**
-        while the [60.32]-versus-[44.21] owner ruling is open.
+      * **THE CHOICE.** Everything else he owns, at whatever he has FLOWN THERE: `transferred_
+        planes`, the [42.1] ledger. It is a stock and not a percentage, because [60.32] starts
+        every Axis aeroplane in Africa and rule 42's transfer mission is the only way any of them
+        reaches Sicily. Zero until a policy orders one.
+
+    The two are added and the sum is capped at the squadron: a requirement and a choice are
+    different aeroplanes (43.12's subject is German, the ledger's is whoever the Axis Player flew),
+    but no arithmetic may base more bombers in the Mediterranean than the establishment fields.
 
     THE FIRST TERM IS RULE 43'S LARGEST EFFECT ON THE CAMPAIGN THE DAY THE LUFTWAFFE ARRIVES: the
     raidable share of a German bomber force falls from 75% to 25% at Game-Turn 35, because 43.13
@@ -326,9 +422,9 @@ def italy_sicily_planes(state: GameState, turn: int) -> int:
     Taken in PLANES, not in Air Points, because that is what the [44.42] table counts and what
     44.27 bounds the African contingent by."""
     squadron = air.squadron_planes(state, Side.AXIS, LAND_ARENA, BOMBER_ROLE)
-    required = required_planes(state, Side.AXIS, turn)
-    return (required * italy_sicily_pct(turn) // 100
-            + (squadron - required) * discretionary_pct() // 100)
+    required = required_planes(state, Side.AXIS, turn) * italy_sicily_pct(turn) // 100
+    flown = transferred_planes(state, Side.AXIS, LAND_ARENA, BOMBER_ROLE)
+    return min(squadron, required + flown)
 
 
 def crete_planes(state: GameState, turn: int) -> int:

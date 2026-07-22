@@ -448,6 +448,19 @@ class EventKind(str, Enum):
     AIR_SQUADRON_UNFIT = "AIR_SQUADRON_UNFIT"
     AIR_REFIT_RESOLVED = "AIR_REFIT_RESOLVED"
     AIR_REFIT_DENIED = "AIR_REFIT_DENIED"
+    # [42.1] THE TRANSFER MISSION -- "flying a plane from one air facility to another" (42.11), and
+    # the only way an aeroplane ever changes base. AIR_TRANSFERRED {squadron, arena, role, planes,
+    # to_mediterranean, based, departure, distance, range, fuel, draws} folds onto
+    # GameState.air_mediterranean (the Italy/Sicily basing ledger) and, when the flight is
+    # outbound, onto the air-facility dumps it drew its fuel from -- "transfer missions consume
+    # fuel" (42.14), at 34.17's Fuel Consumption Rating like any other sortie. `planes` is the
+    # number that changed base and `to_mediterranean` its direction; `departure` is the [37.4] Air
+    # Distance Chart point it flew from and `distance`/`range` the two numbers 37.12 compares
+    # (the plane's charted Range DOUBLED for a transfer, 42.13). A RETURN flight draws nothing:
+    # 43.21 meets every requirement of a Mediterranean-based plane "including fuel and ammunition"
+    # out of the box it sits in. Emitted only when a policy actually moves aeroplanes, so every
+    # scenario that flies no transfer stays byte-identical.
+    AIR_TRANSFERRED = "AIR_TRANSFERRED"
     # [44.0] MALTA -- the island as a place with health (game.malta), once per GAME-TURN.
     #
     # MALTA_RAID_ORDERED {level, dice, in_play_pct, strategic_pct, planes, bomb_points, based,

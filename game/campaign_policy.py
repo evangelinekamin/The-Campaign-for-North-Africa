@@ -995,9 +995,59 @@ def malta_africa_doctrine(state: GameState, available: int, level: str) -> int:
     return available
 
 
+def air_transfer_doctrine(state: GameState, based: int, available: int) -> int:
+    """[42.1]/[43.1]/[44.21] THE AXIS'S BASING DECISION: send the bomber arm to Sicily to suppress
+    Malta, and bring it home to the desert when the island is down.
+
+    THE TRADE IS THE WHOLE POINT, and it is symmetric to malta_africa_doctrine's. A bomber standing
+    in the Italy/Sicily box is the ONLY bomber [44.25]/[44.42] will size a raid from -- and it is
+    one that flies no Land Support over the desert until it is flown back (basing.africa_planes
+    subtracts it, and 42.14 charges fuel for the flight). So the doctrine reads the same board
+    signal the raid doctrine does, and answers the other half of the question:
+
+      * **MALTA STANDING AT ITS REPAIR CEILING** -- undamaged, every Capacity Level intact, 44.14's
+        eighteen aeroplanes a level all operating: there is something there to take, so the Regia
+        Aeronautica's bombers go to Sicily.
+      * **MALTA ALREADY KNOCKED DOWN**: the raid has done its work and the [44.5] repair table will
+        take Game-Turns to undo it. Bombers held in Sicily against a flattened island are bombers
+        not bombing the Eighth Army, so they come home.
+
+    A DOCTRINE, NOT A CALENDAR -- the same discipline the rest of this module is written under. It
+    oscillates on purpose: surge, raid, return, and surge again when the island is repaired. That
+    is a commander reading the position, it costs 34.17 fuel every time he does it, and it is the
+    behaviour that makes the [60.32] ruling's "Sicily is a decision" true on the board rather than
+    only in a docstring.
+
+    ALL OR NOTHING, for the same reason malta_africa_doctrine is: the [44.42] table's percentages
+    are percentages OF the based force, so half a bomber arm in Sicily is half a raid, and there is
+    no printed middle the book asks him to pick.
+
+    ⚠ AND IT DRIVES A MECHANISM THIS ENGINE STILL MAKES TOO STRONG, WHICH IS SAID HERE RATHER THAN
+    DISCOVERED IN A MEASUREMENT. [44.24] is explicit that a raid on Malta is conducted normally,
+    "including air-to-air and AA/flak", and NONE of 40/45/46 is built (game.basing's debt block):
+    nothing shoots an Axis bomber down over the island, Malta's [60.46] fighters and AA Points never
+    fire, and 44.28 has no losses to split. A doctrine that commits the whole bomber arm therefore
+    reads as an upper bound on what the Axis can do to Malta and a lower bound on what it costs him.
+    The cost that IS modelled is the desert's: while they are in Sicily they fly no Land Support."""
+    if malta.capacity(state) < malta.repair_ceiling(state):
+        return -based                                   # the island is down: back to the desert
+    return available                                    # it is whole: go and knock it down
+
+
 def malta_raid_doctrine(state: GameState) -> str:
     """[44.23] Spend the heaviest Availability Level still in the budget while Malta is at
     full health; drop to the unlimited Level I once the island is already damaged.
+
+    ⚠ FIRST, THE GUARD, ADDED 2026-07-22: **A COMMANDER DOES NOT ROLL A TABLE HE HAS NO AIRCRAFT
+    FOR.** 44.29 makes the Availability Level spent the moment it is consulted -- "the raid is
+    cancelled, BUT HE STILL HAS USED THE TABLE HE ROLLED FOR ONCE" -- and the campaign's heavy
+    budget is 25 + 12 + 12 Game-Turns out of 111. With no bomber based in Italy/Sicily [44.42]
+    grants no planes whatever it rolls (its percentages are percentages of that force) and 44.27
+    then bars the African contingent too, so the raid is arithmetically empty. Measured before this
+    guard existed: the doctrine spent the ENTIRE heavy budget -- 49 Game-Turns of II, III and IV --
+    on 49 raids in which not one aeroplane flew. The engine was faithful (44.29 is exactly that
+    unforgiving); the DOCTRINE was not asking whether it had anything to send. It asks now, and
+    Level I is free, unlimited, and 44.25's own do-nothing answer.
 
     A DOCTRINE, NOT A CALENDAR, and the distinction is the whole point of this block. The
     thing this engine deleted to make room for rule 44 was a hardcoded month table; a policy
@@ -1016,6 +1066,8 @@ def malta_raid_doctrine(state: GameState) -> str:
     second half of the war with nothing. So a level is taken only while the share of it already
     spent is no greater than the share of the war already fought -- the budget paced against
     the calendar of the SCENARIO, not against a calendar of history."""
+    if malta.italy_sicily_planes(state, state.turn) <= 0:
+        return "I"                                  # 44.42/44.27: no base in Sicily, no raid to fly
     if malta.capacity(state) < malta.repair_ceiling(state):
         return "I"
     elapsed = (state.turn - 1) / max(1, state.max_turns)
@@ -1054,6 +1106,11 @@ class CampaignAxisPolicy(_CampaignAxisSupplyMixin, ScriptedPolicy):
     def malta_africa_planes(self, state: GameState, available: int, level: str) -> int:
         # [44.25]/[39.19] The African contingent, shared with the live-staff campaign.
         return malta_africa_doctrine(state, available, level)
+
+    def air_transfer(self, state: GameState, based: int, available: int) -> int:
+        # [42.1]/[43.1] The Italy/Sicily basing decision -- the redeploy half of the Malta doctrine,
+        # shared verbatim with the LIVE-staff campaign so the two variants cannot diverge on it.
+        return air_transfer_doctrine(state, based, available)
 
     def convoy_plan(self, state: GameState, side: Side, tons: int) -> dict:
         # [56.22] The convoy split, shared with the live-staff campaign -- the Axis Player's single

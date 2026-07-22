@@ -458,6 +458,35 @@ class Sortie(NamedTuple):
     available: int
 
 
+def fuel_planes(state: GameState, side: Side, role: str, wanted: int
+                ) -> tuple[int, tuple[tuple[str, int], ...], int, int]:
+    """[38.24] Fuel as many of `wanted` aeroplanes as the side's air-facility dumps can pay for,
+    ONE PLANE AT A TIME, and report (planes funded, draws [(dump id, qty)], the full bill, what was
+    in the larder). The draws walk the dumps in id order, so the log is replay-stable.
+
+    The bill's arithmetic and the pooled-larder proxy are `refuel`'s, whose docstring argues both;
+    this is that block taken in PLANES so that a mission denominated in aeroplanes rather than in
+    Air Points -- a [42.1] TRANSFER, which moves a base and carries no bombload -- can be charged
+    the same 34.17 rate through the same code."""
+    dumps = facility_dumps(state, side)
+    available = sum(su.fuel for su in dumps)
+    per = fuel_per_plane(side, role)
+    need = max(0, wanted) * per
+    planes = min(wanted, available // per) if wanted > 0 else 0
+    if planes <= 0:
+        return 0, (), need, available
+    draws: list[tuple[str, int]] = []
+    remaining = planes * per
+    for su in dumps:
+        if remaining <= 0:
+            break
+        take = min(remaining, su.fuel)
+        if take > 0:
+            draws.append((su.id, take))
+            remaining -= take
+    return planes, tuple(draws), need, available
+
+
 def refuel(state: GameState, side: Side, role: str, points: int) -> Sortie:
     """[38.24] Refuel as many of the aeroplanes `points` commits as `side`'s air-facility dumps can
     pay for, ONE PLANE AT A TIME, and report what flies.
@@ -499,26 +528,13 @@ def refuel(state: GameState, side: Side, role: str, points: int) -> Sortie:
     from no on-map pile; and 38.4's Ammunition Points for bombs (38.44), which is a separate
     commodity and a separate block."""
     committed = planes_flying(side, role, points)
-    dumps = facility_dumps(state, side)
-    available = sum(su.fuel for su in dumps)
-    per = fuel_per_plane(side, role)
-    need = committed * per
-    planes = min(committed, available // per) if committed > 0 else 0
+    planes, draws, need, available = fuel_planes(state, side, role, committed)
     if planes <= 0:
         return Sortie(0, 0, committed, (), need, available)
-    draws: list[tuple[str, int]] = []
-    remaining = planes * per
-    for su in dumps:
-        if remaining <= 0:
-            break
-        take = min(remaining, su.fuel)
-        if take > 0:
-            draws.append((su.id, take))
-            remaining -= take
     # the whole force flies at the points it was committed with; a part-funded one flies at its
     # planes' share of them (never more than was committed)
     flown = points if planes == committed else min(points, points_of_planes(side, role, planes))
-    return Sortie(flown, planes, committed, tuple(draws), need, available)
+    return Sortie(flown, planes, committed, draws, need, available)
 
 
 # --- [38.3] REFITTING AIRCRAFT -- THE SORTIE-RATE GOVERNOR --------------------------------------

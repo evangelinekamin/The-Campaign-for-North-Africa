@@ -35,14 +35,16 @@ ROLES = ("fighters", "strike", "recon")
 # --- the transcription -------------------------------------------------------------------------
 
 def test_60_32_the_italian_air_strengths_are_the_printed_rows():
-    """[60.32], PDF page 78, rendered at 300 dpi and read with eyes -- nine printed rows, of which
-    eight are seeded and the ninth ('2S01') is an owner ruling. The OCR in docs/rules/60 agrees on
-    all eight, which is the cross-check."""
+    """[60.32], PDF page 78, rendered at 300 dpi and read with eyes -- NINE printed rows, all nine
+    seeded. The OCR in docs/rules/60 agrees on the eight it can spell, which is the cross-check;
+    the ninth is the garbled '2S01', ruled by the owner on 2026-07-22 to be the Cant Z. 501
+    Gabbiano (see the test below)."""
     printed = {"CR 42": (65, 25), "CR 32": (70, 28), "Ba 65": (10, 2), "Ba 88": (24, 6),
-               "SM 79": (133, 35), "SM 81": (17, 4), "Ca 309": (56, 12), "Ro37Bis": (10, 6)}
+               "SM 79": (133, 35), "SM 81": (17, 4), "Ca 309": (56, 12), "Ro37Bis": (10, 6),
+               "2S01": (9, 9)}
     got = {m.printed: (m.available, m.refitted) for m in roster.roster(Side.AXIS)}
     assert got == printed
-    assert sum(a for a, _ in printed.values()) == 385           # 394 less the unruled nine
+    assert sum(a for a, _ in printed.values()) == 394           # every row the page adds up
 
 
 def test_60_42_the_commonwealth_air_strengths_are_the_printed_rows():
@@ -85,18 +87,26 @@ def test_the_role_column_is_a_reading_of_the_printed_mission_capability():
         assert air.mission_capable(side, "fighters")
 
 
-def test_the_garbled_60_32_row_is_transcribed_and_left_unseeded():
-    """⚠ OWNER RULING NEEDED. [60.32]'s ninth row reads '2S01' and no aircraft chart prints such a
-    name; the only candidate on [4.44b] is the Cant Z. 501 Gabbiano (a Z.501 typeset with Z as 2 and
-    5 as S). That is the 43.11 "FW220" class of question and the owner rules it, not this code -- so
-    the row is transcribed with its printed spelling, its nine aeroplanes are NOT in the
-    establishment, and the candidate chart row IS transcribed so that seeding it is one line."""
-    row = air_establishments_59_3()["campaign_64"]["AXIS"]["unresolved_type_60_32"]
-    assert row["printed"] == "2S01" and (row["available"], row["refitted"]) == (9, 9)
-    assert row["candidate_chart_row"] == "Cant Z. 501 Gabbiano"
-    assert row["candidate_chart_row"] in aircraft_characteristics_4_44()
-    assert row["candidate_chart_row"] not in [m.type for m in roster.roster(Side.AXIS)]
-    assert row["_owner_ruling_needed"].startswith("OWNER RULING NEEDED")
+def test_the_garbled_60_32_row_is_the_cant_z_501_and_is_seeded():
+    """OWNER RULING MADE 2026-07-22 (Eve). [60.32]'s ninth row reads '2S01' and no aircraft chart
+    prints such a name; the only candidate on [4.44b] is the Cant Z. 501 Gabbiano -- a Z.501 whose
+    Z sets as a 2 and whose 5 sets as an S. The rule's own sentence is the evidence: it licenses
+    placement at "flying boat basins" and the Gabbiano is the only Italian flying boat on the chart
+    the Regia Aeronautica could have based in Libya in 1940.
+
+    RESTATED, NOT WEAKENED (rules of this port, 5): this test used to pin the row UNSEEDED, which
+    was right while the ruling was open and is wrong now that it is answered. What it pins instead
+    is the ruling's own evidence -- the printed spelling, the chart row it resolves to, and that
+    the nine aeroplanes are in the establishment where the muster's 394 need them."""
+    row = next(m for m in roster.roster(Side.AXIS) if m.printed == "2S01")
+    assert (row.available, row.refitted) == (9, 9)
+    assert row.type == "Cant Z. 501 Gabbiano" and row.role == "recon"
+    chart = aircraft_characteristics_4_44()[row.type]
+    assert chart["class"] == "flying_boat" and chart["nation"] == "italian"
+    assert chart["mission_capability"]["R"] == "!"          # the cell its role is read off
+    seeded = air_establishments_59_3()["campaign_64"]["AXIS"]["planes"][-1]
+    assert seeded["_type"].startswith("OWNER RULING MADE")
+    assert "unresolved_type_60_32" not in air_establishments_59_3()["campaign_64"]["AXIS"]
 
 
 # --- the points bridge -------------------------------------------------------------------------

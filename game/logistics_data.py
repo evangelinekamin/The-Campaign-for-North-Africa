@@ -353,6 +353,16 @@ def aircraft_refit_table_38_37() -> dict:
     return _data()["aircraft_refit_38_37"]["by_squadron"]
 
 
+def air_distance_37_4() -> dict:
+    """[37.4] AIR DISTANCE CHART, both printed sections, by ROW place then COLUMN place, in hexes.
+    A prohibited pairing -- the chart's "P = not possible to traverse air distance directly between
+    indicated points" -- is a null, never a large number, so a range test can never quietly pass it.
+    Section B ("N. Mediterranean Off-Map Areas") is the only place the book prints a distance from
+    Africa to Sicily or Italy, which makes it the chart a [42.1] transfer to the Mediterranean bases
+    is measured on (game.basing)."""
+    return _data()["air_distance_37_4"]
+
+
 def squadron_capacity_35_23() -> dict:
     """[35.23] SQUADRON CAPACITY CHART, by nationality key ("italian", "german",
     "commonwealth_1940_june_41", "commonwealth_july_41_43"): the charted `ready` + `reserve` =
@@ -448,7 +458,13 @@ def malta_italy_sicily_basing_43_1() -> dict:
     (transcribed for the cross-check, not read by game.basing, which adds up the two parts), the
     `constrained_types_43_11` the typed cases name AS THE [4.44b] CHART PRINTS THEM, and
     `ruled_type_43_11` -- the "FW220" the rule names against the chart row the owner ruled it to be
-    (2026-07-21: the Fw. 200 C), kept as a pair so the prose name stays on the record."""
+    (2026-07-21: the Fw. 200 C), kept as a pair so the prose name stays on the record.
+
+    Also `transfer_42_1`: the [42.1] transfer mission's own block -- the `mediterranean_areas` a
+    transfer may be flown to and the [37.4] `departure_points` it may be flown FROM, each resolved
+    to the [60.5] air facilities that stand at it. That block replaced a seeded percentage when the
+    owner ruled [60.32] on 2026-07-22 (`_owner_ruling_60_32_vs_44_21_ANSWERED`): the Axis's
+    Italy/Sicily posture is a decision he flies, not a constant this file holds."""
     return _malta()["italy_sicily_basing_43_1"]
 
 
@@ -498,8 +514,10 @@ def air_establishments_59_3() -> dict:
     """[34.6]/[59.3] INITIAL AIR STRENGTHS, by scenario key then by side: the printed muster rows
     ([60.32] Italian, [60.42] Commonwealth), each with the [4.44] chart name of the `type`, the
     scenario's own spelling, Total `available`, Total `refitted` (59.32's readiness at Game-Turn 1)
-    and the `role` the type is fielded in. Also carries the scenario's pilot and SGSU rows, and
-    [60.32]'s garbled '2S01' row -- transcribed, UNSEEDED, and raised as an owner ruling. See
+    and the `role` the type is fielded in. Also carries the scenario's pilot and SGSU rows. All
+    NINE of [60.32]'s printed rows are seeded, the ninth being the garbled '2S01' -- ruled by the
+    owner on 2026-07-22 to be the Cant Z. 501 Gabbiano, the chart's one Italian flying boat, on the
+    evidence of the rule's own "flying boat basins" (the ruling is written out on the row). See
     game.roster for what reads this and the data file's own four notes for what it is."""
     return _air_establishments()
 

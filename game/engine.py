@@ -192,6 +192,9 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             _naval_convoys(r, policies)                  # 48 V.D: the Naval Convoy Arrival Phase runs
                                                          # EVERY Operations Stage (VI/VII repeat all of V) --
                                                          # the turn's manifest unloads across the stages
+            _air_transfer(r, policies)                   # 42.15/42.12: the Tactical Land Support Phase's
+                                                         # FIRST air beat -- "transfer missions should be
+                                                         # flown before undertaking any other missions"
             _air_superiority(r)                          # 40/45/46: contest the sky this OpStage (per arena)
             _air_maintenance(r)                          # 33 IV.F.7 / 38.3: ready the planes that flew
             _malta_refit(r)                              # 44.16: and Malta's, "like all other planes"
@@ -1718,6 +1721,104 @@ def _air_fuel(r: _Run, side: Side, role: str, points: int, mission: dict) -> int
         r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
                {"supply_id": sid, "commodity": supply.FUEL, "qty": qty})
     return sortie.points                                # 38.24: however many planes were refuelled
+
+
+def _air_transfer(r: _Run, policies: dict) -> None:
+    """[42.1] THE TRANSFER MISSION -- the Axis bomber arm moves between Africa and the Italy/Sicily
+    boxes, and Sicily becomes a decision instead of a percentage.
+
+        42.11 "A transfer mission is flying a plane FROM ONE AIR FACILITY TO ANOTHER."
+        42.13 "Planes flying transfer missions MAY DOUBLE THEIR RANGE. Transfer is a ONE-WAY
+               FLIGHT; transfer planes do not (cannot) return to their base of origin."
+        42.14 "Planes flying transfer NEED NOT BE REFITTED to fly. However, a plane completing a
+               transfer mission must be refitted to fly another mission in the next Stage or Turn.
+               TRANSFER MISSIONS CONSUME FUEL."
+        42.15 "Transfers are flown ONLY IN TACTICAL LAND SUPPORT PHASES of the Operations Stage."
+        37.15 "No plane may fly unless it has been FUELED. Furthermore, OTHER THAN UNITS FLYING
+               TRANSFER MISSIONS, no plane may fly unless it has been refitted."
+
+    WHY THIS BEAT EXISTS AT ALL. [60.32] starts every Axis aeroplane in Africa; [44.21]/[44.25]/
+    [44.27] make an Italy/Sicily base the precondition for raiding Malta. For two blocks that
+    contradiction was carried as an open owner ruling and stood in for by a percentage in a data
+    file. The owner ruled it on 2026-07-22: [60.32] is a SET-UP rule ("no planes START the game in
+    Italy/Sicily"), the two rules never conflicted, and the bridge between them is this mission --
+    which makes the posture a recurring CHOICE with a real price, because a bomber on a Sicilian
+    field flies nothing over the desert (game.basing.africa_planes subtracts it).
+
+    THE AXIS ALONE, and that is rule 43's own scope: 43.1 is headed "AXIS MEDITERRANEAN BOMBER BASE
+    REQUIREMENTS", the boxes are his, and the Commonwealth's basing is rule 36's, entirely on the
+    map. THE BOMBER ARM ALONE, for the same reason -- rule 43 speaks about bombers, and [43.25]'s
+    Malta permission is a bomber's.
+
+    EACH LEG IS VALIDATED AGAINST THE PRINTED RULE, never trusted from the policy:
+      * OUTBOUND he may send no more aeroplanes than stand serviceable in Africa (38.31) and are
+        not already committed to this Game-Turn's Strategic Phase (39.19); he must hold an air
+        facility the [37.4] Air Distance Chart prints a non-prohibited distance to Sicily or Italy
+        from, within 42.13's doubled range (basing.departures -- in practice Benghazi or Derna);
+        and 42.14's fuel comes out of the 36.17 larder at 34.17's rate, one plane at a time, so a
+        dry air force cannot redeploy. A leg that can fuel nobody flies nobody.
+      * INBOUND he may bring home only what is there, and it costs nothing: 43.21 meets every
+        requirement of a Mediterranean-based plane "including fuel and ammunition" out of the box
+        it sits in, so the Axis Player expends none for it. The asymmetry is the book's.
+
+    ⚠ AND ONE CLAUSE IS APPLIED MORE STRICTLY THAN THE BOOK, DELIBERATELY. 42.14/37.15 let an
+    UNREFITTED plane fly a transfer ("planes flying transfer need not be refitted to fly"), and this
+    beat will not send one: `available` is the SERVICEABLE African bombers. The reason is that our
+    38.31 ledger is per (side, arena, role) pool and cannot follow an aeroplane to Sicily -- so an
+    unfit bomber flown to the box would arrive with its unserviceability left behind in Africa and
+    the [44.42] raid would count it as a fit one. That is laundering, and it is a worse infidelity
+    than refusing a flight the book allows. The refusal costs the Axis nothing he cannot get by
+    refitting first, and it dissolves with 34.72 exactly as the two under-charges below do.
+
+    ⚠ TWO PRINTED CLAUSES OF THE MISSION ARE DELIBERATELY NOT BILLED, both for the same structural
+    reason -- our readiness ledger is per (side, arena, role) POOL and has no idea which base a
+    plane is at (34.72's Squadron Composition Sheet, the debt half this air game waits on):
+      * 42.14's "a plane completing a transfer mission must be REFITTED to fly another mission".
+        Marking the departed aeroplanes unfit would charge that readiness to the African squadron
+        they just LEFT -- africa_planes has already shrunk by the same number -- so the desert
+        would pay for the redeployment twice. The Mediterranean contingent's own refit is 43.22's
+        (six-to-twelve-plane groups in the box), which is unbuilt.
+      * 39.19's "a plane may fly only one mission per Operations Stage" -- same double-count, same
+        reason (game.basing's docstring carries the flag from the other end).
+    Both make a transfer slightly cheaper than the book's. Both dissolve with 34.72."""
+    side = Side.AXIS                                     # 43.1: the Mediterranean boxes are his
+    arena, role = basing.LAND_ARENA, basing.BOMBER_ROLE
+    if not r.state.air or not air.based_on_map(r.state, side):
+        return                                           # no squadron, or no 38.24 hex to fly from
+    squadron = air.squadron(side, arena, role)
+    based = basing.transferred_planes(r.state, side, arena, role)
+    standing = air.ready_planes(r.state, side, arena, role,
+                               basing.establishment(r.state, side, arena, role))
+    available = max(0, standing - basing.strategic_planes(r.state, side, arena, role))
+    asked = int(policies[side].air_transfer(r.state, based, available))
+    if asked == 0:
+        return
+    if asked < 0:                                        # 43.21: coming home costs him nothing
+        planes = min(-asked, based)
+        if planes <= 0:
+            return
+        r.emit(EventKind.AIR_TRANSFERRED, side, f"{side.value}/Air",
+               {"squadron": squadron, "arena": arena, "role": role, "planes": planes,
+                "to_mediterranean": False, "based": based - planes, "departure": None,
+                "distance": None, "range": basing.transfer_range(side, role), "fuel": 0,
+                "draws": [], "need": 0, "available": 0})
+        return
+    departures = basing.departures(r.state, side, role)   # 37.12/42.13: from where, and how far
+    if not departures:
+        return                                           # [37.4] prints P from everything he holds
+    wanted = min(asked, available)
+    funded, draws, need, larder = air.fuel_planes(r.state, side, role, wanted)
+    if funded <= 0:
+        return                                           # 37.15: no plane may fly unless fueled
+    for sid, qty in draws:                               # 42.14 through 38.24: out of the larder
+        r.emit(EventKind.SUPPLY_CONSUMED, side, f"{side.value}/Air",
+               {"supply_id": sid, "commodity": supply.FUEL, "qty": qty})
+    r.emit(EventKind.AIR_TRANSFERRED, side, f"{side.value}/Air",
+           {"squadron": squadron, "arena": arena, "role": role, "planes": funded,
+            "to_mediterranean": True, "based": based + funded,
+            "departure": departures[0].facility, "distance": departures[0].distance,
+            "range": basing.transfer_range(side, role), "fuel": sum(q for _, q in draws),
+            "draws": [list(d) for d in draws], "need": need, "available": larder})
 
 
 def _air_superiority(r: _Run) -> None:

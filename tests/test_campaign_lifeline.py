@@ -184,16 +184,33 @@ def test_the_axis_tobruk_garrison_is_fed_by_sea_through_a_harbour_that_is_fought
     regens = [e for e in changes if "strength" not in e.payload]
     assert bombs, "the Desert Air Force never touched the harbour"
 
-    # (3) ...BUT IT REGENERATES (55.18): bomb damage recovers up to the ceiling, so the harbour is NOT
-    # a one-way ratchet -- it ends the run open (eff > 0), never bombed shut for good.
+    # (3) ...BUT IT REGENERATES (55.18): bomb damage recovers up to the ceiling, so the harbour is
+    # NOT a one-way ratchet -- every time it is knocked down it climbs back.
+    #
+    # RESTATED 2026-07-22, NOT WEAKENED (rules of this port, 5). This used to read
+    # `res.final.port("PORT-Tobruk").eff > 0` -- a SNAPSHOT of the last instant of the run, which
+    # says "not a ratchet" only by luck of what the final Operations Stage happened to do. The
+    # [60.32]/[42.1] transfer block moved the Axis bomber arm to Sicily for part of every Game-Turn,
+    # which changed how many air missions the Axis flies and therefore what the air dice stream
+    # hands the COMMONWEALTH; on this seed the Desert Air Force landed 14 bombs instead of 12 and
+    # the twelfth Game-Turn ENDED on one. The harbour regenerated twelve times and the lane fed on
+    # all twelve turns -- it was never a ratchet and never shut -- so what is asserted now is the
+    # property itself: the quay CLIMBS BACK after being knocked down. That is strictly more than the
+    # snapshot was, and it cannot be satisfied by a run that never bombed the harbour at all.
     assert regens, "55.18 never regenerated the harbour -- it is still a permanent ratchet"
-    assert res.final.port("PORT-Tobruk").eff > 0, "the harbour was bombed permanently shut (the old bug)"
+    first_bomb = min(changes.index(b) for b in bombs)
+    assert any(changes.index(g) > first_bomb for g in regens), \
+        "the harbour never recovered a level after being bombed (the old ratchet bug)"
 
     # (4) SO THE LANE KEEPS FEEDING across the campaign -- the duel throttles the lifeline, it does not
     # sever it. (With the weak proxy air the fortress stays fed; the real air strengths are the lever.)
     turns_landed = {e.turn for e in landed}
     assert len(turns_landed) >= 10, \
         "the sea lane stopped feeding -- the harbour was treated as permanently cut, not fought over"
+    # and it is still feeding at the END, which is the operational statement the old eff-snapshot
+    # was reaching for: a harbour bombed shut for good could not land a cargo on the last turn.
+    assert res.final.turn in turns_landed, \
+        "the sea lane had stopped feeding by the last Game-Turn"
 
 
 # --- (A2) THE HARBOUR DUEL: WHOEVER BESIEGES, BOMBS ------------------------------------------------

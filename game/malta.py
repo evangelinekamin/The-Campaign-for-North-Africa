@@ -389,15 +389,17 @@ def italy_sicily_planes(state: GameState, turn: int) -> int:
     whole of why a Malta raid can now deliver Bomb Points at all. The previous note here said "the
     AXIS's half is live at one one-hundredth" of the island's; that is fixed.
 
-    ⚠⚠ AND THE BASING FRACTION IS AN OPEN OWNER RULING, LEFT UNSEEDED -- WHICH IS WHY THIS RETURNS
-    ZERO IN THE CAMPAIGN AND THE AXIS RAIDS MALTA WITH NOTHING. [60.32] prints "no planes start the
-    game in Italy/Sicily" while [44.21]/[44.25]/[44.27] make an Italy/Sicily base the precondition
-    for any raid at all; the bridge the book intends is 43.1's free basing choice plus a rule-37
-    transfer, and this engine has an order channel for neither. basing.discretionary_pct therefore
-    answers 0 while the ruling is open (it shipped once at [63.46]'s transplanted 10%, which made
-    the whole Malta result a measurement of an October-1942 scenario rule). The force is the book's;
-    what is missing is the transfer mission. Written out in full at
-    `_owner_ruling_needed_60_32_vs_44_21` in data/malta_44.json."""
+    ⚠⚠ AND THE SECOND TERM OF IT IS NOW A DECISION, NOT A FRACTION -- THE OWNER RULING OF
+    2026-07-22. [60.32] prints "no planes start the game in Italy/Sicily" while [44.21]/[44.25]/
+    [44.27] make an Italy/Sicily base the precondition for any raid at all, and for two blocks that
+    stood open with a percentage (or a null) standing in for it. The owner ruled that [60.32] is a
+    SET-UP rule -- a fact about Game-Turn 1, not a repeal of rule 44 -- and that the bridge is the
+    one the book prints: a [42.1] TRANSFER MISSION. So this returns rule 43's REQUIREMENT (zero
+    while [60.32] musters no German aeroplane) plus the bombers the Axis Player has actually FLOWN
+    to Sicily, out of Benghazi or Derna, at 42.13's doubled range and 42.14's fuel. A raid on Malta
+    is now something he has to have decided on, one Operations Stage earlier, at the cost of his
+    Land Support over the desert. Written out in full at `_owner_ruling_60_32_vs_44_21_ANSWERED` in
+    data/malta_44.json."""
     return basing.italy_sicily_planes(state, turn)
 
 

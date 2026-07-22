@@ -619,6 +619,19 @@ class GameState:
     # roll clears), this ledger is cleared at the GAME-TURN boundary alone. game.basing reads it.
     # Default {} commits nothing, so every scenario without an Axis Malta raid is byte-identical.
     air_strategic: dict = field(default_factory=dict)
+    # [42.1]/[43.1] THE BASING LEDGER -- squadron key (game.air.squadron) -> the number of that
+    # squadron's aeroplanes the Axis Player has flown a TRANSFER MISSION to the Italy/Sicily boxes
+    # ([36.5] off-map air facilities). It is the CHOICE half of rule 43's Mediterranean basing:
+    # 43.11/43.12/43.13 REQUIRE a percentage of the German bombers to sit there and game.basing
+    # computes that from the establishment, while everything else the Axis bases there he flew
+    # there himself ("the Axis Player may base any portion of his airforce at Italy/Sicily within
+    # the minimum German plane restrictions of Case 43.1", 61.42). It replaced a seeded percentage:
+    # [60.32] starts every Axis aeroplane in Africa, so the only way to Sicily is to fly there, and
+    # a bomber standing on a Sicilian field is one that is not over the desert (39.19/43.11).
+    # A STOCK, cleared by nothing: an aeroplane stays where it was flown until it is flown back.
+    # Default {} bases nobody in the Mediterranean beyond what rule 43 compels, so every scenario
+    # that flies no transfer is byte-identical.
+    air_mediterranean: dict = field(default_factory=dict)
     # Air missions (rules 41/42) + the recon fog-lift. `air_missions` is the per-side LAND
     # tasking schedule (game.engine._air_support). `air_sighted` is the per-OpStage recon lift:
     # a set of (recon_side_value, hex) pairs observation.py reads ALONGSIDE _sighted_hexes (42.2),
@@ -958,6 +971,18 @@ class GameState:
         else:
             flown.pop(squadron, None)
         return replace(self, air_strategic=flown)
+
+    def with_air_mediterranean(self, squadron: str, planes: int) -> "GameState":
+        """[42.1]/[43.1] Set how many of `squadron`'s aeroplanes are based in the Italy/Sicily
+        boxes. Zero drops the key rather than recording a zero, exactly as with_air_strategic and
+        with_air_unfit do, so "no key" keeps its one meaning -- nobody there but whoever rule 43
+        compels."""
+        based = dict(self.air_mediterranean)
+        if planes > 0:
+            based[squadron] = planes
+        else:
+            based.pop(squadron, None)
+        return replace(self, air_mediterranean=based)
 
     def convoy_cargo(self, convoy: "Convoy") -> dict:
         """What a convoy is actually carrying: the Axis Player's [56.22] plan for it if one was

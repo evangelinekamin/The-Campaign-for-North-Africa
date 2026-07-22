@@ -2566,6 +2566,30 @@
       }
     }
   },
+  "air_distance_37_4": {
+    "_comment": "[37.4] AIR DISTANCE CHART -- 'the Air Distance Table is provided as a handy reference to determining distances in hexes between major points. Considering the size of the game-map, counting hexes can be a chore.' Two staircase matrices, transcribed cell by cell off the scan (PDF page 71, rendered at 300 dpi and read with eyes). ALL DISTANCES ARE IN HEXES, and the chart's own key defines the one non-numeric cell: 'P = Prohibited; not possible to traverse air distance directly between indicated points.' Section B IS THE ONLY PLACE THE BOOK PRINTS A DISTANCE FROM AFRICA TO SICILY OR ITALY, which makes it the chart a [42.1] transfer to the Mediterranean bases is measured on (37.12: 'the Player notes the location of the target hex... and counts the distance in hexes, using any path he wishes, FROM THE BASE/AIR FACILITY to the target hex. If the number of hexes falls within the range of the plane, the plane may be flown'). THE OCR IN docs/rules/90-charts DROPS A CELL IN SECTION A (the Malta and Benghazi rows each lose their Tunis column, 52 and 136); section B is transcribed correctly there and was re-read here anyway.",
+    "_key": "P = Prohibited; not possible to traverse air distance directly between indicated points. Carried as null below, because a prohibition is not a big number: a null must never sort as 'far away' in a range test, and a reader that treats it as one fails loudly. The chart's OTHER non-numeric glyph is the em-dash on the Malta/Malta diagonal -- a place is no distance from itself, which is not a prohibition and is therefore not written as one: that cell is simply absent below.",
+    "axis_off_map_n_african_areas_A": {
+      "_row_order": ["Tripolitania", "Tripoli", "Gabes", "Tunis"],
+      "Tripoli": {"Tripolitania": 32},
+      "Gabes": {"Tripolitania": 68, "Tripoli": 40},
+      "Tunis": {"Tripolitania": 91, "Tripoli": 60, "Gabes": 40},
+      "Malta": {"Tripolitania": 60, "Tripoli": 42, "Gabes": 58, "Tunis": 52},
+      "Nofilia": {"Tripolitania": 32, "Tripoli": 64, "Gabes": 104, "Tunis": 120},
+      "Benghazi": {"Tripolitania": 44, "Tripoli": 88, "Gabes": 124, "Tunis": 136}
+    },
+    "n_mediterranean_off_map_areas_B": {
+      "_row_order": ["Crete", "Malta", "Sicily", "Italy"],
+      "Malta": {"Crete": 105, "Sicily": 24, "Italy": 72},
+      "el Nofilia": {"Crete": null, "Malta": 80, "Sicily": null, "Italy": null},
+      "Benghazi": {"Crete": 62, "Malta": 84, "Sicily": 96, "Italy": 138},
+      "Derna": {"Crete": 27, "Malta": 108, "Sicily": 105, "Italy": 147},
+      "Tobruk": {"Crete": 48, "Malta": 126, "Sicily": null, "Italy": null},
+      "Bardia": {"Crete": 50, "Malta": 144, "Sicily": null, "Italy": null},
+      "Mersa Matruh": {"Crete": 66, "Malta": null, "Sicily": null, "Italy": null},
+      "Alexandria": {"Crete": 84, "Malta": null, "Sicily": null, "Italy": null}
+    }
+  },
   "squadron_capacity_35_23": {
     "_comment": "[35.23] SQUADRON CAPACITY CHART. 'Ready plus Reserve' is the number BOTH 38.23 and 38.33 cap an SGSU's work at: 'an Italian SGSU can handle refueling chores for a total of 12 planes, regardless of squadron assignment, in a given Operations Stage' (38.23), and 'each SGSU can refit up to the maximum planes the SGSU can contain (Ready plus Reserve)' (38.33). THE APPLIED READING IS CASE 35.23's OWN TABLE, PDF p.53, eyes-verified off the 1979 scan -- the owner's ruling of 2026-07-21, written out below. The Italian and German rows are the same in both of the book's printings and come off the same page. The Commonwealth squadron GROWS mid-war, so its rows are DATED -- and the dating is transcribed HERE, in `from`/`to` [year, month] pairs read off the row labels ('1940-June '41', 'July 41-43'), rather than left as a boundary literal in engine code (game.air.squadron_capacity selects the row whose span contains the Game-Turn's month).",
     "_owner_ruling": "OWNER RULING MADE 2026-07-21 (Eve): APPLY PRINTING (ii), CASE 35.23's OWN TABLE AT PDF p.53 -- Commonwealth 15 ready / 5 reserve / 20 total for 1940-June 1941, and 18/6/24 FROM JULY 1941. THE GROWTH DATE MOVES WITH THE NUMBERS: July 1941, not January 1942. THE DISPUTE, recorded because the ruling is a reading of two printings and not a discovery: the book prints this chart TWICE and the two disagree about both Commonwealth rows. BOTH were rendered at 300 dpi and read with eyes, not OCR. (i) THE PLAY-AID CHART, PDF p.105 (Charts and Tables p.10): 'Commonwealth Squadron (1940-41) 12 4 16' and 'Commonwealth Squadron (1942-43) 18 6 24'. (ii) THE RULE TEXT of case 35.23 itself, PDF p.53: 'Commonwealth Squadron (1940-June '41) 15 5 (20 total)' and 'Commonwealth Squadron (July 41-43) 18 6 (24 total)', followed by the prose 'Players will note that starting with July 1941 Commonwealth Squadrons increase their capacity.' THE OWNER READ BOTH AND RULED FOR (ii): the play aid's 1940-41 Commonwealth row is a DUPLICATE OF THE GERMAN STAFFEL ROW DIRECTLY ABOVE IT (12/4/16), which is what a copying error looks like, and printing (ii) says its dates twice -- in the row label and again in the prose. Printing (i) is now the unapplied one and is transcribed verbatim below under `play_aid_35_23_unapplied`; nothing reads it. The Italian (9/3/12) and German (12/4/16) rows are IDENTICAL in both printings and were never in dispute. This binds nothing today (the engine's proxy squadrons are 1-2 aeroplanes against a charted 12-24 allowance, so 38.23/38.33's cap never binds and no signature moves); it becomes load-bearing the moment 34.6/59.3's real Initial Air Strengths land.",

@@ -441,6 +441,14 @@ def apply(state: GameState, event: Event) -> GameState:
         # boundary: an unfit plane stays unfit until somebody refits it.
         return state.with_air_unfit(p["squadron"], p["unfit"])
 
+    if k == EventKind.AIR_TRANSFERRED:
+        # 42.11/42.13: "a transfer mission is flying a plane from one air facility to another",
+        # one-way. The only thing that changes is WHERE the aeroplanes are -- the Italy/Sicily
+        # basing ledger rule 43 and rule 44 both read. The fuel it burned (42.14) rides the
+        # ordinary SUPPLY_CONSUMED events the generator emitted beside this one, exactly as a
+        # bombing sortie's 38.24 draw does, so this fold is one scalar and no supply surface.
+        return state.with_air_mediterranean(p["squadron"], p["based"])
+
     if k == EventKind.MALTA_RAID_ORDERED:
         # 44.23 / 44.29: one Game-Turn of Axis Strategic Bombardment booked against the Availability
         # Level he consulted the [44.42] table with -- spent whether he raided or cancelled. A pure

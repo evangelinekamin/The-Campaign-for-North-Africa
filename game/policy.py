@@ -156,6 +156,23 @@ class Policy:
         doctrine spends nothing it cannot afford; the engine re-validates against the budget."""
         return "I"
 
+    def air_transfer(self, state: GameState, based: int, available: int) -> int:
+        """[42.1]/[43.1] THE BASING DECISION: how many bombers to fly a TRANSFER MISSION between
+        Africa and the Italy/Sicily boxes this Operations Stage. Positive sends them to the
+        Mediterranean, negative brings them home; the engine clamps both ends and validates the
+        flight (the [37.4] distance, 42.13's doubled range, a departure field the side still holds,
+        and 42.14's fuel).
+
+        `based` is how many of his bombers stand in Italy/Sicily now; `available` is how many stand
+        serviceable in Africa and could go.
+
+        THIS IS THE AXIS PLAYER'S CENTRAL RECURRING AIR DECISION, and it is a real one in both
+        directions: [44.21]/[44.25] make an Italy/Sicily base the precondition for raiding Malta at
+        all, while a bomber standing on a Sicilian field flies no Land Support over the desert
+        (43.11's own arithmetic, and 39.19's). The base returns 0 -- a commander with no Malta
+        doctrine moves nobody, and every scenario stays byte-identical."""
+        return 0
+
     def malta_africa_planes(self, state: GameState, available: int, level: str) -> int:
         """[44.21]/[44.25]/[44.27] + [39.19] How many AFRICAN-based bombers to add to this
         Game-Turn's Malta raid, of the `available` the engine has already bounded by 44.27's cap
