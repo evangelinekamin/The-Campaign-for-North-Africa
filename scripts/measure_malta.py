@@ -57,7 +57,10 @@ from game.scenario import campaign                                  # noqa: E402
 from game.state import InterdictionOrder                            # noqa: E402
 
 SEEDS = (1941, 7, 2026, 1, 99)
-MALTA_LANE = "2"        # scenario._campaign_malta_interdiction: the Axis Mediterranean convoy lane
+MALTA_LANE = "3"        # scenario._campaign_malta_interdiction: the Axis Med lane, Italy->Benghazi.
+                        # Was "2" (stale): the scenario relabelled this lane "2"->"3" (56.11 chart,
+                        # scenario.py:1443) and this coupling key was not updated with it, so the OFF
+                        # arm silenced a phantom lane and left Malta LIVE in both arms. 2026-07-23.
 OFF, LIVE = "off", "live"
 
 
