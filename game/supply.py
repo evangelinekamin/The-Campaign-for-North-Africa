@@ -456,6 +456,27 @@ def truck_convoy_cpa(truck_class: str) -> int:
     return TRUCK_CHARS[truck_class]["convoy_cpa"]
 
 
+def first_line_capacity(unit: Unit, commodity: str) -> int:
+    """[54.2] The carrying CEILING of a unit's organic first-line trucks (53.11) for one commodity:
+    the sum over the three classes of its Truck Points times that class's 54.2 per-Point capacity
+    (Light 2 Ammo / 50 Fuel / 6 Stores / 40 Water; Medium 4/120/15/100; Heavy 8/250/30/200). This is
+    what the [60.31]/[60.41] fl_light/fl_medium/fl_heavy allotment BUYS -- the amount of `commodity`
+    the unit's own lorries may hold and ferry the last hex from a dump (the way Port.cap_* is a
+    port's ceiling). A unit with no first-line trucks has capacity 0 and carries nothing of its own
+    beyond the intrinsic 49.14 fuel tank / 50.0 ammo load.
+
+    FLAGGED SIMPLIFICATION (53.12): each commodity is given the trucks' FULL point-capacity
+    independently, rather than the shared fractional cap truck_load_admissible enforces on a real
+    convoy (Sigma_c cargo_c/cap_c <= points) -- a lorry cannot in fact carry a full load of fuel AND
+    a full load of stores at once. Over-generous in the direction the design (phase4 sec 3.3) argues
+    for erring, and it never binds for fuel/ammo (which refill only to their small intrinsic pool);
+    it is load-bearing only as the stores/water buffer ceiling, where the true mix is the player's
+    free choice anyway."""
+    return (unit.fl_light * truck_capacity("light")[commodity]
+            + unit.fl_medium * truck_capacity("medium")[commodity]
+            + unit.fl_heavy * truck_capacity("heavy")[commodity])
+
+
 def truck_load_admissible(truck: TruckFormation, added: dict) -> bool:
     """53.12 load admissibility: a formation of N Truck Points may carry any mix whose
     fractional capacity use sums to <= N -- sum_c(cargo_c / cap_per_point_c) <= points,
@@ -988,6 +1009,45 @@ def colocated_dumps(state: GameState, unit: Unit):
     return sorted((su for su in state.active_supplies(unit.side)
                    if su.hex == unit.hex and (air_ok or not su.air_dump)),
                   key=lambda su: su.id)
+
+
+def first_line_dumps(state: GameState, unit: Unit):
+    """[53.11] THE LAST MILE -- the dumps a unit's own first-line trucks can draw supply from during
+    the 48 V.C.6 Supply Distribution Segment, to carry it the last hex(es) from the forward dump to
+    the man.
+
+    A unit with NO first-line trucks reaches only its OWN hex (colocated_dumps): supply must be IN
+    THE HEX (49.15/50.15/51.15), the strict in-hex model every S5-S8 consumer already draws on -- so
+    German combat units, reinforcements and static garrisons (all fl_* = 0; German first-line is the
+    [4.43b] Reinforcement-Schedule attachment, deferred) stay in-hex and still culminate when they
+    outrun the dump network. A unit that OWNS first-line trucks reaches further: its lorries make a
+    ROUND TRIP to a nearby dump and haul the load home. First-line trucks move at their parent's
+    BASIC CPA (53.22: "First line trucks use their basic CPA (20 or 25)"), so a round trip to a dump
+    at one-way path-cost d costs 2d and is affordable iff 2d <= CPA, i.e. d <= CPA/2 -- which is
+    EXACTLY the flood the abstract 32.16 half-CPA supply range computed. That equality is the whole
+    of the model: the abstract game's "supply range" was always the physical round-trip range of a
+    unit's own first-line lorries; the full game merely gates it on actually OWNING them and CAPS the
+    haul at their 54.2 capacity (first_line_capacity, applied by the caller). Returns friendly ACTIVE
+    dumps in reach, nearest first (deterministic), honouring [36.17] (air dumps invisible to a land
+    unit) exactly as colocated_dumps does -- the co-located dumps are the d=0 members of the list, so
+    a unit standing on a dump still tops up from it first.
+
+    FLAGGED PROXY: this stands in for the 53.14 three-tier chain's last leg -- in the rulebook it is
+    the SECOND-line truck that drives the load to the unit's hex, where the first-line trucks receive
+    it (53.14). We do not model that second-line last leg per unit; we let the first-line trucks
+    reach the forward dump instead. Same physical distance, same CPA bound, one fewer entity. WATER
+    is deliberately NOT drawn through here -- it stays on the abstract half-CPA trace (plan_draw), the
+    faithful proxy the S8 investigation established for the unbuilt 52.45 water trucks."""
+    if not (unit.fl_light or unit.fl_medium or unit.fl_heavy):
+        return colocated_dumps(state, unit)
+    budget = unit.cpa / 2                                            # 53.22 round trip at basic CPA
+    mob = Mobility.FOOT if unit.mobility in NON_MOT_CLASSES else Mobility.MOTORIZED
+    reach = _reach.reach(state.terrain, unit.hex, budget, mob, trace_blocked(state, unit.side))
+    air_ok = air.is_sgsu(unit)                                       # 36.17, as colocated_dumps
+    out = [su for su in state.active_supplies(unit.side)
+           if su.hex in reach and (air_ok or not su.air_dump)]
+    out.sort(key=lambda su: (reach[su.hex], su.id))                  # nearest first, id to break ties
+    return out
 
 
 def in_hex_available(state: GameState, unit: Unit, commodity: str) -> int:

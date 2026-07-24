@@ -10,6 +10,36 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-23 -- CAUSE: rule [53.11] FIRST-LINE TRUCKS, THE LAST MILE from the dump to the
+man. Exactly one rule moves these two logs.
+
+Until this slice the [60.31]/[61.43] first-line-truck allotment was SEEDED onto units (the
+fl_light/fl_medium/fl_heavy carrying-ceiling fields) but DORMANT: the 48 V.C.6 Supply Distribution
+top-up (engine._supply_distribution) refilled a unit's pools only from a dump ON ITS HEX, so a unit
+adjacent to but not standing on a stocked forward dump starved though the supply sat one hex away --
+the binding constraint the faucet audit measured (delivered Stores exceed eaten Stores threefold,
+yet ~53% of Axis unit-Game-Turns take a stores shortfall). This slice activates the tier: a unit's
+own first-line trucks reach a dump within their round-trip basic-CPA range (53.22: CPA/2 one-way,
+which is exactly the flood the abstract 32.16 half-CPA range computed -- the abstract "supply range"
+was always the physical round-trip range of the unit's own lorries) and haul the load home, capped
+at their 54.2 capacity (supply.first_line_capacity). STORES, having no intrinsic 51.0 pool, now
+BUFFER on the trucks (capacity = the 54.2 stores ceiling); FUEL/AMMO refill their intrinsic 49.14/
+50.0 pools from the reachable dump. WATER is deliberately excluded -- it stays on the abstract
+half-CPA trace, the S8 proxy for the unbuilt 52.45 water trucks. German combat units, reinforcements
+and static garrisons own no first-line trucks ([4.43b] Reinforcement-Schedule attachment DEFERRED),
+so they stay strictly in-hex and still culminate.
+
+Both benchmarks field Italian (and Commonwealth) first-line trucks and Commonwealth field dumps, so
+from Game-Turn 1's first Supply Distribution Segment a unit near -- not on -- a dump now refills; both
+logs move wholesale. NO chart magnitude was bent: the 54.2 truck capacities, the [60.31]/[60.41] /
+[61.43]/[61.31] allotments and the 53.11/53.22 mechanism ARE the book's; the abstract 32.16 range
+(Section 32, which rule 3 of this port says DOES NOT APPLY) is what it replaces. Determinism holds --
+each new hash reproduced byte-for-byte across two runs.
+
+    rommels_arrival   c7853d6ae610 -> 0a7ad25b0fb8
+    siege_of_tobruk   812528e2b95b -> 6ea7bd71d159
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-22 -- CAUSE: rule [49.3], the COMMONWEALTH'S OWN EVAPORATION RATE. Exactly one
 rule moves these two logs, and it was checked rather than assumed (see below).
 
@@ -523,8 +553,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "c7853d6ae610"
-SIEGE_OF_TOBRUK = "812528e2b95b"
+ROMMELS_ARRIVAL = "0a7ad25b0fb8"
+SIEGE_OF_TOBRUK = "6ea7bd71d159"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

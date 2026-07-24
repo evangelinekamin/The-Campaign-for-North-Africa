@@ -1478,11 +1478,12 @@ def _evaporate(r: _Run, pct_by_side: dict) -> None:
 def _stores_expenditure(r: _Run, side: Side, hot: bool) -> None:
     """Each living unit draws its 51.11/51.13 Stores requirement IN THE HEX (51.15: "Stores must be
     present in the hex to be used. Stores on truck convoys cannot be used until off-loaded"), NOT
-    through the abstract 32.16 ½-CPA trace. Stores have no organic per-unit reservoir (unlike the
-    49.14 fuel tank / 50.0 ammo load), so the draw comes wholly from a co-located dump -- in_hex_draw's
-    own-pool branch (unit.stores) is always 0 here; the "unit" tag is handled only for symmetry with
-    the fuel/ammo idiom and never fires until first-line trucks are activated to carry stores. A unit
-    with no stores in its hex goes short (51.2)."""
+    through the abstract 32.16 ½-CPA trace. Stores have no organic 49.14/50.0-style reservoir, but
+    as of the 53.11 last-mile slice a unit's first-line trucks BUFFER stores (unit.stores, filled in
+    the 48 V.C.6 Supply Distribution Segment from a dump within reach), so in_hex_draw's own-pool
+    branch now fires: a unit draws first from its lorry-borne stores (UNIT_SUPPLY_CONSUMED), then a
+    co-located dump (SUPPLY_CONSUMED). A unit with no lorry stores AND no co-located dump goes short
+    (51.2)."""
     actor = f"{side.value}/Logistics"
     for u in sorted(r.state.living(side), key=lambda u: u.id):
         if supply.is_sgsu(u):
@@ -1492,7 +1493,7 @@ def _stores_expenditure(r: _Run, side: Side, hot: bool) -> None:
             _stores_shortfall(r, side, actor, u)        # 51.21/51.22
             continue
         for tag, ref_id, qty in draws:                  # 51.15: stores drawn from sources ON the hex
-            if tag == "unit":                           # (no organic stores pool -- always "dump")
+            if tag == "unit":                           # 53.11 lorry-borne stores (own pool first)
                 r.emit(EventKind.UNIT_SUPPLY_CONSUMED, side, actor,
                        {"unit_id": ref_id, "commodity": supply.STORES, "qty": qty})
             else:                                       # a co-located dump (54.11/54.15)
@@ -2808,34 +2809,46 @@ def _draw_move_fuel(r: _Run, side: Side, actor: str, u, cp_spent: float,
     return True
 
 
+def _fl_stores_capacity(u) -> int:
+    return supply.first_line_capacity(u, supply.STORES)      # 54.2: the unit's own lorry stores hold
+
+
 def _supply_distribution(r: _Run, side: Side) -> None:
     """The Supply Distribution Segment (48 V.C.6): before it moves, each of the side's on-map units
-    tops its own supply pools back up from a dump ON ITS HEX, at 0 CP (the 53.24 Organization-Phase
-    exception). A conserving dump->unit transfer (UNIT_REFILLED) -- the dual of loading a truck. It
-    draws ONLY from a co-located dump, so a unit that has outrun the dump network refills nothing:
-    that is how distance costs supply (49.15). An automatic quartermaster default -- 48 V.C.6 says
-    supplies "may" be redistributed, and "top every co-located unit to full" is the faithful greedy
-    reading, so no policy order is needed (flagged as a policy simplification: a live staff could
-    choose partial fills).
+    tops its own supply pools back up, at 0 CP (the 53.24 Organization-Phase exception). A conserving
+    dump->unit transfer (UNIT_REFILLED) -- the dual of loading a truck. An automatic quartermaster
+    default -- 48 V.C.6 says supplies "may" be redistributed, and "top every unit to full" is the
+    faithful greedy reading, so no policy order is needed (flagged as a policy simplification: a live
+    staff could choose partial fills).
 
-    FUEL and AMMO: the 49.14 tank (a full move) and the 50.0 basic load (one firing) are the two
-    intrinsic pools seeded and consumed so far (S5/S6); each refills to its own capacity from a
-    co-located dump. Stores/water (S7/S8) join when their consumers switch. First-line trucks (fl_*)
-    stay dormant here exactly as in the draw -- truck-borne headroom is a separate later slice -- so a
-    unit tops up only to its intrinsic capacity. Ordered FUEL-then-AMMO per unit for a deterministic
-    log; a unit whose pools are already full (the GT1 case -- every pool seeded to capacity) yields no
-    deficit and emits nothing.
+    [53.11] THE LAST MILE. The sources are supply.first_line_dumps: a co-located dump (48 V.C.6 same
+    hex, always) PLUS, for a unit that owns first-line trucks, any dump within its lorries' round-trip
+    reach (CPA/2, the 53.22 basic-CPA ferry). So a unit ADJACENT to but not standing on a stocked
+    forward dump can now be supplied where the strict in-hex model left it starving -- this is the
+    "supply is in the dump but the man cannot draw it" gap the faucet audit measured as the binding
+    constraint. A unit that outruns the dump network entirely (or owns no first-line trucks -- German
+    units, reinforcements, static garrisons; German first-line is the deferred [4.43b] attachment)
+    still refills nothing and culminates: that is how distance costs supply (49.15).
 
-    THE SOURCE LIST IS supply.colocated_dumps, NOT A SCAN OF ITS OWN, and that is the whole of
-    [36.17] here: "LAND UNITS MAY NOT USE AIRFIELD SUPPLY DUMPS unless it is an emergency." This beat
-    used to enumerate active_supplies itself, filtered on hex alone -- so a panzer battalion parked on
-    an air landing strip refilled its 49.14 tank off the squadron's larder (measured, campaign seed 4
-    over twelve Game-Turns: 314 Fuel and 108 Ammunition Points walked out of the Axis air dumps into
-    land combat units, a third of the whole [60.34] air allotment). Asking the shared enumeration is
-    what makes the exclusion structural instead of remembered."""
-    caps = ((supply.FUEL, supply.fuel_capacity), (supply.AMMO, supply.ammo_capacity))
+    FUEL and AMMO refill to their INTRINSIC capacity only -- the 49.14 tank (a full move) and the 50.0
+    load (one firing). Truck-borne headroom BEYOND the intrinsic pool for fuel/ammo (buffering several
+    moves/firings on the lorries) is deferred, so the fuel/ammo picture is unchanged except that the
+    refill now reaches a nearby dump. STORES has NO intrinsic pool (51.0), so its capacity IS the
+    first-line-truck ceiling (54.2, _fl_stores_capacity): a unit with lorries BUFFERS stores on them
+    from a reachable dump and carries that ration forward, which is exactly what first-line trucks are
+    for; a unit with no lorries holds 0 and must draw its stores in-hex at expenditure. WATER stays on
+    the abstract half-CPA trace (S8's faithful proxy) and is NOT pooled here. Ordered FUEL-AMMO-STORES
+    per unit for a deterministic log; a unit whose pools are already full yields no deficit and emits
+    nothing.
+
+    [36.17] "LAND UNITS MAY NOT USE AIRFIELD SUPPLY DUMPS" is honoured because first_line_dumps and
+    colocated_dumps share the air-dump exclusion -- a panzer battalion on an air landing strip still
+    cannot refill its tank off the squadron's larder (measured on the old co-located-only beat: 314
+    Fuel + 108 Ammunition Points once walked out of the Axis air dumps into land units)."""
+    caps = ((supply.FUEL, supply.fuel_capacity), (supply.AMMO, supply.ammo_capacity),
+            (supply.STORES, _fl_stores_capacity))
     for u in r.state.living(side):
-        sources = supply.colocated_dumps(r.state, u)        # 36.17 / 54.11 -- the shared enumeration
+        sources = supply.first_line_dumps(r.state, u)       # 53.11 last mile: co-located + reach
         for commodity, capacity in caps:
             attr = commodity.lower()
             need = capacity(u) - getattr(u, attr)

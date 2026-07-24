@@ -4,9 +4,10 @@ Pins the transcribed [60.31]/[60.41] (campaign, rule 64.3) and [61.43]/[61.31] (
 first-line Truck-Point allotments as the Option-B fl_* carrying-ceiling fields on game.state.Unit
 (scratchpad/port/phase4-first-line-trucks.md). The load-bearing, gated fact is the PER-SIDE Sigma
 (59.42 makes the per-unit split a free choice); this file is that data lint plus the faithfulness
-guards (garrisons static, German first-line deferred, reinforcements deferred). The pools are seeded
-BESIDE the abstract 32.16 trace and NOT consumed here, so both benchmark determinism signatures are
-byte-identical -- pinned in tests/test_convoys / test_ports; nothing to re-baseline for this slice.
+guards (garrisons static, German first-line deferred, reinforcements deferred). This file pins the
+ALLOTMENT (the per-side Sigma); the ACTIVATION of the fl_* pools as the 53.11 last-mile carrier --
+which moved both benchmark signatures -- is a later slice, pinned in tests/test_first_line_reach.py
+and re-baselined in tests/baselines.py under rule [53.11].
 """
 from __future__ import annotations
 
