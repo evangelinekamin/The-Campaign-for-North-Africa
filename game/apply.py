@@ -302,10 +302,11 @@ def apply(state: GameState, event: Event) -> GameState:
         return replace(state.with_unit(drained), consumed=consumed)
 
     if k == EventKind.UNIT_REFILLED:
-        # 48 V.C.6: the 0-CP Supply Distribution top-up -- a conserving transfer dump -> unit pool,
-        # the exact dual of TRUCK_LOADED (dump -> truck). The dump is co-located OR within the unit's
-        # first-line-truck reach (53.11 the last mile, supply.first_line_dumps); either way the
-        # transfer conserves -- grand total unchanged, initial/consumed untouched.
+        # 48 V.C.6: the 0-CP Supply Distribution top-up -- a conserving transfer dump -> unit pool
+        # (both on the same hex: the draw is strictly in-hex, colocated_dumps), the exact dual of
+        # TRUCK_LOADED (dump -> truck). Grand total unchanged, initial/consumed untouched. The unit
+        # pool it fills is the 53.11 first-line-truck stores buffer, which then rides forward with the
+        # unit (the last mile is carried, not reached).
         su = state.supply(p["supply_id"])
         u = state.unit(p["unit_id"])
         commodity = p["commodity"]

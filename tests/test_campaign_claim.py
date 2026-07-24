@@ -90,36 +90,42 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
     AND MUST BE INVERTED to "the railhead is wet and Mersa Matruh is banked" -- which is the whole
     point of pinning it: it fails loudly on the day the engine gets better.
 
-    *** IT FAILED, EXACTLY AS IT PROMISED TO, AND IT IS NOW INVERTED (2026-07-22, the faucet
-    corrected to the charts). *** Measured at GT30 on the same seed: AL-Stage-Matruh holds 2
-    Ammunition Points -- not 0 -- and MERSA MATRUH IS BANKED. Ammunition is the commodity that
-    decided it: 49.12 charges a foot garrison no Fuel at all, so 64.73's "can trace Fuel and
-    Ammunition" comes down to Ammunition for the brigade standing on D3714, and the railhead having
-    any at all is the difference between a garrison and a hundred Victory Points.
+    *** IT FAILED, EXACTLY AS IT PROMISED TO, AND IT WAS INVERTED (2026-07-22, the faucet corrected to
+    the charts): AL-Stage-Matruh held 2 Ammunition Points at GT30 and MERSA MATRUH WAS BANKED. ***
 
-    THE CAUSE IS THIS BLOCK, and only one of its three rules can reach the Commonwealth directly:
-    [49.3]'s 9% Sept-1940-to-Aug-1941 spillage rate, now charged, changes which depot the relay reads
-    as the richest and therefore what its lorries lift and where they take it (measured over the full
-    campaign: Commonwealth Ammunition delivered forward 2,640 -> 6,251 Points). The other two --
-    [56.21]'s per-Game-Turn allowance and the [56.22] oasis fix -- are Axis rules, and reach the
-    Eighth Army only through fighting a different war. So the assertion is the inversion the pin
-    asked for, and the deficiency it characterised is gone: the railhead is no longer dry of the
-    commodity 64.73 needs, and the city is banked."""
+    *** THEN THE [53.11] FIRST-LINE STORES BUFFER LANDED (2026-07-23, THE LAST MILE), AND THE PIN
+    MOVED AGAIN -- so it is RESTATED onto the robust thing it was always reaching for. *** 64.73's
+    supply quality-test (campaign_victory._supplied) traces Fuel and Ammunition over the cpa/2 line
+    (supply.plan_draw), NOT strictly in-hex, so the garrison banks the city by tracing Ammunition to a
+    dump WITHIN REACH -- the co-located railhead depot is only ONE candidate source. The faithful
+    first-line stores buffer draws Stores off the co-located dumps and perturbs the Commonwealth
+    relay's routing (stores changes shift CW supply chaotically, RANDOM IN SIGN -- see the S7 stores
+    memory), leaving AL-Stage-Matruh's OWN residual Ammunition at 0 at GT30 (measured seed 4: 2 Points
+    with the buffer suppressed, 0 with it live) -- while Commonwealth Ammunition DELIVERED forward is
+    unchanged (0 in both arms in this window) and MERSA MATRUH STAYS BANKED either way. So pinning
+    matruh[0].ammo > 0 was pinning a 2-point chaotic residual, not the banking; the capability it meant
+    to guard -- the Commonwealth can trace Fuel and Ammunition at its own railhead city -- is pinned
+    directly below, on the garrison's 64.73 trace, where the knife-edge cannot silently flip it."""
     fin = _run(30).final
     cw, ax = _banked(fin, Side.ALLIED), _banked(fin, Side.AXIS)
     # The Commonwealth keeps the one its own seeded spine feeds...
     assert "Sidi Barrani" in cw
     # ...and stands on Mersa Matruh, and now BANKS it: the garrison is sent, it does not wander off,
-    # and 64.73 counts it because the depot under it can supply it.
+    # and 64.73 counts it because that garrison can trace its supply (pinned below).
     assert campaign_claim._occupied(fin, Side.ALLIED, MATRUH), \
         "the Commonwealth walked off its own railhead city"
     assert "Mersa Matruh" in cw, "the railhead city is garrisoned but no longer banked"
-    # ...and the reason, pinned so it cannot regress silently: the railhead is not dry of AMMUNITION,
-    # which is what 64.73 needs of the foot brigade standing on it (49.12 charges infantry no fuel).
+    # ...and the reason, pinned so it cannot regress silently -- on the ROBUST capability, not the
+    # depot's chaotic residual: the Commonwealth garrison on Mersa Matruh passes 64.73's supply trace
+    # (can trace Fuel AND Ammunition; 49.12 charges the foot brigade no fuel, so this comes down to
+    # Ammunition). This is what banks the city, and it does not depend on the co-located railhead's own
+    # residual, which the [53.11] stores buffer flips (0 here, 2 with the buffer suppressed) via relay
+    # chaos without unbanking the city (see the docstring).
+    matruh_garrison = [u for u in fin.units_at(MATRUH) if u.is_combat and u.side == Side.ALLIED]
+    assert any(fin.victory._supplied(fin, u) for u in matruh_garrison), \
+        "no Commonwealth garrison can trace Ammunition at its own railhead city"
     matruh = [s for s in fin.supplies if s.id == "AL-Stage-Matruh"]
     assert len(matruh) == 1 and matruh[0].hex == MATRUH
-    assert matruh[0].ammo > 0, \
-        "the railhead is dry of AMMUNITION again -- the Commonwealth cannot supply its own terminus"
     # The AXIS -- which used to bank whatever the garrison order happened to pin and throw the rest
     # away -- now holds its own rear: BENGHAZI (its port of arrival, never once garrisoned in 111
     # Game-Turns) and SOLLUM, on top of the Tobruk and Bardia it opens the war standing on.

@@ -2815,40 +2815,46 @@ def _fl_stores_capacity(u) -> int:
 
 def _supply_distribution(r: _Run, side: Side) -> None:
     """The Supply Distribution Segment (48 V.C.6): before it moves, each of the side's on-map units
-    tops its own supply pools back up, at 0 CP (the 53.24 Organization-Phase exception). A conserving
-    dump->unit transfer (UNIT_REFILLED) -- the dual of loading a truck. An automatic quartermaster
-    default -- 48 V.C.6 says supplies "may" be redistributed, and "top every unit to full" is the
-    faithful greedy reading, so no policy order is needed (flagged as a policy simplification: a live
-    staff could choose partial fills).
+    tops its own supply pools back up FROM A CO-LOCATED DUMP, at 0 CP (the 53.24 Organization-Phase
+    exception). A conserving dump->unit transfer (UNIT_REFILLED) -- the dual of loading a truck. An
+    automatic quartermaster default -- 48 V.C.6 says supplies "may" be redistributed, and "top every
+    unit to full" is the faithful greedy reading, so no policy order is needed (flagged as a policy
+    simplification: a live staff could choose partial fills).
 
-    [53.11] THE LAST MILE. The sources are supply.first_line_dumps: a co-located dump (48 V.C.6 same
-    hex, always) PLUS, for a unit that owns first-line trucks, any dump within its lorries' round-trip
-    reach (CPA/2, the 53.22 basic-CPA ferry). So a unit ADJACENT to but not standing on a stocked
-    forward dump can now be supplied where the strict in-hex model left it starving -- this is the
-    "supply is in the dump but the man cannot draw it" gap the faucet audit measured as the binding
-    constraint. A unit that outruns the dump network entirely (or owns no first-line trucks -- German
-    units, reinforcements, static garrisons; German first-line is the deferred [4.43b] attachment)
-    still refills nothing and culminates: that is how distance costs supply (49.15).
+    THE DRAW IS STRICTLY IN-HEX. 48 V.C.6 redistributes "supplies IN THE SAME HEX as land units";
+    49.15 requires fuel "present in the same hex"; 53.24 loads/unloads first-line trucks IN PLACE
+    during this segment (they do NOT drive a solo run -- that is the 2nd/3rd-line convoy's job, in the
+    Truck Convoy Movement Segment, already modelled by _truck_convoys). So the sources are exactly
+    colocated_dumps: a unit not standing on a dump refills nothing here. (An earlier cut reached a
+    dump within a CPA/2 round-trip range; that was rule 32.16, the ABSTRACT game's supply range, which
+    rule 3 of this port says DOES NOT APPLY -- removed. The cross-hex last mile is carried, not
+    reached: see the STORES buffer below.)
+
+    [53.11] THE LAST MILE IS CARRIED. STORES has NO intrinsic 49.14/50.0-style reservoir (51.0), so
+    its capacity IS the unit's first-line-truck ceiling (54.2, _fl_stores_capacity): a unit standing
+    on a dump BUFFERS stores onto its own lorries up to that ceiling and carries that ration forward
+    as it advances (53.22: first-line trucks move with the parent). That is how supply crosses the
+    last hex -- a unit that topped up on a forward dump this OpStage still eats next Game-Turn from its
+    lorry-borne stores though it has moved off (drawn own-pool-first in _stores_expenditure). A unit
+    with no first-line trucks (German combat units, reinforcements, static garrisons -- fl_* = 0;
+    German first-line is the deferred [4.43b] Reinforcement-Schedule attachment) holds 0 stores and
+    must draw in-hex at expenditure, and culminates when it outruns the dump network.
 
     FUEL and AMMO refill to their INTRINSIC capacity only -- the 49.14 tank (a full move) and the 50.0
     load (one firing). Truck-borne headroom BEYOND the intrinsic pool for fuel/ammo (buffering several
-    moves/firings on the lorries) is deferred, so the fuel/ammo picture is unchanged except that the
-    refill now reaches a nearby dump. STORES has NO intrinsic pool (51.0), so its capacity IS the
-    first-line-truck ceiling (54.2, _fl_stores_capacity): a unit with lorries BUFFERS stores on them
-    from a reachable dump and carries that ration forward, which is exactly what first-line trucks are
-    for; a unit with no lorries holds 0 and must draw its stores in-hex at expenditure. WATER stays on
-    the abstract half-CPA trace (S8's faithful proxy) and is NOT pooled here. Ordered FUEL-AMMO-STORES
-    per unit for a deterministic log; a unit whose pools are already full yields no deficit and emits
-    nothing.
+    moves/firings on the lorries) is deferred, so the fuel/ammo picture is the co-located top-up as
+    before. WATER stays on the abstract half-CPA trace (S8's faithful proxy) and is NOT pooled here.
+    Ordered FUEL-AMMO-STORES per unit for a deterministic log; a unit whose pools are already full
+    yields no deficit and emits nothing.
 
-    [36.17] "LAND UNITS MAY NOT USE AIRFIELD SUPPLY DUMPS" is honoured because first_line_dumps and
-    colocated_dumps share the air-dump exclusion -- a panzer battalion on an air landing strip still
-    cannot refill its tank off the squadron's larder (measured on the old co-located-only beat: 314
-    Fuel + 108 Ammunition Points once walked out of the Axis air dumps into land units)."""
+    [36.17] "LAND UNITS MAY NOT USE AIRFIELD SUPPLY DUMPS" is honoured because colocated_dumps carries
+    the air-dump exclusion -- a panzer battalion on an air landing strip still cannot refill its tank
+    off the squadron's larder (measured: 314 Fuel + 108 Ammunition Points once walked out of the Axis
+    air dumps into land units before the exclusion was made structural)."""
     caps = ((supply.FUEL, supply.fuel_capacity), (supply.AMMO, supply.ammo_capacity),
             (supply.STORES, _fl_stores_capacity))
     for u in r.state.living(side):
-        sources = supply.first_line_dumps(r.state, u)       # 53.11 last mile: co-located + reach
+        sources = supply.colocated_dumps(r.state, u)        # 48 V.C.6 / 49.15: strictly the unit's hex
         for commodity, capacity in caps:
             attr = commodity.lower()
             need = capacity(u) - getattr(u, attr)
