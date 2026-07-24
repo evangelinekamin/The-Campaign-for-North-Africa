@@ -507,6 +507,23 @@ class TruckFormation:
     fuel: int = 0
     stores: int = 0
     water: int = 0
+    # --- Vehicle breakdown (rules 21/22). Truck Points ARE subject to Breakdown (21.11
+    # names them FIRST), at BAR 2 Left (21.14, favourable) plus the 54.2 light-truck
+    # off-road penalty. A convoy accrues Breakdown Points as it relocates (21.21, filled
+    # on TRUCK_MOVED); bp_accumulated resets each Operations Stage (21.25); broken_down
+    # (immobile Truck Points, 21.44) PERSISTS across stages until field-repaired (22.23).
+    # A convoy moves at most once per Truck Convoy Phase, so it needs no 21.26 re-check
+    # gate. Defaults 0 keep every pre-breakdown scenario byte-identical.
+    bp_accumulated: float = 0.0
+    broken_down: int = 0
+
+    @property
+    def effective_points(self) -> int:
+        """Truck Points still able to haul: the total less the broken-down lorries, which
+        may not move or carry (21.44). The freight relay (supply.free_points), the 53.12
+        load ceiling and the 32.32 motorization pool all read this, so a broken lorry is
+        dead weight until repaired."""
+        return self.points - self.broken_down
 
 
 @dataclass(frozen=True, slots=True)

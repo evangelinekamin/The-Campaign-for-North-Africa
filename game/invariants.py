@@ -95,6 +95,13 @@ def _check_truck_pools(t) -> None:
     # negative Truck Point count is a mis-encoded loss, not a debt.
     if t.points < 0:
         raise InvariantViolation(f"truck {t.id} has negative Truck Points {t.points}")
+    # [21.44] Broken-down Truck Points are a subset of the formation, exactly as a unit's are
+    # (never below zero nor above the surviving points); Breakdown Points never go into debt (21.25).
+    if not 0 <= t.broken_down <= t.points:
+        raise InvariantViolation(
+            f"truck {t.id} broken_down={t.broken_down} out of [0, {t.points}]")
+    if t.bp_accumulated < 0:
+        raise InvariantViolation(f"truck {t.id} has negative bp_accumulated {t.bp_accumulated}")
 
 
 def _check_port(p) -> None:
@@ -308,10 +315,11 @@ _DUMP_ID_KINDS = frozenset({
     EventKind.AIR_DUMP_BOMBED,      # 41.35 B-SD: bombs eliminate a percentage of the dump
     EventKind.UNIT_REFILLED})       # 48 V.C.6 dump->unit top-up drains a dump (Phase 4)
 
-# Events that change a truck's cargo, resolved by p["truck_id"].
+# Events that change a truck's cargo or breakdown state, resolved by p["truck_id"].
 _TRUCK_ID_KINDS = frozenset({
     EventKind.TRUCK_LOADED, EventKind.TRUCK_UNLOADED, EventKind.TRUCK_EVAPORATED,
-    EventKind.TRUCK_MOVED, EventKind.TRUCK_POINTS_DESTROYED})   # 41.32/41.35 bombed lorries
+    EventKind.TRUCK_MOVED, EventKind.TRUCK_POINTS_DESTROYED,    # 41.32/41.35 bombed lorries
+    EventKind.TRUCK_BROKE_DOWN, EventKind.TRUCK_REPAIRED})      # 21.44/22.23 breakdown pool
 
 # Events that move supply between pools / the ledger: conservation of the change is checked.
 _CONSERVATION_KINDS = frozenset({

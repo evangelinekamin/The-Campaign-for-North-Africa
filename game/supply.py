@@ -484,7 +484,7 @@ def truck_load_admissible(truck: TruckFormation, added: dict) -> bool:
     anything', 53.12, so the four commodities share the Points fractionally.)"""
     cap = truck_capacity(truck.truck_class)
     frac = sum((getattr(truck, c.lower()) + added.get(c, 0)) / cap[c] for c in COMMODITIES)
-    return frac <= truck.points + 1e-9
+    return frac <= truck.effective_points + 1e-9      # 21.44: a broken lorry carries nothing
 
 
 def truck_move_fuel(truck: TruckFormation, cp_spent: float) -> int:
@@ -534,8 +534,9 @@ def free_points(state: GameState, truck: TruckFormation) -> int:
     32.32 has reserved under a desert column. This is the contested pool, and it is why pushing a
     depot forward is a DECISION rather than a free gift (engine._truck_order feeds the convoy a
     formation reduced to exactly this, so both the 53.12 load ceiling and the 49.18 fuel burn shrink
-    with it)."""
-    return truck.points - committed_points(state, truck.id)
+    with it). Broken-down Truck Points (21.44) are already off effective_points, so they neither
+    haul freight nor may be detailed under a 32.32 column."""
+    return truck.effective_points - committed_points(state, truck.id)
 
 
 def motorized(state: GameState, dump_id: str) -> bool:
@@ -588,6 +589,32 @@ def reachable_truck_moves(state: GameState, truck: TruckFormation) -> dict:
     return _reach.reach(state.terrain, truck.hex,
                         truck_convoy_cpa(truck.truck_class), SUPPLY_MOBILITY,
                         trace_blocked(state, truck.side))
+
+
+# [21.11]/[54.2] The mobility class a truck accrues Breakdown Points AS -- only Light Trucks
+# carry the 54.2 off-road +1 BP/hex+hexside penalty; Medium/Heavy accrue the plain motorized
+# value. (Movement COST is Medium for every class, SUPPLY_MOBILITY -- the classes differ only
+# in Breakdown Points, so the chosen path is the same and only the accrual differs.)
+_TRUCK_BP_MOBILITY = {"light": Mobility.LIGHT_TRUCK,
+                      "medium": Mobility.MOTORIZED, "heavy": Mobility.MOTORIZED}
+
+
+def truck_bp_for_move(state: GameState, truck: TruckFormation, dst: Coord) -> float:
+    """Breakdown Points a convoy accrues relocating to `dst` this Truck Convoy Phase (21.21),
+    over the same min-CP path reachable_truck_moves reached it by, accrued at the truck's own
+    54.2 class (light trucks pay the off-road +1). The engine feeds this into the TRUCK_MOVED
+    faucet the way bp_for_move feeds UNIT_MOVED. Zero for a hop with no motorized accrual, so a
+    scenario whose trucks never leave a road stays byte-identical."""
+    _, prev = movement.reachable_prev(state.terrain, truck.hex,
+                                      truck_convoy_cpa(truck.truck_class), SUPPLY_MOBILITY,
+                                      blocked=trace_blocked(state, truck.side))
+    path = movement.reconstruct_path(prev, truck.hex, dst)
+    if len(path) < 2:
+        return 0.0
+    mob = _TRUCK_BP_MOBILITY[truck.truck_class]
+    weather = state.weather_at(truck.hex)               # 29.7: the storm the convoy set out under
+    return sum(movement.breakdown_points(state.terrain, a, b, mob, weather)
+               for a, b in zip(path, path[1:]))
 
 
 # --- [64.71]/[64.72] THE LINE OF SUPPLY, IN TRUCK MOVEMENT POINTS ------------------------------

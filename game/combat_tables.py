@@ -259,9 +259,13 @@ _ANTI_ARMOR: tuple[tuple[int, ...], ...] = (
 # [12.6] BARRAGE AGAINST LAND UNITS CRT. Columns = Actual Barrage Points banded
 # (1-2, 3-4, ... 17+); roll is a sequential d66 (11-66). Result by the target's
 # class: No effect / Pinned / lose 1 / lose 2. For Infantry + Armor a numeric loss
-# ALSO Pins; Guns are never Pinned (12.44). The No-effect band is the complement,
-# so only the Pin / 1 / 2 roll-ranges are stored. Trucks (a separate 12.46 roll)
-# are deferred (abstract logistics 32.56 says barrage never hits trucks).
+# ALSO Pins; Guns and Trucks are never Pinned (12.44). The No-effect band is the
+# complement, so only the Pin / 1 / 2 roll-ranges are stored. The Truck row is the
+# 12.46 secondary roll -- every barrage rolls a second, independent d66 for any Trucks
+# in the target hex. Its "deferral" cited rule 32.56, an ABSTRACT-game rule about
+# Motorization Points; in the full Logistics Game barrage DOES kill real Truck Points
+# (54.2). Truck row transcribed from PDF p.097 (12.46 transcription, adversarially
+# re-verified cell-by-cell) and bound by test_lorry_mortal.
 _BARRAGE: dict[str, dict[str, list[str]]] = {
     "infantry": {
         "pin": ["54-66", "45-66", "42-65", "35-64", "25-61", "21-44", "11-35", "11-32", "11-31"],
@@ -276,24 +280,29 @@ _BARRAGE: dict[str, dict[str, list[str]]] = {
         "1": ["62-66", "55-66", "51-66", "41-66", "31-66", "23-64", "13-56", "11-54", "11-36"],
         "2": ["", "", "", "", "", "65-66", "61-66", "55-66", "41-66"],
     },
+    "truck": {   # 12.46 secondary roll; never Pinned; result = Truck Points destroyed
+        "1": ["", "65-66", "63-66", "61-66", "56-63", "54-63", "51-61", "43-61", "33-61"],
+        "2": ["", "", "", "", "64-66", "64-66", "62-66", "62-66", "62-66"],
+    },
 }
 
 
 def barrage_result(target_class: str, actual_points: int, roll: int,
                    *, column_shift: int = 0) -> tuple[bool, int]:
     """Rule 12.6: (pinned, steps_lost) for a barrage of `actual_points` Actual
-    Barrage Points against a target of the given class ('infantry'/'armor'/'gun'),
-    on a sequential d66 roll. Numeric losses also Pin infantry and armor (12.6).
-    `column_shift` (<= 0) moves the Barrage-Points band left for a target in
-    protective terrain or a fortification (12.33); shifted off the low end of the
-    table the barrage has no effect (rule 12.34)."""
+    Barrage Points against a target of the given class ('infantry'/'armor'/'gun'/
+    'truck'), on a sequential d66 roll. Numeric losses also Pin infantry and armor
+    (12.6). For a 'truck' target the loss count is Truck Points (12.46); guns and
+    trucks are never Pinned (12.44). `column_shift` (<= 0) moves the Barrage-Points
+    band left for a target in protective terrain or a fortification (12.33); shifted
+    off the low end of the table the barrage has no effect (rule 12.34)."""
     col = min(8, (actual_points - 1) // 2) + column_shift
     if col < 0:
         return (False, 0)
     block = _BARRAGE[target_class]
     for loss in ("2", "1"):
         if loss in block and roll in expand(block[loss][col]):
-            return (target_class != "gun", int(loss))       # guns are not pinned
+            return (target_class not in ("gun", "truck"), int(loss))   # guns/trucks not pinned
     if "pin" in block and roll in expand(block["pin"][col]):
         return (True, 0)
     return (False, 0)
@@ -485,6 +494,14 @@ def field_repair(vclass: str, die: int) -> int:
     repaired; for 'ac_recce' the TOE Strength Points repaired; for 'truck' the Truck
     Points repaired. Rolls off the table are 0 (no repair)."""
     return _FIELD_REPAIR[vclass].get(die, 0)
+
+
+# [21.14]/[54.2] Truck Breakdown Adjustment Rating: ALL Truck Points are "2 Left" -- a
+# favourable static shift of the 21.38 column (fewer breakdowns), the same for Light,
+# Medium and Heavy. The Light-truck off-road +1 BP/hex is a separate accrual in
+# movement.breakdown_points (54.2 note), not a BAR shift. Bound to
+# data/breakdown_rates.json.bar_by_model.trucks_54_2 by test_lorry_mortal.
+TRUCK_BAR: int = -2
 
 
 def weather_breakdown_shift(weather: str) -> int:

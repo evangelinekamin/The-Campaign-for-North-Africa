@@ -257,6 +257,17 @@ class EventKind(str, Enum):
     # returns `amount` broken-down TOE to the operational pool (the dual of
     # VEHICLE_BROKE_DOWN); the Fuel it costs (22.15) rides the existing SUPPLY_CONSUMED.
     VEHICLE_REPAIRED = "VEHICLE_REPAIRED"
+    # Truck breakdown/repair (rule 21.11/22.23) -- the SAME desert grind applied to Truck
+    # Points, which 21.11 names FIRST among breakdown-subject vehicles. TRUCK_BREAKDOWN_CHECKED
+    # {truck_id, column, pct} with rng_draws=(d1,d2) certifies the 21.38 roll a moved convoy
+    # made (emitted even on 0%, so the dice are on the record); TRUCK_BROKE_DOWN {truck_id,
+    # amount} moves `amount` Truck Points into TruckFormation.broken_down (immobile, 21.44 --
+    # NOT destroyed and NOT a conservation surface). TRUCK_REPAIRED {truck_id, amount} with
+    # rng_draws=(die,) returns broken Points to the haulage pool -- 22.23 field truck repair is
+    # FREE (no supply), so nothing rides a SUPPLY_CONSUMED.
+    TRUCK_BREAKDOWN_CHECKED = "TRUCK_BREAKDOWN_CHECKED"
+    TRUCK_BROKE_DOWN = "TRUCK_BROKE_DOWN"
+    TRUCK_REPAIRED = "TRUCK_REPAIRED"
     BARRAGE_RESOLVED = "BARRAGE_RESOLVED"
     ANTI_ARMOR_RESOLVED = "ANTI_ARMOR_RESOLVED"
     COMBAT_RESOLVED = "COMBAT_RESOLVED"
@@ -368,6 +379,13 @@ class EventKind(str, Enum):
     # so a formation reduced to zero Points simply stands empty and hauls nothing.
     AIR_DUMP_BOMBED = "AIR_DUMP_BOMBED"
     TRUCK_POINTS_DESTROYED = "TRUCK_POINTS_DESTROYED"
+    # TRUCK_BARRAGED {target, firing, actual, points} with rng_draws=(d1,d2) certifies the
+    # 12.46 SECONDARY barrage roll -- every land Barrage against a hex holding enemy Trucks
+    # rolls a second, independent d66 on the [12.6] Truck row at the SAME Actual-Barrage-Points
+    # column. Emitted even on 0 (the dice are on the record); when it destroys Truck Points the
+    # loss itself rides the existing TRUCK_POINTS_DESTROYED sink (rule "12.46"). This is the full
+    # game correcting the abstract-32.56 deferral -- barrage kills real Truck Points.
+    TRUCK_BARRAGED = "TRUCK_BARRAGED"
     # [34.17]/[38.21]/[38.24] AIRCRAFT BURN FUEL. "This is the number of Fuel Points a plane requires
     # to perform any mission... all Fuel Points are consumed during a mission, regardless of the type
     # or distance" (34.17); "the fuel is subtracted from the total supply in the air facility"

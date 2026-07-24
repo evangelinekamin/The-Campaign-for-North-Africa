@@ -10,6 +10,29 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-24 -- CAUSE: rule [21.11] THE MORTAL LORRY (Phase 6.1). Truck Points are named
+FIRST among the vehicles subject to Breakdown, and for two years not one had ever been lost. Now a
+2nd/3rd-line convoy accrues Breakdown Points as it relocates (21.21, the TRUCK_MOVED faucet), and
+having ceased moving with more than three (21.27) rolls on the 21.38 table at BAR 2 Left (21.14); the
+percentage breaks down into TruckFormation.broken_down (immobile, 21.44) and is field-repaired the
+next Repair Phase on the 22.8 truck column (22.23, FREE). Both benchmarks field the [61.43] Axis
+motor-transport pool and the relay cycles it across the desert, so both logs move.
+
+ATTRIBUTION, CHECKED: re-running both benchmarks with engine._truck_breakdown neutered to a no-op AND
+supply.truck_bp_for_move forced to 0 -- every other change in this slice left in place -- reproduces
+the OLD signatures EXACTLY (dd7bf1df9cec / 0e2bc47ef7f4). So the move is entirely the 21.11 breakdown
+check plus its 21.21 accrual and the 22.23 repair that answers it. The slice's other new dice source,
+the 12.46 secondary BARRAGE-against-Trucks roll, is DORMANT in these two scenarios: their convoys sit
+in the rear and are never in a barraged hex, so no second die is ever drawn for them here (it is
+exercised by tests/test_lorry_mortal.py instead). The 29.34 truck-cargo evaporation and 49.3 CW rate
+were already live (they moved the 07-23 / 07-22 baselines).
+
+    rommels_arrival   dd7bf1df9cec -> df632af423c0
+    siege_of_tobruk   0e2bc47ef7f4 -> b4c62a774318
+
+Each reproduced twice, byte-for-byte.
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-23 -- CAUSE: rule [53.11] FIRST-LINE TRUCKS, THE LAST MILE from the dump to the
 man. Exactly one rule moves these two logs.
 
@@ -559,8 +582,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "dd7bf1df9cec"
-SIEGE_OF_TOBRUK = "0e2bc47ef7f4"
+ROMMELS_ARRIVAL = "df632af423c0"
+SIEGE_OF_TOBRUK = "b4c62a774318"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

@@ -227,6 +227,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                 _capture_dumps(r)                       # 32.13: and the exploitation pulse
             for side in (first, second):
                 _truck_convoys(r, policies[side], side)  # V.J: 2nd/3rd-line truck convoys (48)
+                _truck_breakdown(r, side)                # 21.24: convoys that relocated check for breakdown
             _port_regen(r)                               # 55.18: end of OpStage -- every port that lost
                                                          # NO Efficiency Levels to bombs this stage regains one
             r.go(Phase.RECORD, Side.SYSTEM)
@@ -2537,10 +2538,12 @@ def _divide_truck_loss(formations, points: int) -> list[tuple[object, int]]:
     return [(t, lost[t.id]) for t in live if lost.get(t.id, 0) > 0]
 
 
-def _kill_truck_points(r: _Run, side: Side, formations, points: int, rule: str) -> int:
-    """[41.32]/[41.35] Destroy `points` Truck Points across `formations`, "as evenly as possible",
-    and the cargo that rode on them. Returns the Truck Points actually destroyed (fewer than asked
-    when the hex holds fewer -- 41.35's own "if possible").
+def _kill_truck_points(r: _Run, side: Side, formations, points: int, rule: str,
+                       actor: str | None = None) -> int:
+    """[41.32]/[41.35]/[12.46] Destroy `points` Truck Points across `formations`, "as evenly as
+    possible", and the cargo that rode on them. Returns the Truck Points actually destroyed (fewer
+    than asked when the hex holds fewer -- 41.35's own "if possible"). `actor` defaults to the
+    bombing seat; a land Barrage (12.46) passes its Front actor.
 
     THE CARGO GOES WITH THE LORRIES. 41.32's row says so outright -- the chart Key reads "that
     number of Truck Points AND THEIR CARGO destroyed" -- and it is charged pro rata, each commodity
@@ -2550,11 +2553,12 @@ def _kill_truck_points(r: _Run, side: Side, formations, points: int, rule: str) 
     to carry it would break 53.12's own admissibility rule, so the same pro rata applies. It is our
     reading of a silence, and it makes bombing a dump slightly more destructive than the printed
     sentence alone."""
+    actor = actor or f"{side.value}/Air"
     killed = 0
     for tf, n in _divide_truck_loss(formations, points):
         cargo = {c: -(-getattr(tf, c.lower()) * n // tf.points)      # ceil, in integers
                  for c in supply.COMMODITIES if getattr(tf, c.lower()) > 0}
-        r.emit(EventKind.TRUCK_POINTS_DESTROYED, side, f"{side.value}/Air",
+        r.emit(EventKind.TRUCK_POINTS_DESTROYED, side, actor,
                {"truck_id": tf.id, "points": n, "left": tf.points - n,
                 "cargo": {c: q for c, q in cargo.items() if q > 0}, "rule": rule})
         killed += n
@@ -3169,6 +3173,31 @@ def _breakdown(r: _Run, side: Side) -> None:
                    {"unit_id": u.id, "amount": broken})
 
 
+def _truck_breakdown(r: _Run, side: Side) -> None:
+    """Truck Breakdown check (21.11/21.24), the same desert grind applied to the convoys that
+    just relocated in the Truck Convoy Phase (V.J). 21.11 names Truck Points FIRST among the
+    breakdown-subject vehicles: a convoy that accrued more than three Breakdown Points (21.27)
+    rolls on the 21.38 table at BAR 2 Left (21.14, combat_tables.TRUCK_BAR) plus its section's
+    weather shift (21.37). The rolled percentage of its EFFECTIVE (haulable) Truck Points breaks
+    down (21.35 rounding) into TruckFormation.broken_down. A convoy moves at most once per Phase,
+    so there is no 21.26 re-check gate. Inert when no convoy accrued BP -> byte-identical."""
+    actor = f"{side.value}/Front"
+    for t in sorted((t for t in r.state.trucks if t.side == side), key=lambda t: t.id):
+        if t.bp_accumulated <= 3:                                            # 21.27
+            continue
+        wshift = combat_tables.weather_breakdown_shift(r.state.weather_at(t.hex))   # 21.37
+        col = combat_tables.breakdown_column(t.bp_accumulated, combat_tables.TRUCK_BAR, wshift)
+        d1, d2 = r.d6("breakdown"), r.d6("breakdown")
+        pct = combat_tables.breakdown_result(t.bp_accumulated, combat_tables.TRUCK_BAR,
+                                             wshift, d1 * 10 + d2)
+        broken = _broken_count(pct, t.effective_points)
+        r.emit(EventKind.TRUCK_BREAKDOWN_CHECKED, side, actor,
+               {"truck_id": t.id, "column": col, "pct": pct}, rng_draws=(d1, d2))
+        if broken > 0:
+            r.emit(EventKind.TRUCK_BROKE_DOWN, side, actor,
+                   {"truck_id": t.id, "amount": broken})
+
+
 # Field tank/SPA repair expends Fuel before rolling (22.15/22.26): ONE Fuel Point per
 # tank TOE Strength Point undergoing repair -- "He may attempt to repair only those Tank
 # TOE Strength Points he has expended Fuel for" (22.26). Armored-car / recce field repair
@@ -3207,7 +3236,11 @@ def _repair(r: _Run, side: Side) -> None:
                   if u.broken_down > 0 and u.breaks_down
                   and r.state.control_of(u.hex) != enemy_ctrl                 # 22.13a
                   and not _field_repair_blocked(r.state.weather_at(u.hex))]   # 22.13d, per section
-    if not repairable:
+    repairable_trucks = [t for t in r.state.trucks                            # 22.23 truck column
+                         if t.side == side and t.broken_down > 0
+                         and r.state.control_of(t.hex) != enemy_ctrl          # 22.13a
+                         and not _field_repair_blocked(r.state.weather_at(t.hex))]  # 22.13d
+    if not repairable and not repairable_trucks:
         return
     r.go(Phase.REPAIR, side)
     actor = f"{side.value}/Repair"
@@ -3227,6 +3260,22 @@ def _repair(r: _Run, side: Side) -> None:
         if repaired > 0:
             r.emit(EventKind.VEHICLE_REPAIRED, side, actor,
                    {"unit_id": cur.id, "amount": repaired}, rng_draws=(die,))   # 22.8: certify the roll
+    by_hex: dict = {}                                   # 22.23: ONE die per HEX, not per formation
+    for t in repairable_trucks:
+        by_hex.setdefault(t.hex, []).append(t)
+    for hexpos in sorted(by_hex):
+        die = r.d6("repair")
+        allowance = combat_tables.field_repair("truck", die)  # 1 -> 2 Points, 2 -> 1 Point, else 0
+        first = True                                    # the hex's one roll spreads over its trucks,
+        for t in sorted(by_hex[hexpos], key=lambda t: t.id):  # defender's choice = id order
+            if allowance <= 0:
+                break
+            take = min(allowance, r.state.truck(t.id).broken_down)
+            if take > 0:
+                r.emit(EventKind.TRUCK_REPAIRED, side, actor,   # certify the hex's die on its first fold
+                       {"truck_id": t.id, "amount": take}, rng_draws=(die,) if first else ())
+                allowance -= take
+                first = False
 
 
 def _reject(r: _Run, side: Side, actor: str, order: MoveOrder, reason: str,
@@ -3603,9 +3652,12 @@ def _truck_move(r: _Run, side: Side, actor: str, order, truck, moved: set) -> bo
     if truck.fuel < fuel:
         _reject_truck(r, side, actor, order, "out of cargo fuel to move (49.18)")
         return False
-    r.emit(EventKind.TRUCK_MOVED, side, actor,
-           {"truck_id": truck.id, "from": list(truck.hex), "to": list(to),
-            "cp_spent": reach[to], "fuel": fuel})
+    payload = {"truck_id": truck.id, "from": list(truck.hex), "to": list(to),
+               "cp_spent": reach[to], "fuel": fuel}
+    bp = supply.truck_bp_for_move(r.state, truck, to)   # 21.21: this leg's Breakdown Points
+    if bp:
+        payload["bp"] = bp
+    r.emit(EventKind.TRUCK_MOVED, side, actor, payload)
     moved.add(truck.id)
     return True
 
@@ -4015,7 +4067,9 @@ def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
     simultaneously (strengths read pre-loss). Each barrage resolves against one
     target unit's class on the 12.6 CRT -> Pin and/or step loss; a Pin suppresses
     that unit for the rest of the segment (no anti-armor, no close assault, 12.44).
-    Terrain column-shifts and the separate truck roll (12.46) are deferred."""
+    12.46: every barrage that fires ALSO rolls a second, independent d66 for any enemy
+    Trucks in the target hex (the Truck row of the 12.6 CRT), destroying Truck Points and
+    their cargo -- the full-game correction of the abstract-32.56 deferral."""
     state0 = r.state
     plan: list[tuple] = []
     for firing in (phasing, enemy):
@@ -4039,14 +4093,27 @@ def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
             if raw <= 0 or target_unit is None:
                 continue
             cls = _barrage_class(target_unit)
+            actual = combat.actual_points(raw, False)
             d1, d2 = r.d6("barrage"), r.d6("barrage")
             shift = combat_tables.barrage_terrain_shift(          # 12.33 terrain / fortification
                 state0.terrain.terrain[tgt], state0.fort_level(tgt), cls)
-            pin, loss = combat_tables.barrage_result(
-                cls, combat.actual_points(raw, False), d1 * 10 + d2, column_shift=shift)
+            pin, loss = combat_tables.barrage_result(cls, actual, d1 * 10 + d2, column_shift=shift)
+            # 12.46: a SECOND, independent d66 for any of the barraged side's Trucks in the hex,
+            # on the Truck row at the SAME Actual-Barrage-Points column. Judgement call (flagged):
+            # the truck roll takes NO 12.33 terrain/fort shift -- that shift shelters the dug-in
+            # target unit, not soft-skinned lorries parked in the open. Drawn only when trucks are
+            # present, so a truck-less hex stays byte-identical.
+            truck_owner = _other(firing)
+            tfs = [t for t in state0.trucks_at(tgt)
+                   if t.side == truck_owner and t.points > 0]
+            truck = None
+            if tfs:
+                t1, t2 = r.d6("barrage"), r.d6("barrage")
+                _, tloss = combat_tables.barrage_result("truck", actual, t1 * 10 + t2)
+                truck = (truck_owner, (t1, t2), tloss)
             plan.append((firing, actor, tgt, [u.id for u in armed],
-                         combat.actual_points(raw, False), cls, target_unit.id, (d1, d2), pin, loss))
-    for firing, actor, tgt, firer_ids, actual, cls, tgt_id, dice, pin, loss in plan:
+                         actual, cls, target_unit.id, (d1, d2), pin, loss, truck))
+    for firing, actor, tgt, firer_ids, actual, cls, tgt_id, dice, pin, loss, truck in plan:
         r.emit(EventKind.BARRAGE_RESOLVED, firing, actor,
                {"target": list(tgt), "firers": firer_ids, "actual": actual,
                 "target_class": cls, "target_unit": tgt_id, "pinned": pin, "loss": loss},
@@ -4059,6 +4126,15 @@ def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
         if pin:
             pinned.add(tgt_id)
         _batter_fort(r, firing, actor, tgt, effective=pin or loss > 0)
+        if truck is not None:                            # 12.46: certify the dice, then destroy
+            truck_owner, tdice, tloss = truck
+            r.emit(EventKind.TRUCK_BARRAGED, firing, actor,
+                   {"target": list(tgt), "firing": firing.value, "actual": actual, "points": tloss},
+                   rng_draws=tdice)
+            if tloss > 0:
+                live = [t for t in r.state.trucks_at(tgt)
+                        if t.side == truck_owner and t.points > 0]
+                _kill_truck_points(r, firing, live, tloss, "12.46", actor=actor)
 
 
 def _batter_fort(r: _Run, firing: Side, actor: str, tgt: Coord, *, effective: bool) -> None:

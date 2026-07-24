@@ -108,7 +108,34 @@ def apply(state: GameState, event: Event) -> GameState:
             attr = commodity.lower()
             tf = replace(tf, **{attr: getattr(tf, attr) - qty})
             consumed[commodity] = consumed.get(commodity, 0) + qty
-        return replace(state.with_truck(replace(tf, points=p["left"])), consumed=consumed)
+        # A shrinking convoy loses broken lorries too (21.44 dual of the STEP_LOST cap):
+        # keep broken_down <= points so effective_points never goes negative.
+        left = p["left"]
+        tf = replace(tf, points=left, broken_down=min(tf.broken_down, left))
+        return replace(state.with_truck(tf), consumed=consumed)
+
+    if k == EventKind.TRUCK_BREAKDOWN_CHECKED:
+        # 21.24/21.38: the audit beat of a moved convoy's Breakdown roll. A convoy moves at
+        # most once per Truck Convoy Phase and its BP resets each stage, so there is no 21.26
+        # re-check gate to fold -- this event only certifies the dice (rng_draws). Pure record.
+        return state
+
+    if k == EventKind.TRUCK_BARRAGED:
+        # 12.46: the secondary Barrage roll's dice-certifying record. The Truck-Point loss it
+        # produces (if any) is applied by the TRUCK_POINTS_DESTROYED that follows. Pure record.
+        return state
+
+    if k == EventKind.TRUCK_BROKE_DOWN:
+        # 21.44: move `amount` Truck Points from the haulage pool into broken_down (immobile
+        # until repaired). Not a loss -- points and cargo are unchanged, so conservation holds.
+        tf = state.truck(p["truck_id"])
+        return state.with_truck(replace(tf, broken_down=tf.broken_down + p["amount"]))
+
+    if k == EventKind.TRUCK_REPAIRED:
+        # 22.23: return `amount` broken-down Truck Points to the haulage pool (the dual of the
+        # breakdown). Field truck repair is free (no supply), so nothing else folds.
+        tf = state.truck(p["truck_id"])
+        return state.with_truck(replace(tf, broken_down=tf.broken_down - p["amount"]))
 
     if k == EventKind.CONVOY_PLANNED:
         # 56.21/56.22: the Axis Player's decision about what to load into a sailing whose tonnage
@@ -318,10 +345,13 @@ def apply(state: GameState, event: Event) -> GameState:
     if k == EventKind.TRUCK_MOVED:
         # 53.21 / 49.18: relocate the formation, burning `fuel` of its OWN cargo fuel to
         # move -- folds like a consume (truck fuel down, consumed[FUEL] up) so conservation
-        # holds with truck cargo summed into on_hand.
+        # holds with truck cargo summed into on_hand. 21.21: the leg's Breakdown Points accrue
+        # into bp_accumulated (the truck faucet, dual of UNIT_MOVED's bp), read by the 21.38
+        # check after the Truck Convoy Phase; reset each OpStage (21.25).
         tf = state.truck(p["truck_id"])
         fuel = p["fuel"]
-        st = state.with_truck(replace(tf, hex=tuple(p["to"]), fuel=tf.fuel - fuel))
+        st = state.with_truck(replace(tf, hex=tuple(p["to"]), fuel=tf.fuel - fuel,
+                                      bp_accumulated=tf.bp_accumulated + p.get("bp", 0.0)))
         if fuel:
             consumed = dict(st.consumed)
             consumed["FUEL"] = consumed.get("FUEL", 0) + fuel
@@ -556,6 +586,7 @@ def apply(state: GameState, event: Event) -> GameState:
         # the per-OpStage CP/BP counters -- the same reset semantics as TURN_ADVANCED, now
         # firing at every stage boundary (3x/game-turn), spanning both players' portions (6.14).
         return replace(state, stage=p["stage"], units=_reset_opstage(state.units),
+                       trucks=_reset_truck_opstage(state.trucks),
                        air_superiority={}, air_sighted=frozenset(),
                        naval=_refit_naval(state.naval))
 
@@ -568,6 +599,7 @@ def apply(state: GameState, event: Event) -> GameState:
         # an Operations Stage may not fly in the Strategic Phase of THAT GAME-TURN and vice versa",
         # so the exclusion spans all three Operations Stages and expires with the Game-Turn.
         return replace(state, turn=p["turn"], stage=1, units=_reset_opstage(state.units),
+                       trucks=_reset_truck_opstage(state.trucks),
                        air_superiority={}, air_sighted=frozenset(), air_strategic={},
                        naval=_refit_naval(state.naval))
 
@@ -600,6 +632,14 @@ def _reset_opstage(units: tuple) -> tuple:
     return tuple(replace(u, cp_used=0.0, bp_accumulated=0.0, bp_checked_column=-1, engaged=False,
                          reserve=0, reserve_released=0)
                  for u in units)
+
+
+def _reset_truck_opstage(trucks: tuple) -> tuple:
+    """The Operations-Stage boundary reset for truck convoys (21.25): the Breakdown-Point
+    accumulator clears (BP are cumulative within a stage only), while broken_down (immobile
+    Truck Points, 21.44) persists until field-repaired. Inert on a truck-less state, so every
+    scenario without convoys stays byte-identical."""
+    return tuple(replace(t, bp_accumulated=0.0) if t.bp_accumulated else t for t in trucks)
 
 
 def _apply_step_loss(steps: tuple[StepRecord, ...], amount: int) -> tuple[StepRecord, ...]:
