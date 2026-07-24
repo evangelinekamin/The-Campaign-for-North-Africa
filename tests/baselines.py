@@ -10,6 +10,38 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-24 -- CAUSE: rules [10.31-10.36] MANDATORY ATTACK and [8.64-8.67] BREAK-OFF
+NEGATION (Phase 6.3, "make contact cost something"). Two rules moved these logs, and both were
+CONFIRMED by neutering:
+
+  [10.31-10.36] the ZOC combat requirement. An Enemy hex whose ZOC touches the Phasing side's
+  combat units must be answered each Combat Segment -- Close Assaulted, or Held Off by a Barrage of
+  at least 10.34's Actual-Barrage-Point threshold. A stack that leaves one unanswered and is not
+  10.32-exempt (solely Guns / Pinned / immobile) is force-retreated three hexes for all its
+  remaining CP and three DP (10.36), or Surrenders if no ZOC-free three-hex destination exists
+  (10.36e). Before this an army drifted up to the enemy, declined battle, and drifted on for free.
+  engine._mandatory_attack, swept at the end of _combat off the POST-combat board.
+
+  [8.64-8.67] Contact -- and its 2-CP (Contact) / 4-CP (Engaged) break-off toll -- is now RAW enemy
+  ZOC at the start hex, not the 10.26-negated version. The negator frees a friendly stack's
+  through-movement, NOT the toll to leave: reading the negated form let a unit stacked with one
+  friendly combat unit break off for free. zoc._zoc_search start_cost.
+
+ATTRIBUTION, CHECKED: re-running both benchmarks with engine._mandatory_attack neutered to a no-op
+AND zoc._zoc_search reverted to the 10.26-negated start_cost -- every other change in this slice
+left in place -- reproduces the OLD signatures EXACTLY (df632af423c0 / b4c62a774318). So the move is
+entirely those two rules. The slice's other two rules are STRUCTURALLY INERT on these two scenarios:
+the 6.26 "may-not-DEFEND" gate (engine._resolve_combat armed_def) never bites because no defender is
+assaulted at Cohesion -26 (a stack that far gone auto-Surrenders at the 15.88 -17 floor first), and
+the 6.26 react gate never bites because neither ScriptedPolicy benchmark issues a Reaction (0
+REACTION_MOVED). Both are exercised by tests/test_mandatory_attack.py instead.
+
+    rommels_arrival   df632af423c0 -> 1dd2a1dab379
+    siege_of_tobruk   b4c62a774318 -> f4396ef239eb
+
+Each reproduced twice, byte-for-byte.
+
+--------------------------------------------------------------------------------------------------
 NOT RE-BASELINED BY RULE [15.84] GUN VULNERABILITY (Phase 6.2), 2026-07-24, AND THAT WAS CHECKED
 RATHER THAN ASSUMED -- both signatures recomputed TWICE on the tree and are UNCHANGED
 (df632af423c0 / b4c62a774318).
@@ -617,8 +649,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "df632af423c0"
-SIEGE_OF_TOBRUK = "b4c62a774318"
+ROMMELS_ARRIVAL = "1dd2a1dab379"
+SIEGE_OF_TOBRUK = "f4396ef239eb"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

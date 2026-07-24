@@ -16,7 +16,7 @@ from dataclasses import dataclass, replace
 from typing import Protocol
 
 from . import (air, basing, calendar, combat, combat_tables, construction, cp_costs, initiative,
-               logistics_data, malta, stacking, supply, tactics, weather, wells)
+               logistics_data, malta, stacking, supply, tactics, weather, wells, zoc)
 from .apply import apply
 from .dice import DiceBox
 from .events import CONTROL_OF, Control, Event, EventKind, Phase, Side
@@ -2979,6 +2979,7 @@ def _react(r: _Run, policies: dict, phasing: Side, mover_id: str) -> None:
         return
     adj = [u for u in r.state.living(reacting)          # cheap adjacency pre-filter (8.51 + 8.53a/d)
            if u.is_combat and is_motorized(u.mobility) and not u.engaged   # 8.53a: EVERY motorized class
+           and u.cohesion > -26                         # 6.26: -26 or worse may not move (nor react)
            and is_adjacent(u.hex, mover.hex)]
     if not adj:
         return                                          # the common case -- no reaction possible
@@ -3937,9 +3938,10 @@ def _combat(r: _Run, policies: dict, side: Side) -> None:
     pinned: set[str] = set()          # units Pinned by barrage this segment (12.44)
     charged: set[str] = set()         # 6.3 per-segment CP ledger (one combat charge/unit)
     fired_anti_armor: set[str] = set()   # 14.26/15.21: phasing units that fired anti-armor this segment
+    held_off: dict = {}               # 10.34: Actual Barrage Points the phasing side laid on each enemy hex
     _air_support(r, side, pinned)     # 41.31: air strikes pin BEFORE barrage, joining the 12.44 set
     _naval_bombardment(r, side, pinned)   # 30.2: off-shore gunfire, another pre-barrage 12.44 pin
-    _barrage_step(r, side, enemy, pinned, charged)
+    _barrage_step(r, side, enemy, pinned, charged, held_off)
     _retreat_before_assault(r, policies[enemy], enemy, side, pinned)
     _anti_armor_step(r, side, enemy, pinned, charged, fired_anti_armor)
     actor = f"{side.value}/Front"
@@ -3974,6 +3976,110 @@ def _combat(r: _Run, policies: dict, side: Side) -> None:
                            fired_anti_armor):
             assaulted.add(target)
             committed.update(u.id for u in attackers)
+    _mandatory_attack(r, side, pinned, assaulted, held_off)   # 10.31-10.36: contact must be answered
+
+
+def _hold_off_threshold(r: _Run, ehex: Coord, side: Side) -> int:
+    """10.34: the Actual Barrage Points the Phasing `side` must lay on an Enemy hex to Hold
+    it Off -- the count of that hex's individual non-Gun battalion-equivalent combat units
+    (Gun units, and units of less than one Stacking Point, do not count)."""
+    return sum(1 for e in r.state.enemies_at(ehex, side)
+               if e.is_combat and not e.is_gun and e.stacking_points >= 1)
+
+
+def _mandatory_attack(r: _Run, side: Side, pinned: set[str],
+                      assaulted: set, held_off: dict) -> None:
+    """Rule 10.31-10.36 (ZOC Combat Requirements / "Holding Off"): every Enemy hex whose Zone
+    of Control touches the Phasing side's combat units MUST be answered this Combat Segment --
+    by a Close Assault (10.31, the `assaulted` set) or a Holding-Off Barrage of at least as
+    many Actual Barrage Points as the enemy hex holds non-Gun battalion-equivalents (10.34,
+    `held_off`). A friendly hex is EXEMPT (10.32) when every combat unit in it that could
+    attack is a Gun (Artillery/AT/AA), is Pinned (12.44), or is at Cohesion -26 (6.26) -- none
+    of those owe an attack. A stack that leaves an enemy hex unanswered and is not exempt is
+    FORCED to retreat three hexes, spending all its remaining CP and taking three
+    Disorganization Points (10.36); if no ZOC-free three-hex destination exists it Surrenders
+    in entirety (10.36e). This is the friction that stops an army drifting up to the enemy,
+    declining battle, and drifting on -- contact must now be paid for.
+
+    Read on the POST-combat board, so an enemy hex emptied by an assault this segment no longer
+    controls anyone and owes nothing. Draws no die -- a segment with nothing unanswered is
+    byte-identical to before. Deferred (flagged): 6.26's surrender-when-an-enemy-moves-adjacent
+    for a unit already at Cohesion -26 (it may not move, so it is left in place, not retreated,
+    and its own surrender is not yet wired)."""
+    enemy = _other(side)
+    by_hex: dict[Coord, list] = {}
+    for u in r.state.living(enemy):
+        if u.is_combat:
+            by_hex.setdefault(u.hex, []).append(u)
+    # Which enemy hex(es) control each friendly hex -- 10.31 is evaluated per controlling hex.
+    controllers: dict[Coord, set] = {}
+    for ehex, eunits in by_hex.items():
+        for ch in zoc.controlled_from(eunits, ehex, r.state.terrain):
+            controllers.setdefault(ch, set()).add(ehex)
+    friendly_at: dict[Coord, list] = {}
+    for u in r.state.living(side):
+        if u.is_combat and u.hex in controllers:
+            friendly_at.setdefault(u.hex, []).append(u)
+    for coord in sorted(friendly_at):
+        units = friendly_at[coord]
+        unanswered = [e for e in controllers[coord] if e not in assaulted
+                      and held_off.get(e, 0) < _hold_off_threshold(r, e, side)]
+        if not unanswered:
+            continue                                    # 10.31 discharged (Close Assaulted or Held Off)
+        # 10.32: the units that OWE an attack are the non-Gun, unpinned, still-mobile ones. A
+        # Pinned unit (12.44) may not move either, so it cannot retreat and is left in place.
+        obligated = [u for u in units
+                     if not u.is_gun and u.id not in pinned and u.cohesion > -26]
+        if not obligated:
+            continue                                    # solely Guns / Pinned / immobile -> exempt
+        anchor = min(unanswered, key=lambda e: (distance(coord, e), e))
+        _mandatory_retreat(r, side, obligated, anchor)
+
+
+def _mandatory_retreat(r: _Run, side: Side, units: list, anchor: Coord) -> None:
+    """10.36: a stack that left an enemy hex unanswered Retreats exactly three hexes from the
+    Enemy unit (`anchor`) -- no doubling back (each hex strictly farther from the anchor), and
+    no hex on the path in an Enemy Zone of Control -- spending ALL its remaining CP on the move
+    ("playing all CP's for such movement") and earning three Disorganization Points in addition
+    to any the CP overage bleeds. If no legal three-hex ZOC-free destination exists the stack
+    Surrenders in entirety (10.36e). Draws no die, so replay stays byte-identical."""
+    actor = f"{side.value}/Front"
+    enemy_zoc, enemy_occ = tactics.enemy_zoc_and_occupied(r.state, side)
+    blocked = enemy_zoc | enemy_occ                     # 10.36: no Enemy-ZOC hex (nor enemy unit) en route
+    ids = {u.id for u in units}
+
+    def _fits(nb: Coord) -> bool:                       # the retreating stack must fit (rule 9.31)
+        here = [x for x in r.state.units_at(nb) if x.side == side and x.id not in ids]
+        return stacking.within_hex_limit(here + units, r.state.terrain.terrain[nb])
+
+    cur = units[0].hex
+    path = [cur]
+    for _ in range(3):
+        cands = [nb for nb in neighbors(cur)
+                 if nb in r.state.terrain.terrain and nb not in blocked
+                 and distance(nb, anchor) > distance(cur, anchor) and _fits(nb)]
+        if not cands:
+            break
+        cur = min(cands, key=lambda nb: (-distance(nb, anchor), nb))   # push away, deterministic tiebreak
+        path.append(cur)
+    if len(path) - 1 < 3:                               # 10.36e: no clean 3-hex retreat -> Surrender
+        for u in units:
+            live = r.state.unit(u.id)
+            if live and live.alive:
+                r.emit(EventKind.STEP_LOST, side, actor,
+                       {"unit_id": u.id, "amount": live.strength, "role": "surrender"})
+        return
+    for u in units:
+        payload = {"unit_id": u.id, "from": list(u.hex), "to": list(cur), "hexes": 3}
+        bp = tactics.breakdown_points_over(r.state, u, path)          # 21.22 retreat accrues BP
+        if bp:
+            payload["bp"] = bp
+        r.emit(EventKind.UNIT_RETREATED, side, actor, payload)
+        live = r.state.unit(u.id)                       # 10.36: "playing all CP's for such movement"
+        spend = max(0.0, tactics.effective_cpa(r.state, live) - live.cp_used)
+        if spend > 0:
+            _spend_cp(r, side, actor, live, "mandatory_retreat", spend)
+        r.emit(EventKind.COHESION_CHANGED, side, actor, {"unit_id": u.id, "delta": -3})   # +3 DP (6.22)
 
 
 def _retreat_before_assault(r: _Run, policy: Policy, side: Side, phasing: Side,
@@ -4062,14 +4168,19 @@ def _barrage_target(enemies) -> "object | None":
 
 
 def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
-                  charged: set[str]) -> None:
+                  charged: set[str], held_off: dict | None = None) -> None:
     """Barrage (rule 12): both sides' artillery bombard adjacent enemy hexes first,
     simultaneously (strengths read pre-loss). Each barrage resolves against one
     target unit's class on the 12.6 CRT -> Pin and/or step loss; a Pin suppresses
     that unit for the rest of the segment (no anti-armor, no close assault, 12.44).
     12.46: every barrage that fires ALSO rolls a second, independent d66 for any enemy
     Trucks in the target hex (the Truck row of the 12.6 CRT), destroying Truck Points and
-    their cargo -- the full-game correction of the abstract-32.56 deferral."""
+    their cargo -- the full-game correction of the abstract-32.56 deferral.
+
+    `held_off` (10.34): when supplied, the PHASING side's Actual Barrage Points on each
+    enemy hex are accumulated into it -- a Holding-Off Barrage satisfies the 10.31
+    mandatory-attack obligation once those points meet the enemy hex's threshold, read by
+    _mandatory_attack. Pure bookkeeping (no event, no die), so it never perturbs replay."""
     state0 = r.state
     plan: list[tuple] = []
     for firing in (phasing, enemy):
@@ -4094,6 +4205,8 @@ def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
                 continue
             cls = _barrage_class(target_unit)
             actual = combat.actual_points(raw, False)
+            if held_off is not None and is_phasing:       # 10.34: Holding-Off Barrage accrual
+                held_off[tgt] = held_off.get(tgt, 0) + actual
             d1, d2 = r.d6("barrage"), r.d6("barrage")
             shift = combat_tables.barrage_terrain_shift(          # 12.33 terrain / fortification
                 state0.terrain.terrain[tgt], state0.fort_level(tgt), cls)
@@ -4265,7 +4378,8 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
         _award_vacate_rp(r, side, actor, armed_atk, target)        # 6.24.2
         return True
     armed_def = [u for u in defenders
-                 if u.id not in pinned and _charge_ammo(r, side, actor, u, phasing=False)]
+                 if u.id not in pinned and u.cohesion > -26          # 6.26: -26 or worse may not defend
+                 and _charge_ammo(r, side, actor, u, phasing=False)]
     for u in armed_def:                         # 6.3: the non-phasing defence CP (3), once/segment
         _charge_combat_cp(r, side, u, charged)
 
