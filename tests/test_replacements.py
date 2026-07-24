@@ -11,8 +11,17 @@ import statistics
 
 import pytest
 
+import game.supply as supply
 from game import replacements
+from game.apply import apply
+from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy
 from game.dice import DiceBox, stream_seed
+from game.engine import _Run, _replacement_production, run
+from game.events import Event, EventKind, Phase, Side, event_to_dict
+from game.movement import TerrainMap
+from game.scenario import campaign, rommels_arrival, siege_of_tobruk
+from game.state import GameState, SupplyUnit, VP
+from game.terrain import Terrain
 
 
 # --- [20.78B] the Commonwealth infantry PRODUCTION STREAM -------------------------------
@@ -228,3 +237,168 @@ def test_replacement_point_tons_key_is_reconciled_to_this_chart():
     assert "Axis Replacement Pool" in rpt["axis_naval_convoy"]        # varies -- see the pool
     assert "replacements.json" in rpt["_comment"]                     # points at the real file
     assert rpt["air"] == 2                                            # 54.5 infantry-only air rate
+
+
+# --- the FLOW IN, end to end: engine._replacement_production -> apply -> the pool -------
+#
+# Everything above pins the DATA reader (game.replacements) and the standalone 2d6 stream.
+# These pin the one genuinely NEW behaviour of Block 7.2a -- the engine beat that emits
+# REPLACEMENTS_PRODUCED, the apply() fold that credits GameState.replacement_pool, and the
+# two pool accessors -- so the wiring is guarded against regression, not merely measured
+# once by hand. (Before this section nothing invoked engine._replacement_production, the
+# apply REPLACEMENTS_PRODUCED branch, or state.credit_replacements at all.)
+
+def _repro_state(*, turn: int, seed: int = 1941, production: bool = True) -> GameState:
+    """The minimal valid GameState engine._replacement_production reads: a turn, a seed (which
+    the 'cw_production' stream derives from), and the replacement_production gate. One zeroed
+    dump keeps the supply-conservation invariant trivially true (on_hand + consumed == initial
+    == 0), the same minimal shape tests/test_convoy_planning.py builds for its sibling beat."""
+    dump = SupplyUnit("AX-Port", Side.AXIS, (0, 0), ammo=0, fuel=0, stores=0, water=0)
+    return GameState(
+        turn=turn, max_turns=111, phase=Phase.LOGISTICS, active_side=Side.SYSTEM, seed=seed,
+        weather="clear", vp=VP(),
+        terrain=TerrainMap(terrain={(0, 0): Terrain.CLEAR}, fortifications={}),
+        control={}, units=(), target_hex=(0, 0), supplies=(dump,),
+        consumed={c: 0 for c in supply.COMMODITIES},
+        initial_supply={c: 0 for c in supply.COMMODITIES},
+        convoys=(), stage=1, replacement_production=production)
+
+
+def _fire(*, turn: int, seed: int = 1941, production: bool = True) -> _Run:
+    r = _Run(_repro_state(turn=turn, seed=seed, production=production))
+    _replacement_production(r)
+    return r
+
+
+def _produced(r: _Run) -> list:
+    return [e for e in r.events if e.kind == EventKind.REPLACEMENTS_PRODUCED]
+
+
+def test_production_beat_emits_on_the_arrival_turn_for_plan_turn_minus_four():
+    """GT7 is the first productive Game-Turn: plan_turn = 7 - CW_ARRIVAL_LEAD = 3 (the window's
+    open edge). The beat rolls 2d6 off the 'cw_production' stream, looks the total up against the
+    PLAN turn's column, and emits REPLACEMENTS_PRODUCED{ALLIED, infantry, plan_turn 3, arrival 7}
+    with both dice on the record (rng_draws), so replay needs no RNG."""
+    r = _fire(turn=7)
+    box = DiceBox(1941)
+    d1, d2 = box.d6("cw_production"), box.d6("cw_production")   # the same fresh stream the beat drew
+    ev = _produced(r)
+    assert len(ev) == 1
+    p = ev[0].payload
+    assert (p["side"], p["type"]) == (Side.ALLIED.value, "infantry")
+    assert (p["plan_turn"], p["arrival_turn"]) == (3, 7)
+    assert ev[0].side is Side.ALLIED
+    assert ev[0].rng_draws == (d1, d2)
+    assert p["points"] == replacements.cw_infantry_lookup(3, d1 + d2)
+
+
+def test_the_lookup_column_is_the_plan_turn_not_the_arrival_turn():
+    """plan_turn and arrival_turn can fall in DIFFERENT [20.78B] columns: GT34 plans GT30 (the
+    3..30 column) but arrives inside the 31..46 range. The RP must be read off the PLAN column --
+    'the roll is made when its RP arrive, deterministically the same draw as rolling four turns
+    earlier'. This guards against keying the table off r.state.turn (arrival), which reads the
+    wrong column: for this seed lookup(30) == 5 but lookup(34) == 13, so the distinction bites."""
+    r = _fire(turn=34)
+    box = DiceBox(1941)
+    total = box.d6("cw_production") + box.d6("cw_production")
+    p = _produced(r)[0].payload
+    assert (p["plan_turn"], p["arrival_turn"]) == (30, 34)
+    assert p["points"] == replacements.cw_infantry_lookup(30, total)
+    # a live distinction, not a tautology: GT30 and GT34 index different columns
+    assert (replacements.cw_infantry_column(30)["plan_first"]
+            != replacements.cw_infantry_column(34)["plan_first"])
+
+
+def test_the_fold_credits_the_pool_and_the_accessor_reads_it():
+    """apply(REPLACEMENTS_PRODUCED) credits replacement_pool['ALLIED/infantry'] by the produced
+    points; state.replacements_available reads that bucket back. This is the FLOW IN reaching the
+    ledger Block 7.2b's spend will draw down."""
+    r = _fire(turn=7)
+    pts = _produced(r)[0].payload["points"]
+    assert r.state.replacements_available("ALLIED/infantry") == pts
+    assert r.state.replacement_pool == {"ALLIED/infantry": pts}
+
+
+def test_the_beat_is_gated_off_by_default_so_the_benchmarks_stay_byte_identical():
+    """replacement_production defaults False; the tactical Desert Fox benchmarks never set it, so
+    the beat returns at its first guard -- no PHASE_ADVANCED, no die drawn, no event. This is the
+    structural reason Block 7.2a re-baselined NEITHER signature (tests/baselines.py)."""
+    r = _fire(turn=7, production=False)
+    assert r.events == []
+    assert r.state.replacement_pool == {}
+
+
+def test_off_window_game_turns_draw_no_die_and_emit_nothing():
+    """A plan_turn outside GT3..107 plans nothing, so the beat returns before drawing (the stream
+    is untouched) and emits nothing: the opening turns (plan < 3) and, symmetrically, any turn
+    whose plan_turn would exceed 107. GT111 (plan 107) is the last productive Game-Turn."""
+    for turn in (1, 4, 6, 112, 200):        # plan_turn -3, 0, 2, 108, 196 -- all outside [3, 107]
+        r = _fire(turn=turn)
+        assert r.events == [], turn
+        assert r.state.replacement_pool == {}
+
+
+def test_the_production_beat_is_deterministic():
+    """Same seed -> byte-identical draw and emit (determinism binds absolutely). The 105-roll
+    stream test above proves seed-sensitivity across a campaign; this proves the engine beat's
+    single fold replays identically."""
+    a, b = _fire(turn=7), _fire(turn=7)
+    assert [event_to_dict(e) for e in a.events] == [event_to_dict(e) for e in b.events]
+
+
+def test_a_none_cell_still_emits_a_certified_identity_fold():
+    """A 'none' cell is points 0 (e.g. GT3, roll 5): apply() credits 0 -- an identity on the pool
+    value -- but the event, with its 2d6 on the record, is still in the log, like
+    TRUCK_BREAKDOWN_CHECKED. Built as a bare fold so the assertion does not depend on hunting a
+    seed whose live roll lands on a none cell."""
+    assert replacements.cw_infantry_lookup(3, 5) == 0          # the none cell this fold represents
+    st = _repro_state(turn=7)
+    ev = Event(0, 7, Phase.LOGISTICS, Side.ALLIED, "ALLIED/QM",
+               EventKind.REPLACEMENTS_PRODUCED,
+               {"side": Side.ALLIED.value, "type": "infantry", "points": 0,
+                "plan_turn": 3, "arrival_turn": 7}, (2, 3), 1)
+    out = apply(st, ev)
+    assert out.replacements_available("ALLIED/infantry") == 0
+    assert out.replacement_pool == {"ALLIED/infantry": 0}      # the key exists, credited 0
+
+
+def test_credit_replacements_is_an_immutable_accumulating_credit():
+    """state.credit_replacements never mutates: it returns a NEW state with the bucket raised, an
+    absent bucket reads 0, and successive credits accumulate. The matching debit is Block 7.2b."""
+    st = _repro_state(turn=7)
+    assert st.replacements_available("ALLIED/infantry") == 0   # absent bucket -> 0
+    once = st.credit_replacements("ALLIED/infantry", 10)
+    twice = once.credit_replacements("ALLIED/infantry", 5)
+    assert once.replacements_available("ALLIED/infantry") == 10
+    assert twice.replacements_available("ALLIED/infantry") == 15
+    assert st.replacement_pool == {}                           # the original is never mutated
+    assert once.replacement_pool == {"ALLIED/infantry": 10}    # nor the intermediate
+
+
+def test_the_campaign_run_wires_the_beat_into_the_loop_and_accumulates():
+    """End to end on the real campaign: run() calls the beat every Game-Turn (engine.run), so a
+    short campaign fires on GT7 (plan 3) and GT8 (plan 4), each event well-formed, and the pool is
+    the running sum. This is the guard the block lacked -- that the FLOW IN is actually plumbed
+    into the loop, not merely callable in isolation."""
+    res = run(campaign(seed=4, max_turns=8), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    ev = [e for e in res.events if e.kind == EventKind.REPLACEMENTS_PRODUCED]
+    assert ev, "the campaign must roll the CW Infantry Production stream"
+    assert min(e.payload["plan_turn"] for e in ev) == 3        # the first productive plan turn
+    for e in ev:
+        p = e.payload
+        assert (p["side"], p["type"]) == (Side.ALLIED.value, "infantry")
+        assert p["arrival_turn"] == p["plan_turn"] + replacements.CW_ARRIVAL_LEAD
+        assert p["plan_turn"] in replacements.cw_infantry_plan_turns()
+        assert p["points"] == replacements.cw_infantry_lookup(p["plan_turn"], sum(e.rng_draws))
+    assert (res.final.replacements_available("ALLIED/infantry")
+            == sum(e.payload["points"] for e in ev))
+
+
+def test_the_production_gate_is_a_campaign_only_subsystem():
+    """Only campaign() models the CW Production system (Cairo/Alexandria arrival, 20.76); the two
+    tactical benchmarks leave replacement_production False. Combined with the gated-off beat test,
+    this pins WHY neither benchmark log gained a byte (tests/baselines.py), without paying for a
+    full benchmark run here -- the signature guards already prove byte-identity."""
+    assert campaign(seed=4).replacement_production is True
+    assert rommels_arrival(seed=42).replacement_production is False
+    assert siege_of_tobruk(seed=42).replacement_production is False

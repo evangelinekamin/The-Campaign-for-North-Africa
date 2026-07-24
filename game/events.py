@@ -80,7 +80,8 @@ class EventKind(str, Enum):
     # yielding that turn's Infantry Replacement Points FREE of any shipping cost (20.75). It is
     # emitted on the ARRIVAL Game-Turn (plan_turn + the 4-Game-Turn lead, owner ruling 1), so its
     # fold is a running credit to GameState.replacement_pool[f"{side}/{type}"] -- the pool of
-    # Replacement Points available to ABSORB (which Block 7.2b's UNIT_REBUILT will draw down).
+    # Replacement Points arrived and awaiting Training (20.43) before absorption (which Block 7.2b's
+    # UNIT_REBUILT will draw down).
     # A pure scalar fold: no TOE, no supply surface, so conservation and stacking are untouched.
     # Certified even on a 'none' cell (points 0, an identity fold) so the 2d6 is on the record,
     # like TRUCK_BREAKDOWN_CHECKED. Emitted ONLY where the scenario models the CW Production

@@ -868,10 +868,14 @@ class GameState:
 
     # --- [20.7] THE REPLACEMENT POOL (rule 20, Block 7.2a) -------------------------------------
     # `replacement_pool` is the FLOW-IN ledger: "<side>/<type>" -> the Replacement Points that have
-    # ARRIVED and are available to ABSORB into depleted units (19.61/20.4). Today its one producer
-    # is the [20.78B] Commonwealth Infantry Production stream (REPLACEMENTS_PRODUCED, credited on the
-    # arrival Game-Turn = plan + the 4-turn lead); Block 7.2b's UNIT_REBUILT will draw it down. The
-    # Axis Pool and the [20.78C] equipment chart are DRAW-AT-WILL availability ceilings held in
+    # ARRIVED (at Cairo/Alexandria, 20.76) this Game-Turn. They are NOT yet absorbable: 20.43 makes an
+    # arrived infantry point Train three OpStages before a depleted unit may absorb it (19.61/20.4), and
+    # this scalar ledger models neither the arrival city nor the training clock -- so Block 7.2b's SPEND
+    # must gate on Training, treating an arrived point as available-to-train, not available-to-absorb.
+    # Today its one producer is the [20.78B] Commonwealth Infantry Production stream
+    # (REPLACEMENTS_PRODUCED, credited on the arrival Game-Turn = plan + the 4-turn lead); Block 7.2b's
+    # UNIT_REBUILT will draw it down. The Axis Pool and the [20.78C] equipment chart are DRAW-AT-WILL
+    # availability ceilings held in
     # data/replacements.json (game.replacements), not accumulated here -- they enter this ledger only
     # when a spend draws them (7.2b). A pure scalar dict: no TOE, no supply surface, so invariants
     # are untouched. Default {} holds nothing.

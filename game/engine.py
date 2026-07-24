@@ -1161,8 +1161,17 @@ def _replacement_production(r: _Run) -> None:
     the points planned on plan_turn = turn - 4 (the owner-ruled 4-Game-Turn lead, 20.21/20.78B) land
     now and enter GameState.replacement_pool. So the roll is made when its RP arrive, which is
     deterministically the same draw as rolling four turns earlier -- and the pool then means exactly
-    'Infantry RP available to absorb now', the handle Block 7.2b needs. plan_turn < GT3 (the opening
-    four Game-Turns) plans nothing, so nothing arrives and no die is drawn.
+    'Infantry RP arrived and awaiting the 20.43 Training delay', the handle Block 7.2b gates its SPEND
+    behind (an arrived point is available-to-train, not yet available-to-absorb). plan_turn < GT3 (the
+    opening four Game-Turns) plans nothing, so nothing arrives and no die is drawn.
+
+    FLAG (judgment call, carried from the 20.78B transcription section 2, not silently closed): that the
+    roll is MANDATORY every Game-Turn -- rather than a draw the CW Player elects Axis-Pool style, when
+    convenient -- is the STRONGER reading, not an explicit book imperative. It rests on 20.73's
+    "receives ... per turn" read against 20.74's forced even split of a turn's whole output across its
+    OpStages; 20.62 spells out a "may bring in any number" election for the Axis, but 20.7 spells out no
+    matching "MUST roll" for the CW. We implement the mandatory reading; if 7.2b ever makes the election
+    visible, this beat is where it changes.
 
     REPLACEMENTS_PRODUCED is emitted even on a 'none' cell (points 0, an identity fold), so the 2d6 is
     on the record like every other certified roll. Fires ONLY where the scenario models the CW
