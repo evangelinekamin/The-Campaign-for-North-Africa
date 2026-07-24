@@ -1683,6 +1683,8 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         initial_supply=_initial_supply(supplies, units),
         villages=village_hexes,                          # 54.12: the missing capacity row
         dump_capture=True,                               # 32.13/54.15: a dump entered is a dump taken
+        replacement_production=True,                     # 20.7/20.78B: the CW Infantry Production stream
+                                                         # (the replacement economy's FLOW IN, Block 7.2a)
         # [32.32] THE DESERT COLUMN'S PRICE -- BUILT, TESTED, AND MEASURED OFF. This is not an
         # oversight and it is not balance: the rule is implemented in full (game.engine._organization,
         # game.supply.MOTORIZATION_POINTS, tests/test_motorization.py) and turning it on here breaks

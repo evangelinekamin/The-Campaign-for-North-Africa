@@ -73,6 +73,20 @@ class EventKind(str, Enum):
     # stacking check) until room opens. The load-bearing dual of the marker REINFORCEMENT_ARRIVED:
     # it folds by relocating the arrival in time rather than recording it.
     REINFORCEMENT_DELAYED = "REINFORCEMENT_DELAYED"
+    # [20.7]/[20.78B] THE REPLACEMENT ECONOMY'S FLOW IN (Block 7.2a) -- production, not spend.
+    # REPLACEMENTS_PRODUCED {side, type, points, plan_turn, arrival_turn} with rng_draws=(d1,d2)
+    # is the Commonwealth Infantry Production stream: one 2d6 roll every Game-Turn (20.73/20.78B),
+    # looked up against the plan-turn's GT-range column (game.replacements.cw_infantry_lookup),
+    # yielding that turn's Infantry Replacement Points FREE of any shipping cost (20.75). It is
+    # emitted on the ARRIVAL Game-Turn (plan_turn + the 4-Game-Turn lead, owner ruling 1), so its
+    # fold is a running credit to GameState.replacement_pool[f"{side}/{type}"] -- the pool of
+    # Replacement Points available to ABSORB (which Block 7.2b's UNIT_REBUILT will draw down).
+    # A pure scalar fold: no TOE, no supply surface, so conservation and stacking are untouched.
+    # Certified even on a 'none' cell (points 0, an identity fold) so the 2d6 is on the record,
+    # like TRUCK_BREAKDOWN_CHECKED. Emitted ONLY where the scenario models the CW Production
+    # system (GameState.replacement_production -- the campaign alone; the tactical benchmarks run
+    # no 111-turn production schedule), so every non-campaign scenario stays byte-identical.
+    REPLACEMENTS_PRODUCED = "REPLACEMENTS_PRODUCED"
     UNIT_MOVED = "UNIT_MOVED"
     UNIT_RETREATED = "UNIT_RETREATED"
     SUPPLY_MOVED = "SUPPLY_MOVED"

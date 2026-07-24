@@ -67,6 +67,10 @@ SUBSYSTEMS: tuple[str, ...] = (
     "anti_armor",         # [14.6] the Anti-Armor CRT
     "close_assault",      # [15.79] the Close Assault CRT
     "morale",             # [17.4] the Morale Table
+    "cw_production",      # [20.78B] the Commonwealth Infantry Production stream -- one 2d6 per
+                          #   Game-Turn (GT3-107), THE conditional per-turn drawer of rule 20's
+                          #   FLOW IN. Its own stream so the random production of Replacement Points
+                          #   can never perturb (or be perturbed by) a weather or combat die.
 )
 
 

@@ -10,6 +10,41 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+NOT RE-BASELINED BY RULE [20.7]/[20.78B] THE REPLACEMENT ECONOMY'S FLOW IN (Block 7.2a), 2026-07-24,
+AND THAT WAS CHECKED RATHER THAN ASSUMED -- both signatures recomputed on the tree and are UNCHANGED
+(dda6faa445b4 / 5f02a0c4fb9e).
+
+The block builds the PRODUCTION half of rule 20 -- the thing nothing in this engine had ever done, put
+a Replacement Point into a pool from which a depleted unit can be rebuilt (the SPEND is Block 7.2b).
+Its one live producer is the [20.78B] Commonwealth Infantry Production stream: ONE 2d6 roll per
+Game-Turn (GT3-107, off the new `cw_production` dice subsystem), FREE (20.75), crediting
+GameState.replacement_pool on the arrival turn (plan + the owner-ruled 4-Game-Turn lead). The Axis Pool
+and the [20.78C] equipment chart are transcribed as draw-at-will DATA (data/replacements.json,
+game.replacements), inert until 7.2b draws them.
+
+It moves NEITHER benchmark log, and the reason is STRUCTURAL and doubly so:
+
+  * PRODUCTION IS GATED behind GameState.replacement_production, which ONLY game.scenario.campaign
+    sets -- the CW Production system is a 111-turn campaign subsystem (Cairo/Alexandria arrival,
+    20.76), not a rule the tactical Desert Fox benchmarks model, exactly as motorized_supply /
+    dump_capture / initiative_chart gate their own campaign-scale subsystems. Measured: rommels_arrival
+    and siege_of_tobruk each emit ZERO REPLACEMENTS_PRODUCED events, so engine._replacement_production
+    returns at its first guard and neither log gains a byte.
+  * AND THE DIE COULD NOT REACH THEM IF IT FIRED. `cw_production` is its own game.dice subsystem,
+    seeded independently of every other -- so a roll drawn there advances no weather, combat or
+    breakdown stream. This is the whole point of game.dice: adding an 18th subsystem cannot re-index
+    the other 17.
+
+The CAMPAIGN log DOES move -- it gains 105 REPLACEMENTS_PRODUCED events (and their Phase.LOGISTICS
+markers) -- and the campaign is not signature-pinned (see CAMPAIGN_SEED below). But its BOARD
+trajectory is byte-identical: because `cw_production` perturbs no other stream and the pool is inert
+(nothing spends it yet), every unit/supply/victory outcome is exactly what it was. Measured, full
+campaign seed 4: winner unchanged (Axis Smashing Victory, 415-20 VP, 64.76), reached GT111, and the
+stream produced 1,669 Infantry Replacement Points into the pool -- a single-seed sample of the
+[20.78B] expected yield 1,615.9 (game.replacements.cw_infantry_expected_yield; empirical mean 1,617.1
+over 1,000 seeds, matching the port plan's ~1,617). The channel IS exercised by tests/test_replacements.py.
+
+--------------------------------------------------------------------------------------------------
 NOT RE-BASELINED BY RULE [19.0] ORGANIZATION AND KAMPFGRUPPEN (Block 7.1), 2026-07-24, AND THAT WAS
 CHECKED RATHER THAN ASSUMED -- both signatures recomputed TWICE on the tree and are UNCHANGED
 (dda6faa445b4 / 5f02a0c4fb9e).

@@ -1,0 +1,215 @@
+{
+  "_comment": "RULE 20 -- THE REPLACEMENT ECONOMY: the Axis Replacement Pool (20.66), the Axis Truck Production Chart (20.66a), the Commonwealth Infantry Production Table (20.78B), and the Commonwealth Production Chart (20.78C). Transcribed cell-by-cell from the scan (tmp/The Campaign for North Africa.pdf) per scratchpad/port/transcriptions/20.66-axis-replacements-and-20.62-charge.md (PDF p.176 + rule text p.032), 20.78B-cw-infantry-replacements.md (PDF p.141 + p.031/032), and 20.78C-cw-tank-gun-replacements.md (PDF p.141 + p.032/088). Each was read at 300dpi and adversarially verified. This file is the SINGLE SOURCE OF TRUTH for the per-point tonnage that data/logistics_rates.json:equivalent_weights_54_5.replacement_point_tons forward-references. Block 7.2a (game/replacements.py + game/engine._replacement_production) reads it to model THE FLOW IN -- the Commonwealth infantry random stream, and the availability/lead-time/tonnage of the draw-at-will pools; Block 7.2b will build THE SPEND (a unit absorbing a Replacement Point via the already-wired UNIT_REBUILT path).",
+
+  "arrival_lead_time": {
+    "_comment": "How long between PLANNING a Replacement Point (its chart Date/Dates column) and its ARRIVAL on the map. OWNER RULING 1 (Eve, PHASE-7-OWNER-RULINGS.md): the Commonwealth lead is FOUR Game-Turns -- the [20.21]/[20.78B]-footnote value (~1 month), consistent with 20.72's own worked example; 20.72's prose 'two months' is loose. So a [20.78B/C] Date is the PLAN turn and on-map arrival = Date + 4 (the Shermans land ~GT93, not GT89). The Axis Pool keeps its own printed [20.63] TWO-Game-Turn lead.",
+    "commonwealth_game_turns": 4,
+    "axis_game_turns": 2
+  },
+
+  "axis_tonnage_errata_20_62": {
+    "_comment": "NAMED ERRATA KEY (the 54.17 demolition class -- never applied silently). OWNER RULING 6 (Eve, ASSUMED): the shipping tonnage per Axis Infantry Replacement Point is 30, NOT the 35 that rule 20.62's own worked example implies. The book prints the fact three ways and two of the three agree on 30. Trivially reversible: one constant. See scratchpad/port/transcriptions/20.66-axis-replacements-and-20.62-charge.md section 5.",
+    "reading_A_rule_20_62_example": {
+      "text": "10 Italian Infantry Replacement Points ... would need 350 Tons of Shipping availability.",
+      "implied_tons_per_point": 35,
+      "page": "PDF 032"
+    },
+    "reading_B_pool_chart_20_66": {
+      "text": "The Italian (and German) Production Chart Tonnage column reads 30 for Infantry (read at 4x zoom to exclude an OCR 30-vs-35 misread).",
+      "tons_per_point": 30,
+      "page": "PDF 176"
+    },
+    "third_source_rule_56_24": {
+      "text": "10 Infantry Points ... this would subtract 300 tons from the available tonnage for that Game-Turn.",
+      "tons_per_point": 30,
+      "page": "PDF 075"
+    },
+    "ruling": "USE 30 tons per Axis Infantry Replacement Point (both German and Italian print 30). The chart's own Tonnage column and rule 56.24's worked example agree; only 20.62's own example says 35. Same shape as ruling 1 -- a loose prose example against a printed case value."
+  },
+
+  "axis_pool_20_66": {
+    "_comment": "[20.66] THE AXIS REPLACEMENT POOL, PDF p.176. Draw-at-will (like [20.61]): the Axis Player elects each OpStage how many of each type to bring in, bounded by (a) 'number' the campaign-total cap, (b) 'max' per period the rate cap, and (c) 'plan_gt' the first Game-Turn a type may be planned. Every point is charged 'tonnage' against the [56.5] convoy allowance (20.62) at PRIORITY over all other supplies (20.64), planned 2 Game-Turns ahead (20.63), and runs the Malta gauntlet. [20.67] 'Axis Replacement Point Type Limitations Chart' is NOT a fourth chart -- it is the max/plan_gt columns embedded here (transcription section 4). A 'plan_gt' is the FIRST Game-Turn the Max may be planned; arrival = plan_gt + 2 ([20.63]).",
+    "german_production": {
+      "_key": "Number = total RP of that type for the whole campaign. Max = per period below. plan_gt = first Game-Turn the point may be planned (arriving TWO Game-Turns later, 20.63). tonnage = Axis Naval Convoy tons per point (54.5 forward-references this column). max_period: 'game_turn' (bare Max), 'two_weeks' (printed '*': first-and-second / third-and-fourth week of a month), 'month' (printed 'dagger'). Note German '*' = two_weeks and dagger = month (the Italian/CW charts mark these DIFFERENTLY -- see their own keys).",
+      "items": [
+        {"key": "infantry", "name": "Infantry", "number": 400, "max": 12, "max_period": "game_turn", "marker": "", "plan_gt": 38, "tonnage": 30, "class": "infantry"},
+        {"key": "armed_recce", "name": "Armed Recce", "number": 25, "max": 2, "max_period": "two_weeks", "marker": "*", "plan_gt": 47, "tonnage": 80, "class": "recce"},
+        {"key": "light_aa", "name": "Light AA", "number": 40, "max": 2, "max_period": "game_turn", "marker": "", "plan_gt": 59, "tonnage": 13, "class": "gun"},
+        {"key": "heavy_aa", "name": "Heavy AA", "number": 10, "max": 1, "max_period": "month", "marker": "dagger", "plan_gt": 59, "tonnage": 65, "class": "gun"},
+        {"key": "ig18_75", "name": "75.cm IG18", "number": 20, "max": 1, "max_period": "game_turn", "marker": "", "plan_gt": 45, "tonnage": 5, "class": "gun"},
+        {"key": "k18_105", "name": "10.5cm K18", "number": 40, "max": 1, "max_period": "game_turn", "marker": "", "plan_gt": 45, "tonnage": 66, "class": "gun"},
+        {"key": "sfh18_15", "name": "15cm sFH18", "number": 10, "max": 1, "max_period": "game_turn", "marker": "", "plan_gt": 45, "tonnage": 65, "class": "gun"},
+        {"key": "sig33_15", "name": "15cm sIG33", "number": 5, "max": 1, "max_period": "game_turn", "marker": "", "plan_gt": 45, "tonnage": 18, "class": "gun"},
+        {"key": "k18_15", "name": "15cm K18", "number": 18, "max": 1, "max_period": "game_turn", "marker": "", "plan_gt": 45, "tonnage": 150, "class": "gun"},
+        {"key": "k18_17", "name": "17cm K18", "number": 5, "max": 1, "max_period": "month", "marker": "dagger", "plan_gt": 65, "tonnage": 206, "class": "gun"},
+        {"key": "mrs18_21", "name": "21cm Mrs.18", "number": 5, "max": 1, "max_period": "month", "marker": "dagger", "plan_gt": 60, "tonnage": 197, "class": "gun"},
+        {"key": "sp_105", "name": "SP 10.5cm", "number": 3, "max": 3, "max_period": "month", "marker": "dagger", "plan_gt": 63, "tonnage": 120, "class": "gun"},
+        {"key": "pak38_5", "name": "5cm Pak38", "number": 25, "max": 1, "max_period": "game_turn", "marker": "", "plan_gt": 45, "tonnage": 12, "class": "gun"},
+        {"key": "spzb41", "name": "2.8cm s.Pz.B.41 / 28/20 Pak", "number": 15, "max": 1, "max_period": "game_turn", "marker": "", "plan_gt": 45, "tonnage": 5, "class": "gun", "note": "ONE weapon (the 2.8cm squeeze-bore AT gun), printed as two stacked name lines with a single data row -- not two items (transcription section 3 FLAG)."},
+        {"key": "pak_r_762", "name": "7.62cm Pak(R)", "number": 22, "max": 1, "max_period": "game_turn", "marker": "", "plan_gt": 64, "tonnage": 15, "class": "gun"},
+        {"key": "marder3", "name": "Marder III", "number": 9, "max": 1, "max_period": "month", "marker": "dagger", "plan_gt": 64, "tonnage": 132, "class": "recce"},
+        {"key": "pz2", "name": "PzII", "number": 5, "max": 1, "max_period": "game_turn", "marker": "", "plan_gt": 41, "tonnage": 135, "class": "tank"},
+        {"key": "pz3e", "name": "PzIII E", "number": 38, "max": 5, "max_period": "game_turn", "marker": "", "plan_gt": 53, "tonnage": 190, "class": "tank"},
+        {"key": "pz3h", "name": "PzIII H", "number": 31, "max": 5, "max_period": "game_turn", "marker": "", "plan_gt": 53, "tonnage": 200, "class": "tank"},
+        {"key": "pz3j_special", "name": "PzIII J Special", "number": 17, "max": 2, "max_period": "game_turn", "marker": "", "plan_gt": 76, "tonnage": 220, "class": "tank"},
+        {"key": "pz4d", "name": "PzIV D", "number": 18, "max": 1, "max_period": "game_turn", "marker": "", "plan_gt": 59, "tonnage": 215, "class": "tank"},
+        {"key": "pz4e", "name": "PzIV E", "number": 15, "max": 1, "max_period": "game_turn", "marker": "", "plan_gt": 59, "tonnage": 220, "class": "tank", "note": "Max read as a bare 1 (residual glyph ambiguity, transcription section 3 FLAG): the shaded cell's faint tick is not clearly a dagger; both independent reads settle on 1 = per game_turn."},
+        {"key": "pz4f2_special", "name": "PzIV F2 Special", "number": 7, "max": 1, "max_period": "two_weeks", "marker": "*", "plan_gt": 81, "tonnage": 235, "class": "tank"}
+      ]
+    },
+    "italian_production": {
+      "_key": "Same columns as the German chart, BUT the markers differ per this chart's own key: '*' is an ID note ('all are Autobelinda 41s, ID Code vv') NOT a cap-period, and dagger = per month. Items with two printed Number sub-rows carry a 'tiers' array (each a printed sub-row {number, max, max_period, plan_first, plan_last}); the item 'number' is the campaign total = sum of the tier numbers. Per the key, the FIRST Number is the cap DURING its window and the second becomes available later. 'Note that only two points of each type may be called up during a game-turn.' tonnage is a per-item constant. The tri-nation French rows (marked double-dagger) sit in the Tunis box (plan_gt 39, no two-week delay, land/coastal-shippable).",
+      "items": [
+        {"key": "infantry", "name": "Infantry", "number": 1200, "tonnage": 30, "class": "infantry",
+         "tiers": [
+           {"number": 100, "max": 5, "max_period": "game_turn", "plan_first": 5, "plan_last": 8, "note": "this 100-point pool spans GT5-24 (the key: '...the maximum of 100 infantry replacement points may be planned during game-turns 5 through 24'); this sub-row is its GT5-8 rate."},
+           {"number": 0, "max": 10, "max_period": "game_turn", "plan_first": 9, "plan_last": 24, "note": "printed Number is '--' (dash): NO new pool, only the higher GT9-24 rate on the SAME 100 as the tier above. number 0 keeps the tier-sum == item number invariant."},
+           {"number": 1100, "max": 25, "max_period": "game_turn", "plan_first": 25, "plan_last": null}
+         ]},
+        {"key": "armored_recce_ac", "name": "Armored Reconnaissance/Armored Car", "number": 25, "max": 1, "max_period": "game_turn", "marker": "*", "plan_gt": 31, "tonnage": 59, "class": "recce", "note": "'*' = all are Autobelinda 41's (ID Code vv) -- an ID note, not a cap period."},
+        {"key": "light_aa", "name": "Light AA", "number": 60, "tonnage": 6, "class": "gun",
+         "tiers": [
+           {"number": 15, "max": 2, "max_period": "game_turn", "plan_first": 2, "plan_last": 24},
+           {"number": 45, "max": 1, "max_period": "game_turn", "plan_first": 25, "plan_last": null}
+         ]},
+        {"key": "heavy_aa_75_46", "name": "Heavy AA (75/46)", "number": 30, "tonnage": 59, "class": "gun",
+         "tiers": [
+           {"number": 5, "max": 1, "max_period": "game_turn", "plan_first": 10, "plan_last": 24},
+           {"number": 25, "max": 1, "max_period": "game_turn", "plan_first": 25, "plan_last": null}
+         ]},
+        {"key": "heavy_aa_90_53", "name": "Heavy AA (90/53)", "number": 10, "max": 1, "max_period": "game_turn", "marker": "", "plan_gt": 73, "tonnage": 92, "class": "gun"},
+        {"key": "at_47_32", "name": "47/32 Mod. 37", "number": 33, "tonnage": 9, "class": "gun",
+         "tiers": [
+           {"number": 8, "max": 2, "max_period": "game_turn", "plan_first": 10, "plan_last": 24},
+           {"number": 25, "max": 1, "max_period": "game_turn", "plan_first": 25, "plan_last": null}
+         ]},
+        {"key": "gun_65_17", "name": "65/17 Gun", "number": 20, "tonnage": 3, "class": "gun",
+         "tiers": [
+           {"number": 5, "max": 1, "max_period": "game_turn", "plan_first": 9, "plan_last": 24},
+           {"number": 15, "max": 1, "max_period": "game_turn", "plan_first": 25, "plan_last": null}
+         ]},
+        {"key": "gun_75_27", "name": "75/27 Gun", "number": 38, "tonnage": 12, "class": "gun",
+         "tiers": [
+           {"number": 12, "max": 2, "max_period": "game_turn", "plan_first": 9, "plan_last": 24},
+           {"number": 26, "max": 2, "max_period": "game_turn", "plan_first": 25, "plan_last": null}
+         ]},
+        {"key": "howitzer_75_18", "name": "75/18 Howitzer", "number": 11, "tonnage": 12, "class": "gun",
+         "tiers": [
+           {"number": 6, "max": 1, "max_period": "game_turn", "plan_first": 9, "plan_last": 24},
+           {"number": 5, "max": 1, "max_period": "month", "plan_first": 25, "plan_last": null}
+         ]},
+        {"key": "howitzer_100_17", "name": "100/17 Howitzer", "number": 32, "tonnage": 17, "class": "gun",
+         "tiers": [
+           {"number": 10, "max": 1, "max_period": "game_turn", "plan_first": 9, "plan_last": 24},
+           {"number": 22, "max": 2, "max_period": "game_turn", "plan_first": 25, "plan_last": null}
+         ]},
+        {"key": "gun_105_28", "name": "105/28 Gun", "number": 9, "tonnage": 48, "class": "gun",
+         "tiers": [
+           {"number": 3, "max": 1, "max_period": "month", "plan_first": 9, "plan_last": 24},
+           {"number": 6, "max": 1, "max_period": "month", "plan_first": 25, "plan_last": null}
+         ]},
+        {"key": "semovente_75_18", "name": "Semovente 75/18 SP Gun", "number": 8, "max": 1, "max_period": "month", "marker": "dagger", "plan_gt": 65, "tonnage": 60, "class": "gun"},
+        {"key": "howitzer_149_13", "name": "149/13 Howitzer", "number": 6, "max": 1, "max_period": "month", "marker": "dagger", "plan_gt": 25, "tonnage": 84, "class": "gun"},
+        {"key": "para_art", "name": "ParaArt", "number": 4, "max": 2, "max_period": "game_turn", "marker": "", "plan_gt": 96, "tonnage": 3, "class": "gun"},
+        {"key": "fr_149", "name": "149mm (Fr.)", "number": 10, "max": 2, "max_period": "game_turn", "marker": "double_dagger", "plan_gt": 39, "tonnage": 50, "class": "gun", "note": "Tunis box; available GT39 with no two-week delay; land/coastal-shippable; no supplies until Map Section A."},
+        {"key": "fr_155_rimhailo", "name": "155mm Rimhailo (Fr.)", "number": 10, "max": 2, "max_period": "game_turn", "marker": "double_dagger", "plan_gt": 39, "tonnage": 53, "class": "gun", "note": "Tunis box; available GT39 with no two-week delay; land/coastal-shippable; no supplies until Map Section A."},
+        {"key": "cv_l3", "name": "CV L.3 or CV 33/35", "number": 68, "max": 5, "max_period": "game_turn", "marker": "", "plan_gt": 3, "tonnage": 16, "class": "tank"},
+        {"key": "ca_l6_40", "name": "CA L6/40", "number": 26, "tonnage": 28, "class": "tank",
+         "tiers": [
+           {"number": 5, "max": 1, "max_period": "month", "plan_first": 33, "plan_last": 68},
+           {"number": 21, "max": 2, "max_period": "game_turn", "plan_first": 69, "plan_last": null}
+         ]},
+        {"key": "ca_m13_40", "name": "CA M 13/40", "number": 49, "max": 2, "max_period": "game_turn", "marker": "", "plan_gt": 25, "tonnage": 70, "class": "tank"},
+        {"key": "ca_m14_41", "name": "CA M 14/41", "number": 61, "max": 3, "max_period": "game_turn", "marker": "", "plan_gt": 59, "tonnage": 73, "class": "tank"}
+      ]
+    },
+    "truck_production_20_66a": {
+      "_key": "[20.66a] AXIS TRUCK PRODUCTION CHART. Trucks are the binding constraint of the whole campaign (53.0; scratchpad/port/faucet-audit.md) and this is a faucet into the last mile. Each Truck Type prints ONE Number and Tonnage but TWO Max/Dates tiers -- a low per-Game-Turn cap for the early window and a higher one from GT13. 'number' = total Truck Points of that type for the campaign; tiers[].max = per game-turn; tiers[].first_gt = first Game-Turn that Max may be PLANNED (arriving two weeks / 2 Game-Turns later). tonnage = Axis Naval Convoy tons per Truck Point.",
+      "items": [
+        {"key": "light", "name": "Light", "number": 835, "tonnage": 45,
+         "tiers": [
+           {"max": 4, "first_gt": 4, "last_gt": 12},
+           {"max": 15, "first_gt": 13, "last_gt": null}
+         ]},
+        {"key": "medium", "name": "Medium", "number": 2890, "tonnage": 80,
+         "tiers": [
+           {"max": 20, "first_gt": 6, "last_gt": 12},
+           {"max": 50, "first_gt": 13, "last_gt": null}
+         ]},
+        {"key": "heavy", "name": "Heavy", "number": 525, "tonnage": 150,
+         "tiers": [
+           {"max": 3, "first_gt": 5, "last_gt": 12},
+           {"max": 8, "first_gt": 13, "last_gt": null}
+         ]}
+      ]
+    }
+  },
+
+  "commonwealth_infantry_production_20_78B": {
+    "_comment": "[20.78B] COMMONWEALTH INFANTRY PRODUCTION TABLE, PDF p.141. A RANDOM PRODUCTION STREAM, not a fixed schedule: ONE 2d6 roll EVERY Game-Turn (20.73 'the Player uses a random dice roll to determine what Infantry ... Points he receives per turn'), looked up against whichever GT-range column contains the PLAN turn. Production runs GT3 through GT107 inclusive (105 rolls); GT1-2 and GT108-111 fall outside all four columns and produce none. Arrives FOUR Game-Turns later (arrival_lead_time.commonwealth_game_turns), always at Cairo or Alexandria (20.76), one city for a Game-Turn's whole batch (20.78B footnote), FREE of any shipping/tonnage cost (20.75). Unmodified in BOTH campaign start points ([64.54.B] 'No change'). Expected campaign yield = 1615.89 Infantry Replacement Points (game.replacements.cw_infantry_expected_yield), matching the port plan's '~1,617'. GT107 + the 4-GT lead = GT111 exactly, so the last productive roll lands its RP on the last Game-Turn (transcription section 6). 'none' cells are 0.",
+    "dice": "2d6",
+    "columns": [
+      {"plan_first": 3, "plan_last": 30,
+       "by_roll": {"2": 0, "3": 3, "4": 15, "5": 0, "6": 5, "7": 6, "8": 4, "9": 5, "10": 8, "11": 10, "12": 20}},
+      {"plan_first": 31, "plan_last": 46,
+       "by_roll": {"2": 0, "3": 4, "4": 10, "5": 22, "6": 13, "7": 15, "8": 8, "9": 18, "10": 20, "11": 25, "12": 0}},
+      {"plan_first": 47, "plan_last": 102,
+       "by_roll": {"2": 5, "3": 22, "4": 25, "5": 13, "6": 28, "7": 20, "8": 16, "9": 30, "10": 19, "11": 35, "12": 8}},
+      {"plan_first": 103, "plan_last": 107,
+       "by_roll": {"2": 0, "3": 5, "4": 3, "5": 2, "6": 11, "7": 0, "8": 13, "9": 1, "10": 5, "11": 7, "12": 0}}
+    ]
+  },
+
+  "commonwealth_production_20_78C": {
+    "_comment": "[20.78C] COMMONWEALTH PRODUCTION CHART, PDF p.141 -- the CW tank/gun/AA Replacement-Point schedule. Draw-at-will, Axis-Pool style, NO die roll (20.73 carves Infantry/Trucks OUT of this; everything here is elected). FREE -- no tonnage, no shipping, no interdiction (20.75); this is the Commonwealth's structural late-war advantage. Bounded by 'number' (campaign total), 'max' per period, and the plan window (plan_first / plan_last). Arrives FOUR Game-Turns after the plan turn (arrival_lead_time.commonwealth_game_turns), at Cairo/Alexandria then Training (20.43). Every UNUSED point here = 1 Commonwealth Victory Point (64.74). The 'Tiger Convoy' (GT32) is IN ADDITION to this chart. Reduced for the shorter Desert-Fox campaign by [64.54.C] (see shorter_campaign_reductions_64_54C).",
+    "_key": "number (#) = campaign-total cap. max = per period. max_period: 'game_turn' (bare), 'month' (printed '*'), 'two_weeks' (printed dagger) -- NOTE these markers are the REVERSE of the German chart (transcription section 1). plan_first / plan_last = the window (in Game-Turns) the point may be PLANNED; a single printed Date has plan_last=null (runs to campaign end). class drives 20.43 Training length (gun=1 OpStage, tank/ac/recce=6).",
+    "tank_total": 332,
+    "equipment_total": 958,
+    "items": [
+      {"key": "armored_recce_ac", "name": "Armored Recce/Armored Car", "number": 90, "max": 2, "max_period": "game_turn", "marker": "", "plan_first": 3, "plan_last": null, "class": "recce"},
+      {"key": "light_aa", "name": "Light AA", "number": 75, "max": 1, "max_period": "game_turn", "marker": "", "plan_first": 7, "plan_last": null, "class": "gun"},
+      {"key": "heavy_aa", "name": "Heavy AA", "number": 15, "max": 1, "max_period": "month", "marker": "*", "plan_first": 11, "plan_last": null, "class": "gun"},
+      {"key": "25_pounder", "name": "25-pounders", "number": 250, "max": 4, "max_period": "game_turn", "marker": "", "plan_first": 11, "plan_last": null, "class": "gun"},
+      {"key": "gun_45in", "name": "4.5\" Guns", "number": 25, "max": 3, "max_period": "game_turn", "marker": "", "plan_first": 76, "plan_last": null, "class": "gun"},
+      {"key": "howitzer_55in", "name": "5.5\" Howitzers", "number": 12, "max": 1, "max_period": "game_turn", "marker": "", "plan_first": 83, "plan_last": null, "class": "gun"},
+      {"key": "howitzer_155mm", "name": "155mm Howitzers", "number": 6, "max": 1, "max_period": "game_turn", "marker": "", "plan_first": 51, "plan_last": 59, "class": "gun"},
+      {"key": "2_pounder", "name": "2-pounders", "number": 60, "max": 5, "max_period": "month", "marker": "*", "plan_first": 5, "plan_last": 86, "class": "gun"},
+      {"key": "6_pounder", "name": "6-pounders", "number": 80, "max": 5, "max_period": "game_turn", "marker": "", "plan_first": 75, "plan_last": null, "class": "gun"},
+      {"key": "sp_6_pounder", "name": "SP 6-pounders", "number": 7, "max": 3, "max_period": "game_turn", "marker": "", "plan_first": 76, "plan_last": null, "class": "gun"},
+      {"key": "17_pounder", "name": "17-pounders", "number": 6, "max": 3, "max_period": "game_turn", "marker": "", "plan_first": 103, "plan_last": null, "class": "gun"},
+      {"key": "mk6_light", "name": "Mark VI Light", "number": 15, "max": 3, "max_period": "month", "marker": "*", "plan_first": 3, "plan_last": 38, "class": "tank"},
+      {"key": "a9_cruiser", "name": "A9 Cruiser", "number": 8, "max": 2, "max_period": "month", "marker": "*", "plan_first": 3, "plan_last": 38, "class": "tank"},
+      {"key": "a10_cruiser", "name": "A10 Cruiser", "number": 10, "max": 3, "max_period": "month", "marker": "*", "plan_first": 3, "plan_last": 38, "class": "tank"},
+      {"key": "a13_cruiser", "name": "A13 Cruiser", "number": 8, "max": 2, "max_period": "month", "marker": "*", "plan_first": 9, "plan_last": 38, "class": "tank"},
+      {"key": "crusader_1", "name": "Crusader Mk I", "number": 35, "max": 5, "max_period": "month", "marker": "*", "plan_first": 31, "plan_last": 76, "class": "tank"},
+      {"key": "crusader_2", "name": "Crusader Mk II", "number": 30, "max": 5, "max_period": "month", "marker": "*", "plan_first": 41, "plan_last": 78, "class": "tank"},
+      {"key": "crusader_3", "name": "Crusader Mk III", "number": 18, "max": 6, "max_period": "two_weeks", "marker": "dagger", "plan_first": 88, "plan_last": null, "class": "tank"},
+      {"key": "matilda", "name": "Matilda", "number": 25, "max": 2, "max_period": "month", "marker": "*", "plan_first": 9, "plan_last": 74, "class": "tank"},
+      {"key": "valentine", "name": "Valentine", "number": 20, "max": 3, "max_period": "month", "marker": "*", "plan_first": 39, "plan_last": null, "class": "tank"},
+      {"key": "stuart", "name": "Stuart", "number": 44, "max": 10, "max_period": "month", "marker": "*", "plan_first": 35, "plan_last": 54, "class": "tank"},
+      {"key": "grant", "name": "Grant", "number": 56, "max": 8, "max_period": "month", "marker": "*", "plan_first": 66, "plan_last": null, "class": "tank"},
+      {"key": "sherman", "name": "Sherman", "number": 62, "max": 12, "max_period": "game_turn", "marker": "", "plan_first": 89, "plan_last": null, "class": "tank", "note": "The decisive late-war medium: 62 RP, Max 12 per Game-Turn (no per-month marker), first plan-GT 89, no cutoff, free to ship. On-map arrival = 89 + 4 = GT93 (ruling 1)."},
+      {"key": "churchill", "name": "Churchill", "number": 1, "max": null, "max_period": "game_turn", "marker": "dash", "plan_first": 90, "plan_last": null, "class": "tank", "note": "Max printed as '-' (dash): only 1 exists, no rate cap is meaningful."}
+    ],
+    "shorter_campaign_reductions_64_54C": {
+      "_comment": "[64.54.C] For the SHORTER (Desert-Fox-start, GT26-111) campaign these nine items are REDUCED TO (not by) the numbers below; every other row is unaffected. The full GT1-111 campaign uses 'items' above unchanged ([64.54] A/B: Truck and Infantry tables 'No change'). Applied only when the scenario runs the shorter start.",
+      "armored_recce_ac": 75,
+      "light_aa": 70,
+      "25_pounder": 230,
+      "2_pounder": 50,
+      "mk6_light": 5,
+      "a9_cruiser": 3,
+      "a10_cruiser": 3,
+      "a13_cruiser": 5,
+      "matilda": 20
+    }
+  },
+
+  "deferred": {
+    "_comment": "Rule-20 charts NOT transcribed in Block 7.2a, flagged with their source so the next pass can pick them up. None is needed for the CW infantry FLOW-IN this block measures.",
+    "commonwealth_truck_production_20_78A": "A separate 1d6-per-truck-type random stream (docs/rules/90-charts:3391+; PDF p.141 top-left). The 20.78B transcription notes its existence but gives no cell values; not rendered/verified here. The Commonwealth's TRUCK replacement flow -- a sibling of the infantry stream, also random and also free -- awaits its own transcription.",
+    "axis_replacement_point_type_limitations_20_67": "NOT a separate dataset (transcription section 4): the per-type max/plan_gt columns already embedded in axis_pool_20_66 ARE the [20.67] Type Limitations.",
+    "replacement_point_conversion_20_3": "[20.3] REPLACEMENT POINT CONVERSION CHART (docs/rules/90-charts:1059-1163): converts HQ/MG/Heavy-Weapons/etc. counters to Infantry/Gun/Tank/Recce class points for absorption. A distinct chart, out of scope; needed for 7.2b's spend absorption of odd counter types.",
+    "air_shipped_infantry_54_5": "[54.5] footnote: an Axis INFANTRY Replacement Point may alternatively go by AIR at a flat 2 tons/point (no other class may fly). A distinct third shipping mode; recorded in data/logistics_rates.json equivalent_weights_54_5.replacement_point_tons.air, not modelled here."
+  }
+}

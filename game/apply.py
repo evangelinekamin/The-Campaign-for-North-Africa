@@ -38,6 +38,12 @@ def apply(state: GameState, event: Event) -> GameState:
         port = state.port(p["port_id"])
         return state.with_port(replace(port, eff=p["level"]))
 
+    if k == EventKind.REPLACEMENTS_PRODUCED:
+        # 20.7/20.78B: Replacement Points arrive into the pool (the FLOW IN, Block 7.2a). A pure
+        # scalar credit -- no TOE, no supply surface -- so conservation and stacking are untouched.
+        # points 0 (a 'none' cell) is an identity fold that still certifies the 2d6 in the log.
+        return state.credit_replacements(f"{p['side']}/{p['type']}", p["points"])
+
     if k == EventKind.SUPPLY_EVAPORATED:
         # 49.3 / 52.44: fuel/water lost to evaporation & spillage. Folds exactly like a
         # consume -- drain the dump, credit consumed[] -- so on_hand+consumed==initial holds.

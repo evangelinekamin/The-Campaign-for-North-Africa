@@ -38,7 +38,7 @@ AXIS_LANE = "1"          # rommels_arrival's Axis Mediterranean convoy lane (sce
 # --- the derivation ----------------------------------------------------------------------------
 
 def test_every_subsystem_gets_its_own_distinct_stream():
-    """17 subsystems, 17 different sequences. If two shared a seed they would roll in lockstep
+    """18 subsystems, 18 different sequences. If two shared a seed they would roll in lockstep
     and a 'correlated' engine is only marginally better than a desynchronised one.
 
     The count moved from 15 to 16 when the [38.37] Aircraft Refit Table got its own `air_refit`
@@ -47,10 +47,14 @@ def test_every_subsystem_gets_its_own_distinct_stream():
     to isolate. It moved to 17 with rule 44's `malta` stream (Phase 5.4), whose BOTH halves draw
     conditionally: the [44.42] raid roll happens only where an island is seeded, and the [44.5]
     repair rolls once per Maltese facility that stands below its ceiling. Malta is the exact case
-    this module was written for -- the measurement it corrupted was Malta's own."""
+    this module was written for -- the measurement it corrupted was Malta's own. It moved to 18 with
+    rule 20's `cw_production` stream (Block 7.2a): the [20.78B] Commonwealth Infantry Production roll
+    is ONE 2d6 per Game-Turn, drawn CONDITIONALLY -- only in a scenario that models the CW Production
+    system (the campaign, GT3-107) -- so the random production of Replacement Points must not perturb
+    a weather or combat die, nor be perturbed by one."""
     box = DiceBox(1941)
     draws = {sub: [box.d6(sub) for _ in range(40)] for sub in SUBSYSTEMS}
-    assert len(SUBSYSTEMS) == 17                                      # + malta (rule 44)
+    assert len(SUBSYSTEMS) == 18                                      # + cw_production (rule 20.78B)
     assert len({tuple(v) for v in draws.values()}) == len(SUBSYSTEMS)
 
 

@@ -16,7 +16,8 @@ from dataclasses import dataclass, replace
 from typing import Protocol
 
 from . import (air, basing, calendar, combat, combat_tables, construction, cp_costs, initiative,
-               logistics_data, malta, organization, stacking, supply, tactics, weather, wells, zoc)
+               logistics_data, malta, organization, replacements, stacking, supply, tactics,
+               weather, wells, zoc)
 from .apply import apply
 from .dice import DiceBox
 from .events import CONTROL_OF, Control, Event, EventKind, Phase, Side
@@ -176,6 +177,9 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                                                         # Phase -- AFTER the Strategic Air Planning Stage,
                                                         # as 48 orders them -- where the Axis decides what
                                                         # to ship, ONE GAME-TURN AHEAD of the sailing
+        _replacement_production(r)                       # 20.7/20.78B: the Commonwealth Infantry Production
+                                                        # roll (once per Game-Turn) -- the replacement
+                                                        # economy's FLOW IN, into GameState.replacement_pool
         _stores_setup(r)                                # 48 IV: Stores Expenditure + 6% base evaporation
         for stage in (1, 2, 3):
             r.ports_bombed_this_stage = set()            # 55.18: this stage's bomb ledger starts empty
@@ -1140,6 +1144,42 @@ def _convoy_planning(r: _Run, policies: dict) -> None:
                {"convoy_id": c.id, "lane": c.lane, "dest": c.dest, "tons": c.tons,
                 "allowed_tons": c.tons, "cargo": cargo,
                 "tons_by": {k: round(v, 3) for k, v in sorted(tons_by.items())}})
+
+
+def _replacement_production(r: _Run) -> None:
+    """[20.7]/[20.78B] THE REPLACEMENT ECONOMY'S FLOW IN, once per Game-Turn -- the Commonwealth
+    Infantry Production stream (Block 7.2a). This is the thing NOTHING in the engine had ever done:
+    put Replacement Points into a pool from which depleted units can be rebuilt (the SPEND is 7.2b).
+
+        20.73  "The Player uses a RANDOM DICE ROLL to determine what Infantry ... Points he receives
+                per turn, depending upon the date of arrival."
+        20.75  "The Commonwealth Player HAS NO SHIPPING PROBLEMS; his Replacement Points simply
+                arrive." -- FREE, the structural asymmetry against every tonnage-charged Axis point.
+
+    ONE 2d6 roll per Game-Turn (off the 'cw_production' subsystem), looked up against the PLAN turn's
+    [20.78B] GT-range column (game.replacements.cw_infantry_lookup). We emit on the ARRIVAL Game-Turn:
+    the points planned on plan_turn = turn - 4 (the owner-ruled 4-Game-Turn lead, 20.21/20.78B) land
+    now and enter GameState.replacement_pool. So the roll is made when its RP arrive, which is
+    deterministically the same draw as rolling four turns earlier -- and the pool then means exactly
+    'Infantry RP available to absorb now', the handle Block 7.2b needs. plan_turn < GT3 (the opening
+    four Game-Turns) plans nothing, so nothing arrives and no die is drawn.
+
+    REPLACEMENTS_PRODUCED is emitted even on a 'none' cell (points 0, an identity fold), so the 2d6 is
+    on the record like every other certified roll. Fires ONLY where the scenario models the CW
+    Production system (GameState.replacement_production -- the campaign; the tactical Desert Fox
+    benchmarks run no 111-turn production schedule), so every non-campaign scenario stays
+    byte-identical."""
+    if not r.state.replacement_production:
+        return
+    plan_turn = r.state.turn - replacements.CW_ARRIVAL_LEAD
+    if plan_turn not in replacements.cw_infantry_plan_turns():
+        return                                           # nothing was planned 4 Game-Turns ago
+    d1, d2 = r.d6("cw_production"), r.d6("cw_production")
+    points = replacements.cw_infantry_lookup(plan_turn, d1 + d2)
+    r.go(Phase.LOGISTICS, Side.SYSTEM)                    # a SYSTEM housekeeping beat, like convoys
+    r.emit(EventKind.REPLACEMENTS_PRODUCED, Side.ALLIED, "ALLIED/QM",
+           {"side": Side.ALLIED.value, "type": "infantry", "points": points,
+            "plan_turn": plan_turn, "arrival_turn": r.state.turn}, rng_draws=(d1, d2))
 
 
 def _naval_convoys(r: _Run, policies: dict | None = None) -> None:

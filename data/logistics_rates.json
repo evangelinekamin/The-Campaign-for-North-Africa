@@ -462,6 +462,7 @@
       "water": 0.1667
     },
     "replacement_point_tons": {
+      "_comment": "[54.5] forward-references the Axis Replacement Pool for the per-point convoy tonnage, and the SINGLE SOURCE OF TRUTH for that is now data/replacements.json (axis_pool_20_66.*.items[].tonnage), read by game.replacements.axis_tonnage_per_point -- NOT a second copy here (Block 7.2a). Infantry is charged 30 tons/point under the named errata data/replacements.json:axis_tonnage_errata_20_62 (owner ruling 6: the 30 the chart + rule 56.24 print, not the 35 that 20.62's own example implies). The 'air' route below (a flat 2 tons/point, infantry-class only) is the [54.5] footnote and is the one per-point tonnage that lives here rather than in the pool chart.",
       "axis_naval_convoy": "varies -- see Axis Replacement Pool",
       "interport_or_railroad": "n/a",
       "air": 2,

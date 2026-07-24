@@ -866,6 +866,24 @@ class GameState:
     motorization: dict = field(default_factory=dict)
     motorized_supply: bool = False
 
+    # --- [20.7] THE REPLACEMENT POOL (rule 20, Block 7.2a) -------------------------------------
+    # `replacement_pool` is the FLOW-IN ledger: "<side>/<type>" -> the Replacement Points that have
+    # ARRIVED and are available to ABSORB into depleted units (19.61/20.4). Today its one producer
+    # is the [20.78B] Commonwealth Infantry Production stream (REPLACEMENTS_PRODUCED, credited on the
+    # arrival Game-Turn = plan + the 4-turn lead); Block 7.2b's UNIT_REBUILT will draw it down. The
+    # Axis Pool and the [20.78C] equipment chart are DRAW-AT-WILL availability ceilings held in
+    # data/replacements.json (game.replacements), not accumulated here -- they enter this ledger only
+    # when a spend draws them (7.2b). A pure scalar dict: no TOE, no supply surface, so invariants
+    # are untouched. Default {} holds nothing.
+    #
+    # `replacement_production` gates the [20.78B] per-Game-Turn roll: the CW Production system is a
+    # 111-turn campaign subsystem (Cairo/Alexandria arrival, 20.76), not a rule the tactical Desert
+    # Fox benchmarks model -- so only game.scenario.campaign turns it on, exactly as motorized_supply
+    # / dump_capture / initiative_chart gate their own campaign-scale subsystems. Default False emits
+    # no REPLACEMENTS_PRODUCED, so every non-campaign scenario stays byte-identical.
+    replacement_pool: dict = field(default_factory=dict)
+    replacement_production: bool = False
+
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:
         for u in self.units:
@@ -1052,6 +1070,19 @@ class GameState:
         plans = dict(self.convoy_plans)
         plans[convoy_id] = dict(cargo)
         return replace(self, convoy_plans=plans)
+
+    def credit_replacements(self, key: str, points: int) -> "GameState":
+        """[20.7] Add `points` arrived Replacement Points to the pool bucket `key`
+        ('<side>/<type>'). A conserving copy-then-replace (never mutates), the same idiom
+        with_convoy_plan uses. Block 7.2b's absorb will be the matching debit."""
+        pool = dict(self.replacement_pool)
+        pool[key] = pool.get(key, 0) + points
+        return replace(self, replacement_pool=pool)
+
+    def replacements_available(self, key: str) -> int:
+        """The Replacement Points of bucket `key` ('<side>/<type>') that have arrived and are
+        not yet absorbed. Zero for an absent key. (Block 7.2b reads this to bound a rebuild.)"""
+        return self.replacement_pool.get(key, 0)
 
     def with_air_unfit(self, squadron: str, planes: int) -> "GameState":
         """[38.31] Set how many of `squadron`'s aeroplanes stand UNREFITTED (mirrors
