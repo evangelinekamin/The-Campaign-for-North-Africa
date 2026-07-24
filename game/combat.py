@@ -17,10 +17,14 @@ moves into a vacated hex next phase, rule 10.24).
 Combined arms (15.4) reduces each side's Actual close-assault points via the
 `*_ca_penalty` args (the engine computes them from the tank/infantry TOE mix).
 
+Guns & Vulnerability (15.84b/c) are applied in the ENGINE (engine._forward_gun_vuln_losses)
+off this result's `column` (Overrun, 15.77) and `*_points_lost`: a Forward Gun caught in a
+Close Assault sheds TOE on its Vulnerability Rating, taken after the percentage losses here.
+
 DEFERRED + FLAGGED for later slices: the Prisoners Captured % table (15.89 — Capt
 here just records that some already-counted losses are prisoners, no board effect),
-the organizational-size table beyond 2:1 (15.52/15.53), guns & vulnerability
-(15.84), Probe (15.9). Morale (15.6) is a column shift, applied via `morale_shift`.
+the organizational-size table beyond 2:1 (15.52/15.53), Probe (15.9). Morale (15.6)
+is a column shift, applied via `morale_shift`.
 Anti-Armor (14) + Barrage (12) are their own combat steps in the engine segment.
 """
 from __future__ import annotations

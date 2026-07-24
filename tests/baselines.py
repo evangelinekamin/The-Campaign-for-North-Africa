@@ -10,6 +10,41 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+NOT RE-BASELINED BY RULE [15.84] GUN VULNERABILITY (Phase 6.2), 2026-07-24, AND THAT WAS CHECKED
+RATHER THAN ASSUMED -- both signatures recomputed TWICE on the tree and are UNCHANGED
+(df632af423c0 / b4c62a774318).
+
+[15.84b/c] is the largest missing land-combat loss channel: a Forward GUN caught in a Close Assault
+now sheds TOE on its VULNERABILITY Rating. That Rating was populated on every counter (game.oob, off
+the [4.47]/[4.48]/[4.49] Characteristics Charts) and read by NO code, so artillery was IMMORTAL in
+Close Assault -- it bled only to the 15.83 percentage pool. The channel fires in
+engine._forward_gun_vuln_losses, AFTER the percentage losses (15.84c), sized off combat.resolve's
+`column` (Overrun, 15.77) and `*_points_lost`; 12.18 halves an attacking Gun's Rating and AA/Flak
+are exempt (15.84b).
+
+It moves NEITHER benchmark log, and the reason is STRUCTURAL, not luck. The channel fires only when a
+GUN is one of the units taking Close-Assault Raw-Point losses in a combat that reaches the 15.79 CRT.
+Measured on both benchmark logs (ScriptedPolicy, seed 42): the WHOLE rommels_arrival run records ONE
+close-assault attacker step-loss and ZERO defender step-losses, and siege_of_tobruk the same -- their
+combat is overwhelmingly Barrage / Anti-Armor / auto-Surrender (15.88), and in neither is a Gun ever
+the unit bleeding Close-Assault Raw Points. So _forward_gun_vuln_losses is handed a loss with no
+Forward Gun to remove, emits nothing, and both logs stay byte-identical. (The channel IS exercised --
+by tests/test_vulnerability.py, and by the campaign, which is not signature-pinned.)
+
+MEASURED, full campaign (CampaignAxis vs CampaignCommonwealth) -- gun VULNERABILITY step-losses over
+the whole 111-turn war, a channel that was structurally ZERO before this rule:
+
+    seed 1941   2 events /  2 gun Points   (of def=12 atk=27 close-assault step-losses that war)
+    seed    7   1 event  /  1 gun Point    (of def=4  atk=13)
+    seed   99   1 event  /  1 gun Point    (of def=3  atk=7)
+    seed 2026   2 events /  3 gun Points   (of def=15 atk=18)
+
+The channel is LOW-FREQUENCY -- a Gun dies in Close Assault only when the enemy actually closes on it,
+rare in these logistics-dominated campaigns where supply attrition and Surrender do the killing -- and
+it does not flip the campaign winner. That is the faithful picture: artillery is no longer immortal,
+but the desert's killers are still thirst and encirclement, not the bayonet.
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-24 -- CAUSE: rule [21.11] THE MORTAL LORRY (Phase 6.1). Truck Points are named
 FIRST among the vehicles subject to Breakdown, and for two years not one had ever been lost. Now a
 2nd/3rd-line convoy accrues Breakdown Points as it relocates (21.21, the TRUCK_MOVED faucet), and

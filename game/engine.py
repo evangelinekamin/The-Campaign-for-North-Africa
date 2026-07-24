@@ -4328,12 +4328,32 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
            rng_draws=(*atk_md, *def_md, ab, asm, db, dsm))
     # 15.83d: steps are removed to ABSORB the raw points lost, each step soaking up
     # its unit's close-assault rating (dca defending, oca attacking) worth of points.
-    for uid, amount in _absorb_losses(defenders, res.defender_points_lost, lambda u: u.dca):
+    def_losses = _absorb_losses(defenders, res.defender_points_lost, lambda u: u.dca)
+    for uid, amount in def_losses:
         r.emit(EventKind.STEP_LOST, side, actor,
                {"unit_id": uid, "amount": amount, "role": "defender"})
-    for uid, amount in _absorb_losses(armed_atk, res.attacker_points_lost, lambda u: u.oca):
+    atk_losses = _absorb_losses(armed_atk, res.attacker_points_lost, lambda u: u.oca)
+    for uid, amount in atk_losses:
         r.emit(EventKind.STEP_LOST, side, actor,
                {"unit_id": uid, "amount": amount, "role": "attacker"})
+    # 15.84b/c: Forward GUNS take VULNERABILITY losses -- a channel separate from and taken
+    # AFTER (15.84c) the 15.83 percentage losses above; without it artillery was immortal in
+    # Close Assault (its Vulnerability Rating was populated but read by no code). The engine
+    # models no Forward/Back gun position (12.11/12.12), so a Gun that PARTICIPATES in the
+    # assault is treated as Forward: attacking Guns fought an Offensive assault (armed_atk --
+    # 12.18 halves their Vulnerability), defending Guns a Defensive one (armed_def). An OVERRUN
+    # (15.84c) additionally catches EVERY defending Gun in the hex, Forward or Back, so the
+    # position distinction it turns on does not arise -- all defenders' Guns are pulled in.
+    overrun = res.column >= combat_tables.OVERRUN_COL
+    def_guns = defenders if overrun else armed_def
+    for uid, amount in _forward_gun_vuln_losses(def_guns, res.defender_points_lost,
+                                                dict(def_losses), offensive=False):
+        r.emit(EventKind.STEP_LOST, side, actor,
+               {"unit_id": uid, "amount": amount, "role": "vulnerability"})
+    for uid, amount in _forward_gun_vuln_losses(armed_atk, res.attacker_points_lost,
+                                                dict(atk_losses), offensive=True):
+        r.emit(EventKind.STEP_LOST, side, actor,
+               {"unit_id": uid, "amount": amount, "role": "vulnerability"})
     # Cohesion: 30%+ losses disorganize the involved units (6.21b/15.29b), -3 each. A
     # winning attacker recovers this via the 6.24.2 award below (a costly victory nets 0).
     if res.attacker_loss_pct >= 30:
@@ -4607,6 +4627,44 @@ def _absorb_losses(units, points: int, rating_of) -> list[tuple[str, int]]:
         if rating <= 0 or u.strength <= 0:
             continue
         take = min(u.strength, math.ceil(remaining / rating))
+        out.append((u.id, take))
+        remaining -= take * rating
+    return out
+
+
+def _forward_gun_vuln_losses(guns, raw_points_lost: int,
+                             already_lost: dict[str, int], *,
+                             offensive: bool) -> list[tuple[str, int]]:
+    """Rule 15.84b/c: Forward Guns take Close-Assault losses on their VULNERABILITY Rating --
+    the loss channel the engine was missing (Vulnerability was populated on the counter and
+    read by no code, so artillery was immortal in Close Assault). It is separate from, and by
+    15.84c taken AFTER, the 15.83 percentage losses.
+
+    The affected side must remove at least 50% -- rounded up -- as many Vulnerability Points of
+    its Forward Guns as it lost Raw Strength Points in the Assault (`raw_points_lost`). Because
+    15.84b imports the 14.42/14.43 Armor-Protection mechanic ("Vulnerability uses the same
+    mechanics as Armor Protection"), each Gun TOE Point removed absorbs its own Vulnerability
+    Rating worth of those Points, so a higher-Rated Gun sheds FEWER Points for the same loss
+    (12.18's note: the higher the Rating, the LESS vulnerable). A Gun that fought an OFFENSIVE
+    Close Assault has its Rating halved rounded up (12.18), so `offensive` attackers bleed
+    harder than defenders of the same printed Rating. AA/Flak units are exempt (15.84b, last
+    sentence). `already_lost` (unit-id -> steps the 15.83 pass already removed from that Gun)
+    caps each Gun so the two loss channels together never remove more Points than it has."""
+    required = math.ceil(raw_points_lost / 2)          # "at least 50% as many ... as ... lost"
+    out: list[tuple[str, int]] = []
+    remaining = required
+    for u in sorted(guns, key=lambda x: -x.strength):
+        if remaining <= 0:
+            break
+        if u.is_pure_aa or not u.is_gun:               # 15.84b: AA/Flak exempt; Guns only (11.12)
+            continue
+        rating = math.ceil(u.vulnerability / 2) if offensive else u.vulnerability   # 12.18 offensive half
+        if rating <= 0:
+            continue
+        avail = u.strength - already_lost.get(u.id, 0)
+        if avail <= 0:
+            continue
+        take = min(avail, math.ceil(remaining / rating))
         out.append((u.id, take))
         remaining -= take * rating
     return out
