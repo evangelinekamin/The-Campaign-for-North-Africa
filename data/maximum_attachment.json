@@ -1,0 +1,161 @@
+{
+  "_source": "[19.5] MAXIMUM ATTACHMENT CHART, PDF p.101. Verified verbatim against the scan by scratchpad/port/transcriptions/19-organization-and-15.53-orgsize.md Part B.1: the existing OCR in docs/rules/90-charts-tables-and-play-aids.md (lines 916-958) is an EXACT match, cell for cell.",
+  "_rule": "[19.5]: 'The limits listed on this chart apply to all units of the indicated size and type, regardless of whether or not the unit's organization is standard (i.e. whether it appears on the Formation Organization Chart, 19.3) or not.' [19.4]: assigned units may be attached and detached freely; these limits govern the ADDITIONAL non-assigned units a Parent Formation may carry over and above its assignment limits.",
+  "_key": "Unit = Refers to a counter which is at full strength, a Battalion- or Company-Equivalent. Tank = Specifically Bn-Eq units composed of tank TOE Strength Points. Infantry = All Infantry-type units with the exception of Machinegun and Heavy Weapons units (whether or not they are motorized).",
+  "_modifications": "Any nation's Division- and Brigade-equivalent units may attach two non-Shell company-Equivalent units at no cost to the maximum attachments. Note that three company-eq are equal to one Bn-eq unit and that the company-equivalents must comply with any restrictions as to the type of units which may be attached to that Division or Brigade.",
+  "_schema": "`units` is the printed count of Battalion-equivalent attachments. `max_infantry`/`max_tank` are the printed type caps, -1 meaning the chart prints no cap on that type and 0 meaning it prints an explicit prohibition ('no Tank'). `free_companies` is the [19.5] Modifications allowance (2 non-Shell company-equivalents at no cost to the maximum, for Division- and Brigade-equivalents). `printed` is the chart cell verbatim.",
+  "_not_yet_enforced": "Some [19.5] cells are transcribed verbatim for completeness but are NOT read by game.organization.may_attach yet -- FLAGGED here, not silently dropped, each because the engine's counters lack the discriminator the column needs. `max_gun_class` (Matruh, '1 gun class') and the related 19.86 single-gun-type rule need a gun-CLASS model the engine does not have (all gun TOE is one pool). `max_recce` (Selby, 'no Recce') needs a reconnaissance branch flag on the counter -- the same gap flagged on organization._is_infantry, which counts an MG battalion as infantry for want of a branch symbol. `brigade_alternative` (German divisions, '1 Brigade and 1 unit, or 4 units') needs a WHOLE-brigade attachment, which needs brigade org_types on the map, i.e. the [4.44]/[4.45] OA parent tree (port plan T1-2); `max_artillery` (German Artillery Brigade HQ) is likewise inert until that tree attaches an artillery unit to an ArKo. The `companies` field on the three `*_battalion` rows is the [19.5] 'any Battalion -> 1 Company' cap; it is unread because a battalion is not yet a Parent Formation (it has no [19.3] row and no org_type -- 19.0 permits a battalion Parent, but its only 'organization' is the one company it may hold, and which battalion may parent which company is on the OA tree). None of these is reachable while nothing attaches in a live run.",
+
+  "rows": {
+    "cw_armor_division_early": {
+      "nation": "CW", "applies": "Armor Division", "gt_from": 1, "gt_to": 67,
+      "units": 2, "max_infantry": 1, "max_tank": 0, "free_companies": 2,
+      "printed": "2 units. 1 Infantry; no Tank."
+    },
+    "cw_armor_division_late": {
+      "nation": "CW", "applies": "Armor Division", "gt_from": 68, "gt_to": 0,
+      "units": 3, "max_infantry": 1, "max_tank": 1, "free_companies": 2,
+      "printed": "3 units. 1 Infantry and/or 1 Tank."
+    },
+    "cw_infantry_division": {
+      "nation": "CW", "applies": "Infantry Division", "gt_from": 1, "gt_to": 0,
+      "units": 2, "max_infantry": 1, "max_tank": 0, "free_companies": 2,
+      "printed": "2 units. 1 Infantry; no Tank."
+    },
+    "cw_tank_brigade_early": {
+      "nation": "CW", "applies": "Tank Brigade", "gt_from": 1, "gt_to": 67,
+      "units": 2, "max_infantry": 1, "max_tank": 0, "free_companies": 2,
+      "printed": "2 units. 1 Infantry; no Tank."
+    },
+    "cw_tank_brigade_late": {
+      "nation": "CW", "applies": "Tank Brigade", "gt_from": 68, "gt_to": 0,
+      "units": 1, "max_infantry": -1, "max_tank": 0, "free_companies": 2,
+      "printed": "1 unit. No Tank."
+    },
+    "cw_other_brigade": {
+      "nation": "CW", "applies": "other Brigade", "gt_from": 1, "gt_to": 0,
+      "units": 1, "max_infantry": -1, "max_tank": -1, "free_companies": 2,
+      "printed": "1 unit."
+    },
+    "cw_battalion": {
+      "nation": "CW", "applies": "any Battalion", "gt_from": 1, "gt_to": 0,
+      "units": 0, "max_infantry": -1, "max_tank": -1, "free_companies": 0,
+      "companies": 1,
+      "printed": "1 Company."
+    },
+    "cw_matruh_garrison": {
+      "nation": "CW", "applies": "Matruh Garrison", "gt_from": 1, "gt_to": 12,
+      "units": 6, "max_infantry": -1, "max_tank": 0, "max_gun_class": 1, "free_companies": 2,
+      "printed": "6 units. no tank, 1 gun class."
+    },
+    "cw_selby_force": {
+      "nation": "CW", "applies": "Selby Force", "gt_from": 13, "gt_to": 0,
+      "units": 5, "max_infantry": 3, "max_tank": 0, "max_recce": 0, "free_companies": 2,
+      "printed": "5 units. no tank, no Recce, 3 infantry."
+    },
+
+    "ge_armor_division": {
+      "nation": "GE", "applies": "Armor Division", "gt_from": 1, "gt_to": 0,
+      "units": 4, "max_infantry": -1, "max_tank": 0, "brigade_alternative": 1, "free_companies": 2,
+      "printed": "1 Brigade and 1 unit or 4 units. No Tank."
+    },
+    "ge_infantry_division": {
+      "nation": "GE", "applies": "Infantry Division", "gt_from": 1, "gt_to": 0,
+      "units": 3, "max_infantry": -1, "max_tank": 0, "brigade_alternative": 1, "free_companies": 2,
+      "printed": "1 Brigade or 3 units. No Tank."
+    },
+    "ge_regiment": {
+      "nation": "GE", "applies": "Infantry or Armor Regiment", "gt_from": 1, "gt_to": 0,
+      "units": 1, "max_infantry": -1, "max_tank": -1, "free_companies": 2,
+      "printed": "1 unit."
+    },
+    "ge_battle_group": {
+      "nation": "GE", "applies": "Battle Group", "gt_from": 1, "gt_to": 0,
+      "units": 4, "max_infantry": 2, "max_tank": 1, "free_companies": 2,
+      "printed": "4 units.",
+      "_note": "The type caps come from [19.72] itself -- 'no more than one tank battalion and/or two infantry battalions' -- and the '2 additional companies' clause is the same allowance the chart's own Modifications grant every Brigade-equivalent."
+    },
+    "ge_artillery_brigade_hq": {
+      "nation": "GE", "applies": "Artillery Brigade HQ", "gt_from": 1, "gt_to": 0,
+      "units": 1, "max_infantry": 0, "max_tank": 0, "max_artillery": 1, "free_companies": 2,
+      "printed": "1 Artillery unit."
+    },
+    "ge_battalion": {
+      "nation": "GE", "applies": "any Battalion", "gt_from": 1, "gt_to": 0,
+      "units": 0, "max_infantry": -1, "max_tank": -1, "free_companies": 0,
+      "companies": 1,
+      "printed": "1 Company."
+    },
+
+    "it_armor_division": {
+      "nation": "IT", "applies": "Armor Division/Tank Group", "gt_from": 1, "gt_to": 0,
+      "units": 2, "max_infantry": -1, "max_tank": -1, "free_companies": 2,
+      "printed": "2 units."
+    },
+    "it_infantry_division": {
+      "nation": "IT", "applies": "Infantry Division", "gt_from": 1, "gt_to": 0,
+      "units": 2, "max_infantry": 1, "max_tank": 1, "free_companies": 2,
+      "printed": "2 units. 1 Infantry or 1 Tank."
+    },
+    "it_brigade": {
+      "nation": "IT", "applies": "Brigade/Regiment", "gt_from": 1, "gt_to": 0,
+      "units": 1, "max_infantry": -1, "max_tank": -1, "free_companies": 2,
+      "printed": "1 unit."
+    },
+    "it_battle_group": {
+      "nation": "IT", "applies": "Battle Group", "gt_from": 1, "gt_to": 0,
+      "units": 3, "max_infantry": 2, "max_tank": 1, "free_companies": 1,
+      "printed": "3 units.",
+      "_note": "The type caps and the ONE extra company come from [19.73] itself -- 'only two of which may be infantry and only one of which may be armor. One company-sized unit may be attached' -- which is narrower than the chart's generic two-company Modification, so the rule's own number is used."
+    },
+    "it_battalion": {
+      "nation": "IT", "applies": "any Battalion", "gt_from": 1, "gt_to": 0,
+      "units": 0, "max_infantry": -1, "max_tank": -1, "free_companies": 0,
+      "companies": 0,
+      "printed": "No units."
+    }
+  },
+
+  "org_type_rows": {
+    "_note": "Which [19.5] row governs each [19.3] formation row. A formation with a GT-dependent row names both and game.organization picks by the current Game-Turn.",
+    "cw_armor_division_I": ["cw_armor_division_early", "cw_armor_division_late"],
+    "cw_armor_division_II": ["cw_armor_division_early", "cw_armor_division_late"],
+    "cw_armor_division_III": ["cw_armor_division_early", "cw_armor_division_late"],
+    "cw_armor_division_IV": ["cw_armor_division_early", "cw_armor_division_late"],
+    "cw_infantry_division": ["cw_infantry_division"],
+    "cw_armor_brigade_I": ["cw_tank_brigade_early", "cw_tank_brigade_late"],
+    "cw_armor_brigade_II": ["cw_tank_brigade_early", "cw_tank_brigade_late"],
+    "cw_armor_brigade_III": ["cw_tank_brigade_early", "cw_tank_brigade_late"],
+    "cw_support_group_I": ["cw_other_brigade"],
+    "cw_support_group_II": ["cw_other_brigade"],
+    "cw_support_group_III": ["cw_other_brigade"],
+    "cw_infantry_brigade_super": ["cw_other_brigade"],
+    "cw_infantry_brigade": ["cw_other_brigade"],
+    "cw_allied_infantry_brigade": ["cw_other_brigade"],
+    "cw_selby_force": ["cw_matruh_garrison", "cw_selby_force"],
+    "it_armor_division": ["it_armor_division"],
+    "it_tank_group": ["it_armor_division"],
+    "it_motorized_infantry_division": ["it_infantry_division"],
+    "it_semi_motorized_infantry_division": ["it_infantry_division"],
+    "it_libyan_division": ["it_infantry_division"],
+    "it_tank_regiment_super": ["it_brigade"],
+    "it_tank_regiment": ["it_brigade"],
+    "it_bersaglieri_regiment": ["it_brigade"],
+    "it_infantry_regiment": ["it_brigade"],
+    "it_cavalry_regiment": ["it_brigade"],
+    "it_saharan_detachment": ["it_brigade"],
+    "it_recam": ["it_brigade"],
+    "it_battle_group": ["it_battle_group"],
+    "ge_5_light_panzer_division": ["ge_armor_division"],
+    "ge_21_panzer_division": ["ge_armor_division"],
+    "ge_15_panzer_division": ["ge_armor_division"],
+    "ge_90_leichte_division": ["ge_infantry_division"],
+    "ge_164_leichte_division": ["ge_infantry_division"],
+    "ge_armored_regiment": ["ge_regiment"],
+    "ge_15_infantry_brigade": ["ge_regiment"],
+    "ge_ramcke_brigade": ["ge_regiment"],
+    "ge_infantry_regiment": ["ge_regiment"],
+    "ge_arko_104": ["ge_artillery_brigade_hq"],
+    "ge_battle_group": ["ge_battle_group"]
+  }
+}

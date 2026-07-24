@@ -97,8 +97,39 @@ class MotorizeOrder:
     truck_ids: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True, slots=True)
+class OrganizationOrder:
+    """[19.0] One act of the Reorganization Segment (48 V.C.2) -- the combat-unit half of the
+    Organization Phase, as against the MotorizeOrder lorry half. `kind` is which of rule 19's
+    operations:
+
+      'attach'   -- [19.41]/[19.42] fold `unit_id` into Parent `parent_id`'s counter (19.12); the
+                    engine re-validates against the [19.5] Maximum Attachment Chart and the [19.72]
+                    Kampfgruppe caps (game.organization.may_attach) and charges the [6.3] CP.
+      'detach'   -- [19.43]/[19.44] the reverse; a Kampfgruppe losing its last German unit disbands
+                    (Kampfgruppen HQ's sheet, note 2).
+      'assign'   -- [19.21]/[19.26]/[19.25] the paper relationship (no [6.3] CP). Empty `parent_id`
+                    un-assigns (19.25).
+      'form_kg'  -- [19.71] create a Battle Group headquarters counter (`org_type` its 19.3 row,
+                    `name` its historical name); units then attach to it by their own 'attach'
+                    orders (note 1: "formed simply by attaching a German unit to it").
+      'rebuild'  -- [19.61]/[19.68] absorb `points` Replacement TOE Strength Points, never past the
+                    counter's printed maximum, at one CP per two points.
+      'augment'  -- [19.8]/[19.9] add `points` of ad hoc anti-tank to a Brigade-Level HQ (Axis) or
+                    an eligible Commonwealth infantry battalion.
+
+    Every one is re-validated at the engine boundary (game.engine._reorganize) like every other
+    order, so an adversarial or a mistaken policy cannot corrupt the tree."""
+    kind: str                       # 'attach'|'detach'|'assign'|'form_kg'|'rebuild'|'augment'
+    unit_id: str = ''
+    parent_id: str = ''
+    points: int = 0
+    org_type: str = ''              # form_kg: the [19.3] row
+    name: str = ''                  # form_kg: the Kampfgruppe's historical name
+
+
 Order = (MoveOrder | AttackOrder | SupplyMoveOrder | TruckOrder | DemolitionOrder | BuildOrder
-         | MotorizeOrder)
+         | MotorizeOrder | OrganizationOrder)
 
 
 class Policy:
@@ -113,6 +144,9 @@ class Policy:
 
     def motorization(self, state: GameState, side: Side) -> list[MotorizeOrder]:
         return []  # optional: detail lorries to carry a dump, or stand them down (rule 32.32)
+
+    def organization(self, state: GameState, side: Side) -> list[OrganizationOrder]:
+        return []  # optional: attach/detach/assign/form-Kampfgruppe/rebuild/augment (rule 19)
 
     def retreat_before_assault(self, state: GameState, side: Side,
                                pinned: frozenset[str]) -> list[MoveOrder]:

@@ -16,7 +16,7 @@ from dataclasses import dataclass, replace
 from typing import Protocol
 
 from . import (air, basing, calendar, combat, combat_tables, construction, cp_costs, initiative,
-               logistics_data, malta, stacking, supply, tactics, weather, wells, zoc)
+               logistics_data, malta, organization, stacking, supply, tactics, weather, wells, zoc)
 from .apply import apply
 from .dice import DiceBox
 from .events import CONTROL_OF, Control, Event, EventKind, Phase, Side
@@ -3286,8 +3286,201 @@ def _reject(r: _Run, side: Side, actor: str, order: MoveOrder, reason: str,
             "reason": reason})
 
 
+def _reorganize(r: _Run, side: Side, order) -> None:
+    """One rule-19 act in the Reorganization Segment, validated at the boundary and folded.
+
+    The [6.3] organization CP rows are charged to BOTH counters the chart names -- "(Parent
+    Formation and detaching unit)" -- via CP_EXPENDED, exactly as _charge_combat_cp does at the
+    combat seams. `assign` costs no CP (it is not on the 6.3 chart); `form_kg` costs none for the
+    creation itself (the first unit's attach pays, note 1)."""
+    actor = f"{side.value}/Command"
+    board = [u for u in r.state.living(side)] + [u for u in r.state.units
+                                                 if u.side != side and r.state.on_map(u)]
+
+    def reject(why: str) -> None:
+        r.emit(EventKind.ORDER_REJECTED, side, actor,
+               {"order": order.kind, "unit_id": order.unit_id,
+                "parent_id": order.parent_id, "reason": why})
+
+    def cp(uid: str, activity: str, points: int) -> None:
+        if points:
+            r.emit(EventKind.CP_EXPENDED, side, actor,
+                   {"unit_id": uid, "activity": activity, "cp": points})
+
+    if order.kind == "attach":
+        parent, unit = r.state.unit(order.parent_id), r.state.unit(order.unit_id)
+        if parent is None or unit is None or parent.side != side or unit.side != side:
+            return reject("no such friendly Parent Formation and unit")
+        already = [u for u in board if u.attached_to == parent.id]
+        why = organization.may_attach(parent, already, unit, turn=r.state.turn, board=board)
+        if why:
+            return reject(why)
+        assigned = unit.assigned_to == parent.id
+        r.emit(EventKind.UNIT_ATTACHED, side, actor,
+               {"unit_id": unit.id, "parent_id": parent.id, "assigned": assigned})
+        price = cp_costs.attach_cost(assigned)
+        cp(unit.id, "attach", price)
+        cp(parent.id, "attach", price)                     # 19.41/19.42: each to both units
+
+    elif order.kind == "detach":
+        parent, unit = r.state.unit(order.parent_id), r.state.unit(order.unit_id)
+        if parent is None or unit is None:
+            return reject("no such Parent Formation and unit")
+        why = organization.may_detach(parent, unit, segment="REORGANIZATION")
+        if why:
+            return reject(why)
+        r.emit(EventKind.UNIT_DETACHED, side, actor,
+               {"unit_id": unit.id, "parent_id": parent.id})
+        price = cp_costs.detach_cost()
+        cp(unit.id, "detach", price)
+        cp(parent.id, "detach", price)                     # 19.43/19.44: each to both units
+        _maybe_disband_battle_group(r, side, actor, parent.id)
+
+    elif order.kind == "assign":
+        parent, unit = r.state.unit(order.parent_id), r.state.unit(order.unit_id)
+        if unit is None or unit.side != side:
+            return reject("no such friendly unit")
+        if not order.parent_id:                            # 19.25: un-assign (a CW cap fell)
+            r.emit(EventKind.UNIT_ASSIGNED, side, actor,
+                   {"unit_id": unit.id, "parent_id": "", "previous": unit.assigned_to})
+            return
+        if parent is None or parent.side != side:
+            return reject("no such friendly Parent Formation")
+        already = [u for u in board if u.assigned_to == parent.id]
+        why = organization.may_assign(parent, already, unit)
+        if why:
+            return reject(why)
+        r.emit(EventKind.UNIT_ASSIGNED, side, actor,
+               {"unit_id": unit.id, "parent_id": parent.id, "previous": unit.assigned_to})
+
+    elif order.kind == "form_kg":
+        why = organization.may_form_battle_group(board, _nation_of(side, order))
+        if why:
+            return reject(why)
+        row = organization.formation(order.org_type)
+        if not row:
+            return reject("no such [19.3] Formation Organization row for this Battle Group")
+        kg_id = order.unit_id or f"KG-{order.org_type}"
+        if r.state.unit(kg_id) is not None:
+            return reject(f"a counter {kg_id!r} already exists")
+        # 19.71 forms it in a friendly unit's hex, where its components stand and will attach:
+        # the optional `parent_id` names that anchor unit, else the first friendly unit on the map.
+        anchor = r.state.unit(order.parent_id) if order.parent_id else next(
+            (u for u in r.state.living(side)), None)
+        if anchor is None or anchor.side != side:
+            return reject("a Battle Group must be formed on a friendly unit's hex (19.71)")
+        r.emit(EventKind.BATTLE_GROUP_FORMED, side, actor,
+               {"unit_id": kg_id, "side": side.value,
+                "nationality": row.get("nation", ""), "org_type": order.org_type,
+                "name": order.name or kg_id, "hex": list(anchor.hex), "morale": anchor.morale,
+                "cpa": anchor.cpa, "mobility": anchor.mobility.name, "steps": 1})
+
+    elif order.kind == "rebuild":
+        unit = r.state.unit(order.unit_id)
+        if unit is None or unit.side != side:
+            return reject("no such friendly unit")
+        why = organization.may_rebuild(unit, points=order.points)
+        if why:
+            return reject(why)
+        r.emit(EventKind.UNIT_REBUILT, side, actor,
+               {"unit_id": unit.id, "points": order.points,
+                "strength": unit.strength + order.points})
+        price = organization.rebuild_cp(order.points)
+        cp(unit.id, "rebuild", price)
+        if unit.assigned_to:                               # 19.68: "and its parent, if such"
+            cp(unit.assigned_to, "rebuild", price)
+
+    elif order.kind == "augment":
+        unit = r.state.unit(order.unit_id)
+        if unit is None or unit.side != side:
+            return reject("no such friendly unit")
+        if side == Side.ALLIED:
+            allow = organization.cw_at_allowance(unit, turn=r.state.turn)
+            if order.points <= 0 or order.points > allow:
+                return reject(f"Commonwealth anti-tank augmentation allows {allow} points (19.9)")
+            new_cpa = None                                 # 19.97: keeps its own CPA
+        else:
+            at_units = [(u, u.max_toe) for u in board if u.is_gun and u.anti_armor > 0]
+            why = organization.may_augment_at(unit, order.points, at_units)
+            if why:
+                return reject(why)
+            new_cpa = order.points and _at_cpa(unit)       # 19.85: CPA of the AT points
+        r.emit(EventKind.HQ_AUGMENTED, side, actor,
+               {"unit_id": unit.id, "points": order.points,
+                "at_points": organization.at_points(unit) + order.points,
+                "cpa": new_cpa, "rule": "19.9" if side == Side.ALLIED else "19.8"})
+
+    else:
+        reject(f"unknown organization order kind {order.kind!r}")
+
+
+def _maybe_disband_battle_group(r: _Run, side: Side, actor: str, parent_id: str) -> None:
+    """Kampfgruppen HQ's sheet, note 2: "the Kampfgruppe counter must be removed (disbanded) when
+    detaching the final German unit ... In such a situation any remaining Italian units must be
+    detached and any remaining anti-tank TOE Strength Points assigned to the headquarters become
+    replacement points." Fires only for a German Battle Group whose last German subsidiary has just
+    gone -- "elimination through combat does not apply" (note 2)."""
+    hq = r.state.unit(parent_id)
+    if hq is None or hq.org_type != "ge_battle_group" or not hq.alive:
+        return
+    germans = [u for u in r.state.units if u.attached_to == parent_id
+               and u.nationality == "GE" and r.state.on_map(u)]
+    if germans:
+        return
+    # note 2: "any remaining Italian units must be detached". The last German is gone, so every unit
+    # still attached to the Kampfgruppe is one of them -- and leaving it attached to a counter about
+    # to be removed would dangle its 19.12 representation on a dead HQ. This forced administrative
+    # detach is not a player act and carries no [6.3] Capability Point cost.
+    for uid in [u.id for u in r.state.units if u.attached_to == parent_id]:
+        r.emit(EventKind.UNIT_DETACHED, side, actor, {"unit_id": uid, "parent_id": parent_id})
+    # note 2's other half -- the HQ's own anti-tank TOE Strength Points "become replacement points"
+    # -- is served on the removal side by emptying the counter's steps (the BATTLE_GROUP_DISBANDED
+    # handler), which takes the points off the board with it; CREDITING them to a Replacement Point
+    # pool awaits rule 20, which this engine does not yet carry (FLAGGED, as game.organization flags
+    # every rule-20 dependency).
+    r.emit(EventKind.BATTLE_GROUP_DISBANDED, side, actor, {"unit_id": parent_id})
+
+
+def _nation_of(side: Side, order) -> str:
+    """The nationality forming a Battle Group -- from its [19.3] row (ge_/it_ prefix)."""
+    row = organization.formation(order.org_type)
+    return row.get("nation", "GE" if side == Side.AXIS else "CW")
+
+
+def _at_cpa(hq) -> int:
+    """[19.85] "An HQ that contains Anti-Tank TOE Strength Points possesses a CPA equal to that of
+    those Anti-Tank Points." The engine carries no separate AT-gun CPA rating, so this is the HQ's
+    own CPA -- a flagged proxy in the [19.85] report, not a transcribed gun rating."""
+    return hq.cpa
+
+
 def _organization(r: _Run, policy: Policy, side: Side) -> None:
-    """[32.32] THE ORGANIZATION PHASE: detail lorries to carry a depot, or stand them down.
+    """[48 V.C.2] THE REORGANIZATION SEGMENT of the Organization Phase, in its two halves.
+
+    THE COMBAT-UNIT HALF (rule 19), added Block 7.1. The Reorganization Segment is where "any
+    non-assigned units including Trucks" are attached, detached, assigned and reorganized (48 V.C.2
+    / 05 sequence C.1), and where Battle Groups form (19.71), depleted units are rebuilt (19.68)
+    and ad hoc anti-tank is raised (19.8/19.9). Each order is re-validated at THIS boundary against
+    game.organization -- the [19.5] Maximum Attachment Chart, the [19.3] Formation Organization
+    Chart and the [19.72]/[19.73] Kampfgruppe caps -- and charged the [6.3] Capability Points, so a
+    mistaken or adversarial policy cannot corrupt the tree. Base Policy.organization returns [], so
+    every scenario that reorganizes nothing emits no rule-19 event and is byte-identical.
+
+    THE LORRY HALF (rule 32.32), pre-existing. It details Motorization Points to carry a supply
+    dump. *** FLAGGED, OWNER RULING NEEDED (Block 7.1 report). *** Section 32 opens "This Section
+    applies if the Players are playing the Land Game WITHOUT the Air and Logistics Games... Players
+    will not receive any trucks but rather receive Motorization Points" -- so the 30-Motorization-
+    Point dump-carry is the ABSTRACT game's substitute for the full Logistics Game's trucks, and
+    port-plan section 5.1 A3 classes it an abstract rule illegitimately in force whose full-game
+    replacement (a truck convoy LOADS cargo, DRIVES, UNLOADS a new dump: 53.12 + 54.11) already
+    exists in this engine (_truck_convoys / game.relay / SUPPLY_DUMP_ESTABLISHED). The committed
+    docstring below DISPUTES that, reading 32.51 as an exchange rate; A3 rebuts the reading. That
+    is a live contradiction between two authorities in the repo, it is NOT rule 19, and removing a
+    deliberately-committed subsystem mid-block would violate 'touch only what the task requires' --
+    so this block LEAVES it in place and reports it. Resolve under A3, with its own measurement.
+
+    ----------------------------------------------------------------------------------------------
+    [32.32] detail lorries to carry a depot, or stand them down.
 
     "Supply Units may be transported by Motorization Points. THIRTY Motorization Points are required
     to transport one real supply unit... Motorization Points may be attached/detached to supply
@@ -3320,9 +3513,14 @@ def _organization(r: _Run, policy: Policy, side: Side) -> None:
     and may be used by the Enemy." We give them back to their owner rather than to the captor. The
     captor's half means minting Truck Points for the enemy on a captured hex -- a truck-OOB change,
     not this slice."""
+    org_orders = policy.organization(r.state, side)
+    if not org_orders and not r.state.motorized_supply:
+        return                            # nothing to reorganize and no lorries live: byte-identical
+    r.go(Phase.ORGANIZATION, side)
+    for order in org_orders:                                # rule 19: the combat-unit half
+        _reorganize(r, side, order)
     if not r.state.motorized_supply:      # the flagged campaign gate (game.state.motorized_supply)
         return
-    r.go(Phase.ORGANIZATION, side)
     actor = f"{side.value}/Logistics"
     for sid, legs in sorted(r.state.motorization.items()):
         if not any(t.side == side for tid, _ in legs for t in (r.state.truck(tid),) if t):
@@ -4362,6 +4560,28 @@ def _assault_hexside_shift(tmap, atk_hexes, target) -> int:
     return min((s for s in shifts if s < 0), default=0) + max((s for s in shifts if s > 0), default=0)
 
 
+def _parents_of(r: _Run, units) -> list:
+    """[15.53]/[19.12] The Parent Formation counters that REPRESENT these participants.
+
+    A headquarters is not a combat unit, so it never appears in the armed attacker or defender
+    list -- but its subsidiaries' size-equivalence IS its size (9.13: "a full division has a
+    Stacking Point value of 5, while it may include units whose total Stacking Point values are
+    much greater than five"), so the attachment chain has to be walked back onto the board before
+    [15.53] can read it. Walks upward transitively, which is 19.46."""
+    out, seen, frontier = [], {u.id for u in units}, list(units)
+    while frontier:
+        u = frontier.pop()
+        if not u.attached_to or u.attached_to in seen:
+            continue
+        parent = r.state.unit(u.attached_to)
+        if parent is None:
+            continue
+        seen.add(parent.id)
+        out.append(parent)
+        frontier.append(parent)
+    return out
+
+
 def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
                     target: Coord, pinned: set[str], charged: set[str],
                     fired_anti_armor: set[str] = frozenset()) -> bool:
@@ -4442,8 +4662,15 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
         morale_shift=atk_m - def_m,
         attacker_ca_penalty=_combined_arms_penalty(armed_atk),      # rule 15.4
         defender_ca_penalty=_combined_arms_penalty(armed_def),
-        attacker_size=max((u.stacking_points for u in armed_atk), default=0),  # 15.53
-        defender_size=max((u.stacking_points for u in defenders), default=0),  # incl. pinned (15.12)
+        # [15.53] "Largest Unit On = Each Player's largest unit, in size-equivalents, actually
+        # taking part in the combat in the hex." A battalion attached to a division or a
+        # Kampfgruppe is not a battalion in that fight -- 19.12 makes it part of the Parent's
+        # counter -- so game.organization resolves each participant up its attachment chain and
+        # applies 9.26/9.28's shell step-down. Attackers are read against the units in the
+        # attacking hexes so a Parent standing with them is found; defenders against the target's.
+        attacker_size=organization.combat_size(armed_atk + _parents_of(r, armed_atk)),
+        defender_size=organization.combat_size(defenders + _parents_of(r, defenders)),  # incl.
+        # pinned defenders (15.12), which still count toward their side's size-equivalence.
         fortification_level=fort, in_enemy_minefield=mined)
     r.emit(EventKind.COMBAT_RESOLVED, side, actor,
            {"target": list(target), "attackers": [u.id for u in armed_atk],

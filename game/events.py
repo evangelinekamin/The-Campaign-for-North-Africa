@@ -238,6 +238,45 @@ class EventKind(str, Enum):
     # which is a truck-OOB change and not this slice.
     MOTORIZATION_ATTACHED = "MOTORIZATION_ATTACHED"
     MOTORIZATION_DETACHED = "MOTORIZATION_DETACHED"
+    # [19.0] ORGANIZATION AND REORGANIZATION -- the Parent-Formation tree (game.organization),
+    # built and taken apart in the Reorganization Segment of the Organization Phase (48 V.C.2).
+    # Every one of these folds onto Unit.assigned_to / Unit.attached_to / Unit.steps and NOTHING
+    # else: no supply surface is touched, so conservation is untouched. The Capability Points the
+    # [6.3] chart prices them at ride the existing CP_EXPENDED -- one event per counter, because
+    # every organization row of that chart is billed to BOTH the Parent Formation and the
+    # subsidiary ("a cost of one Capability Point each to both units", 19.41/19.43/19.44).
+    #
+    # UNIT_ATTACHED {unit_id, parent_id, assigned, cp} is [19.41]/[19.42]: the Parent's counter now
+    # "represents the attached unit as well" (19.12), so the subsidiary stops stacking on its own
+    # account and the FORMATION's [9.4] size is what [15.53] reads. This is the event that makes
+    # the Organization Size chart reachable at all.
+    # UNIT_DETACHED {unit_id, parent_id, cp} is [19.43]/[19.44], the other direction.
+    # UNIT_ASSIGNED {unit_id, parent_id, previous} is [19.21]/[19.26]: the paper relationship,
+    # which holds a slot in the Parent's TOE wherever the unit physically stands (19.28). An empty
+    # parent_id is the un-assignment [19.25] compels when a Commonwealth cap falls.
+    #
+    # BATTLE_GROUP_FORMED {unit_id, side, nationality, org_type, name, hex, morale, cpa} APPENDS a
+    # Battle Group headquarters counter to state.units -- rule 19.71's "Battle Group counters are
+    # provided to give HQ support", and the Kampfgruppen HQ's sheet's own note 1: "A Kampfgruppe is
+    # formed simply by attaching a German unit to it, THEREBY CREATING THE UNIT." It carries the
+    # `hq` role's cadre TOE and no combat ratings, so it mints no combat power -- what it mints is
+    # ORGANIZATION, which is precisely what 9.13 says a headquarters is for.
+    # BATTLE_GROUP_DISBANDED {unit_id} is note 2: "the Kampfgruppe counter must be removed
+    # (disbanded) when detaching the final German unit". It empties the counter's steps, which is
+    # how a counter leaves this engine's board.
+    #
+    # UNIT_REBUILT {unit_id, points, strength, cp} is [19.61]/[19.68]: Replacement TOE Strength
+    # Points absorbed in the Organization Phase, never past the counter's printed maximum, at one
+    # Capability Point per two points. HQ_AUGMENTED {unit_id, points, at_points, cpa, rule} is the
+    # ad hoc anti-tank of [19.8] (an Axis Brigade-Level HQ, 3-6 points, taking their CPA per 19.85)
+    # and of [19.9] (a Commonwealth infantry battalion from Game-Turn 75, 1-2 points).
+    UNIT_ATTACHED = "UNIT_ATTACHED"
+    UNIT_DETACHED = "UNIT_DETACHED"
+    UNIT_ASSIGNED = "UNIT_ASSIGNED"
+    BATTLE_GROUP_FORMED = "BATTLE_GROUP_FORMED"
+    BATTLE_GROUP_DISBANDED = "BATTLE_GROUP_DISBANDED"
+    UNIT_REBUILT = "UNIT_REBUILT"
+    HQ_AUGMENTED = "HQ_AUGMENTED"
     # Commonwealth railroad (rule 54.3, the inland rail DISTRIBUTION layer). RAIL_HAULED
     # {from_dump, to_dump, commodity, qty} is a CONSERVING dump->dump transfer over the
     # rail network (both dumps rail-connected; qty <= 1500 tons/OpStage of ONE commodity,

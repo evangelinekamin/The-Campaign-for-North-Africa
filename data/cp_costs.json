@@ -1,6 +1,6 @@
 {
   "_source": "6.3 CAPABILITY POINT EXPENDITURE SUMMARY (Charts & Tables Common to Both Players)",
-  "_note": "Transcribed verbatim from the 6.3 chart. The combat engine wires the assault/defend and break-contact/disengage rows; the probe and undergo-barrage rows are transcribed for the record but not yet consumed (the engine does not model a distinct Probe). Terrain/minefield (TEC/CPA formulae), detach/attach, load/unload, construction, paradrop and air-readiness rows are out of scope here -- movement already charges its own CP via UNIT_MOVED.cp_spent.",
+  "_note": "Transcribed verbatim from the 6.3 chart. The combat engine wires the assault/defend and break-contact/disengage rows; the probe and undergo-barrage rows are transcribed for the record but not yet consumed (the engine does not model a distinct Probe). Terrain/minefield (TEC/CPA formulae), load/unload, construction, paradrop and air-readiness rows are out of scope here -- movement already charges its own CP via UNIT_MOVED.cp_spent.",
   "phasing_unit": {
     "barrage_or_assault": 5,
     "undergo_barrage": 3,
@@ -11,5 +11,12 @@
     "defend_probe": 2
   },
   "break_contact": 2,
-  "disengage": 4
+  "disengage": 4,
+  "_organization_note": "The four ORGANIZATION rows of the same 6.3 chart (docs/rules/90-charts-tables-and-play-aids.md:529-532), wired by rule 19 (game.organization). Each is charged to BOTH counters named in its cell -- the Parent Formation and the subsidiary unit -- which is what the parenthesis says and what [19.41]/[19.42]/[19.43]/[19.44] repeat in prose ('a cost of one Capability Point each to both units').",
+  "organization": {
+    "detach": 1,
+    "attach_assigned": 1,
+    "attach_unassigned": 2,
+    "absorb_2_replacement_points": 1
+  }
 }

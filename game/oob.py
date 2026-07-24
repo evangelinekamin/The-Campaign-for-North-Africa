@@ -777,6 +777,11 @@ def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
         (StepRecord(role, s["steps"]),),
         mobility=mob,
         cpa=s["cpa"], stacking_points=s.get("sp", 1),       # 1=battalion (rule 9.4)
+        # [19.61]/[9.26] the counter's printed maximum TOE Strength = its charted full-strength
+        # figure, which is exactly `steps` at construction (the OOB builds every unit at full TOE).
+        # It is the rebuild ceiling (19.61/19.68) and the shell denominator (9.26). A model may
+        # override it (a unit arriving below its paper strength, 19.6 second paragraph).
+        max_toe=model.get("max_toe", s.get("max_toe", s["steps"])),
         oca=model.get("oca", s["oca"]), dca=model.get("dca", s["dca"]),
         barrage=rating("barrage"), anti_armor=rating("anti_armor"),
         armor_protection=rating("armor_protection"), vulnerability=rating("vulnerability"),

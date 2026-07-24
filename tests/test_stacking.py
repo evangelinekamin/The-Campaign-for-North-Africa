@@ -13,10 +13,16 @@ from game.terrain import Terrain
 
 @dataclass
 class S:
+    """A StackUnit stub. `attached_to` / `org_type` joined the protocol when rule 19 landed:
+    §9.12 and §9.21 make a counter's stacking value a function of the organization tree (a bare
+    HQ is 0, a Parent Formation is worth its printed value, an attached subsidiary is inside its
+    Parent's counter). Both default to "independent", which is what every counter here is."""
     stacking_points: int = 1
     is_first_line_truck: bool = False
     is_pure_aa: bool = False
     is_garrison_home: bool = False
+    attached_to: str = ""
+    org_type: str = ""
 
 
 def test_two_battalions_within_default_limit():

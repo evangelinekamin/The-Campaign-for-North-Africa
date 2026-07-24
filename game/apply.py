@@ -7,10 +7,11 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from . import supply
+from . import organization, supply
 from .events import Control, Event, EventKind, Phase, Side
 from .movement import edge
-from .state import GameState, Rommel, StepRecord, SupplyUnit, VP
+from .state import GameState, Rommel, StepRecord, SupplyUnit, Unit, VP
+from .terrain import Mobility
 
 
 def apply(state: GameState, event: Event) -> GameState:
@@ -260,6 +261,58 @@ def apply(state: GameState, event: Event) -> GameState:
         # 32.32's other hinge: the column stands down and the lorries go back on the freight run.
         book = {k2: v for k2, v in state.motorization.items() if k2 != p["supply_id"]}
         return replace(state, motorization=book)
+
+    if k == EventKind.UNIT_ATTACHED:
+        # 19.12: the Parent Formation's counter now represents this unit as well -- "functionally
+        # combined into one unit". Pure: no TOE moves and no supply is touched; what changes is
+        # which counter the board reads it under, and therefore the [9.4] size [15.53] sees.
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, attached_to=p["parent_id"]))
+
+    if k == EventKind.UNIT_DETACHED:
+        # 19.43/19.44: the subsidiary's own counter goes back on the map.
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, attached_to=""))
+
+    if k == EventKind.UNIT_ASSIGNED:
+        # 19.21/19.26/19.25: the paper relationship. An empty parent_id un-assigns (19.25).
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, assigned_to=p["parent_id"]))
+
+    if k == EventKind.BATTLE_GROUP_FORMED:
+        # 19.71 + Kampfgruppen HQ's sheet note 1: "A Kampfgruppe is formed simply by attaching a
+        # German unit to it, thereby creating the unit." A pure APPEND of a headquarters counter
+        # -- the same idiom SUPPLY_DUMP_ESTABLISHED uses for a dump. It carries the HQ cadre's TOE
+        # and NO combat ratings (oca/dca 0, is_combat False), so it adds organization, not power.
+        hq = Unit(p["unit_id"], Side(p["side"]), tuple(p["hex"]),
+                  (StepRecord("hq", p["steps"]),), mobility=Mobility[p["mobility"]],
+                  cpa=p["cpa"], stacking_points=0, oca=0, dca=1, morale=p["morale"],
+                  is_combat=False, nationality=p["nationality"], formation=p["name"],
+                  org_type=p["org_type"], arrival_turn=state.turn)
+        return replace(state, units=state.units + (hq,))
+
+    if k == EventKind.BATTLE_GROUP_DISBANDED:
+        # Kampfgruppen HQ's sheet note 2: "the Kampfgruppe counter must be removed (disbanded)
+        # when detaching the final German unit". Emptying its steps takes the counter off the
+        # board (state.on_map reads Unit.alive), which is how a counter leaves this engine -- and
+        # with the steps go any 19.9 anti-tank TOE Strength Points it carried (note 2: they "become
+        # replacement points"; the RP credit awaits rule 20). Any remaining Italian units were
+        # already detached by their own UNIT_DETACHED events (engine._maybe_disband_battle_group).
+        u = state.unit(p["unit_id"])
+        return state.with_unit(replace(u, steps=()))
+
+    if k == EventKind.UNIT_REBUILT:
+        # 19.61/19.68: Replacement TOE Strength Points absorbed, never past the printed maximum
+        # (the generator checked it against Unit.max_toe). The Capability Points ride CP_EXPENDED.
+        return state.with_unit(organization.absorb(state.unit(p["unit_id"]), p["points"]))
+
+    if k == EventKind.HQ_AUGMENTED:
+        # 19.83/19.85/19.93/19.97: anti-tank TOE Strength Points folded onto a counter as a second
+        # weapons system, taking the CPA the rule prescribes (19.85 the guns' own; 19.97 the
+        # infantry's). 19.87 needs no code -- an HQ is worth zero Stacking Points until units
+        # attach, by 9.12, whatever it contains.
+        u = state.unit(p["unit_id"])
+        return state.with_unit(organization.augment_at(u, p["points"], p.get("cpa")))
 
     if k == EventKind.SUPPLY_DUMP_CONSTRUCTED:
         # 24.9: the heap of supplies in this hex is now a CONSTRUCTED supply dump, which by the

@@ -1,0 +1,329 @@
+{
+  "_source": "[19.3] FORMATION ORGANIZATION CHART -- [19.31] Commonwealth (PDF p.135), [19.32] Italian (PDF p.174), [19.33] German (PDF p.175). Transcribed from scratchpad/port/transcriptions/19-organization-and-15.53-orgsize.md Part B, which read all three pages off the scan at 300dpi and carries an adversarial re-verification (Part B.0).",
+  "_reading_B0": "THE PARENTHESIZED NUMBER ON EVERY COMPOSITION ICON IS THAT COMPONENT'S STACKING-POINT VALUE, NOT A COUNT. The number of each component is how many times its icon repeats in the row. '0x' means one 0-SP company, never 'none'. This corrected a systematic mis-notation in the first pass; see Part B.0.",
+  "_sp_tiers": "[9.4] UNIT BASIC STACKING POINT VALUES: Division 5, Super Brigade 3, (Standard) Brigade / Battle Group 2, Battalion 1, Company 0. [9.12]: an HQ counter's printed value is PARENTHESIZED -- it is worth 0 while nothing is attached to it, and this value when it represents its formation as a combat unit.",
+  "_denominators": "`max_brigades` / `max_battalions` are the [9.26] SHELL denominators, read off each row's own composition: for a division, the number of brigade-equivalents that may be assigned to it; for a brigade, the number of battalions (combat units). [9.26]: a division is a shell when 50% or less of its assignable brigade-equivalents are ATTACHED; a brigade when fewer than 2/3 of its assignable battalions are, with the printed exception for a 2-battalion brigade.",
+  "_denominators_are_derived": "FLAGGED JUDGMENT CALL (not an owner ruling -- the book prints no contradiction, it simply does not print these numbers): max_brigades / max_battalions are COUNTED off each row's composition icons, so the 'what counts as a brigade- or battalion-equivalent' rule is interpretive. Two calls made here, both conservative: a 2-SP artillery/HQ counter is NOT counted as a division brigade-equivalent (e.g. the 15th Panzer's '(2-SP) Arty HQ' is excluded, giving max_brigades=2, not 3) even though 9.22 reads any 2-SP counter as a brigade-equivalent; and MG / heavy-weapons battalions are NOT counted toward a brigade's max_battalions even though 9.26 says 'battalions (combat units)'. These are inert while nothing attaches (the shell test never runs on a live formation); a phase that seeds the [4.44]/[4.45] OA parent tree should re-derive them against a 600dpi re-crop of pp.135/174/175 and get an owner glance first.",
+  "_confidence": "HIGH for the Italian (B.3) and German (B.4) rows -- each row prints its own plain-English name. The Commonwealth rows (B.2) carry the transcription's four numbered legibility flags; the transcription recommends a 600dpi re-crop of PDF p.135 before treating its exact battalion counts as load-bearing. Flagged per row below with `confidence`.",
+  "_not_transcribed_here": "The full component-by-component TOE of each row (which battalion of which branch) is in the transcription document. This file carries the fields the engine consumes -- the [9.12] stacking tier, the organizational level and the [9.26] shell denominators -- plus each row's composition as prose, so nothing is lost and nothing is invented. Joining the chart's component types to the engine's unit roles needs the OA Chart parent tree (port plan T1-2) and is deliberately not attempted here.",
+
+  "formations": {
+    "cw_armor_division_I": {
+      "nation": "CW", "level": "division", "sp": 5, "gt_from": 1, "gt_to": 18,
+      "name": "Commonwealth Armored Division, Organization Type I",
+      "max_brigades": 3, "max_battalions": 0,
+      "composition": "2x Armd Bde (I) + 1x Support Gp (I)",
+      "confidence": "HIGH"
+    },
+    "cw_armor_division_II": {
+      "nation": "CW", "level": "division", "sp": 5, "gt_from": 19, "gt_to": 70,
+      "name": "Commonwealth Armored Division, Organization Type II",
+      "max_brigades": 3, "max_battalions": 0,
+      "composition": "2x Armd Bde (II) + 1x Support Gp (II) + 1x (Armd Car unit or Armd Recon unit)",
+      "confidence": "HIGH"
+    },
+    "cw_armor_division_III": {
+      "nation": "CW", "level": "division", "sp": 5, "gt_from": 71, "gt_to": 91,
+      "name": "Commonwealth Armored Division, Organization Type III",
+      "max_brigades": 2, "max_battalions": 0,
+      "composition": "1x Armd Bde (III) + 1x Support Gp (III) + 1x Armd Car unit",
+      "confidence": "HIGH"
+    },
+    "cw_armor_division_IV": {
+      "nation": "CW", "level": "division", "sp": 5, "gt_from": 92, "gt_to": 0,
+      "name": "Commonwealth Armored Division, Organization Type IV",
+      "max_brigades": 2, "max_battalions": 0,
+      "composition": "1x Armd Bde + 1x Support Gp + 3x Artillery unit + 1x AT Regt + 1x Lt AA unit + 1x MG Bn + 1x Eng Bn + 1x (Armd Car unit or Armd Recon unit)",
+      "confidence": "MEDIUM -- transcription flag 1: the row's first icon is printed with a small 'II' where 'IV' would be expected; transcribed as printed."
+    },
+    "cw_infantry_division": {
+      "nation": "CW", "level": "division", "sp": 5, "gt_from": 1, "gt_to": 0,
+      "name": "Commonwealth Infantry Division",
+      "max_brigades": 3, "max_battalions": 0,
+      "composition": "3x Support Gp (X-echelon glyph) + 3x Artillery unit + 1x AT Regt + 1x Lt AA unit + 1x MG Bn + 1x Eng Bn + 1x (Armd Car unit or Armd Recon unit)",
+      "confidence": "MEDIUM -- transcription flags 2/3 (a faint Lt AA numeral; the infantry-vs-MG battalion glyph)."
+    },
+    "cw_armor_brigade_I": {
+      "nation": "CW", "level": "brigade", "sp": 2, "gt_from": 1, "gt_to": 18,
+      "name": "Commonwealth Armored Brigade, Organization Type I",
+      "max_brigades": 0, "max_battalions": 3,
+      "composition": "3x Tank Bn",
+      "confidence": "HIGH"
+    },
+    "cw_armor_brigade_II": {
+      "nation": "CW", "level": "brigade", "sp": 2, "gt_from": 19, "gt_to": 70,
+      "name": "Commonwealth Armored Brigade, Organization Type II",
+      "max_brigades": 0, "max_battalions": 4,
+      "composition": "3x Tank Bn + 1x infantry-type Bn",
+      "confidence": "MEDIUM -- transcription flag 3 (infantry vs MG battalion glyph)."
+    },
+    "cw_armor_brigade_III": {
+      "nation": "CW", "level": "brigade", "sp": 2, "gt_from": 71, "gt_to": 91,
+      "name": "Commonwealth Armored Brigade, Organization Type III",
+      "max_brigades": 0, "max_battalions": 4,
+      "composition": "3x Tank Bn + 1x infantry-type Bn + 1x Artillery unit",
+      "confidence": "MEDIUM -- transcription flag 3."
+    },
+    "cw_support_group_I": {
+      "nation": "CW", "level": "brigade", "sp": 2, "gt_from": 1, "gt_to": 18,
+      "name": "Commonwealth Support Group, Organization Type I",
+      "max_brigades": 0, "max_battalions": 2,
+      "composition": "2x infantry-type Bn + 1x Artillery unit + 1x AT Regt + 1x (Armd Car unit or Armd Recon unit)",
+      "confidence": "HIGH"
+    },
+    "cw_support_group_II": {
+      "nation": "CW", "level": "brigade", "sp": 2, "gt_from": 19, "gt_to": 70,
+      "name": "Commonwealth Support Group, Organization Type II",
+      "max_brigades": 0, "max_battalions": 1,
+      "composition": "1x infantry-type Bn + 1x Artillery unit + 1x AT Regt",
+      "confidence": "HIGH"
+    },
+    "cw_support_group_III": {
+      "nation": "CW", "level": "brigade", "sp": 2, "gt_from": 71, "gt_to": 91,
+      "name": "Commonwealth Support Group, Organization Type III (Motor Brigade Group after GT 70)",
+      "max_brigades": 0, "max_battalions": 3,
+      "composition": "3x infantry-type Bn + 1x Artillery unit",
+      "confidence": "HIGH"
+    },
+    "cw_infantry_brigade_super": {
+      "nation": "CW", "level": "brigade", "sp": 3, "gt_from": 1, "gt_to": 0,
+      "name": "Commonwealth Infantry Brigade (3 SP) -- 18th Australian, 1st Free French, Polish",
+      "max_brigades": 0, "max_battalions": 3,
+      "composition": "3x Infantry Bn + 1x Artillery unit + 1x AT unit + 1x (Lt AA unit or MG Bn) + 1x (Armd Car unit or Armd Recon unit) + 1x 'Unit' (blank box, SP 0/1)",
+      "confidence": "MEDIUM -- transcription flag 4 (tight 'or' icon clusters)."
+    },
+    "cw_infantry_brigade": {
+      "nation": "CW", "level": "brigade", "sp": 2, "gt_from": 1, "gt_to": 0,
+      "name": "Commonwealth Infantry Brigade (2 SP) -- 3rd Indian / 161st Indian Motor Brigade Group",
+      "max_brigades": 0, "max_battalions": 3,
+      "composition": "3x Infantry Bn",
+      "confidence": "HIGH"
+    },
+    "cw_allied_infantry_brigade": {
+      "nation": "CW", "level": "brigade", "sp": 2, "gt_from": 1, "gt_to": 0,
+      "name": "Allied Infantry Brigade -- 2nd Free French / 1st Greek",
+      "max_brigades": 0, "max_battalions": 3,
+      "composition": "3x Infantry Bn + 1x (Artillery unit or AT unit) + 1x 'Unit' (blank box)",
+      "confidence": "MEDIUM -- transcription flag 4."
+    },
+
+    "it_armor_division": {
+      "nation": "IT", "level": "division", "sp": 5, "gt_from": 1, "gt_to": 0,
+      "name": "Italian Armored Division",
+      "max_brigades": 2, "max_battalions": 0,
+      "composition": "1x (2-SP) Tank Regt + 1x (2-SP) Infantry Regt + 1x ArmdCar unit + 1x AT unit + 1x Arty Regt",
+      "confidence": "HIGH"
+    },
+    "it_tank_group": {
+      "nation": "IT", "level": "division", "sp": 5, "gt_from": 1, "gt_to": 26,
+      "name": "Italian Tank Group (in CNA, the Libyan Tank Command)",
+      "max_brigades": 2, "max_battalions": 0,
+      "composition": "2x (2-SP) Tank Regt",
+      "confidence": "HIGH"
+    },
+    "it_motorized_infantry_division": {
+      "nation": "IT", "level": "division", "sp": 5, "gt_from": 1, "gt_to": 0,
+      "name": "Italian Motorized Infantry Division",
+      "max_brigades": 3, "max_battalions": 0,
+      "composition": "3x (2-SP) Infantry Regt + 1x AT unit + 1x Arty Regt + AA unit + 1x MG Bn + 1x Eng Bn",
+      "confidence": "HIGH"
+    },
+    "it_semi_motorized_infantry_division": {
+      "nation": "IT", "level": "division", "sp": 5, "gt_from": 1, "gt_to": 0,
+      "name": "Italian Semi-motorized Infantry Division",
+      "max_brigades": 2, "max_battalions": 0,
+      "composition": "2x (2-SP) Infantry Regt + AT unit + 1x Arty Regt + 1x MG Bn + 1x Eng Bn + 1x Bersaglieri Bn or 1x (0-SP) Bersaglieri Recon Coy",
+      "confidence": "HIGH"
+    },
+    "it_libyan_division": {
+      "nation": "IT", "level": "division", "sp": 5, "gt_from": 1, "gt_to": 0,
+      "name": "Italian Libyan infantry / parachute infantry division",
+      "max_brigades": 2, "max_battalions": 0,
+      "composition": "2x (2-SP) Infantry Regt + 1x (0-SP) AT unit + 1x Arty Regt. Note: the Gruppo Maletti may assign a third regiment.",
+      "confidence": "HIGH"
+    },
+    "it_tank_regiment_super": {
+      "nation": "IT", "level": "brigade", "sp": 3, "gt_from": 1, "gt_to": 0,
+      "name": "Italian Tank Regiment (3 SP) -- historically four Light battalions and one Medium",
+      "max_brigades": 0, "max_battalions": 5,
+      "composition": "5x Tank Bn",
+      "confidence": "HIGH"
+    },
+    "it_tank_regiment": {
+      "nation": "IT", "level": "brigade", "sp": 2, "gt_from": 1, "gt_to": 0,
+      "name": "Italian Tank Regiment (2 SP)",
+      "max_brigades": 0, "max_battalions": 3,
+      "composition": "3x Tank Bn",
+      "confidence": "HIGH"
+    },
+    "it_bersaglieri_regiment": {
+      "nation": "IT", "level": "brigade", "sp": 2, "gt_from": 1, "gt_to": 0,
+      "name": "Italian Bersaglieri Infantry Regiment",
+      "max_brigades": 0, "max_battalions": 3,
+      "composition": "3x Bersaglieri Bn",
+      "confidence": "HIGH"
+    },
+    "it_infantry_regiment": {
+      "nation": "IT", "level": "brigade", "sp": 2, "gt_from": 1, "gt_to": 0,
+      "name": "Italian Infantry Regiment (infantry / motorized / parachute)",
+      "max_brigades": 0, "max_battalions": 3,
+      "composition": "3x Infantry Bn. Note: the 54th Territorial and 4th of the 10th Army regiments are a single counter, not four.",
+      "confidence": "HIGH"
+    },
+    "it_cavalry_regiment": {
+      "nation": "IT", "level": "brigade", "sp": 2, "gt_from": 1, "gt_to": 0,
+      "name": "Italian Cavalry Regiment",
+      "max_brigades": 0, "max_battalions": 3,
+      "composition": "3x Cavalry Bn",
+      "confidence": "HIGH"
+    },
+    "it_saharan_detachment": {
+      "nation": "IT", "level": "brigade", "sp": 2, "gt_from": 1, "gt_to": 0,
+      "name": "Italian Saharan detachment (an infantry regiment)",
+      "max_brigades": 0, "max_battalions": 3,
+      "composition": "3x Infantry Bn or 1x Cavalry Bn, + 1x MG Bn + 1x (0-SP) MG Coy + 1x Arty Regt",
+      "confidence": "HIGH"
+    },
+    "it_recam": {
+      "nation": "IT", "level": "brigade", "sp": 2, "gt_from": 1, "gt_to": 0,
+      "name": "Reggruppamento Esplorante del Corpo di Manovra (RECAM)",
+      "max_brigades": 0, "max_battalions": 3,
+      "composition": "1x ArmdCar Regt + 1x (0-SP) Recon Coy + 1x Arty Bn + 1x Eng Bn. Note: not an armored regiment for armored-division assignment.",
+      "confidence": "HIGH"
+    },
+
+    "ge_5_light_panzer_division": {
+      "nation": "GE", "level": "division", "sp": 5, "gt_from": 1, "gt_to": 0,
+      "name": "5th Light Panzer Division (becomes the 21st Panzer Division)",
+      "max_brigades": 1, "max_battalions": 0,
+      "composition": "1x (2-SP) Tank Regt + 2x Inf Bn + 1x TankDestroyer Bn + 1x AT Bn + 1x Arty unit + 1x Hvy AA unit + 1x Lt AA unit + 1x Armd Recon Bn + 1x Eng Bn",
+      "confidence": "HIGH"
+    },
+    "ge_21_panzer_division": {
+      "nation": "GE", "level": "division", "sp": 5, "gt_from": 1, "gt_to": 0,
+      "name": "21st Panzer Division",
+      "max_brigades": 2, "max_battalions": 0,
+      "composition": "1x (2-SP) Tank Regt + 1x (2-SP) Infantry Regt + 1x TankDestroyer Bn + 1x AT Bn + 2x Arty unit + 1x Hvy AA unit + 1x Lt AA unit + 1x Armd Recon Bn + 1x Eng Bn",
+      "confidence": "HIGH"
+    },
+    "ge_15_panzer_division": {
+      "nation": "GE", "level": "division", "sp": 5, "gt_from": 1, "gt_to": 0,
+      "name": "15th Panzer Division",
+      "max_brigades": 2, "max_battalions": 0,
+      "composition": "1x (2-SP) Tank Regt + 1x (3-SP) 15th Infantry Brigade + 1x TankDestroyer Bn + 1x (2-SP) Arty HQ + 1x Armd Recon Bn + 1x Eng Bn",
+      "confidence": "HIGH"
+    },
+    "ge_90_leichte_division": {
+      "nation": "GE", "level": "division", "sp": 5, "gt_from": 1, "gt_to": 0,
+      "name": "90th Leichte Afrika Division",
+      "max_brigades": 2, "max_battalions": 0,
+      "composition": "2x (2-SP) Infantry Regt + 2x Inf Bn + 1x AT Bn + 1x Arty unit + 1x Armd Recon Bn + 1x Eng Bn",
+      "confidence": "HIGH"
+    },
+    "ge_164_leichte_division": {
+      "nation": "GE", "level": "division", "sp": 5, "gt_from": 1, "gt_to": 0,
+      "name": "164th Leichte Afrika Division",
+      "max_brigades": 3, "max_battalions": 0,
+      "composition": "3x (2-SP) Infantry Regt + 1x AT Bn + 2x Arty unit + 1x Lt AA unit + 1x Armd Recon Bn + 1x Eng Bn",
+      "confidence": "HIGH"
+    },
+    "ge_armored_regiment": {
+      "nation": "GE", "level": "brigade", "sp": 2, "gt_from": 1, "gt_to": 0,
+      "name": "German Armored Regiment",
+      "max_brigades": 0, "max_battalions": 2,
+      "composition": "2x Tank Bn",
+      "confidence": "HIGH"
+    },
+    "ge_15_infantry_brigade": {
+      "nation": "GE", "level": "brigade", "sp": 3, "gt_from": 1, "gt_to": 0,
+      "name": "15th Infantry Brigade",
+      "max_brigades": 0, "max_battalions": 6,
+      "composition": "3x (2-SP) Infantry Regt. The brigade may never contain more than six battalions of infantry.",
+      "confidence": "HIGH"
+    },
+    "ge_ramcke_brigade": {
+      "nation": "GE", "level": "brigade", "sp": 3, "gt_from": 1, "gt_to": 0,
+      "name": "Ramcke Brigade",
+      "max_brigades": 0, "max_battalions": 5,
+      "composition": "5x Inf Bn",
+      "confidence": "HIGH"
+    },
+    "ge_infantry_regiment": {
+      "nation": "GE", "level": "brigade", "sp": 2, "gt_from": 1, "gt_to": 0,
+      "name": "German Infantry Regiment (the 288th Sonderverband and 361st Afrika may substitute freely)",
+      "max_brigades": 0, "max_battalions": 3,
+      "composition": "3x Inf Bn. No Battle Group may be assigned to a division.",
+      "confidence": "HIGH"
+    },
+    "ge_arko_104": {
+      "nation": "GE", "level": "brigade", "sp": 2, "gt_from": 1, "gt_to": 0,
+      "name": "ArKo 104 -- an artillery Kampfgruppe (German non-divisional artillery sheet, note b)",
+      "max_brigades": 0, "max_battalions": 5,
+      "composition": "A maximum of five artillery units at any one time.",
+      "confidence": "HIGH"
+    },
+
+    "ge_battle_group": {
+      "nation": "GE", "level": "brigade", "sp": 2, "gt_from": 1, "gt_to": 0,
+      "name": "German Battle Group (Kampfgruppe)",
+      "max_brigades": 0, "max_battalions": 4,
+      "composition": "[19.72] A maximum of four battalion-sized units of any type, but no more than one tank battalion and/or two infantry battalions. Up to two additional companies may be attached over this limit.",
+      "confidence": "HIGH -- rule text, not an icon row"
+    },
+    "it_battle_group": {
+      "nation": "IT", "level": "brigade", "sp": 2, "gt_from": 1, "gt_to": 0,
+      "name": "Italian Battle Group",
+      "max_brigades": 0, "max_battalions": 3,
+      "composition": "[19.73] A maximum of three battalion-sized units, only two of which may be infantry and only one of which may be armor. One company-sized unit may be attached.",
+      "confidence": "HIGH -- rule text, not an icon row"
+    },
+    "cw_selby_force": {
+      "nation": "CW", "level": "brigade", "sp": 2, "gt_from": 13, "gt_to": 0,
+      "name": "Selby Force -- the only Commonwealth Battle Group (Matruh Garrison HQ before GT 13)",
+      "max_brigades": 0, "max_battalions": 5,
+      "composition": "No units may be ASSIGNED (Commonwealth OA sheet, Matruh Garrison note); the [19.5] Maximum Attachment Chart governs it entirely.",
+      "confidence": "HIGH -- OA-sheet prose"
+    }
+  },
+
+  "battle_groups": {
+    "_source": "[19.71]-[19.73] plus the Kampfgruppen HQ's sheet (PDF p.165) and the Italian Battle Groups sheet (90-charts:4536-4542).",
+    "_zero_means_no_printed_limit": "In this block a 0 is NOT 'none permitted' -- it is 'the book prints no limit on this'. It applies to max_in_play (German), max_artillery_units (Italian) and max_italian_units_total (Italian). Every positive number is a limit the rules print.",
+    "GE": {
+      "org_type": "ge_battle_group",
+      "max_in_play": 0,
+      "max_battalions": 4,
+      "max_tank_battalions": 1,
+      "max_infantry_battalions": 2,
+      "extra_companies": 2,
+      "max_artillery_units": 2,
+      "max_italian_units_total": 3,
+      "named": ["Badde", "Bach", "Dedeking", "Fischer", "Graf", "Kaiser", "Knabe", "Kost",
+                "Marcks", "Menny", "Mitte", "Pfeiffer", "Schwerin", "Voss"],
+      "_max_in_play_note": "0 = NO CAP, and that is the book's own word: 'If the Axis Player wishes to form more Kampfgruppen than he has battlegroup counters, he may do so' (Kampfgruppen HQ's sheet note a). The fourteen names are 'a random selection of actual groups formed during the campaign'.",
+      "_notes": [
+        "1. A Kampfgruppe is formed simply by attaching a German unit to it, thereby creating the unit.",
+        "2. The Kampfgruppe counter must be removed (disbanded) when detaching the final German unit (elimination through combat does not apply). In such a situation any remaining Italian units must be detached and any remaining anti-tank TOE Strength Points assigned to the headquarters become replacement points.",
+        "3. The German Player may never attach/assign more than two artillery-type units to a Kampfgruppe unless it is either the 1st or 2nd Afrika Artillery Regiment headquarters.",
+        "4. No more than a total of three Italian units may be attached to all of the German Kampfgruppen in play at any time."
+      ]
+    },
+    "IT": {
+      "org_type": "it_battle_group",
+      "max_in_play": 2,
+      "max_battalions": 3,
+      "max_tank_battalions": 1,
+      "max_infantry_battalions": 2,
+      "extra_companies": 1,
+      "max_artillery_units": 0,
+      "max_italian_units_total": 0,
+      "named": ["Allegri", "Bignami", "Calpani", "Crucilla", "Fabrizi", "Ferrara", "Moech",
+                "Pacquali", "Piana"],
+      "_max_in_play_note": "[19.73]: 'No more than two Italian Battle Groups may be in existence at one time.' No counters are provided; they are formed on paper from the Italian OA Sheet list.",
+      "_notes": [
+        "[19.73] Maximum three battalion-sized units, only two of which may be infantry and only one of which may be armor. One company-sized unit may be attached.",
+        "The Italian Battle Groups are considered to be brigade-level headquarters and can be infantry, armor, infantry-armor, or artillery."
+      ]
+    }
+  }
+}

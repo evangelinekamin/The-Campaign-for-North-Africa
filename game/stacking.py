@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import Iterable, Protocol
 
+from . import organization
 from .terrain import Terrain
 
 ROAD_TRACK_STACK_LIMIT = 5      # §9.33 (sourced from prose)
@@ -27,20 +28,31 @@ class StackUnit(Protocol):
     is_first_line_truck: bool   # §9.29: excluded from hex stacking (and road space)
     is_pure_aa: bool            # §9.16b/§46.17: free in major cities / air facilities
     is_garrison_home: bool      # §9.16a: free in its assigned city/village
+    attached_to: str            # §9.21/§19.12: represented by its Parent Formation's counter
+    org_type: str               # §9.12: an HQ's parenthesized value lives on the 19.3 chart
 
 
-def counts_in_hex(u: StackUnit, terrain: Terrain) -> int:
+def counts_in_hex(u: StackUnit, terrain: Terrain, stack: Iterable[StackUnit] = ()) -> int:
+    """§9.11-§9.21: what one counter costs the hex it stands in.
+
+    `stack` is the rest of the hex, needed only for the rule-19 organization tree: an HQ is
+    worth "'0' when it has no combat units of any type attached; the printed number... when it
+    represents the division or brigade as a combat unit" (§9.12), and a unit attached to a Parent
+    is inside that Parent's counter and costs nothing more (§9.21). Every attached unit is in its
+    Parent's hex by §19.13, so the hex is all the context this needs. Default () = no tree, which
+    reads the printed value on every counter -- the pre-rule-19 behaviour, unchanged."""
     if u.is_first_line_truck:                       # §9.29
         return 0
     if u.is_garrison_home:                          # §9.16a
         return 0
     if u.is_pure_aa and terrain == Terrain.MAJOR_CITY:   # §9.16b (city; airfield/strip later)
         return 0
-    return u.stacking_points
+    return organization.size(u, stack)
 
 
 def hex_points(units: Iterable[StackUnit], terrain: Terrain) -> int:
-    return sum(counts_in_hex(u, terrain) for u in units)
+    stack = tuple(units)
+    return sum(counts_in_hex(u, terrain, stack) for u in stack)
 
 
 def within_hex_limit(units: Iterable[StackUnit], terrain: Terrain,
@@ -50,8 +62,10 @@ def within_hex_limit(units: Iterable[StackUnit], terrain: Terrain,
 
 def road_track_points(units: Iterable[StackUnit]) -> int:
     # §9.29: first-line trucks don't count for road space either; unattached truck
-    # convoys DO (modelled when the truck/supply slice lands).
-    return sum(u.stacking_points for u in units if not u.is_first_line_truck)
+    # convoys DO (modelled when the truck/supply slice lands). Road space is denominated in
+    # the same Stacking Points as the hex limit, so it reads the same §9.12/§9.21 tree.
+    stack = tuple(units)
+    return sum(organization.size(u, stack) for u in stack if not u.is_first_line_truck)
 
 
 def within_road_track_limit(units: Iterable[StackUnit]) -> bool:

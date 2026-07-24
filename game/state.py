@@ -127,6 +127,41 @@ class Unit:
     fl_light: int = 0              # 53.11 first-line Truck Points by 54.2 class -- the 59.42
     fl_medium: int = 0             #   allotment; the unit's carrying ceiling (supply.truck_capacity),
     fl_heavy: int = 0              #   the way Port.cap_* is a port's.
+    # --- [19.0] ORGANIZATION: THE PARENT-FORMATION TREE (game.organization) --------------------
+    # "Each unit represented by a counter in the game is either independent or ASSIGNED and/or
+    # ATTACHED to a Parent Formation" (19.0). The two relations are different and a unit may hold
+    # one of each at once (19.13), never two of either:
+    #
+    #   `assigned_to` -- the Parent Formation this counter is part of ON PAPER (19.11). It takes up
+    #     that Parent's TOE space wherever it physically is ("Remember: assigned units take up space
+    #     in a Parent Unit's TOE, regardless of where they are", 19.28), and it need NOT be in the
+    #     Parent's hex.
+    #   `attached_to` -- the Parent Formation whose counter REPRESENTS this one on the map (19.12):
+    #     "not only are both the attached unit and the Parent Formation in the same hex, but they
+    #     are functionally combined into one unit". This is the load-bearing one. An attached unit
+    #     stacks at ZERO on its own account, because it is inside the Parent's counter (9.21), and
+    #     it is the Parent's [9.4] size -- not its own -- that the [15.53] Organization Size chart
+    #     reads (9.13: "a full division has a Stacking Point value of 5, while it may include units
+    #     whose total Stacking Point values are much greater than five").
+    #   `org_type` -- the [19.3]/[19.5] chart row that governs this counter as a PARENT FORMATION
+    #     (data/formation_organization.json, data/maximum_attachment.json): its [9.12] parenthesized
+    #     Stacking Point value, its assignment maxima and its attachment maxima. '' is every counter
+    #     that is not a Parent Formation, which is every battalion and company.
+    #
+    # All three default to '' -- no tree at all -- so every existing counter, every scenario and
+    # every hand-built test unit is independent and byte-identical until an order attaches something.
+    assigned_to: str = ''          # 19.11: the Parent Formation on paper (may be elsewhere)
+    attached_to: str = ''          # 19.12: the Parent Formation whose counter represents this one
+    org_type: str = ''             # the [19.3]/[19.5] row governing this counter as a Parent
+    # [19.61] "No unit may ever be increased above its stated maximum TOE Strength Level (listed in
+    # the OA Chart for that unit)" -- the counter's printed ID-Code Maximum TOE Strength. It is the
+    # ceiling every rebuild is measured against (19.61/19.68, and rule 20's Replacement Points), and
+    # the denominator of [9.26]'s battalion-shell test ("less than 50% of its maximum TOE Strength
+    # Points... an artillery unit must be less than 25%"). game.oob seeds it from the same charted
+    # full-strength figure it already builds `steps` from. Default 0 means "no printed maximum on
+    # record": no rebuild ceiling to enforce and no shell test to run, which is what every
+    # hand-built counter and every pre-rule-19 scenario had.
+    max_toe: int = 0
     # Derived TOE totals, cached at construction (rule 11.32 reads them ~38M times a run).
     # steps + broken_down are the only inputs and change ONLY via replace(), which re-runs
     # __post_init__ -- so the cache can never go stale. compare/repr=False keeps eq/hash/repr

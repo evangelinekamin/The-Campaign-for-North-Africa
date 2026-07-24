@@ -10,6 +10,45 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+NOT RE-BASELINED BY RULE [19.0] ORGANIZATION AND KAMPFGRUPPEN (Block 7.1), 2026-07-24, AND THAT WAS
+CHECKED RATHER THAN ASSUMED -- both signatures recomputed TWICE on the tree and are UNCHANGED
+(dda6faa445b4 / 5f02a0c4fb9e).
+
+Rule 19 -- the entire assign/attach/detach/Kampfgruppe hierarchy -- was MISSING: Unit had no
+parent/assigned/attached field, so no division and no Battle Group could ever form, and the
+[15.53] Organization Size Close Assault chart (transcribed exactly, verified against the scan)
+could never reach its Brigade / Super-Brigade / Division rows -- no counter carries more than one
+Stacking Point (the ten HQ / gun roles are SP 0, everything else SP 1), so the chart could fire
+only on its lowest (1,0) 'battalion vs. a lone gun or company' edge and never on the 2 / 3 / 5 SP
+tiers. The block adds the tree (game.state.Unit.assigned_to/attached_to/org_type), the [19.3]/[19.5] charts as
+data (data/formation_organization.json, data/maximum_attachment.json), the [6.3] organization CP
+rows, the [9.2] unit-equivalent + [9.26] shell arithmetic and the [19.6]/[19.8]/[19.9] rebuild and
+ad-hoc-AT paths (game.organization), and rewires close assault to read a formation's size up its
+attachment chain with 9.28's shell step-down (engine._parents_of + organization.combat_size).
+
+It moves NEITHER benchmark log, and the reason is STRUCTURAL, not luck. Two independent facts:
+
+  * NOTHING IS ATTACHED in either scenario. The historical starting tree lives on the [4.44]/[4.45]
+    Organization at Arrival Charts, which are not transcribed (port plan T1-2), so game.oob seeds
+    no org_type and no attachment; and ScriptedPolicy issues no organization order, so no division
+    or Kampfgruppe forms. Every counter stays independent at SP 1 -- exactly what it was.
+  * THE ONE LIVE CHANGE TO EXISTING COMBAT -- close assault now reads size_equivalent (9.28 shell
+    step-down) instead of raw stacking_points, off the max_toe game.oob now seeds -- is never
+    EXERCISED here. Instrumented over both full benchmark runs: organization.combat_size diverges
+    from the old max(stacking_points) ZERO times. These two scripted scenarios resolve almost no
+    close assault (their combat is Barrage / Anti-Armor / auto-Surrender, as the 15.84 note above
+    records), and in none of it is a participant a shell. So the new path is handed only
+    full-strength SP-1 battalions and returns 1, byte-for-byte as before.
+
+The machinery IS proven to fire -- by tests/test_organization.py, whose headline
+test_org_size_shift_fires_for_the_first_time_when_a_kampfgruppe_forms builds a four-battalion German
+Battle Group and shows the [15.53] chart shift TWO columns off its brigade tier (2 SP vs 1 SP) --
+the first time the chart reaches that tier, which no counter could do before rule 19 -- and
+test_a_division_against_a_company_is_the_chart_s_eight_column_shift the 5-vs-0 eight-column case. It
+will move the CAMPAIGN log (not signature-pinned) the moment either the T1-2 parent tree lands or a
+policy forms a Kampfgruppe.
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-24 -- CAUSE: rule [10.31-10.36] MANDATORY ATTACK (Phase 6.3, "make contact cost
 something"). ONE rule moves these logs. (This supersedes the FIRST cut of Phase 6.3 earlier the same
 day, which paired the sweep with a break-off change that a repair pass has since reverted -- see the
