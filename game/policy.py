@@ -117,10 +117,13 @@ class OrganizationOrder:
                     counter's printed maximum, at one CP per two points.
       'augment'  -- [19.8]/[19.9] add `points` of ad hoc anti-tank to a Brigade-Level HQ (Axis) or
                     an eligible Commonwealth infantry battalion.
+      'withdraw' -- [20.9] the Commonwealth Player VOLUNTARILY withdraws `unit_id` (an eligible
+                    combat battalion at >=75% TOE, standing in Cairo/Alexandria) for the Victory
+                    Points Block 7.3 scores under 64.75.
 
     Every one is re-validated at the engine boundary (game.engine._reorganize) like every other
     order, so an adversarial or a mistaken policy cannot corrupt the tree."""
-    kind: str                       # 'attach'|'detach'|'assign'|'form_kg'|'rebuild'|'augment'
+    kind: str               # 'attach'|'detach'|'assign'|'form_kg'|'rebuild'|'augment'|'withdraw'
     unit_id: str = ''
     parent_id: str = ''
     points: int = 0

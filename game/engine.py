@@ -180,6 +180,9 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
         _replacement_production(r)                       # 20.7/20.78B: the Commonwealth Infantry Production
                                                         # roll (once per Game-Turn) -- the replacement
                                                         # economy's FLOW IN, into GameState.replacement_pool
+        _commonwealth_withdrawals(r)                     # 20.8/[4.43a]: units pulled for Greece/Crete/Syria
+        _replacement_spend(r)                            # 19.61/20.4: ...and the FLOW OUT (Block 7.2b) --
+                                                        # the CW QM rebuilds depleted infantry from it
         _stores_setup(r)                                # 48 IV: Stores Expenditure + 6% base evaporation
         for stage in (1, 2, 3):
             r.ports_bombed_this_stage = set()            # 55.18: this stage's bomb ledger starts empty
@@ -1189,6 +1192,105 @@ def _replacement_production(r: _Run) -> None:
     r.emit(EventKind.REPLACEMENTS_PRODUCED, Side.ALLIED, "ALLIED/QM",
            {"side": Side.ALLIED.value, "type": "infantry", "points": points,
             "plan_turn": plan_turn, "arrival_turn": r.state.turn}, rng_draws=(d1, d2))
+
+
+def _replacement_spend(r: _Run) -> None:
+    """[19.61]/[19.68]/[20.4] THE REPLACEMENT ECONOMY'S FLOW OUT (Block 7.2b) -- the thing that closes
+    the loop 7.2a opened. Block 7.2a filled GameState.replacement_pool and NOTHING drew it down; here
+    the Commonwealth Quartermaster spends the arrived Infantry Replacement Points to rebuild depleted
+    Commonwealth infantry, restoring TOE Strength Points (19.61) at one Capability Point per two (19.68).
+    THIS is the first ADDITIVE write to Unit.steps in the campaign.
+
+        20.4  "Replacement Points are... added to under-strength units to bring them back toward their
+               maximum TOE Strength." -- via engine._rebuild, which draws the [20.3] class from the pool.
+
+    SCRIPTED, once per Game-Turn (right after the production roll, so a point arrived this turn is
+    spendable this turn), most-depleted battalion first, to full TOE, until the pool is dry. Two
+    scoped SIMPLIFICATIONS, both flagged:
+
+      * 20.43 TRAINING is SKIPPED this block (it is Block 7.4): the pool comment calls an arrived
+        point 'available-to-train, not available-to-absorb', but with no training clock we treat it as
+        absorbable on arrival. The spend is therefore FASTER than the trained rule; 7.4 adds the delay.
+      * a once-per-Game-Turn QM auto-spend is the deterministic PROXY for the player's per-OpStage
+        Organization-Phase rebuilding choice -- the QM seat is scripted (CLAUDE.md), and 'how many steps
+        a campaign restores' must not hinge on an LLM's whim. 19.64's supply-trace gate on the recipient
+        (a replacement reaches a unit that can trace to its arrival city) is not modelled -- a depleted
+        on-map battalion is rebuilt wherever it stands.
+
+    Gated on GameState.replacement_production, exactly as the flow-in is -- so only the campaign runs it
+    and every benchmark stays byte-identical (the pool is empty, and the die of the flow-in it depends
+    on never fired there either)."""
+    if not r.state.replacement_production:
+        return
+    key = f"{Side.ALLIED.value}/infantry"
+    if r.state.replacements_available(key) <= 0:
+        return
+    depleted = [u for u in r.state.living(Side.ALLIED)
+                if r.state.on_map(u) and u.max_toe > 0 and u.strength < u.max_toe
+                and organization.replacement_kind(u) == "any_other_infantry"]
+    if not depleted:
+        return
+    # most-depleted first (largest deficit), deterministic tiebreak on id
+    depleted.sort(key=lambda u: (u.strength - u.max_toe, u.id))
+    r.go(Phase.ORGANIZATION, Side.ALLIED)
+    for snap in depleted:
+        avail = r.state.replacements_available(key)
+        if avail <= 0:
+            break
+        unit = r.state.unit(snap.id)                      # fresh: a prior rebuild folded already
+        points = min(organization.rebuild_headroom(unit, unit.max_toe), avail)   # 20.3: 1 Inf/TOE
+        if points > 0:
+            _rebuild(r, Side.ALLIED, unit, points)
+
+
+def _commonwealth_withdrawals(r: _Run) -> None:
+    """[20.8]/[4.43a] THE COMMONWEALTH MANDATORY WITHDRAWALS -- the formations History pulled from the
+    desert for Greece, Crete, Syria, Iraq and Cyprus, REMOVED from play at their scheduled Game-Turn
+    (20.84). Until now the campaign only ever ADDED the schedule's (Rtn) returns (seeded as fresh
+    arrivals in reinforcements_campaign.json) and never SUBTRACTED the originals, so the Eighth Army
+    grew without bound and every returned formation was a DUPLICATE. This is the subtraction.
+
+    20.83, its cross-reference corrected under the named errata key (owner ruling 3: the printed
+    '(20.75)' is a typo for (20.82)): a scheduled unit not at Cairo/Alexandria by its Stage, OR below
+    75% of its maximum TOE Strength, is ELIMINATED rather than cleanly withdrawn -- the anti-
+    procrastination penalty. Both branches take the counter off the board; the flag is recorded for
+    64.75 (Block 7.3) and for the future return-cancellation an elimination implies (a properly
+    withdrawn unit returns, an eliminated one may not -- but the (Rtn) arrivals are pre-seeded, so this
+    block records the distinction without cancelling the return: FLAGGED).
+
+    20.82 governs a BY-TYPE withdrawal (only GT97's 'any three infantry battalions'): the count is
+    filled with battalions at >=75% TOE, else the highest-TOE available (20.82's own fallback).
+
+    TURN-GRANULAR, at the turn's start, exactly as reinforcements arrive at Stage 1 regardless of their
+    own arrival_stage -- the row's transcribed `stage` is not used for timing (FLAGGED). Gated on
+    GameState.commonwealth_withdrawals so only the campaign runs it; every benchmark stays byte-identical."""
+    if not r.state.commonwealth_withdrawals:
+        return
+    rows = replacements.withdrawals_for_turn(r.state.turn)
+    if not rows:
+        return
+    bases = set(replacements.withdrawal_base_hexes().values())
+    frac = replacements.withdrawal_toe_fraction()
+    emitted = False
+    for row in rows:
+        targets = [u for u in r.state.living(Side.ALLIED)
+                   if r.state.on_map(u) and replacements.withdrawal_matches(u.id, row["match"])]
+        n = row.get("by_type", 0)
+        if n:                                             # 20.82: additional infantry battalions by TOE
+            taken = {u.id for u in targets}
+            pool = [u for u in r.state.living(Side.ALLIED)
+                    if r.state.on_map(u) and u.id not in taken and u.max_toe > 0
+                    and organization.replacement_kind(u) == "any_other_infantry"]
+            pool.sort(key=lambda u: (u.strength < frac * u.max_toe, -u.strength, u.id))
+            targets += pool[:n]
+        for u in sorted(targets, key=lambda u: u.id):
+            if not emitted:
+                r.go(Phase.ORGANIZATION, Side.ALLIED)
+                emitted = True
+            clean = tuple(u.hex) in bases and (u.max_toe <= 0 or u.strength >= frac * u.max_toe)
+            r.emit(EventKind.UNIT_WITHDRAWN, Side.ALLIED, "ALLIED/Command",
+                   {"unit_id": u.id, "voluntary": False, "eliminated": not clean,
+                    "turn": r.state.turn})
 
 
 def _naval_convoys(r: _Run, policies: dict | None = None) -> None:
@@ -3335,6 +3437,48 @@ def _reject(r: _Run, side: Side, actor: str, order: MoveOrder, reason: str,
             "reason": reason})
 
 
+def _rebuild(r: _Run, side: Side, unit, points: int) -> str:
+    """[19.61]/[19.68]/[20.3]/[20.7] Rebuild `unit` by `points` Replacement TOE Strength Points,
+    DRAWING those points from the pool the flow-in filled. Returns '' on success -- UNIT_REBUILT
+    emitted (the absorb + the pool debit) and the 19.68 Capability Points charged -- else the reason
+    it could not. The single gate the policy 'rebuild' order and the _replacement_spend QM beat share,
+    so a rebuild never conjures strength from an empty pool.
+
+    [20.3] fixes which class of Replacement Point rebuilds this counter and how many per TOE point;
+    only single-class rows are wired this block (the mixed 'Heavy Weapons' = 1 Inf & 1 Gun row and the
+    equipment classes await the Axis/[20.78C] draw-at-will flow-in). A free-rebuild row (Road/Railroad
+    Construction, note f) carries no pool key and costs nothing."""
+    if points <= 0:
+        return "no Replacement Points offered"
+    charge = replacements.conversion_charge(organization.replacement_kind(unit))
+    if not charge:
+        pool_key, cost = "", 0                              # [20.3] note f: a free rebuild
+    elif len(charge) == 1:
+        cls, per = next(iter(charge.items()))
+        pool_key, cost = f"{side.value}/{cls}", per * points
+    else:
+        return ("[20.3] this counter needs more than one class of Replacement Point to rebuild; "
+                "the mixed-class rows are not wired in Block 7.2b")
+    if cost > r.state.replacements_available(pool_key):
+        return (f"insufficient Replacement Points: {cost} of {pool_key!r} needed, "
+                f"{r.state.replacements_available(pool_key)} available (20.7)")
+    why = organization.may_rebuild(unit, points=points)
+    if why:
+        return why
+    actor = f"{side.value}/Command"
+    r.emit(EventKind.UNIT_REBUILT, side, actor,
+           {"unit_id": unit.id, "points": points, "strength": unit.strength + points,
+            "pool_key": pool_key, "cost": cost})
+    price = organization.rebuild_cp(points)                 # 19.68: one CP per two points, to both
+    if price:
+        r.emit(EventKind.CP_EXPENDED, side, actor,
+               {"unit_id": unit.id, "activity": "rebuild", "cp": price})
+        if unit.assigned_to:                               # 19.68: "and its parent, if such"
+            r.emit(EventKind.CP_EXPENDED, side, actor,
+                   {"unit_id": unit.assigned_to, "activity": "rebuild", "cp": price})
+    return ""
+
+
 def _reorganize(r: _Run, side: Side, order) -> None:
     """One rule-19 act in the Reorganization Segment, validated at the boundary and folded.
 
@@ -3428,16 +3572,9 @@ def _reorganize(r: _Run, side: Side, order) -> None:
         unit = r.state.unit(order.unit_id)
         if unit is None or unit.side != side:
             return reject("no such friendly unit")
-        why = organization.may_rebuild(unit, points=order.points)
+        why = _rebuild(r, side, unit, order.points)         # [20.3]/[20.7] draws the pool + 19.68 CP
         if why:
             return reject(why)
-        r.emit(EventKind.UNIT_REBUILT, side, actor,
-               {"unit_id": unit.id, "points": order.points,
-                "strength": unit.strength + order.points})
-        price = organization.rebuild_cp(order.points)
-        cp(unit.id, "rebuild", price)
-        if unit.assigned_to:                               # 19.68: "and its parent, if such"
-            cp(unit.assigned_to, "rebuild", price)
 
     elif order.kind == "augment":
         unit = r.state.unit(order.unit_id)
@@ -3458,6 +3595,27 @@ def _reorganize(r: _Run, side: Side, order) -> None:
                {"unit_id": unit.id, "points": order.points,
                 "at_points": organization.at_points(unit) + order.points,
                 "cpa": new_cpa, "rule": "19.9" if side == Side.ALLIED else "19.8"})
+
+    elif order.kind == "withdraw":
+        # [20.9] the VOLUNTARY Commonwealth withdrawal -- the Player elects to pull an eligible
+        # battalion for Victory Points (64.75-A, scored in Block 7.3). 64.75-A's own eligibility: a
+        # combat battalion at >=75% TOE Strength that starts the Stage in Alexandria or Cairo. The
+        # act is here; only the CW may do it (64.75 is a Commonwealth-only clause). No policy issues
+        # this yet -- it is the mechanism 7.3 scores.
+        unit = r.state.unit(order.unit_id)
+        if unit is None or unit.side != side:
+            return reject("no such friendly unit")
+        if side != Side.ALLIED:
+            return reject("only the Commonwealth may voluntarily withdraw (64.75)")
+        if not unit.is_combat:
+            return reject("only a combat battalion may be voluntarily withdrawn (64.75-A)")
+        frac = replacements.withdrawal_toe_fraction()
+        if unit.max_toe > 0 and unit.strength < frac * unit.max_toe:
+            return reject("a voluntarily-withdrawn unit must be at least 75% of TOE Strength (64.75-A)")
+        if tuple(unit.hex) not in set(replacements.withdrawal_base_hexes().values()):
+            return reject("must start the Stage in Alexandria or Cairo to be withdrawn (64.75-A)")
+        r.emit(EventKind.UNIT_WITHDRAWN, side, actor,
+               {"unit_id": unit.id, "voluntary": True, "eliminated": False, "turn": r.state.turn})
 
     else:
         reject(f"unknown organization order kind {order.kind!r}")

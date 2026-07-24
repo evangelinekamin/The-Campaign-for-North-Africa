@@ -437,6 +437,30 @@ def absorb(unit, points: int) -> Unit:
     return replace(unit, steps=steps)
 
 
+def replacement_kind(unit) -> str:
+    """[20.3] Which Replacement Point Conversion Chart row governs this counter -- the proxy
+    that maps an engine Unit onto a chart TYPE, so the SPEND knows which class of Replacement
+    Point (and how many) rebuilds it.
+
+    FLAGGED, the same restrictive proxy the [19.5] `_is_infantry` classifier already carries:
+    the engine puts no branch symbol on a counter (the OOB's mg / commando / engineer roles are
+    not on Unit), so the chart's finer infantry types -- Commando (3 Inf), Machinegun / Paratroop /
+    Bersaglieri / Engineer Battalion (2 Inf) -- all COLLAPSE into 'any_other_infantry' (1 Inf),
+    the cheapest infantry row. That is the cheap direction, and it is where the wired CW infantry
+    spend draws; the finer rows return when the branch symbol is transcribed ([4.47]-[4.49])."""
+    if unit.is_tank:
+        return "tank"
+    if unit.is_gun:                                    # a Vulnerability-rated gun (11.12)
+        if unit.barrage > 0:
+            return "artillery"
+        if unit.anti_armor > 0:
+            return "anti_tank"
+        return "anti_air"
+    if not unit.is_combat and unit.org_type:           # a bare Parent-Formation headquarters
+        return "any_headquarters_unit"
+    return "any_other_infantry"
+
+
 # --- [19.8] ad hoc Axis anti-tank batteries ----------------------------------------------
 
 def at_points(unit) -> int:

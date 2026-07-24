@@ -26,11 +26,19 @@ from functools import lru_cache
 
 _PATH = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "data", "replacements.json"))
+_WITHDRAWALS_PATH = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "..", "data", "withdrawals_campaign.json"))
 
 
 @lru_cache(maxsize=1)
 def _data() -> dict:
     with open(_PATH, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+@lru_cache(maxsize=1)
+def _withdrawals() -> dict:
+    with open(_WITHDRAWALS_PATH, encoding="utf-8") as fh:
         return json.load(fh)
 
 
@@ -174,3 +182,84 @@ def commonwealth_tonnage_per_point(key: str) -> int:
     """[20.75] Zero, always. The Commonwealth Player has no Shipping Problems; his Replacement
     Points -- infantry stream and equipment chart alike -- simply arrive, free of tonnage."""
     return 0
+
+
+# --- [20.3] the REPLACEMENT POINT CONVERSION CHART (Block 7.2b, THE SPEND) ----------------
+
+def _conversion() -> dict:
+    return _data()["replacement_conversion_20_3"]
+
+
+def conversion_rows() -> list:
+    """Every row of the [20.3] Replacement Point Conversion Chart -- unit type -> the
+    Replacement Points, by class, that restore one of its TOE Strength Points."""
+    return _conversion()["rows"]
+
+
+def conversion_for(unit_type: str) -> dict:
+    """The [20.3] row for a unit TYPE key (e.g. 'any_other_infantry', 'tank'). Its `requires`
+    is a list of ALTERNATIVES (OR); each alternative a list of {class,count} (AND). An empty
+    `requires` is the free Road/Railroad Construction rebuild (note f)."""
+    for row in conversion_rows():
+        if row["unit_type"] == unit_type:
+            return row
+    raise KeyError(f"no [20.3] Replacement Point Conversion row {unit_type!r}")
+
+
+def conversion_charge(unit_type: str) -> dict:
+    """The DEFAULT Replacement-Point charge to rebuild ONE TOE Strength Point of `unit_type`:
+    the FIRST [20.3] alternative folded to {class: count}. The first alternative is the plain
+    same-class rebuild (a Recce/Armored-Car row's second alternative is the Lt-Tank UPGRADE,
+    Case 20.5). {} for the free Road/Railroad Construction row (note f)."""
+    alts = conversion_for(unit_type)["requires"]
+    if not alts:
+        return {}
+    charge: dict = {}
+    for req in alts[0]:
+        charge[req["class"]] = charge.get(req["class"], 0) + req["count"]
+    return charge
+
+
+# --- [20.8] the Commonwealth MANDATORY WITHDRAWAL schedule (Block 7.2b) -------------------
+
+def withdrawal_rows() -> list:
+    """The [4.43a] WD-column schedule -- every mandatory Commonwealth withdrawal, {turn, stage,
+    formation, match, tpt, by_type?}. `match` is a list of counter-name prefixes (may be empty
+    where the named formation is not yet in the OOB)."""
+    return _withdrawals()["withdrawals"]
+
+
+def withdrawals_for_turn(turn: int) -> list:
+    """The withdrawal rows scheduled for this Game-Turn. The engine fires them at the turn's start
+    (turn-granular, as reinforcements arrive at Stage 1 regardless of their own arrival_stage); the
+    row's `stage` is transcribed but not used for timing -- flagged in engine._commonwealth_withdrawals."""
+    return [w for w in withdrawal_rows() if w["turn"] == turn]
+
+
+def withdrawal_base_hexes() -> dict:
+    """[20.83]/[20.84] Cairo and Alexandria, as axial (q, r) -- the two cities a withdrawing unit
+    must reach by its Stage or be ELIMINATED."""
+    return {city: tuple(hx) for city, hx in _withdrawals()["base_hexes"].items()}
+
+
+def withdrawal_toe_fraction() -> float:
+    """[20.82] The 75% of maximum TOE Strength a withdrawing unit must hold to be cleanly withdrawn
+    (else eliminated, 20.83) and to satisfy a by-type withdrawal. Read from the named errata key
+    that records the 20.83 '(20.75)' -> (20.82) cross-reference typo (owner ruling 3)."""
+    return _withdrawals()["toe_threshold_errata_20_82"]["toe_fraction"]
+
+
+def withdrawal_matches(counter: str, prefixes) -> bool:
+    """Does an engine counter id belong to a withdrawal's formation? The schedule's `match` prefixes
+    are the human-readable formation names ('7 In Bde'); engine unit ids are the slug game.oob._uid
+    builds by turning every space into a hyphen ('HQ-7-In-Bde', '7-In-Bde-I', '7-In-Bde-(Rtn)-I').
+    Both sides are normalised to that slug, then a counter matches prefix P if it equals P or 'HQ-'+P,
+    or begins with P+'-' or 'HQ-'+P+'-' -- so a formation's HQ, its battalions and its later (Rtn)
+    instances all match one prefix, and being on-map at the withdrawal turn selects the right instance
+    across a withdraw/return shuffle."""
+    cid = counter.replace(" ", "-")
+    for p in prefixes:
+        s = p.replace(" ", "-")
+        if cid == s or cid == f"HQ-{s}" or cid.startswith(f"{s}-") or cid.startswith(f"HQ-{s}-"):
+            return True
+    return False

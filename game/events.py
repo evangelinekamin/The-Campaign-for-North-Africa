@@ -280,17 +280,27 @@ class EventKind(str, Enum):
     # (disbanded) when detaching the final German unit". It empties the counter's steps, which is
     # how a counter leaves this engine's board.
     #
-    # UNIT_REBUILT {unit_id, points, strength, cp} is [19.61]/[19.68]: Replacement TOE Strength
-    # Points absorbed in the Organization Phase, never past the counter's printed maximum, at one
-    # Capability Point per two points. HQ_AUGMENTED {unit_id, points, at_points, cpa, rule} is the
-    # ad hoc anti-tank of [19.8] (an Axis Brigade-Level HQ, 3-6 points, taking their CPA per 19.85)
-    # and of [19.9] (a Commonwealth infantry battalion from Game-Turn 75, 1-2 points).
+    # UNIT_REBUILT {unit_id, points, strength, pool_key, cost} is [19.61]/[19.68]/[20.3]/[20.7]:
+    # Replacement TOE Strength Points absorbed in the Organization Phase (the FIRST additive write
+    # to Unit.steps), never past the counter's printed maximum, at one Capability Point per two
+    # points (a separate CP_EXPENDED). Block 7.2b closes the loop: `cost` Replacement Points of the
+    # [20.3] class `pool_key` ('<side>/<class>') are DRAWN from GameState.replacement_pool the flow-in
+    # filled -- the debit the generator already gated on availability. HQ_AUGMENTED {unit_id, points,
+    # at_points, cpa, rule} is the ad hoc anti-tank of [19.8] (an Axis Brigade-Level HQ, 3-6 points,
+    # taking their CPA per 19.85) and of [19.9] (a Commonwealth infantry battalion from GT75, 1-2).
+    #
+    # UNIT_WITHDRAWN {unit_id, voluntary, eliminated, turn} is rule 20.8/20.9: a Commonwealth counter
+    # leaves play -- MANDATORY off the [4.43a] Reinforcement-Track schedule (voluntary False), or
+    # VOLUNTARY at the Player's election (voluntary True, scored by 64.75 in Block 7.3). It empties the
+    # counter's steps, exactly as BATTLE_GROUP_DISBANDED does. 20.83: a scheduled unit not at Cairo or
+    # Alexandria by its withdrawal Stage is ELIMINATED (eliminated True) rather than cleanly withdrawn.
     UNIT_ATTACHED = "UNIT_ATTACHED"
     UNIT_DETACHED = "UNIT_DETACHED"
     UNIT_ASSIGNED = "UNIT_ASSIGNED"
     BATTLE_GROUP_FORMED = "BATTLE_GROUP_FORMED"
     BATTLE_GROUP_DISBANDED = "BATTLE_GROUP_DISBANDED"
     UNIT_REBUILT = "UNIT_REBUILT"
+    UNIT_WITHDRAWN = "UNIT_WITHDRAWN"
     HQ_AUGMENTED = "HQ_AUGMENTED"
     # Commonwealth railroad (rule 54.3, the inland rail DISTRIBUTION layer). RAIL_HAULED
     # {from_dump, to_dump, commodity, qty} is a CONSERVING dump->dump transfer over the

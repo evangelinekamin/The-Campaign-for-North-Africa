@@ -888,6 +888,13 @@ class GameState:
     replacement_pool: dict = field(default_factory=dict)
     replacement_production: bool = False
 
+    # `commonwealth_withdrawals` gates the [20.8]/[4.43a] mandatory withdrawal schedule -- the CW
+    # formations pulled from the desert for Greece/Crete/Syria and REMOVED from play (20.84), the
+    # subtraction whose absence let the campaign only ever ADD the (Rtn) returns. A 111-turn campaign
+    # subsystem like replacement_production; only game.scenario.campaign turns it on, so every other
+    # scenario emits no UNIT_WITHDRAWN and stays byte-identical. Default False.
+    commonwealth_withdrawals: bool = False
+
     # --- lookups -------------------------------------------------------------
     def unit(self, uid: str) -> Unit | None:
         for u in self.units:

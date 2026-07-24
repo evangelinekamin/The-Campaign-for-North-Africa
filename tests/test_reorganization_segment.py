@@ -40,13 +40,14 @@ def _u(uid, hex_, **kw):
                 stacking_points=kw.pop("sp", 1), oca=kw.pop("oca"), dca=kw.pop("dca"), **kw)
 
 
-def _state(units, *, turn=1, max_turns=1):
+def _state(units, *, turn=1, max_turns=1, replacement_pool=None):
     hexes = {u.hex for u in units} | {(0, 0), (9, 9)}
     return GameState(
         turn=turn, max_turns=max_turns, phase=Phase.RECORD, active_side=Side.AXIS, seed=42,
         weather="normal", vp=VP(), terrain=_terrain(hexes),
         control={}, units=tuple(units), target_hex=(9, 9),
-        supplies=(), consumed={}, initial_supply={})
+        supplies=(), consumed={}, initial_supply={},
+        replacement_pool=replacement_pool or {})
 
 
 class _OrgPolicy(ScriptedPolicy):
@@ -158,18 +159,27 @@ def test_disbanding_a_kampfgruppe_detaches_its_remaining_italian_units():
 # --- rebuild + augment ----------------------------------------------------------------
 
 def test_rebuild_absorbs_replacement_points_up_to_the_printed_maximum():
+    # Block 7.2b: a rebuild now DRAWS the points from the pool (20.3/20.7) -- the flow-in Block 7.2a
+    # built. So the AXIS infantry pool must hold them; the [20.3] 'any_other_infantry' row charges
+    # 1 Infantry Point per TOE point, and apply debits the pool by that cost.
     bn = _u("B1", (0, 0), strength=4, max_toe=8)
-    res = _run([bn], [OrganizationOrder("rebuild", unit_id="B1", points=2)])
+    res = _run([bn], [OrganizationOrder("rebuild", unit_id="B1", points=2)],
+               replacement_pool={"AXIS/infantry": 5})
     assert res.final.unit("B1").strength == 6
+    assert res.final.replacement_pool["AXIS/infantry"] == 3               # 20.7: 2 drawn of the 5
     cp = [e for e in _kinds(res.events, EventKind.CP_EXPENDED)
           if e.payload.get("activity") == "rebuild"]
     assert cp and cp[0].payload["cp"] == 1                                # 19.68: 1 CP per 2 points
 
 
 def test_rebuild_past_the_printed_maximum_is_rejected():
+    # The pool is stocked so the ONLY thing that can reject is the 19.61 maximum (points 4 vs
+    # headroom 1) -- not an empty pool.
     bn = _u("B1", (0, 0), strength=7, max_toe=8)
-    res = _run([bn], [OrganizationOrder("rebuild", unit_id="B1", points=4)])
+    res = _run([bn], [OrganizationOrder("rebuild", unit_id="B1", points=4)],
+               replacement_pool={"AXIS/infantry": 9})
     assert res.final.unit("B1").strength == 7                             # 19.61: unchanged
+    assert res.final.replacement_pool["AXIS/infantry"] == 9               # nothing drawn
     assert [e for e in res.events if e.kind == EventKind.ORDER_REJECTED
             and e.payload.get("order") == "rebuild"]
 

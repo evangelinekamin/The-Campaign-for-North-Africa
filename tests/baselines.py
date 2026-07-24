@@ -10,6 +10,51 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+NOT RE-BASELINED BY RULE 20 THE SPEND + THE COMMONWEALTH WITHDRAWALS (Block 7.2b), 2026-07-24, AND
+THAT WAS CHECKED RATHER THAN ASSUMED -- both signatures recomputed on the tree and are UNCHANGED
+(dda6faa445b4 / 5f02a0c4fb9e), each reproduced twice.
+
+Block 7.2b closes the loop 7.2a opened. 7.2a filled GameState.replacement_pool and NOTHING consumed
+it; this builds THE SPEND -- a depleted unit drawing Replacement Points from the pool to restore TOE
+Strength Points, the FIRST additive write to Unit.steps -- through the 19.61/19.68 rebuild path now
+gated on the [20.3] Replacement Point Conversion Chart (data/replacements.json, scan-verified PDF p.102,
+where the docs/rules OCR had the Armored-Car/Tank rows scrambled). It also lands the 20.8/[4.43a]
+Commonwealth mandatory withdrawals (data/withdrawals_campaign.json), 20.82/20.83 (the '(20.75)' ->
+(20.82) cross-reference typo, under a named errata key, owner ruling 3), and the 20.9 voluntary hook
+Block 7.3 scores under 64.75.
+
+It moves NEITHER benchmark log, and the reason is STRUCTURAL and threefold:
+
+  * BOTH new beats are GATED behind campaign-only flags. engine._replacement_spend returns at its
+    replacement_production guard and engine._commonwealth_withdrawals at the new commonwealth_withdrawals
+    guard -- and ONLY game.scenario.campaign sets either, exactly as the 7.2a flow-in was gated. The two
+    Desert Fox benchmarks set neither, so both beats return before emitting.
+  * THE ORDER PATHS EMIT NOTHING THERE. The now-pool-gated 'rebuild' and the new 'withdraw' organization
+    orders are issued by no benchmark policy (ScriptedPolicy.organization returns []), so neither
+    UNIT_REBUILT nor UNIT_WITHDRAWN is generated.
+  * AND THE APPLY EDITS ONLY TOUCH THOSE TWO EVENTS. apply(UNIT_REBUILT) now also debits the pool, and
+    apply(UNIT_WITHDRAWN) empties a counter (broken_down zeroed) -- events neither benchmark emits.
+
+The CAMPAIGN log DOES move, and the campaign is not signature-pinned (see CAMPAIGN_SEED below). This is
+the block whose whole point is a number that was structurally ZERO before it.
+
+MEASURED, full campaign at CAMPAIGN_SEED=4 (CampaignAxis vs CampaignCommonwealth), the TOE Strength
+Points a real campaign now RESTORES: 1,669 (716 UNIT_REBUILT events) -- the entire [20.78B] production
+that seed (1,669 Infantry Points produced, pool ends at 0), because the crushed Eighth Army's infantry
+losses exceed its replacement flood and absorb all of it. And the mandatory withdrawals that now
+SUBTRACT the formations History sent to Greece/Crete/Syria: 76 UNIT_WITHDRAWN, 74 of them ELIMINATED
+by 20.83 (the CW fights at the front, not in Cairo/Alexandria, so the anti-procrastination clause bites
+-- the counter leaves either way). 23 of the 33 [4.43a] rows resolve against the current, still-
+incomplete CW OOB; the other 10 are transcribed with an empty match and fire as the OOB completes.
+
+The winner and 64.76 grade are UNCHANGED -- Axis Smashing Victory, and the Commonwealth's own Victory
+Points hold at 20 (the Axis total eases 415 -> 390: the rebuilt Eighth Army is a touch harder to evict,
+even as the withdrawals strip it). Determinism binds by construction: both beats are pure point-
+arithmetic with NO die, so a die drawn elsewhere cannot move and the same seed replays byte-identically
+(verified: campaign(4) folded twice is identical). The channel IS exercised by
+tests/test_replacement_spend.py (20 tests) and tests/test_replacements.py's restated campaign-loop guard.
+
+--------------------------------------------------------------------------------------------------
 NOT RE-BASELINED BY RULE [20.7]/[20.78B] THE REPLACEMENT ECONOMY'S FLOW IN (Block 7.2a), 2026-07-24,
 AND THAT WAS CHECKED RATHER THAN ASSUMED -- both signatures recomputed on the tree and are UNCHANGED
 (dda6faa445b4 / 5f02a0c4fb9e).

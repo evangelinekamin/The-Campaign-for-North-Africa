@@ -390,8 +390,15 @@ def test_the_campaign_run_wires_the_beat_into_the_loop_and_accumulates():
         assert p["arrival_turn"] == p["plan_turn"] + replacements.CW_ARRIVAL_LEAD
         assert p["plan_turn"] in replacements.cw_infantry_plan_turns()
         assert p["points"] == replacements.cw_infantry_lookup(p["plan_turn"], sum(e.rng_draws))
-    assert (res.final.replacements_available("ALLIED/infantry")
-            == sum(e.payload["points"] for e in ev))
+    # RESTATED for Block 7.2b: the pool is no longer pure accumulation -- the FLOW OUT
+    # (_replacement_spend) now DRAWS it to rebuild depleted CW infantry. What survives is the
+    # conservation identity: every Infantry Point produced is either still in the pool or was drawn
+    # by a UNIT_REBUILT (cost). The block's original 'pool == produced' enshrined the open loop.
+    produced = sum(e.payload["points"] for e in ev)
+    drawn = sum(e.payload["cost"] for e in res.events if e.kind == EventKind.UNIT_REBUILT
+                and e.payload["pool_key"] == "ALLIED/infantry")
+    assert res.final.replacements_available("ALLIED/infantry") == produced - drawn
+    assert drawn > 0, "Block 7.2b: the campaign must actually SPEND replacement points now"
 
 
 def test_the_production_gate_is_a_campaign_only_subsystem():

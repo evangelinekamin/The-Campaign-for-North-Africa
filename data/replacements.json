@@ -205,11 +205,53 @@
     }
   },
 
+  "replacement_conversion_20_3": {
+    "_comment": "[20.3] REPLACEMENT POINT CONVERSION CHART (Block 7.2b). What one Replacement TOE Strength Point of a given unit TYPE costs in Replacement Points of a given CLASS. This is the bridge between the flow-in pools (keyed by class -- infantry / tank / artillery / anti_tank / anti_air / armr) and THE SPEND: a depleted unit is rebuilt by drawing its type's cost from the co-classed pool (19.61/19.64/20.4). Rows with an empty `requires` cost NOTHING (the Road/Railroad Construction battalions rebuild free, note f). `requires` is a list of ALTERNATIVES (OR); each alternative is a list of {class,count} requirements (AND, e.g. Heavy Weapons = 1 Infantry AND 1 Gun).",
+    "_source": "PDF p.102, rendered at 300dpi and read with eyes (scan-verified 2026-07-24). The docs/rules/90-charts:1059-1163 OCR is SCRAMBLED for rows 12-14 -- it shifts the Armored Reconnaissance / Armored Car / Tank costs up one row (giving 'Armored Car -> 1 Tank', 'Tank -> 1 Artillery') -- and is NOT trusted. The scan is the arbiter: Armored Reconnaissance -> 1 ArmR or 1 Lt Tank; Armored Car -> 2 ArmR or 1 Lt Tank; Tank -> 1 Tank.",
+    "_key": {
+      "Inf": "Infantry.",
+      "Gun": "Artillery, anti-tank or anti-air, whatever its ratings.",
+      "ArmR": "Armored Reconnaissance/Armored Car. Italian ArmR replacement points are always treated as Autobelinda 41's (ID Code 'vv'), even if not able to upgrade the unit under Case 20.5.",
+      "Lt Tank": "Light Tank of the type specified in Case 20.5. This only applies if upgrading the unit.",
+      "Lt AT": "Only Italian 47/32 or German 2.8cm or 28/20 Pak anti-tank guns."
+    },
+    "rows": [
+      {"unit_type": "any_headquarters_unit", "name": "Any Headquarters Unit", "requires": [[{"class": "infantry", "count": 2}]]},
+      {"unit_type": "commando", "name": "Commando", "note": "a", "requires": [[{"class": "infantry", "count": 3}]]},
+      {"unit_type": "paratroop_infantry", "name": "Paratroop Infantry", "note": "b", "requires": [[{"class": "infantry", "count": 2}]]},
+      {"unit_type": "italian_bersaglieri_infantry", "name": "Italian Bersaglieri Infantry", "requires": [[{"class": "infantry", "count": 2}]]},
+      {"unit_type": "machinegun", "name": "Machinegun", "note": "c", "requires": [[{"class": "infantry", "count": 2}]]},
+      {"unit_type": "heavy_weapons", "name": "Heavy Weapons", "note": "d", "requires": [[{"class": "infantry", "count": 1}, {"class": "gun", "count": 1}]]},
+      {"unit_type": "any_other_infantry", "name": "Any other Infantry", "requires": [[{"class": "infantry", "count": 1}]]},
+      {"unit_type": "engineer_battalion", "name": "Engineer Battalion", "note": "e", "requires": [[{"class": "infantry", "count": 2}]]},
+      {"unit_type": "engineer_company", "name": "Engineer Company", "requires": [[{"class": "infantry", "count": 1}]]},
+      {"unit_type": "road_railroad_construction", "name": "Road Construction or Railroad Construction", "note": "f", "requires": []},
+      {"unit_type": "motorcycle_camel_reconnaissance", "name": "Motorcycle Reconnaissance, Camel Cavalry or Reconnaissance", "requires": [[{"class": "infantry", "count": 2}]]},
+      {"unit_type": "armored_reconnaissance", "name": "Armored Reconnaissance", "requires": [[{"class": "armr", "count": 1}], [{"class": "lt_tank", "count": 1}]]},
+      {"unit_type": "armored_car", "name": "Armored Car", "requires": [[{"class": "armr", "count": 2}], [{"class": "lt_tank", "count": 1}]]},
+      {"unit_type": "tank", "name": "Tank", "requires": [[{"class": "tank", "count": 1}]]},
+      {"unit_type": "artillery", "name": "Artillery", "requires": [[{"class": "artillery", "count": 1}]]},
+      {"unit_type": "airdropable_artillery", "name": "Airdropable Artillery", "requires": [[{"class": "italian_para_art", "count": 1}], [{"class": "german_75_lt_gun", "count": 1}]]},
+      {"unit_type": "anti_tank", "name": "Anti-tank", "requires": [[{"class": "anti_tank", "count": 1}]]},
+      {"unit_type": "airdropable_anti_tank", "name": "Airdropable Anti-tank", "note": "g", "requires": [[{"class": "lt_at", "count": 1}]]},
+      {"unit_type": "anti_air", "name": "Anti-air", "requires": [[{"class": "anti_air", "count": 1}]]},
+      {"unit_type": "squadron_ground_support_unit", "name": "Squadron Ground Support Unit", "requires": [[{"class": "infantry", "count": 1}, {"class": "supplies", "count": 1}]]}
+    ],
+    "notes": {
+      "a": "Specifically the Layforce or Special Air Service Brigade.",
+      "b": "Specifically units of the Italian 185th Folgore or German Ramcke Brigade.",
+      "c": "Whether or not it bears a motorized symbol.",
+      "d": "All units except those of the Ramcke Brigade.",
+      "e": "Including the Australian Pioneer unit.",
+      "f": "Specifically the Commonwealth Player's one South African Road Construction Battalion and two New Zealand Railroad Construction Battalions. If eliminated, the unit is returned to play as a reinforcement during the sixth Operations Stage after the Operations Stage in which the unit was eliminated.",
+      "g": "Only applies if assigning anti-tank TOE Strength Points to headquarters of the 185th Folgore Division and/or the headquarters of the Ramcke Brigade."
+    }
+  },
+
   "deferred": {
     "_comment": "Rule-20 charts NOT transcribed in Block 7.2a, flagged with their source so the next pass can pick them up. None is needed for the CW infantry FLOW-IN this block measures.",
     "commonwealth_truck_production_20_78A": "A separate 1d6-per-truck-type random stream (docs/rules/90-charts:3391+; PDF p.141 top-left). The 20.78B transcription notes its existence but gives no cell values; not rendered/verified here. The Commonwealth's TRUCK replacement flow -- a sibling of the infantry stream, also random and also free -- awaits its own transcription.",
     "axis_replacement_point_type_limitations_20_67": "NOT a separate dataset (transcription section 4): the per-type max/plan_gt columns already embedded in axis_pool_20_66 ARE the [20.67] Type Limitations.",
-    "replacement_point_conversion_20_3": "[20.3] REPLACEMENT POINT CONVERSION CHART (docs/rules/90-charts:1059-1163): converts HQ/MG/Heavy-Weapons/etc. counters to Infantry/Gun/Tank/Recce class points for absorption. A distinct chart, out of scope; needed for 7.2b's spend absorption of odd counter types.",
     "air_shipped_infantry_54_5": "[54.5] footnote: an Axis INFANTRY Replacement Point may alternatively go by AIR at a flat 2 tons/point (no other class may fly). A distinct third shipping mode; recorded in data/logistics_rates.json equivalent_weights_54_5.replacement_point_tons.air, not modelled here."
   }
 }

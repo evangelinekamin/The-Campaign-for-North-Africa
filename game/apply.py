@@ -310,7 +310,19 @@ def apply(state: GameState, event: Event) -> GameState:
     if k == EventKind.UNIT_REBUILT:
         # 19.61/19.68: Replacement TOE Strength Points absorbed, never past the printed maximum
         # (the generator checked it against Unit.max_toe). The Capability Points ride CP_EXPENDED.
-        return state.with_unit(organization.absorb(state.unit(p["unit_id"]), p["points"]))
+        # 20.3/20.7 THE DRAW (Block 7.2b): the points come from the pool the flow-in filled -- debit
+        # `cost` of class `pool_key` here. The generator gated cost <= available, so the bucket never
+        # goes negative; a free-rebuild row ([20.3] Road/Railroad Construction) carries cost 0.
+        st = state.credit_replacements(p["pool_key"], -p["cost"]) if p.get("cost") else state
+        return st.with_unit(organization.absorb(st.unit(p["unit_id"]), p["points"]))
+
+    if k == EventKind.UNIT_WITHDRAWN:
+        # 20.8/20.84 (mandatory) or 20.9 (voluntary): the counter leaves play. Emptying its steps
+        # takes it off the board (state.on_map reads Unit.alive), the same idiom BATTLE_GROUP_DISBANDED
+        # uses -- with broken_down zeroed too, since a withdrawn combat unit may carry broken-down
+        # vehicles that must not outlive its strength (the 21.44 invariant 0 <= broken_down <= strength).
+        # 64.75's scoring of a VOLUNTARY withdrawal is Block 7.3, off this event's own record.
+        return state.with_unit(replace(state.unit(p["unit_id"]), steps=(), broken_down=0))
 
     if k == EventKind.HQ_AUGMENTED:
         # 19.83/19.85/19.93/19.97: anti-tank TOE Strength Points folded onto a counter as a second
