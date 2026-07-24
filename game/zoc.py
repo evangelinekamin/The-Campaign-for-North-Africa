@@ -124,12 +124,14 @@ def _zoc_search(search, tmap, start, budget, mobility, *, enemy_zoc, friendly_ne
         blocked=enemy_occupied,                                   # §8.13
         terminal=controlled,                                      # §10.23
         passable=lambda here, nb: not (controlled(here) and controlled(nb)),  # §10.24
-        # §8.62/8.64-8.66: Contact -- and its break-off toll -- is RAW enemy ZOC at the
-        # start hex. The 10.26 negator frees a friendly stack's THROUGH-movement (terminal/
-        # passable above), NOT the toll to leave: 8.67 ("when ALL the Friendly units that
-        # were in Contact break off...") proves the book expects each unit in a stack to be
-        # in Contact and to pay. Reading the negated `controlled(start)` here let a unit
-        # stacked with one friendly combat unit break off for free -- the drift-up-and-away.
-        start_cost=break_off if start in enemy_zoc else 0.0,
+        # §8.61/8.62/8.64-8.66 + §10.26: Contact is being in an Enemy ZOC (8.62), and its 2/4-CP
+        # break-off toll (8.65/8.66) falls on a unit that begins a Movement Segment in Contact
+        # (8.64). But 8.61 makes Breaking Off "a function of Movement", and 10.26 negates an Enemy
+        # ZOC "for ALL MOVEMENT PURPOSES" when a Friendly combat unit shares the hex -- so a unit
+        # stacked with a negator is not in (un-negated) Contact and owes no toll. That is the same
+        # `controlled` predicate the terminal/passable gates use above. (8.67's "when ALL the
+        # Friendly units ... break off" is equally satisfied by units each alone in the ZOC in
+        # DIFFERENT hexes, so it does not override 10.26 to force a per-unit toll on a negated stack.)
+        start_cost=break_off if controlled(start) else 0.0,
         weather=weather,
     )

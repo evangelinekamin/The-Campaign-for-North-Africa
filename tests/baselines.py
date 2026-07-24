@@ -10,34 +10,51 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
-RE-BASELINED 2026-07-24 -- CAUSE: rules [10.31-10.36] MANDATORY ATTACK and [8.64-8.67] BREAK-OFF
-NEGATION (Phase 6.3, "make contact cost something"). Two rules moved these logs, and both were
-CONFIRMED by neutering:
+RE-BASELINED 2026-07-24 -- CAUSE: rule [10.31-10.36] MANDATORY ATTACK (Phase 6.3, "make contact cost
+something"). ONE rule moves these logs. (This supersedes the FIRST cut of Phase 6.3 earlier the same
+day, which paired the sweep with a break-off change that a repair pass has since reverted -- see the
+REPAIR note directly below; the pre-6.3 hashes df632af423c0 / b4c62a774318 are the anchor.)
 
   [10.31-10.36] the ZOC combat requirement. An Enemy hex whose ZOC touches the Phasing side's
   combat units must be answered each Combat Segment -- Close Assaulted, or Held Off by a Barrage of
   at least 10.34's Actual-Barrage-Point threshold. A stack that leaves one unanswered and is not
-  10.32-exempt (solely Guns / Pinned / immobile) is force-retreated three hexes for all its
-  remaining CP and three DP (10.36), or Surrenders if no ZOC-free three-hex destination exists
-  (10.36e). Before this an army drifted up to the enemy, declined battle, and drifted on for free.
-  engine._mandatory_attack, swept at the end of _combat off the POST-combat board.
+  10.32-exempt (solely Guns / Pinned / immobile) is force-retreated to a hex three hexes distant for
+  all its remaining CP and three DP (10.36), or Surrenders if no ZOC-free destination three hexes
+  distant exists (10.36e). Before this an army drifted up to the enemy, declined battle, and drifted
+  on for free. engine._mandatory_attack, swept at the end of _combat off the POST-combat board.
 
-  [8.64-8.67] Contact -- and its 2-CP (Contact) / 4-CP (Engaged) break-off toll -- is now RAW enemy
-  ZOC at the start hex, not the 10.26-negated version. The negator frees a friendly stack's
-  through-movement, NOT the toll to leave: reading the negated form let a unit stacked with one
-  friendly combat unit break off for free. zoc._zoc_search start_cost.
+REPAIR PASS, 2026-07-24 (three adversarial verifiers). The first cut of Phase 6.3 shipped two defects
+that this re-baseline embodies the fix for:
 
-ATTRIBUTION, CHECKED: re-running both benchmarks with engine._mandatory_attack neutered to a no-op
-AND zoc._zoc_search reverted to the 10.26-negated start_cost -- every other change in this slice
-left in place -- reproduces the OLD signatures EXACTLY (df632af423c0 / b4c62a774318). So the move is
-entirely those two rules. The slice's other two rules are STRUCTURALLY INERT on these two scenarios:
-the 6.26 "may-not-DEFEND" gate (engine._resolve_combat armed_def) never bites because no defender is
-assaulted at Cohesion -26 (a stack that far gone auto-Surrenders at the 15.88 -17 floor first), and
-the 6.26 react gate never bites because neither ScriptedPolicy benchmark issues a Reaction (0
-REACTION_MOVED). Both are exercised by tests/test_mandatory_attack.py instead.
+  * [8.64-8.67] break-off was changed to charge the 2/4-CP toll on RAW enemy ZOC at the start hex,
+    even when a Friendly combat unit shares the hex and negates that ZOC. That REVERSED the pre-6.3
+    behaviour the transcription called "already faithfully wired" and cut against 10.26's plain text
+    ("the presence of a Friendly combat unit ... negates the effect of an Enemy ZOC for ALL MOVEMENT
+    PURPOSES") chained through 8.61 ("Breaking Off is a function of Movement") -> 8.62 (Contact is
+    being in an Enemy ZOC) -> 8.64 (toll on a unit in Contact): a unit stacked with a negator is not
+    in un-negated Contact and owes no toll. The sole cited support (8.67) is neutral -- it is equally
+    satisfied by units each alone in the ZOC in DIFFERENT hexes. REVERTED to the 10.26-negated
+    `controlled(start)` (zoc._zoc_search start_cost); it is no longer a signature mover.
+  * [10.36] the forced retreat took THREE strictly-outward steps, so from an adjacent (distance-1)
+    start it ended at distance 4, not the "three hexes distant" the rule specifies; and its strict
+    "each step farther" test surrendered units that could reach distance 3 only via a legal sideways
+    (equal-distance) step, though 10.36 bars only doubling back and Enemy-ZOC hexes. CORRECTED
+    (engine._mandatory_retreat): a BFS to a stacking-legal hex EXACTLY three hexes from the anchor,
+    steps non-decreasing in distance (sidesteps legal, backtracking barred), Surrender only when no
+    such destination exists.
 
-    rommels_arrival   df632af423c0 -> 1dd2a1dab379
-    siege_of_tobruk   b4c62a774318 -> f4396ef239eb
+ATTRIBUTION, CHECKED: on the repaired tree (break-off start_cost already reverted to the 10.26-negated
+form), re-running both benchmarks with engine._mandatory_attack neutered to a no-op reproduces the
+pre-6.3 signatures EXACTLY (df632af423c0 / b4c62a774318). So the entire move is [10.31-10.36], and the
+break-off revert is a clean return to pre-6.3 (it moves nothing on its own). The slice's other rules
+are STRUCTURALLY INERT on these two scenarios: the 6.26 "may-not-DEFEND" gate (engine._resolve_combat
+armed_def) never bites because no defender is assaulted at Cohesion -26 (a stack that far gone
+auto-Surrenders at the 15.88 -17 floor first), and the 6.26 react gate never bites because neither
+ScriptedPolicy benchmark issues a Reaction (0 REACTION_MOVED). Both are exercised by
+tests/test_mandatory_attack.py instead.
+
+    rommels_arrival   df632af423c0 -> dda6faa445b4
+    siege_of_tobruk   b4c62a774318 -> 5f02a0c4fb9e
 
 Each reproduced twice, byte-for-byte.
 
@@ -649,8 +666,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "1dd2a1dab379"
-SIEGE_OF_TOBRUK = "f4396ef239eb"
+ROMMELS_ARRIVAL = "dda6faa445b4"
+SIEGE_OF_TOBRUK = "5f02a0c4fb9e"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

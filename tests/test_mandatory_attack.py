@@ -71,15 +71,17 @@ def _contact_state(**axis_kw):
 LINE = TerrainMap(terrain={(x, 0): Terrain.CLEAR for x in range(4)})
 
 
-def test_stacked_unit_still_pays_the_break_off_toll():
-    # 8.62/8.67: a unit whose start hex is in an enemy ZOC is in Contact and pays 2 CP to leave,
-    # EVEN when a co-located friendly combat unit negates that ZOC for through-movement (10.26).
-    # Reading the negated form let a stacked unit break off for free -- the drift-up-and-away.
+def test_stacked_unit_breaks_off_free():
+    # 10.26 negates an enemy ZOC "for ALL MOVEMENT PURPOSES" when a friendly combat unit shares the
+    # hex, and 8.61 makes Breaking Off a function of Movement -- so a unit stacked with a negator is
+    # not in (un-negated) Contact (8.62) and owes no break-off toll (8.64). It moves as if the ZOC
+    # were not there. (8.67's "when ALL the friendly units break off" is satisfied by units each
+    # alone in the ZOC in different hexes, so it does not force a per-unit toll on a negated stack.)
     reach = zoc.reachable_with_zoc(LINE, (0, 0), budget=20, mobility=Mobility.VEHICLE,
                                    enemy_zoc=frozenset({(0, 0)}),
                                    friendly_negators=frozenset({(0, 0)}), break_off=2.0)
-    assert reach[(0, 0)] == 2.0            # still pays the toll to break off
-    assert reach[(1, 0)] == 2.0 + 2       # break-off + the clear-hex step
+    assert reach[(0, 0)] == 0.0            # the negator frees the break-off (10.26)
+    assert reach[(1, 0)] == 2.0           # just the clear-hex step, no toll
 
 
 def test_break_off_free_only_when_not_in_a_zoc():

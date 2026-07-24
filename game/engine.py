@@ -4037,40 +4037,57 @@ def _mandatory_attack(r: _Run, side: Side, pinned: set[str],
 
 
 def _mandatory_retreat(r: _Run, side: Side, units: list, anchor: Coord) -> None:
-    """10.36: a stack that left an enemy hex unanswered Retreats exactly three hexes from the
-    Enemy unit (`anchor`) -- no doubling back (each hex strictly farther from the anchor), and
-    no hex on the path in an Enemy Zone of Control -- spending ALL its remaining CP on the move
-    ("playing all CP's for such movement") and earning three Disorganization Points in addition
-    to any the CP overage bleeds. If no legal three-hex ZOC-free destination exists the stack
-    Surrenders in entirety (10.36e). Draws no die, so replay stays byte-identical."""
+    """10.36: a stack that left an enemy hex unanswered Retreats to a hex THREE HEXES DISTANT from
+    the Enemy unit (`anchor`) -- "no doubling back" (no step nearer the anchor than the hex before
+    it; a sideways step at equal distance is legal, only backtracking is barred) and no hex on the
+    path in an Enemy Zone of Control -- spending ALL its remaining CP on the move ("playing all CP's
+    for such movement") and earning three Disorganization Points in addition to any the CP overage
+    bleeds. If no such ZOC-free destination three hexes distant exists the stack Surrenders in
+    entirety (10.36e). The start hex is adjacent to the anchor (its ZOC reaches only one hex), so
+    "three hexes distant" is the binding end-state: the walk stops at distance 3, it does not push
+    on to distance 4. Draws no die, so replay stays byte-identical."""
     actor = f"{side.value}/Front"
     enemy_zoc, enemy_occ = tactics.enemy_zoc_and_occupied(r.state, side)
     blocked = enemy_zoc | enemy_occ                     # 10.36: no Enemy-ZOC hex (nor enemy unit) en route
     ids = {u.id for u in units}
+    terr = r.state.terrain
 
     def _fits(nb: Coord) -> bool:                       # the retreating stack must fit (rule 9.31)
         here = [x for x in r.state.units_at(nb) if x.side == side and x.id not in ids]
-        return stacking.within_hex_limit(here + units, r.state.terrain.terrain[nb])
+        return stacking.within_hex_limit(here + units, terr.terrain[nb])
 
-    cur = units[0].hex
-    path = [cur]
-    for _ in range(3):
-        cands = [nb for nb in neighbors(cur)
-                 if nb in r.state.terrain.terrain and nb not in blocked
-                 and distance(nb, anchor) > distance(cur, anchor) and _fits(nb)]
-        if not cands:
-            break
-        cur = min(cands, key=lambda nb: (-distance(nb, anchor), nb))   # push away, deterministic tiebreak
-        path.append(cur)
-    if len(path) - 1 < 3:                               # 10.36e: no clean 3-hex retreat -> Surrender
+    # Breadth-first walk outward, at most three hexes: never nearer the anchor than the hex before
+    # it (10.36 "no doubling back" -- a sidestep at equal distance is legal, a step back is not),
+    # never through an Enemy ZOC or enemy unit, to a stacking-legal hex EXACTLY three hexes from the
+    # anchor. The shortest such path wins (deterministic sorted tiebreak on the outward hex).
+    path = None
+    frontier = [[units[0].hex]]
+    while frontier and path is None:
+        nxt = []
+        for trail in frontier:
+            cur = trail[-1]
+            for nb in sorted(neighbors(cur)):
+                if (nb not in terr.terrain or nb in blocked or nb in trail
+                        or distance(nb, anchor) < distance(cur, anchor)):
+                    continue
+                if distance(nb, anchor) == 3 and _fits(nb):
+                    path = trail + [nb]
+                    break
+                if len(trail) < 3:                      # room for another of the three hexes
+                    nxt.append(trail + [nb])
+            if path is not None:
+                break
+        frontier = nxt
+    if path is None:                                    # 10.36e: no clean three-hex retreat -> Surrender
         for u in units:
             live = r.state.unit(u.id)
             if live and live.alive:
                 r.emit(EventKind.STEP_LOST, side, actor,
                        {"unit_id": u.id, "amount": live.strength, "role": "surrender"})
         return
+    dest = path[-1]
     for u in units:
-        payload = {"unit_id": u.id, "from": list(u.hex), "to": list(cur), "hexes": 3}
+        payload = {"unit_id": u.id, "from": list(u.hex), "to": list(dest), "hexes": len(path) - 1}
         bp = tactics.breakdown_points_over(r.state, u, path)          # 21.22 retreat accrues BP
         if bp:
             payload["bp"] = bp
