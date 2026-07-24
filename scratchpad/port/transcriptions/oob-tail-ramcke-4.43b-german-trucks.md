@@ -10,15 +10,18 @@ rendered: **080, 081, 145, 146, 162, 163, 164** of `tmp/The Campaign for North A
 `<!-- page NNN -->` markers are literal PDF page numbers, confirmed against the chapter-boundary
 markers in `docs/rules/60-*.md` / `61-*.md`).
 
-**Headline result: nothing here needs new OOB rows.** `data/reinforcements_campaign.json` already
-carries the Ramcke Brigade, Sonderverband 288 and 300th Oasis Battalion, and every unit/GT/OpS/morale
-cell verified **exactly** against the scan (details below). The actual gap is **trucks**: none of the
-541 rows in that file carry a truck field, and the engine's first-line-truck mechanism (`fl_light` /
-`fl_medium` / `fl_heavy` on `game.state.Unit`, seeded by `oob._seed_first_line`) is only wired at
-scenario t0, never at reinforcement arrival. This transcription supplies the **verified** GT/OpS/L/M/H
-table needed to wire that seam, and it **corrects one cell** and **confirms the rest** of a prior draft
-(`scratchpad/port/phase4-german-first-line-trucks-DRAFT.md`, dated 2026-07-19, explicitly marked "OCR
-draft, not scan-verified").
+**Headline result: the three named formations need no new OOB rows.**
+`data/reinforcements_campaign.json` already carries the Ramcke Brigade, Sonderverband 288 and 300th
+Oasis Battalion, and every unit/GT/OpS/morale cell verified **exactly** against the scan (details
+below). The actual gaps are (a) **trucks**: none of the 541 rows in that file carry a truck field, and
+the engine's first-line-truck mechanism (`fl_light`/`fl_medium`/`fl_heavy` on `game.state.Unit`, seeded
+by `oob._seed_first_line`) is only wired at scenario t0, never at reinforcement arrival; and (b) a
+**fifth formation sheet found while verifying Sonderverband 288** — [4.45c] "Unassigned Infantry
+Units" (707/708 Heavy Weapons Coy, 13th Coy/Brandenburg Regt, 778 Naval Engineer Koy) — which is
+missing from `data/` almost entirely (§5). This transcription supplies the **verified** GT/OpS/L/M/H
+truck table needed to wire seam (a), and it **corrects one cell** and **confirms the rest** of a prior
+draft (`scratchpad/port/phase4-german-first-line-trucks-DRAFT.md`, dated 2026-07-19, explicitly marked
+"OCR draft, not scan-verified").
 
 ---
 
@@ -135,7 +138,7 @@ mountain infantry unit!"
 | GT/OpS | Row (verbatim) |
 |---|---|
 | 76/2 | "Gm: Sonderverband 288 Regt; Trucks: 5 L, 18 M, 4 H." |
-| 76/3 | "Gm: 708 Heavy Weapons Coy." — a **different** unit (the "708 SchwInf Koy" of the Unassigned Infantry Units sheet, arrives 3/76 per [4.45c]); the 288/708 numbering is coincidental, it is not part of Sonderverband 288. |
+| 76/3 | "Gm: 708 Heavy Weapons Coy." — a **different** unit (the "708 SchwInf Koy" of the Unassigned Infantry Units sheet, arrives 3/76 per [4.45c]); the 288/708 numbering is coincidental, it is not part of Sonderverband 288. **This whole sheet is missing from data/ — see §5.** |
 
 The schedule attaches the truck total to "Sonderverband 288 Regt" as a whole (it does not break the
 5L/18M/4H down per sub-unit the way the OA chart breaks the six counters out individually) — this is
@@ -324,7 +327,117 @@ in `docs/rules/90-*.md`).
 
 ---
 
-## 5. Summary of flags
+## 5. GAP — the "Unassigned Infantry Units" formation sheet is entirely missing from data/reinforcements_campaign.json
+
+Not part of the original four-item assignment by name, but found while verifying Sonderverband 288
+(§2.2's 76/3 row is a *different* formation) and directly adjacent in every source I read for this
+transcription: the same [4.45c] page (164) that carries the Ramcke Brigade sheet also carries a fifth
+German sheet, and none of its non-Rommel units are seeded anywhere in `data/`.
+
+### 5.1 Organization chart — [4.45c] "Unassigned Infantry Units", scan p.164 (book folio 164)
+
+Basic Morale: **+1**.
+
+| Unit | Counter Abbreviation | ID Code | TOE & Weapon System(s) | Arrives (OpS/GT) |
+|---|---|---|---|---|
+| Deutsches Afrika Korps HQ | Rommel | a | N | 2/20 |
+| 707 SchwInf Koy | 707 | t | N | 2/66 |
+| 708 SchwInf Koy | 708 | t | N | 3/76 |
+| 13th Koy/Brandenburg Regt | 13/Bdbg | s | N | 1/85 |
+| 778 Naval Engineer Koy | 778/Nvl | gg | N | 3/66 |
+
+(`778/Nvl` — the final glyph is a lowercase "l", not a numeral "1"; legible but tight at 300dpi, worth a
+600dpi re-check if anyone is being pedantic about the counter-abbreviation field specifically.)
+
+Notes (verbatim): (a, on 707 SchwInf Koy) *"Became attached, at first, to the 90th Light Division. Was
+later attached to the 164th Light Division."* (b, on 708 SchwInf Koy) *"Was attached, at first, to the
+200th PanzerGrenadier Regiment. Was later attached to the 164th Light Division."* No note is printed for
+13th Koy/Brandenburg Regt or 778 Naval Engineer Koy.
+
+The [4.45c] chart-index note (scan p.162, quoted in full at the top of that page) defines "SchwInf" as
+"Schwertze-Infanteriegeschützen (Heavy Weapons)" — i.e. 707/708 SchwInf Koy are the "707th and 708th
+Heavy Weapons Coys" named in [4.43b] and in the El Alamein scenario OOB (below).
+
+### 5.2 [4.43b] Reinforcement Schedule cross-check — scan p.145-146
+
+| GT/OpS | Row (verbatim) | Matches §7.1? |
+|---|---|---|
+| 20/2 | "Gm: Rommel [DAK]." | yes — 2/20 |
+| 66/2 | "Gm: 707 Heavy Weapons Coy, 114 Flak Bn." | yes — 2/66 (114 Flak Bn is a separate, unrelated Non-Divisional Flak unit sharing the OpS) |
+| 66/3 | "Gm: 778 Naval Eng Coy, 442 Flak Bn." | yes — 3/66 (442 Flak Bn likewise unrelated) |
+| 76/3 | "Gm: 708 Heavy Weapons Coy." | yes — 3/76 |
+| 85/1 | "Gm: 13th Company of the Brandenburg Regt." | yes — 1/85 |
+
+All five arrivals cross-check exactly, two independent sources agreeing to the OpS. No truck figure is
+attached to any of the five anywhere in the schedule (checked as part of the full GT9-99 read in §4.2).
+
+### 5.3 Corroboration — the El Alamein scenario OOB independently groups the same five units
+
+`docs/rules/63-scenario-group-four-el-alamein.md:220,252,254` (not scan-rendered for this transcription —
+OCR text only, but it agrees with §7.1/§7.2 well enough on unit names/grouping that a full re-render
+didn't seem necessary):
+
+> "D2733: Ramcke Bde; Trucks: None." — independent confirmation that Ramcke never receives first-line
+> trucks (matches the "no truck figure anywhere in the schedule" finding in §3.2).
+>
+> "Anywhere on Map D: ... German: Sonderverband 288 Regt (I); 707th and 708th Heavy Weapons Coys; 13th
+> Coy of the Bandenburg Regt (I)." — the exact same three-formation grouping (Sonderverband 288 +
+> 707/708 SchwInf Koy + 13th Brandenburg) that [4.43b] places back-to-back at GT76.
+>
+> "Anywhere on Map A thru D: Any four Oasis Coys and the 778th Naval Engineers." — 778 Naval Engineer
+> Koy again named alongside 300th-Oasis-Bn companies, as it is adjacent to them in [4.43b] at GT66.
+
+### 5.4 data/reinforcements_campaign.json — GAP, 4 of 5 units entirely absent
+
+```
+grep -c '"707"\|"708"\|Brandenburg\|778.*Naval\|Naval.*778' data/reinforcements_campaign.json  →  0
+```
+
+Only **Rommel** is present, and under a **different group name** than the book's own sheet title:
+
+```json
+{"counter": "Rommel", "group": "GE DAK", "hex": [45, -7], "side": "AXIS",
+ "role": "hq", "nationality": "GE", "morale": 1, "arrival_turn": 20}
+```
+
+Two problems with even this one seeded entry:
+
+1. **`arrival_stage` is missing.** Every other entry in the file carries `arrival_stage`; Rommel's does
+   not. Both §5.1 (2/20) and §5.2 (20/2) agree the correct value is **2**. If the loader defaults a
+   missing `arrival_stage` to 1, Rommel/DAK HQ enters one OpStage early.
+2. **Group name drift.** `"GE DAK"` vs. the book's `"Unassigned Infantry Units"` sheet name (compare
+   `"GE Ramcke Brigade"`, `"GE Sonderverband 288"`, `"GE 300th Oasis Battalion"` elsewhere in the same
+   file, which all mirror their [4.45c] sheet titles exactly). Not a correctness bug — Rommel/DAK HQ is
+   plausibly its own group either way — but whoever adds the other four units should decide whether to
+   fold them into `"GE DAK"` or rename/create `"GE Unassigned Infantry Units"` to match the book, since
+   splitting one sheet across two group names in the data model would be a needless inconsistency.
+
+**Ready-to-seed rows** (same schema as the file's existing entries, `hex: [45, -7]` matching the generic
+Axis-reinforcement-arrival convention already used for Ramcke/Sonderverband 288/DAK):
+
+```json
+{"counter": "707 SchwInf Koy", "group": "GE Unassigned Infantry Units", "hex": [45, -7], "side": "AXIS",
+ "role": "infantry", "nationality": "GE", "morale": 1, "arrival_turn": 66, "arrival_stage": 2}
+{"counter": "778 Naval Eng Koy", "group": "GE Unassigned Infantry Units", "hex": [45, -7], "side": "AXIS",
+ "role": "motor_infantry", "nationality": "GE", "morale": 1, "arrival_turn": 66, "arrival_stage": 3}
+{"counter": "708 SchwInf Koy", "group": "GE Unassigned Infantry Units", "hex": [45, -7], "side": "AXIS",
+ "role": "infantry", "nationality": "GE", "morale": 1, "arrival_turn": 76, "arrival_stage": 3}
+{"counter": "13th Koy/Brandenburg Regt", "group": "GE Unassigned Infantry Units", "hex": [45, -7],
+ "side": "AXIS", "role": "infantry", "nationality": "GE", "morale": 1, "arrival_turn": 85, "arrival_stage": 1}
+```
+
+`role` values are my best-guess mapping onto the engine's existing role vocabulary (§5.1's TOE column is
+just "N" for all four — no distinguishing weapon system printed, unlike Sonderverband 288's Panzerjaeger
+Bn or Ramcke's "+1×7.5cm Lt Gun" — so there is no chart basis to pick `infantry` vs `motor_infantry` vs a
+dedicated `heavy_weapons` role beyond "778 Naval Eng[ineer]" plausibly matching the `motor_infantry`
+role already used for 300th-Oasis-Bn-adjacent engineer-type units elsewhere in the file; **flagging the
+role choice as a judgment call for whoever wires this, not a transcribed fact**). `morale: 1` follows
+the sheet's own "Basic Morale: +1" line, matching the convention `morale = printed modifier` used
+throughout the file's other GE groups (e.g. Sonderverband 288's "+1" → `morale: 1`).
+
+---
+
+## 6. Summary of flags
 
 1. **OWNER RULING NEEDED** — `data/oob_desert_fox.json` seeds a 3rd "300 OAS" company at hex A2016
    (sea terrain) alongside Rommel's and the 5 Le Div's HQ counters at the same bad coordinate; rule
@@ -343,15 +456,23 @@ in `docs/rules/90-*.md`).
 5. **Carried forward from the draft** — the "alone" 15th/90th/164th-Division trucks are, per the
    footnote itself, the Axis player's free choice to treat as first-line (attached) or 2nd-3rd-line;
    this transcription does not adjudicate that either, it just confirms the six L/M/H figures involved.
-6. **Nothing unreadable.** Every cell cited above was legible at 300dpi; no page needed a re-render at
+6. **GAP, not previously flagged** — the "Unassigned Infantry Units" [4.45c] sheet (707 SchwInf Koy,
+   708 SchwInf Koy, 13th Koy/Brandenburg Regt, 778 Naval Engineer Koy) is entirely missing from
+   `data/reinforcements_campaign.json`; only its fifth member, Rommel/DAK HQ, is seeded, under a
+   differently-named group and missing its `arrival_stage`. Ready-to-seed rows supplied. §5.
+7. **Nothing unreadable.** Every cell cited above was legible at 300dpi; no page needed a re-render at
    higher resolution.
 
-## 6. What a future implementation pass needs
+## 7. What a future implementation pass needs
 
 - §4.2's table is ready to wire as a GT/OpS-triggered addition to `fl_light`/`fl_medium`/`fl_heavy` on
   the newly-arrived unit(s), the same fields `oob._seed_first_line` already sets at t0 — this is a new
   seam (reinforcement-time truck attachment), not a new field.
 - §1-3 need no data changes; they are here as verification, not gap-fill.
+- §5's four `json` rows are ready to append to `data/reinforcements_campaign.json`'s `reinforcements`
+  array as-is, modulo the `role` judgment call flagged there and the group-name decision (fold into
+  `"GE DAK"` vs. rename to `"GE Unassigned Infantry Units"`); Rommel's own entry needs one field added
+  (`"arrival_stage": 2`).
 - Resolve flags 1 and 4 (owner rulings) before wiring if their answers would change unit placement or
   the 22/24 GT assignment; flag 5 (the "alone" trucks' first-line-vs-2nd/3rd-line choice) before
   wiring if the engine needs a single deterministic default rather than exposing the choice to a policy.
