@@ -32,7 +32,7 @@ WHERE THE TREE COMES FROM. This module builds and polices the tree; the historic
 who begins the game assigned to whom -- is the [4.45] Organization at Arrival Charts, transcribed to
 data/oob_organization_4_45.json and seeded onto the campaign OOB (game.oob._seed_organization, Block
 B). The campaign then CONCENTRATES it in the Reorganization Segment and fights it as formations
-(game.campaign_policy.concentrate_formations + engine._carry_attached / combat_size, Block C), which
+(game.campaign_policy.concentrate_formations + engine._co_located_subtree / combat_size, Block C), which
 is what makes [15.53] reach its Brigade/Division tiers in play. A scenario with no seeded tree (both
 Desert Fox benchmarks) leaves every counter independent -- exactly what the engine had before.
 """

@@ -328,9 +328,13 @@ def anti_armor_damage(actual_points: int, roll: int, *, phasing: bool = False,
 # smaller SP). Stacking points: 5=Division, 3=Super-Brigade, 2=Brigade/Battle Group,
 # 1=Battalion, 0=Company (rule 9.4). The formation tiers are LIVE: a battalion attached
 # to its Parent Formation is that Formation in the fight (organization.combat_size +
-# engine._parents_of, 15.55/19.12), so a concentrated division/brigade/Kampfgruppe reads
-# its full size here -- seeded by [4.45] (Block B) and driven onto the map by the campaign
-# Reorganization Segment (campaign_policy.concentrate_formations, Block C). The lowest
+# engine._parents_of, 15.55/19.12), so a concentrated formation reads its full size here --
+# seeded by [4.45] (Block B) and driven onto the map by the campaign Reorganization Segment
+# (campaign_policy.concentrate_formations, Block C). What SCRIPTED campaign play actually
+# reaches is the SP-2 tier (the Italian regiments concentrating, plus the CW tank brigade);
+# the Division and Super-Brigade tiers need an HQ the engine can carry forward (non-combat
+# HQs wait on [4.44]/[4.45] movement, not transcribed) and no Kampfgruppe is formed (19.71
+# deferred), so those higher rows are exercised by unit tests, not yet by play. The lowest
 # (1,0) battalion-vs-company row fires for loose counters as it always did.
 _ORG_SIZE_SHIFT: dict[tuple[int, int], int] = {
     (5, 3): 1, (5, 2): 2, (5, 1): 4, (5, 0): 8,

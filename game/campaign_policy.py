@@ -62,7 +62,7 @@ def concentrate_formations(state: GameState, side: Side) -> list[OrganizationOrd
         belongs to (19.28's paper assignment made concrete on the map), not the [19.5]-capped
         attachment of a stranger. Once attached, the formation's units resolve at its Organization
         Size in close assault (organization.combat_size), and its counter carries them as one when
-        it advances (engine._carry_attached) -- so a division fights, and moves, as a division.
+        it advances (engine._co_located_subtree) -- so a division fights, and moves, as a division.
 
       * DETACH (19.43) any unit a link still binds to a Parent it no longer stands with. Voluntary
         movement keeps a formation together (the carry above), but a retreat or a Reaction can
@@ -79,16 +79,21 @@ def concentrate_formations(state: GameState, side: Side) -> list[OrganizationOrd
 
     ONLY UNDER A COMBAT PARENT (FLAGGED -- an engine limitation, not a rule). In the game a division
     is one counter and its HQ moves WITH it; in this engine an HQ is a separate counter, and a bare,
-    non-combat HQ counter (the CW brigade/division and German division HQs) is moved by no proposer.
-    Fold a formation into such an HQ and its units -- which may no longer self-move once attached
-    (19.12, engine._movement) -- would be FROZEN where they stand, since nothing can order the HQ to
-    lead them (measured: the Eighth Army's Delta brigades concentrated and never reached the railhead,
-    the whole faucet died). So concentration is confined to formations whose Parent is itself a COMBAT
-    counter that CAN be ordered forward and CAN carry them (engine._carry_attached) -- the Italian and
-    German regiments, the CW tank brigade. This is where Organization Size actually bites, and it
-    bites for the AXIS: its regiments fight concentrated (the DAK's historical strength), a faithful
-    counterweight to the Commonwealth replacement flow. The non-combat-HQ tiers (a concentrated
-    division/brigade) wait on the [4.44]/[4.45] HQ-follows-its-formation movement, not transcribed.
+    non-combat HQ counter (every CW brigade/division HQ, and every German division AND panzer-regiment
+    HQ) is moved by no proposer. Fold a formation into such an HQ and its units -- which may no longer
+    self-move once attached (19.12, engine._movement) -- would be FROZEN where they stand, since
+    nothing can order the HQ to lead them (measured: the Eighth Army's Delta brigades concentrated and
+    never reached the railhead, the whole faucet died). So concentration is confined to formations
+    whose Parent is itself a COMBAT counter that CAN be ordered forward and CAN carry them
+    (engine._co_located_subtree) -- in the campaign OOB that is the Italian infantry regiments and tank
+    groups and the one Commonwealth combat brigade (1 Army Tank Bde); EVERY German Parent Formation is
+    a bare, non-combat HQ counter, so the DAK concentrates nothing here. This is where Organization
+    Size actually bites, and under this engine's separate-HQ model it bites for the AXIS through its
+    ITALIAN formations -- a faithful counterweight to the Commonwealth replacement flow. FLAGGED, and
+    worth stating plainly, as the REVERSE of the historical picture: the DAK's own panzer regiments,
+    which fought concentrated, cannot concentrate here (their counters are non-combat HQs), while the
+    Italian binary divisions do. The German (and CW brigade/division) tiers wait on the [4.44]/[4.45]
+    HQ-follows-its-formation movement, not transcribed.
 
     Pure setup-tree play: no Kampfgruppe is formed here (that is the speculative 19.71 act, flagged
     and deferred). Returns [] when no unit carries the tree, so any policy that inherits this on a
@@ -1207,9 +1212,10 @@ class CampaignAxisPolicy(_CampaignAxisSupplyMixin, ScriptedPolicy):
         super().__init__(attacker=Side.AXIS)
 
     def organization(self, state: GameState, side: Side) -> list[OrganizationOrder]:
-        # [19.4]/[19.12] Concentrate the seeded [4.45] formation tree. Organization Size in close
-        # assault is historically an AXIS strength -- the DAK fought as divisions and Kampfgruppen --
-        # so this is where the Panzerarmee gets its [15.53] concentration edge (concentrate_formations).
+        # [19.4]/[19.12] Concentrate the seeded [4.45] formation tree. The [15.53] Organization Size
+        # edge this yields the Axis is delivered by the ITALIAN regiments and tank groups -- the only
+        # Axis Parent Formations that are combat counters; every German (DAK) formation is a bare,
+        # non-combat HQ counter and concentrates nothing here (see concentrate_formations for why).
         return concentrate_formations(state, side)
 
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:

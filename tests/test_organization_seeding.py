@@ -75,6 +75,11 @@ def _concentrate(by, div_id, tree):
 
 
 def test_a_seeded_division_fully_concentrated_reads_combat_size_five():
+    """THE MACHINERY, not scripted play: combat_size reads the Division tier (5) when a division is
+    hand-concentrated. Scripted campaign play does NOT reach this tier -- a division needs its
+    non-combat HQ carried forward and no proposer moves a bare HQ (campaign_policy.concentrate_
+    formations), so play tops out at the SP-2 regiment tier (the sibling test below). This asserts
+    the chart's top row is WIRED, not that divisions concentrate in campaign."""
     by = _campaign_units()
     # the 50th (Northumbrian) Division: HQ + three infantry brigades, each with its three battalions.
     stack = _concentrate(by, "HQ-50-Inf-Div", {

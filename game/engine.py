@@ -3088,7 +3088,7 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
             continue
         if u.attached_to:                               # 19.12: an attached subsidiary is inside its
             continue                                    # Parent's counter and moves only when the Parent
-                                                        # does (_carry_attached) -- never on its own order
+                                                        # does (_co_located_subtree) -- never on its own order
         if u.cohesion <= -26:                           # 6.26: a unit at Cohesion -26 or worse may
             _reject(r, side, actor, order,              # not move (nor attack, nor defend). The
                     "Cohesion -26 or worse: may not move (6.26)")   # surrender-on-enemy-adjacency
@@ -3179,7 +3179,14 @@ def _co_located_subtree(state: GameState, parent, index: dict) -> list:
     never separately trip Reaction (8.5) -- one counter made one move. A subsidiary is dropped from
     the Movement Segment's own order loop (it may not self-move, 19.12), so it moves with its Parent
     here or not at all. Empty for any counter with nothing attached, so every scenario without a
-    live organization tree carries nothing and stays byte-identical."""
+    live organization tree carries nothing and stays byte-identical.
+
+    FLAGGED ([6.15]): the mover's reach is gated on the PARENT's CPA (the caller runs
+    reachable_for_prev on the Parent counter), not on the LOWEST CPA among the formation's
+    components as 6.15 directs. Immaterial while the only Parents that carry a subtree are
+    homogeneous foot-infantry regiments -- a motorized formation's HQ is non-combat and never
+    carries -- so no carried component has a lower CPA to bind the move; noted so the
+    simplification is not silent."""
     out, frontier, seen = [], [parent.id], {parent.id}
     while frontier:
         pid = frontier.pop()

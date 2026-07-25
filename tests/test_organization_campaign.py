@@ -7,8 +7,8 @@ then found it INERT in play -- no policy attached anything, so no formation ever
   * concentrate_formations (game.campaign_policy) is the Reorganization-Segment standing order both
     campaign policies now issue -- 19.4/19.12 attach of each assigned unit that stands in its Parent's
     hex, plus the 19.43 reconciliation of any link a retreat has left stale, under a 9.14 stacking gate;
-  * a concentrated formation then MOVES as one counter (engine._co_located_subtree / _carry_attached,
-    19.12) so it reaches combat still concentrated;
+  * a concentrated formation then MOVES as one counter (engine._co_located_subtree, 19.12) so it
+    reaches combat still concentrated;
   * organization.size and engine._parents_of read the fold from PHYSICAL co-location, so a split
     formation counts honestly and never mis-fires;
   * and the close-assault resolver records the Organization-Size tier in COMBAT_RESOLVED.
