@@ -545,10 +545,12 @@ class CampaignVictory:
 
         THE ORDER IS 64.75 THEN 64.74, on the plan's instruction (00-THE-PORT-PLAN.md:1556) and this
         Block 7.3 task: 64.74 scores what is left UNUSED, and a voluntary 64.75 withdrawal is one of
-        the things that leaves a unit's Replacement Points unspent. The data-flow between them is
-        DORMANT today -- no equipment SPEND beat draws the pool, so a withdrawal changes no unused
-        count yet -- but the sequence is the book's, and it is written this way so it stays correct
-        when the equipment spend lands. 64.76 then compares the totals as a ratio (grade)."""
+        the things that leaves a unit's Replacement Points unspent. 64.74 ITSELF is live as of Block B
+        (the Axis infantry spend draws its pool, so the Axis scores his unused infantry); but the
+        64.75<->64.74 data-flow stays DORMANT -- 64.75 is Commonwealth-only and the Commonwealth's one
+        spendable class (infantry) is book-excluded, so a withdrawal changes no SCORED unused count yet.
+        The sequence is the book's, written so it stays correct when the [20.78C] equipment spend makes
+        CW tank/gun spendable. 64.76 then compares the totals as a ratio (grade)."""
         s = r.state
         axis_vp = cwlth_vp = 0
         for ax, avp, cvp, _name in self.cities:                       # 64.73
@@ -635,9 +637,11 @@ class CampaignVictory:
         only if the engine can actually SPEND it (replacements.replacement_vp_spendable_classes); a class
         with no rebuild beat is 100% unused by construction, which is an unmodelled spend, not the
         husbandry 64.74 rewards, and scoring it produced a fixed Axis+893 / CW+958 constant that
-        compressed every grade toward 1:1 (the Gate 7A artifact). Today the only spendable class is the
-        Commonwealth infantry rebuild -- itself book-excluded -- so 64.74 correctly scores 0/0 until the
-        [20.78C] equipment or [20.66] Axis spend lands and its class joins spendable_classes. The
+        compressed every grade toward 1:1 (the Gate 7A artifact). As of Block B (2026-07-25) two classes
+        are spendable: the Commonwealth infantry rebuild (itself book-excluded, so it never scores) and
+        the [20.66] Axis infantry rebuild the Block B flow-in + [20.62] coupling now feed -- which is NOT
+        book-excluded, so the Axis scores his unused infantry husbandry (~13 of the 1,600-pool in the
+        seed-1941 war, allotted minus the ~1,587 the spend drew). CW tank/gun still await [20.78C]. The
         permanent exclusion set (replacements.replacement_vp_excluded_classes) is now book-faithful:
         the earlier proxy that also dropped Axis infantry was reverted with this ruling -- the spendable
         gate, not an exclusion, is what keeps an unbuilt-spend class from scoring."""

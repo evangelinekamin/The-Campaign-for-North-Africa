@@ -464,12 +464,14 @@ def unused_replacement_vp(side: Side, used: dict, spendable: "frozenset | None" 
     `spendable` overrides the data-driven set, for tests that verify the allotted-minus-used arithmetic
     of a class not yet spendable in the live campaign. Left None in all engine callers.
 
-    TODAY THIS SCORES 0/0: the only spendable class is 'ALLIED/infantry', which the printed rule
-    excludes anyway, so the scoring set is empty for both sides until a non-infantry spend lands. When
-    the Axis pool / [20.78C] equipment spend lands, add its class to spendable_classes AND reconcile the
-    pool_key class the SPEND writes with these chart classes ([20.3] conversion classes vs the pool's
-    infantry/recce/gun/tank) so the subtraction bites -- the same reconciliation data/replacements.json
-    flags on axis_pool_20_66."""
+    LIVE (as of Block B, 2026-07-25): the AXIS scores its unused 'infantry' -- the [20.66] flow-in +
+    [20.62] coupling + spend made 'AXIS/infantry' a real spendable class (~13 unused of the 1,600 pool
+    in the seed-1941 war). The COMMONWEALTH still scores 0: its only spendable class, 'ALLIED/infantry',
+    is book-excluded. CW tank/gun await the [20.78C] equipment spend; when it (or any further Axis
+    equipment flow-in) lands, add its class to spendable_classes AND reconcile the pool_key class the
+    SPEND writes with these chart classes ([20.3] conversion classes vs the pool's infantry/recce/gun/
+    tank) so the subtraction bites -- the same reconciliation data/replacements.json flags on
+    axis_pool_20_66."""
     excluded = replacement_vp_excluded_classes(side)
     if spendable is None:
         spendable = replacement_vp_spendable_classes(side)
