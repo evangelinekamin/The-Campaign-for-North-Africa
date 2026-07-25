@@ -1231,52 +1231,82 @@ def _replacement_training(r: _Run) -> None:
                {"key": key, "points": matured[key], "up_to_turn": r.state.turn})
 
 
+def _get_eligible_units_for_class(state: GameState, side: Side, pool_class: str) -> list[Unit]:
+    """[20.3] Get all on-map units of `side` that may be rebuilt by `pool_class`.
+
+    Maps pool class to replacement_kind(s) that can absorb it:
+    - 'infantry' -> 'any_other_infantry' or 'any_headquarters_unit'
+    - 'tank' -> 'tank'
+    - 'gun' -> 'artillery', 'anti_tank', 'anti_air'
+    - 'recce' -> 'any_other_infantry' (FLAG: engine doesn't distinguish recce; treated as infantry)
+
+    Returns depleted (strength < max_toe) units only, sorted most-depleted-first."""
+    if pool_class == "infantry":
+        target_kinds = {"any_other_infantry", "any_headquarters_unit"}
+    elif pool_class == "tank":
+        target_kinds = {"tank"}
+    elif pool_class == "gun":
+        target_kinds = {"artillery", "anti_tank", "anti_air"}
+    elif pool_class == "recce":
+        # FLAG: [20.3] uses "armr"/"lt_tank" for recce, but engine returns "any_other_infantry"
+        # Judgment call: recce pool rebuilds the same units as infantry (both collapse to same kind)
+        target_kinds = {"any_other_infantry"}
+    else:
+        return []
+
+    depleted = [u for u in state.living(side)
+                if state.on_map(u) and u.max_toe > 0 and u.strength < u.max_toe
+                and organization.replacement_kind(u) in target_kinds]
+    # most-depleted first (largest deficit), deterministic tiebreak on id
+    depleted.sort(key=lambda u: (u.strength - u.max_toe, u.id))
+    return depleted
+
+
 def _replacement_spend(r: _Run) -> None:
-    """[19.61]/[19.68]/[20.4] THE REPLACEMENT ECONOMY'S FLOW OUT (Block 7.2b) -- the thing that closes
-    the loop 7.2a opened. Block 7.2a filled GameState.replacement_pool and NOTHING drew it down; here
-    the Commonwealth Quartermaster spends the arrived Infantry Replacement Points to rebuild depleted
-    Commonwealth infantry, restoring TOE Strength Points (19.61) at one Capability Point per two (19.68).
-    THIS is the first ADDITIVE write to Unit.steps in the campaign.
+    """[19.61]/[19.68]/[20.4] THE REPLACEMENT ECONOMY'S FLOW OUT (Block 7.2b) -- Block A generalized
+    to spend EVERY class (tank/gun/infantry/recce) for BOTH sides, restoring TOE Strength Points via
+    the 19.61/19.68 rebuild path. [20.3] maps pool class to unit type.
 
         20.4  "Replacement Points are... added to under-strength units to bring them back toward their
                maximum TOE Strength." -- via engine._rebuild, which draws the [20.3] class from the pool.
 
     SCRIPTED, once per Game-Turn (right after the production roll and the 20.43 training graduation, so
-    a point that MATURED this turn is spendable this turn), most-depleted battalion first, to full TOE,
-    until the pool is dry. The spend draws only the ABSORBABLE pool (replacement_pool); a still-Training
-    cohort is in replacement_training and invisible here until _replacement_training graduates it. One
-    scoped SIMPLIFICATION remains, flagged:
+    a point that MATURED this turn is spendable this turn), most-depleted battalion first within each
+    class, to full TOE, until the pool is dry. The spend draws only the ABSORBABLE pool (replacement_pool);
+    a still-Training cohort is in replacement_training and invisible here until _replacement_training
+    graduates it.
 
-      * a once-per-Game-Turn QM auto-spend is the deterministic PROXY for the player's per-OpStage
-        Organization-Phase rebuilding choice -- the QM seat is scripted (CLAUDE.md), and 'how many steps
-        a campaign restores' must not hinge on an LLM's whim. 19.64's supply-trace gate on the recipient
-        (a replacement reaches a unit that can trace to its arrival city) is not modelled -- a depleted
-        on-map battalion is rebuilt wherever it stands.
+    Block A FLAGS: pool 'recce' class collides with [20.3] 'armr'/'lt_tank' rows; the engine doesn't
+    distinguish recce from infantry, so recce pool rebuilds any_other_infantry units (same as infantry).
 
     Gated on GameState.replacement_production, exactly as the flow-in is -- so only the campaign runs it
     and every benchmark stays byte-identical (the pool is empty, and the die of the flow-in it depends
     on never fired there either)."""
     if not r.state.replacement_production:
         return
-    key = f"{Side.ALLIED.value}/infantry"
-    if r.state.replacements_available(key) <= 0:
-        return
-    depleted = [u for u in r.state.living(Side.ALLIED)
-                if r.state.on_map(u) and u.max_toe > 0 and u.strength < u.max_toe
-                and organization.replacement_kind(u) == "any_other_infantry"]
-    if not depleted:
-        return
-    # most-depleted first (largest deficit), deterministic tiebreak on id
-    depleted.sort(key=lambda u: (u.strength - u.max_toe, u.id))
-    r.go(Phase.ORGANIZATION, Side.ALLIED)
-    for snap in depleted:
-        avail = r.state.replacements_available(key)
-        if avail <= 0:
-            break
-        unit = r.state.unit(snap.id)                      # fresh: a prior rebuild folded already
-        points = min(organization.rebuild_headroom(unit, unit.max_toe), avail)   # 20.3: 1 Inf/TOE
-        if points > 0:
-            _rebuild(r, Side.ALLIED, unit, points)
+
+    emitted = False
+    # Spend each class for each side: CW and Axis both have tank/gun/infantry; recce is rare
+    classes = ["infantry", "tank", "gun", "recce"]
+    for side in (Side.ALLIED, Side.AXIS):
+        for pool_class in classes:
+            key = f"{side.value}/{pool_class}"
+            if r.state.replacements_available(key) <= 0:
+                continue
+            depleted = _get_eligible_units_for_class(r.state, side, pool_class)
+            if not depleted:
+                continue
+            if not emitted:
+                r.go(Phase.ORGANIZATION, side)
+                emitted = True
+            for snap in depleted:
+                avail = r.state.replacements_available(key)
+                if avail <= 0:
+                    break
+                unit = r.state.unit(snap.id)              # fresh: a prior rebuild folded already
+                points = min(organization.rebuild_headroom(unit, unit.max_toe), avail)
+                if points > 0:
+                    _rebuild(r, side, unit, points)
 
 
 def _commonwealth_withdrawals(r: _Run) -> None:
@@ -3541,15 +3571,23 @@ def _rebuild(r: _Run, side: Side, unit, points: int) -> str:
     [20.3] fixes which class of Replacement Point rebuilds this counter and how many per TOE point;
     only single-class rows are wired this block (the mixed 'Heavy Weapons' = 1 Inf & 1 Gun row and the
     equipment classes await the Axis/[20.78C] draw-at-will flow-in). A free-rebuild row (Road/Railroad
-    Construction, note f) carries no pool key and costs nothing."""
+    Construction, note f) carries no pool key and costs nothing.
+
+    Block A NOTE: the [20.3] class name (e.g., "artillery") must be mapped to the pool class
+    (e.g., "gun") because the pools use simplified names but [20.3] uses specific ones."""
     if points <= 0:
         return "no Replacement Points offered"
     charge = replacements.conversion_charge(organization.replacement_kind(unit))
     if not charge:
         pool_key, cost = "", 0                              # [20.3] note f: a free rebuild
     elif len(charge) == 1:
-        cls, per = next(iter(charge.items()))
-        pool_key, cost = f"{side.value}/{cls}", per * points
+        conv_cls, per = next(iter(charge.items()))
+        # Map [20.3] class to pool class (e.g., "artillery" -> "gun")
+        pool_cls = replacements.conversion_class_to_pool_class(conv_cls)
+        if pool_cls is None:
+            return (f"[20.3] class {conv_cls!r} does not map to any replacement pool "
+                    "(one-off special class with no mass supply)")
+        pool_key, cost = f"{side.value}/{pool_cls}", per * points
     else:
         return ("[20.3] this counter needs more than one class of Replacement Point to rebuild; "
                 "the mixed-class rows are not wired in Block 7.2b")

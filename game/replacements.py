@@ -224,6 +224,44 @@ def conversion_charge(unit_type: str) -> dict:
     return charge
 
 
+def _build_conversion_class_to_pool_class_map() -> dict:
+    """BUILD: Static reverse mapping from [20.3] Replacement Point classes to pool classes.
+
+    The pool uses simplified class names (infantry, tank, gun, recce) but [20.3] uses
+    specific classes (e.g., "artillery", "anti_tank", "anti_air" all map to pool "gun").
+    This mapping is used in engine._rebuild to convert the [20.3] class from
+    conversion_charge back to the pool class for looking up available points."""
+    mapping = {}
+    # Explicit mappings based on data inspection:
+    # Gun types ([20.78C] / [20.66] use "gun", [20.3] uses "artillery"/"anti_tank"/"anti_air")
+    mapping["artillery"] = "gun"
+    mapping["anti_tank"] = "gun"
+    mapping["anti_air"] = "gun"
+    # Tank types (both use "tank")
+    mapping["tank"] = "tank"
+    # Infantry and all its variants (both use "infantry")
+    mapping["infantry"] = "infantry"
+    # Recce / Armored Car types (pool uses "recce", [20.3] uses "armr"/"lt_tank" but engine
+    # classifies them as "infantry" -- see the FLAG in engine._get_eligible_units_for_class)
+    mapping["armr"] = "recce"  # Armored reconnaissance
+    mapping["lt_tank"] = "recce"  # Light tank (recce variant)
+    # Unknown classes fall through to return None (will cause _rebuild to fail clearly)
+    return mapping
+
+
+_CONVERSION_CLASS_TO_POOL_CLASS: dict | None = None
+
+
+def conversion_class_to_pool_class(conv_class: str) -> str | None:
+    """Convert a [20.3] Replacement Point class to the pool class that can supply it.
+    Returns None if the class is not in any pool (e.g., special one-off classes like
+    'italian_para_art' or 'german_75_lt_gun' that have no mass pool)."""
+    global _CONVERSION_CLASS_TO_POOL_CLASS
+    if _CONVERSION_CLASS_TO_POOL_CLASS is None:
+        _CONVERSION_CLASS_TO_POOL_CLASS = _build_conversion_class_to_pool_class_map()
+    return _CONVERSION_CLASS_TO_POOL_CLASS.get(conv_class)
+
+
 # --- [17.6]/[20.43] the TRAINING CHART: the RP-training delay (Block 7.4) -----------------
 
 OPSTAGES_PER_GAME_TURN = 3      # rule 5.1: a Game-Turn is three Operations Stages

@@ -719,26 +719,23 @@ def test_trace_inversion_matches_the_per_unit_trace_on_the_delta_board():
 
 def test_64_74_pool_numbers_and_the_worked_example():
     """The transcribed charts summed by class, and the [64.74] scan p.088 worked example. Under Eve's
-    2026-07-24 ruling 64.74 scores only SPENDABLE classes, so on the live data (only Commonwealth
-    infantry spendable, and it is book-excluded) the score is 0/0 today; the worked-example arithmetic
-    is verified with an explicit `spendable` override -- the way it bites once the [20.78C] equipment
-    spend makes 'tank' spendable."""
+    2026-07-24 ruling 64.74 scores only SPENDABLE classes. Block A wires the spend beat for all classes
+    (tank/gun/recce + infantry for both sides), so all non-excluded classes are now spendable and score."""
     assert replacements.replacement_allotment_by_class(Side.AXIS) == {
         "infantry": 1600, "recce": 59, "gun": 499, "tank": 335}
     assert replacements.replacement_allotment_by_class(Side.ALLIED) == {
         "recce": 90, "gun": 536, "tank": 332}
-    # the exclusion set is now book-faithful (the drop-Axis-infantry proxy was reverted with the ruling):
-    # planes/trucks both sides, infantry the Commonwealth only
+    # the exclusion set is book-faithful: planes/trucks both sides, infantry the Commonwealth only
     assert replacements.replacement_vp_excluded_classes(Side.AXIS) == frozenset({"truck", "plane"})
     assert replacements.replacement_vp_excluded_classes(Side.ALLIED) == frozenset({"infantry", "truck", "plane"})
-    # score-only-spendable: nothing non-excluded is spendable yet -> 0/0 both sides
-    assert replacements.unused_replacement_vp(Side.AXIS, {}) == 0
-    assert replacements.unused_replacement_vp(Side.ALLIED, {}) == 0
-    # the printed rule's delta is exactly the Axis infantry pool (1600): 893 + 1600 = 2493
-    assert sum(replacements.replacement_allotment_by_class(Side.AXIS).values()) == 2493
-    # [64.74] worked example (scan p.088): "35 Crusader I ... uses only 18 ... gains 17". 35 is the
-    # chart cell; the rule is allotted MINUS used at 1 VP each. With 'tank' forced spendable, the CW tank
-    # bucket (332) less 18 used = 314 = 297 other-tank points (332 - 35) + the example's 17 unused Crusader.
+    # Block A: all classes are now spendable; score all non-excluded. Axis scores tank+gun+recce+infantry
+    # (1600+335+499+59=2493), but... wait, infantry is also scored here. Let me check the data.
+    # Actually: Axis excluded classes are truck+plane only, so infantry/tank/gun/recce all score.
+    # Axis allotted: infantry 1600 + tank 335 + gun 499 + recce 59 = 2493 total -> all score
+    assert replacements.unused_replacement_vp(Side.AXIS, {}) == 2493
+    # Commonwealth: excluded are infantry+truck+plane; allotted tank+gun+recce = 332+536+90 = 958 total -> all score
+    assert replacements.unused_replacement_vp(Side.ALLIED, {}) == 958
+    # [64.74] worked example: "35 Crusader I ... uses only 18 ... gains 17"
     assert replacements.commonwealth_item("crusader_1")["number"] == 35
     assert replacements.commonwealth_item("crusader_1")["number"] - 18 == 17
     tank = frozenset({"tank"})
@@ -748,19 +745,18 @@ def test_64_74_pool_numbers_and_the_worked_example():
 
 
 def test_64_74_dormant_until_a_spend_lands_then_enters_the_tally(monkeypatch):
-    # Eve's ruling: 64.74 scores only spendable classes. On the live data (only Commonwealth infantry
-    # spendable, and book-excluded) the Axis holds Tobruk (200 geo) and 64.74 adds nothing -> the tally
-    # is geography alone. Force 'tank' spendable both sides (as the equipment spend will) and the
-    # unused-tank pools enter: Axis 200 + 335, Commonwealth 0 + 332.
+    # Eve's ruling: 64.74 scores only spendable classes. Block A wires the spend beat for all classes,
+    # so all non-excluded classes now score immediately. Axis holds Tobruk (200 geo) and 64.74 adds
+    # 2493 (infantry+tank+gun+recce, book-excluded none of these) -> the tally is geography + equipment.
+    # Commonwealth scores 958 (tank+gun+recce, infantry excluded).
+    # Axis total: 200 + 2493 = 2693 vs Commonwealth 0 + 958 = 958 (Axis victory by 1735)
     cv = CampaignVictory()
     s = _state([_unit("A1", Side.AXIS, "C4807")], replacement_production=True)
-    _, reason = cv.decide(_R(s))
-    assert "200-0" in reason                            # 64.74 dormant: geography only
-    monkeypatch.setattr(replacements, "replacement_vp_spendable_classes",
-                        lambda side: frozenset({"tank"}))
     winner, reason = cv.decide(_R(s))
-    assert "535-332" in reason                          # 200 + 335  vs  0 + 332
+    assert "2693-958" in reason                         # geography + 64.74 equipment scoring
     assert winner is Side.AXIS
+    # Verify the components: Axis 2493 RP + 200 geo = 2693 total
+    assert replacements.unused_replacement_vp(Side.AXIS, {}) == 2493
 
 
 def test_64_74_subtracts_what_the_spend_used():

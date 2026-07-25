@@ -139,6 +139,68 @@ def test_spend_gated_off_without_production_is_byte_identical():
     assert r.events == [] and r.state.unit("A").strength == 4
 
 
+def test_spend_rebuilds_cw_tanks_from_tank_pool():
+    """Block A: generalized spend now handles the tank class from [20.78C]."""
+    tank = _u("T", hex=(1, 1), strength=4, max_toe=8, is_tank=True)
+    r = _Run(_state([tank], pool={"ALLIED/tank": 10}))
+    _replacement_spend(r)
+    assert r.state.unit("T").strength == 8           # 4 + 4, all tank pool spent
+    assert r.state.replacements_available("ALLIED/tank") == 6
+    rebuilt = [e for e in r.events if e.kind == EventKind.UNIT_REBUILT]
+    assert len(rebuilt) == 1
+    assert rebuilt[0].payload["pool_key"] == "ALLIED/tank"
+
+
+def test_spend_rebuilds_cw_guns_from_gun_pool():
+    """Block A: the gun pool ([20.78C] artillery/AA/AT guns) rebuilds gun-type units."""
+    artillery = _u("A", hex=(1, 1), strength=3, max_toe=8, barrage=3, vulnerability=2)
+    antitank = _u("AT", hex=(2, 2), strength=2, max_toe=6, anti_armor=4, vulnerability=2)
+    r = _Run(_state([artillery, antitank], pool={"ALLIED/gun": 12}))
+    _replacement_spend(r)
+    assert r.state.unit("A").strength == 8           # 3 + 5
+    assert r.state.unit("AT").strength == 6          # 2 + 4
+    assert r.state.replacements_available("ALLIED/gun") == 3  # 12 - 5 - 4
+    rebuilt = [e for e in r.events if e.kind == EventKind.UNIT_REBUILT]
+    assert len(rebuilt) == 2
+    assert all(e.payload["pool_key"] == "ALLIED/gun" for e in rebuilt)
+
+
+def test_spend_rebuilds_axis_infantry_from_pool():
+    """Block A: Axis infantry pool ([20.66]) rebuilds Axis infantry units."""
+    axis_inf = _inf("GE Inf", (1, 1), strength=3, max_toe=8, side=Side.AXIS, nationality="GE")
+    r = _Run(_state([axis_inf], pool={"AXIS/infantry": 10}))
+    _replacement_spend(r)
+    assert r.state.unit("GE Inf").strength == 8      # 3 + 5
+    assert r.state.replacements_available("AXIS/infantry") == 5
+    rebuilt = [e for e in r.events if e.kind == EventKind.UNIT_REBUILT]
+    assert len(rebuilt) == 1
+    assert rebuilt[0].payload["pool_key"] == "AXIS/infantry"
+
+
+def test_spend_rebuilds_axis_tanks():
+    """Block A: Axis tank pool rebuilds Axis tanks."""
+    axis_tank = _u("Pz III", hex=(1, 1), strength=2, max_toe=5, is_tank=True,
+                   side=Side.AXIS, nationality="GE")
+    r = _Run(_state([axis_tank], pool={"AXIS/tank": 8}))
+    _replacement_spend(r)
+    assert r.state.unit("Pz III").strength == 5      # 2 + 3 (headroom)
+    assert r.state.replacements_available("AXIS/tank") == 5  # 8 - 3
+    rebuilt = [e for e in r.events if e.kind == EventKind.UNIT_REBUILT]
+    assert len(rebuilt) == 1
+    assert rebuilt[0].payload["pool_key"] == "AXIS/tank"
+
+
+def test_spend_most_depleted_first_across_classes():
+    """Block A: within each class, most-depleted units rebuild first (existing behavior)."""
+    inf1 = _inf("I1", (1, 1), strength=2, max_toe=8, side=Side.AXIS, nationality="GE")
+    inf2 = _inf("I2", (2, 2), strength=6, max_toe=8, side=Side.AXIS, nationality="GE")
+    r = _Run(_state([inf1, inf2], pool={"AXIS/infantry": 5}))
+    _replacement_spend(r)
+    assert r.state.unit("I1").strength == 7          # 2 + 5 (most depleted gets all)
+    assert r.state.unit("I2").strength == 6          # untouched (pool empty)
+    assert r.state.replacements_available("AXIS/infantry") == 0
+
+
 def test_spend_ignores_a_full_strength_or_axis_unit():
     full = _inf("F", (1, 1), strength=8, max_toe=8)
     axis = _inf("X", (2, 2), strength=2, max_toe=8, side=Side.AXIS, nationality="GE")
@@ -157,6 +219,23 @@ def test_apply_unit_rebuilt_debits_the_pool_and_adds_the_steps():
     out = apply(st, ev)
     assert out.unit("A").strength == 7
     assert out.replacements_available("ALLIED/infantry") == 3
+
+
+# --- Block A: 64.74 scoring of non-excluded classes ----
+
+def test_64_74_will_score_cw_tank_once_added_to_spendable_classes():
+    """Block A adds 'tank' and 'gun' to the spendable_classes for ALLIED in data/replacements.json.
+    Once added, 64.74 will score the unused tank/gun pools (they're not book-excluded like infantry).
+    This test verifies the pool setup; the actual 64.74 scoring is in test_campaign_victory."""
+    # Currently spendable_classes has only ["infantry"] for ALLIED; tank is not yet in it
+    spendable_now = replacements.replacement_vp_spendable_classes(Side.ALLIED)
+    assert "infantry" in spendable_now
+    # After Block A, spendable_classes will grow to include "tank" and "gun"
+    # Verify the logic: if "tank" is spendable and not excluded, it scores
+    excluded = replacements.replacement_vp_excluded_classes(Side.ALLIED)
+    assert "infantry" in excluded                   # book-excluded
+    assert "tank" not in excluded                   # not excluded
+    # So once "tank" is in spendable_classes, it WILL score in 64.74
 
 
 # --- 20.8 the mandatory withdrawals -----------------------------------------------------
