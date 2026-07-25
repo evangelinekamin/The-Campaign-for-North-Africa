@@ -158,6 +158,70 @@ def tonnage_errata() -> dict:
     return _data()["axis_tonnage_errata_20_62"]
 
 
+# --- [20.62]/[20.64]/[20.67] the AXIS INFANTRY bring-in ceiling (Block B, the convoy coupling) -----
+#
+# Block B builds the [20.62] tonnage charge (engine._axis_replacement_bring_in), whose vehicle is a
+# minimal, faithful INFANTRY flow-in: the Axis brings in the Infantry Replacement Points his depleted
+# army needs, bounded by the [20.66]/[20.67] pool. Only INFANTRY is wired live -- both German and
+# Italian print an unambiguous 30 tons/point, and Block A's spend already heals AXIS/infantry. The
+# TANK/GUN Axis flow-in is DEFERRED: its per-type tonnage (PzII 135 ... PzIV F2 235) is not a single
+# number, and the recce-vs-gun class split awaits the [20.3] reconciliation data/replacements.json
+# flags. The tonnage charge itself is class-agnostic and lands them cheaply once that reconciliation
+# and a per-type election arrive.
+
+def _applicable_period_max(item: dict, plan_turn: int) -> "tuple[int, str | None]":
+    """The [20.66]/[20.67] Max Replacement Points of one Production-Chart `item` plannable on
+    `plan_turn`, with its Max period -- honouring either a flat `plan_gt` window (German rows) or the
+    tiered `plan_first`/`plan_last` windows (the Italian pool's rate steps). (0, None) outside every
+    window. The Italian infantry `tiers` share one campaign pool but step their per-Game-Turn rate at
+    GT9 and GT25; the active tier is the one whose window contains the plan turn."""
+    if "tiers" in item:
+        for tier in item["tiers"]:
+            hi = tier.get("plan_last")
+            if tier["plan_first"] <= plan_turn and (hi is None or plan_turn <= hi):
+                return tier["max"], tier["max_period"]
+        return 0, None
+    if plan_turn >= item.get("plan_gt", 1 << 30):
+        return item["max"], item["max_period"]
+    return 0, None
+
+
+def axis_infantry_per_gt_max(plan_turn: int) -> int:
+    """[20.66]/[20.67] The most INFANTRY Replacement Points the Axis may PLAN in Game-Turn `plan_turn`
+    -- the German pool (400, 12/Game-Turn from GT38) plus the active Italian tier (1,200 total: 5/GT
+    across GT5-8, 10/GT across GT9-24, 25/GT from GT25). Both nations' infantry Max is per game_turn,
+    so this is a direct per-Game-Turn ceiling; it is 0 before the Italian pool opens (GT5). Read from
+    the [20.66] chart, not a literal."""
+    total = 0
+    for chart in ("german", "italian"):
+        mx, period = _applicable_period_max(axis_item(chart, "infantry"), plan_turn)
+        if mx and period != "game_turn":                # infantry is all per-game_turn on both charts
+            raise ValueError(f"{chart} infantry Max period is {period!r}, not 'game_turn'")
+        total += mx
+    return total
+
+
+def axis_infantry_tonnage() -> int:
+    """[20.62]/errata (owner ruling 6): the Shipping Tons charged per Axis Infantry Replacement Point
+    -- 30, printed identically on the German and Italian charts. Read from the chart's Tonnage column,
+    asserting the two agree, so the coupling's magnitude is the book's."""
+    german = axis_tonnage_per_point("german", "infantry")
+    italian = axis_tonnage_per_point("italian", "infantry")
+    if german != italian:
+        raise ValueError(f"German ({german}) and Italian ({italian}) infantry tonnage disagree")
+    return german
+
+
+def axis_infantry_pool_total() -> int:
+    """[20.66] The campaign-total Axis INFANTRY Replacement Points -- the German 400 plus the Italian
+    1,200 = 1,600, each chart's own '#'. The lifetime ceiling the bring-in may not exceed (the coupling
+    tracks cumulative shipped against it). FLAG: this is the NATION-AGGREGATE cap, collapsing the German
+    400 / Italian 1,200 sub-caps into one, exactly as the engine's AXIS/infantry pool and
+    organization.replacement_kind already treat Axis infantry as one nation-agnostic class."""
+    return (axis_item("german", "infantry")["number"]
+            + axis_item("italian", "infantry")["number"])
+
+
 # --- [20.78C] the COMMONWEALTH PRODUCTION CHART -----------------------------------------
 
 def _cw_equipment() -> dict:

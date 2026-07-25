@@ -46,7 +46,10 @@ def apply(state: GameState, event: Event) -> GameState:
         # points 0 (a 'none' cell) is a pure identity fold (no cohort) that still certifies the 2d6.
         if not p["points"]:
             return state
-        return state.credit_training(f"{p['side']}/{p['type']}", p["mature_turn"], p["points"])
+        st = state.credit_training(f"{p['side']}/{p['type']}", p["mature_turn"], p["points"])
+        if "tons_charged" in p:                          # Block B: the Axis coupling marks its flow-in
+            st = st.credit_axis_shipped(p["type"], p["points"])   # 20.66 lifetime cap ledger
+        return st
 
     if k == EventKind.REPLACEMENTS_TRAINED:
         # 20.43/17.6: a Training cohort graduates -- move `points` matured Replacement Points into the

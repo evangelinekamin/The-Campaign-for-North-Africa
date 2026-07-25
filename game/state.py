@@ -897,6 +897,14 @@ class GameState:
     replacement_training: dict = field(default_factory=dict)
     replacement_production: bool = False
 
+    # `axis_replacements_shipped` is the [20.66] lifetime ledger the Block-B convoy coupling keeps:
+    # "<type>" -> the cumulative Axis Replacement Points brought in over the campaign, so the bring-in
+    # (engine._axis_replacement_bring_in) can honour the chart's campaign-total '#' (Axis infantry
+    # 1,600 = German 400 + Italian 1,200). The Commonwealth has no such cap (its infantry is a random
+    # stream, its equipment free), so only the Axis flow-in writes it. Default {} -- and only
+    # game.scenario.campaign's Axis coupling ever fills it, so every benchmark holds it empty.
+    axis_replacements_shipped: dict = field(default_factory=dict)
+
     # `commonwealth_withdrawals` gates the [20.8]/[4.43a] mandatory withdrawal schedule -- the CW
     # formations pulled from the desert for Greece/Crete/Syria and REMOVED from play (20.84), the
     # subtraction whose absence let the campaign only ever ADD the (Rtn) returns. A 111-turn campaign
@@ -1137,6 +1145,13 @@ class GameState:
         else:
             training.pop(key, None)
         return replace(self, replacement_training=training)
+
+    def credit_axis_shipped(self, type_key: str, points: int) -> "GameState":
+        """[20.66] Add `points` to the lifetime Axis-shipped ledger for `type_key`, so the convoy
+        coupling can cap the bring-in at the chart's campaign total. Copy-then-replace, never mutates."""
+        shipped = dict(self.axis_replacements_shipped)
+        shipped[type_key] = shipped.get(type_key, 0) + points
+        return replace(self, axis_replacements_shipped=shipped)
 
     def with_air_unfit(self, squadron: str, planes: int) -> "GameState":
         """[38.31] Set how many of `squadron`'s aeroplanes stand UNREFITTED (mirrors

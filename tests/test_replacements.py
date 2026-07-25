@@ -388,29 +388,39 @@ def test_the_campaign_run_wires_the_beat_into_the_loop_and_accumulates():
     """End to end on the real campaign: run() calls the beat every Game-Turn (engine.run), so a
     short campaign fires on GT7 (plan 3) and GT8 (plan 4), each event well-formed, and the pool is
     the running sum. This is the guard the block lacked -- that the FLOW IN is actually plumbed
-    into the loop, not merely callable in isolation."""
+    into the loop, not merely callable in isolation.
+
+    RESTATED for Block B (20.62 the Axis convoy coupling): REPLACEMENTS_PRODUCED is no longer a
+    Commonwealth-only event -- the Axis now ALSO brings in Infantry Replacement Points, charged
+    tonnage against the convoy (its own test file). This test owns the COMMONWEALTH flow-in, so it
+    filters to the ALLIED events and scopes the conservation identity to the Commonwealth pool; the
+    Axis events are asserted well-formed but their accounting lives with the coupling."""
     res = run(campaign(seed=4, max_turns=8), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     ev = [e for e in res.events if e.kind == EventKind.REPLACEMENTS_PRODUCED]
-    assert ev, "the campaign must roll the CW Infantry Production stream"
-    assert min(e.payload["plan_turn"] for e in ev) == 3        # the first productive plan turn
-    for e in ev:
+    cw = [e for e in ev if e.payload["side"] == Side.ALLIED.value]
+    assert cw, "the campaign must roll the CW Infantry Production stream"
+    assert min(e.payload["plan_turn"] for e in cw) == 3        # the first productive plan turn
+    for e in cw:
         p = e.payload
-        assert (p["side"], p["type"]) == (Side.ALLIED.value, "infantry")
+        assert p["type"] == "infantry"
         assert p["arrival_turn"] == p["plan_turn"] + replacements.CW_ARRIVAL_LEAD
         assert p["plan_turn"] in replacements.cw_infantry_plan_turns()
         assert p["points"] == replacements.cw_infantry_lookup(p["plan_turn"], sum(e.rng_draws))
-    # RESTATED for Block 7.4 (20.43 Training): a produced point is no longer absorbable on arrival --
-    # it sits in replacement_training for the [17.6] delay, then graduates to the pool, then may be
-    # drawn. So the conservation identity is now THREE-way: every Infantry Point produced is either
-    # still Training, or trained-and-absorbable in the pool, or already drawn by a UNIT_REBUILT. (7.2b's
-    # two-way 'pool == produced - drawn' enshrined the skipped delay -- the last Game-Turn's arrivals
-    # have not matured, so they are in training, not the pool.)
-    produced = sum(e.payload["points"] for e in ev)
+    # Block B: the Axis coupling emits its own REPLACEMENTS_PRODUCED -- infantry, 30 tons/point, the
+    # [20.63] two-Game-Turn lead. It is a charged flow-in where the Commonwealth's is free (20.75).
+    for e in (e for e in ev if e.payload["side"] == Side.AXIS.value):
+        p = e.payload
+        assert p["type"] == "infantry" and p["tons_charged"] == p["points"] * 30
+        assert p["arrival_turn"] == p["plan_turn"] + replacements.AXIS_ARRIVAL_LEAD
+    # Conservation stays THREE-way (Block 7.4's 20.43 Training) but SCOPED to the Commonwealth pool:
+    # every CW Infantry Point produced is either still Training, or trained-and-absorbable in the pool,
+    # or already drawn by a UNIT_REBUILT. (The Axis pool is a separate ledger; mixing the two summed a
+    # CW-produced total against an all-sides training ledger.)
+    produced = sum(e.payload["points"] for e in cw)
     drawn = sum(e.payload["cost"] for e in res.events if e.kind == EventKind.UNIT_REBUILT
                 and e.payload["pool_key"] == "ALLIED/infantry")
     in_pool = res.final.replacements_available("ALLIED/infantry")
-    in_training = sum(sum(cohorts.values())
-                      for cohorts in res.final.replacement_training.values())
+    in_training = sum(res.final.replacement_training.get("ALLIED/infantry", {}).values())
     assert produced == in_pool + in_training + drawn
     assert drawn > 0, "Block 7.2b: the campaign must actually SPEND replacement points now"
     assert in_training > 0, "Block 7.4: the last Game-Turn's arrivals have not finished Training"

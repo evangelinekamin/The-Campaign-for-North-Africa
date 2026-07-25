@@ -10,6 +10,36 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+NOT RE-BASELINED BY RULE [20.62]/[20.64] THE AXIS CONVOY COUPLING (Block B of Gate 7A), 2026-07-25,
+AND THAT WAS CHECKED RATHER THAN ASSUMED -- both signatures recomputed on the tree and are UNCHANGED
+(the two test_rommel_and_siege_stay_byte_identical guards pass unmodified).
+
+The block builds the mechanism that makes the Axis faucet PAY for its army's healing: every Axis
+Infantry Replacement Point is now charged 30 Shipping Tons (the errata) against the [56.5] convoy
+allowance, at PRIORITY over fuel/ammunition/stores (20.64), before the 56.22 supply split -- where
+the Commonwealth's Replacement Points still simply arrive (20.75). The charge lives in
+engine._axis_replacement_bring_in, called from engine._convoy_planning; its vehicle is a minimal
+faithful INFANTRY flow-in (the [20.66] German 400 + Italian 1,200 pool), crediting the [20.43]
+Training ledger with the [20.63] two-Game-Turn lead, from which Block A's spend heals the army.
+
+It moves NEITHER benchmark log, and the reason is the same structure that gated 7.2a/7.2b:
+
+  * THE COUPLING IS GATED behind GameState.replacement_production, which ONLY game.scenario.campaign
+    sets. engine._axis_replacement_bring_in returns c.tons unchanged at its first guard for the two
+    Desert Fox benchmarks, so the convoy split sees the identical allowance it always did and no
+    REPLACEMENTS_PRODUCED is emitted on their logs.
+  * THE ELECTION DRAWS NO DIE. The bring-in is need-driven point arithmetic (the infantry deficit,
+    minus the pipeline, bounded by the [20.67] per-Game-Turn ceiling and the allowance) -- no RNG
+    subsystem is touched, so nothing a benchmark draws can move even if the gate opened.
+  * THE apply EDIT IS NIL. The Axis flow-in reuses REPLACEMENTS_PRODUCED, whose apply already credits
+    the Training ledger; no new EventKind and no new fold. The extra tons_charged/convoy_id payload
+    keys are recorded facts the fold ignores.
+
+The CAMPAIGN log DOES move -- that is the whole point of the block -- and the campaign is not
+signature-pinned (see CAMPAIGN_SEED below). Neutering the charge (return c.tons) restores the
+pre-block campaign supply exactly, which is how the squeeze was measured (reported in the commit).
+
+--------------------------------------------------------------------------------------------------
 NOT RE-BASELINED BY RULE 20 THE SPEND + THE COMMONWEALTH WITHDRAWALS (Block 7.2b), 2026-07-24, AND
 THAT WAS CHECKED RATHER THAN ASSUMED -- both signatures recomputed on the tree and are UNCHANGED
 (dda6faa445b4 / 5f02a0c4fb9e), each reproduced twice.

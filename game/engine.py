@@ -1090,6 +1090,88 @@ def _rail_station(r: _Run, convoy, stop):
     return r.state.supply(sid)
 
 
+def _axis_replacement_bring_in(r: _Run, c) -> float:
+    """[20.62]/[20.64]/[20.66] THE AXIS CONVOY COUPLING (Block B) -- the beat that makes the faucet
+    PAY for the army's healing. Before the Axis Player splits a convoy's [56.5] allowance among
+    fuel/ammunition/stores (56.22), he brings in the INFANTRY Replacement Points his depleted army
+    needs, and their Shipping Tonnage comes off that same allowance FIRST:
+
+        20.62  "each Replacement Point is counted against the Shipping Tonnage allowance" -- 30 tons
+               per Infantry Point (the named errata, owner ruling 6).
+        20.64  "Replacement Points have priority in Shipping Space over any type of supplies."
+        56.24  "10 Infantry Points ... this would subtract 300 tons from the available tonnage for
+               that Game-Turn."
+
+    Returns the tonnage LEFT for supplies (c.tons minus the replacement charge). Emits the flow-in
+    REPLACEMENTS_PRODUCED into the [20.43] Training ledger (the same event and pool Block 7.2a/7.4
+    already run), carrying its own tons_charged as a recorded fact. Block A's _replacement_spend then
+    heals the army from the matured pool -- so the loop the Commonwealth has had since 7.2b now closes
+    for the Axis too, but at a price in convoy space the Commonwealth never pays (20.75).
+
+    THE ELECTION is need-driven: bring in enough to cover the current infantry deficit, minus what is
+    already in the pipeline (absorbable pool + still-Training cohorts), bounded by the [20.66]/[20.67]
+    per-Game-Turn ceiling and by what the allowance can carry. When the tonnage cannot cover both,
+    REPLACEMENTS WIN (20.64): the points are not dropped, supplies are squeezed -- to nothing if the
+    deficit fills the ship. Points are still capped at the allowance (56.27: a convoy may not carry
+    over capacity), so an un-shippable surplus simply waits for a later Game-Turn.
+
+    FLAGS (judgement calls, none a transcribed number):
+      * WHICH BEAT: the charge attaches to the FORWARD convoy (arrival == turn+1), planned at THIS
+        Convoy Planning Phase -- 56.24 bills the RP against "the available tonnage for that Game-Turn"
+        the Axis is planning. The opening double-plan's curtain-raiser (arrival == this turn), booked
+        before the game began, is NOT charged.
+      * THE LEAD SEAM: the point is charged here (with the convoy arriving turn+1) but ARRIVES turn+2
+        ([20.63], via replacements.axis_arrival_turn) -- the one-Game-Turn gap between the [56.0]
+        convoy lead and the [20.63] replacement lead. Charging the convoy that physically carries it
+        (arriving turn+2, planned next Game-Turn) would need a second ledger of tonnage-due-per-turn;
+        the co-planned reading keeps the charge and the split in one pure beat and matches 56.24.
+      * DOCTRINE, NOT RULE: 20.66 is draw-at-will and the book hands "how many to bring in" to the
+        Axis Player, exactly as 56.22 hands him the convoy split. "Heal the deficit" is the policy's
+        faithful default (the sibling of convoy_plan_doctrine's "ship what the army is short of"); a
+        future block may expose it as a Policy hook. It reads the deficit at the turn's head, before
+        this turn's own spend heals -- pipeline-awareness keeps that from over-shipping.
+      * INFANTRY ONLY: tank/gun Axis flow-in is deferred (per-type tonnage + the [20.3]/class
+        reconciliation the data flags); this charge is class-agnostic and lands them cheaply later.
+      * NO GAUNTLET: the point is credited to Training unconditionally -- it does not run the 41.6/44
+        interdiction gauntlet with the supplies on its convoy (deferred). The [20.62]/[20.64] tonnage
+        charge, which IS this block, is modelled in full.
+      * THE [20.66] CAMPAIGN CAP is enforced against the NATION-AGGREGATE 1,600 (German 400 + Italian
+        1,200), collapsing the two sub-caps into one as the engine's nation-agnostic AXIS/infantry pool
+        already does. It nearly binds: measured, seed 1941 brings in 1,591 of the 1,600 over GT1-111,
+        so the cap is a real ceiling on a higher-attrition campaign (not the slack the first draft
+        assumed). Tracked in GameState.axis_replacements_shipped.
+
+    Gated: only when the scenario models the CW Production system (replacement_production), for the
+    Axis, on the forward convoy with tons > 0. Every other convoy and every benchmark returns c.tons
+    unchanged -- byte-identical (the benchmarks set no replacement_production)."""
+    if (not r.state.replacement_production or c.side != Side.AXIS
+            or c.tons <= 0 or c.arrival_turn != r.state.turn + 1):
+        return c.tons
+    plan_turn = r.state.turn
+    cap = replacements.axis_infantry_per_gt_max(plan_turn)      # [20.67] per-Game-Turn ceiling
+    if cap <= 0:
+        return c.tons                                          # the infantry pool has not opened (GT5)
+    eligible = _get_eligible_units_for_class(r.state, Side.AXIS, "infantry")
+    deficit = sum(organization.rebuild_headroom(u, u.max_toe) for u in eligible)
+    pipeline = (r.state.replacements_available("AXIS/infantry")
+                + sum(r.state.replacement_training.get("AXIS/infantry", {}).values()))
+    tonnage = replacements.axis_infantry_tonnage()             # 30 t/pt (errata)
+    allowance_pts = int(c.tons // tonnage)                     # 56.27: no more than the ship holds
+    remaining = (replacements.axis_infantry_pool_total()       # [20.66] the campaign-total 1,600 cap
+                 - r.state.axis_replacements_shipped.get("infantry", 0))
+    points = max(0, min(cap, deficit - pipeline, allowance_pts, remaining))
+    if points <= 0:
+        return c.tons
+    rp_tons = points * tonnage
+    arrival = replacements.axis_arrival_turn(plan_turn)        # 20.63: plan + 2
+    mature = arrival + replacements.training_delay_gt("infantry")   # 20.43/[17.6]: +1 GT for infantry
+    r.emit(EventKind.REPLACEMENTS_PRODUCED, Side.AXIS, "AXIS/QM",
+           {"side": Side.AXIS.value, "type": "infantry", "points": points,
+            "plan_turn": plan_turn, "arrival_turn": arrival, "mature_turn": mature,
+            "tons_charged": rp_tons, "convoy_id": c.id})
+    return c.tons - rp_tons
+
+
 def _convoy_planning(r: _Run, policies: dict) -> None:
     """[48 III] / [56.21] / [56.22] THE AXIS CONVOY PLANNING PHASE, once per Game-Turn, planning the
     NEXT Game-Turn's sailings -- and the beat that deleted invention I11.
@@ -1135,19 +1217,24 @@ def _convoy_planning(r: _Run, policies: dict) -> None:
         return                                           # unplanned scenarios stay byte-identical
     r.go(Phase.LOGISTICS, Side.SYSTEM)
     for c in sorted(due, key=lambda c: (c.arrival_turn, c.id)):
+        allowed = _axis_replacement_bring_in(r, c)       # [20.62]/[20.64]: the Axis replacement charge
+                                                         # comes off the allowance first, at priority
+                                                         # over supplies (c.tons unchanged if none)
         pol = policies[c.side]
-        plan = pol.convoy_plan(r.state, c.side, c.tons)  # Policy.convoy_plan: 56.22 is a MANDATORY
+        plan = pol.convoy_plan(r.state, c.side, allowed)  # Policy.convoy_plan: 56.22 is a MANDATORY
                                                          # input, so this is called, never probed
         tons_by = {k: float(v) for k, v in plan.items()
                    if k in supply.CONVOY_COMMODITIES and v > 0}     # 56.22: the three, and no other
         total = sum(tons_by.values())
-        if total > c.tons:                               # 56.21/56.27: within the allowable tonnage
-            tons_by = {k: v * c.tons / total for k, v in tons_by.items()}
+        if allowed <= 0:                                 # 20.64: replacements took the whole allowance
+            tons_by = {}
+        elif total > allowed:                            # 56.21/56.27: within the allowable tonnage
+            tons_by = {k: v * allowed / total for k, v in tons_by.items()}
         cargo = {k: supply.tons_to_points(v, k) for k, v in tons_by.items()}
         cargo = {k: q for k, q in cargo.items() if q > 0}
         r.emit(EventKind.CONVOY_PLANNED, c.side, f"{c.side.value}/QM",
                {"convoy_id": c.id, "lane": c.lane, "dest": c.dest, "tons": c.tons,
-                "allowed_tons": c.tons, "cargo": cargo,
+                "allowed_tons": allowed, "cargo": cargo,
                 "tons_by": {k: round(v, 3) for k, v in sorted(tons_by.items())}})
 
 
