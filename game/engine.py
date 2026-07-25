@@ -1464,11 +1464,11 @@ def _replacement_spend(r: _Run) -> None:
     Block A generalized the machinery; the FLOW-INS that fill its pools have since landed, so most passes
     are now LIVE in the campaign: ALLIED/infantry (the [20.78B] stream, _replacement_production);
     ALLIED/tank and ALLIED/gun (the [20.78C] equipment flow-in, _cw_equipment_production); and
-    AXIS/infantry (the [20.66] bring-in + [20.62] coupling, _axis_replacement_bring_in). The CW tank/gun
-    passes heal whatever CW armour/gun deficit appears -- usually small, because CW armour dies outright
-    rather than depleting. The only INERT passes are AXIS/tank and AXIS/gun: no Axis equipment producer
-    exists yet, so those pools stay empty (their flow-in awaits the per-type tonnage + [20.3] class
-    reconciliation the data flags). The generalized machinery is also exercised by
+    AXIS/infantry, AXIS/tank and AXIS/gun (the [20.66] bring-in + [20.62] coupling + per-type equipment
+    election, all in _axis_replacement_bring_in). Every mass class now has a producer; the CW and Axis
+    tank/gun passes heal whatever armour/gun deficit appears, but the spend is near-zero in play --
+    measured ~20 Axis tank / ~1 Axis gun and ~1 CW tank across the whole campaign -- because armour and
+    guns leave the war eliminated-outright or at full strength rather than depleting-alive. The generalized machinery is also exercised by
     tests/test_replacement_spend.py, which injects each pool. recce and HQ are deferred, with their
     reasons, in _get_eligible_units_for_class.
 
@@ -1478,9 +1478,10 @@ def _replacement_spend(r: _Run) -> None:
     if not r.state.replacement_production:
         return
 
-    # [20.3] each mass Replacement-Point class and the unit kind it rebuilds. A pass is inert until a
-    # producer fills its pool: today ALLIED/infantry, ALLIED/tank, ALLIED/gun and AXIS/infantry have one;
-    # AXIS/tank and AXIS/gun stay empty (no Axis equipment producer). recce and HQ are deferred (see
+    # [20.3] each mass Replacement-Point class and the unit kind it rebuilds. Every mass class now has a
+    # producer: ALLIED/infantry, ALLIED/tank, ALLIED/gun and AXIS/infantry, AXIS/tank, AXIS/gun (the last
+    # two via the [20.62] per-type equipment election in _axis_replacement_bring_in); the tank/gun passes
+    # fire near-zero because armour rarely depletes-alive. recce and HQ are deferred (see
     # _get_eligible_units_for_class -- each unreachable or mispriced by this flat 1-Point-per-TOE spend).
     classes = ["infantry", "tank", "gun"]
     for side in (Side.ALLIED, Side.AXIS):

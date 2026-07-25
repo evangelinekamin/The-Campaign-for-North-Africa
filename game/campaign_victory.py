@@ -27,10 +27,12 @@ branch under rule 61.8, which likewise does not define it -- out of scope here.)
 
 64.74 and 64.75 -- the last two point categories -- ARE NOW SCORED (Block 7.3, decide()): 64.74 the
 unused Replacement Points off the transcribed rule-20 charts less what the SPEND drew, 64.75 the
-Commonwealth Withdrawal Points off the voluntary-withdrawal log. Two things about them stay open and
-are flagged at their methods: 64.74's Axis-infantry exclusion is a DATA-DRIVEN PROXY that deviates
-from the scan (owner ruling needed -- _unused_replacement_points_64_74), and 64.75-B's -2-on-return
-is dormant because no 20.9 return mechanism exists yet (_withdrawal_points_64_75).
+Commonwealth Withdrawal Points off the voluntary-withdrawal log. ONE thing about them stays open,
+flagged at its method: 64.75-B's -2-on-return is dormant because no 20.9 return mechanism exists yet
+(_withdrawal_points_64_75). 64.74's exclusion set is now book-faithful (planes/Trucks both sides,
+Infantry CW-only): owner ruling 7 (2026-07-24, Eve) reverted the interim Axis-infantry proxy, and a
+SPENDABLE-classes gate -- not an exclusion -- now withholds an unbuilt-spend class from scoring
+(_unused_replacement_points_64_74).
 
 DEFERRED, documented so nothing is silently missing:
   - 64.73's Stores/Water week-test and the in-hex "do you HAVE it" form of the occupation

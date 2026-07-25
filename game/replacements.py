@@ -141,7 +141,7 @@ def axis_tank_total(chart: str) -> int:
 
 
 def axis_gun_total(chart: str) -> int:
-    """The campaign-total gun-class Replacement Points on one Axis chart (German 124 / Italian 251)."""
+    """The campaign-total gun-class Replacement Points on one Axis chart (German 218 / Italian 281)."""
     return sum(i["number"] for i in axis_items(chart) if i.get("class") == "gun")
 
 
@@ -246,12 +246,12 @@ def tonnage_errata() -> dict:
 #
 # Block B builds the [20.62] tonnage charge (engine._axis_replacement_bring_in), whose vehicle is a
 # minimal, faithful INFANTRY flow-in: the Axis brings in the Infantry Replacement Points his depleted
-# army needs, bounded by the [20.66]/[20.67] pool. Only INFANTRY is wired live -- both German and
-# Italian print an unambiguous 30 tons/point, and Block A's spend already heals AXIS/infantry. The
-# TANK/GUN Axis flow-in is DEFERRED: its per-type tonnage (PzII 135 ... PzIV F2 235) is not a single
-# number, and the recce-vs-gun class split awaits the [20.3] reconciliation data/replacements.json
-# flags. The tonnage charge itself is class-agnostic and lands them cheaply once that reconciliation
-# and a per-type election arrive.
+# army needs, bounded by the [20.66]/[20.67] pool. INFANTRY, TANK and GUN are all wired live now: the
+# infantry at its unambiguous 30 tons/point, the equipment (axis_equipment_election) at each type's own
+# per-type Tonnage (PzII 135 ... PzIV F2 235), cheapest-first. What stays DEFERRED is the recce-vs-gun
+# [20.3] class split (the Marder/pak_r ambiguity the data flags) and per-ROW (vs class-aggregate) window
+# metering -- neither binds in play, where the equipment spend is near-zero (armour rarely depletes-alive:
+# the review measured ~20 tank of 335 and ~1 gun of 499 over the whole campaign).
 
 def _applicable_period_max(item: dict, plan_turn: int) -> "tuple[int, str | None]":
     """The [20.66]/[20.67] Max Replacement Points of one Production-Chart `item` plannable on
