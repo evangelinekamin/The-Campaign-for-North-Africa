@@ -406,11 +406,16 @@ def test_the_campaign_run_wires_the_beat_into_the_loop_and_accumulates():
         assert p["arrival_turn"] == p["plan_turn"] + replacements.CW_ARRIVAL_LEAD
         assert p["plan_turn"] in replacements.cw_infantry_plan_turns()
         assert p["points"] == replacements.cw_infantry_lookup(p["plan_turn"], sum(e.rng_draws))
-    # Block B: the Axis coupling emits its own REPLACEMENTS_PRODUCED -- infantry, 30 tons/point, the
-    # [20.63] two-Game-Turn lead. It is a charged flow-in where the Commonwealth's is free (20.75).
-    for e in (e for e in ev if e.payload["side"] == Side.AXIS.value):
+    # Block B: the Axis coupling emits its own REPLACEMENTS_PRODUCED -- infantry (30 tons/point) and
+    # equipment (tank/gun, per-type tonnage), the [20.63] two-Game-Turn lead. It is a charged flow-in
+    # where the Commonwealth's is free (20.75). Infantry events must charge 30 t/pt; equipment charges
+    # per-type (variable, estimated as average).
+    axis_events = [e for e in ev if e.payload["side"] == Side.AXIS.value]
+    for e in axis_events:
         p = e.payload
-        assert p["type"] == "infantry" and p["tons_charged"] == p["points"] * 30
+        if p["type"] == "infantry":
+            assert p["tons_charged"] == p["points"] * 30   # Infantry: 30 t/pt (errata)
+        # equipment types (tank/gun) charge per-type tonnage (variable, estimated as average of items)
         assert p["arrival_turn"] == p["plan_turn"] + replacements.AXIS_ARRIVAL_LEAD
     # Conservation stays THREE-way (Block 7.4's 20.43 Training) but SCOPED to the Commonwealth pool:
     # every CW Infantry Point produced is either still Training, or trained-and-absorbable in the pool,
