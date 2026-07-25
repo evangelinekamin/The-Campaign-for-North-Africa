@@ -463,9 +463,10 @@ def replacement_vp_spendable_classes(side: Side) -> frozenset:
     """[64.74] The Replacement-Point classes the engine can currently SPEND for `side` -- the only
     classes whose UNUSED count is a real quantity. OWNER RULING 2026-07-24 (Eve): 64.74 scores only
     spendable classes, because a class with no rebuild beat is 100% unused by construction (an
-    unmodelled spend, not the husbandry 64.74 rewards). Today only the Commonwealth infantry spend
-    exists (engine._replacement_spend); it GROWS one data edit at a time as the equipment / Axis spends
-    land. Read from data so adding a class is never a literal here."""
+    unmodelled spend, not the husbandry 64.74 rewards). It GROWS one data edit at a time WITH the
+    producer that makes its spend real: today AXIS 'infantry' (the [20.66] coupling, Block B) and
+    ALLIED 'tank'/'gun' (the [20.78C] flow-in, Block A) are live, each with a firing rebuild beat.
+    Read from data so adding a class is never a literal here."""
     return frozenset(_victory_64_74()["spendable_classes"].get(side.value, ()))
 
 
@@ -500,14 +501,16 @@ def unused_replacement_vp(side: Side, used: dict, spendable: "frozenset | None" 
     `spendable` overrides the data-driven set, for tests that verify the allotted-minus-used arithmetic
     of a class not yet spendable in the live campaign. Left None in all engine callers.
 
-    LIVE (as of Block B, 2026-07-25): the AXIS scores its unused 'infantry' -- the [20.66] flow-in +
-    [20.62] coupling + spend made 'AXIS/infantry' a real spendable class (~13 unused of the 1,600 pool
-    in the seed-1941 war). The COMMONWEALTH still scores 0: its only spendable class, 'ALLIED/infantry',
-    is book-excluded. CW tank/gun await the [20.78C] equipment spend; when it (or any further Axis
-    equipment flow-in) lands, add its class to spendable_classes AND reconcile the pool_key class the
-    SPEND writes with these chart classes ([20.3] conversion classes vs the pool's infantry/recce/gun/
-    tank) so the subtraction bites -- the same reconciliation data/replacements.json flags on
-    axis_pool_20_66."""
+    LIVE (as of Block A CW equipment, 2026-07-25): the AXIS scores its unused 'infantry' -- the [20.66]
+    flow-in + [20.62] coupling + spend made 'AXIS/infantry' a real spendable class (~13 unused of the
+    1,600 pool in the seed-1941 war). The COMMONWEALTH now scores its unused 'tank' + 'gun' -- the
+    [20.78C] flow-in (engine._cw_equipment_production) + spend made both spendable, and neither is
+    book-excluded (only CW infantry is). MEASURED, the CW tank/gun SPEND is near-zero (armour/guns die
+    outright rather than depleting), so the husbandry is ~865 of the 868 pool -- a REAL allotted-minus-
+    used, flagged as a balance finding in data/replacements.json (spendable_classes). Still awaiting
+    their own Axis flow-ins: Axis 'tank'/'gun'/'recce' (per-type tonnage + the [20.3] class
+    reconciliation the data flags on axis_pool_20_66); CW 'recce' is structurally unspendable
+    (replacement_kind never emits a recce kind)."""
     excluded = replacement_vp_excluded_classes(side)
     if spendable is None:
         spendable = replacement_vp_spendable_classes(side)

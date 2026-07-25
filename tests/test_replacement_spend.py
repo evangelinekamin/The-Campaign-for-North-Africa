@@ -224,18 +224,20 @@ def test_apply_unit_rebuilt_debits_the_pool_and_adds_the_steps():
 # --- Block A: 64.74 scoring of non-excluded classes ----
 
 def test_64_74_will_score_cw_tank_once_added_to_spendable_classes():
-    """Block A adds 'tank' and 'gun' to the spendable_classes for ALLIED in data/replacements.json.
-    Once added, 64.74 will score the unused tank/gun pools (they're not book-excluded like infantry).
-    This test verifies the pool setup; the actual 64.74 scoring is in test_campaign_victory."""
-    # Currently spendable_classes has only ["infantry"] for ALLIED; tank is not yet in it
+    """RESTATED (rule 5): Block A LANDED 'tank' and 'gun' in spendable_classes.ALLIED (the [20.78C]
+    flow-in engine._cw_equipment_production + the generalized spend), so 64.74 now scores the unused
+    tank/gun pools (neither is book-excluded, unlike CW infantry). This test verifies the pool setup;
+    the actual 64.74 scoring is in test_campaign_victory. 'recce' stays OUT -- it is structurally
+    unspendable (organization.replacement_kind never emits a recce kind)."""
     spendable_now = replacements.replacement_vp_spendable_classes(Side.ALLIED)
-    assert "infantry" in spendable_now
-    # After Block A, spendable_classes will grow to include "tank" and "gun"
-    # Verify the logic: if "tank" is spendable and not excluded, it scores
+    assert "infantry" in spendable_now              # was always here (but book-excluded)
+    assert "tank" in spendable_now                  # Block A: the [20.78C] flow-in + spend landed
+    assert "gun" in spendable_now
+    assert "recce" not in spendable_now             # structurally unspendable -- no rebuild beat
+    # tank/gun are NOT book-excluded, so being spendable, they score their unused count in 64.74:
     excluded = replacements.replacement_vp_excluded_classes(Side.ALLIED)
-    assert "infantry" in excluded                   # book-excluded
-    assert "tank" not in excluded                   # not excluded
-    # So once "tank" is in spendable_classes, it WILL score in 64.74
+    assert "infantry" in excluded                   # book-excluded (CW only)
+    assert "tank" not in excluded and "gun" not in excluded
 
 
 # --- 20.8 the mandatory withdrawals -----------------------------------------------------

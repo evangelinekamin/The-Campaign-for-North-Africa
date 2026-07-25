@@ -728,9 +728,10 @@ def test_64_74_pool_numbers_and_the_worked_example():
     """The transcribed charts summed by class, and the [64.74] scan p.088 worked example. Under Eve's
     2026-07-24 ruling 64.74 scores only SPENDABLE classes. As of Block B (2026-07-25) the AXIS 'infantry'
     class is spendable (the [20.66] flow-in + [20.62] coupling + spend landed) and is NOT book-excluded,
-    so the Axis scores his unused infantry; the COMMONWEALTH still scores 0 (its only spendable class,
-    infantry, is book-excluded). A not-yet-live class's arithmetic is verified with an explicit `spendable`
-    override -- the way it will bite once the [20.78C] equipment spend makes 'tank' spendable."""
+    so the Axis scores his unused infantry. RESTATED for Block A CW equipment (2026-07-25, rule 5): the
+    [20.78C] flow-in (engine._cw_equipment_production) + spend landed, so 'tank'/'gun' are now SPENDABLE
+    for the Commonwealth too and NOT book-excluded -- so the COMMONWEALTH now scores its unused tank+gun
+    husbandry (332 + 536 = 868), where it used to score 0. Only CW 'infantry' stays book-excluded."""
     assert replacements.replacement_allotment_by_class(Side.AXIS) == {
         "infantry": 1600, "recce": 59, "gun": 499, "tank": 335}
     assert replacements.replacement_allotment_by_class(Side.ALLIED) == {
@@ -741,10 +742,15 @@ def test_64_74_pool_numbers_and_the_worked_example():
     assert replacements.replacement_vp_excluded_classes(Side.ALLIED) == frozenset({"infantry", "truck", "plane"})
     # score-only-spendable: AXIS 'infantry' is spendable (Block B) and not book-excluded, so with NO spend
     # recorded all 1600 allotted infantry points are unused; a realistic ~1587-point spend leaves 13 (the
-    # live seed-1941 husbandry). The Commonwealth's only spendable class (infantry) is book-excluded -> 0.
+    # live seed-1941 husbandry). The Commonwealth now scores its unused tank+gun (Block A made both
+    # spendable, neither book-excluded): with NO spend recorded all 332 + 536 = 868 are unused (its
+    # infantry class stays book-excluded and never scores).
     assert replacements.unused_replacement_vp(Side.AXIS, {}) == 1600
     assert replacements.unused_replacement_vp(Side.AXIS, {("AXIS", "infantry"): 1587}) == 13
-    assert replacements.unused_replacement_vp(Side.ALLIED, {}) == 0
+    assert replacements.unused_replacement_vp(Side.ALLIED, {}) == 868         # 332 tank + 536 gun
+    # ...and a recorded CW tank/gun spend subtracts, exactly as the Axis infantry one does:
+    assert replacements.unused_replacement_vp(
+        Side.ALLIED, {("ALLIED", "tank"): 30, ("ALLIED", "gun"): 100}) == 738   # (332-30) + (536-100)
     # the printed rule's delta is exactly the Axis infantry pool (1600): 893 + 1600 = 2493
     assert sum(replacements.replacement_allotment_by_class(Side.AXIS).values()) == 2493
     # [64.74] worked example (scan p.088): "35 Crusader I ... uses only 18 ... gains 17". 35 is the
@@ -759,19 +765,20 @@ def test_64_74_pool_numbers_and_the_worked_example():
 
 
 def test_64_74_axis_infantry_scores_live_then_forced_tank_also_enters(monkeypatch):
-    # RESTATED from "dormant_until_a_spend_lands" (rule 5): Block B (2026-07-25) made 'AXIS/infantry' a
-    # real spendable class ([20.66] flow-in + [20.62] coupling + spend), NOT book-excluded -- so 64.74 is
-    # LIVE for the Axis, no longer dormant. The Axis holds Tobruk (200 geo) AND scores his unused
-    # infantry, and a recorded spend subtracts: a rebuild drawing 1587 of the 1600-point pool leaves 13
-    # unused -> 200 + 13 = 213 (the live-war shape).
+    # RESTATED for Block A CW equipment (rule 5): Block B made 'AXIS/infantry' spendable; Block A now
+    # makes CW 'tank'/'gun' spendable too ([20.78C] flow-in + spend), NOT book-excluded -- so BOTH sides'
+    # husbandry is live in the default data set. The Axis holds Tobruk (200 geo) AND scores his unused
+    # infantry; the Commonwealth scores its unused tank+gun (868 with no CW equipment spend recorded).
+    # A recorded Axis spend subtracts: a rebuild drawing 1587 of the 1600-point pool leaves 13 unused ->
+    # Axis 200 + 13 = 213; the Commonwealth's 868 is untouched by an AXIS/infantry rebuild.
     cv = CampaignVictory()
     s = _state([_unit("A1", Side.AXIS, "C4807")], replacement_production=True)
     _, reason = cv.decide(_R(s, [_rebuilt("AXIS/infantry", 1587)]))
-    assert "213-0" in reason                            # 200 geo + (1600 - 1587) unused infantry
+    assert "213-868" in reason                          # Axis 200 + (1600-1587); CW 332+536 unused
     _, reason = cv.decide(_R(s))                        # no spend recorded -> the whole pool is unused
-    assert "1800-0" in reason                           # 200 geo + 1600 unused infantry
-    # forcing ONLY 'tank' spendable (as the [20.78C] equipment spend will, overriding the data set)
-    # swaps infantry out for the tank pools: Axis 200 + 335, Commonwealth 0 + 332.
+    assert "1800-868" in reason                         # Axis 200 + 1600; CW 868
+    # forcing ONLY 'tank' spendable (overriding the data set) isolates the tank arithmetic on both sides:
+    # Axis 200 + 335, Commonwealth 0 + 332 (its gun husbandry drops out under the override).
     monkeypatch.setattr(replacements, "replacement_vp_spendable_classes",
                         lambda side: frozenset({"tank"}))
     winner, reason = cv.decide(_R(s))
