@@ -247,7 +247,11 @@ def _is_infantry(u) -> bool:
     return u.is_combat and not u.is_tank and not u.is_gun
 
 
-def _is_company(u) -> bool:
+def is_company(u) -> bool:
+    """A company-sized combat counter: rule 9.4 gives a battalion one Stacking Point and a company
+    zero, so a company is a combat unit whose printed Stacking Point value is 0. The engine-wide
+    battalion/company discriminator ([19.5] attachment accounting, and 64.75-A's 'battalion, not
+    company' voluntary-withdrawal eligibility)."""
     return u.stacking_points == 0 and u.is_combat
 
 
@@ -277,9 +281,9 @@ def may_attach(parent, attached, unit, turn: int, board=()) -> str:
         return ""
 
     guests = [u for u in attached if u.assigned_to != parent.id]
-    bns = [u for u in guests if not _is_company(u)]
-    coys = [u for u in guests if _is_company(u)]
-    if _is_company(unit):
+    bns = [u for u in guests if not is_company(u)]
+    coys = [u for u in guests if is_company(u)]
+    if is_company(unit):
         # [19.5] Modifications: "Any nation's Division- and Brigade-equivalent units may attach
         # two non-Shell company-Equivalent units at no cost to the maximum attachments. Note that
         # three company-eq are equal to one Bn-eq unit."

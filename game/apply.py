@@ -39,10 +39,22 @@ def apply(state: GameState, event: Event) -> GameState:
         return state.with_port(replace(port, eff=p["level"]))
 
     if k == EventKind.REPLACEMENTS_PRODUCED:
-        # 20.7/20.78B: Replacement Points arrive into the pool (the FLOW IN, Block 7.2a). A pure
-        # scalar credit -- no TOE, no supply surface -- so conservation and stacking are untouched.
-        # points 0 (a 'none' cell) is an identity fold that still certifies the 2d6 in the log.
-        return state.credit_replacements(f"{p['side']}/{p['type']}", p["points"])
+        # 20.7/20.78B/20.43: Replacement Points arrive into the TRAINING ledger (the FLOW IN, Block
+        # 7.2a; the 20.43 Training delay, Block 7.4) -- NOT the absorbable pool. They mature into the
+        # pool at `mature_turn` (arrival + the [17.6] delay) via REPLACEMENTS_TRAINED. A pure
+        # nested-dict credit -- no TOE, no supply surface -- so conservation and stacking are untouched.
+        # points 0 (a 'none' cell) is a pure identity fold (no cohort) that still certifies the 2d6.
+        if not p["points"]:
+            return state
+        return state.credit_training(f"{p['side']}/{p['type']}", p["mature_turn"], p["points"])
+
+    if k == EventKind.REPLACEMENTS_TRAINED:
+        # 20.43/17.6: a Training cohort graduates -- move `points` matured Replacement Points into the
+        # absorbable pool and drop the cohorts of `key` matured by `up_to_turn` (Block 7.4). The
+        # generator (engine._replacement_training) read `points` off matured_training, so pool credit
+        # and cohort drop describe the same maturation.
+        return state.graduate_training(p["key"], p["up_to_turn"]).credit_replacements(
+            p["key"], p["points"])
 
     if k == EventKind.SUPPLY_EVAPORATED:
         # 49.3 / 52.44: fuel/water lost to evaporation & spillage. Folds exactly like a

@@ -25,12 +25,20 @@ runs to Game-Turn 111 and is settled on the 64.73 tally, exactly as the book has
 engine's built-in Race-for-Tobruk spec, engine._victory, still carries the same invented
 branch under rule 61.8, which likewise does not define it -- out of scope here.)
 
+64.74 and 64.75 -- the last two point categories -- ARE NOW SCORED (Block 7.3, decide()): 64.74 the
+unused Replacement Points off the transcribed rule-20 charts less what the SPEND drew, 64.75 the
+Commonwealth Withdrawal Points off the voluntary-withdrawal log. Two things about them stay open and
+are flagged at their methods: 64.74's Axis-infantry exclusion is a DATA-DRIVEN PROXY that deviates
+from the scan (owner ruling needed -- _unused_replacement_points_64_74), and 64.75-B's -2-on-return
+is dormant because no 20.9 return mechanism exists yet (_withdrawal_points_64_75).
+
 DEFERRED, documented so nothing is silently missing:
   - 64.73's Stores/Water week-test and the in-hex "do you HAVE it" form of the occupation
     quality-test. The Fuel-for-20-CP and Ammunition-for-three-fires MAGNITUDES are faithful
     (CampaignVictory._supplied); the Stores/Water week and the in-hex form need the per-unit
     basic-load model (49.14 + 53.11, T1-1), so a holder is still tested by a reach-a-dump trace.
-  - 64.74 unused-Replacement-Point VPs and 64.75 Commonwealth Withdrawal VPs.
+  - 64.74's used-subtraction bites only once an Axis-pool / [20.78C] equipment SPEND beat exists to
+    draw those classes down; today only the Commonwealth infantry spend runs, and it is excluded.
 
 THE TRIPOLI HOLE -- CLOSED 2026-07-16, WITH 64.72. The history is kept because the hole was a
 BLOCKER for 64.72 and the record of why it was safe to close is the record of why 64.72 is faithful.
@@ -117,7 +125,7 @@ import os
 from typing import TYPE_CHECKING
 
 from . import coords, supply, wells
-from .events import Side
+from .events import EventKind, Side
 
 if TYPE_CHECKING:                       # avoid a runtime import cycle (engine owns _Run)
     from .engine import _Run
@@ -134,6 +142,12 @@ _STAGES_PER_TURN = 3
 # Phase of every Operations Stage, so the rule is live from the first check of Game-Turn 35 onward
 # -- turn >= 35, at any stage. No end: it is asked again every stage for the rest of the war.
 _AUTO_WIN_TURN_64_72 = 35
+
+# 64.75-A Commonwealth Withdrawal Points: "1/2 point for each week that unit is gone, to a maximum
+# of three points per unit." WEEK = one Game-Turn (owner ruling 4, scratchpad/port/PHASE-7-OWNER-
+# RULINGS.md), so a battalion gone six-or-more Game-Turns caps at three points.
+_WITHDRAWAL_VP_PER_WEEK = 0.5
+_WITHDRAWAL_VP_MAX_PER_UNIT = 3.0
 
 
 def load_victory_cities() -> dict:
@@ -520,23 +534,139 @@ class CampaignVictory:
         return None, ""
 
     def decide(self, r: "_Run") -> tuple["Side | None", str]:
+        """The 64.73-64.76 POINT TALLY -- reached only when neither 64.71 nor 64.72 fired (the engine
+        calls decide() at the final turn, after check() returned no winner), which is 64.73's own
+        opener "failing the above two cases". Three categories of points are totalled and then graded:
+
+          - 64.73 Geographic Occupation Points: each side scores the cities its supplied combat units
+            hold (self.cities / _occupier).
+          - 64.75 Commonwealth Withdrawal Points (Commonwealth only).
+          - 64.74 unused Replacement-Point Victory Points (both sides).
+
+        THE ORDER IS 64.75 THEN 64.74, on the plan's instruction (00-THE-PORT-PLAN.md:1556) and this
+        Block 7.3 task: 64.74 scores what is left UNUSED, and a voluntary 64.75 withdrawal is one of
+        the things that leaves a unit's Replacement Points unspent. The data-flow between them is
+        DORMANT today -- no equipment SPEND beat draws the pool, so a withdrawal changes no unused
+        count yet -- but the sequence is the book's, and it is written this way so it stays correct
+        when the equipment spend lands. 64.76 then compares the totals as a ratio (grade)."""
         s = r.state
         axis_vp = cwlth_vp = 0
-        for ax, avp, cvp, _name in self.cities:
+        for ax, avp, cvp, _name in self.cities:                       # 64.73
             side = self._occupier(s, ax)
             if side == Side.AXIS:
                 axis_vp += avp
             elif side == Side.ALLIED:
                 cwlth_vp += cvp
-        return grade(axis_vp, cwlth_vp)
+        cwlth_vp += self._withdrawal_points_64_75(r)                  # 64.75 (Commonwealth only)
+        axis_74, cwlth_74 = self._unused_replacement_points_64_74(r)  # 64.74 (both sides)
+        return grade(axis_vp + axis_74, cwlth_vp + cwlth_74)
+
+    def _withdrawal_points_64_75(self, r: "_Run") -> float:
+        """[64.75] Commonwealth WITHDRAWAL POINTS -- the Commonwealth's only non-geographic Victory
+        Point source, and the counterweight to 64.74. 64.75-A pays HALF a point for each WEEK (owner
+        ruling 4: one Game-Turn) that a VOLUNTARILY-withdrawn combat battalion of infantry, armour,
+        artillery or anti-tank -- NOT AA -- is gone, to a maximum of three points per unit. It is
+        summed from the UNIT_WITHDRAWN log (a read-only projection of the run, like a 64.73 tally --
+        it re-enters no event stream).
+
+        WHAT IS EXCLUDED, per the rule's own words:
+          - MANDATORY withdrawals ([4.43a], voluntary False): "These are voluntary withdrawals, not
+            mandatory withdrawals" -- the formations History sent to Greece/Crete/Syria do not score.
+          - AA: 64.75-A lists "infantry, armour, artillery or anti-tank guns (not AA)", and those four
+            arms are every combat arm EXCEPT anti-aircraft (rule 3.23), so the one filter is to drop
+            an anti-aircraft counter (organization.replacement_kind == 'anti_air').
+          - non-Commonwealth: "apply solely to the Commonwealth Player" -- honoured structurally (the
+            engine's 'withdraw' order rejects a non-Allied voluntary withdrawal, engine._organization)
+            and re-checked here (u.side).
+
+        WHAT THE ACT ALREADY GUARANTEES, and this scoring therefore trusts: the 'withdraw' order path
+        rejects a company, a unit below 75% TOE Strength, and one not in Alexandria/Cairo (64.75-A's
+        other conditions). They CANNOT be re-verified here -- a withdrawn counter has steps=() (its
+        strength gone) -- so the eligibility that survives withdrawal (its type, for the AA filter) is
+        read off the still-intact Unit, and the rest is the act's contract.
+
+        WEEKS GONE = final_turn - withdrawal_turn (FLAGGED, a fencepost judgement call): a unit
+        withdrawn DURING Game-Turn T was present at the start of T, so it is counted absent for the
+        whole Game-Turns after it (T+1..F), i.e. F - T weeks -- a last-turn withdrawal scores zero.
+        The alternative (F - T + 1, counting the withdrawal week) differs by one week / half a point,
+        and only below the three-point cap (a withdrawal in the final ~six turns); the cap makes it
+        moot for every earlier one.
+
+        64.75-B DORMANT, and deliberately not coded (no speculative branch): "every time a battalion
+        withdrawn under A is returned to the game, the Commonwealth loses two points", and the
+        gone-clock would stop at the return. NOTHING returns a voluntarily-withdrawn counter in this
+        engine -- withdrawal empties its steps, the (Rtn) reinforcements are the MANDATORY returns
+        under different ids, and no order re-raises a voluntary one -- so the -2 has no trigger and no
+        withdrawal's clock is ever stopped early. When a 20.9 return mechanism is built, this is where
+        the -2 and the clock-stop attach."""
+        from . import organization                                   # local: replacements imports us
+        final_turn = r.state.turn
+        total = 0.0
+        for e in r.events:
+            if e.kind is not EventKind.UNIT_WITHDRAWN or not e.payload.get("voluntary"):
+                continue
+            u = r.state.unit(e.payload["unit_id"])
+            if u is None or u.side != Side.ALLIED:                    # 64.75: Commonwealth only
+                continue
+            if organization.replacement_kind(u) == "anti_air":       # 64.75-A "(not AA)"
+                continue
+            weeks_gone = max(0, final_turn - e.payload["turn"])
+            total += min(_WITHDRAWAL_VP_MAX_PER_UNIT, _WITHDRAWAL_VP_PER_WEEK * weeks_gone)
+        return total
+
+    def _unused_replacement_points_64_74(self, r: "_Run") -> tuple[int, int]:
+        """[64.74] REPLACEMENT VICTORY POINTS -- one point per UNUSED Replacement Point allotted in a
+        Player's Production Charts (unused = the charts' campaign total MINUS what the SPEND has drawn
+        from the pool), excluding planes and Trucks for both and Infantry per the data key's flag.
+        Returns (axis_vp, commonwealth_vp). The magnitudes and the exclusion set are the transcribed
+        charts' (game.replacements); this method only measures USED off the UNIT_REBUILT log and hands
+        it down.
+
+        GATED ON GameState.replacement_production -- the rule-20 economy being in play. 64.74 scores
+        "Replacement Points allotted ... in his Production Charts", so a scenario that runs no
+        Production system (every non-campaign board -- the benchmark specs use their own VictorySpec,
+        and the hand-built victory tests construct this one on synthetic boards) has none allotted and
+        scores none. This is the rule's genuine precondition and the SAME boundary the flow-in already
+        uses (engine._replacement_production), not a campaign-gate to dodge a signature -- decide()
+        emits no event and moves no determinism signature at all. The live campaign sets the flag, so
+        64.74 always fires there.
+
+        THE EXCLUSION SET IS A DATA-DRIVEN, FLAGGED PROXY. The printed rule (scan p.088, read with eyes)
+        excludes Infantry FOR THE COMMONWEALTH ONLY; data/replacements.json adopts the port plan's
+        interim proxy that ALSO drops Axis infantry, because with no Axis rebuild beat every Axis
+        infantry point reads 'unused' and the printed rule would score the whole 1600-point Axis
+        infantry pool (Axis 2493 v CW 958, a GT0 Smashing invariant to play). One data edit restores
+        the book. See replacements.replacement_vp_excluded_classes and the data key's own note; it is
+        the block's headline OWNER-RULING flag."""
+        if not r.state.replacement_production:
+            return 0, 0
+        from . import replacements
+        used: dict = {}
+        for e in r.events:
+            if e.kind is not EventKind.UNIT_REBUILT:
+                continue
+            pool_key, cost = e.payload.get("pool_key"), e.payload.get("cost", 0)
+            if pool_key and cost:
+                side_v, cls = pool_key.split("/", 1)
+                used[(side_v, cls)] = used.get((side_v, cls), 0) + cost
+        return (replacements.unused_replacement_vp(Side.AXIS, used),
+                replacements.unused_replacement_vp(Side.ALLIED, used))
 
 
-def grade(axis_vp: int, cwlth_vp: int) -> tuple["Side | None", str]:
+def _fmt(v) -> "int | float":
+    """Render a Victory-Point total for the reason string: an int (or whole-valued float, e.g. the
+    4.0 two capped withdrawals make) as an int, a genuine half-point (64.75-A pays in halves) as
+    itself. Keeps '200-0' reading '200-0' while '958 + 4.5' reads '962.5'."""
+    return int(v) if float(v).is_integer() else v
+
+
+def grade(axis_vp, cwlth_vp) -> tuple["Side | None", str]:
     """Rule 64.76: compare the totals as a ratio of most-to-least. Even is a Draw;
     otherwise better-than-1:1 up to 1.5:1 is Marginal, up to 2.5:1 Decisive, beyond
-    Smashing. A shutout (loser at 0) is a Smashing Victory."""
+    Smashing. A shutout (loser at 0) is a Smashing Victory. Totals may carry a 64.75-A half-point,
+    so they are numbers, not necessarily ints."""
     if axis_vp == cwlth_vp:
-        return None, f"Draw at {axis_vp}-{cwlth_vp} Victory Points (64.76)"
+        return None, f"Draw at {_fmt(axis_vp)}-{_fmt(cwlth_vp)} Victory Points (64.76)"
     winner = Side.AXIS if axis_vp > cwlth_vp else Side.ALLIED
     most, least = max(axis_vp, cwlth_vp), min(axis_vp, cwlth_vp)
     ratio = most / least if least > 0 else float("inf")
@@ -547,4 +677,4 @@ def grade(axis_vp: int, cwlth_vp: int) -> tuple["Side | None", str]:
     else:
         level = "Smashing Victory"
     name = "Axis" if winner == Side.AXIS else "Commonwealth"
-    return winner, f"{name} {level}: {axis_vp}-{cwlth_vp} Victory Points (64.76)"
+    return winner, f"{name} {level}: {_fmt(axis_vp)}-{_fmt(cwlth_vp)} Victory Points (64.76)"

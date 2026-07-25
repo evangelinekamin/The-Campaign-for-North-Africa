@@ -248,6 +248,31 @@
     }
   },
 
+  "training_chart_17_6": {
+    "_comment": "[17.6] TRAINING CHART -- the number of Operations Stages an arrived Replacement Point of each type must Train (rule 20.43) before a depleted unit may absorb it. 3 Operations Stages = 1 Game-Turn (rule 5.1). The chart's footnote: 'the # is the number of Operations Stages needed to train that type of Replacement Point or raise any type of an untrained Commonwealth unit's Basic Morale one point. The Commando Replacement Point must be trained by its assigned unit. Note that the time required for training guns is more of an uncrating cost than training necessity.' 20.43's OWN inline table (Gun 1 / Infantry 3 / Tank,AC,Recce 6) agrees on every row it shares; [17.6] is the formal chart it points to and adds the Commando (12) and Commonwealth-Unit (6) rows.",
+    "_scan": "PDF p.100, rendered at 300dpi and read cell-by-cell (scratchpad/port/transcriptions/17.3-20.43-training.md section 4; matches docs/rules/90-charts-tables-and-play-aids.md OCR lines 875-885 verbatim). Chart rows: 'Infantry (except Commando)' 3, 'Tank or Recce' 6, 'Gun' 1, 'Commando' 12, 'Commonwealth Unit' 6. No 54.17-class OCR error here -- every cell crisp.",
+    "_key": "opstages = Operations Stages of Training, keyed by the Replacement-Point TYPE (the pool 'type' field). 'ac' (armored car) is 6 by 20.43's inline 'Tank, AC, Recce Replacement -- Six' grouping (the [17.6] chart's 'Tank or Recce' row does not name AC separately). 'commonwealth_unit' (6) is the SEPARATE 17.3 UNIT-morale track (raise an untrained CW unit's Basic Morale one point per 6 Operations Stages, rule 17.34) -- transcribed here for chart completeness, but its consumer (the morale climb) is DEFERRED: the per-unit Untrained Basic Morale values live on the OA Sheets, NOT in this rulebook scan (transcription section 7). Only the RP-training DELAY reads this chart today (game.replacements.training_opstages / training_delay_gt), and only the CW-infantry producer is wired, so only the 'infantry' row (3 -> a 1-Game-Turn delay) bites live.",
+    "opstages": {
+      "infantry": 3,
+      "gun": 1,
+      "tank": 6,
+      "recce": 6,
+      "ac": 6,
+      "commando": 12,
+      "commonwealth_unit": 6
+    }
+  },
+
+  "victory_replacement_points_64_74": {
+    "_comment": "[64.74] REPLACEMENT VICTORY POINTS (Block 7.3, game.campaign_victory.decide). At game end each Player scores ONE Victory Point per UNUSED Replacement Point allotted in his Production Charts -- unused = the campaign-total 'number' (this file's charts) MINUS the Replacement Points THE SPEND has drawn from the pool (summed from the UNIT_REBUILT event log). Scored only in the point-tally path (64.73 opener 'failing the above two cases'), and only when the scenario runs the rule-20 economy (GameState.replacement_production); a scenario with no Production system has no allotted Replacement Points and scores none.",
+    "_scan": "PDF p.088, read on the render with eyes 2026-07-24 (scratchpad/port/transcriptions/20.78C-cw-tank-gun-replacements.md section 5, and the docs/rules OCR at 64-...:81 agree verbatim): 'Each Player receives one point for each unused Replacement Point allotted to him in his Production Charts, NOT INCLUDING PLANES AND/OR TRUCKS AND, FOR THE COMMONWEALTH PLAYER ONLY, INFANTRY. Thus, if the Commonwealth Player had a total of 35 Crusader I Tank Replacement Points available for the game, but he uses only 18, he gains 17 points.' The worked example (35 - 18 = 17) cross-checks: 35 is exactly the [20.78C] Crusader Mk I 'number'.",
+    "excluded_classes": {
+      "_comment": "Replacement-Point CLASSES that do NOT score, per side. planes + Trucks are excluded BOTH sides; the PRINTED RULE (see _scan) excludes Infantry FOR THE COMMONWEALTH ONLY -- Axis infantry Replacement Points DO score under the book. 'plane' and 'truck' are absent from the charts this file scores (air is a separate establishment; the [20.66a]/[20.78A] truck streams are separate), so those two names make the rule explicit and filter nothing live today; only 'infantry' bites. FLAGGED PROXY / OWNER RULING NEEDED: the AXIS 'infantry' entry DEVIATES from the scan. It is the port plan's interim proxy (00-THE-PORT-PLAN.md:872-875,1556; and this Block 7.3 task) for the still-unbuilt Axis infantry SPEND -- with no Axis rebuild beat every one of the 1600 Axis infantry points reads 'unused', so the printed rule scores the FULL Axis infantry pool (Axis 2493 v CW 958, a Game-Turn-0 Smashing Victory invariant to play). Dropping Axis infantry restores the like-for-like unused-EQUIPMENT comparison the modelled spends treat symmetrically (Axis 893 v CW 958). This is NOT in the PHASE-7 owner-rulings docket. TO RESTORE THE PRINTED RULE: delete 'infantry' from the AXIS list below (one edit) -- and it becomes correct on its own once the Axis infantry spend is built (the used-subtraction will then draw the pool down for real).",
+      "AXIS": ["infantry", "truck", "plane"],
+      "ALLIED": ["infantry", "truck", "plane"]
+    }
+  },
+
   "deferred": {
     "_comment": "Rule-20 charts NOT transcribed in Block 7.2a, flagged with their source so the next pass can pick them up. None is needed for the CW infantry FLOW-IN this block measures.",
     "commonwealth_truck_production_20_78A": "A separate 1d6-per-truck-type random stream (docs/rules/90-charts:3391+; PDF p.141 top-left). The 20.78B transcription notes its existence but gives no cell values; not rendered/verified here. The Commonwealth's TRUCK replacement flow -- a sibling of the infantry stream, also random and also free -- awaits its own transcription.",

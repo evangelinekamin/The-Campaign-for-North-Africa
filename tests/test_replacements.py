@@ -309,14 +309,18 @@ def test_the_lookup_column_is_the_plan_turn_not_the_arrival_turn():
             != replacements.cw_infantry_column(34)["plan_first"])
 
 
-def test_the_fold_credits_the_pool_and_the_accessor_reads_it():
-    """apply(REPLACEMENTS_PRODUCED) credits replacement_pool['ALLIED/infantry'] by the produced
-    points; state.replacements_available reads that bucket back. This is the FLOW IN reaching the
-    ledger Block 7.2b's spend will draw down."""
-    r = _fire(turn=7)
-    pts = _produced(r)[0].payload["points"]
-    assert r.state.replacements_available("ALLIED/infantry") == pts
-    assert r.state.replacement_pool == {"ALLIED/infantry": pts}
+def test_the_fold_credits_the_training_ledger_not_the_pool():
+    """RESTATED for Block 7.4 (20.43 Training): apply(REPLACEMENTS_PRODUCED) no longer credits the
+    absorbable pool. An arrived point enters the TRAINING ledger at arrival + the [17.6] delay
+    (Infantry +1 Game-Turn), and reaches the pool only after it has Trained (REPLACEMENTS_TRAINED).
+    GT34 plans GT30 (a nonzero cohort), maturing GT35. The old assertion enshrined 7.2b's
+    'absorbable on arrival' shortcut."""
+    r = _fire(turn=34)
+    p = _produced(r)[0].payload
+    assert p["points"] > 0 and p["mature_turn"] == 35
+    assert r.state.replacement_pool == {}                          # NOT absorbable this Game-Turn
+    assert r.state.replacement_training == {"ALLIED/infantry": {35: p["points"]}}
+    assert r.state.replacements_available("ALLIED/infantry") == 0
 
 
 def test_the_beat_is_gated_off_by_default_so_the_benchmarks_stay_byte_identical():
@@ -326,6 +330,7 @@ def test_the_beat_is_gated_off_by_default_so_the_benchmarks_stay_byte_identical(
     r = _fire(turn=7, production=False)
     assert r.events == []
     assert r.state.replacement_pool == {}
+    assert r.state.replacement_training == {}
 
 
 def test_off_window_game_turns_draw_no_die_and_emit_nothing():
@@ -336,6 +341,7 @@ def test_off_window_game_turns_draw_no_die_and_emit_nothing():
         r = _fire(turn=turn)
         assert r.events == [], turn
         assert r.state.replacement_pool == {}
+        assert r.state.replacement_training == {}
 
 
 def test_the_production_beat_is_deterministic():
@@ -347,8 +353,8 @@ def test_the_production_beat_is_deterministic():
 
 
 def test_a_none_cell_still_emits_a_certified_identity_fold():
-    """A 'none' cell is points 0 (e.g. GT3, roll 5): apply() credits 0 -- an identity on the pool
-    value -- but the event, with its 2d6 on the record, is still in the log, like
+    """A 'none' cell is points 0 (e.g. GT3, roll 5): apply() Trains nobody -- a pure identity on BOTH
+    ledgers -- but the event, with its 2d6 on the record, is still in the log, like
     TRUCK_BREAKDOWN_CHECKED. Built as a bare fold so the assertion does not depend on hunting a
     seed whose live roll lands on a none cell."""
     assert replacements.cw_infantry_lookup(3, 5) == 0          # the none cell this fold represents
@@ -356,10 +362,13 @@ def test_a_none_cell_still_emits_a_certified_identity_fold():
     ev = Event(0, 7, Phase.LOGISTICS, Side.ALLIED, "ALLIED/QM",
                EventKind.REPLACEMENTS_PRODUCED,
                {"side": Side.ALLIED.value, "type": "infantry", "points": 0,
-                "plan_turn": 3, "arrival_turn": 7}, (2, 3), 1)
+                "plan_turn": 3, "arrival_turn": 7, "mature_turn": 8}, (2, 3), 1)
     out = apply(st, ev)
     assert out.replacements_available("ALLIED/infantry") == 0
-    assert out.replacement_pool == {"ALLIED/infantry": 0}      # the key exists, credited 0
+    # RESTATED for Block 7.4: the old fold credited a 0-point pool KEY; the 20.43 fold lands in the
+    # training ledger, and a 0-point arrival Trains nobody -- a pure identity on both ledgers.
+    assert out.replacement_pool == {}
+    assert out.replacement_training == {}
 
 
 def test_credit_replacements_is_an_immutable_accumulating_credit():
@@ -390,15 +399,21 @@ def test_the_campaign_run_wires_the_beat_into_the_loop_and_accumulates():
         assert p["arrival_turn"] == p["plan_turn"] + replacements.CW_ARRIVAL_LEAD
         assert p["plan_turn"] in replacements.cw_infantry_plan_turns()
         assert p["points"] == replacements.cw_infantry_lookup(p["plan_turn"], sum(e.rng_draws))
-    # RESTATED for Block 7.2b: the pool is no longer pure accumulation -- the FLOW OUT
-    # (_replacement_spend) now DRAWS it to rebuild depleted CW infantry. What survives is the
-    # conservation identity: every Infantry Point produced is either still in the pool or was drawn
-    # by a UNIT_REBUILT (cost). The block's original 'pool == produced' enshrined the open loop.
+    # RESTATED for Block 7.4 (20.43 Training): a produced point is no longer absorbable on arrival --
+    # it sits in replacement_training for the [17.6] delay, then graduates to the pool, then may be
+    # drawn. So the conservation identity is now THREE-way: every Infantry Point produced is either
+    # still Training, or trained-and-absorbable in the pool, or already drawn by a UNIT_REBUILT. (7.2b's
+    # two-way 'pool == produced - drawn' enshrined the skipped delay -- the last Game-Turn's arrivals
+    # have not matured, so they are in training, not the pool.)
     produced = sum(e.payload["points"] for e in ev)
     drawn = sum(e.payload["cost"] for e in res.events if e.kind == EventKind.UNIT_REBUILT
                 and e.payload["pool_key"] == "ALLIED/infantry")
-    assert res.final.replacements_available("ALLIED/infantry") == produced - drawn
+    in_pool = res.final.replacements_available("ALLIED/infantry")
+    in_training = sum(sum(cohorts.values())
+                      for cohorts in res.final.replacement_training.values())
+    assert produced == in_pool + in_training + drawn
     assert drawn > 0, "Block 7.2b: the campaign must actually SPEND replacement points now"
+    assert in_training > 0, "Block 7.4: the last Game-Turn's arrivals have not finished Training"
 
 
 def test_the_production_gate_is_a_campaign_only_subsystem():

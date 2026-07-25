@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 import game.supply as supply
-from game import organization, replacements
+from game import campaign_victory, coords, organization, replacements
 from game.apply import apply
 from game.engine import _Run, _commonwealth_withdrawals, _reorganize, _replacement_spend, run
 from game.events import Event, EventKind, Phase, Side
@@ -161,7 +161,14 @@ def test_apply_unit_rebuilt_debits_the_pool_and_adds_the_steps():
 
 # --- 20.8 the mandatory withdrawals -----------------------------------------------------
 
-_CAIRO = tuple(replacements.withdrawal_base_hexes()["Cairo"])
+# Cairo is a FIVE-hex city (Alexandria two); the withdrawal gate must recognise every hex of both,
+# not one per city -- so tests derive the real hexes from the canonical enumeration and prove the
+# multi-hex geography, rather than trusting a single representative hex (Block 7.2b repair).
+_CAIRO_HEXES = [coords.to_axial(coords.parse(h))
+                for h in campaign_victory.load_victory_cities()["auto_win"]["cairo"]]
+_ALEX_HEXES = [coords.to_axial(coords.parse(h))
+               for h in campaign_victory.load_victory_cities()["auto_win"]["alexandria"]]
+_CAIRO = _CAIRO_HEXES[0]                                        # one of Cairo's five hexes
 
 
 def _withdrawn(r) -> dict:
@@ -195,6 +202,24 @@ def test_withdrawal_20_83_eliminates_a_unit_not_at_a_base_or_below_75pct_toe():
     assert gone["HQ 10 Armd Div"]["eliminated"] is False
     assert gone["9 Armd Bde I"]["eliminated"] is True
     assert gone["9 Armd Bde II"]["eliminated"] is True
+
+
+def test_withdrawal_recognises_every_hex_of_the_multi_hex_delta_cities():
+    """Cairo is FIVE hexes and Alexandria TWO (data/victory_cities.json auto_win). A withdrawing unit
+    standing in ANY of them is 'at a base' and cleanly withdrawn. The earlier single-hex base table
+    saw only ONE hex per city and wrongly eliminated (20.83) a unit in the other four/one -- proven
+    here on a SECOND, non-representative hex of each city (which the old table did NOT contain, so
+    this asserts the Block 7.2b repair, not merely the happy path)."""
+    assert len(_CAIRO_HEXES) == 5 and len(_ALEX_HEXES) == 2         # the canonical multi-hex geography
+    bases = replacements.withdrawal_base_hexes()
+    assert set(_CAIRO_HEXES) <= bases and set(_ALEX_HEXES) <= bases
+    at_cairo2 = _inf("HQ 10 Armd Div", _CAIRO_HEXES[1], 8, 8, is_combat=False)  # Cairo's 2nd hex
+    at_alex2 = _inf("9 Armd Bde I", _ALEX_HEXES[1], 8, 8)                       # Alexandria's 2nd hex
+    r = _Run(_state([at_cairo2, at_alex2], turn=110, withdrawals=True))
+    _commonwealth_withdrawals(r)
+    gone = _withdrawn(r)
+    assert gone["HQ 10 Armd Div"]["eliminated"] is False
+    assert gone["9 Armd Bde I"]["eliminated"] is False
 
 
 def test_by_type_withdrawal_takes_three_battalions_at_75pct_toe_first_20_82():
@@ -282,3 +307,14 @@ def test_voluntary_withdrawal_is_commonwealth_only():
     _reorganize(r, Side.AXIS, OrganizationOrder("withdraw", unit_id="DAK Bn"))
     assert not _withdrawn(r)
     assert [e for e in r.events if e.kind == EventKind.ORDER_REJECTED]
+
+
+def test_voluntary_withdrawal_rejects_a_company_64_75_A():
+    """64.75-A names 'a combat battalion (not company)'. A company (rule 9.4: zero Stacking Points),
+    full-strength in Cairo and thus eligible on every other test, is refused for its size."""
+    company = _u("A Coy", hex=_CAIRO, strength=8, max_toe=8, is_combat=True, sp=0)
+    assert organization.is_company(company)                        # the 9.4 discriminator
+    r = _try_withdraw(company)
+    assert not _withdrawn(r)
+    assert [e for e in r.events if e.kind == EventKind.ORDER_REJECTED
+            and e.payload["order"] == "withdraw"]

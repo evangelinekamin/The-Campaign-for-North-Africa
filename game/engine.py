@@ -181,6 +181,8 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                                                         # roll (once per Game-Turn) -- the replacement
                                                         # economy's FLOW IN, into GameState.replacement_pool
         _commonwealth_withdrawals(r)                     # 20.8/[4.43a]: units pulled for Greece/Crete/Syria
+        _replacement_training(r)                          # 20.43/[17.6]: arrived RPs that finished Training
+                                                        # graduate into the absorbable pool (Block 7.4)
         _replacement_spend(r)                            # 19.61/20.4: ...and the FLOW OUT (Block 7.2b) --
                                                         # the CW QM rebuilds depleted infantry from it
         _stores_setup(r)                                # 48 IV: Stores Expenditure + 6% base evaporation
@@ -1162,11 +1164,13 @@ def _replacement_production(r: _Run) -> None:
     ONE 2d6 roll per Game-Turn (off the 'cw_production' subsystem), looked up against the PLAN turn's
     [20.78B] GT-range column (game.replacements.cw_infantry_lookup). We emit on the ARRIVAL Game-Turn:
     the points planned on plan_turn = turn - 4 (the owner-ruled 4-Game-Turn lead, 20.21/20.78B) land
-    now and enter GameState.replacement_pool. So the roll is made when its RP arrive, which is
-    deterministically the same draw as rolling four turns earlier -- and the pool then means exactly
-    'Infantry RP arrived and awaiting the 20.43 Training delay', the handle Block 7.2b gates its SPEND
-    behind (an arrived point is available-to-train, not yet available-to-absorb). plan_turn < GT3 (the
-    opening four Game-Turns) plans nothing, so nothing arrives and no die is drawn.
+    now and enter the [20.43] TRAINING ledger (GameState.replacement_training), maturing into the
+    absorbable GameState.replacement_pool at arrival + the [17.6] delay (Infantry 3 OpStages = +1
+    Game-Turn, game.replacements.training_delay_gt; Block 7.4). So the roll is made when its RP arrive,
+    which is deterministically the same draw as rolling four turns earlier -- and the point is NOT
+    absorbable the turn it arrives: engine._replacement_training graduates it a Game-Turn later, and
+    only then does the SPEND (Block 7.2b) see it. plan_turn < GT3 (the opening four Game-Turns) plans
+    nothing, so nothing arrives and no die is drawn.
 
     FLAG (judgment call, carried from the 20.78B transcription section 2, not silently closed): that the
     roll is MANDATORY every Game-Turn -- rather than a draw the CW Player elects Axis-Pool style, when
@@ -1188,10 +1192,43 @@ def _replacement_production(r: _Run) -> None:
         return                                           # nothing was planned 4 Game-Turns ago
     d1, d2 = r.d6("cw_production"), r.d6("cw_production")
     points = replacements.cw_infantry_lookup(plan_turn, d1 + d2)
+    mature_turn = r.state.turn + replacements.training_delay_gt("infantry")   # 20.43/[17.6]: +1 GT
     r.go(Phase.LOGISTICS, Side.SYSTEM)                    # a SYSTEM housekeeping beat, like convoys
     r.emit(EventKind.REPLACEMENTS_PRODUCED, Side.ALLIED, "ALLIED/QM",
            {"side": Side.ALLIED.value, "type": "infantry", "points": points,
-            "plan_turn": plan_turn, "arrival_turn": r.state.turn}, rng_draws=(d1, d2))
+            "plan_turn": plan_turn, "arrival_turn": r.state.turn,
+            "mature_turn": mature_turn}, rng_draws=(d1, d2))
+
+
+def _replacement_training(r: _Run) -> None:
+    """[20.43]/[17.6] THE REPLACEMENT-POINT TRAINING GRADUATION (Block 7.4) -- the beat that closes the
+    flag _replacement_spend carried. Block 7.2b treated an arrived Replacement Point as 'absorbable on
+    arrival' because there was no training clock; this is the clock. An arrived point sits in the
+    GameState.replacement_training ledger until it has Trained the [17.6] number of Operations Stages
+    for its type (Infantry 3 = one Game-Turn, rule 5.1); at the Game-Turn it matures, this graduates it
+    into the absorbable GameState.replacement_pool, from which _replacement_spend then draws.
+
+        20.43  "Replacement Points ... are required to undergo Training. They must train for a specific
+                number of Operations Stages, which may include the Stage of arrival."
+
+    Once per Game-Turn at the turn's head (before _replacement_spend), so a cohort that matured this
+    turn is absorbable this turn. One REPLACEMENTS_TRAINED per key with matured points, in sorted-key
+    order for determinism; nothing due emits nothing. The training here is modelled as pure elapsed
+    time: the scalar ledger holds neither the arrival CITY (20.76 makes it Cairo/Alexandria, itself a
+    17.32 Training Area) nor 17.35's same-arm instructor-battalion requirement -- flagged, the same
+    abstraction level the pool itself is at (game.state.replacement_training). Gated on
+    GameState.replacement_production exactly as the flow-in and the spend are, so every benchmark
+    emits no REPLACEMENTS_TRAINED and stays byte-identical."""
+    if not r.state.replacement_production:
+        return
+    matured = r.state.matured_training(r.state.turn)
+    if not matured:
+        return
+    r.go(Phase.LOGISTICS, Side.SYSTEM)                    # a SYSTEM housekeeping beat, like the flow-in
+    for key in sorted(matured):
+        side = Side.ALLIED if key.split("/")[0] == Side.ALLIED.value else Side.AXIS
+        r.emit(EventKind.REPLACEMENTS_TRAINED, side, f"{side.value}/QM",
+               {"key": key, "points": matured[key], "up_to_turn": r.state.turn})
 
 
 def _replacement_spend(r: _Run) -> None:
@@ -1204,13 +1241,12 @@ def _replacement_spend(r: _Run) -> None:
         20.4  "Replacement Points are... added to under-strength units to bring them back toward their
                maximum TOE Strength." -- via engine._rebuild, which draws the [20.3] class from the pool.
 
-    SCRIPTED, once per Game-Turn (right after the production roll, so a point arrived this turn is
-    spendable this turn), most-depleted battalion first, to full TOE, until the pool is dry. Two
-    scoped SIMPLIFICATIONS, both flagged:
+    SCRIPTED, once per Game-Turn (right after the production roll and the 20.43 training graduation, so
+    a point that MATURED this turn is spendable this turn), most-depleted battalion first, to full TOE,
+    until the pool is dry. The spend draws only the ABSORBABLE pool (replacement_pool); a still-Training
+    cohort is in replacement_training and invisible here until _replacement_training graduates it. One
+    scoped SIMPLIFICATION remains, flagged:
 
-      * 20.43 TRAINING is SKIPPED this block (it is Block 7.4): the pool comment calls an arrived
-        point 'available-to-train, not available-to-absorb', but with no training clock we treat it as
-        absorbable on arrival. The spend is therefore FASTER than the trained rule; 7.4 adds the delay.
       * a once-per-Game-Turn QM auto-spend is the deterministic PROXY for the player's per-OpStage
         Organization-Phase rebuilding choice -- the QM seat is scripted (CLAUDE.md), and 'how many steps
         a campaign restores' must not hinge on an LLM's whim. 19.64's supply-trace gate on the recipient
@@ -1269,7 +1305,7 @@ def _commonwealth_withdrawals(r: _Run) -> None:
     rows = replacements.withdrawals_for_turn(r.state.turn)
     if not rows:
         return
-    bases = set(replacements.withdrawal_base_hexes().values())
+    bases = replacements.withdrawal_base_hexes()          # every hex of Cairo and Alexandria
     frac = replacements.withdrawal_toe_fraction()
     emitted = False
     for row in rows:
@@ -3609,10 +3645,12 @@ def _reorganize(r: _Run, side: Side, order) -> None:
             return reject("only the Commonwealth may voluntarily withdraw (64.75)")
         if not unit.is_combat:
             return reject("only a combat battalion may be voluntarily withdrawn (64.75-A)")
+        if organization.is_company(unit):                  # 64.75-A: "a combat battalion (not company)"
+            return reject("a company may not be voluntarily withdrawn -- 64.75-A names a battalion (9.4)")
         frac = replacements.withdrawal_toe_fraction()
         if unit.max_toe > 0 and unit.strength < frac * unit.max_toe:
             return reject("a voluntarily-withdrawn unit must be at least 75% of TOE Strength (64.75-A)")
-        if tuple(unit.hex) not in set(replacements.withdrawal_base_hexes().values()):
+        if tuple(unit.hex) not in replacements.withdrawal_base_hexes():
             return reject("must start the Stage in Alexandria or Cairo to be withdrawn (64.75-A)")
         r.emit(EventKind.UNIT_WITHDRAWN, side, actor,
                {"unit_id": unit.id, "voluntary": True, "eliminated": False, "turn": r.state.turn})

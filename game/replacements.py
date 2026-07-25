@@ -21,8 +21,12 @@ data, never literals.
 from __future__ import annotations
 
 import json
+import math
 import os
 from functools import lru_cache
+
+from . import campaign_victory, coords
+from .events import Side
 
 _PATH = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "data", "replacements.json"))
@@ -220,6 +224,35 @@ def conversion_charge(unit_type: str) -> dict:
     return charge
 
 
+# --- [17.6]/[20.43] the TRAINING CHART: the RP-training delay (Block 7.4) -----------------
+
+OPSTAGES_PER_GAME_TURN = 3      # rule 5.1: a Game-Turn is three Operations Stages
+
+
+def _training() -> dict:
+    return _data()["training_chart_17_6"]["opstages"]
+
+
+def training_opstages(rp_type: str) -> int:
+    """[17.6]/[20.43] The Operations Stages an arrived Replacement Point of `rp_type` must Train
+    before a depleted unit may absorb it (Gun 1 / Infantry 3 / Tank,AC,Recce 6 / Commando 12), read
+    from the transcribed [17.6] chart. 'commonwealth_unit' (6) is the SEPARATE 17.3 unit-morale track
+    (its climb consumer is deferred -- see the data key's flag)."""
+    return _training()[rp_type]
+
+
+def training_delay_gt(rp_type: str) -> int:
+    """The whole Game-Turns an arrived Replacement Point of `rp_type` spends in 20.43 Training before
+    it is absorbable, given the once-per-Game-Turn Reorganization spend: ceil(OpStages / 3), because a
+    Game-Turn is OPSTAGES_PER_GAME_TURN Operations Stages (rule 5.1) and the spend runs at the turn's
+    head, before its stages -- so a point arriving on Game-Turn N is absorbable on Game-Turn N + delay.
+
+    Infantry 3 -> 1, Tank/Recce 6 -> 2, Commando 12 -> 4. Gun 1 -> 1: a sub-turn 1-OpStage training
+    rounds UP to a full Game-Turn's wait at this per-Game-Turn spend grain -- flagged, and inert (no
+    Gun producer is wired; only the CW-infantry FLOW-IN feeds the training ledger today)."""
+    return math.ceil(training_opstages(rp_type) / OPSTAGES_PER_GAME_TURN)
+
+
 # --- [20.8] the Commonwealth MANDATORY WITHDRAWAL schedule (Block 7.2b) -------------------
 
 def withdrawal_rows() -> list:
@@ -236,10 +269,17 @@ def withdrawals_for_turn(turn: int) -> list:
     return [w for w in withdrawal_rows() if w["turn"] == turn]
 
 
-def withdrawal_base_hexes() -> dict:
-    """[20.83]/[20.84] Cairo and Alexandria, as axial (q, r) -- the two cities a withdrawing unit
-    must reach by its Stage or be ELIMINATED."""
-    return {city: tuple(hx) for city, hx in _withdrawals()["base_hexes"].items()}
+@lru_cache(maxsize=1)
+def withdrawal_base_hexes() -> frozenset:
+    """[20.83]/[20.84] EVERY hex of Cairo and Alexandria as axial (q, r) -- the two cities a
+    withdrawing unit must stand in by its Stage or be ELIMINATED (20.83). Cairo is FIVE hexes and
+    Alexandria TWO; they are read from the ONE canonical enumeration -- data/victory_cities.json
+    'auto_win' (the rule-64.71 auto-win objective and the 25.12 Level-3 forts), the same source
+    game.scenario.delta_hexes reads -- NOT a narrower private copy that recognised one hex per city
+    and so eliminated units standing anywhere else in the Delta."""
+    aw = campaign_victory.load_victory_cities()["auto_win"]
+    return frozenset(coords.to_axial(coords.parse(h))
+                     for h in aw["alexandria"] + aw["cairo"])
 
 
 def withdrawal_toe_fraction() -> float:
@@ -263,3 +303,61 @@ def withdrawal_matches(counter: str, prefixes) -> bool:
         if cid == s or cid == f"HQ-{s}" or cid.startswith(f"{s}-") or cid.startswith(f"HQ-{s}-"):
             return True
     return False
+
+
+# --- [64.74] UNUSED REPLACEMENT-POINT VICTORY POINTS (Block 7.3) --------------------------
+
+def _victory_64_74() -> dict:
+    return _data()["victory_replacement_points_64_74"]
+
+
+def replacement_vp_excluded_classes(side: Side) -> frozenset:
+    """[64.74] The Replacement-Point CLASSES that do NOT score as Victory Points for `side`
+    (planes, Trucks, and -- see the data key's flag -- Infantry). Read from the named
+    'victory_replacement_points_64_74' key so the printed-rule-vs-proxy call is one edit in data,
+    never a literal here (data/replacements.json documents that the AXIS 'infantry' entry is a
+    FLAGGED PROXY for the unbuilt Axis infantry spend and DEVIATES from the scan, which excludes
+    Infantry for the Commonwealth Player only)."""
+    return frozenset(_victory_64_74()["excluded_classes"].get(side.value, ()))
+
+
+def replacement_allotment_by_class(side: Side) -> dict:
+    """The campaign-total Replacement Points ALLOTTED per class (the charts' '#' columns), by side.
+    Axis = the [20.66] German + Italian Replacement Pool; Commonwealth = the [20.78C] equipment
+    chart. The [20.78B] Commonwealth Infantry stream is a RANDOM production, not a fixed allotment,
+    and 64.74 excludes it anyway; the [20.66a]/[20.78A] Truck streams are separate and excluded too.
+    A pure read of the transcribed charts -- the magnitudes are the book's, grouped by the per-row
+    'class' (an implementer derivation the data flags, inert here: it only buckets the sum)."""
+    out: dict = {}
+    if side == Side.AXIS:
+        items = axis_items("german") + axis_items("italian")
+    elif side == Side.ALLIED:
+        items = commonwealth_equipment_items()
+    else:
+        return out
+    for item in items:
+        out[item["class"]] = out.get(item["class"], 0) + item["number"]
+    return out
+
+
+def unused_replacement_vp(side: Side, used: dict) -> int:
+    """[64.74] `side`'s replacement Victory Points: ONE per UNUSED Replacement Point (allotted minus
+    used), summed over the SCORING classes (every class the charts allot, less
+    replacement_vp_excluded_classes). `used` maps (side_value, class) -> Replacement Points already
+    drawn by the SPEND (game.campaign_victory sums it from the UNIT_REBUILT log). Floored at zero per
+    class so an over-draw (impossible today -- the SPEND gate caps every rebuild at the pool) can never
+    score negative.
+
+    FLAG -- the class key of `used` is the pool_key class the SPEND wrote ('<side>/<class>'), and only
+    the Commonwealth infantry spend exists today (pool_key 'ALLIED/infantry', an EXCLUDED class, so it
+    never touches a scoring bucket). When the Axis pool / [20.78C] equipment spend lands, its pool_key
+    class must be reconciled with these chart classes ([20.3] conversion classes vs the pool's
+    infantry/recce/gun/tank) for the subtraction to bite -- the same reconciliation data/replacements.json
+    flags on axis_pool_20_66. Inert until then: every eligible class subtracts 0."""
+    excluded = replacement_vp_excluded_classes(side)
+    total = 0
+    for cls, allotted in replacement_allotment_by_class(side).items():
+        if cls in excluded:
+            continue
+        total += max(0, allotted - used.get((side.value, cls), 0))
+    return total

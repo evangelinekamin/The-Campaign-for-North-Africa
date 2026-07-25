@@ -10,13 +10,14 @@ from __future__ import annotations
 
 import math
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from game import coords, movement, supply
+from game import coords, movement, replacements, supply
 from game.campaign_victory import CampaignVictory, grade
-from game.events import CONTROL_OF, Control, Phase, Side
+from game.events import CONTROL_OF, Control, Event, EventKind, Phase, Side
 from game.hexmap import line
 from game.movement import TerrainMap
 from game.state import GameState, StepRecord, SupplyUnit, Unit, VP
@@ -34,11 +35,13 @@ GT_64_72 = 35             # 64.72: "Starting with the first OpStage of Game-Turn
 
 
 class _R:
-    """Minimal engine-run stand-in: CampaignVictory reads r.state and remembers the 64.71
-    hold clock in r.victory_scratch (engine._Run). Reassign `state` to advance the run."""
+    """Minimal engine-run stand-in: CampaignVictory reads r.state, r.events (the 64.74/64.75
+    tally walks the UNIT_REBUILT / UNIT_WITHDRAWN log) and remembers the 64.71 hold clock in
+    r.victory_scratch (engine._Run). Reassign `state` to advance the run."""
 
-    def __init__(self, state):
+    def __init__(self, state, events=None):
         self.state = state
+        self.events = list(events or [])
         self.victory_scratch: dict = {}
 
 
@@ -58,7 +61,8 @@ def _unit(uid: str, side: Side, where, *, combat: bool = True, strength: int = 5
 
 
 def _state(units, *, supplied: bool = True, turn: int = 111, stage: int = 1,
-           terrain: "dict | None" = None, supplies=None, control=None) -> GameState:
+           terrain: "dict | None" = None, supplies=None, control=None,
+           replacement_production: bool = False) -> GameState:
     # C3-3: a holder must trace supply (rule 64.73). By default co-locate a dump with each
     # combat unit so the tally / auto-win tests exercise OCCUPATION; supplied=False strands the
     # units (no dump) to test the supply gate itself. Terrain carries the unit hexes so the
@@ -72,7 +76,8 @@ def _state(units, *, supplied: bool = True, turn: int = 111, stage: int = 1,
     return GameState(turn=turn, max_turns=111, phase=Phase.RECORD, active_side=Side.SYSTEM,
                      seed=1, weather="normal", vp=VP(), terrain=TerrainMap(terrain=terrain),
                      control=control or {}, units=tuple(units), target_hex=(0, 0),
-                     supplies=tuple(supplies), consumed={}, initial_supply={}, stage=stage)
+                     supplies=tuple(supplies), consumed={}, initial_supply={}, stage=stage,
+                     replacement_production=replacement_production)
 
 
 def _road_to_tobruk(*ends) -> dict:
@@ -706,3 +711,124 @@ def test_trace_inversion_matches_the_per_unit_trace_on_the_delta_board():
     cv = CampaignVictory()
     _assert_trace_parity(cv, _delta_board(turn=50, stage=1))
     _assert_trace_parity(cv, _delta_board(turn=50, stage=1, tobruk=Side.ALLIED))
+
+
+# --- [64.74] unused Replacement-Point Victory Points (Block 7.3) ----------------
+# THE ORDER OF THIS BLOCK IS 64.75 THEN 64.74 (the plan / the task): 64.74 counts what is left
+# UNUSED, and a voluntary withdrawal is one of the things that leaves Replacement Points unspent.
+
+def test_64_74_pool_numbers_and_the_worked_example():
+    """The transcribed charts summed by class, and the [64.74] scan p.088 worked example. The
+    DEFAULT is the port-plan proxy that excludes infantry for BOTH sides (Axis 893 v CW 958); the
+    PRINTED rule excludes it for the Commonwealth only, which would add the 1600-point Axis infantry
+    pool (Axis 2493). See data/replacements.json victory_replacement_points_64_74 for the flag."""
+    assert replacements.replacement_allotment_by_class(Side.AXIS) == {
+        "infantry": 1600, "recce": 59, "gun": 499, "tank": 335}
+    assert replacements.replacement_allotment_by_class(Side.ALLIED) == {
+        "recce": 90, "gun": 536, "tank": 332}
+    # default proxy: infantry excluded both sides
+    assert replacements.unused_replacement_vp(Side.AXIS, {}) == 893
+    assert replacements.unused_replacement_vp(Side.ALLIED, {}) == 958
+    # the printed rule's delta is exactly the Axis infantry pool (1600): 893 + 1600 = 2493
+    assert sum(replacements.replacement_allotment_by_class(Side.AXIS).values()) == 2493
+    # [64.74] worked example (scan p.088): "35 Crusader I ... uses only 18 ... gains 17". 35 is the
+    # chart cell; the rule is allotted MINUS used at 1 VP each. We sum by CLASS, and the per-item 17
+    # lives inside the tank bucket: 297 other-tank points (332 - 35) + 17 unused Crusader I = 314.
+    assert replacements.commonwealth_item("crusader_1")["number"] == 35
+    assert replacements.commonwealth_item("crusader_1")["number"] - 18 == 17
+    assert replacements.unused_replacement_vp(Side.ALLIED, {("ALLIED", "tank"): 18}) == 940  # 958 - 18
+    assert 940 - 90 - 536 == 314                       # the tank bucket = 297 + the worked example's 17
+
+
+def test_64_74_unused_replacement_points_enter_the_tally_both_sides():
+    # On the rule-20 campaign economy, with no SPEND (empty log) the whole pool is unused: the Axis
+    # holds Tobruk (200 geo) and banks +893, the Commonwealth banks +958. Both feed the 64.76 grade.
+    cv = CampaignVictory()
+    winner, reason = cv.decide(_R(_state([_unit("A1", Side.AXIS, "C4807")],
+                                         replacement_production=True)))
+    assert "1093-958" in reason                        # 200 + 893  vs  0 + 958
+    assert winner is Side.AXIS and "Marginal" in reason   # 1093/958 = 1.14:1
+
+
+def test_64_74_subtracts_what_the_spend_used():
+    # A Commonwealth tank rebuild (pool_key ALLIED/tank, cost 18) is 18 fewer unused points -> 18 fewer
+    # CW Victory Points, exactly the [64.74] allotted-minus-used mechanic, drawn from the UNIT_REBUILT log.
+    cv = CampaignVictory()
+    spent = Event(0, 60, Phase.ORGANIZATION, Side.ALLIED, "ALLIED/Command", EventKind.UNIT_REBUILT,
+                  {"unit_id": "x", "points": 18, "strength": 0, "pool_key": "ALLIED/tank", "cost": 18})
+    s = _state([_unit("A1", Side.AXIS, "C4807")], replacement_production=True)
+    winner, reason = cv.decide(_R(s, events=[spent]))
+    assert "1093-940" in reason                        # CW 958 - 18 = 940
+
+
+def test_64_74_is_gated_on_the_production_economy():
+    # Without the rule-20 economy (replacement_production False -- the benchmark / synthetic default)
+    # there are NO allotted Replacement Points, so 64.74 scores nothing: the tally is 64.73 geography
+    # alone. This is what keeps every geographic-tally test above unperturbed.
+    cv = CampaignVictory()
+    winner, reason = cv.decide(_R(_state([_unit("A1", Side.AXIS, "C4807")])))
+    assert "200-0" in reason and winner is Side.AXIS
+
+
+# --- [64.75] Commonwealth Withdrawal Points (Block 7.3) -------------------------
+
+def _withdrawn(uid: str, turn: int, *, voluntary: bool = True) -> Event:
+    """A UNIT_WITHDRAWN fact, as engine._organization ('withdraw') / _commonwealth_withdrawals emit it."""
+    return Event(0, turn, Phase.ORGANIZATION, Side.ALLIED, "ALLIED/Command", EventKind.UNIT_WITHDRAWN,
+                 {"unit_id": uid, "voluntary": voluntary, "eliminated": False, "turn": turn})
+
+
+def _cw_battalion(uid: str, *, side: Side = Side.ALLIED, **kw) -> Unit:
+    # A combat battalion as it stands AFTER withdrawal: steps emptied (strength 0, banks no geography),
+    # its type ratings intact so 64.75's "(not AA)" classifier still reads it.
+    return replace(_unit(uid, side, "E1730", **kw), steps=())
+
+
+def test_64_75_half_point_per_week_gone_capped_at_three():
+    cv = CampaignVictory()
+    u = _cw_battalion("C1")
+    # withdrawn GT108, game ends GT111 -> 3 weeks (owner ruling 4: week = one Game-Turn) -> 1.5 pts
+    assert cv._withdrawal_points_64_75(_R(_state([u], turn=111), [_withdrawn("C1", 108)])) == 1.5
+    # withdrawn GT105 -> 6 weeks -> exactly the 3-point cap
+    assert cv._withdrawal_points_64_75(_R(_state([u], turn=111), [_withdrawn("C1", 105)])) == 3.0
+    # withdrawn GT10 -> 101 weeks, still capped at 3 (64.75-A "maximum of three points per unit")
+    assert cv._withdrawal_points_64_75(_R(_state([u], turn=111), [_withdrawn("C1", 10)])) == 3.0
+    # withdrawn on the final Game-Turn -> gone zero weeks -> nothing
+    assert cv._withdrawal_points_64_75(_R(_state([u], turn=111), [_withdrawn("C1", 111)])) == 0.0
+
+
+def test_64_75_excludes_aa_mandatory_and_non_commonwealth():
+    cv = CampaignVictory()
+    # 64.75-A "(not AA)": an anti-aircraft battalion (Vulnerability-rated gun, no barrage / anti-armor
+    # -> replacement_kind 'anti_air') scores nothing however long it is gone.
+    aa = replace(_cw_battalion("AA1"), vulnerability=2)
+    assert cv._withdrawal_points_64_75(_R(_state([aa], turn=111), [_withdrawn("AA1", 100)])) == 0.0
+    # a MANDATORY [4.43a] withdrawal (voluntary False) is explicitly NOT a 64.75 withdrawal
+    inf = _cw_battalion("C1")
+    assert cv._withdrawal_points_64_75(
+        _R(_state([inf], turn=111), [_withdrawn("C1", 100, voluntary=False)])) == 0.0
+    # 64.75 "apply solely to the Commonwealth Player": an Axis withdrawal (which the act forbids anyway)
+    # scores nothing.
+    ax = _cw_battalion("X1", side=Side.AXIS)
+    assert cv._withdrawal_points_64_75(_R(_state([ax], turn=111), [_withdrawn("X1", 100)])) == 0.0
+
+
+def test_64_75_enters_the_tally_as_commonwealth_points():
+    # End to end through decide(): one voluntary withdrawal (GT108, gone 3 weeks -> 1.5) with the RP
+    # economy OFF, so the withdrawal points stand alone -- the Commonwealth's only score, a shutout.
+    cv = CampaignVictory()
+    u = _cw_battalion("C1")
+    winner, reason = cv.decide(_R(_state([u], turn=111), [_withdrawn("C1", 108)]))
+    assert winner is Side.ALLIED and "0-1.5" in reason and "Smashing" in reason
+
+
+def test_64_75_sums_over_units_and_stacks_with_64_74():
+    # Two voluntary withdrawals (3.0 capped + 1.5) = 4.5 CW withdrawal points, ON TOP of the 64.74
+    # pools -- the order 64.75-then-64.74 both feeding one Commonwealth total.
+    cv = CampaignVictory()
+    us = [_cw_battalion("C1"), _cw_battalion("C2")]
+    events = [_withdrawn("C1", 100), _withdrawn("C2", 108)]     # 3.0 (capped) + 1.5
+    s = _state(us, turn=111, replacement_production=True)
+    winner, reason = cv.decide(_R(s, events))
+    assert "893-962.5" in reason                       # Axis 893 ; CW 958 + 4.5
+    assert winner is Side.ALLIED and "Marginal" in reason

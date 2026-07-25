@@ -866,19 +866,27 @@ class GameState:
     motorization: dict = field(default_factory=dict)
     motorized_supply: bool = False
 
-    # --- [20.7] THE REPLACEMENT POOL (rule 20, Block 7.2a) -------------------------------------
-    # `replacement_pool` is the FLOW-IN ledger: "<side>/<type>" -> the Replacement Points that have
-    # ARRIVED (at Cairo/Alexandria, 20.76) this Game-Turn. They are NOT yet absorbable: 20.43 makes an
-    # arrived infantry point Train three OpStages before a depleted unit may absorb it (19.61/20.4), and
-    # this scalar ledger models neither the arrival city nor the training clock -- so Block 7.2b's SPEND
-    # must gate on Training, treating an arrived point as available-to-train, not available-to-absorb.
-    # Today its one producer is the [20.78B] Commonwealth Infantry Production stream
-    # (REPLACEMENTS_PRODUCED, credited on the arrival Game-Turn = plan + the 4-turn lead); Block 7.2b's
-    # UNIT_REBUILT will draw it down. The Axis Pool and the [20.78C] equipment chart are DRAW-AT-WILL
-    # availability ceilings held in
-    # data/replacements.json (game.replacements), not accumulated here -- they enter this ledger only
-    # when a spend draws them (7.2b). A pure scalar dict: no TOE, no supply surface, so invariants
-    # are untouched. Default {} holds nothing.
+    # --- [20.7]/[20.43] THE REPLACEMENT POOL + TRAINING LEDGER (rule 20, Blocks 7.2a/7.2b/7.4) ----
+    # `replacement_pool` is the ABSORBABLE ledger: "<side>/<type>" -> Replacement Points that have
+    # arrived (at Cairo/Alexandria, 20.76) AND finished their 20.43 Training, so a depleted unit may
+    # absorb them NOW (19.61/20.4). Block 7.2b's UNIT_REBUILT draws it down.
+    #
+    # `replacement_training` is the [20.43] TRAINING ledger the FLOW IN now lands in FIRST (Block 7.4,
+    # closing the flag engine._replacement_spend carried): "<side>/<type>" -> {mature_turn: points}, the
+    # arrived-but-still-Training cohorts, each keyed by the Game-Turn it becomes absorbable (arrival +
+    # the [17.6] delay, game.replacements.training_delay_gt). engine._replacement_training graduates a
+    # cohort into replacement_pool the Game-Turn it matures (REPLACEMENTS_TRAINED). So an arrived point
+    # is NOT absorbable the turn it arrives -- Infantry trains 3 Operations Stages = one Game-Turn (5.1)
+    # -- which is exactly what 7.2b's "absorbable on arrival" simplification skipped.
+    #
+    # Today the one producer is the [20.78B] Commonwealth Infantry Production stream
+    # (REPLACEMENTS_PRODUCED, into replacement_training on the arrival Game-Turn = plan + the 4-turn
+    # lead). The Axis Pool and the [20.78C] equipment chart are DRAW-AT-WILL availability ceilings held
+    # in data/replacements.json (game.replacements), not accumulated here -- they enter these ledgers
+    # only when a spend draws them (7.2b). Both are pure scalar/nested dicts: no TOE, no supply surface,
+    # so invariants are untouched. This scalar model still holds neither the arrival CITY nor 17.35's
+    # instructor-battalion requirement -- the training is modelled as pure elapsed time (flagged). Both
+    # default {} and hold nothing.
     #
     # `replacement_production` gates the [20.78B] per-Game-Turn roll: the CW Production system is a
     # 111-turn campaign subsystem (Cairo/Alexandria arrival, 20.76), not a rule the tactical Desert
@@ -886,6 +894,7 @@ class GameState:
     # / dump_capture / initiative_chart gate their own campaign-scale subsystems. Default False emits
     # no REPLACEMENTS_PRODUCED, so every non-campaign scenario stays byte-identical.
     replacement_pool: dict = field(default_factory=dict)
+    replacement_training: dict = field(default_factory=dict)
     replacement_production: bool = False
 
     # `commonwealth_withdrawals` gates the [20.8]/[4.43a] mandatory withdrawal schedule -- the CW
@@ -1091,9 +1100,43 @@ class GameState:
         return replace(self, replacement_pool=pool)
 
     def replacements_available(self, key: str) -> int:
-        """The Replacement Points of bucket `key` ('<side>/<type>') that have arrived and are
-        not yet absorbed. Zero for an absent key. (Block 7.2b reads this to bound a rebuild.)"""
+        """The Replacement Points of bucket `key` ('<side>/<type>') that have arrived, finished
+        Training (20.43) and are not yet absorbed. Zero for an absent key. (Block 7.2b's spend reads
+        this to bound a rebuild; a still-Training cohort is in replacement_training, not here.)"""
         return self.replacement_pool.get(key, 0)
+
+    def credit_training(self, key: str, mature_turn: int, points: int) -> "GameState":
+        """[20.43] Add `points` arrived Replacement Points to `key`'s Training cohort that becomes
+        absorbable on `mature_turn` (arrival + the [17.6] delay). The FLOW IN lands here, not in the
+        absorbable pool: an arrived point Trains before it may be absorbed. A conserving
+        copy-then-replace (never mutates), the sibling of credit_replacements."""
+        training = {k: dict(v) for k, v in self.replacement_training.items()}
+        cohort = training.setdefault(key, {})
+        cohort[mature_turn] = cohort.get(mature_turn, 0) + points
+        return replace(self, replacement_training=training)
+
+    def matured_training(self, turn: int) -> dict:
+        """[20.43] The Replacement Points whose Training completes BY `turn` (mature_turn <= turn):
+        key -> points, for every key with a positive matured sum. What engine._replacement_training
+        graduates into the absorbable pool (a still-Training cohort matures later and is not counted)."""
+        out: dict = {}
+        for key, cohorts in self.replacement_training.items():
+            pts = sum(n for mt, n in cohorts.items() if mt <= turn)
+            if pts > 0:
+                out[key] = pts
+        return out
+
+    def graduate_training(self, key: str, up_to_turn: int) -> "GameState":
+        """[20.43] Remove the Training cohorts of `key` matured by `up_to_turn` -- they graduate to
+        the absorbable pool via a paired credit_replacements (see apply REPLACEMENTS_TRAINED). A key
+        left with no still-Training cohort drops out. Copy-then-replace, never mutates."""
+        training = {k: dict(v) for k, v in self.replacement_training.items()}
+        cohort = {mt: n for mt, n in training.get(key, {}).items() if mt > up_to_turn}
+        if cohort:
+            training[key] = cohort
+        else:
+            training.pop(key, None)
+        return replace(self, replacement_training=training)
 
     def with_air_unfit(self, squadron: str, planes: int) -> "GameState":
         """[38.31] Set how many of `squadron`'s aeroplanes stand UNREFITTED (mirrors
