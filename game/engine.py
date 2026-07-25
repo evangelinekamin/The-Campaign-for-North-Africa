@@ -3079,12 +3079,16 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
     enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(r.state, side)
     roster = r.state.living(side)          # phase-start snapshot (matches the observation)
     orders = policy.movement(r.state, side)
+    attached_index = _attached_index(r.state)   # 19.12: parent -> its subsidiaries (stable this Segment)
     _drain_staff(r, policy, side)          # the deliberation that produced these orders
     for order in orders:
         u = r.state.unit(order.unit_id)
         if u is None or not u.alive or u.side != side:
             _reject(r, side, actor, order, "no such living unit under this command")
             continue
+        if u.attached_to:                               # 19.12: an attached subsidiary is inside its
+            continue                                    # Parent's counter and moves only when the Parent
+                                                        # does (_carry_attached) -- never on its own order
         if u.cohesion <= -26:                           # 6.26: a unit at Cohesion -26 or worse may
             _reject(r, side, actor, order,              # not move (nor attack, nor defend). The
                     "Cohesion -26 or worse: may not move (6.26)")   # surrender-on-enemy-adjacency
@@ -3121,8 +3125,12 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
             _reject(r, side, actor, order,
                     "destination unreachable within CPA or blocked by ZOC")
             continue
+        carried = _co_located_subtree(r.state, u, attached_index)  # 19.12: its counter moves the formation
         present = [x for x in r.state.units_at(order.to) if x.side == side]
-        if not stacking.within_hex_limit(present + [u], r.state.terrain.terrain[order.to]):
+        # 9.14 at the destination is the FORMATION's footprint, not the bare HQ's: the Parent counts
+        # its Organization SP only once its subsidiaries stand with it (9.12), so they must be in the
+        # tested stack or a move validated at the HQ's lone-0 would over-stack the hex once carried.
+        if not stacking.within_hex_limit(present + [u] + carried, r.state.terrain.terrain[order.to]):
             _reject(r, side, actor, order, "destination over stacking limit")
             continue
         if r.state.enemies_at(order.to, side):          # 8.5 re-entrancy: a reactor may have slid
@@ -3138,9 +3146,52 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
             payload["bp"] = bp
         old_cp = r.state.unit(u.id).cp_used
         r.emit(EventKind.UNIT_MOVED, side, actor, payload)
+        for c in carried:                       # 19.12: the Parent's counter carries its attached
+            r.emit(EventKind.UNIT_MOVED, side, actor,   # subsidiaries with it, at no CP and no Fuel
+                   {"unit_id": c.id, "from": list(c.hex), "to": list(order.to), "cp_spent": 0})
         _disorganize_overage(r, side, actor, u.id, old_cp,        # 6.21: overrun past CPA (8.16/8.17)
                              old_cp + reach[order.to], tactics.effective_cpa(r.state, u))
         _react(r, policies, side, u.id)         # 8.5: the non-phasing side may slide aside
+
+
+def _attached_index(state: GameState) -> dict:
+    """parent-id -> its subsidiaries' ids, sorted. Built once per Movement Segment: attachment only
+    changes in the Reorganization Segment (19.4), so the graph is stable while units move, and the
+    carry below can look up a mover's children in O(1) instead of rescanning every counter."""
+    idx: dict[str, list[str]] = {}
+    for x in state.units:
+        if x.attached_to:
+            idx.setdefault(x.attached_to, []).append(x.id)
+    for kids in idx.values():
+        kids.sort()
+    return idx
+
+
+def _co_located_subtree(state: GameState, parent, index: dict) -> list:
+    """[19.12]/[19.46] The attached units standing in `parent`'s hex that its counter REPRESENTS --
+    the subtree it carries when it moves ("functionally combined into one unit"). Co-located ONLY:
+    a link to a unit in another hex is stale (a split the Reorganization Segment has yet to
+    reconcile, 19.13) and is NOT part of the counter, so it is never teleported along. Walked
+    transitively (19.46), in id order for determinism.
+
+    Because the carried units ride inside the Parent's counter they cost NO additional Capability
+    Point and NO Fuel (the formation's per-hex consumption is the Parent's, drawn once), and they
+    never separately trip Reaction (8.5) -- one counter made one move. A subsidiary is dropped from
+    the Movement Segment's own order loop (it may not self-move, 19.12), so it moves with its Parent
+    here or not at all. Empty for any counter with nothing attached, so every scenario without a
+    live organization tree carries nothing and stays byte-identical."""
+    out, frontier, seen = [], [parent.id], {parent.id}
+    while frontier:
+        pid = frontier.pop()
+        for cid in index.get(pid, ()):
+            if cid in seen:
+                continue
+            c = state.unit(cid)
+            if c is not None and c.alive and tuple(c.hex) == tuple(parent.hex):
+                seen.add(cid)
+                out.append(c)
+                frontier.append(cid)
+    return out
 
 
 def _react(r: _Run, policies: dict, phasing: Side, mover_id: str) -> None:
@@ -4812,14 +4863,23 @@ def _parents_of(r: _Run, units) -> list:
     list -- but its subsidiaries' size-equivalence IS its size (9.13: "a full division has a
     Stacking Point value of 5, while it may include units whose total Stacking Point values are
     much greater than five"), so the attachment chain has to be walked back onto the board before
-    [15.53] can read it. Walks upward transitively, which is 19.46."""
+    [15.53] can read it. Walks upward transitively, which is 19.46.
+
+    ONLY A CO-LOCATED PARENT TAKES PART. 15.53 counts "each Player's largest unit... actually
+    taking part in the combat IN THE HEX", and 19.12/19.13 put an attached unit in its Parent's
+    hex -- so the chain is climbed from a unit to its Parent only while the two stand in the SAME
+    hex. A link left stale by a move or a retreat that split a formation before the Reorganization
+    Segment reconciled it is not followed: an absent Parent is not "in the hex", so its size does
+    not inflate a combat its counter is nowhere near. With the Parent thus omitted, the separated
+    subsidiary falls through organization.size to its own printed value (it is no longer folded),
+    so it fights as the independent battalion it has physically become."""
     out, seen, frontier = [], {u.id for u in units}, list(units)
     while frontier:
         u = frontier.pop()
         if not u.attached_to or u.attached_to in seen:
             continue
         parent = r.state.unit(u.attached_to)
-        if parent is None:
+        if parent is None or tuple(parent.hex) != tuple(u.hex):    # 19.12/19.13: same hex, or not at all
             continue
         seen.add(parent.id)
         out.append(parent)
@@ -4896,6 +4956,14 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
         return True
     ab, asm, db, dsm = (r.d6("close_assault"), r.d6("close_assault"),
                         r.d6("close_assault"), r.d6("close_assault"))
+    # [15.53] "Largest Unit On = Each Player's largest unit, in size-equivalents, actually taking
+    # part in the combat in the hex." A battalion attached to a division or a Kampfgruppe is not a
+    # battalion in that fight -- 19.12 makes it part of the Parent's counter -- so game.organization
+    # resolves each participant up its (co-located) attachment chain and applies 9.26/9.28's shell
+    # step-down. Attackers are read against the units in the attacking hexes so a Parent standing
+    # with them is found; defenders against the target's (incl. pinned defenders, 15.12).
+    atk_sz = organization.combat_size(armed_atk + _parents_of(r, armed_atk))
+    def_sz = organization.combat_size(defenders + _parents_of(r, defenders))
     res = combat.resolve(
         attacker_raw=sum(u.raw_offense for u in armed_atk),
         defender_raw=sum(_def_raw(u) for u in armed_def),      # unarmed -> 0; dry -> half (52.51/52.52)
@@ -4907,27 +4975,24 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
         morale_shift=atk_m - def_m,
         attacker_ca_penalty=_combined_arms_penalty(armed_atk),      # rule 15.4
         defender_ca_penalty=_combined_arms_penalty(armed_def),
-        # [15.53] "Largest Unit On = Each Player's largest unit, in size-equivalents, actually
-        # taking part in the combat in the hex." A battalion attached to a division or a
-        # Kampfgruppe is not a battalion in that fight -- 19.12 makes it part of the Parent's
-        # counter -- so game.organization resolves each participant up its attachment chain and
-        # applies 9.26/9.28's shell step-down. Attackers are read against the units in the
-        # attacking hexes so a Parent standing with them is found; defenders against the target's.
-        attacker_size=organization.combat_size(armed_atk + _parents_of(r, armed_atk)),
-        defender_size=organization.combat_size(defenders + _parents_of(r, defenders)),  # incl.
-        # pinned defenders (15.12), which still count toward their side's size-equivalence.
+        attacker_size=atk_sz, defender_size=def_sz,
         fortification_level=fort, in_enemy_minefield=mined)
-    r.emit(EventKind.COMBAT_RESOLVED, side, actor,
-           {"target": list(target), "attackers": [u.id for u in armed_atk],
-            "defenders": [u.id for u in defenders],
-            "differential": res.differential, "column": res.column,
-            "morale_shift": atk_m - def_m,
-            "attacker_loss_pct": res.attacker_loss_pct,
-            "defender_loss_pct": res.defender_loss_pct,
-            "attacker_captured": res.attacker_captured,
-            "defender_captured": res.defender_captured,
-            "attacker_engaged": res.attacker_engaged,
-            "retreat_hexes": res.retreat_hexes},
+    payload = {"target": list(target), "attackers": [u.id for u in armed_atk],
+               "defenders": [u.id for u in defenders],
+               "differential": res.differential, "column": res.column,
+               "morale_shift": atk_m - def_m,
+               "attacker_loss_pct": res.attacker_loss_pct,
+               "defender_loss_pct": res.defender_loss_pct,
+               "attacker_captured": res.attacker_captured,
+               "defender_captured": res.defender_captured,
+               "attacker_engaged": res.attacker_engaged,
+               "retreat_hexes": res.retreat_hexes}
+    if max(atk_sz, def_sz) >= 2:                # [15.53]: record the Organization-Size tier when a
+        payload["attacker_size"] = atk_sz       # FORMATION (>= Brigade/Battle-Group) took part -- the
+        payload["defender_size"] = def_sz       # tier Block 7.C's setup tree unlocked. Absent when only
+        # lone battalions/companies fought (size <= 1), so every org-tree-less scenario -- both
+        # signature-pinned benchmarks -- records nothing new and stays byte-identical.
+    r.emit(EventKind.COMBAT_RESOLVED, side, actor, payload,
            rng_draws=(*atk_md, *def_md, ab, asm, db, dsm))
     # 15.83d: steps are removed to ABSORB the raw points lost, each step soaking up
     # its unit's close-assault rating (dca defending, oca attacking) worth of points.

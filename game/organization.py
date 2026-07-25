@@ -28,10 +28,13 @@ Both charts are transcribed into data/ (formation_organization.json, maximum_att
 and read here; the Capability Point prices are the four organization rows of the [6.3] chart
 (game.cp_costs). No magnitude in this file is a literal.
 
-WHAT IS DELIBERATELY NOT HERE, and why. The historical starting tree -- who begins the game
-assigned to whom -- is on the [4.44]/[4.45] Organization at Arrival Charts, which are not
-transcribed (port plan T1-2). So this module builds and polices the tree; it does not seed
-one. Everything defaults to independent, which is exactly what the engine had before.
+WHERE THE TREE COMES FROM. This module builds and polices the tree; the historical STARTING tree --
+who begins the game assigned to whom -- is the [4.45] Organization at Arrival Charts, transcribed to
+data/oob_organization_4_45.json and seeded onto the campaign OOB (game.oob._seed_organization, Block
+B). The campaign then CONCENTRATES it in the Reorganization Segment and fights it as formations
+(game.campaign_policy.concentrate_formations + engine._carry_attached / combat_size, Block C), which
+is what makes [15.53] reach its Brigade/Division tiers in play. A scenario with no seeded tree (both
+Desert Fox benchmarks) leaves every counter independent -- exactly what the engine had before.
 """
 from __future__ import annotations
 
@@ -136,7 +139,18 @@ def size(unit, attached=()) -> int:
 
     NO shell reduction here: [9.28]'s step-down is for "Unit Differentiation on Close Assault
     (see Case 15.5) and for any rule where unit size is important", not for the physical
-    stacking limit, which 9.11/9.14 denominate in the printed value. See size_equivalent."""
+    stacking limit, which 9.11/9.14 denominate in the printed value. See size_equivalent.
+
+    THE FOLD IS BY THE LINK, NOT BY CO-LOCATION, and deliberately. 19.12/19.13 make an attached unit
+    ALWAYS stand in its Parent's hex, so folding it to zero wherever the link points has the same
+    answer as folding it only when co-located -- EXCEPT during the one-event-at-a-time carry that
+    moves a formation (engine._co_located_subtree), where the Parent steps to the new hex an event
+    before its subsidiaries follow. A co-location test would read those subsidiaries UN-folded for
+    that single event and trip the [9.14] limit on a formation merely mid-stride; worse, it would
+    make one counter's move change a DIFFERENT hex's point-count, which the incremental invariant
+    checker (game.invariants: delta vs full sweep) is built to forbid. So stacking folds by the link
+    and stays LOCAL. Telling a genuinely detached straggler apart from a folded subsidiary is the job
+    of combat_size, which runs once per assault (not once per event) and can afford to look."""
     if unit.attached_to:
         return 0
     row = formation(unit.org_type) if unit.org_type else {}
@@ -232,7 +246,17 @@ def combat_size(units) -> int:
             seen.add(top.attached_to)
             top = by_id[top.attached_to]
         tops[top.id] = top
-    return max((size_equivalent(t, units) for t in tops.values()), default=0)
+
+    def _present_size(t):
+        # 15.53 counts the largest unit "actually taking part in the combat IN THE HEX." A top whose
+        # Parent is NOT among the participants is a detached straggler -- not folded into a counter
+        # that stands elsewhere -- so it fights at its OWN size. This is the ONE place the co-location
+        # distinction is drawn: size() itself stays link-local for the per-event stacking invariant
+        # (see its docstring), and this reader runs once per assault, so it can afford to look.
+        if t.attached_to and t.attached_to not in by_id:
+            t = replace(t, attached_to="")
+        return size_equivalent(t, units)
+    return max((_present_size(t) for t in tops.values()), default=0)
 
 
 # --- [19.4] / [19.5] attachment ---------------------------------------------------------

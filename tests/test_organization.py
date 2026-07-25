@@ -79,6 +79,10 @@ def test_9_12_an_hq_that_represents_its_formation_is_worth_its_printed_value():
 
 def test_9_21_an_attached_unit_does_not_stack_on_its_own_account():
     bn = _u("B1", attached_to="KG")
+    # 9.21/19.12: an attached unit is represented by its Parent's counter and does not stack on its
+    # own account. size() folds it to zero by the LINK, not by co-location, so the per-event stacking
+    # invariant stays local across the formation carry (see size()'s docstring and combat_size, which
+    # is where a genuinely detached straggler is told apart -- once per assault, not per event).
     assert organization.size(bn, ()) == 0          # represented by the Parent's counter (19.12)
 
 

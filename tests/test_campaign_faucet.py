@@ -382,13 +382,18 @@ def test_the_commonwealth_trucks_actually_run():
     forward = [e for e in unloads if _west_of_matruh(dump_hex[e.payload["supply_id"]])]
     assert forward, "nothing was ever hauled west of the railhead"
 
-    # A forward Field Supply Depot actually FILLS. Asked of the chain, not of one named link: the
-    # relay lifts from each staging depot to fill the one ahead of it, so the stock ends up at the
-    # chain's HEAD and the links behind are transit nodes at zero. With the take-and-hold occupying
-    # SOLLUM (game.campaign_claim) the head is AL-Stage-Sollum -- the third link, which the old code
-    # could never fill at all: the Commonwealth swept past the hex for the whole war, it stayed
-    # Axis-CONTROLLED, and the relay will not deliver into a hex the enemy holds.
-    depots = ("AL-Stage-Barrani", "AL-Stage-Sollum")
+    # A Field Supply Depot at the chain's HEAD actually FILLS. Asked of the chain, not of one named
+    # link: the relay lifts from each staging depot to fill the one ahead of it, so the stock ends up
+    # at the head and the links behind are transit nodes at zero.
+    #
+    # RESTATED 2026-07-25 (Block 7.C, rule 15.53 Organization Size): the head moved BACK. The Axis now
+    # fights its regiments concentrated (campaign_policy.concentrate_formations), and its [15.53]
+    # column-shift edge has overrun BOTH forward staging depots -- Sidi Barrani and Sollum are Axis-
+    # held now (32.13) -- so the relay fills the forward-most link the Commonwealth still holds: the
+    # rail-fed Matruh railhead reservoir. The pool still CYCLES and still hauls WEST of the railhead
+    # (both asserted above, unchanged); the concentration edge decides only how far forward the head
+    # sits (measured seed 4, GT24: Matruh wet 1881/7407, AL-Stage-Barrani/Sollum AXIS and dry).
+    depots = ("AL-Stage-Matruh", "AL-Stage-Barrani", "AL-Stage-Sollum")
     assert any(res.final.supply(d).fuel > 0 for d in depots), \
         f"no Field Supply Depot filled: {[(d, res.final.supply(d).fuel) for d in depots]}"
 

@@ -326,9 +326,12 @@ def anti_armor_damage(actual_points: int, roll: int, *, phasing: bool = False,
 # [15.53] Organization-Size Close Assault Modifications: the column shift in favour
 # of the side whose largest participating unit is bigger, keyed by (larger SP,
 # smaller SP). Stacking points: 5=Division, 3=Super-Brigade, 2=Brigade/Battle Group,
-# 1=Battalion, 0=Company (rule 9.4). Division-level aggregation of a formation's
-# battalions (15.55, via the parent HQ) is deferred, so this fires only when the
-# participating units' own sizes differ (e.g. a battalion assaulting a company).
+# 1=Battalion, 0=Company (rule 9.4). The formation tiers are LIVE: a battalion attached
+# to its Parent Formation is that Formation in the fight (organization.combat_size +
+# engine._parents_of, 15.55/19.12), so a concentrated division/brigade/Kampfgruppe reads
+# its full size here -- seeded by [4.45] (Block B) and driven onto the map by the campaign
+# Reorganization Segment (campaign_policy.concentrate_formations, Block C). The lowest
+# (1,0) battalion-vs-company row fires for loose counters as it always did.
 _ORG_SIZE_SHIFT: dict[tuple[int, int], int] = {
     (5, 3): 1, (5, 2): 2, (5, 1): 4, (5, 0): 8,
     (3, 2): 0, (3, 1): 2, (3, 0): 4, (2, 1): 2, (2, 0): 4, (1, 0): 2,

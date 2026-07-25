@@ -105,11 +105,20 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
     unchanged (0 in both arms in this window) and MERSA MATRUH STAYS BANKED either way. So pinning
     matruh[0].ammo > 0 was pinning a 2-point chaotic residual, not the banking; the capability it meant
     to guard -- the Commonwealth can trace Fuel and Ammunition at its own railhead city -- is pinned
-    directly below, on the garrison's 64.73 trace, where the knife-edge cannot silently flip it."""
+    directly below, on the garrison's 64.73 trace, where the knife-edge cannot silently flip it.
+
+    *** RESTATED 2026-07-25 (Block 7.C, rule 15.53 Organization Size). *** The Axis now fights its
+    Italian regiments CONCENTRATED (campaign_policy.concentrate_formations), and the [15.53] column-
+    shift edge -- historically the DAK's, a faithful counterweight to the Phase-7 Commonwealth
+    replacement flow -- takes SIDI BARRANI, the forward city the enemy used to bank while its
+    battalions sat scattered. So the Commonwealth banks Mersa Matruh (still garrisoned, still tracing
+    its supply, below) and the AXIS banks Sidi Barrani. The take-and-hold thesis is unchanged: an army
+    keeps what it banks and goes and gets the rest -- and now the Axis goes and gets this one."""
     fin = _run(30).final
     cw, ax = _banked(fin, Side.ALLIED), _banked(fin, Side.AXIS)
-    # The Commonwealth keeps the one its own seeded spine feeds...
-    assert "Sidi Barrani" in cw
+    # The Axis, fighting concentrated (15.53), now TAKES the forward city the Commonwealth used to
+    # bank against its scattered battalions -- see the RESTATED note above (measured seed 4, GT30).
+    assert "Sidi Barrani" in ax
     # ...and stands on Mersa Matruh, and now BANKS it: the garrison is sent, it does not wander off,
     # and 64.73 counts it because that garrison can trace its supply (pinned below).
     assert campaign_claim._occupied(fin, Side.ALLIED, MATRUH), \
@@ -192,9 +201,16 @@ def test_occupying_sollum_brings_the_supply_chain_up_to_it():
     # this one seed -- the army's own baggage, not "the chain behind Sollum" at all. A unit standing
     # on Sollum is fed by the depot ON Sollum, which is what the lorries fill once the offensive takes
     # the hex; that is the whole reason the depot is seeded there empty.
-    barrani = fin.supply("AL-Stage-Barrani")
-    assert barrani.ammo > 0 and barrani.fuel > 0, \
-        "the chain behind Sollum is dry -- the rail faucet or the lorry park is dead"
+    # RESTATED 2026-07-25 (Block 7.C, rule 15.53 Organization Size): the head moved BACK one bound.
+    # The Axis now fights its regiments concentrated (campaign_policy.concentrate_formations) and its
+    # [15.53] column-shift edge has OVERRUN the forward Sidi Barrani reservoir (32.13: the hex and its
+    # dump changed hands), so the live Commonwealth chain now sits at the rail-fed Matruh railhead
+    # reservoir. That the chain is ALIVE -- the rail faucet and the lorry park still filling it -- is
+    # what this pins; the concentration edge decides only HOW FAR FORWARD the head reaches, and it is
+    # the railhead now, not Sidi Barrani (measured seed 4, GT24: Matruh wet, AL-Stage-Barrani AXIS).
+    matruh = fin.supply("AL-Stage-Matruh")
+    assert matruh.ammo > 0 and matruh.fuel > 0, \
+        "the chain behind the railhead is dry -- the rail faucet or the lorry park is dead"
 
 
 def test_you_do_not_besiege_a_city_you_could_not_hold():

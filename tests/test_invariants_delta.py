@@ -66,16 +66,18 @@ def _recorded_logs():
     # (BLOWN). It is the smallest fold measured that does so, so coverage is a property of the
     # recorded run rather than of the seed.
     #
-    # THE SEED HAS MOVED THREE TIMES, AND EACH TIME FOR THE SAME REASON: a rule landed that reshaped
+    # THE SEED HAS MOVED FOUR TIMES, AND EACH TIME FOR THE SAME REASON: a rule landed that reshaped
     # the campaign's opening, and the previous fold stopped producing one of the three. Phase-3 (the
     # Commonwealth order of battle) retired seed 1; Phase-4 S5 (in-hex fuel) retired it again; and
     # Phase 5.1 (rules 35/36 -- the air facilities left units[], the SGSUs joined it, and the charted
-    # air-facility trucks came on) left seed-8/mt3 without a front-line retreat. seed-14/mt3 is the
-    # current smallest (scratchpad/find_coverage_seeds_p51.py; 3,911 events). What is asserted is the
-    # COVERAGE, so re-measuring the seed when the opening moves is the maintenance this test is for --
-    # never dropping the requirement.
-    yield ("campaign:14/mt3",
-           run(campaign(seed=14, max_turns=3), CampaignAxisPolicy(), CampaignCommonwealthPolicy()))
+    # air-facility trucks came on) left seed-8/mt3 without a front-line retreat, retiring it to
+    # seed-14/mt3. Block 7.C (rule 15.53 -- the Axis regiments fight CONCENTRATED and reshape the
+    # opening's captures) left seed-14/mt3 without a 32.13 dump overrun; seed-24/mt3 is the current
+    # smallest fold that drives all three (5,518 events). What is asserted is the COVERAGE, so
+    # re-measuring the seed when the opening moves is the maintenance this test is for -- never
+    # dropping the requirement.
+    yield ("campaign:24/mt3",
+           run(campaign(seed=24, max_turns=3), CampaignAxisPolicy(), CampaignCommonwealthPolicy()))
 
 
 def test_incremental_verdict_matches_full_sweep_at_every_event():

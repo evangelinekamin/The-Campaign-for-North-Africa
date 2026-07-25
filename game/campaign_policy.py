@@ -26,15 +26,16 @@ logic lives in the module-level campaign_truck_orders below.
 """
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass, replace
 
-from . import campaign_claim, construction, malta, supply, tactics, wells
+from . import campaign_claim, construction, malta, organization, stacking, supply, tactics, wells
 from .campaign_claim import (STAGING, garrison_units,   # the rule-64.73 standing orders, re-exported
                              hold_depots, hold_garrisons)   # (game.campaign_staff and the tests import them from here)
 from .events import Control, Side
 from .hexmap import Coord, distance
 from .policy import (AttackOrder, BuildOrder, DemolitionOrder, MotorizeOrder, MoveOrder,
-                     ScriptedPolicy, SupplyMoveOrder, TruckOrder)
+                     OrganizationOrder, ScriptedPolicy, SupplyMoveOrder, TruckOrder)
 from .state import GameState, SupplyUnit
 from .relay import (  # extracted to game.relay; re-exported so every caller and __all__ keep working
     _step_toward, _relay_source, _is_faucet, _a_link_in_the_chain, _field_dump_id,
@@ -43,9 +44,90 @@ from .relay import (  # extracted to game.relay; re-exported so every caller and
 
 __all__ = ["CAMPAIGN_CW_OFFENSIVES", "CampaignAxisPolicy", "CampaignCommonwealthPolicy",
            "OffensiveSchedule", "air_supply_orders", "build_the_chain", "campaign_motorization",
-           "campaign_truck_orders", "deny_dumps", "garrison_units", "hold_depots",
-           "hold_garrisons", "keep_in_trace", "railhead", "take_and_hold_moves",
+           "campaign_truck_orders", "concentrate_formations", "deny_dumps", "garrison_units",
+           "hold_depots", "hold_garrisons", "keep_in_trace", "railhead", "take_and_hold_moves",
            "take_and_hold_supply"]
+
+
+def concentrate_formations(state: GameState, side: Side) -> list[OrganizationOrder]:
+    """[19.4]/[19.12] THE REORGANIZATION SEGMENT STANDING ORDER that makes the seeded [4.45]
+    formation tree actually FIGHT as formations -- the driver Gate 7A found missing, without which
+    the [15.53] Organization Size chart could never leave its lone-battalion tier in 111 turns.
+
+    Two acts, both the book's, both re-validated at the engine boundary (engine._reorganize):
+
+      * ATTACH (19.4/19.41) every ASSIGNED unit that stands in its Parent Formation's hex. "Any
+        units assigned to a particular Parent Formation may freely be attached to or detached from
+        that Parent Formation" -- so this is the no-cost homecoming of a unit to the formation it
+        belongs to (19.28's paper assignment made concrete on the map), not the [19.5]-capped
+        attachment of a stranger. Once attached, the formation's units resolve at its Organization
+        Size in close assault (organization.combat_size), and its counter carries them as one when
+        it advances (engine._carry_attached) -- so a division fights, and moves, as a division.
+
+      * DETACH (19.43) any unit a link still binds to a Parent it no longer stands with. Voluntary
+        movement keeps a formation together (the carry above), but a retreat or a Reaction can
+        split one, and 19.12 attachment is a SAME-HEX relationship; a stale link is reconciled here,
+        in the one Segment the rule lets it be. This is not the gratuitous break-up of a historical
+        formation -- it keeps the map tree honest to where the counters actually stand.
+
+    THE STACKING GATE (9.14/9.31). Attaching is normally free of stacking cost -- a subsidiary folds
+    to zero inside its Parent's counter (9.13) -- but the FIRST unit under a large HQ makes that HQ
+    jump from a bare 0 (9.12) to its full formation value, which can push a hex over its limit. So a
+    formation concentrates only where the resulting stack is legal; the rest of its units come in as
+    room is made. The engine re-checks the limit at rest regardless (invariants), this only keeps the
+    staff from ordering an attach the board cannot hold.
+
+    ONLY UNDER A COMBAT PARENT (FLAGGED -- an engine limitation, not a rule). In the game a division
+    is one counter and its HQ moves WITH it; in this engine an HQ is a separate counter, and a bare,
+    non-combat HQ counter (the CW brigade/division and German division HQs) is moved by no proposer.
+    Fold a formation into such an HQ and its units -- which may no longer self-move once attached
+    (19.12, engine._movement) -- would be FROZEN where they stand, since nothing can order the HQ to
+    lead them (measured: the Eighth Army's Delta brigades concentrated and never reached the railhead,
+    the whole faucet died). So concentration is confined to formations whose Parent is itself a COMBAT
+    counter that CAN be ordered forward and CAN carry them (engine._carry_attached) -- the Italian and
+    German regiments, the CW tank brigade. This is where Organization Size actually bites, and it
+    bites for the AXIS: its regiments fight concentrated (the DAK's historical strength), a faithful
+    counterweight to the Commonwealth replacement flow. The non-combat-HQ tiers (a concentrated
+    division/brigade) wait on the [4.44]/[4.45] HQ-follows-its-formation movement, not transcribed.
+
+    Pure setup-tree play: no Kampfgruppe is formed here (that is the speculative 19.71 act, flagged
+    and deferred). Returns [] when no unit carries the tree, so any policy that inherits this on a
+    tree-less scenario is byte-identical."""
+    by_id = {u.id: u for u in state.units}
+    living = list(state.living(side))
+    orders: list[OrganizationOrder] = []
+
+    # DETACH the stale links first (a formation split by a retreat/Reaction; 19.43 in-Segment).
+    for u in living:
+        if u.attached_to:
+            p = by_id.get(u.attached_to)
+            if p is None or not p.alive or tuple(p.hex) != tuple(u.hex):
+                orders.append(OrganizationOrder("detach", unit_id=u.id, parent_id=u.attached_to))
+
+    # ATTACH each assigned unit co-located with its COMBAT Parent, per formation, gated on 9.14.
+    kids: dict[str, list] = defaultdict(list)
+    for u in living:
+        if not u.assigned_to or u.attached_to:
+            continue
+        p = by_id.get(u.assigned_to)
+        if (p is not None and p.side == side and p.alive and p.is_combat
+                and tuple(p.hex) == tuple(u.hex)):
+            kids[p.id].append(u)
+
+    work = {u.id: u for u in state.units}                 # tracks this Segment's attaches so several
+    for pid in sorted(kids):                              # formations sharing a hex compose correctly
+        children = sorted(kids[pid], key=lambda u: u.id)
+        parent = by_id[pid]
+        terrain = state.terrain.terrain[tuple(parent.hex)]
+        cset = {c.id for c in children}
+        stack = [replace(work[x.id], attached_to=pid) if x.id in cset else work[x.id]
+                 for x in state.units_at(parent.hex)]
+        if not stacking.within_hex_limit(stack, terrain):
+            continue                                      # 9.14: not enough room to fold them in yet
+        for c in children:
+            orders.append(OrganizationOrder("attach", unit_id=c.id, parent_id=pid))
+            work[c.id] = replace(work[c.id], attached_to=pid)
+    return orders
 
 
 # --- the rule-64.73 standing orders, SIDE-GENERIC (see game.campaign_claim) -----------------------
@@ -321,6 +403,12 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
         # The ADVANCE branch. It drives on whatever objective the view it is handed carries:
         # Benghazi on an offensive Game-Turn, the assembly line between them.
         self._advance = ScriptedPolicy(attacker=Side.ALLIED)
+
+    def organization(self, state: GameState, side: Side) -> list[OrganizationOrder]:
+        # [19.4]/[19.12] Concentrate the seeded [4.45] formation tree so the Eighth Army's divisions
+        # fight as divisions -- the [15.53] Organization Size chart the Commonwealth needs to stand
+        # against the DAK's concentration (see concentrate_formations).
+        return concentrate_formations(state, side)
 
     def _on_offensive(self, state: GameState) -> bool:
         return self._schedule.is_offensive(state.turn)
@@ -1117,6 +1205,12 @@ class CampaignAxisPolicy(_CampaignAxisSupplyMixin, ScriptedPolicy):
 
     def __init__(self):
         super().__init__(attacker=Side.AXIS)
+
+    def organization(self, state: GameState, side: Side) -> list[OrganizationOrder]:
+        # [19.4]/[19.12] Concentrate the seeded [4.45] formation tree. Organization Size in close
+        # assault is historically an AXIS strength -- the DAK fought as divisions and Kampfgruppen --
+        # so this is where the Panzerarmee gets its [15.53] concentration edge (concentrate_formations).
+        return concentrate_formations(state, side)
 
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
         return take_and_hold_moves(state, side, super().movement(state, side), escort=True)
