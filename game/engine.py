@@ -1146,19 +1146,11 @@ def _axis_replacement_bring_in(r: _Run, c) -> float:
         # cumulative cap during GT5-24, separate from the later 1,100-RP pool (GT25+).
         italian_window_total = replacements.axis_italian_infantry_window_total(plan_turn)
         if italian_window_total is not None:
-            # We're in the GT5-24 Italian window. Enforce the sub-cap.
-            # Before GT38 (when German infantry opens), all shipped infantry is Italian.
-            total_shipped = r.state.replacements_shipped.get("AXIS/infantry", 0)
-            if plan_turn < 38:
-                # All shipped so far is against the Italian window
-                italian_shipped = total_shipped
-            else:
-                # German is open; without separate tracking, be conservative.
-                # Assume the Italian window is filled first (prioritize Italian for the window).
-                # For simplicity, track only the points shipped during the window.
-                # This is a limitation of the current ledger structure (TODO: split AXIS/italian_infantry).
-                italian_shipped = total_shipped
-            # Reduce remaining to enforce the Italian window cap
+            # We're in the GT5-24 Italian window. German infantry does not open until GT38 (its plan_gt),
+            # which is past this window's close -- so every AXIS/infantry point shipped so far IS Italian,
+            # and the class-keyed ledger needs no split to attribute the window. Cap the remaining draw at
+            # the 100-RP window pool (distinct from the per-Game-Turn rate).
+            italian_shipped = r.state.replacements_shipped.get("AXIS/infantry", 0)
             remaining = min(remaining, italian_window_total - italian_shipped)
         inf_points = max(0, min(inf_cap, deficit - pipeline, allowance_pts, remaining))
         if inf_points > 0:
@@ -1173,32 +1165,24 @@ def _axis_replacement_bring_in(r: _Run, c) -> float:
             total_tons_charged += inf_tons
 
     # --- Axis Equipment bring-in (tank/gun) -----------------------------------------------
+    # [20.62] Each Replacement Point is charged its printed PER-TYPE Tonnage (the gun class alone spans
+    # 3->206 tons), so the election picks real types cheapest-first and charges their real Tonnage
+    # (replacements.axis_equipment_election) -- never an invented average. Bounded by the deficit, the
+    # pipeline, the [20.66] class campaign total, each type's per-Game-Turn Max, and the tonnage left.
+    # NB the equipment SPEND is near-zero in play, so this heals a depleted battalion when one appears
+    # and charges the faucet, but its class is NOT scored by 64.74 (data spendable_classes: AXIS infantry
+    # only -- an unbuilt-spend class is 100% unused by construction, the Gate-7A artifact the ruling bars).
     for pool_class in ("tank", "gun"):
-        rate_cap = replacements.axis_equipment_per_gt_max(plan_turn, pool_class)
-        if rate_cap <= 0:
-            continue
         eligible = _get_eligible_units_for_class(r.state, Side.AXIS, pool_class)
         deficit = sum(organization.rebuild_headroom(u, u.max_toe) for u in eligible)
         key = f"AXIS/{pool_class}"
         pipeline = (r.state.replacements_available(key)
                     + sum(r.state.replacement_training.get(key, {}).values()))
-        # For equipment, we need to estimate tonnage per point. Use an average of the chart's items
-        # or read the specific type's tonnage when available. For now, we iterate per-item and track
-        # cumulative tons and points, selecting greedily by type.
         remaining = (replacements.axis_equipment_pool_total(pool_class)
                      - r.state.replacements_shipped.get(key, 0))
-        # Greedy selection: try to bring in points, starting with lowest-tonnage types to maximize
-        # the number of points we can fit. (This is a simplification; a real policy might elect
-        # specific types.) For now, estimate average tonnage and allocate proportionally.
-        items = [i for i in (replacements.axis_items("german") + replacements.axis_items("italian"))
-                 if i.get("class") == pool_class]
-        if not items:
-            continue
-        avg_tonnage = sum(i["tonnage"] for i in items) / len(items)
-        allowance_pts = int(allowed / avg_tonnage) if allowed > 0 else 0
-        eq_points = max(0, min(rate_cap, deficit - pipeline, allowance_pts, remaining))
+        want = max(0, min(deficit - pipeline, remaining))
+        eq_points, eq_tons = replacements.axis_equipment_election(plan_turn, pool_class, want, allowed)
         if eq_points > 0:
-            eq_tons = int(eq_points * avg_tonnage)  # Conservative: round down
             arrival = replacements.axis_arrival_turn(plan_turn)
             mature = arrival + replacements.training_delay_gt(pool_class)
             r.emit(EventKind.REPLACEMENTS_PRODUCED, Side.AXIS, "AXIS/QM",

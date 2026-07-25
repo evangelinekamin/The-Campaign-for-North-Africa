@@ -147,7 +147,7 @@ def axis_gun_total(chart: str) -> int:
 
 def axis_equipment_pool_total(pool_class: str) -> int:
     """[20.66] The campaign-total Axis tank/gun Replacement Points across both German and Italian
-    charts (tank 335 / gun 375). The lifetime ceiling the equipment bring-in may not exceed."""
+    charts (tank 335 / gun 499). The lifetime ceiling the equipment bring-in may not exceed."""
     if pool_class == "tank":
         return axis_tank_total("german") + axis_tank_total("italian")
     elif pool_class == "gun":
@@ -159,7 +159,16 @@ def axis_equipment_per_gt_max(plan_turn: int, pool_class: str) -> int:
     """[20.66]/[20.67] The most tank/gun Replacement Points of `pool_class` the Axis may PLAN in
     Game-Turn `plan_turn` -- the sum of the Max of every chart item of that class whose plan window
     contains the turn. Read from the chart, not a literal; 0 before the class's first window opens
-    (tanks GT41, guns GT45 both German)."""
+    (tanks GT41, guns GT45 both German).
+
+    FLAG (a judgement call, no transcribed number moved -- the same one commonwealth_equipment_per_gt_max
+    makes): the printed Max is taken as a per-GAME-TURN ceiling regardless of its max_period. Some rows
+    print Max per month or per two weeks; a monthly allowance MAY be planned inside a single Game-Turn.
+    (axis_infantry_per_gt_max instead RAISES on a non-game_turn period, because infantry is game_turn on
+    both charts, so a stray period there would be a data error -- equipment periods legitimately vary.)
+    This is the aggregate class ceiling for documentation/tests; the live bring-in
+    (axis_equipment_election / engine._axis_replacement_bring_in) realizes it PER-ITEM, bounding each
+    type by its own Max, so this summed value is not what charges the convoy."""
     total = 0
     for chart in ("german", "italian"):
         for item in axis_items(chart):
@@ -169,6 +178,50 @@ def axis_equipment_per_gt_max(plan_turn: int, pool_class: str) -> int:
             if mx and mx > 0:
                 total += mx
     return total
+
+
+def axis_equipment_election(plan_turn: int, pool_class: str, want_points: int,
+                            allowed_tons: int) -> "tuple[int, int]":
+    """[20.62]/[20.66] Elect up to `want_points` tank/gun Replacement Points of `pool_class` for the
+    Game-Turn's bring-in and return (points, tons) charged at the chart's REAL per-type Tonnage.
+
+    The book charges each Replacement Point its printed per-type Tonnage (the Tonnage column: PzII 135,
+    CV L.3 16, 17cm K18 206, gun_65_17 3, ...), NOT one class number -- so the earlier average was an
+    invented figure the gun class alone spans 3->206 tons across. The DEFICIT the QM heals is per-class
+    (which specific tank TYPE restores a depleted battalion is the [20.3] conversion's free choice, and
+    replacement_kind collapses every tank counter to one 'tank'), so the per-type ELECTION is a
+    judgement call, FLAGGED: the QM brings in the CHEAPEST-Tonnage types first -- the most Replacement
+    Points per ton of scarce convoy. Each type is bounded by its own [20.66]/[20.67] per-Game-Turn Max
+    (the printed Max as a per-Game-Turn ceiling, the axis_equipment_per_gt_max flag); `want_points`
+    already carries the deficit and the class campaign-total cap; `allowed_tons` is the convoy allowance
+    left after infantry, so a point is elected only if its real Tonnage still fits.
+
+    RESIDUAL (FLAGGED, deficit-bound): the per-ITEM campaign '#'/'first Number' window sub-cap (e.g. the
+    German Light AA's 40 total, or an early-window step) is not metered here -- the shipped ledger is
+    class-keyed (AXIS/gun), so the engine caps the class aggregate (axis_equipment_pool_total), not each
+    row. The deficit binds far below these per-row ceilings in play (the review measured ~20 tank / ~1
+    gun Points across the whole campaign), so this never differs live; per-row metering awaits a per-type
+    ledger. This is the same CLASS-not-TYPE aggregation the Commonwealth flow-in already documents."""
+    if want_points <= 0 or allowed_tons <= 0:
+        return 0, 0
+    rows = []
+    for chart in ("german", "italian"):
+        for item in axis_items(chart):
+            if item.get("class") != pool_class:
+                continue
+            mx, _ = _applicable_period_max(item, plan_turn)
+            if mx and mx > 0:
+                rows.append((item["tonnage"], mx))
+    points = tons = 0
+    for tonnage, cap in sorted(rows):                     # cheapest Tonnage first (the flagged election)
+        if points >= want_points or allowed_tons - tons < tonnage:
+            break
+        n = min(cap, want_points - points, (allowed_tons - tons) // tonnage)
+        if n <= 0:
+            continue
+        points += n
+        tons += n * tonnage
+    return points, tons
 
 
 def axis_trucks() -> list:
@@ -215,21 +268,6 @@ def _applicable_period_max(item: dict, plan_turn: int) -> "tuple[int, str | None
     if plan_turn >= item.get("plan_gt", 1 << 30):
         return item["max"], item["max_period"]
     return 0, None
-
-
-def _applicable_window_total(item: dict, plan_turn: int) -> "int | None":
-    """The [20.66] WINDOW TOTAL cap for a tiered item (e.g., Italian infantry's 100-RP cap across
-    GT5-24). For non-tiered items or when the plan_turn is outside all tiers, returns None.
-    Used to enforce sub-caps like the Italian infantry's lifetime pool within a time window."""
-    if "tiers" not in item:
-        return None
-    for tier in item["tiers"]:
-        hi = tier.get("plan_last")
-        if tier["plan_first"] <= plan_turn and (hi is None or plan_turn <= hi):
-            # Return the tier's 'number' field, which is the window-total cap (0 for subsequent tiers
-            # that represent a higher rate on the same pool)
-            return tier["number"]
-    return None
 
 
 def axis_infantry_per_gt_max(plan_turn: int) -> int:
