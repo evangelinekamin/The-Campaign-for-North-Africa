@@ -203,7 +203,7 @@ def test_the_per_game_turn_cap_bounds_the_bring_in():
 
 def _with_shipped(st, points):
     return st.__class__(**{**{f: getattr(st, f) for f in st.__dataclass_fields__},
-                           "axis_replacements_shipped": {"infantry": points}})
+                           "replacements_shipped": {"AXIS/infantry": points}})
 
 
 def test_the_20_66_campaign_total_caps_the_lifetime_bring_in():
@@ -214,7 +214,7 @@ def test_the_20_66_campaign_total_caps_the_lifetime_bring_in():
     army = [_inf("A", (1, 1), strength=1, max_toe=200)]     # deficit 199, far over the remaining 10
     r = _plan(_with_shipped(_state([_axis_conv(31, 100000)], army, turn=30), 1590))
     assert _rp_events(r)[0].payload["points"] == 1600 - 1590         # only the pool's remainder
-    assert r.state.axis_replacements_shipped["infantry"] == 1600     # ledger folded to the cap
+    assert r.state.replacements_shipped["AXIS/infantry"] == 1600     # ledger folded to the cap
     dry = _plan(_with_shipped(_state([_axis_conv(31, 100000)], army, turn=30), 1600))
     assert _rp_events(dry) == []                                     # pool exhausted, nothing ships
     assert _planned(dry, "axis-conv-t31")["allowed_tons"] == 100000  # supplies get the whole allowance

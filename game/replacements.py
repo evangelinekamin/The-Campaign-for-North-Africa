@@ -246,6 +246,42 @@ def commonwealth_tank_total() -> int:
     return sum(i["number"] for i in commonwealth_equipment_items() if i.get("class") == "tank")
 
 
+def commonwealth_equipment_class_total(pool_class: str) -> int:
+    """The campaign-total [20.78C] Replacement Points of one mass class (tank 332 / gun 536 / recce 90)
+    -- the lifetime ceiling the [20.78C] equipment flow-in (engine._cw_equipment_production) may not
+    exceed. The chart's own item 'class' column IS the pool class (tank/gun/recce), so this sums the
+    '#' of the matching rows; the recce total is inert (recce is not a spendable pool -- see
+    engine._get_eligible_units_for_class -- so the flow-in never draws it)."""
+    return sum(i["number"] for i in commonwealth_equipment_items() if i.get("class") == pool_class)
+
+
+def commonwealth_equipment_per_gt_max(plan_turn: int, pool_class: str) -> int:
+    """[20.78C] The most Replacement Points of `pool_class` (tank/gun) the Commonwealth may PLAN in
+    Game-Turn `plan_turn` -- the sum of the Max of every chart item of that class whose plan window
+    (plan_first..plan_last, a null plan_last running to campaign end) contains the turn. Read from the
+    chart, not a literal; 0 before the class's first window opens (the gun chart opens GT5, tanks GT3).
+
+    FLAG (a judgement call, no transcribed number moved): the printed Max is taken as a per-GAME-TURN
+    ceiling regardless of its max_period. Some [20.78C] rows print Max per month ('*') or per two weeks
+    (dagger); a monthly allowance MAY be planned inside a single Game-Turn (the cap governs the month's
+    total, not the turn's), and the campaign-total '#' (commonwealth_equipment_class_total) is the hard
+    lifetime ceiling this flow-in actually tracks -- so the rolling month/two-week WINDOW total is not
+    separately metered. Under the heal-the-deficit doctrine the rate is dominated by the deficit and the
+    campaign total anyway; this is the same aggregation axis_infantry_per_gt_max already makes over the
+    two nations' pools. A Max printed as a dash (the lone Churchill) carries no rate cap and contributes
+    its '#'."""
+    total = 0
+    for item in commonwealth_equipment_items():
+        if item.get("class") != pool_class:
+            continue
+        lo, hi = item["plan_first"], item["plan_last"]
+        if plan_turn < lo or (hi is not None and plan_turn > hi):
+            continue
+        mx = item["max"]
+        total += item["number"] if mx is None else mx
+    return total
+
+
 def commonwealth_tonnage_per_point(key: str) -> int:
     """[20.75] Zero, always. The Commonwealth Player has no Shipping Problems; his Replacement
     Points -- infantry stream and equipment chart alike -- simply arrive, free of tonnage."""

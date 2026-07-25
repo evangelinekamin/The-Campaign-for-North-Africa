@@ -180,6 +180,9 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
         _replacement_production(r)                       # 20.7/20.78B: the Commonwealth Infantry Production
                                                         # roll (once per Game-Turn) -- the replacement
                                                         # economy's FLOW IN, into GameState.replacement_pool
+        _cw_equipment_production(r)                       # 20.78C/20.75: the CW tank/gun equipment FLOW IN
+                                                        # -- draw-at-will, FREE (no tonnage), heal-the-
+                                                        # deficit; the lever that puts CW armour on the board
         _commonwealth_withdrawals(r)                     # 20.8/[4.43a]: units pulled for Greece/Crete/Syria
         _replacement_training(r)                          # 20.43/[17.6]: arrived RPs that finished Training
                                                         # graduate into the absorbable pool (Block 7.4)
@@ -1139,7 +1142,7 @@ def _axis_replacement_bring_in(r: _Run, c) -> float:
         1,200), collapsing the two sub-caps into one as the engine's nation-agnostic AXIS/infantry pool
         already does. It nearly binds: measured, seed 1941 brings in 1,591 of the 1,600 over GT1-111,
         so the cap is a real ceiling on a higher-attrition campaign (not the slack the first draft
-        assumed). Tracked in GameState.axis_replacements_shipped.
+        assumed). Tracked in GameState.replacements_shipped under 'AXIS/infantry'.
 
     Gated: only when the scenario models the CW Production system (replacement_production), for the
     Axis, on the forward convoy with tons > 0. Every other convoy and every benchmark returns c.tons
@@ -1158,7 +1161,7 @@ def _axis_replacement_bring_in(r: _Run, c) -> float:
     tonnage = replacements.axis_infantry_tonnage()             # 30 t/pt (errata)
     allowance_pts = int(c.tons // tonnage)                     # 56.27: no more than the ship holds
     remaining = (replacements.axis_infantry_pool_total()       # [20.66] the campaign-total 1,600 cap
-                 - r.state.axis_replacements_shipped.get("infantry", 0))
+                 - r.state.replacements_shipped.get("AXIS/infantry", 0))
     points = max(0, min(cap, deficit - pipeline, allowance_pts, remaining))
     if points <= 0:
         return c.tons
@@ -1285,6 +1288,75 @@ def _replacement_production(r: _Run) -> None:
            {"side": Side.ALLIED.value, "type": "infantry", "points": points,
             "plan_turn": plan_turn, "arrival_turn": r.state.turn,
             "mature_turn": mature_turn}, rng_draws=(d1, d2))
+
+
+def _cw_equipment_production(r: _Run) -> None:
+    """[20.78C]/[20.75] THE COMMONWEALTH EQUIPMENT FLOW-IN -- the last unbuilt lever of Gate 7A, and
+    the mirror of the Axis coupling with its price struck out. Where the Axis brings in Infantry Points
+    at a cost in convoy tonnage (engine._axis_replacement_bring_in), the Commonwealth draws his [20.78C]
+    tank and gun Replacement Points FREE:
+
+        20.73  Infantry and Trucks are the RANDOM streams; the [20.78C] chart (tanks, guns, AA) is
+               ELECTED (draw-at-will), like the Axis Pool -- no die.
+        20.75  "The Commonwealth Player has no Shipping Problems; his Replacement Points simply
+               arrive." -- no tonnage, no convoy, no Malta gauntlet.
+
+    Until this beat, the [20.78C] chart produced on paper and NOTHING filled the ALLIED/tank and
+    ALLIED/gun pools -- so Block A's generalized spend had nothing to draw and the 62 Shermans never
+    reached the board. This is the producer that closes it. The Points enter the [20.43] Training ledger
+    with the owner-ruled FOUR-Game-Turn Commonwealth lead (20.21/20.78B, ruling 1) plus the [17.6] delay
+    (tank 6 OpStages = 2 GT, gun 1 = 1 GT), from which engine._replacement_spend heals the army -- so a
+    Sherman planned GT89 arrives GT93 and is absorbable GT95.
+
+    THE ELECTION is need-driven, exactly as the Axis bring-in: bring in enough tank/gun Points to cover
+    the current deficit, minus what is already in the pipeline (absorbable pool + still-Training
+    cohorts), bounded by the [20.78C] per-Game-Turn Max (commonwealth_equipment_per_gt_max) and the
+    chart's campaign-total '#' (commonwealth_equipment_class_total, tracked in replacements_shipped).
+
+    FLAGS (judgement calls, none a transcribed number):
+      * DOCTRINE, NOT RULE: [20.78C] is draw-at-will and the book hands 'how many of each type to bring
+        in' to the Commonwealth Player. 'Heal the deficit' is the faithful default -- the exact sibling
+        of the Axis bring-in's doctrine and of convoy_plan_doctrine; a future block may expose it as a
+        Policy hook. The deficit is read at the turn's head, before this turn's spend heals; pipeline-
+        awareness keeps the four-Game-Turn lead from over-ordering.
+      * CLASS, NOT TYPE: the coarse tank/gun pool cannot tell a Sherman Point from a Crusader Point
+        (organization.replacement_kind collapses every tank counter to 'tank'), so the flow-in tracks
+        the class-aggregate cap (tank 332 / gun 536), not each row's '#'. The RECCE rows (90 Points) are
+        not drawn: recce is not a spendable pool (_get_eligible_units_for_class). The per-Game-Turn Max
+        likewise aggregates the open rows (commonwealth_equipment_per_gt_max flag).
+      * NO TRAINING CITY: the Points mature by pure elapsed time; 20.76's Cairo/Alexandria arrival and
+        17.35's instructor battalion are the same abstraction the Axis flow-in and the pool itself use.
+      * SHORTER CAMPAIGN: [64.54.C]'s reduced totals for the Desert-Fox start are not applied -- only the
+        full GT1-111 campaign runs the economy today (data flags shorter_campaign_reductions_64_54C).
+
+    Gated on GameState.replacement_production, exactly as the rest of the rule-20 economy -- so only the
+    campaign runs it and every benchmark stays byte-identical (no Phase.LOGISTICS beat, no emit)."""
+    if not r.state.replacement_production:
+        return
+    plan_turn = r.state.turn
+    emitted = False
+    for pool_class in ("tank", "gun"):
+        rate_cap = replacements.commonwealth_equipment_per_gt_max(plan_turn, pool_class)
+        if rate_cap <= 0:
+            continue                                       # this class's chart window has not opened
+        eligible = _get_eligible_units_for_class(r.state, Side.ALLIED, pool_class)
+        deficit = sum(organization.rebuild_headroom(u, u.max_toe) for u in eligible)
+        key = f"{Side.ALLIED.value}/{pool_class}"
+        pipeline = (r.state.replacements_available(key)
+                    + sum(r.state.replacement_training.get(key, {}).values()))
+        remaining = (replacements.commonwealth_equipment_class_total(pool_class)
+                     - r.state.replacements_shipped.get(key, 0))
+        points = max(0, min(rate_cap, deficit - pipeline, remaining))
+        if points <= 0:
+            continue
+        arrival = replacements.commonwealth_arrival_turn(plan_turn)     # 20.76/ruling 1: plan + 4
+        mature = arrival + replacements.training_delay_gt(pool_class)   # 20.43/[17.6]: tank +2, gun +1
+        if not emitted:
+            r.go(Phase.LOGISTICS, Side.SYSTEM)             # a SYSTEM housekeeping beat, like the flow-in
+            emitted = True
+        r.emit(EventKind.REPLACEMENTS_PRODUCED, Side.ALLIED, "ALLIED/QM",
+               {"side": Side.ALLIED.value, "type": pool_class, "points": points,
+                "plan_turn": plan_turn, "arrival_turn": arrival, "mature_turn": mature})
 
 
 def _replacement_training(r: _Run) -> None:

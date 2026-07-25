@@ -897,13 +897,15 @@ class GameState:
     replacement_training: dict = field(default_factory=dict)
     replacement_production: bool = False
 
-    # `axis_replacements_shipped` is the [20.66] lifetime ledger the Block-B convoy coupling keeps:
-    # "<type>" -> the cumulative Axis Replacement Points brought in over the campaign, so the bring-in
-    # (engine._axis_replacement_bring_in) can honour the chart's campaign-total '#' (Axis infantry
-    # 1,600 = German 400 + Italian 1,200). The Commonwealth has no such cap (its infantry is a random
-    # stream, its equipment free), so only the Axis flow-in writes it. Default {} -- and only
-    # game.scenario.campaign's Axis coupling ever fills it, so every benchmark holds it empty.
-    axis_replacements_shipped: dict = field(default_factory=dict)
+    # `replacements_shipped` is the lifetime FLOW-IN ledger every draw-at-will replacement stream keeps:
+    # "<side>/<type>" -> the cumulative Replacement Points brought in over the campaign, so a flow-in
+    # can honour its chart's campaign-total '#'. Two producers write it: the [20.66] Axis convoy coupling
+    # (engine._axis_replacement_bring_in, cap AXIS/infantry 1,600 = German 400 + Italian 1,200) and the
+    # [20.78C] Commonwealth equipment flow-in (engine._cw_equipment_production, cap ALLIED/tank 332 /
+    # ALLIED/gun 536). The Commonwealth INFANTRY stream is random and uncapped, so its entry here (also
+    # written, harmlessly) is read by nothing. Default {} -- and only game.scenario.campaign's flow-ins
+    # ever fill it, so every benchmark holds it empty.
+    replacements_shipped: dict = field(default_factory=dict)
 
     # `commonwealth_withdrawals` gates the [20.8]/[4.43a] mandatory withdrawal schedule -- the CW
     # formations pulled from the desert for Greece/Crete/Syria and REMOVED from play (20.84), the
@@ -1146,12 +1148,13 @@ class GameState:
             training.pop(key, None)
         return replace(self, replacement_training=training)
 
-    def credit_axis_shipped(self, type_key: str, points: int) -> "GameState":
-        """[20.66] Add `points` to the lifetime Axis-shipped ledger for `type_key`, so the convoy
-        coupling can cap the bring-in at the chart's campaign total. Copy-then-replace, never mutates."""
-        shipped = dict(self.axis_replacements_shipped)
-        shipped[type_key] = shipped.get(type_key, 0) + points
-        return replace(self, axis_replacements_shipped=shipped)
+    def credit_shipped(self, key: str, points: int) -> "GameState":
+        """[20.66]/[20.78C] Add `points` to the lifetime shipped ledger for `key` ('<side>/<type>'), so
+        a draw-at-will flow-in can cap itself at its chart's campaign total. Copy-then-replace, never
+        mutates."""
+        shipped = dict(self.replacements_shipped)
+        shipped[key] = shipped.get(key, 0) + points
+        return replace(self, replacements_shipped=shipped)
 
     def with_air_unfit(self, squadron: str, planes: int) -> "GameState":
         """[38.31] Set how many of `squadron`'s aeroplanes stand UNREFITTED (mirrors
