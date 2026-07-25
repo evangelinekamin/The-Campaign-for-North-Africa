@@ -312,13 +312,22 @@ def _victory_64_74() -> dict:
 
 
 def replacement_vp_excluded_classes(side: Side) -> frozenset:
-    """[64.74] The Replacement-Point CLASSES that do NOT score as Victory Points for `side`
-    (planes, Trucks, and -- see the data key's flag -- Infantry). Read from the named
-    'victory_replacement_points_64_74' key so the printed-rule-vs-proxy call is one edit in data,
-    never a literal here (data/replacements.json documents that the AXIS 'infantry' entry is a
-    FLAGGED PROXY for the unbuilt Axis infantry spend and DEVIATES from the scan, which excludes
-    Infantry for the Commonwealth Player only)."""
+    """[64.74] The Replacement-Point CLASSES the printed rule PERMANENTLY excludes from Victory Points
+    for `side` (planes and Trucks both sides; Infantry for the Commonwealth only). Read from the named
+    'victory_replacement_points_64_74' key. This set is book-faithful (scan p.088): the earlier proxy
+    that also dropped Axis infantry was reverted 2026-07-24 -- the spendable gate below, not an
+    exclusion, now keeps an unbuilt-spend class from scoring."""
     return frozenset(_victory_64_74()["excluded_classes"].get(side.value, ()))
+
+
+def replacement_vp_spendable_classes(side: Side) -> frozenset:
+    """[64.74] The Replacement-Point classes the engine can currently SPEND for `side` -- the only
+    classes whose UNUSED count is a real quantity. OWNER RULING 2026-07-24 (Eve): 64.74 scores only
+    spendable classes, because a class with no rebuild beat is 100% unused by construction (an
+    unmodelled spend, not the husbandry 64.74 rewards). Today only the Commonwealth infantry spend
+    exists (engine._replacement_spend); it GROWS one data edit at a time as the equipment / Axis spends
+    land. Read from data so adding a class is never a literal here."""
+    return frozenset(_victory_64_74()["spendable_classes"].get(side.value, ()))
 
 
 def replacement_allotment_by_class(side: Side) -> dict:
@@ -340,24 +349,30 @@ def replacement_allotment_by_class(side: Side) -> dict:
     return out
 
 
-def unused_replacement_vp(side: Side, used: dict) -> int:
+def unused_replacement_vp(side: Side, used: dict, spendable: "frozenset | None" = None) -> int:
     """[64.74] `side`'s replacement Victory Points: ONE per UNUSED Replacement Point (allotted minus
-    used), summed over the SCORING classes (every class the charts allot, less
-    replacement_vp_excluded_classes). `used` maps (side_value, class) -> Replacement Points already
-    drawn by the SPEND (game.campaign_victory sums it from the UNIT_REBUILT log). Floored at zero per
-    class so an over-draw (impossible today -- the SPEND gate caps every rebuild at the pool) can never
-    score negative.
+    used), summed over the SCORING classes -- a class scores only if it is both SPENDABLE
+    (replacement_vp_spendable_classes, Eve's 2026-07-24 ruling) and NOT permanently excluded
+    (replacement_vp_excluded_classes -- planes/trucks both, infantry CW-only). `used` maps
+    (side_value, class) -> Replacement Points already drawn by the SPEND (game.campaign_victory sums it
+    from the UNIT_REBUILT log). Floored at zero per class so an over-draw (impossible today -- the SPEND
+    gate caps every rebuild at the pool) can never score negative.
 
-    FLAG -- the class key of `used` is the pool_key class the SPEND wrote ('<side>/<class>'), and only
-    the Commonwealth infantry spend exists today (pool_key 'ALLIED/infantry', an EXCLUDED class, so it
-    never touches a scoring bucket). When the Axis pool / [20.78C] equipment spend lands, its pool_key
-    class must be reconciled with these chart classes ([20.3] conversion classes vs the pool's
-    infantry/recce/gun/tank) for the subtraction to bite -- the same reconciliation data/replacements.json
-    flags on axis_pool_20_66. Inert until then: every eligible class subtracts 0."""
+    `spendable` overrides the data-driven set, for tests that verify the allotted-minus-used arithmetic
+    of a class not yet spendable in the live campaign. Left None in all engine callers.
+
+    TODAY THIS SCORES 0/0: the only spendable class is 'ALLIED/infantry', which the printed rule
+    excludes anyway, so the scoring set is empty for both sides until a non-infantry spend lands. When
+    the Axis pool / [20.78C] equipment spend lands, add its class to spendable_classes AND reconcile the
+    pool_key class the SPEND writes with these chart classes ([20.3] conversion classes vs the pool's
+    infantry/recce/gun/tank) so the subtraction bites -- the same reconciliation data/replacements.json
+    flags on axis_pool_20_66."""
     excluded = replacement_vp_excluded_classes(side)
+    if spendable is None:
+        spendable = replacement_vp_spendable_classes(side)
     total = 0
     for cls, allotted in replacement_allotment_by_class(side).items():
-        if cls in excluded:
+        if cls not in spendable or cls in excluded:
             continue
         total += max(0, allotted - used.get((side.value, cls), 0))
     return total

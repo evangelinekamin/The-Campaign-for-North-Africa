@@ -631,13 +631,16 @@ class CampaignVictory:
         emits no event and moves no determinism signature at all. The live campaign sets the flag, so
         64.74 always fires there.
 
-        THE EXCLUSION SET IS A DATA-DRIVEN, FLAGGED PROXY. The printed rule (scan p.088, read with eyes)
-        excludes Infantry FOR THE COMMONWEALTH ONLY; data/replacements.json adopts the port plan's
-        interim proxy that ALSO drops Axis infantry, because with no Axis rebuild beat every Axis
-        infantry point reads 'unused' and the printed rule would score the whole 1600-point Axis
-        infantry pool (Axis 2493 v CW 958, a GT0 Smashing invariant to play). One data edit restores
-        the book. See replacements.replacement_vp_excluded_classes and the data key's own note; it is
-        the block's headline OWNER-RULING flag."""
+        SCORES ONLY SPENDABLE CLASSES (owner ruling 2026-07-24, Eve). A class scores its unused count
+        only if the engine can actually SPEND it (replacements.replacement_vp_spendable_classes); a class
+        with no rebuild beat is 100% unused by construction, which is an unmodelled spend, not the
+        husbandry 64.74 rewards, and scoring it produced a fixed Axis+893 / CW+958 constant that
+        compressed every grade toward 1:1 (the Gate 7A artifact). Today the only spendable class is the
+        Commonwealth infantry rebuild -- itself book-excluded -- so 64.74 correctly scores 0/0 until the
+        [20.78C] equipment or [20.66] Axis spend lands and its class joins spendable_classes. The
+        permanent exclusion set (replacements.replacement_vp_excluded_classes) is now book-faithful:
+        the earlier proxy that also dropped Axis infantry was reverted with this ruling -- the spendable
+        gate, not an exclusion, is what keeps an unbuilt-spend class from scoring."""
         if not r.state.replacement_production:
             return 0, 0
         from . import replacements
