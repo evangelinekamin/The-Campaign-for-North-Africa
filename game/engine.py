@@ -1234,23 +1234,29 @@ def _replacement_training(r: _Run) -> None:
 def _get_eligible_units_for_class(state: GameState, side: Side, pool_class: str) -> list[Unit]:
     """[20.3] Get all on-map units of `side` that may be rebuilt by `pool_class`.
 
-    Maps pool class to replacement_kind(s) that can absorb it:
-    - 'infantry' -> 'any_other_infantry' or 'any_headquarters_unit'
-    - 'tank' -> 'tank'
-    - 'gun' -> 'artillery', 'anti_tank', 'anti_air'
-    - 'recce' -> 'any_other_infantry' (FLAG: engine doesn't distinguish recce; treated as infantry)
+    Maps pool class to the replacement_kind(s) that can absorb it:
+    - 'infantry' -> 'any_other_infantry'
+    - 'tank'     -> 'tank'
+    - 'gun'      -> 'artillery', 'anti_tank', 'anti_air'
+
+    DEFERRED, each for a specific reason (so the SPEND neither mischarges nor under-serves):
+    - 'recce': [20.3] rebuilds Recce/Armored-Car counters from 'armr'/'lt_tank' Replacement Points, but
+      organization.replacement_kind never emits those kinds -- a recce counter collapses to
+      'any_other_infantry' (the documented [4.47] branch-symbol proxy). A 'recce' pool is therefore
+      structurally unreachable: its charge would resolve to the INFANTRY pool via conversion_charge, not
+      a recce one. Left out until the branch symbol lets the engine tell recce from infantry.
+    - HQ counters ('any_headquarters_unit'): [20.3] rebuilds them from infantry at 2 Inf/TOE, not the
+      1:1 the flat spend below offers, so folding them into the infantry pass under-serves them
+      (_rebuild refuses whenever 2*points > pool). Left to the slice that lands the 2:1 charge -- which
+      also keeps this WIRING block's live spend byte-identical to its parent (CW infantry only).
 
     Returns depleted (strength < max_toe) units only, sorted most-depleted-first."""
     if pool_class == "infantry":
-        target_kinds = {"any_other_infantry", "any_headquarters_unit"}
+        target_kinds = {"any_other_infantry"}
     elif pool_class == "tank":
         target_kinds = {"tank"}
     elif pool_class == "gun":
         target_kinds = {"artillery", "anti_tank", "anti_air"}
-    elif pool_class == "recce":
-        # FLAG: [20.3] uses "armr"/"lt_tank" for recce, but engine returns "any_other_infantry"
-        # Judgment call: recce pool rebuilds the same units as infantry (both collapse to same kind)
-        target_kinds = {"any_other_infantry"}
     else:
         return []
 
@@ -1263,9 +1269,9 @@ def _get_eligible_units_for_class(state: GameState, side: Side, pool_class: str)
 
 
 def _replacement_spend(r: _Run) -> None:
-    """[19.61]/[19.68]/[20.4] THE REPLACEMENT ECONOMY'S FLOW OUT (Block 7.2b) -- Block A generalized
-    to spend EVERY class (tank/gun/infantry/recce) for BOTH sides, restoring TOE Strength Points via
-    the 19.61/19.68 rebuild path. [20.3] maps pool class to unit type.
+    """[19.61]/[19.68]/[20.4] THE REPLACEMENT ECONOMY'S FLOW OUT (Block 7.2b) -- generalized (Block A)
+    from the CW-infantry-only rebuild to spend EVERY mass class (infantry/tank/gun) for BOTH sides,
+    restoring TOE Strength Points via the 19.61/19.68 rebuild path. [20.3] maps pool class to unit type.
 
         20.4  "Replacement Points are... added to under-strength units to bring them back toward their
                maximum TOE Strength." -- via engine._rebuild, which draws the [20.3] class from the pool.
@@ -1276,8 +1282,13 @@ def _replacement_spend(r: _Run) -> None:
     a still-Training cohort is in replacement_training and invisible here until _replacement_training
     graduates it.
 
-    Block A FLAGS: pool 'recce' class collides with [20.3] 'armr'/'lt_tank' rows; the engine doesn't
-    distinguish recce from infantry, so recce pool rebuilds any_other_infantry units (same as infantry).
+    Block A is WIRING, not new live behaviour: it makes the machinery ready for the tank/gun and Axis
+    flow-ins that later blocks add. No producer fills those pools yet (engine._replacement_production
+    still emits only ALLIED/infantry), so in the live campaign only the CW infantry pool is ever
+    non-empty -- the tank/gun/Axis passes are inert no-ops and the live spend restores exactly the CW
+    infantry it did before this block. The generalized machinery is exercised by
+    tests/test_replacement_spend.py, which injects each pool. recce and HQ are deferred, with their
+    reasons, in _get_eligible_units_for_class.
 
     Gated on GameState.replacement_production, exactly as the flow-in is -- so only the campaign runs it
     and every benchmark stays byte-identical (the pool is empty, and the die of the flow-in it depends
@@ -1285,10 +1296,12 @@ def _replacement_spend(r: _Run) -> None:
     if not r.state.replacement_production:
         return
 
-    emitted = False
-    # Spend each class for each side: CW and Axis both have tank/gun/infantry; recce is rare
-    classes = ["infantry", "tank", "gun", "recce"]
+    # [20.3] each mass Replacement-Point class and the unit kind it rebuilds. Inert until a producer
+    # fills the pool (only ALLIED/infantry has one today); recce and HQ are deferred (see
+    # _get_eligible_units_for_class -- each unreachable or mispriced by this flat 1-Point-per-TOE spend).
+    classes = ["infantry", "tank", "gun"]
     for side in (Side.ALLIED, Side.AXIS):
+        emitted = False                                  # each side opens its OWN Organization beat
         for pool_class in classes:
             key = f"{side.value}/{pool_class}"
             if r.state.replacements_available(key) <= 0:

@@ -1382,17 +1382,10 @@
       ]
     },
     "spendable_classes": {
-      "AXIS": [
-        "infantry",
-        "tank",
-        "gun",
-        "recce"
-      ],
+      "_comment": "OWNER RULING 2026-07-24 (Eve): 64.74 scores UNUSED Replacement Points only for classes the engine can currently SPEND. Rationale -- 'unused' presupposes 'usable'; a class with no rebuild beat is 100% unused by construction, which is not husbandry (what 64.74 rewards) but an unmodelled spend, and scoring it produced a fixed Axis+893 / CW+958 constant that compressed every campaign grade toward 1:1 (the Gate 7A artifact). Today the ONLY live spend is the Commonwealth infantry rebuild (engine._replacement_spend, pool_key ALLIED/infantry) -- which is ALSO book-excluded, so 64.74 correctly scores 0/0 until a non-infantry spend lands. Block A (2026-07-25) generalized the SPEND MACHINERY to every class/side but wired NO new FLOW-IN, so tank/gun and every Axis pool stay empty in the live campaign; growing this set then re-created the exact Gate 7A artifact (a fixed Axis+2493 / CW+958, larger than the +893 it flagged) -- REVERTED here in the Block A review-repair. GROWS ONE EDIT AT A TIME, only WITH the producer that makes used>0 real: when the [20.78C] Commonwealth equipment flow-in + spend lands add its classes to ALLIED (tank/gun score -- CW armour is not excluded); when the [20.66] Axis flow-in + spend + [20.62] coupling lands add AXIS (infantry/tank/gun score -- only CW infantry is excluded). The used-subtraction then bites for real. This carries the engine-state truth the reverted proxy used to smuggle into excluded_classes.",
+      "AXIS": [],
       "ALLIED": [
-        "infantry",
-        "tank",
-        "gun",
-        "recce"
+        "infantry"
       ]
     }
   },

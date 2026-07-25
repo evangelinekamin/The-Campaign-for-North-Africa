@@ -227,10 +227,10 @@ def conversion_charge(unit_type: str) -> dict:
 def _build_conversion_class_to_pool_class_map() -> dict:
     """BUILD: Static reverse mapping from [20.3] Replacement Point classes to pool classes.
 
-    The pool uses simplified class names (infantry, tank, gun, recce) but [20.3] uses
-    specific classes (e.g., "artillery", "anti_tank", "anti_air" all map to pool "gun").
-    This mapping is used in engine._rebuild to convert the [20.3] class from
-    conversion_charge back to the pool class for looking up available points."""
+    The mass pools use simplified class names (infantry, tank, gun) but [20.3] uses specific
+    classes (e.g., "artillery", "anti_tank", "anti_air" all map to pool "gun"). This mapping is
+    used in engine._rebuild to convert the [20.3] class from conversion_charge back to the pool
+    class for looking up available points."""
     mapping = {}
     # Explicit mappings based on data inspection:
     # Gun types ([20.78C] / [20.66] use "gun", [20.3] uses "artillery"/"anti_tank"/"anti_air")
@@ -241,10 +241,11 @@ def _build_conversion_class_to_pool_class_map() -> dict:
     mapping["tank"] = "tank"
     # Infantry and all its variants (both use "infantry")
     mapping["infantry"] = "infantry"
-    # Recce / Armored Car types (pool uses "recce", [20.3] uses "armr"/"lt_tank" but engine
-    # classifies them as "infantry" -- see the FLAG in engine._get_eligible_units_for_class)
-    mapping["armr"] = "recce"  # Armored reconnaissance
-    mapping["lt_tank"] = "recce"  # Light tank (recce variant)
+    # NOT mapped -- the [20.3] recce classes "armr"/"lt_tank": organization.replacement_kind never
+    # emits a recce kind (a recce counter collapses to any_other_infantry, the [4.47] proxy), so no
+    # selectable unit ever charges these, and a "recce" pool would be structurally unreachable. They
+    # fall through to None, exactly as the one-off special classes do, until the engine can tell recce
+    # from infantry (the same gate engine._get_eligible_units_for_class documents).
     # Unknown classes fall through to return None (will cause _rebuild to fail clearly)
     return mapping
 
