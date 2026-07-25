@@ -224,17 +224,20 @@ def test_apply_unit_rebuilt_debits_the_pool_and_adds_the_steps():
 # --- Block A: 64.74 scoring of non-excluded classes ----
 
 def test_64_74_will_score_cw_tank_once_added_to_spendable_classes():
-    """RESTATED (rule 5): Block A LANDED 'tank' and 'gun' in spendable_classes.ALLIED (the [20.78C]
-    flow-in engine._cw_equipment_production + the generalized spend), so 64.74 now scores the unused
-    tank/gun pools (neither is book-excluded, unlike CW infantry). This test verifies the pool setup;
-    the actual 64.74 scoring is in test_campaign_victory. 'recce' stays OUT -- it is structurally
-    unspendable (organization.replacement_kind never emits a recce kind)."""
+    """RESTATED for the Block A CW-equipment REVIEW-REPAIR (rule 5): Block A briefly landed 'tank'/'gun'
+    in spendable_classes.ALLIED, then REVERTED them -- the CW equipment spend is near-zero (gun is never
+    produced), so its ~865 husbandry is unused-by-construction, and scoring the CW half of the book's
+    symmetric equipment rule while the Axis half is unbuilt flipped the pinned campaign (data key note).
+    So tank/gun are NOT spendable by the default set today, but they are NOT book-excluded either -- so
+    they WILL score once their Axis equipment mirror lands and both spends are non-trivial. 'recce' stays
+    OUT for a second reason too: it is structurally unspendable (replacement_kind never emits a recce
+    kind). The actual 64.74 scoring is in test_campaign_victory."""
     spendable_now = replacements.replacement_vp_spendable_classes(Side.ALLIED)
-    assert "infantry" in spendable_now              # was always here (but book-excluded)
-    assert "tank" in spendable_now                  # Block A: the [20.78C] flow-in + spend landed
-    assert "gun" in spendable_now
+    assert "infantry" in spendable_now              # spendable via [20.78B], but book-excluded
+    assert "tank" not in spendable_now              # REVERTED -- returns with the Axis equipment mirror
+    assert "gun" not in spendable_now               # REVERTED (and never produced -- used==0)
     assert "recce" not in spendable_now             # structurally unspendable -- no rebuild beat
-    # tank/gun are NOT book-excluded, so being spendable, they score their unused count in 64.74:
+    # tank/gun are NOT book-excluded, so once they are spendable again they will score their unused count:
     excluded = replacements.replacement_vp_excluded_classes(Side.ALLIED)
     assert "infantry" in excluded                   # book-excluded (CW only)
     assert "tank" not in excluded and "gun" not in excluded

@@ -728,10 +728,13 @@ def test_64_74_pool_numbers_and_the_worked_example():
     """The transcribed charts summed by class, and the [64.74] scan p.088 worked example. Under Eve's
     2026-07-24 ruling 64.74 scores only SPENDABLE classes. As of Block B (2026-07-25) the AXIS 'infantry'
     class is spendable (the [20.66] flow-in + [20.62] coupling + spend landed) and is NOT book-excluded,
-    so the Axis scores his unused infantry. RESTATED for Block A CW equipment (2026-07-25, rule 5): the
-    [20.78C] flow-in (engine._cw_equipment_production) + spend landed, so 'tank'/'gun' are now SPENDABLE
-    for the Commonwealth too and NOT book-excluded -- so the COMMONWEALTH now scores its unused tank+gun
-    husbandry (332 + 536 = 868), where it used to score 0. Only CW 'infantry' stays book-excluded."""
+    so the Axis scores his unused infantry. RESTATED for the Block A CW-equipment REVIEW-REPAIR
+    (2026-07-25, rule 5): Block A briefly made CW 'tank'/'gun' spendable, but the review measured the CW
+    equipment spend near-zero (gun is never produced), so its ~865 husbandry is unused-BY-CONSTRUCTION and
+    -- scored while the symmetric Axis equipment pool is unbuilt/unscored -- flipped the pinned campaign;
+    it was REVERTED. So the Commonwealth scores 0 by the default data set (its 'infantry' is book-excluded
+    and 'tank'/'gun' are no longer spendable); the allotted-minus-used arithmetic is proven below with a
+    forced-spendable override, and returns to the default set when the Axis equipment mirror lands."""
     assert replacements.replacement_allotment_by_class(Side.AXIS) == {
         "infantry": 1600, "recce": 59, "gun": 499, "tank": 335}
     assert replacements.replacement_allotment_by_class(Side.ALLIED) == {
@@ -742,15 +745,16 @@ def test_64_74_pool_numbers_and_the_worked_example():
     assert replacements.replacement_vp_excluded_classes(Side.ALLIED) == frozenset({"infantry", "truck", "plane"})
     # score-only-spendable: AXIS 'infantry' is spendable (Block B) and not book-excluded, so with NO spend
     # recorded all 1600 allotted infantry points are unused; a realistic ~1587-point spend leaves 13 (the
-    # live seed-1941 husbandry). The Commonwealth now scores its unused tank+gun (Block A made both
-    # spendable, neither book-excluded): with NO spend recorded all 332 + 536 = 868 are unused (its
-    # infantry class stays book-excluded and never scores).
+    # live seed-1941 husbandry).
     assert replacements.unused_replacement_vp(Side.AXIS, {}) == 1600
     assert replacements.unused_replacement_vp(Side.AXIS, {("AXIS", "infantry"): 1587}) == 13
-    assert replacements.unused_replacement_vp(Side.ALLIED, {}) == 868         # 332 tank + 536 gun
-    # ...and a recorded CW tank/gun spend subtracts, exactly as the Axis infantry one does:
+    # RESTATED (rule 5): the Commonwealth scores 0 by the DEFAULT data set -- 'infantry' is spendable but
+    # book-excluded, and Block A's 'tank'/'gun' were REVERTED from spendable_classes. So even a recorded
+    # CW tank/gun spend scores nothing while tank/gun are not spendable (the arithmetic is proven with the
+    # forced-spendable override further down; this asserts the reverted default returns 0):
+    assert replacements.unused_replacement_vp(Side.ALLIED, {}) == 0
     assert replacements.unused_replacement_vp(
-        Side.ALLIED, {("ALLIED", "tank"): 30, ("ALLIED", "gun"): 100}) == 738   # (332-30) + (536-100)
+        Side.ALLIED, {("ALLIED", "tank"): 30, ("ALLIED", "gun"): 100}) == 0
     # the printed rule's delta is exactly the Axis infantry pool (1600): 893 + 1600 = 2493
     assert sum(replacements.replacement_allotment_by_class(Side.AXIS).values()) == 2493
     # [64.74] worked example (scan p.088): "35 Crusader I ... uses only 18 ... gains 17". 35 is the
@@ -765,18 +769,18 @@ def test_64_74_pool_numbers_and_the_worked_example():
 
 
 def test_64_74_axis_infantry_scores_live_then_forced_tank_also_enters(monkeypatch):
-    # RESTATED for Block A CW equipment (rule 5): Block B made 'AXIS/infantry' spendable; Block A now
-    # makes CW 'tank'/'gun' spendable too ([20.78C] flow-in + spend), NOT book-excluded -- so BOTH sides'
-    # husbandry is live in the default data set. The Axis holds Tobruk (200 geo) AND scores his unused
-    # infantry; the Commonwealth scores its unused tank+gun (868 with no CW equipment spend recorded).
-    # A recorded Axis spend subtracts: a rebuild drawing 1587 of the 1600-point pool leaves 13 unused ->
-    # Axis 200 + 13 = 213; the Commonwealth's 868 is untouched by an AXIS/infantry rebuild.
+    # RESTATED for the Block A CW-equipment REVIEW-REPAIR (rule 5): Block B made 'AXIS/infantry'
+    # spendable; Block A briefly made CW 'tank'/'gun' spendable too, then REVERTED them (the CW equipment
+    # spend is near-zero and the one-sided ~865 husbandry flipped the pinned campaign -- data key note).
+    # So the Axis holds Tobruk (200 geo) AND scores his unused infantry, while the Commonwealth scores 0
+    # equipment by the default data set. A recorded Axis spend subtracts: a rebuild drawing 1587 of the
+    # 1600-point pool leaves 13 unused -> Axis 200 + 13 = 213; the Commonwealth stays at 0.
     cv = CampaignVictory()
     s = _state([_unit("A1", Side.AXIS, "C4807")], replacement_production=True)
     _, reason = cv.decide(_R(s, [_rebuilt("AXIS/infantry", 1587)]))
-    assert "213-868" in reason                          # Axis 200 + (1600-1587); CW 332+536 unused
-    _, reason = cv.decide(_R(s))                        # no spend recorded -> the whole pool is unused
-    assert "1800-868" in reason                         # Axis 200 + 1600; CW 868
+    assert "213-0" in reason                            # Axis 200 + (1600-1587); CW scores 0 (reverted)
+    _, reason = cv.decide(_R(s))                        # no spend recorded -> the whole Axis pool is unused
+    assert "1800-0" in reason                           # Axis 200 + 1600; CW 0
     # forcing ONLY 'tank' spendable (overriding the data set) isolates the tank arithmetic on both sides:
     # Axis 200 + 335, Commonwealth 0 + 332 (its gun husbandry drops out under the override).
     monkeypatch.setattr(replacements, "replacement_vp_spendable_classes",

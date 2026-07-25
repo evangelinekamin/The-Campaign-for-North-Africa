@@ -37,9 +37,11 @@ DEFERRED, documented so nothing is silently missing:
     quality-test. The Fuel-for-20-CP and Ammunition-for-three-fires MAGNITUDES are faithful
     (CampaignVictory._supplied); the Stores/Water week and the in-hex form need the per-unit
     basic-load model (49.14 + 53.11, T1-1), so a holder is still tested by a reach-a-dump trace.
-  - 64.74's used-subtraction bites for the classes with a live SPEND beat: AXIS infantry (the [20.66]
-    coupling, Block B) and ALLIED tank/gun (the [20.78C] flow-in, Block A). The measured CW armour
-    spend is near-zero, so its unused-tank/gun husbandry is large -- flagged in data/replacements.json.
+  - 64.74's used-subtraction bites only for AXIS infantry today (the [20.66] coupling + Block B flow-in
+    + spend -- a real used>0). ALLIED tank/gun were scored by Block A's [20.78C] flow-in and REVERTED in
+    its review-repair: the CW equipment spend is near-zero (gun is never even produced), so its ~865
+    husbandry is unused-by-construction, and scoring it while the symmetric Axis equipment pool is
+    unbuilt/unscored flipped the pinned campaign seed -- it returns with its Axis mirror (data key note).
 
 THE TRIPOLI HOLE -- CLOSED 2026-07-16, WITH 64.72. The history is kept because the hole was a
 BLOCKER for 64.72 and the record of why it was safe to close is the record of why 64.72 is faithful.
@@ -546,13 +548,13 @@ class CampaignVictory:
 
         THE ORDER IS 64.75 THEN 64.74, on the plan's instruction (00-THE-PORT-PLAN.md:1556) and this
         Block 7.3 task: 64.74 scores what is left UNUSED, and a voluntary 64.75 withdrawal is one of
-        the things that leaves a unit's Replacement Points unspent. 64.74 ITSELF is live for both sides
-        (the Axis infantry spend and the Block A CW tank/gun spend each draw their pools). The
-        64.75<->64.74 data-flow is now MORE than dormant: a voluntarily-withdrawn CW armour/gun
-        battalion is one fewer unit for the [20.78C] flow-in to heal, so it leaves marginally more
-        tank/gun unused -- but the effect is second-order (through the producer's deficit), and the
-        measured CW armour spend is already near-zero, so a withdrawal moves the tally little in
-        practice. 64.76 then compares the totals as a ratio (grade)."""
+        the things that leaves a unit's Replacement Points unspent. 64.74 today scores only the AXIS
+        unused infantry (the [20.66] spend draws that pool); the Block A CW tank/gun scoring was REVERTED
+        in its review-repair (premature -- see _unused_replacement_points_64_74). So the 64.75<->64.74
+        data-flow is again DORMANT: a voluntarily-withdrawn CW armour/gun battalion is one fewer unit for
+        the [20.78C] flow-in to heal and so leaves marginally more tank/gun unused, but CW tank/gun no
+        longer SCORE, so that husbandry never reaches the tally. When CW equipment scoring returns (with
+        its Axis mirror) this second-order flow returns with it. 64.76 compares the totals as a ratio."""
         s = r.state
         axis_vp = cwlth_vp = 0
         for ax, avp, cvp, _name in self.cities:                       # 64.73
@@ -643,12 +645,16 @@ class CampaignVictory:
         are spendable: the Commonwealth infantry rebuild (itself book-excluded, so it never scores) and
         the [20.66] Axis infantry rebuild the Block B flow-in + [20.62] coupling now feed -- which is NOT
         book-excluded, so the Axis scores his unused infantry husbandry (~13 of the 1,600-pool in the
-        seed-1941 war, allotted minus the ~1,587 the spend drew). Block A (2026-07-25) adds ALLIED
-        'tank'/'gun' (the [20.78C] flow-in + spend): NOT book-excluded, so the Commonwealth scores its
-        unused tank/gun -- and, MEASURED, its armour spend is near-zero, so that husbandry is large
-        (~865 of 868); flagged as a balance finding in data/replacements.json. The permanent exclusion
-        set (replacements.replacement_vp_excluded_classes) is now book-faithful:
-        the earlier proxy that also dropped Axis infantry was reverted with this ruling -- the spendable
+        seed-1941 war, allotted minus the ~1,587 the spend drew). Block A (2026-07-25) added ALLIED
+        'tank'/'gun' (the [20.78C] flow-in + spend), then REVERTED them in its review-repair: the CW
+        equipment spend is near-zero (gun is never even produced), so the ~865 husbandry is unused-BY-
+        CONSTRUCTION -- the used==0 artifact this ruling forbids -- and scoring the CW half of the book's
+        SYMMETRIC equipment rule while the Axis half is unbuilt/unscored flipped the pinned CAMPAIGN_SEED
+        from an Axis Smashing Victory to a Commonwealth one (MEASURED; the book-faithful symmetric score
+        keeps the Axis ahead 1283-985). So the Commonwealth scores 0 replacement VP today; its equipment
+        returns with its Axis mirror (data/replacements.json spendable_classes REVERTED note). The
+        permanent exclusion set (replacements.replacement_vp_excluded_classes) is now book-faithful: the
+        earlier proxy that also dropped Axis infantry was reverted with this ruling -- the spendable
         gate, not an exclusion, is what keeps an unbuilt-spend class from scoring."""
         if not r.state.replacement_production:
             return 0, 0

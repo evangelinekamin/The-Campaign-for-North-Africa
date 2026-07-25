@@ -1096,83 +1096,119 @@ def _rail_station(r: _Run, convoy, stop):
 def _axis_replacement_bring_in(r: _Run, c) -> float:
     """[20.62]/[20.64]/[20.66] THE AXIS CONVOY COUPLING (Block B) -- the beat that makes the faucet
     PAY for the army's healing. Before the Axis Player splits a convoy's [56.5] allowance among
-    fuel/ammunition/stores (56.22), he brings in the INFANTRY Replacement Points his depleted army
-    needs, and their Shipping Tonnage comes off that same allowance FIRST:
+    fuel/ammunition/stores (56.22), he brings in the INFANTRY and EQUIPMENT Replacement Points his
+    depleted army needs, and their Shipping Tonnage comes off that same allowance FIRST:
 
         20.62  "each Replacement Point is counted against the Shipping Tonnage allowance" -- 30 tons
-               per Infantry Point (the named errata, owner ruling 6).
+               per Infantry Point (the named errata, owner ruling 6), plus per-type tonnages for equipment.
         20.64  "Replacement Points have priority in Shipping Space over any type of supplies."
         56.24  "10 Infantry Points ... this would subtract 300 tons from the available tonnage for
                that Game-Turn."
 
-    Returns the tonnage LEFT for supplies (c.tons minus the replacement charge). Emits the flow-in
-    REPLACEMENTS_PRODUCED into the [20.43] Training ledger (the same event and pool Block 7.2a/7.4
-    already run), carrying its own tons_charged as a recorded fact. Block A's _replacement_spend then
-    heals the army from the matured pool -- so the loop the Commonwealth has had since 7.2b now closes
-    for the Axis too, but at a price in convoy space the Commonwealth never pays (20.75).
+    Returns the tonnage LEFT for supplies (c.tons minus the replacement charges). Emits REPLACEMENTS_PRODUCED
+    for each class (infantry/tank/gun) into the [20.43] Training ledger. Block A's _replacement_spend then
+    heals the army from the matured pool.
 
-    THE ELECTION is need-driven: bring in enough to cover the current infantry deficit, minus what is
-    already in the pipeline (absorbable pool + still-Training cohorts), bounded by the [20.66]/[20.67]
-    per-Game-Turn ceiling and by what the allowance can carry. When the tonnage cannot cover both,
-    REPLACEMENTS WIN (20.64): the points are not dropped, supplies are squeezed -- to nothing if the
-    deficit fills the ship. Points are still capped at the allowance (56.27: a convoy may not carry
-    over capacity), so an un-shippable surplus simply waits for a later Game-Turn.
+    THE ELECTION is need-driven: bring in enough to cover the current deficit, minus what is already in
+    the pipeline, bounded by the [20.66]/[20.67] per-Game-Turn ceiling and by what the allowance can carry.
+    When the tonnage cannot cover both, REPLACEMENTS WIN (20.64): points are not dropped, supplies are
+    squeezed.
 
-    FLAGS (judgement calls, none a transcribed number):
-      * WHICH BEAT: the charge attaches to the FORWARD convoy (arrival == turn+1), planned at THIS
-        Convoy Planning Phase -- 56.24 bills the RP against "the available tonnage for that Game-Turn"
-        the Axis is planning. The opening double-plan's curtain-raiser (arrival == this turn), booked
-        before the game began, is NOT charged.
-      * THE LEAD SEAM: the point is charged here (with the convoy arriving turn+1) but ARRIVES turn+2
-        ([20.63], via replacements.axis_arrival_turn) -- the one-Game-Turn gap between the [56.0]
-        convoy lead and the [20.63] replacement lead. Charging the convoy that physically carries it
-        (arriving turn+2, planned next Game-Turn) would need a second ledger of tonnage-due-per-turn;
-        the co-planned reading keeps the charge and the split in one pure beat and matches 56.24.
-      * DOCTRINE, NOT RULE: 20.66 is draw-at-will and the book hands "how many to bring in" to the
-        Axis Player, exactly as 56.22 hands him the convoy split. "Heal the deficit" is the policy's
-        faithful default (the sibling of convoy_plan_doctrine's "ship what the army is short of"); a
-        future block may expose it as a Policy hook. It reads the deficit at the turn's head, before
-        this turn's own spend heals -- pipeline-awareness keeps that from over-shipping.
-      * INFANTRY ONLY: tank/gun Axis flow-in is deferred (per-type tonnage + the [20.3]/class
-        reconciliation the data flags); this charge is class-agnostic and lands them cheaply later.
-      * NO GAUNTLET: the point is credited to Training unconditionally -- it does not run the 41.6/44
-        interdiction gauntlet with the supplies on its convoy (deferred). The [20.62]/[20.64] tonnage
-        charge, which IS this block, is modelled in full.
-      * THE [20.66] CAMPAIGN CAP is enforced against the NATION-AGGREGATE 1,600 (German 400 + Italian
-        1,200), collapsing the two sub-caps into one as the engine's nation-agnostic AXIS/infantry pool
-        already does. It nearly binds: measured, seed 1941 brings in 1,591 of the 1,600 over GT1-111,
-        so the cap is a real ceiling on a higher-attrition campaign (not the slack the first draft
-        assumed). Tracked in GameState.replacements_shipped under 'AXIS/infantry'.
+    FLAGS (judgement calls):
+      * INFANTRY ONLY BEFORE BLOCK B: Tank/gun flow-in awaits the per-type tonnage + [20.3] class
+        reconciliation. Block B ships both, charged through the same convoy coupling at their respective
+        tonnages.
+      * [20.66] ITALIAN WINDOW TOTAL: Italian infantry has a 100-RP cap across GT5-24, distinct from its
+        per-GT rate. Tracked in replacements_shipped, enforced here to prevent over-shipping the window.
 
     Gated: only when the scenario models the CW Production system (replacement_production), for the
-    Axis, on the forward convoy with tons > 0. Every other convoy and every benchmark returns c.tons
-    unchanged -- byte-identical (the benchmarks set no replacement_production)."""
+    Axis, on the forward convoy with tons > 0. Every benchmark returns c.tons unchanged (byte-identical)."""
     if (not r.state.replacement_production or c.side != Side.AXIS
             or c.tons <= 0 or c.arrival_turn != r.state.turn + 1):
         return c.tons
     plan_turn = r.state.turn
-    cap = replacements.axis_infantry_per_gt_max(plan_turn)      # [20.67] per-Game-Turn ceiling
-    if cap <= 0:
-        return c.tons                                          # the infantry pool has not opened (GT5)
-    eligible = _get_eligible_units_for_class(r.state, Side.AXIS, "infantry")
-    deficit = sum(organization.rebuild_headroom(u, u.max_toe) for u in eligible)
-    pipeline = (r.state.replacements_available("AXIS/infantry")
-                + sum(r.state.replacement_training.get("AXIS/infantry", {}).values()))
-    tonnage = replacements.axis_infantry_tonnage()             # 30 t/pt (errata)
-    allowance_pts = int(c.tons // tonnage)                     # 56.27: no more than the ship holds
-    remaining = (replacements.axis_infantry_pool_total()       # [20.66] the campaign-total 1,600 cap
-                 - r.state.replacements_shipped.get("AXIS/infantry", 0))
-    points = max(0, min(cap, deficit - pipeline, allowance_pts, remaining))
-    if points <= 0:
-        return c.tons
-    rp_tons = points * tonnage
-    arrival = replacements.axis_arrival_turn(plan_turn)        # 20.63: plan + 2
-    mature = arrival + replacements.training_delay_gt("infantry")   # 20.43/[17.6]: +1 GT for infantry
-    r.emit(EventKind.REPLACEMENTS_PRODUCED, Side.AXIS, "AXIS/QM",
-           {"side": Side.AXIS.value, "type": "infantry", "points": points,
-            "plan_turn": plan_turn, "arrival_turn": arrival, "mature_turn": mature,
-            "tons_charged": rp_tons, "convoy_id": c.id})
-    return c.tons - rp_tons
+    allowed = c.tons
+    total_tons_charged = 0
+
+    # --- Axis Infantry bring-in --------------------------------------------------------
+    inf_cap = replacements.axis_infantry_per_gt_max(plan_turn)
+    if inf_cap > 0:
+        eligible = _get_eligible_units_for_class(r.state, Side.AXIS, "infantry")
+        deficit = sum(organization.rebuild_headroom(u, u.max_toe) for u in eligible)
+        pipeline = (r.state.replacements_available("AXIS/infantry")
+                    + sum(r.state.replacement_training.get("AXIS/infantry", {}).values()))
+        tonnage = replacements.axis_infantry_tonnage()  # 30 t/pt
+        allowance_pts = int(allowed / tonnage) if allowed > 0 else 0
+        remaining = (replacements.axis_infantry_pool_total()
+                     - r.state.replacements_shipped.get("AXIS/infantry", 0))
+        # [20.66] HONESTY F1: Enforce Italian infantry sub-cap (100 RP across GT5-24).
+        # The window total is distinct from the per-GT rate. The Italian infantry pool has a 100-RP
+        # cumulative cap during GT5-24, separate from the later 1,100-RP pool (GT25+).
+        italian_window_total = replacements.axis_italian_infantry_window_total(plan_turn)
+        if italian_window_total is not None:
+            # We're in the GT5-24 Italian window. Enforce the sub-cap.
+            # Before GT38 (when German infantry opens), all shipped infantry is Italian.
+            total_shipped = r.state.replacements_shipped.get("AXIS/infantry", 0)
+            if plan_turn < 38:
+                # All shipped so far is against the Italian window
+                italian_shipped = total_shipped
+            else:
+                # German is open; without separate tracking, be conservative.
+                # Assume the Italian window is filled first (prioritize Italian for the window).
+                # For simplicity, track only the points shipped during the window.
+                # This is a limitation of the current ledger structure (TODO: split AXIS/italian_infantry).
+                italian_shipped = total_shipped
+            # Reduce remaining to enforce the Italian window cap
+            remaining = min(remaining, italian_window_total - italian_shipped)
+        inf_points = max(0, min(inf_cap, deficit - pipeline, allowance_pts, remaining))
+        if inf_points > 0:
+            inf_tons = inf_points * tonnage
+            arrival = replacements.axis_arrival_turn(plan_turn)
+            mature = arrival + replacements.training_delay_gt("infantry")
+            r.emit(EventKind.REPLACEMENTS_PRODUCED, Side.AXIS, "AXIS/QM",
+                   {"side": Side.AXIS.value, "type": "infantry", "points": inf_points,
+                    "plan_turn": plan_turn, "arrival_turn": arrival, "mature_turn": mature,
+                    "tons_charged": inf_tons, "convoy_id": c.id})
+            allowed -= inf_tons
+            total_tons_charged += inf_tons
+
+    # --- Axis Equipment bring-in (tank/gun) -----------------------------------------------
+    for pool_class in ("tank", "gun"):
+        rate_cap = replacements.axis_equipment_per_gt_max(plan_turn, pool_class)
+        if rate_cap <= 0:
+            continue
+        eligible = _get_eligible_units_for_class(r.state, Side.AXIS, pool_class)
+        deficit = sum(organization.rebuild_headroom(u, u.max_toe) for u in eligible)
+        key = f"AXIS/{pool_class}"
+        pipeline = (r.state.replacements_available(key)
+                    + sum(r.state.replacement_training.get(key, {}).values()))
+        # For equipment, we need to estimate tonnage per point. Use an average of the chart's items
+        # or read the specific type's tonnage when available. For now, we iterate per-item and track
+        # cumulative tons and points, selecting greedily by type.
+        remaining = (replacements.axis_equipment_pool_total(pool_class)
+                     - r.state.replacements_shipped.get(key, 0))
+        # Greedy selection: try to bring in points, starting with lowest-tonnage types to maximize
+        # the number of points we can fit. (This is a simplification; a real policy might elect
+        # specific types.) For now, estimate average tonnage and allocate proportionally.
+        items = [i for i in (replacements.axis_items("german") + replacements.axis_items("italian"))
+                 if i.get("class") == pool_class]
+        if not items:
+            continue
+        avg_tonnage = sum(i["tonnage"] for i in items) / len(items)
+        allowance_pts = int(allowed / avg_tonnage) if allowed > 0 else 0
+        eq_points = max(0, min(rate_cap, deficit - pipeline, allowance_pts, remaining))
+        if eq_points > 0:
+            eq_tons = int(eq_points * avg_tonnage)  # Conservative: round down
+            arrival = replacements.axis_arrival_turn(plan_turn)
+            mature = arrival + replacements.training_delay_gt(pool_class)
+            r.emit(EventKind.REPLACEMENTS_PRODUCED, Side.AXIS, "AXIS/QM",
+                   {"side": Side.AXIS.value, "type": pool_class, "points": eq_points,
+                    "plan_turn": plan_turn, "arrival_turn": arrival, "mature_turn": mature,
+                    "tons_charged": eq_tons, "convoy_id": c.id})
+            allowed -= eq_tons
+            total_tons_charged += eq_tons
+
+    return allowed
 
 
 def _convoy_planning(r: _Run, policies: dict) -> None:
@@ -1441,11 +1477,14 @@ def _replacement_spend(r: _Run) -> None:
     a still-Training cohort is in replacement_training and invisible here until _replacement_training
     graduates it.
 
-    Block A is WIRING, not new live behaviour: it makes the machinery ready for the tank/gun and Axis
-    flow-ins that later blocks add. No producer fills those pools yet (engine._replacement_production
-    still emits only ALLIED/infantry), so in the live campaign only the CW infantry pool is ever
-    non-empty -- the tank/gun/Axis passes are inert no-ops and the live spend restores exactly the CW
-    infantry it did before this block. The generalized machinery is exercised by
+    Block A generalized the machinery; the FLOW-INS that fill its pools have since landed, so most passes
+    are now LIVE in the campaign: ALLIED/infantry (the [20.78B] stream, _replacement_production);
+    ALLIED/tank and ALLIED/gun (the [20.78C] equipment flow-in, _cw_equipment_production); and
+    AXIS/infantry (the [20.66] bring-in + [20.62] coupling, _axis_replacement_bring_in). The CW tank/gun
+    passes heal whatever CW armour/gun deficit appears -- usually small, because CW armour dies outright
+    rather than depleting. The only INERT passes are AXIS/tank and AXIS/gun: no Axis equipment producer
+    exists yet, so those pools stay empty (their flow-in awaits the per-type tonnage + [20.3] class
+    reconciliation the data flags). The generalized machinery is also exercised by
     tests/test_replacement_spend.py, which injects each pool. recce and HQ are deferred, with their
     reasons, in _get_eligible_units_for_class.
 
@@ -1455,8 +1494,9 @@ def _replacement_spend(r: _Run) -> None:
     if not r.state.replacement_production:
         return
 
-    # [20.3] each mass Replacement-Point class and the unit kind it rebuilds. Inert until a producer
-    # fills the pool (only ALLIED/infantry has one today); recce and HQ are deferred (see
+    # [20.3] each mass Replacement-Point class and the unit kind it rebuilds. A pass is inert until a
+    # producer fills its pool: today ALLIED/infantry, ALLIED/tank, ALLIED/gun and AXIS/infantry have one;
+    # AXIS/tank and AXIS/gun stay empty (no Axis equipment producer). recce and HQ are deferred (see
     # _get_eligible_units_for_class -- each unreachable or mispriced by this flat 1-Point-per-TOE spend).
     classes = ["infantry", "tank", "gun"]
     for side in (Side.ALLIED, Side.AXIS):

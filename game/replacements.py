@@ -140,6 +140,37 @@ def axis_tank_total(chart: str) -> int:
     return sum(i["number"] for i in axis_items(chart) if i.get("class") == "tank")
 
 
+def axis_gun_total(chart: str) -> int:
+    """The campaign-total gun-class Replacement Points on one Axis chart (German 124 / Italian 251)."""
+    return sum(i["number"] for i in axis_items(chart) if i.get("class") == "gun")
+
+
+def axis_equipment_pool_total(pool_class: str) -> int:
+    """[20.66] The campaign-total Axis tank/gun Replacement Points across both German and Italian
+    charts (tank 335 / gun 375). The lifetime ceiling the equipment bring-in may not exceed."""
+    if pool_class == "tank":
+        return axis_tank_total("german") + axis_tank_total("italian")
+    elif pool_class == "gun":
+        return axis_gun_total("german") + axis_gun_total("italian")
+    return 0
+
+
+def axis_equipment_per_gt_max(plan_turn: int, pool_class: str) -> int:
+    """[20.66]/[20.67] The most tank/gun Replacement Points of `pool_class` the Axis may PLAN in
+    Game-Turn `plan_turn` -- the sum of the Max of every chart item of that class whose plan window
+    contains the turn. Read from the chart, not a literal; 0 before the class's first window opens
+    (tanks GT41, guns GT45 both German)."""
+    total = 0
+    for chart in ("german", "italian"):
+        for item in axis_items(chart):
+            if item.get("class") != pool_class:
+                continue
+            mx, period = _applicable_period_max(item, plan_turn)
+            if mx and mx > 0:
+                total += mx
+    return total
+
+
 def axis_trucks() -> list:
     """[20.66a] the Axis Truck Production Chart rows (Light 835 / Medium 2890 / Heavy 525)."""
     return _data()["axis_pool_20_66"]["truck_production_20_66a"]["items"]
@@ -186,6 +217,21 @@ def _applicable_period_max(item: dict, plan_turn: int) -> "tuple[int, str | None
     return 0, None
 
 
+def _applicable_window_total(item: dict, plan_turn: int) -> "int | None":
+    """The [20.66] WINDOW TOTAL cap for a tiered item (e.g., Italian infantry's 100-RP cap across
+    GT5-24). For non-tiered items or when the plan_turn is outside all tiers, returns None.
+    Used to enforce sub-caps like the Italian infantry's lifetime pool within a time window."""
+    if "tiers" not in item:
+        return None
+    for tier in item["tiers"]:
+        hi = tier.get("plan_last")
+        if tier["plan_first"] <= plan_turn and (hi is None or plan_turn <= hi):
+            # Return the tier's 'number' field, which is the window-total cap (0 for subsequent tiers
+            # that represent a higher rate on the same pool)
+            return tier["number"]
+    return None
+
+
 def axis_infantry_per_gt_max(plan_turn: int) -> int:
     """[20.66]/[20.67] The most INFANTRY Replacement Points the Axis may PLAN in Game-Turn `plan_turn`
     -- the German pool (400, 12/Game-Turn from GT38) plus the active Italian tier (1,200 total: 5/GT
@@ -199,6 +245,26 @@ def axis_infantry_per_gt_max(plan_turn: int) -> int:
             raise ValueError(f"{chart} infantry Max period is {period!r}, not 'game_turn'")
         total += mx
     return total
+
+
+def axis_italian_infantry_window_total(plan_turn: int) -> "int | None":
+    """[20.66] Italian infantry's WINDOW TOTAL cap across GT5-24: max 100 RP. The Italian pool
+    records this as tier 0 with number=100 (GT5-8) and tier 1 with number=0 (GT9-24), both sharing
+    the same 100-RP pool. Returns 100 if plan_turn is in GT5-24, None otherwise. This is distinct
+    from the per-GT rate (5/GT GT5-8, 10/GT GT9-24) and enforces a separate lifetime cap."""
+    italian_inf = axis_item("italian", "infantry")
+    if italian_inf["tiers"]:
+        tier0 = italian_inf["tiers"][0]
+        # Tier 0 defines the window start and total (100)
+        # Tier 1 (if present) continues the same window at a higher rate
+        if len(italian_inf["tiers"]) > 1:
+            tier1 = italian_inf["tiers"][1]
+            # Both tiers must have the same window end (GT24) for this to work
+            if tier0["plan_first"] <= plan_turn <= tier1.get("plan_last", 111):
+                # We're in the shared 100-RP window (GT5-24)
+                if plan_turn >= tier0["plan_first"] and plan_turn <= (tier1.get("plan_last") or 111):
+                    return tier0["number"]  # 100
+    return None
 
 
 def axis_infantry_tonnage() -> int:
@@ -387,8 +453,10 @@ def training_delay_gt(rp_type: str) -> int:
     head, before its stages -- so a point arriving on Game-Turn N is absorbable on Game-Turn N + delay.
 
     Infantry 3 -> 1, Tank/Recce 6 -> 2, Commando 12 -> 4. Gun 1 -> 1: a sub-turn 1-OpStage training
-    rounds UP to a full Game-Turn's wait at this per-Game-Turn spend grain -- flagged, and inert (no
-    Gun producer is wired; only the CW-infantry FLOW-IN feeds the training ledger today)."""
+    rounds UP to a full Game-Turn's wait at this per-Game-Turn spend grain -- flagged. The Gun and Tank
+    delays are LIVE (not inert): the [20.78C] Commonwealth equipment flow-in (engine._cw_equipment_
+    production) feeds ALLIED/tank and ALLIED/gun into the training ledger alongside the CW-infantry
+    stream, so a gun point trains one Game-Turn and a tank point two before the spend may absorb it."""
     return math.ceil(training_opstages(rp_type) / OPSTAGES_PER_GAME_TURN)
 
 
@@ -464,9 +532,16 @@ def replacement_vp_spendable_classes(side: Side) -> frozenset:
     classes whose UNUSED count is a real quantity. OWNER RULING 2026-07-24 (Eve): 64.74 scores only
     spendable classes, because a class with no rebuild beat is 100% unused by construction (an
     unmodelled spend, not the husbandry 64.74 rewards). It GROWS one data edit at a time WITH the
-    producer that makes its spend real: today AXIS 'infantry' (the [20.66] coupling, Block B) and
-    ALLIED 'tank'/'gun' (the [20.78C] flow-in, Block A) are live, each with a firing rebuild beat.
-    Read from data so adding a class is never a literal here."""
+    producer that makes its spend real -- and ONLY when that spend is non-trivial AND its book-symmetric
+    counterpart on the other side is producible too, so 64.74 never scores half of a rule the book
+    applies to both sides. Today only AXIS 'infantry' scores (the [20.66] coupling + Block B flow-in +
+    spend heals ~1,587 of the 1,600 pool -- a real used>0). ALLIED holds 'infantry' (spendable via the
+    [20.78B] stream but book-EXCLUDED, so it scores 0). ALLIED 'tank'/'gun' were added by Block A and
+    REVERTED in its review-repair (2026-07-25): the CW equipment producer is faithful but its spend is
+    near-zero (gun is never produced -- CW guns do not deplete-alive), so scoring it banks a fixed ~865
+    the book only means as husbandry, and -- with the symmetric Axis equipment pool unbuilt and unscored
+    -- that one-sided ~865 flipped the pinned campaign seed (see the data key's REVERTED note). They
+    return with their Axis mirror. Read from data so adding a class is never a literal here."""
     return frozenset(_victory_64_74()["spendable_classes"].get(side.value, ()))
 
 
@@ -501,16 +576,16 @@ def unused_replacement_vp(side: Side, used: dict, spendable: "frozenset | None" 
     `spendable` overrides the data-driven set, for tests that verify the allotted-minus-used arithmetic
     of a class not yet spendable in the live campaign. Left None in all engine callers.
 
-    LIVE (as of Block A CW equipment, 2026-07-25): the AXIS scores its unused 'infantry' -- the [20.66]
-    flow-in + [20.62] coupling + spend made 'AXIS/infantry' a real spendable class (~13 unused of the
-    1,600 pool in the seed-1941 war). The COMMONWEALTH now scores its unused 'tank' + 'gun' -- the
-    [20.78C] flow-in (engine._cw_equipment_production) + spend made both spendable, and neither is
-    book-excluded (only CW infantry is). MEASURED, the CW tank/gun SPEND is near-zero (armour/guns die
-    outright rather than depleting), so the husbandry is ~865 of the 868 pool -- a REAL allotted-minus-
-    used, flagged as a balance finding in data/replacements.json (spendable_classes). Still awaiting
-    their own Axis flow-ins: Axis 'tank'/'gun'/'recce' (per-type tonnage + the [20.3] class
-    reconciliation the data flags on axis_pool_20_66); CW 'recce' is structurally unspendable
-    (replacement_kind never emits a recce kind)."""
+    LIVE (as of the Block A CW-equipment review-repair, 2026-07-25): only the AXIS scores, its unused
+    'infantry' -- the [20.66] flow-in + [20.62] coupling + spend made 'AXIS/infantry' a real spendable
+    class (~13 unused of the 1,600 pool in the seed-1941 war). The COMMONWEALTH scores 0 here: its
+    'infantry' is spendable but book-EXCLUDED, and its 'tank'/'gun' were REVERTED from spendable_classes
+    (Block A scored them, but the CW equipment spend is near-zero -- gun is never even produced -- so the
+    ~865 husbandry is unused-by-construction, and scoring it while the symmetric Axis equipment pool is
+    unbuilt/unscored flipped the pinned campaign; see data/replacements.json). CW equipment scoring
+    returns with its Axis mirror. Still awaiting their own Axis flow-ins: Axis 'tank'/'gun'/'recce'
+    (per-type tonnage + the [20.3] class reconciliation the data flags on axis_pool_20_66); CW 'recce'
+    is additionally structurally unspendable (replacement_kind never emits a recce kind)."""
     excluded = replacement_vp_excluded_classes(side)
     if spendable is None:
         spendable = replacement_vp_spendable_classes(side)

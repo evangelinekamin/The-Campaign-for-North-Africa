@@ -257,16 +257,19 @@ def test_the_commonwealth_convoy_is_never_charged():
 # --- end to end -----------------------------------------------------------------------------------
 
 def test_the_campaign_charges_axis_replacements_against_the_convoy():
-    """On the real campaign the Axis brings in Infantry Replacement Points and their tonnage is
-    charged against the Benghazi convoy -- the first mechanism that makes the faucet pay for the
+    """On the real campaign the Axis brings in Infantry and Equipment Replacement Points and their
+    tonnage is charged against the Benghazi convoy -- the mechanism that makes the faucet pay for the
     army's healing. And it is AXIS-only: the Commonwealth ships its replacements free."""
     res = run(campaign(seed=1941, max_turns=45),
               CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     axis_rp = [e for e in res.events if e.kind == EventKind.REPLACEMENTS_PRODUCED
                and e.payload["side"] == "AXIS"]
-    assert axis_rp, "the Axis must bring in Infantry Replacement Points once its pool opens"
-    assert all(e.payload["type"] == "infantry" for e in axis_rp)
-    assert all(e.payload["tons_charged"] == e.payload["points"] * 30 for e in axis_rp)
+    assert axis_rp, "the Axis must bring in Replacement Points (infantry/tank/gun) once pools open"
+    # Axis brings in infantry (30 t/pt) and equipment (tank/gun, per-type tonnage)
+    assert any(e.payload["type"] == "infantry" for e in axis_rp), "infantry RPs are brought in"
+    # Infantry events charge 30 t/pt
+    infantry = [e for e in axis_rp if e.payload["type"] == "infantry"]
+    assert all(e.payload["tons_charged"] == e.payload["points"] * 30 for e in infantry)
     assert sum(e.payload["tons_charged"] for e in axis_rp) > 0
     # the charge sits ON the convoy allowance: some Axis sailing shows allowed_tons < its gross tons
     squeezed = [e.payload for e in res.events if e.kind == EventKind.CONVOY_PLANNED
