@@ -1,0 +1,1536 @@
+{
+ "_source": "[4.45a/b/c] Organization at Arrival Charts (scratchpad/port/transcriptions/4.45a-oa-allied.md, 4.45b-oa-italian.md, 4.45c-oa-german.md), mapped onto the campaign OOB counters (oob_italian.json + oob_campaign_extra.json + reinforcements_campaign.json). Keyed by counter string; game.oob._seed_organization resolves parent counters to engine unit ids and sets Unit.assigned_to (19.11, the paper parent) + Unit.org_type (the [19.3] Formation Organization row on an HQ). attached_to is NOT seeded: the VASSAL extraction scatters each formation one unit per hex, so no formation is co-located at setup (19.12 attachment requires the same hex); the tree is the paper structure that makes [15.53] REACHABLE once a formation concentrates and attaches.",
+ "_org_types": "The [19.3] row names live in data/formation_organization.json.",
+ "_flags": [
+  "Melded Italian reinforcement divisions (Ariete, Littorio, Trieste, Trento, Bologna, Brescia, Savona, Sabratha, Sirte, Pistoia, Pavia, Folgore, GGFF) carry NO HQ counter in the OOB (2-4 melded counters each) -- not seedable, left independent.",
+  "64th Catanzaro / 2nd Libyan / 62nd Marmarica / 63rd Cirene have NO division-HQ counter; their two infantry regiments ARE seeded (the divisional Arty/MG/Eng stay independent).",
+  "4th CCNN battalion 170: the OA puts it under the 270th Legion but counter 'IT 170 - 240-4CN' states the 240th; the counter's stated parent is followed.",
+  "Garrisons (Tobruk/Benghazi/Bardia/Derna/minor) and all Unassigned/Corps/Non-Divisional sheets are flat lists of independent units (OA), correctly left with no parent."
+ ],
+ "tree": {
+  "1 Armd Bde [2] (Rtn)": {
+   "org_type": "",
+   "parent": "HQ 2 Armd Div"
+  },
+  "1 Army Tank Bde": {
+   "org_type": "cw_armor_brigade_I",
+   "parent": ""
+  },
+  "1 Bn du Pacifique": {
+   "org_type": "",
+   "parent": "HQ 1 Free French Bde"
+  },
+  "1 Fld Arty Regt [4 In]": {
+   "org_type": "",
+   "parent": ""
+  },
+  "1 Greek Bde I": {
+   "org_type": "",
+   "parent": "HQ 1 Greek Bde"
+  },
+  "1 Greek Bde II": {
+   "org_type": "",
+   "parent": "HQ 1 Greek Bde"
+  },
+  "1 Greek Bde III": {
+   "org_type": "",
+   "parent": "HQ 1 Greek Bde"
+  },
+  "1 RHA": {
+   "org_type": "",
+   "parent": "HQ 2 Armd Div"
+  },
+  "1 Regt d'Artillerie [1 FF]": {
+   "org_type": "",
+   "parent": "HQ 1 Free French Bde"
+  },
+  "1 SA AT Regt": {
+   "org_type": "",
+   "parent": "HQ 1 SA Div"
+  },
+  "1 SA Bde I": {
+   "org_type": "",
+   "parent": "HQ 1 SA Bde"
+  },
+  "1 SA Bde II": {
+   "org_type": "",
+   "parent": "HQ 1 SA Bde"
+  },
+  "1 SA Bde III": {
+   "org_type": "",
+   "parent": "HQ 1 SA Bde"
+  },
+  "1 SA Fld Arty [2 SA]": {
+   "org_type": "",
+   "parent": "HQ 2 SA Div"
+  },
+  "1 Support Group": {
+   "org_type": "",
+   "parent": "HQ 1 Armd Div"
+  },
+  "1/7 Middlesex MG Bn": {
+   "org_type": "",
+   "parent": "HQ 51 Inf Div"
+  },
+  "10 Hussars [1]": {
+   "org_type": "",
+   "parent": "HQ 1 Armd Div"
+  },
+  "10 In Bde (Rtn) I": {
+   "org_type": "",
+   "parent": "HQ 10 In Bde (Rtn)"
+  },
+  "10 In Bde (Rtn) II": {
+   "org_type": "",
+   "parent": "HQ 10 In Bde (Rtn)"
+  },
+  "10 In Bde (Rtn) III": {
+   "org_type": "",
+   "parent": "HQ 10 In Bde (Rtn)"
+  },
+  "10 In Bde I": {
+   "org_type": "",
+   "parent": "HQ 10 In Bde"
+  },
+  "10 In Bde II": {
+   "org_type": "",
+   "parent": "HQ 10 In Bde"
+  },
+  "10 In Bde III": {
+   "org_type": "",
+   "parent": "HQ 10 In Bde"
+  },
+  "11 In Bde (Rtn) I": {
+   "org_type": "",
+   "parent": "HQ 11 In Bde (Rtn)"
+  },
+  "11 In Bde (Rtn) II": {
+   "org_type": "",
+   "parent": "HQ 11 In Bde (Rtn)"
+  },
+  "11 In Bde (Rtn) III": {
+   "org_type": "",
+   "parent": "HQ 11 In Bde (Rtn)"
+  },
+  "115 Schutzen Regt": {
+   "org_type": "",
+   "parent": "HQ 15 Panzer Div"
+  },
+  "124th Fld Arty [50]": {
+   "org_type": "",
+   "parent": "HQ 50 Inf Div"
+  },
+  "125 PzGren Regt": {
+   "org_type": "",
+   "parent": "HQ 164 Light Div"
+  },
+  "126th Fld Arty [51]": {
+   "org_type": "",
+   "parent": "HQ 51 Inf Div"
+  },
+  "127th Fld Arty [51]": {
+   "org_type": "",
+   "parent": "HQ 51 Inf Div"
+  },
+  "128th Fld Arty [51]": {
+   "org_type": "",
+   "parent": "HQ 51 Inf Div"
+  },
+  "13 AT [51]": {
+   "org_type": "",
+   "parent": "HQ 51 Inf Div"
+  },
+  "131 Inf Bde I": {
+   "org_type": "",
+   "parent": "HQ 131 Inf Bde"
+  },
+  "131 Inf Bde II": {
+   "org_type": "",
+   "parent": "HQ 131 Inf Bde"
+  },
+  "131 Inf Bde III": {
+   "org_type": "",
+   "parent": "HQ 131 Inf Bde"
+  },
+  "14 Inf Bde (Rtn) I": {
+   "org_type": "",
+   "parent": "HQ 14 Inf Bde (Rtn)"
+  },
+  "14 Inf Bde (Rtn) II": {
+   "org_type": "",
+   "parent": "HQ 14 Inf Bde (Rtn)"
+  },
+  "14 Inf Bde (Rtn) III": {
+   "org_type": "",
+   "parent": "HQ 14 Inf Bde (Rtn)"
+  },
+  "14 Inf Bde I": {
+   "org_type": "",
+   "parent": "HQ 14 Inf Bde"
+  },
+  "14 Inf Bde II": {
+   "org_type": "",
+   "parent": "HQ 14 Inf Bde"
+  },
+  "14 Inf Bde III": {
+   "org_type": "",
+   "parent": "HQ 14 Inf Bde"
+  },
+  "144 Fld Arty Regt [5 In]": {
+   "org_type": "",
+   "parent": "HQ 5 In Div"
+  },
+  "144 Fld Arty [5 In] (Rtn)": {
+   "org_type": "",
+   "parent": "HQ 5 In Div (Rtn)"
+  },
+  "15 Krad Bn": {
+   "org_type": "",
+   "parent": "HQ 15 Panzer Div"
+  },
+  "150 Inf Bde (Rtn) I": {
+   "org_type": "",
+   "parent": "HQ 150 Inf Bde (Rtn)"
+  },
+  "150 Inf Bde (Rtn) II": {
+   "org_type": "",
+   "parent": "HQ 150 Inf Bde (Rtn)"
+  },
+  "150 Inf Bde (Rtn) III": {
+   "org_type": "",
+   "parent": "HQ 150 Inf Bde (Rtn)"
+  },
+  "150 Inf Bde I": {
+   "org_type": "",
+   "parent": "HQ 150 Inf Bde"
+  },
+  "150 Inf Bde II": {
+   "org_type": "",
+   "parent": "HQ 150 Inf Bde"
+  },
+  "150 Inf Bde III": {
+   "org_type": "",
+   "parent": "HQ 150 Inf Bde"
+  },
+  "151 Inf Bde I": {
+   "org_type": "",
+   "parent": "HQ 151 Inf Bde"
+  },
+  "151 Inf Bde II": {
+   "org_type": "",
+   "parent": "HQ 151 Inf Bde"
+  },
+  "151 Inf Bde III": {
+   "org_type": "",
+   "parent": "HQ 151 Inf Bde"
+  },
+  "152 Inf Bde I": {
+   "org_type": "",
+   "parent": "HQ 152 Inf Bde"
+  },
+  "152 Inf Bde II": {
+   "org_type": "",
+   "parent": "HQ 152 Inf Bde"
+  },
+  "152 Inf Bde III": {
+   "org_type": "",
+   "parent": "HQ 152 Inf Bde"
+  },
+  "153 Inf Bde I": {
+   "org_type": "",
+   "parent": "HQ 153 Inf Bde"
+  },
+  "153 Inf Bde II": {
+   "org_type": "",
+   "parent": "HQ 153 Inf Bde"
+  },
+  "153 Inf Bde III": {
+   "org_type": "",
+   "parent": "HQ 153 Inf Bde"
+  },
+  "154 Inf Bde I": {
+   "org_type": "",
+   "parent": "HQ 154 Inf Bde"
+  },
+  "154 Inf Bde II": {
+   "org_type": "",
+   "parent": "HQ 154 Inf Bde"
+  },
+  "154 Inf Bde III": {
+   "org_type": "",
+   "parent": "HQ 154 Inf Bde"
+  },
+  "155 Schutzen Regt": {
+   "org_type": "",
+   "parent": "HQ 90 Light Div"
+  },
+  "16 Inf Bde (Rtn) I": {
+   "org_type": "",
+   "parent": "HQ 16 Inf Bde (Rtn)"
+  },
+  "16 Inf Bde (Rtn) II": {
+   "org_type": "",
+   "parent": "HQ 16 Inf Bde (Rtn)"
+  },
+  "16 Inf Bde (Rtn) III": {
+   "org_type": "",
+   "parent": "HQ 16 Inf Bde (Rtn)"
+  },
+  "161 In Motor Bde I": {
+   "org_type": "",
+   "parent": "HQ 161 In Motor Bde"
+  },
+  "161 In Motor Bde II": {
+   "org_type": "",
+   "parent": "HQ 161 In Motor Bde"
+  },
+  "161 In Motor Bde III": {
+   "org_type": "",
+   "parent": "HQ 161 In Motor Bde"
+  },
+  "164 Aufkl Bn": {
+   "org_type": "",
+   "parent": "HQ 164 Light Div"
+  },
+  "18 Aus Bde I": {
+   "org_type": "",
+   "parent": "HQ 18 Aus Bde"
+  },
+  "18 Aus Bde II": {
+   "org_type": "",
+   "parent": "HQ 18 Aus Bde"
+  },
+  "18 Aus Bde III": {
+   "org_type": "",
+   "parent": "HQ 18 Aus Bde"
+  },
+  "18 In Bde I": {
+   "org_type": "",
+   "parent": "HQ 18 In Bde"
+  },
+  "18 In Bde II": {
+   "org_type": "",
+   "parent": "HQ 18 In Bde"
+  },
+  "18 In Bde III": {
+   "org_type": "",
+   "parent": "HQ 18 In Bde"
+  },
+  "19 Aus Bde I": {
+   "org_type": "",
+   "parent": "HQ 19 Aus Bde"
+  },
+  "19 Aus Bde II": {
+   "org_type": "",
+   "parent": "HQ 19 Aus Bde"
+  },
+  "19 Aus Bde III": {
+   "org_type": "",
+   "parent": "HQ 19 Aus Bde"
+  },
+  "190 Arty Bn": {
+   "org_type": "",
+   "parent": "HQ 90 Light Div"
+  },
+  "190 Pzjg Bn": {
+   "org_type": "",
+   "parent": "HQ 90 Light Div"
+  },
+  "1st Bn Infanterie de Marine [1 FF]": {
+   "org_type": "",
+   "parent": "HQ 1 Free French Bde"
+  },
+  "1st Bn de Fusiliers [1 FF]": {
+   "org_type": "",
+   "parent": "HQ 1 Free French Bde"
+  },
+  "1st Durham LI [23/70] (Rtn)": {
+   "org_type": "",
+   "parent": "HQ 70 Inf Div"
+  },
+  "1st Essex [23/70] (Rtn)": {
+   "org_type": "",
+   "parent": "HQ 70 Inf Div"
+  },
+  "2 Armd Div Cruiser Regt I": {
+   "org_type": "",
+   "parent": "HQ 2 Armd Div"
+  },
+  "2 Armd Div Cruiser Regt II": {
+   "org_type": "",
+   "parent": "HQ 2 Armd Div"
+  },
+  "2 Armd Div Cruiser Regt III": {
+   "org_type": "",
+   "parent": "HQ 2 Armd Div"
+  },
+  "2 Bays [1]": {
+   "org_type": "",
+   "parent": "HQ 1 Armd Div"
+  },
+  "2 Bn Legion Etranger": {
+   "org_type": "",
+   "parent": "HQ 1 Free French Bde"
+  },
+  "2 Free French Bde I": {
+   "org_type": "",
+   "parent": "HQ 2 Free French Bde"
+  },
+  "2 Free French Bde II": {
+   "org_type": "",
+   "parent": "HQ 2 Free French Bde"
+  },
+  "2 Free French Bde III": {
+   "org_type": "",
+   "parent": "HQ 2 Free French Bde"
+  },
+  "2 MG Bn": {
+   "org_type": "",
+   "parent": "HQ 5 Le Div"
+  },
+  "2 NZ Div (Rtn) Bn 1": {
+   "org_type": "",
+   "parent": ""
+  },
+  "2 NZ Div (Rtn) Bn 2": {
+   "org_type": "",
+   "parent": ""
+  },
+  "2 NZ Div (Rtn) Bn 3": {
+   "org_type": "",
+   "parent": ""
+  },
+  "2 NZ Div (Rtn) Bn 4": {
+   "org_type": "",
+   "parent": ""
+  },
+  "2 NZ Div (Rtn) Bn 5": {
+   "org_type": "",
+   "parent": ""
+  },
+  "2 NZ Div (Rtn) Bn 6": {
+   "org_type": "",
+   "parent": ""
+  },
+  "2 NZ Div (Rtn) Bn 7": {
+   "org_type": "",
+   "parent": ""
+  },
+  "2 NZ Div core (Rtn)": {
+   "org_type": "",
+   "parent": ""
+  },
+  "2 RTR": {
+   "org_type": "",
+   "parent": "HQ 2 Armd Div"
+  },
+  "2 SA AT Regt": {
+   "org_type": "",
+   "parent": "HQ 2 SA Div"
+  },
+  "2 SA Bde I": {
+   "org_type": "",
+   "parent": "HQ 2 SA Bde"
+  },
+  "2 SA Bde II": {
+   "org_type": "",
+   "parent": "HQ 2 SA Bde"
+  },
+  "2 SA Bde III": {
+   "org_type": "",
+   "parent": "HQ 2 SA Bde"
+  },
+  "2 SA Fld Arty Regt": {
+   "org_type": "",
+   "parent": "HQ 2 SA Div"
+  },
+  "2/1 Aus Fld Arty [6 Aus]": {
+   "org_type": "",
+   "parent": ""
+  },
+  "2/2 Aus Fld Arty": {
+   "org_type": "",
+   "parent": ""
+  },
+  "2/2 Aus MG Bn": {
+   "org_type": "",
+   "parent": "HQ 9 Aus Div"
+  },
+  "2/288 Gebergs Bn": {
+   "org_type": "",
+   "parent": "288 Son HQ"
+  },
+  "2/3 Aus AT Bn": {
+   "org_type": "",
+   "parent": "HQ 9 Aus Div"
+  },
+  "20 Aus Bde I": {
+   "org_type": "",
+   "parent": "HQ 20 Aus Bde"
+  },
+  "20 Aus Bde II": {
+   "org_type": "",
+   "parent": "HQ 20 Aus Bde"
+  },
+  "20 Aus Bde III": {
+   "org_type": "",
+   "parent": "HQ 20 Aus Bde"
+  },
+  "20 In Bde Grp I": {
+   "org_type": "",
+   "parent": "HQ 20 In Bde Grp"
+  },
+  "20 In Bde Grp II": {
+   "org_type": "",
+   "parent": "HQ 20 In Bde Grp"
+  },
+  "20 In Bde Grp III": {
+   "org_type": "",
+   "parent": "HQ 20 In Bde Grp"
+  },
+  "21 In Bde Grp I": {
+   "org_type": "",
+   "parent": "HQ 21 In Bde Grp"
+  },
+  "21 In Bde Grp II": {
+   "org_type": "",
+   "parent": "HQ 21 In Bde Grp"
+  },
+  "21 In Bde Grp III": {
+   "org_type": "",
+   "parent": "HQ 21 In Bde Grp"
+  },
+  "22 Armd Bde Regt I": {
+   "org_type": "",
+   "parent": "HQ 22 Armd Bde"
+  },
+  "22 Armd Bde Regt II": {
+   "org_type": "",
+   "parent": "HQ 22 Armd Bde"
+  },
+  "22 Armd Bde Regt III": {
+   "org_type": "",
+   "parent": "HQ 22 Armd Bde"
+  },
+  "220 Arty Regt": {
+   "org_type": "",
+   "parent": "HQ 164 Light Div"
+  },
+  "23 Armd Bde": {
+   "org_type": "",
+   "parent": "HQ 8 Armd Div"
+  },
+  "23 Bde AT Coy [23/70]": {
+   "org_type": "",
+   "parent": "HQ 70 Inf Div"
+  },
+  "24 Armd Bde": {
+   "org_type": "",
+   "parent": "HQ 8 Armd Div"
+  },
+  "24 Aus Bde I": {
+   "org_type": "",
+   "parent": "HQ 24 Aus Bde"
+  },
+  "24 Aus Bde II": {
+   "org_type": "",
+   "parent": "HQ 24 Aus Bde"
+  },
+  "24 Aus Bde III": {
+   "org_type": "",
+   "parent": "HQ 24 Aus Bde"
+  },
+  "25 In Bde Grp I": {
+   "org_type": "",
+   "parent": "HQ 25 In Bde Grp"
+  },
+  "25 In Bde Grp II": {
+   "org_type": "",
+   "parent": "HQ 25 In Bde Grp"
+  },
+  "25 In Bde Grp III": {
+   "org_type": "",
+   "parent": "HQ 25 In Bde Grp"
+  },
+  "26 Aus Bde I": {
+   "org_type": "",
+   "parent": "HQ 26 Aus Bde"
+  },
+  "26 Aus Bde II": {
+   "org_type": "",
+   "parent": "HQ 26 Aus Bde"
+  },
+  "26 Aus Bde III": {
+   "org_type": "",
+   "parent": "HQ 26 Aus Bde"
+  },
+  "28 Fld Arty [5 In]": {
+   "org_type": "",
+   "parent": "HQ 5 In Div"
+  },
+  "288 Panzerjaeger Bn": {
+   "org_type": "",
+   "parent": "288 Son HQ"
+  },
+  "288 Pioneer Coy": {
+   "org_type": "",
+   "parent": "288 Son HQ"
+  },
+  "288 Son HQ": {
+   "org_type": "ge_infantry_regiment",
+   "parent": ""
+  },
+  "28th Fld Arty [5 In] (Rtn)": {
+   "org_type": "",
+   "parent": "HQ 5 In Div (Rtn)"
+  },
+  "29 In Bde I": {
+   "org_type": "",
+   "parent": "HQ 29 In Bde"
+  },
+  "29 In Bde II": {
+   "org_type": "",
+   "parent": "HQ 29 In Bde"
+  },
+  "29 In Bde III": {
+   "org_type": "",
+   "parent": "HQ 29 In Bde"
+  },
+  "2nd Bn de Marche [1 FF]": {
+   "org_type": "",
+   "parent": "HQ 1 Free French Bde"
+  },
+  "2nd Cheshire MG [50]": {
+   "org_type": "",
+   "parent": "HQ 50 Inf Div"
+  },
+  "2nd Derbyshire Yeomanry [R, 8]": {
+   "org_type": "",
+   "parent": "HQ 8 Armd Div"
+  },
+  "2nd In Fld Arty [3 In Mtr X]": {
+   "org_type": "",
+   "parent": "HQ 3 In Motor Bde"
+  },
+  "2nd NA AT Coy [1 FF]": {
+   "org_type": "",
+   "parent": "HQ 1 Free French Bde"
+  },
+  "3 Aufkl Bn": {
+   "org_type": "",
+   "parent": "HQ 5 Le Div"
+  },
+  "3 In Motor Bde I": {
+   "org_type": "",
+   "parent": "HQ 3 In Motor Bde"
+  },
+  "3 In Motor Bde II": {
+   "org_type": "",
+   "parent": "HQ 3 In Motor Bde"
+  },
+  "3 In Motor Bde III": {
+   "org_type": "",
+   "parent": "HQ 3 In Motor Bde"
+  },
+  "3 SA Bde I": {
+   "org_type": "",
+   "parent": "HQ 3 SA Bde"
+  },
+  "3 SA Bde II": {
+   "org_type": "",
+   "parent": "HQ 3 SA Bde"
+  },
+  "3 SA Bde III": {
+   "org_type": "",
+   "parent": "HQ 3 SA Bde"
+  },
+  "3/18 Royal Garhwals [10/5 In]": {
+   "org_type": "",
+   "parent": "HQ 5 In Div"
+  },
+  "3/2 Punjab Regt": {
+   "org_type": "",
+   "parent": "HQ 5 In Div"
+  },
+  "3/288 SchwInf Bn": {
+   "org_type": "",
+   "parent": "288 Son HQ"
+  },
+  "33 Arty Regt": {
+   "org_type": "",
+   "parent": "HQ 15 Panzer Div"
+  },
+  "33 Aufkl Bn": {
+   "org_type": "",
+   "parent": "HQ 15 Panzer Div"
+  },
+  "33 Pzjg Bn": {
+   "org_type": "",
+   "parent": "HQ 15 Panzer Div"
+  },
+  "361 Afrika Regt": {
+   "org_type": "",
+   "parent": "HQ 90 Light Div"
+  },
+  "382 PzGren Regt": {
+   "org_type": "",
+   "parent": "HQ 164 Light Div"
+  },
+  "39 Pzjg Bn": {
+   "org_type": "",
+   "parent": "HQ 5 Le Div"
+  },
+  "3rd Bn Legion Etrangere [1 FF]": {
+   "org_type": "",
+   "parent": "HQ 1 Free French Bde"
+  },
+  "3rd SA Fld Arty [1 SA]": {
+   "org_type": "",
+   "parent": "HQ 1 SA Div"
+  },
+  "4 In Div core (Rtn)": {
+   "org_type": "",
+   "parent": ""
+  },
+  "4 RTR": {
+   "org_type": "",
+   "parent": "1 Army Tank Bde"
+  },
+  "4 SA Bde I": {
+   "org_type": "",
+   "parent": "HQ 4 SA Bde"
+  },
+  "4 SA Bde II": {
+   "org_type": "",
+   "parent": "HQ 4 SA Bde"
+  },
+  "4 SA Bde III": {
+   "org_type": "",
+   "parent": "HQ 4 SA Bde"
+  },
+  "4 SA Fld Arty Regt": {
+   "org_type": "",
+   "parent": "HQ 1 SA Div"
+  },
+  "4/288 MG Bn": {
+   "org_type": "",
+   "parent": "288 Son HQ"
+  },
+  "40th LAA [51]": {
+   "org_type": "",
+   "parent": "HQ 51 Inf Div"
+  },
+  "433 PzGren Regt": {
+   "org_type": "",
+   "parent": "HQ 164 Light Div"
+  },
+  "44 Inf Div body": {
+   "org_type": "",
+   "parent": ""
+  },
+  "4th Borderers [23/70]": {
+   "org_type": "",
+   "parent": "HQ 70 Inf Div"
+  },
+  "5 NZ Bde I": {
+   "org_type": "",
+   "parent": "HQ 5 NZ Bde"
+  },
+  "5 NZ Bde II": {
+   "org_type": "",
+   "parent": "HQ 5 NZ Bde"
+  },
+  "5 NZ Bde III": {
+   "org_type": "",
+   "parent": "HQ 5 NZ Bde"
+  },
+  "5 SA Bde I": {
+   "org_type": "",
+   "parent": "HQ 5 SA Bde"
+  },
+  "5 SA Bde II": {
+   "org_type": "",
+   "parent": "HQ 5 SA Bde"
+  },
+  "5 SA Bde III": {
+   "org_type": "",
+   "parent": "HQ 5 SA Bde"
+  },
+  "5 SA Fld Arty [2 SA]": {
+   "org_type": "",
+   "parent": "HQ 2 SA Div"
+  },
+  "50th Recce [50]": {
+   "org_type": "",
+   "parent": "HQ 50 Inf Div"
+  },
+  "51 Recce Bn": {
+   "org_type": "",
+   "parent": "HQ 51 Inf Div"
+  },
+  "57 AT Regt [44]": {
+   "org_type": "",
+   "parent": ""
+  },
+  "57th Fld Arty [44]": {
+   "org_type": "",
+   "parent": ""
+  },
+  "580 Aufkl Bn": {
+   "org_type": "",
+   "parent": "HQ 90 Light Div"
+  },
+  "58th Fld Arty [44]": {
+   "org_type": "",
+   "parent": ""
+  },
+  "6 NZ Bde (Rtn) I": {
+   "org_type": "",
+   "parent": "HQ 6 NZ Bde"
+  },
+  "6 NZ Bde (Rtn) II": {
+   "org_type": "",
+   "parent": "HQ 6 NZ Bde"
+  },
+  "6 NZ Bde (Rtn) III": {
+   "org_type": "",
+   "parent": "HQ 6 NZ Bde"
+  },
+  "6 NZ Bde I": {
+   "org_type": "",
+   "parent": "HQ 6 NZ Bde"
+  },
+  "6 NZ Bde II": {
+   "org_type": "",
+   "parent": "HQ 6 NZ Bde"
+  },
+  "6 NZ Bde III": {
+   "org_type": "",
+   "parent": "HQ 6 NZ Bde"
+  },
+  "6 NZ Fld Arty": {
+   "org_type": "",
+   "parent": ""
+  },
+  "6 SA Bde I": {
+   "org_type": "",
+   "parent": "HQ 6 SA Bde"
+  },
+  "6 SA Bde II": {
+   "org_type": "",
+   "parent": "HQ 6 SA Bde"
+  },
+  "6 SA Bde III": {
+   "org_type": "",
+   "parent": "HQ 6 SA Bde"
+  },
+  "605 Pzjg Bn": {
+   "org_type": "",
+   "parent": "HQ 5 Le Div"
+  },
+  "606 Flak Bn": {
+   "org_type": "",
+   "parent": "HQ 5 Le Div"
+  },
+  "609 Flak Bn": {
+   "org_type": "",
+   "parent": "HQ 164 Light Div"
+  },
+  "613 Flak Bn": {
+   "org_type": "",
+   "parent": "HQ 90 Light Div"
+  },
+  "61st AT [51]": {
+   "org_type": "",
+   "parent": "HQ 51 Inf Div"
+  },
+  "65th Fld Arty [44]": {
+   "org_type": "",
+   "parent": ""
+  },
+  "69 Inf Bde I": {
+   "org_type": "",
+   "parent": "HQ 69 Inf Bde"
+  },
+  "69 Inf Bde II": {
+   "org_type": "",
+   "parent": "HQ 69 Inf Bde"
+  },
+  "69 Inf Bde III": {
+   "org_type": "",
+   "parent": "HQ 69 Inf Bde"
+  },
+  "7 In Bde (Rtn) I": {
+   "org_type": "",
+   "parent": "HQ 7 In Bde (Rtn)"
+  },
+  "7 In Bde (Rtn) II": {
+   "org_type": "",
+   "parent": "HQ 7 In Bde (Rtn)"
+  },
+  "7 In Bde (Rtn) III": {
+   "org_type": "",
+   "parent": "HQ 7 In Bde (Rtn)"
+  },
+  "7 In Bde I": {
+   "org_type": "",
+   "parent": "HQ 7 In Bde"
+  },
+  "7 In Bde II": {
+   "org_type": "",
+   "parent": "HQ 7 In Bde"
+  },
+  "7 In Bde III": {
+   "org_type": "",
+   "parent": "HQ 7 In Bde"
+  },
+  "7 NZ AT Regt": {
+   "org_type": "",
+   "parent": ""
+  },
+  "7 RTR": {
+   "org_type": "",
+   "parent": "HQ 2 Armd Div"
+  },
+  "7 SA Fld Arty [1 SA]": {
+   "org_type": "",
+   "parent": "HQ 1 SA Div"
+  },
+  "7 SA Recce Bn": {
+   "org_type": "",
+   "parent": "HQ 2 SA Div"
+  },
+  "72nd Fld Arty [50]": {
+   "org_type": "",
+   "parent": "HQ 50 Inf Div"
+  },
+  "74 Fld Arty Regt [50]": {
+   "org_type": "",
+   "parent": "HQ 50 Inf Div"
+  },
+  "8 Armd Bde": {
+   "org_type": "",
+   "parent": "HQ 10 Armd Div"
+  },
+  "8 MG Bn": {
+   "org_type": "",
+   "parent": "HQ 5 Le Div"
+  },
+  "9 Armd Bde": {
+   "org_type": "",
+   "parent": "HQ 10 Armd Div"
+  },
+  "9 Aus Cav Regt": {
+   "org_type": "",
+   "parent": "HQ 9 Aus Div"
+  },
+  "9 Aus Div core (Rtn)": {
+   "org_type": "",
+   "parent": "HQ 9 Aus Div"
+  },
+  "9 In Bde (Rtn) I": {
+   "org_type": "",
+   "parent": "HQ 9 In Bde (Rtn)"
+  },
+  "9 In Bde (Rtn) II": {
+   "org_type": "",
+   "parent": "HQ 9 In Bde (Rtn)"
+  },
+  "9 In Bde (Rtn) III": {
+   "org_type": "",
+   "parent": "HQ 9 In Bde (Rtn)"
+  },
+  "9 In Bde I": {
+   "org_type": "",
+   "parent": "HQ 9 In Bde"
+  },
+  "9 In Bde II": {
+   "org_type": "",
+   "parent": "HQ 9 In Bde"
+  },
+  "9 In Bde III": {
+   "org_type": "",
+   "parent": "HQ 9 In Bde"
+  },
+  "9 Lancers [1]": {
+   "org_type": "",
+   "parent": "HQ 1 Armd Div"
+  },
+  "Capetown Highlanders Bn [2/1 SA]": {
+   "org_type": "",
+   "parent": "HQ 2 SA Div"
+  },
+  "Die Middelandse MG [2 SA]": {
+   "org_type": "",
+   "parent": "HQ 2 SA Div"
+  },
+  "HQ 1 Armd Div": {
+   "org_type": "cw_armor_division_II",
+   "parent": ""
+  },
+  "HQ 1 Free French Bde": {
+   "org_type": "cw_infantry_brigade_super",
+   "parent": ""
+  },
+  "HQ 1 Greek Bde": {
+   "org_type": "cw_allied_infantry_brigade",
+   "parent": ""
+  },
+  "HQ 1 SA Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 1 SA Div"
+  },
+  "HQ 1 SA Div": {
+   "org_type": "cw_infantry_division",
+   "parent": ""
+  },
+  "HQ 10 Armd Div": {
+   "org_type": "cw_armor_division_III",
+   "parent": ""
+  },
+  "HQ 10 In Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 5 In Div"
+  },
+  "HQ 10 In Bde (Rtn)": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 5 In Div (Rtn)"
+  },
+  "HQ 10 In Div": {
+   "org_type": "cw_infantry_division",
+   "parent": ""
+  },
+  "HQ 11 In Bde (Rtn)": {
+   "org_type": "cw_infantry_brigade",
+   "parent": ""
+  },
+  "HQ 131 Inf Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": ""
+  },
+  "HQ 14 Inf Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 70 Inf Div"
+  },
+  "HQ 14 Inf Bde (Rtn)": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 70 Inf Div"
+  },
+  "HQ 15 Panzer Div": {
+   "org_type": "ge_15_panzer_division",
+   "parent": ""
+  },
+  "HQ 150 Inf Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 50 Inf Div"
+  },
+  "HQ 150 Inf Bde (Rtn)": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 50 Inf Div"
+  },
+  "HQ 151 Inf Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 50 Inf Div"
+  },
+  "HQ 152 Inf Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 51 Inf Div"
+  },
+  "HQ 153 Inf Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 51 Inf Div"
+  },
+  "HQ 154 Inf Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 51 Inf Div"
+  },
+  "HQ 16 Inf Bde (Rtn)": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 70 Inf Div"
+  },
+  "HQ 161 In Motor Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": ""
+  },
+  "HQ 164 Light Div": {
+   "org_type": "ge_164_leichte_division",
+   "parent": ""
+  },
+  "HQ 18 Aus Bde": {
+   "org_type": "cw_infantry_brigade_super",
+   "parent": ""
+  },
+  "HQ 18 In Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": ""
+  },
+  "HQ 19 Aus Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": ""
+  },
+  "HQ 2 Armd Bde [1]": {
+   "org_type": "cw_armor_brigade_II",
+   "parent": "HQ 1 Armd Div"
+  },
+  "HQ 2 Armd Div": {
+   "org_type": "cw_armor_division_I",
+   "parent": ""
+  },
+  "HQ 2 Free French Bde": {
+   "org_type": "cw_allied_infantry_brigade",
+   "parent": ""
+  },
+  "HQ 2 SA Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 1 SA Div"
+  },
+  "HQ 2 SA Div": {
+   "org_type": "cw_infantry_division",
+   "parent": ""
+  },
+  "HQ 20 Aus Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 9 Aus Div"
+  },
+  "HQ 20 In Bde Grp": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 10 In Div"
+  },
+  "HQ 21 In Bde Grp": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 10 In Div"
+  },
+  "HQ 22 Armd Bde": {
+   "org_type": "cw_armor_brigade_II",
+   "parent": ""
+  },
+  "HQ 22 Guards Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": ""
+  },
+  "HQ 23 Inf Bde [70]": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 70 Inf Div"
+  },
+  "HQ 24 Aus Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 9 Aus Div"
+  },
+  "HQ 25 In Bde Grp": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 10 In Div"
+  },
+  "HQ 26 Aus Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 9 Aus Div"
+  },
+  "HQ 29 In Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 5 In Div"
+  },
+  "HQ 3 In Motor Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": ""
+  },
+  "HQ 3 SA Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 2 SA Div"
+  },
+  "HQ 4 SA Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 2 SA Div"
+  },
+  "HQ 5 In Div": {
+   "org_type": "cw_infantry_division",
+   "parent": ""
+  },
+  "HQ 5 In Div (Rtn)": {
+   "org_type": "cw_infantry_division",
+   "parent": ""
+  },
+  "HQ 5 Le Div": {
+   "org_type": "ge_5_light_panzer_division",
+   "parent": ""
+  },
+  "HQ 5 NZ Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": ""
+  },
+  "HQ 5 Pz Regt": {
+   "org_type": "ge_armored_regiment",
+   "parent": "HQ 5 Le Div"
+  },
+  "HQ 5 SA Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 1 SA Div"
+  },
+  "HQ 50 Inf Div": {
+   "org_type": "cw_infantry_division",
+   "parent": ""
+  },
+  "HQ 51 Inf Div": {
+   "org_type": "cw_infantry_division",
+   "parent": ""
+  },
+  "HQ 6 NZ Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": ""
+  },
+  "HQ 6 SA Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 2 SA Div"
+  },
+  "HQ 69 Inf Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 50 Inf Div"
+  },
+  "HQ 7 In Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": ""
+  },
+  "HQ 7 In Bde (Rtn)": {
+   "org_type": "cw_infantry_brigade",
+   "parent": ""
+  },
+  "HQ 70 Inf Div": {
+   "org_type": "cw_infantry_division",
+   "parent": ""
+  },
+  "HQ 8 Armd Div": {
+   "org_type": "cw_armor_division_III",
+   "parent": ""
+  },
+  "HQ 8 Pz Regt": {
+   "org_type": "ge_armored_regiment",
+   "parent": "HQ 15 Panzer Div"
+  },
+  "HQ 9 Aus Div": {
+   "org_type": "cw_infantry_division",
+   "parent": ""
+  },
+  "HQ 9 In Bde": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 5 In Div"
+  },
+  "HQ 9 In Bde (Rtn)": {
+   "org_type": "cw_infantry_brigade",
+   "parent": "HQ 5 In Div (Rtn)"
+  },
+  "HQ 90 Light Div": {
+   "org_type": "ge_90_leichte_division",
+   "parent": ""
+  },
+  "HQ Armd Bde [2 Armd]": {
+   "org_type": "cw_armor_brigade_I",
+   "parent": "HQ 2 Armd Div"
+  },
+  "HQ Polish Bde": {
+   "org_type": "cw_infantry_brigade_super",
+   "parent": ""
+  },
+  "HQ Ramcke Bde": {
+   "org_type": "ge_ramcke_brigade",
+   "parent": ""
+  },
+  "I/104 Schutzen Bn": {
+   "org_type": "",
+   "parent": "HQ 15 Panzer Div"
+  },
+  "I/33 Flak Bn": {
+   "org_type": "",
+   "parent": "HQ 5 Le Div"
+  },
+  "I/5 Pz Bn": {
+   "org_type": "",
+   "parent": "HQ 5 Pz Regt"
+  },
+  "I/75 Arty Bn": {
+   "org_type": "",
+   "parent": "HQ 5 Le Div"
+  },
+  "I/8 Pz Bn": {
+   "org_type": "",
+   "parent": "HQ 8 Pz Regt"
+  },
+  "I/Kroh Bn": {
+   "org_type": "",
+   "parent": "HQ Ramcke Bde"
+  },
+  "II/104 Schutzen Bn": {
+   "org_type": "",
+   "parent": "HQ 15 Panzer Div"
+  },
+  "II/5 Pz Bn": {
+   "org_type": "",
+   "parent": "HQ 5 Pz Regt"
+  },
+  "II/8 Pz Bn": {
+   "org_type": "",
+   "parent": "HQ 8 Pz Regt"
+  },
+  "II/Heydte Bn": {
+   "org_type": "",
+   "parent": "HQ Ramcke Bde"
+  },
+  "III/255 Schutzen Bn": {
+   "org_type": "",
+   "parent": "HQ 90 Light Div"
+  },
+  "III/347 Schutzen Bn": {
+   "org_type": "",
+   "parent": "HQ 90 Light Div"
+  },
+  "III/Hubner Bn": {
+   "org_type": "",
+   "parent": "HQ Ramcke Bde"
+  },
+  "IT 115 - 62 Marm": {
+   "org_type": "it_infantry_regiment",
+   "parent": ""
+  },
+  "IT 116 - 62 Marm": {
+   "org_type": "it_infantry_regiment",
+   "parent": ""
+  },
+  "IT 119 - 240-4CN": {
+   "org_type": "",
+   "parent": "IT 240Lgn - 4 CCNN"
+  },
+  "IT 141 - 64 Cat": {
+   "org_type": "it_infantry_regiment",
+   "parent": ""
+  },
+  "IT 142 - 64 Cat": {
+   "org_type": "it_infantry_regiment",
+   "parent": ""
+  },
+  "IT 157 - 63 Cir": {
+   "org_type": "it_infantry_regiment",
+   "parent": ""
+  },
+  "IT 158 - 63 Cir": {
+   "org_type": "it_infantry_regiment",
+   "parent": ""
+  },
+  "IT 17 - 270-4CN": {
+   "org_type": "",
+   "parent": "IT 270Lgn - 4 CCNN"
+  },
+  "IT 170 - 240-4CN": {
+   "org_type": "",
+   "parent": "IT 240Lgn - 4 CCNN"
+  },
+  "IT 176 - 240-4CN": {
+   "org_type": "",
+   "parent": "IT 240Lgn - 4 CCNN"
+  },
+  "IT 204 - 4CCNN (ART)": {
+   "org_type": "",
+   "parent": "IT 4 CCNN - (4CN)"
+  },
+  "IT 204 - 4CCNN (ENG)": {
+   "org_type": "",
+   "parent": "IT 4 CCNN - (4CN)"
+  },
+  "IT 204 - 4CCNN (MG)": {
+   "org_type": "",
+   "parent": "IT 4 CCNN - (4CN)"
+  },
+  "IT 240Lgn - 4 CCNN": {
+   "org_type": "it_infantry_regiment",
+   "parent": "IT 4 CCNN - (4CN)"
+  },
+  "IT 270Lgn - 4 CCNN": {
+   "org_type": "it_infantry_regiment",
+   "parent": "IT 4 CCNN - (4CN)"
+  },
+  "IT 3 - 270-4CN": {
+   "org_type": "",
+   "parent": "IT 270Lgn - 4 CCNN"
+  },
+  "IT 3 Libyan - 2 Libyan": {
+   "org_type": "it_infantry_regiment",
+   "parent": ""
+  },
+  "IT 4 CCNN - (4CN)": {
+   "org_type": "it_semi_motorized_infantry_division",
+   "parent": ""
+  },
+  "IT 4 Libyan - 2 Libyan": {
+   "org_type": "it_infantry_regiment",
+   "parent": ""
+  },
+  "IT 70 - 240-4CN": {
+   "org_type": "",
+   "parent": "IT 240Lgn - 4 CCNN"
+  },
+  "IT Aresca - LTC": {
+   "org_type": "it_tank_regiment_super",
+   "parent": "IT LTC - none"
+  },
+  "IT I(M) - LTC": {
+   "org_type": "",
+   "parent": "IT Aresca - LTC"
+  },
+  "IT I-141 - 64 Cat": {
+   "org_type": "",
+   "parent": "IT 141 - 64 Cat"
+  },
+  "IT I-142 - 64 Cat": {
+   "org_type": "",
+   "parent": "IT 142 - 64 Cat"
+  },
+  "IT I/115 - 62 Marm": {
+   "org_type": "",
+   "parent": "IT 115 - 62 Marm"
+  },
+  "IT I/116 - 62 Marm": {
+   "org_type": "",
+   "parent": "IT 116 - 62 Marm"
+  },
+  "IT I/157 - 63 Cir": {
+   "org_type": "",
+   "parent": "IT 157 - 63 Cir"
+  },
+  "IT I/158 - 63 Cir": {
+   "org_type": "",
+   "parent": "IT 158 - 63 Cir"
+  },
+  "IT II(M) - LTC": {
+   "org_type": "",
+   "parent": "IT Trvli - LTC"
+  },
+  "IT II-141 - 64 Cat": {
+   "org_type": "",
+   "parent": "IT 141 - 64 Cat"
+  },
+  "IT II-142 - 64 Cat": {
+   "org_type": "",
+   "parent": "IT 142 - 64 Cat"
+  },
+  "IT II-3L - 2 Libyan": {
+   "org_type": "",
+   "parent": "IT 3 Libyan - 2 Libyan"
+  },
+  "IT II/115 - 62 Marm": {
+   "org_type": "",
+   "parent": "IT 115 - 62 Marm"
+  },
+  "IT II/116 - 62 Marm": {
+   "org_type": "",
+   "parent": "IT 116 - 62 Marm"
+  },
+  "IT II/157 - 63 Cir": {
+   "org_type": "",
+   "parent": "IT 157 - 63 Cir"
+  },
+  "IT II/158 - 63 Cir": {
+   "org_type": "",
+   "parent": "IT 158 - 63 Cir"
+  },
+  "IT III-141 - 64 Cat": {
+   "org_type": "",
+   "parent": "IT 141 - 64 Cat"
+  },
+  "IT III-142 - 64 Cat": {
+   "org_type": "",
+   "parent": "IT 142 - 64 Cat"
+  },
+  "IT III/115 - 62 Marm": {
+   "org_type": "",
+   "parent": "IT 115 - 62 Marm"
+  },
+  "IT III/116 - 62 Marm": {
+   "org_type": "",
+   "parent": "IT 116 - 62 Marm"
+  },
+  "IT III/157 - 63 Cir": {
+   "org_type": "",
+   "parent": "IT 157 - 63 Cir"
+  },
+  "IT III/158 - 63 Cir": {
+   "org_type": "",
+   "parent": "IT 158 - 63 Cir"
+  },
+  "IT IX(L) - LTC": {
+   "org_type": "",
+   "parent": "IT Trvli - LTC"
+  },
+  "IT LTC - none": {
+   "org_type": "it_tank_group",
+   "parent": ""
+  },
+  "IT LX(L) - LTC": {
+   "org_type": "",
+   "parent": "IT Trvli - LTC"
+  },
+  "IT LXI(L) - LTC": {
+   "org_type": "",
+   "parent": "IT Trvli - LTC"
+  },
+  "IT LXII(L) - LTC": {
+   "org_type": "",
+   "parent": "IT Aresca - LTC"
+  },
+  "IT LXIII(L) - LTC": {
+   "org_type": "",
+   "parent": "IT Aresca - LTC"
+  },
+  "IT Trvli - LTC": {
+   "org_type": "it_tank_regiment_super",
+   "parent": "IT LTC - none"
+  },
+  "IT VI-3L - 2 Libyan": {
+   "org_type": "",
+   "parent": "IT 3 Libyan - 2 Libyan"
+  },
+  "IT VII-3L - 2 Libyan": {
+   "org_type": "",
+   "parent": "IT 3 Libyan - 2 Libyan"
+  },
+  "IT XIV-4L - 2 Libyan": {
+   "org_type": "",
+   "parent": "IT 4 Libyan - 2 Libyan"
+  },
+  "IT XV-4L - 2 Libyan": {
+   "org_type": "",
+   "parent": "IT 4 Libyan - 2 Libyan"
+  },
+  "IT XVI-4L - 2 Libyan": {
+   "org_type": "",
+   "parent": "IT 4 Libyan - 2 Libyan"
+  },
+  "IT XX(L) - LTC": {
+   "org_type": "",
+   "parent": "IT Trvli - LTC"
+  },
+  "IT XXI(L) - LTC": {
+   "org_type": "",
+   "parent": "IT Aresca - LTC"
+  },
+  "IV/Schweiger Bn": {
+   "org_type": "",
+   "parent": "HQ Ramcke Bde"
+  },
+  "Polish Bde I": {
+   "org_type": "",
+   "parent": "HQ Polish Bde"
+  },
+  "Polish Bde II": {
+   "org_type": "",
+   "parent": "HQ Polish Bde"
+  },
+  "Polish Bde III": {
+   "org_type": "",
+   "parent": "HQ Polish Bde"
+  },
+  "President Steyn MG [1 SA]": {
+   "org_type": "",
+   "parent": "HQ 1 SA Div"
+  },
+  "V/Burchardt Bn": {
+   "org_type": "",
+   "parent": "HQ Ramcke Bde"
+  }
+ }
+}

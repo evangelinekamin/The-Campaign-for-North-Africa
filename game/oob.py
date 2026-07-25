@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import replace
+from functools import lru_cache
 
 from . import air, coords, logistics_data, wells
 from .events import Side
@@ -249,6 +250,7 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
     units: list[Unit] = []
     dumps_meta: list[tuple[str, Side, tuple]] = []   # (uid, side, hex) placed after the loop
     seen: dict[str, int] = {}
+    counter_to_id: dict[str, str] = {}               # [4.45] tree resolution (counter -> engine id)
 
     for rec in (_load(oob_file) + (_load(extra_file) if extra_file else [])):
         if rec.get("kind") not in ("unit", "dump"):
@@ -267,7 +269,9 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
             continue                                 # features are not engine units
         role = rec.get("role") or classify(rec["counter"], rec["group"])
         if role is not None:
-            units.append(_make_unit(rec, side, ax, role, stats, seen, 0))
+            u = _make_unit(rec, side, ax, role, stats, seen, 0)
+            units.append(u)
+            counter_to_id[rec["counter"]] = u.id
 
     supplies: list[SupplyUnit] = _place_dumps(dumps_meta, dump_pools or DESERT_FOX_DUMP_POOLS)
 
@@ -275,8 +279,10 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
         side = Side.AXIS if rec["side"] == "AXIS" else Side.ALLIED
         role = rec.get("role") or classify(rec["counter"], rec["group"])
         if role is not None:
-            units.append(_make_unit(rec, side, tuple(rec["hex"]), role, stats, seen,
-                                    rec["arrival_turn"]))
+            u = _make_unit(rec, side, tuple(rec["hex"]), role, stats, seen, rec["arrival_turn"])
+            units.append(u)
+            counter_to_id[rec["counter"]] = u.id
+    units = _seed_organization(units, counter_to_id)                      # 4.45 / 19.11 parent tree
     units = _seed_first_line(units, first_line or DESERT_FOX_FIRST_LINE)   # 53.11 / 64.3
     units = _seed_fuel_tanks(units)                                        # 49.14 fuel tanks
     units = _seed_ammo_loads(units)                                        # 50.0 ammo basic loads
@@ -666,6 +672,43 @@ def _place_dumps(dumps_meta: list[tuple[str, Side, tuple]], pools: dict) -> list
             out.append(SupplyUnit(uid, side, ax, ammo=amt["AMMO"], fuel=amt["FUEL"],
                                   stores=amt["STORES"], water=amt["WATER"]))
     return out
+
+
+@lru_cache(maxsize=1)
+def _org_tree() -> dict:
+    """[4.45] The historical setup formation tree (data/oob_organization_4_45.json), keyed by counter
+    string and transcribed from the three Organization at Arrival Charts."""
+    return _load("oob_organization_4_45.json")["tree"]
+
+
+def _seed_organization(units: list[Unit], counter_to_id: dict) -> list[Unit]:
+    """[4.45]/[19.11] Seed the historical PARENT-FORMATION tree onto the mustered OOB: set each mapped
+    counter's `assigned_to` (its [19.11] paper parent) and, on a formation HQ, its `org_type` (the
+    [19.3] Formation Organization row). The org_type is the load-bearing bit: it gives an HQ counter a
+    Stacking Point tier above 1 (a brigade 2, a division 5), so [15.53] Organization Size can finally
+    reach its Brigade/Super-Brigade/Division rows -- physically unreachable before, since every counter
+    was SP 1 -- the moment that formation concentrates and its units attach (organization.combat_size).
+
+    `attached_to` is deliberately NOT seeded. The VASSAL campaign extraction scatters each formation
+    one unit per hex, and [19.12] attachment is a same-hex, functionally-combined relationship (19.28:
+    an ASSIGNED unit "takes up space in a Parent Unit's TOE, regardless of where they are"). So the
+    PAPER tree is faithful at a scattered setup and the MAP tree is not; the tree makes [15.53]
+    REACHABLE, and a policy or a player closing the formation up is what makes it fire.
+
+    The counter->id map is built in build() as it musters each record. A counter absent from a
+    scenario's OOB -- every Desert Fox benchmark counter -- is simply not in the map and left
+    independent, so the two signature-pinned benchmarks are untouched. NO die and NO event: pure setup
+    seeding, exactly like the 49.14 fuel tank and the 50.0 ammo load."""
+    tree = _org_tree()
+    edits: dict[str, tuple[str, str]] = {}
+    for counter, spec in tree.items():
+        uid = counter_to_id.get(counter)
+        if uid is None:
+            continue                                   # counter not in this scenario's OOB
+        parent = spec.get("parent", "")
+        edits[uid] = (spec.get("org_type", ""), counter_to_id.get(parent, "") if parent else "")
+    return [replace(u, org_type=edits[u.id][0], assigned_to=edits[u.id][1])
+            if u.id in edits else u for u in units]
 
 
 def _seed_first_line(units: list[Unit], first_line: dict) -> list[Unit]:
