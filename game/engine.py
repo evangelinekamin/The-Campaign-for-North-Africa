@@ -3231,6 +3231,13 @@ def _fl_stores_capacity(u) -> int:
     return supply.first_line_capacity(u, supply.STORES)      # 54.2: the unit's own lorry stores hold
 
 
+def _fl_ammo_capacity(u) -> int:
+    # 50.0 intrinsic 'fire once' load PLUS the 50.17/53.11 first-line-truck carry (54.2). Ammo,
+    # unlike stores (51.0, no organic pool), has BOTH: the organic basic load and the lorry buffer
+    # on top of it -- 50.17 "It is available for use when in first line trucks or supply dumps."
+    return supply.ammo_capacity(u) + supply.first_line_capacity(u, supply.AMMO)
+
+
 def _supply_distribution(r: _Run, side: Side) -> None:
     """The Supply Distribution Segment (48 V.C.6): before it moves, each of the side's on-map units
     tops its own supply pools back up FROM A CO-LOCATED DUMP, at 0 CP (the 53.24 Organization-Phase
@@ -3258,18 +3265,22 @@ def _supply_distribution(r: _Run, side: Side) -> None:
     German first-line is the deferred [4.43b] Reinforcement-Schedule attachment) holds 0 stores and
     must draw in-hex at expenditure, and culminates when it outruns the dump network.
 
-    FUEL and AMMO refill to their INTRINSIC capacity only -- the 49.14 tank (a full move) and the 50.0
-    load (one firing). Truck-borne headroom BEYOND the intrinsic pool for fuel/ammo (buffering several
-    moves/firings on the lorries) is deferred, so the fuel/ammo picture is the co-located top-up as
-    before. WATER stays on the abstract half-CPA trace (S8's faithful proxy) and is NOT pooled here.
-    Ordered FUEL-AMMO-STORES per unit for a deterministic log; a unit whose pools are already full
-    yields no deficit and emits nothing.
+    FUEL refills to its INTRINSIC capacity only -- the 49.14 tank (a full move). Truck-borne headroom
+    BEYOND the intrinsic pool for fuel (buffering several moves on the lorries) is deferred, so the
+    fuel picture is the co-located top-up as before. AMMO refills to the intrinsic 50.0 load PLUS the
+    50.17/53.11 first-line-truck buffer (_fl_ammo_capacity, 54.2) -- unlike fuel, 50.17 explicitly
+    carries ammo forward on a unit's own lorries ("available for use when in first line trucks"), and
+    without it a unit that topped up on a dump this Segment still runs dry after one close assault
+    (50.0's basic load affords exactly one firing) and 15.15-surrenders whole on the next contact even
+    though it is otherwise fully healthy. WATER stays on the abstract half-CPA trace (S8's faithful
+    proxy) and is NOT pooled here. Ordered FUEL-AMMO-STORES per unit for a deterministic log; a unit
+    whose pools are already full yields no deficit and emits nothing.
 
     [36.17] "LAND UNITS MAY NOT USE AIRFIELD SUPPLY DUMPS" is honoured because colocated_dumps carries
     the air-dump exclusion -- a panzer battalion on an air landing strip still cannot refill its tank
     off the squadron's larder (measured: 314 Fuel + 108 Ammunition Points once walked out of the Axis
     air dumps into land units before the exclusion was made structural)."""
-    caps = ((supply.FUEL, supply.fuel_capacity), (supply.AMMO, supply.ammo_capacity),
+    caps = ((supply.FUEL, supply.fuel_capacity), (supply.AMMO, _fl_ammo_capacity),
             (supply.STORES, _fl_stores_capacity))
     for u in r.state.living(side):
         sources = supply.colocated_dumps(r.state, u)        # 48 V.C.6 / 49.15: strictly the unit's hex

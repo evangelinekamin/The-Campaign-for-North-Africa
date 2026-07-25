@@ -10,6 +10,54 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-25 -- CAUSE: rule [50.17]/[53.11]/[54.2] THE CLOSE-ASSAULT-AMMO LAST MILE
+(armour-elimination diagnosis, scratchpad/port/armour-elimination-diagnosis.md +
+scratchpad/port/ammo-last-mile-spec.md). Part 1 of a two-part supply fix moves these logs; Part 2
+does not, and that is CHECKED below rather than assumed.
+
+  PART 1 (engine._fl_ammo_capacity, engine._supply_distribution's `caps` tuple). Rule 50.0 gives
+  every combat unit an intrinsic 'fire once' basic ammo load, and 50.17/53.11 separately lets a
+  unit's OWN first-line trucks carry MORE ammo on top of that ("available for use when in first
+  line trucks"; 54.2's Light 2 / Medium 4 / Heavy 8 Ammo Points per Truck Point) -- a buffer this
+  port had built (S0/S2, tests/test_first_line.py) but never wired into the 48 V.C.6 Supply
+  Distribution refill, which topped AMMO to the bare intrinsic capacity only (mirroring FUEL, which
+  correctly has no such buffer -- 49.14's tank IS the whole of a vehicle's organic fuel carry). A
+  str-8 tank's intrinsic load affords exactly one close assault (50.14: rate 2 x strength, cost 16,
+  against a 24-point load) and is then dry -- so on the SECOND assault [15.15]/[15.88] auto-
+  surrenders the whole unit even at full strength and healthy cohesion, which the diagnosis measured
+  as ~53% of every tank surrender in the campaign. The fix un-defers the buffer: AMMO now refills to
+  `ammo_capacity(u) + first_line_capacity(u, AMMO)`, exactly mirroring how STORES already refills to
+  its (organic-pool-less) first-line ceiling. Both Desert Fox benchmarks seed GT1 first-line trucks
+  onto their Italian/Commonwealth units ([61.43]/[61.31], test_benchmark_first_line_totals_match_
+  61_43_61_31 -- 315 + 133 = 448 Truck Points), so raising the AMMO refill ceiling changes what a
+  unit standing on a dump draws the moment its intrinsic pool is not already full, and both logs
+  move. This is the sanctioned "faithful close-assault-ammo change" category, not a leak.
+
+  PART 2 (game.oob._seed_reinforcement_first_line, data/reinforcement_first_line.json) attaches
+  first-line trucks to REINFORCEMENTS as they arrive, transcribed from the [4.43a]/[4.43b] "Attached
+  Trucks" schedule column -- necessary because every one of the 39 Commonwealth armour counters in
+  the full CAMPAIGN is a rule-20 reinforcement and so, before Part 2, carried a truck buffer of
+  exactly zero regardless of Part 1's wire. It is wired ONLY into game.scenario.campaign
+  (`reinforcement_first_line_file="reinforcement_first_line.json"`); oob.build's new parameter
+  defaults to None and neither rommels_arrival nor siege_of_tobruk passes it -- Desert Fox's own
+  rule-61 reinforcement schedule is a separate, untranscribed chart, and reusing the campaign's
+  [4.43a]/[4.43b] data for it would be an invented cross-scenario leak, not a faithful reuse.
+
+ATTRIBUTION, CHECKED: neutering Part 1 alone (patching engine._fl_ammo_capacity back to plain
+supply.ammo_capacity, the pre-fix intrinsic-only ceiling) reproduces the PRE-fix signatures EXACTLY
+(dda6faa445b4 / 5f02a0c4fb9e) on both benchmarks. Separately, neutering Part 2 alone (patching
+oob._seed_reinforcement_first_line to the identity passthrough, Part 1 left active) reproduces the
+POST-fix signatures EXACTLY (b03f538ccb8a / fb0b8678dc74) -- proving Part 2 is not merely small on
+these two scenarios but STRUCTURALLY INERT on them, exactly as its own spec predicted ("siege/rommel
+are short -- likely not").
+
+    rommels_arrival   dda6faa445b4 -> b03f538ccb8a
+    siege_of_tobruk   5f02a0c4fb9e -> fb0b8678dc74
+
+Each reproduced twice, byte-for-byte. The CAMPAIGN is not signature-pinned (see CAMPAIGN_SEED below);
+its measured effect is reported in the commit that lands this baseline.
+
+--------------------------------------------------------------------------------------------------
 NOT RE-BASELINED BY RULE [20.62]/[20.64] THE AXIS CONVOY COUPLING (Block B of Gate 7A), 2026-07-25,
 AND THAT WAS CHECKED RATHER THAN ASSUMED -- both signatures recomputed on the tree and are UNCHANGED
 (the two test_rommel_and_siege_stay_byte_identical guards pass unmodified).
@@ -815,8 +863,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "dda6faa445b4"
-SIEGE_OF_TOBRUK = "5f02a0c4fb9e"
+ROMMELS_ARRIVAL = "b03f538ccb8a"
+SIEGE_OF_TOBRUK = "fb0b8678dc74"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

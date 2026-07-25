@@ -16,8 +16,11 @@ game's supply range (Section 32, which rule 3 of this port says DOES NOT APPLY) 
 crosses the last hex is CARRIED, not reached: a unit's first-line trucks BUFFER stores from a
 co-located dump up to their 54.2 ceiling (supply.first_line_capacity) and ride that ration forward as
 the unit advances (53.22: first-line trucks move with the parent). WATER is excluded (it stays on the
-abstract half-CPA trace, the S8 proxy). German units / reinforcements / garrisons own no first-line
-trucks ([4.43b] deferred) and stay strictly in-hex.
+abstract half-CPA trace, the S8 proxy). Garrisons own no first-line trucks (static, "start with no
+organic transport") and stay strictly in-hex; at GT1, so did every reinforcement and every German
+unit, but the [4.43a]/[4.43b] Attached-Trucks schedule that un-defers reinforcement first-line trucks
+(ammo-last-mile Part 2, tests/test_first_line.py) is out of this file's scope -- every fixture here is
+a hand-built GT1-shaped unit, so nothing below exercises it.
 """
 from __future__ import annotations
 
@@ -77,8 +80,11 @@ def test_first_line_capacity_reads_the_54_2_chart():
 def test_a_colocated_dump_buffers_stores_a_bare_unit_gets_none():
     # THE HEADLINE, faithful shape: a unit STANDING ON a stocked dump buffers stores onto its own
     # first-line trucks (53.11), up to the 54.2 ceiling; a unit with NO first-line trucks buffers no
-    # stores at all (51.0: stores have no intrinsic pool). Both top their 49.14 tank and 50.0 ammo
-    # load from the co-located dump.
+    # stores at all (51.0: stores have no intrinsic pool). Both top their 49.14 tank from the
+    # co-located dump; AMMO, RESTATED for the ammo-last-mile fix (50.17/53.11, unlike stores, gives
+    # a unit BOTH an intrinsic 50.0 basic load AND a lorry buffer on top of it), tops to that same
+    # ceiling too -- so the trucked unit's ammo now exceeds its bare intrinsic capacity exactly as
+    # its stores buffer does.
     trucked = _unit("AX-T", (5, 0), fl_medium=5)
     bare = _unit("AX-B", (5, 0))                       # identical but no first-line trucks
     for u, buffers in ((trucked, True), (bare, False)):
@@ -86,10 +92,13 @@ def test_a_colocated_dump_buffers_stores_a_bare_unit_gets_none():
         _supply_distribution(r, Side.AXIS)
         got = r.state.unit(u.id)
         assert got.fuel == supply.fuel_capacity(u) > 0
-        assert got.ammo == supply.ammo_capacity(u) > 0
+        ammo_ceiling = supply.ammo_capacity(u) + supply.first_line_capacity(u, supply.AMMO)
+        assert got.ammo == ammo_ceiling > 0
         if buffers:
+            assert got.ammo == supply.ammo_capacity(u) + 20            # 5 Medium TP x 4 Ammo/TP (54.2)
             assert got.stores == supply.first_line_capacity(u, supply.STORES) == 75
         else:
+            assert got.ammo == supply.ammo_capacity(u)                 # no lorries -> intrinsic only
             assert got.stores == 0                     # no lorries -> no stores buffer (51.0)
 
 

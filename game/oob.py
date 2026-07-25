@@ -232,7 +232,7 @@ def classify(counter: str, group: str) -> "str | None":
 def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
           reinforcements_file: str | None = "reinforcements_desert_fox.json",
           extra_file: str | None = None, dump_pools: dict | None = None,
-          first_line: dict | None = None,
+          first_line: dict | None = None, reinforcement_first_line_file: str | None = None,
           ) -> tuple[list[Unit], list[SupplyUnit]]:
     """Build engine units/supplies from an OOB file. If `sections` is given (e.g.
     "ABC"), only pieces whose hex is in those map sections are kept (rear units on
@@ -244,8 +244,12 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
     (Side -> commodity->points) is the 64.3 start-line field-dump pool; it defaults to
     the SECTION-61 Desert Fox pools, and game.scenario.campaign passes SECTION 60.
     `first_line` (Side -> class->Truck Points) is the 53.11 first-line-truck allotment seeded
-    onto the units (Option B); it likewise defaults to Section 61 and the campaign passes
-    Section 60 (see _seed_first_line)."""
+    onto the GT1 muster (Option B); it likewise defaults to Section 61 and the campaign passes
+    Section 60 (see _seed_first_line). `reinforcement_first_line_file` (rule 20 / [4.43a]/
+    [4.43b]) is the companion schedule of first-line trucks ATTACHED TO REINFORCEMENTS as they
+    arrive -- only game.scenario.campaign passes one (the Desert Fox scenarios' own rule-61
+    reinforcement schedule is a separate, untranscribed chart); see
+    _seed_reinforcement_first_line."""
     stats = _load("unit_stats.json")
     units: list[Unit] = []
     dumps_meta: list[tuple[str, Side, tuple]] = []   # (uid, side, hex) placed after the loop
@@ -283,7 +287,9 @@ def build(oob_file: str = "oob_desert_fox.json", sections: str | None = None,
             units.append(u)
             counter_to_id[rec["counter"]] = u.id
     units = _seed_organization(units, counter_to_id)                      # 4.45 / 19.11 parent tree
-    units = _seed_first_line(units, first_line or DESERT_FOX_FIRST_LINE)   # 53.11 / 64.3
+    units = _seed_first_line(units, first_line or DESERT_FOX_FIRST_LINE)   # 53.11 / 64.3 (GT1 muster)
+    if reinforcement_first_line_file:
+        units = _seed_reinforcement_first_line(units, _load(reinforcement_first_line_file))
     units = _seed_fuel_tanks(units)                                        # 49.14 fuel tanks
     units = _seed_ammo_loads(units)                                        # 50.0 ammo basic loads
     return units, supplies
@@ -749,6 +755,45 @@ def _seed_first_line(units: list[Unit], first_line: dict) -> list[Unit]:
             raise ValueError(
                 f"first-line seed for {side.name}: seeded {got} Truck Points, expected {want}")
     return out
+
+
+def _seed_reinforcement_first_line(units: list[Unit], pool: list[dict]) -> list[Unit]:
+    """[4.43a]/[4.43b] "Attached Trucks": the reinforcement-schedule half of 53.11 that
+    _seed_first_line's own docstring calls out as deferred -- it seeds only the GT1 muster
+    (`arrival_turn == 0`), so every rule-20 reinforcement (all 39 CW armour counters among
+    them) carries first_line_capacity == 0 and the intrinsic 50.0 basic load is all it will
+    ever have (ammo-last-mile spec, scratchpad/port/ammo-last-mile-spec.md Q2).
+
+    `pool` is data/reinforcement_first_line.json (tools/vassal/build_reinforcement_first_line.py):
+    one record per (nationality, arrival_turn) bucket, scan-transcribed off the schedule's own
+    "Attached Trucks" column. Both charts' own legend settles the division as rule TEXT, not a
+    judgement call -- "may be freely divided amongst the units" (CW) / "must arrive attached to
+    any unit of their nationality arriving in that Operations Stage" (Axis) -- so this is the
+    identical even split (_share) _seed_first_line already applies to the GT1 muster, scoped to
+    the units that share that bucket's (side, nationality, arrival_turn).
+
+    A bucket with no combat-eligible recipient that Game-Turn (an HQ-only arrival, is_combat=
+    False exactly as the GT1 filter already excludes; or -- generally, though not the case for
+    either of the two buckets this data actually strands -- a formation the reinforcement OOB
+    gives no counter to at all, per build_campaign_reinforcements.py's "standalone flak/artillery
+    batteries, oasis companies and truck-only lines are deferred") is SKIPPED rather than forced
+    onto a unit the book never attached it to -- see tests/test_first_line.py for the exact,
+    measured accounting of what lands and what does not. No die, no event: pure setup seeding,
+    exactly like _seed_first_line itself."""
+    seeded = {u.id: u for u in units}
+    for rec in pool:
+        side = Side.AXIS if rec["nationality"] in ("GE", "IT") else Side.ALLIED
+        elig = [u for u in units if u.side == side and u.nationality == rec["nationality"]
+                and u.arrival_turn == rec["arrival_turn"] and u.is_combat and not u.is_garrison_home]
+        n = len(elig)
+        if not n:
+            continue                     # no combat-eligible arrival this bucket (see docstring)
+        for i, u in enumerate(elig):
+            seeded[u.id] = replace(seeded[u.id],
+                                   fl_light=_share(rec["light"], n, i),
+                                   fl_medium=_share(rec["medium"], n, i),
+                                   fl_heavy=_share(rec["heavy"], n, i))
+    return [seeded[u.id] for u in units]
 
 
 def _seed_fuel_tanks(units: list[Unit]) -> list[Unit]:

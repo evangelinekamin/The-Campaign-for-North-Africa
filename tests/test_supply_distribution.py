@@ -1,7 +1,8 @@
-"""Phase 4, slices S4/S6: the 48 V.C.6 Supply Distribution Segment (engine._supply_distribution) -- the
-0-CP Organization-Phase beat that tops a unit's own pools back up from a co-located dump (UNIT_REFILLED,
-a conserving dump->unit transfer). FUEL (49.14 tank) AND AMMO (50.0 'fire once' basic load) now; each
-refills to its own intrinsic capacity.
+"""Phase 4, slices S4/S6/[ammo last-mile]: the 48 V.C.6 Supply Distribution Segment
+(engine._supply_distribution) -- the 0-CP Organization-Phase beat that tops a unit's own pools back up
+from a co-located dump (UNIT_REFILLED, a conserving dump->unit transfer). FUEL refills to its intrinsic
+49.14 tank capacity; AMMO refills to the intrinsic 50.0 'fire once' basic load PLUS the 50.17/53.11
+first-line-truck buffer (54.2) on top of it.
 
 coastal_corridor puts DAK-5le (Fuel Capacity 50, ammo_capacity 10) on the same hex as AX-Dump1 (fuel
 60, ammo 40); its inline units start with empty pools (the pool-fill is oob.build only), which is
@@ -65,6 +66,23 @@ def test_full_pools_draw_nothing():
     assert not _dak_refills(r, "FUEL") and not _dak_refills(r, "AMMO")
     assert r.state.supply("AX-Dump1").fuel == 60            # DAK's dump untouched (both commodities)
     assert r.state.supply("AX-Dump1").ammo == 40
+
+
+def test_supply_distribution_tops_ammo_to_the_first_line_truck_ceiling():
+    # [50.17]/[53.11]/[54.2]: AMMO, unlike FUEL, now refills PAST the 50.0 intrinsic 'fire once'
+    # load to the first-line-truck ceiling -- 1 Heavy Truck Point buffers 8 more Ammo Points (54.2)
+    # on top of DAK-5le's own 10-point basic load. Before this fix the beat topped AMMO to the bare
+    # intrinsic capacity only (mirroring FUEL); this is the direct RED->GREEN for that ceiling.
+    s = coastal_corridor()
+    dak = replace(s.unit("DAK-5le"), fl_heavy=1)
+    s = s.with_unit(dak)
+    assert supply.ammo_capacity(dak) == 10
+    assert supply.first_line_capacity(dak, "AMMO") == 8
+    r = _Run(s)
+    _supply_distribution(r, Side.AXIS)
+    assert r.state.unit("DAK-5le").ammo == 18            # 10 intrinsic + 8 truck buffer, NOT 10
+    assert r.state.supply("AX-Dump1").ammo == 40 - 18     # the transfer is conserving
+    invariants.check(r.state)
 
 
 def test_refill_capped_by_dump_contents():

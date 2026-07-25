@@ -447,6 +447,42 @@ def test_starved_garrison_surrenders_in_close_assault_15_15():
     assert r.state.unit("G").strength == 0                           # garrison captured en masse
 
 
+def test_first_line_truck_ammo_buffer_survives_a_second_assault_50_17():
+    # The armour-elimination diagnosis (scratchpad/port/armour-elimination-diagnosis.md): a str-8
+    # tank's INTRINSIC 50.0 basic load (24 Ammo: max(anti_armor 3, assault 2) x 8) affords exactly
+    # ONE close assault (cost 2 x 8 = 16), leaving 8 -- not enough for a second. A cut-off tank that
+    # tops up on a dump and then advances off it (53.22: first-line trucks move WITH the parent)
+    # should carry its 50.17/53.11/54.2 truck-borne ammo forward and survive the next contact
+    # instead of 15.15-surrendering whole at full strength and healthy cohesion.
+    from game import supply
+    from game.engine import _Run, _charge_ammo, _defenders_capitulate
+    from game.state import Unit
+    from game.terrain import Mobility
+
+    def tank(**kw):
+        return Unit("T", Side.ALLIED, (0, 0), (StepRecord("t", 8),), mobility=Mobility.VEHICLE,
+                    cpa=20, stacking_points=2, oca=6, dca=6, anti_armor=3, armor_protection=4,
+                    morale=2, cohesion=0, **kw)
+
+    buffered = tank(fl_heavy=1, ammo=32)          # 24 intrinsic + 8 (1 Heavy TP, 54.2) -- topped by
+    assert supply.ammo_capacity(buffered) == 24   # _supply_distribution's new _fl_ammo_capacity ceiling
+    assert supply.first_line_capacity(buffered, supply.AMMO) == 8
+    cut_off = _Run(_lone_hex_state([buffered]))                       # off the dump network (53.22)
+    assert _charge_ammo(cut_off, Side.ALLIED, "ALLIED/Front",
+                        cut_off.state.unit("T"), phasing=False) is True     # 1st assault: own pool
+    assert cut_off.state.unit("T").ammo == 16                              # 32 - 16
+    assert _defenders_capitulate(cut_off, [cut_off.state.unit("T")]) is False   # armed -> fights on
+
+    # Same tank, same starting (intrinsic) pool, but NO first-line trucks: proves the survival is
+    # the truck buffer's doing, not a change to the 15.15 threshold or the intrinsic load itself.
+    bare = tank(ammo=24)                          # no fl_*, freshly topped to the bare intrinsic load
+    poor = _Run(_lone_hex_state([bare]))
+    assert _charge_ammo(poor, Side.ALLIED, "ALLIED/Front",
+                        poor.state.unit("T"), phasing=False) is True
+    assert poor.state.unit("T").ammo == 8                                  # 24 - 16
+    assert _defenders_capitulate(poor, [poor.state.unit("T")]) is True     # 15.15: dry -> surrender
+
+
 def test_barrage_fires_at_adjacent_enemy():
     # artillery barrages an adjacent enemy infantry hex (rule 12); the barrage is
     # resolved against the target's class and can pin / cost steps.

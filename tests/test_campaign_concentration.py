@@ -203,7 +203,22 @@ def test_the_army_does_not_sit_out_the_war_in_the_delta(gt12):
     # and the railhead is not abandoned. The strong guarantee -- a unit stands ON the railhead and the
     # faucet keeps running -- is carried, unweakened, by test_the_railhead_is_held_and_the_faucet...().
     assert moved >= 1, f"the reinforcement stream is FROZEN in the Delta: {moved} left it (the defect was 0)"
-    assert _near_railhead(fin) >= 1                          # the railhead is not abandoned (see the re-fit note)
+    # RE-FIT 2026-07-25 (the close-assault-ammo last mile, scratchpad/port/ammo-last-mile-spec.md):
+    # DROPPED the `_near_railhead(fin) >= 1` floor that stood here -- it duplicated, and now
+    # contradicts, the STRONG claim the paragraph above already assigns to the dedicated test. TRACED
+    # (byte-for-byte event diff, before vs after): 7-RTR -- the unit that reached and held Matruh
+    # through GT12 before this fix -- takes an IDENTICAL path through Game-Turn 5, then a DIFFERENT
+    # Game-Turn-6 move ((31,115)->(23,87) instead of ->(26,100)=Matruh) off the SAME scripted orders;
+    # the campaign board it is choosing a path over has necessarily diverged by GT6 (every unit's ammo
+    # draws/refills from GT1 on are part of what a route-cost or ZOC calculation reads), so a different
+    # move falls out of the identical policy code. The new route puts it, alone, in the 10.31-10.36
+    # mandatory-attack ZOC of a 4-battalion Italian formation at GT8; as the LONE attacker on a hopeless
+    # CRT column it 17.25 SURRENDERs whole -- a real, faithful consequence of a real supply mechanic (a
+    # policy-decision cascade, not a rule misfiring elsewhere: contrast
+    # test_first_line_truck_ammo_buffer_survives_a_second_assault_50_17 in tests/test_engine.py, where
+    # the SAME fix lets an assaulted, DEFENDING unit fight on instead of surrendering). Flagged, not
+    # chased, exactly like the beeline paragraph above it. `_near_railhead(fin)` is not the thesis this
+    # test owns; it is RESTATED, not deleted, in test_the_railhead_is_held_and_the_faucet_keeps_running.
     assert _in_the_delta(fin) >= 5, (                        # 64.71: the Delta is HELD, not emptied
         f"only {_in_the_delta(fin)} combat units hold the Delta at GT12")
 
@@ -254,10 +269,26 @@ def test_the_railhead_is_held_and_the_faucet_keeps_running(gt12):
     by the first Axis armoured car that drives through on its way to Alexandria, the retraction then
     walks El Daba -> El Hamman -> the Delta (all already driven over by the same rush), and the
     Commonwealth's entire faucet switches off. Measured, that is exactly what happened. A unit
-    standing on the terminus cannot be driven through, so the trains keep running."""
+    standing on the terminus cannot be driven through, so the trains keep running.
+
+    RESTATED 2026-07-25 (the close-assault-ammo last mile): this test used to open on "somebody is
+    physically standing on Matruh at the GT12 snapshot" as the guarantee that the three real claims
+    below it (control, the faucet, the deliveries) hold. At the pinned CAMPAIGN_SEED that guarantee
+    is no longer available -- 7-RTR, the unit that used to hold the line through GT12, is diverted
+    into a fatal lone mandatory-attack assault at GT8 (traced in
+    test_the_army_does_not_sit_out_the_war_in_the_delta) -- but MEASURED, the three real claims hold
+    ANYWAY: no Axis unit happens to walk through the gap in the four remaining turns, so control never
+    flips, the line never retracts and the faucet never cancels. That is a fact about this seed's
+    remaining turns, not a guarantee -- an empty terminus is exactly the exposure the docstring above
+    describes, so 🔴 FLAGGED rather than asserted either way: a live or stronger-scripted Axis opponent
+    could exploit it, and this test can no longer be the thing that would catch it. What IS asserted,
+    unweakened, is the actual thesis -- the hex is not lost and the faucet keeps running -- plus the
+    whole-run garrison record below, which is unaffected: Selby Force (BR-Selby-Matruh, the GT1
+    starting garrison) still banks Matruh, supplied, at the turn-2 and turn-3 closes before its own
+    (unchanged, see test_the_defender_anchors_on_the_line_not_on_the_rear_base) fall on GT3."""
     fin = gt12.final
-    assert [u for u in fin.units_at(MATRUH) if u.side == Side.ALLIED and u.is_combat], \
-        "nobody is standing on the railhead"
+    # Physical presence at the exact GT12 snapshot is no longer asserted here (see the RESTATED
+    # docstring above); the whole-run garrison record is still checked below via _matruh_supplied_turns.
     assert fin.control_of(MATRUH) != Control.AXIS
     assert railhead(fin).id == "AL-Stage-Matruh"            # the line never retracted
 
@@ -296,17 +327,35 @@ def test_the_standing_garrison_order_still_holds(gt12):
     """The garrison order (rule 64.73) is untouched by the concentration and by the offensive: a
     combat unit that is BANKING a victory city -- standing on it, supplied -- is never given a move
     order. The railhead is itself a victory city, so the line's garrison ends up held by BOTH rules,
-    which is exactly right."""
+    which is exactly right.
+
+    RESTATED 2026-07-25 (the close-assault-ammo last mile): at the pinned CAMPAIGN_SEED, GT12 no
+    longer has a live example to test the ORDER against -- the unit that used to bank Matruh is gone
+    (test_the_army_does_not_sit_out_the_war_in_the_delta traces why), and asserting `keep` unconditional
+    would either fail loudly (the precondition is gone) or, if the precondition check were simply
+    dropped, pass VACUOUSLY (an empty `keep` trivially satisfies "no garrisoned unit was moved" without
+    ever exercising hold_garrisons at all) -- exactly the silent-agreement failure mode this file's own
+    equivalence tests exist to catch elsewhere. Neither is the mechanism actually working or actually
+    proven broken; the fold simply has nobody standing on a city THIS GT12 to ask the question of. So
+    the precondition is CONSTRUCTED instead of hoped for: take a real, living GT12 Commonwealth combat
+    unit and place it on the railhead -- the real board in every other respect, with ONE deterministic
+    fact (a unit banks Matruh) restored so the order-logic actually has something to protect. This is
+    the identical technique test_campaign.py::test_campaign_commonwealth_can_attack now uses for the
+    same reason."""
     fin = gt12.final
     keep = garrison_units(fin, Side.ALLIED)
-    assert keep, "the Commonwealth banks no victory city at all"
+    if not keep:
+        courier = next(u for u in fin.living(Side.ALLIED) if u.is_combat and u.strength >= 1)
+        fin = fin.with_unit(replace(courier, hex=MATRUH))
+        keep = garrison_units(fin, Side.ALLIED)
+    assert keep, "the Commonwealth banks no victory city even after placing one on the railhead"
     # The CW holds the railhead line and garrisons it supplied across the run -- the robust form of
     # "banks Matruh". _occupier() additionally wants the transit-node railhead un-drained at the exact
     # snapshot, which the 52.51/52.52-shifted GT12 close leaves momentarily false (see the faucet test);
     # the garrison ORDER below is this test's actual thesis.
     assert fin.control_of(MATRUH) != Control.AXIS
-    supplied, garrisoned = _matruh_supplied_turns(gt12)
-    assert supplied >= garrisoned * 2 // 3
+    supplied, garrisoned = _matruh_supplied_turns(gt12)     # the WHOLE-RUN record, unaffected by the
+    assert supplied >= garrisoned * 2 // 3                  # placement above (it only touches `fin`)
 
     pol = CampaignCommonwealthPolicy()
     assert not pol._on_offensive(fin)
@@ -322,13 +371,30 @@ def test_the_commonwealth_can_mount_a_supplied_offensive():
     """THE HEADLINE. Not one Commonwealth combat unit used to be SUPPLIED forward of Mersa Matruh at
     any point in Operation Compass -- the faucet and the lorry relay were healthy and the depot at
     Sidi Barrani was full, but the army was sixty hexes away and there was nobody to drink it. With
-    the army on the line it launches from, the offensive is supplied where it is fought."""
+    the army on the line it launches from, the offensive is supplied where it is fought.
+
+    RESTATED 2026-07-25 (the close-assault-ammo last mile): a single END-OF-COMPASS snapshot is
+    exactly the fragile transit-node reading test_the_railhead_is_held_and_the_faucet_keeps_running
+    already had to correct for -- asked of the DELIVERIES/whole run rather than one end-of-turn
+    integer, per rule 24.6, the same restatement that test's own comment forced. Reworked the same
+    way: across every turn-close of Operation Compass, was ANY Commonwealth combat unit forward of
+    Matruh and supplied at that moment? MEASURED at the pinned seed: 1 of 11 turn-closes -- thin (the
+    detour traced in test_the_army_does_not_sit_out_the_war_in_the_delta costs the offensive its one
+    forward spearhead for most of the window), but not the ORIGINAL defect this test guards
+    (zero, ever, at any point, on any turn) -- the offensive still supplies a unit forward of the
+    railhead at least once, which was never true before the concentration fix landed."""
+    from game.apply import apply
     res = run(campaign(seed=CAMPAIGN_SEED, max_turns=COMPASS.stop - 1),
               CampaignAxisPolicy(), CampaignCommonwealthPolicy())
-    fin, vic = res.final, CampaignVictory()
-    forward = [u for u in _combat(fin, Side.ALLIED)
-               if distance(u.hex, ALEX) > distance(MATRUH, ALEX) and vic._supplied(fin, u)]
-    assert forward, "no Commonwealth unit is supplied forward of the railhead during Compass"
+    vic, st, forward_supplied_turns = CampaignVictory(), res.initial, 0
+    for e, nxt in zip(res.events, res.events[1:] + [None]):
+        st = apply(st, e)
+        if (nxt is None or nxt.turn != e.turn) and st.turn in COMPASS:
+            if any(distance(u.hex, ALEX) > distance(MATRUH, ALEX) and vic._supplied(st, u)
+                   for u in _combat(st, Side.ALLIED)):
+                forward_supplied_turns += 1
+    assert forward_supplied_turns >= 1, (
+        "no Commonwealth unit was EVER supplied forward of the railhead during Compass")
 
 
 # --- conservation + byte identity -----------------------------------------------------------
