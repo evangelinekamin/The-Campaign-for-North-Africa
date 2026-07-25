@@ -44,6 +44,21 @@ Two independent citations (the operative chart + a second worked example) say 30
 example says 35 -- the same shape as ruling 1 (a loose prose example against a printed case value).
 **ASSUMED: 30 tons/point, under a named errata key. Trivially reversible -- one constant in data/.**
 
+## 7. [64.74] EXCLUSION = **score only SPENDABLE classes**  [RULED -- Eve, 2026-07-24]
+Surfaced by Gate 7A/7B as D-1 (it was not in this docket when Phase 7's tail was built). The as-committed
+64.74 used a flagged proxy that ALSO dropped Axis infantry (deviating from the scan, which excludes
+infantry for the Commonwealth only), and still scored unused EQUIPMENT on both sides -- a fixed
+Axis+893 / CW+958 constant that compressed every campaign grade toward 1:1 (an artifact of the unbuilt
+equipment/Axis spend, not the flow).
+**RULING: 64.74 scores UNUSED Replacement Points only for classes the engine can actually SPEND** --
+"unused" presupposes "usable"; a class with no rebuild beat is 100% unused by construction, which is an
+unmodelled spend, not the husbandry 64.74 rewards. Today the only live spend is Commonwealth infantry
+(itself book-excluded), so **64.74 correctly scores 0/0** until a non-infantry spend lands; the grade
+returns to geography-driven. IMPLEMENTED (data `spendable_classes`, `replacement_vp_spendable_classes`):
+the drop-Axis-infantry proxy was REVERTED so `excluded_classes` is again exactly the printed rule, and
+the engine-state truth lives in the spendable gate. Grows one data edit at a time as each spend lands
+(CW equipment -> add ALLIED tank/gun; Axis spend -> add AXIS infantry/tank/gun).
+
 ## Already resolved / moot (recorded so they are not re-litigated)
 - [60.32] Italy/Sicily basing: RULED (Eve) -- a placement rule with two exclusions; 394 planes take the
   field in Africa, basing in Sicily is a wartime redeployment DECISION. Done.
