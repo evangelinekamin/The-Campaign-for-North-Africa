@@ -61,7 +61,11 @@ def test_gt1_campaign_relay_hauls_where_the_base_shuttle_strands():
         "the campaign relay hauled nothing on Game-Turn 1"
 
     # (2) a truck out of cargo fuel on the (now stocked) first staging dump W1.
-    w1 = (5, 36)
+    # RESTATED 2026-07-26 (Phase 8.1b, the A/B/D/E section-seam correction): W1 is a raw-axial
+    # probed waypoint (game.scenario._campaign_staging_dumps' own docstring), re-derived alongside
+    # it -- must stay byte-identical to AX-Stage-W1's own hex there, or this truck is no longer
+    # co-located with the dump it is meant to test stranding on.
+    w1 = (4, 36)
     supplies = tuple(replace(s, ammo=40, fuel=400, stores=40) if s.id == "AX-Stage-W1" else s
                      for s in st.supplies)
     stranded = replace(st, supplies=supplies,

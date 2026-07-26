@@ -4,8 +4,8 @@
       "counter": "HQ Polish Bde",
       "group": "CW Polish Brigade",
       "hex": [
-        43,
-        141
+        42,
+        140
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -18,8 +18,8 @@
       "counter": "Polish Bde I",
       "group": "CW Polish Brigade",
       "hex": [
-        43,
-        141
+        42,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -32,8 +32,8 @@
       "counter": "Polish Bde II",
       "group": "CW Polish Brigade",
       "hex": [
-        43,
-        141
+        42,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -46,8 +46,8 @@
       "counter": "Polish Bde III",
       "group": "CW Polish Brigade",
       "hex": [
-        43,
-        141
+        42,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -60,8 +60,8 @@
       "counter": "2 RTR",
       "group": "CW 2nd Armoured Division",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -74,8 +74,8 @@
       "counter": "6 NZ Fld Arty",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        44,
-        140
+        43,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -88,8 +88,8 @@
       "counter": "7 RTR",
       "group": "CW 2nd Armoured Division",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -102,8 +102,8 @@
       "counter": "1 Fld Arty Regt [4 In]",
       "group": "CW 4th Indian Division",
       "hex": [
-        44,
-        140
+        43,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -116,8 +116,8 @@
       "counter": "HQ 7 In Bde",
       "group": "CW 4th Indian Division",
       "hex": [
-        44,
-        140
+        43,
+        139
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -129,8 +129,8 @@
       "counter": "7 In Bde I",
       "group": "CW 4th Indian Division",
       "hex": [
-        44,
-        140
+        43,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -142,8 +142,8 @@
       "counter": "7 In Bde II",
       "group": "CW 4th Indian Division",
       "hex": [
-        44,
-        140
+        43,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -155,8 +155,8 @@
       "counter": "7 In Bde III",
       "group": "CW 4th Indian Division",
       "hex": [
-        44,
-        140
+        43,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -168,8 +168,8 @@
       "counter": "HQ 6 NZ Bde",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -181,8 +181,8 @@
       "counter": "6 NZ Bde I",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -194,8 +194,8 @@
       "counter": "6 NZ Bde II",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -207,8 +207,8 @@
       "counter": "6 NZ Bde III",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -220,8 +220,8 @@
       "counter": "2/2 Aus Fld Arty",
       "group": "CW 6th Australian Division",
       "hex": [
-        46,
-        141
+        45,
+        140
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -234,8 +234,8 @@
       "counter": "11 Czech Bn",
       "group": "CW Czechoslovak Battalion",
       "hex": [
-        43,
-        141
+        42,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -247,8 +247,8 @@
       "counter": "HQ 19 Aus Bde",
       "group": "CW 6th Australian Division",
       "hex": [
-        46,
-        141
+        45,
+        140
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -260,8 +260,8 @@
       "counter": "19 Aus Bde I",
       "group": "CW 6th Australian Division",
       "hex": [
-        46,
-        141
+        45,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -273,8 +273,8 @@
       "counter": "19 Aus Bde II",
       "group": "CW 6th Australian Division",
       "hex": [
-        46,
-        141
+        45,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -286,8 +286,8 @@
       "counter": "19 Aus Bde III",
       "group": "CW 6th Australian Division",
       "hex": [
-        46,
-        141
+        45,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -377,8 +377,8 @@
       "counter": "HQ 20 Aus Bde",
       "group": "CW 9th Australian Division",
       "hex": [
-        47,
-        139
+        46,
+        138
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -390,8 +390,8 @@
       "counter": "20 Aus Bde I",
       "group": "CW 9th Australian Division",
       "hex": [
-        47,
-        139
+        46,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -403,8 +403,8 @@
       "counter": "20 Aus Bde II",
       "group": "CW 9th Australian Division",
       "hex": [
-        47,
-        139
+        46,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -416,8 +416,8 @@
       "counter": "20 Aus Bde III",
       "group": "CW 9th Australian Division",
       "hex": [
-        47,
-        139
+        46,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -429,8 +429,8 @@
       "counter": "HQ 18 Aus Bde",
       "group": "CW 7th Australian Division",
       "hex": [
-        46,
-        141
+        45,
+        140
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -442,8 +442,8 @@
       "counter": "18 Aus Bde I",
       "group": "CW 7th Australian Division",
       "hex": [
-        46,
-        141
+        45,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -455,8 +455,8 @@
       "counter": "18 Aus Bde II",
       "group": "CW 7th Australian Division",
       "hex": [
-        46,
-        141
+        45,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -468,8 +468,8 @@
       "counter": "18 Aus Bde III",
       "group": "CW 7th Australian Division",
       "hex": [
-        46,
-        141
+        45,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -481,8 +481,8 @@
       "counter": "1 RHA",
       "group": "CW 2nd Armoured Division",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -564,8 +564,8 @@
       "counter": "2/3 Aus AT Bn",
       "group": "CW 9th Australian Division",
       "hex": [
-        47,
-        139
+        46,
+        138
       ],
       "side": "ALLIED",
       "role": "antitank",
@@ -578,8 +578,8 @@
       "counter": "HQ 26 Aus Bde",
       "group": "CW 9th Australian Division",
       "hex": [
-        47,
-        139
+        46,
+        138
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -591,8 +591,8 @@
       "counter": "26 Aus Bde I",
       "group": "CW 9th Australian Division",
       "hex": [
-        47,
-        139
+        46,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -604,8 +604,8 @@
       "counter": "26 Aus Bde II",
       "group": "CW 9th Australian Division",
       "hex": [
-        47,
-        139
+        46,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -617,8 +617,8 @@
       "counter": "26 Aus Bde III",
       "group": "CW 9th Australian Division",
       "hex": [
-        47,
-        139
+        46,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -630,8 +630,8 @@
       "counter": "HQ 22 Guards Bde",
       "group": "CW 22nd Guards Brigade",
       "hex": [
-        43,
-        140
+        42,
+        139
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -643,8 +643,8 @@
       "counter": "HQ 9 Aus Div",
       "group": "CW 9th Australian Division",
       "hex": [
-        46,
-        141
+        45,
+        140
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -669,8 +669,8 @@
       "counter": "HQ 24 Aus Bde",
       "group": "CW 9th Australian Division",
       "hex": [
-        47,
-        139
+        46,
+        138
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -682,8 +682,8 @@
       "counter": "24 Aus Bde I",
       "group": "CW 9th Australian Division",
       "hex": [
-        47,
-        139
+        46,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -695,8 +695,8 @@
       "counter": "24 Aus Bde II",
       "group": "CW 9th Australian Division",
       "hex": [
-        47,
-        139
+        46,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -708,8 +708,8 @@
       "counter": "24 Aus Bde III",
       "group": "CW 9th Australian Division",
       "hex": [
-        47,
-        139
+        46,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -721,8 +721,8 @@
       "counter": "HQ 70 Inf Div",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -985,8 +985,8 @@
       "counter": "HQ 3 In Motor Bde",
       "group": "CW 3rd Indian Motor Brigade",
       "hex": [
-        45,
-        142
+        44,
+        141
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -998,8 +998,8 @@
       "counter": "3 In Motor Bde I",
       "group": "CW 3rd Indian Motor Brigade",
       "hex": [
-        45,
-        142
+        44,
+        141
       ],
       "side": "ALLIED",
       "role": "motor_infantry",
@@ -1011,8 +1011,8 @@
       "counter": "3 In Motor Bde II",
       "group": "CW 3rd Indian Motor Brigade",
       "hex": [
-        45,
-        142
+        44,
+        141
       ],
       "side": "ALLIED",
       "role": "motor_infantry",
@@ -1024,8 +1024,8 @@
       "counter": "3 In Motor Bde III",
       "group": "CW 3rd Indian Motor Brigade",
       "hex": [
-        45,
-        142
+        44,
+        141
       ],
       "side": "ALLIED",
       "role": "motor_infantry",
@@ -1222,8 +1222,8 @@
       "counter": "4 In Div core (Rtn)",
       "group": "CW 4th Indian Division",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1261,8 +1261,8 @@
       "counter": "4 RTR",
       "group": "CW 1st Army Tank Brigade",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -1301,8 +1301,8 @@
       "counter": "HQ 11 In Bde (Rtn)",
       "group": "CW 4th Indian Division",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -1314,8 +1314,8 @@
       "counter": "11 In Bde (Rtn) I",
       "group": "CW 4th Indian Division",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1327,8 +1327,8 @@
       "counter": "11 In Bde (Rtn) II",
       "group": "CW 4th Indian Division",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1340,8 +1340,8 @@
       "counter": "11 In Bde (Rtn) III",
       "group": "CW 4th Indian Division",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1353,8 +1353,8 @@
       "counter": "2/2 Aus MG Bn",
       "group": "CW 9th Australian Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "mg",
@@ -1366,8 +1366,8 @@
       "counter": "9 Aus Cav Regt",
       "group": "CW 9th Australian Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "recon",
@@ -1419,8 +1419,8 @@
       "counter": "HQ 5 SA Bde",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        138
+        45,
+        137
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -1432,8 +1432,8 @@
       "counter": "5 SA Bde I",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        138
+        45,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1445,8 +1445,8 @@
       "counter": "5 SA Bde II",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        138
+        45,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1458,8 +1458,8 @@
       "counter": "5 SA Bde III",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        138
+        45,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1471,8 +1471,8 @@
       "counter": "HQ 1 SA Div",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        138
+        45,
+        137
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -1484,8 +1484,8 @@
       "counter": "Tiger Convoy: A13",
       "group": "CW Tiger Convoy (tank replacements)",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -1499,8 +1499,8 @@
       "counter": "Tiger Convoy: Crusader I",
       "group": "CW Tiger Convoy (tank replacements)",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -1514,8 +1514,8 @@
       "counter": "Tiger Convoy: Matilda",
       "group": "CW Tiger Convoy (tank replacements)",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -1529,8 +1529,8 @@
       "counter": "Tiger Convoy: Mk VI Light",
       "group": "CW Tiger Convoy (tank replacements)",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -1585,8 +1585,8 @@
       "counter": "HQ 14 Inf Bde",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -1598,8 +1598,8 @@
       "counter": "14 Inf Bde I",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1611,8 +1611,8 @@
       "counter": "14 Inf Bde II",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1624,8 +1624,8 @@
       "counter": "14 Inf Bde III",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1637,8 +1637,8 @@
       "counter": "HQ 5 NZ Bde",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -1650,8 +1650,8 @@
       "counter": "5 NZ Bde I",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1663,8 +1663,8 @@
       "counter": "5 NZ Bde II",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1676,8 +1676,8 @@
       "counter": "5 NZ Bde III",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1689,8 +1689,8 @@
       "counter": "7 NZ AT Regt",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        44,
-        140
+        43,
+        139
       ],
       "side": "ALLIED",
       "role": "antitank",
@@ -1703,8 +1703,8 @@
       "counter": "1 Army Tank Bde",
       "group": "CW 1st Army Tank Brigade",
       "hex": [
-        45,
-        141
+        44,
+        140
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -1717,8 +1717,8 @@
       "counter": "1 SA AT Regt",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        142
+        45,
+        141
       ],
       "side": "ALLIED",
       "role": "antitank",
@@ -1731,8 +1731,8 @@
       "counter": "HQ 150 Inf Bde",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -1744,8 +1744,8 @@
       "counter": "150 Inf Bde I",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1757,8 +1757,8 @@
       "counter": "150 Inf Bde II",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1770,8 +1770,8 @@
       "counter": "150 Inf Bde III",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1783,8 +1783,8 @@
       "counter": "HQ 2 SA Bde",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        138
+        45,
+        137
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -1796,8 +1796,8 @@
       "counter": "2 SA Bde I",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        138
+        45,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1809,8 +1809,8 @@
       "counter": "2 SA Bde II",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        138
+        45,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1822,8 +1822,8 @@
       "counter": "2 SA Bde III",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        138
+        45,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1835,8 +1835,8 @@
       "counter": "HQ 2 SA Div",
       "group": "CW 2nd South African Division",
       "hex": [
-        46,
-        142
+        45,
+        141
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -1848,8 +1848,8 @@
       "counter": "HQ 1 SA Bde",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        138
+        45,
+        137
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -1861,8 +1861,8 @@
       "counter": "1 SA Bde I",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        138
+        45,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1874,8 +1874,8 @@
       "counter": "1 SA Bde II",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        138
+        45,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1887,8 +1887,8 @@
       "counter": "1 SA Bde III",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        138
+        45,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1927,8 +1927,8 @@
       "counter": "144 Fld Arty Regt [5 In]",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -1941,8 +1941,8 @@
       "counter": "HQ 3 SA Bde",
       "group": "CW 2nd South African Division",
       "hex": [
-        46,
-        142
+        45,
+        141
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -1954,8 +1954,8 @@
       "counter": "3 SA Bde I",
       "group": "CW 2nd South African Division",
       "hex": [
-        46,
-        142
+        45,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1967,8 +1967,8 @@
       "counter": "3 SA Bde II",
       "group": "CW 2nd South African Division",
       "hex": [
-        46,
-        142
+        45,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1980,8 +1980,8 @@
       "counter": "3 SA Bde III",
       "group": "CW 2nd South African Division",
       "hex": [
-        46,
-        142
+        45,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -1993,8 +1993,8 @@
       "counter": "HQ 6 SA Bde",
       "group": "CW 2nd South African Division",
       "hex": [
-        47,
-        138
+        46,
+        137
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2006,8 +2006,8 @@
       "counter": "6 SA Bde I",
       "group": "CW 2nd South African Division",
       "hex": [
-        47,
-        138
+        46,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2019,8 +2019,8 @@
       "counter": "6 SA Bde II",
       "group": "CW 2nd South African Division",
       "hex": [
-        47,
-        138
+        46,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2032,8 +2032,8 @@
       "counter": "6 SA Bde III",
       "group": "CW 2nd South African Division",
       "hex": [
-        47,
-        138
+        46,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2045,8 +2045,8 @@
       "counter": "HQ 9 In Bde",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2058,8 +2058,8 @@
       "counter": "9 In Bde I",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2071,8 +2071,8 @@
       "counter": "9 In Bde II",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2084,8 +2084,8 @@
       "counter": "9 In Bde III",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2097,8 +2097,8 @@
       "counter": "HQ 5 In Div",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2110,8 +2110,8 @@
       "counter": "HQ 10 In Bde",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2123,8 +2123,8 @@
       "counter": "10 In Bde I",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2136,8 +2136,8 @@
       "counter": "10 In Bde II",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2149,8 +2149,8 @@
       "counter": "10 In Bde III",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2162,8 +2162,8 @@
       "counter": "HQ 29 In Bde",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2175,8 +2175,8 @@
       "counter": "29 In Bde I",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2188,8 +2188,8 @@
       "counter": "29 In Bde II",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2201,8 +2201,8 @@
       "counter": "29 In Bde III",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2214,8 +2214,8 @@
       "counter": "3/2 Punjab Regt",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2227,8 +2227,8 @@
       "counter": "7 SA Recce Bn",
       "group": "CW 2nd South African Division",
       "hex": [
-        47,
-        138
+        46,
+        137
       ],
       "side": "ALLIED",
       "role": "recon",
@@ -2266,8 +2266,8 @@
       "counter": "2 SA AT Regt",
       "group": "CW 2nd South African Division",
       "hex": [
-        47,
-        138
+        46,
+        137
       ],
       "side": "ALLIED",
       "role": "antitank",
@@ -2280,8 +2280,8 @@
       "counter": "2 SA Fld Arty Regt",
       "group": "CW 2nd South African Division",
       "hex": [
-        47,
-        138
+        46,
+        137
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -2294,8 +2294,8 @@
       "counter": "4 SA Fld Arty Regt",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        142
+        45,
+        141
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -2373,8 +2373,8 @@
       "counter": "HQ 16 Inf Bde (Rtn)",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2386,8 +2386,8 @@
       "counter": "16 Inf Bde (Rtn) I",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2399,8 +2399,8 @@
       "counter": "16 Inf Bde (Rtn) II",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2412,8 +2412,8 @@
       "counter": "16 Inf Bde (Rtn) III",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2425,8 +2425,8 @@
       "counter": "1 Support Group",
       "group": "CW 1st Armoured Division",
       "hex": [
-        43,
-        140
+        42,
+        139
       ],
       "side": "ALLIED",
       "role": "motor_infantry",
@@ -2438,8 +2438,8 @@
       "counter": "1 Bn du Pacifique",
       "group": "CW 1st Free French Brigade",
       "hex": [
-        43,
-        142
+        42,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2451,8 +2451,8 @@
       "counter": "2 Bn Legion Etranger",
       "group": "CW 1st Free French Brigade",
       "hex": [
-        43,
-        141
+        42,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2464,8 +2464,8 @@
       "counter": "HQ 1 Free French Bde",
       "group": "CW 1st Free French Brigade",
       "hex": [
-        43,
-        141
+        42,
+        140
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2531,8 +2531,8 @@
       "counter": "1 Regt d'Artillerie [1 FF]",
       "group": "CW 1st Free French Brigade",
       "hex": [
-        43,
-        142
+        42,
+        141
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -2545,8 +2545,8 @@
       "counter": "74 Fld Arty Regt [50]",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -2559,8 +2559,8 @@
       "counter": "HQ 50 Inf Div",
       "group": "CW 50th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2572,8 +2572,8 @@
       "counter": "HQ 151 Inf Bde",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2585,8 +2585,8 @@
       "counter": "151 Inf Bde I",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2598,8 +2598,8 @@
       "counter": "151 Inf Bde II",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2611,8 +2611,8 @@
       "counter": "151 Inf Bde III",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2624,8 +2624,8 @@
       "counter": "HQ 69 Inf Bde",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2637,8 +2637,8 @@
       "counter": "69 Inf Bde I",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2650,8 +2650,8 @@
       "counter": "69 Inf Bde II",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2663,8 +2663,8 @@
       "counter": "69 Inf Bde III",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2676,8 +2676,8 @@
       "counter": "8 Armd Bde",
       "group": "CW 10th Armoured Division",
       "hex": [
-        45,
-        141
+        44,
+        140
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -2704,8 +2704,8 @@
       "counter": "HQ 161 In Motor Bde",
       "group": "CW 161st Indian Motor Brigade",
       "hex": [
-        45,
-        142
+        44,
+        141
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2717,8 +2717,8 @@
       "counter": "161 In Motor Bde I",
       "group": "CW 161st Indian Motor Brigade",
       "hex": [
-        45,
-        142
+        44,
+        141
       ],
       "side": "ALLIED",
       "role": "motor_infantry",
@@ -2730,8 +2730,8 @@
       "counter": "161 In Motor Bde II",
       "group": "CW 161st Indian Motor Brigade",
       "hex": [
-        45,
-        142
+        44,
+        141
       ],
       "side": "ALLIED",
       "role": "motor_infantry",
@@ -2743,8 +2743,8 @@
       "counter": "161 In Motor Bde III",
       "group": "CW 161st Indian Motor Brigade",
       "hex": [
-        45,
-        142
+        44,
+        141
       ],
       "side": "ALLIED",
       "role": "motor_infantry",
@@ -2756,8 +2756,8 @@
       "counter": "HQ 2 Free French Bde",
       "group": "CW 2nd Free French Brigade",
       "hex": [
-        43,
-        142
+        42,
+        141
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2769,8 +2769,8 @@
       "counter": "2 Free French Bde I",
       "group": "CW 2nd Free French Brigade",
       "hex": [
-        43,
-        142
+        42,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2782,8 +2782,8 @@
       "counter": "2 Free French Bde II",
       "group": "CW 2nd Free French Brigade",
       "hex": [
-        43,
-        142
+        42,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2795,8 +2795,8 @@
       "counter": "2 Free French Bde III",
       "group": "CW 2nd Free French Brigade",
       "hex": [
-        43,
-        142
+        42,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2808,8 +2808,8 @@
       "counter": "2/7 Gurkha Rifles",
       "group": "CW Indian Army (unassigned)",
       "hex": [
-        45,
-        142
+        44,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2821,8 +2821,8 @@
       "counter": "32 Army Tank Bde",
       "group": "CW 32nd Army Tank Brigade",
       "hex": [
-        45,
-        141
+        44,
+        140
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -2835,8 +2835,8 @@
       "counter": "HQ 10 Armd Div",
       "group": "CW 10th Armoured Division",
       "hex": [
-        46,
-        139
+        45,
+        138
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2848,8 +2848,8 @@
       "counter": "9 Armd Bde",
       "group": "CW 10th Armoured Division",
       "hex": [
-        45,
-        141
+        44,
+        140
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -2863,8 +2863,8 @@
       "counter": "HQ 10 In Div",
       "group": "CW 10th Indian Division",
       "hex": [
-        45,
-        139
+        44,
+        138
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2876,8 +2876,8 @@
       "counter": "HQ 20 In Bde Grp",
       "group": "CW 10th Indian Division",
       "hex": [
-        45,
-        139
+        44,
+        138
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2889,8 +2889,8 @@
       "counter": "20 In Bde Grp I",
       "group": "CW 10th Indian Division",
       "hex": [
-        45,
-        139
+        44,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2902,8 +2902,8 @@
       "counter": "20 In Bde Grp II",
       "group": "CW 10th Indian Division",
       "hex": [
-        45,
-        139
+        44,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2915,8 +2915,8 @@
       "counter": "20 In Bde Grp III",
       "group": "CW 10th Indian Division",
       "hex": [
-        45,
-        139
+        44,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2928,8 +2928,8 @@
       "counter": "HQ 21 In Bde Grp",
       "group": "CW 10th Indian Division",
       "hex": [
-        45,
-        139
+        44,
+        138
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2941,8 +2941,8 @@
       "counter": "21 In Bde Grp I",
       "group": "CW 10th Indian Division",
       "hex": [
-        45,
-        139
+        44,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2954,8 +2954,8 @@
       "counter": "21 In Bde Grp II",
       "group": "CW 10th Indian Division",
       "hex": [
-        45,
-        139
+        44,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2967,8 +2967,8 @@
       "counter": "21 In Bde Grp III",
       "group": "CW 10th Indian Division",
       "hex": [
-        45,
-        139
+        44,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -2980,8 +2980,8 @@
       "counter": "HQ 25 In Bde Grp",
       "group": "CW 10th Indian Division",
       "hex": [
-        45,
-        139
+        44,
+        138
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -2993,8 +2993,8 @@
       "counter": "25 In Bde Grp I",
       "group": "CW 10th Indian Division",
       "hex": [
-        45,
-        139
+        44,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3006,8 +3006,8 @@
       "counter": "25 In Bde Grp II",
       "group": "CW 10th Indian Division",
       "hex": [
-        45,
-        139
+        44,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3019,8 +3019,8 @@
       "counter": "25 In Bde Grp III",
       "group": "CW 10th Indian Division",
       "hex": [
-        45,
-        139
+        44,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3046,8 +3046,8 @@
       "counter": "6 Rajputana Rifles MG Bn",
       "group": "CW Indian Army (unassigned)",
       "hex": [
-        45,
-        142
+        44,
+        141
       ],
       "side": "ALLIED",
       "role": "mg",
@@ -3059,8 +3059,8 @@
       "counter": "23 Armd Bde",
       "group": "CW 8th Armoured Division",
       "hex": [
-        46,
-        139
+        45,
+        138
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -3074,8 +3074,8 @@
       "counter": "HQ 8 Armd Div",
       "group": "CW 8th Armoured Division",
       "hex": [
-        46,
-        139
+        45,
+        138
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -3087,8 +3087,8 @@
       "counter": "24 Armd Bde",
       "group": "CW 8th Armoured Division",
       "hex": [
-        46,
-        139
+        45,
+        138
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -3102,8 +3102,8 @@
       "counter": "HQ 131 Inf Bde",
       "group": "CW 44th Infantry Division",
       "hex": [
-        48,
-        139
+        47,
+        138
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -3115,8 +3115,8 @@
       "counter": "131 Inf Bde I",
       "group": "CW 44th Infantry Division",
       "hex": [
-        48,
-        139
+        47,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3128,8 +3128,8 @@
       "counter": "131 Inf Bde II",
       "group": "CW 44th Infantry Division",
       "hex": [
-        48,
-        139
+        47,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3141,8 +3141,8 @@
       "counter": "131 Inf Bde III",
       "group": "CW 44th Infantry Division",
       "hex": [
-        48,
-        139
+        47,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3154,8 +3154,8 @@
       "counter": "44 Inf Div body",
       "group": "CW 44th Infantry Division",
       "hex": [
-        48,
-        139
+        47,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3181,8 +3181,8 @@
       "counter": "1/7 Middlesex MG Bn",
       "group": "CW 51st Infantry Division",
       "hex": [
-        43,
-        140
+        42,
+        139
       ],
       "side": "ALLIED",
       "role": "mg",
@@ -3194,8 +3194,8 @@
       "counter": "HQ 152 Inf Bde",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -3207,8 +3207,8 @@
       "counter": "152 Inf Bde I",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3220,8 +3220,8 @@
       "counter": "152 Inf Bde II",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3233,8 +3233,8 @@
       "counter": "152 Inf Bde III",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3246,8 +3246,8 @@
       "counter": "HQ 153 Inf Bde",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -3259,8 +3259,8 @@
       "counter": "153 Inf Bde I",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3272,8 +3272,8 @@
       "counter": "153 Inf Bde II",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3285,8 +3285,8 @@
       "counter": "153 Inf Bde III",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3298,8 +3298,8 @@
       "counter": "HQ 154 Inf Bde",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -3311,8 +3311,8 @@
       "counter": "154 Inf Bde I",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3324,8 +3324,8 @@
       "counter": "154 Inf Bde II",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3337,8 +3337,8 @@
       "counter": "154 Inf Bde III",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3350,8 +3350,8 @@
       "counter": "51 Recce Bn",
       "group": "CW 51st Infantry Division",
       "hex": [
-        43,
-        140
+        42,
+        139
       ],
       "side": "ALLIED",
       "role": "recon",
@@ -3363,8 +3363,8 @@
       "counter": "HQ 51 Inf Div",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -3415,8 +3415,8 @@
       "counter": "HQ 1 Greek Bde",
       "group": "CW 1st Greek Brigade",
       "hex": [
-        43,
-        142
+        42,
+        141
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -3428,8 +3428,8 @@
       "counter": "1 Greek Bde I",
       "group": "CW 1st Greek Brigade",
       "hex": [
-        43,
-        142
+        42,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3441,8 +3441,8 @@
       "counter": "1 Greek Bde II",
       "group": "CW 1st Greek Brigade",
       "hex": [
-        43,
-        142
+        42,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3454,8 +3454,8 @@
       "counter": "1 Greek Bde III",
       "group": "CW 1st Greek Brigade",
       "hex": [
-        43,
-        142
+        42,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -3572,8 +3572,8 @@
       "counter": "57 AT Regt [44]",
       "group": "CW 44th Infantry Division",
       "hex": [
-        48,
-        139
+        47,
+        138
       ],
       "side": "ALLIED",
       "role": "antitank",
@@ -3667,8 +3667,8 @@
       "counter": "10 NZ RR Constr Coy",
       "group": "CW NZ Railway Construction",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "rr_engineer",
@@ -3680,8 +3680,8 @@
       "counter": "13 NZ RR Constr Coy",
       "group": "CW NZ Railway Construction",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "rr_engineer",
@@ -3693,8 +3693,8 @@
       "counter": "1 SA Road Constr Bn",
       "group": "CW SA Road Construction",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "road_engineer",
@@ -4974,8 +4974,8 @@
       "counter": "107th RHA",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -4989,8 +4989,8 @@
       "counter": "2/1 Aus Fld Arty [6 Aus]",
       "group": "CW 6th Australian Division",
       "hex": [
-        46,
-        141
+        45,
+        140
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5004,8 +5004,8 @@
       "counter": "51 Fld Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5019,8 +5019,8 @@
       "counter": "104th RHA",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5034,8 +5034,8 @@
       "counter": "64th Medium Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5049,8 +5049,8 @@
       "counter": "4th Fld Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5064,8 +5064,8 @@
       "counter": "5 NZ Fld Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5079,8 +5079,8 @@
       "counter": "18th Fld Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5094,8 +5094,8 @@
       "counter": "28 Fld Arty [5 In]",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5109,8 +5109,8 @@
       "counter": "1 SA Fld Arty [2 SA]",
       "group": "CW 2nd South African Division",
       "hex": [
-        47,
-        138
+        46,
+        137
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5124,8 +5124,8 @@
       "counter": "5 SA Fld Arty [2 SA]",
       "group": "CW 2nd South African Division",
       "hex": [
-        47,
-        138
+        46,
+        137
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5139,8 +5139,8 @@
       "counter": "27th Medium Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5154,8 +5154,8 @@
       "counter": "68th Medium Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5169,8 +5169,8 @@
       "counter": "60 Fld Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5184,8 +5184,8 @@
       "counter": "3rd SA Fld Arty [1 SA]",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        138
+        45,
+        137
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5199,8 +5199,8 @@
       "counter": "7 SA Fld Arty [1 SA]",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        138
+        45,
+        137
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5214,8 +5214,8 @@
       "counter": "67th Medium Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5229,8 +5229,8 @@
       "counter": "78th Fld Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5244,8 +5244,8 @@
       "counter": "111th Fld Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5259,8 +5259,8 @@
       "counter": "154th Fld Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5274,8 +5274,8 @@
       "counter": "72nd Fld Arty [50]",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5289,8 +5289,8 @@
       "counter": "124th Fld Arty [50]",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5304,8 +5304,8 @@
       "counter": "3rd Fld Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5319,8 +5319,8 @@
       "counter": "2nd In Fld Arty [3 In Mtr X]",
       "group": "CW 3rd Indian Motor Brigade",
       "hex": [
-        45,
-        142
+        44,
+        141
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5334,8 +5334,8 @@
       "counter": "69th Medium Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5349,8 +5349,8 @@
       "counter": "98th Fld Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5364,8 +5364,8 @@
       "counter": "32nd Fld Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5379,8 +5379,8 @@
       "counter": "121st Fld Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5394,8 +5394,8 @@
       "counter": "11th Fld Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5409,8 +5409,8 @@
       "counter": "53rd Fld Arty",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5424,8 +5424,8 @@
       "counter": "5th RHA",
       "group": "CW Corps Artillery",
       "hex": [
-        45,
-        140
+        44,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5439,8 +5439,8 @@
       "counter": "126th Fld Arty [51]",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5454,8 +5454,8 @@
       "counter": "127th Fld Arty [51]",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5469,8 +5469,8 @@
       "counter": "128th Fld Arty [51]",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5484,8 +5484,8 @@
       "counter": "57th Fld Arty [44]",
       "group": "CW 44th Infantry Division",
       "hex": [
-        48,
-        139
+        47,
+        138
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5499,8 +5499,8 @@
       "counter": "58th Fld Arty [44]",
       "group": "CW 44th Infantry Division",
       "hex": [
-        48,
-        139
+        47,
+        138
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5514,8 +5514,8 @@
       "counter": "65th Fld Arty [44]",
       "group": "CW 44th Infantry Division",
       "hex": [
-        48,
-        139
+        47,
+        138
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -5529,8 +5529,8 @@
       "counter": "13th LAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5543,8 +5543,8 @@
       "counter": "74th HAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5557,8 +5557,8 @@
       "counter": "52nd LAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5571,8 +5571,8 @@
       "counter": "2nd HAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5585,8 +5585,8 @@
       "counter": "61st HAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5599,8 +5599,8 @@
       "counter": "1st LAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5613,8 +5613,8 @@
       "counter": "1st SA LAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5627,8 +5627,8 @@
       "counter": "14 NZ LAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5641,8 +5641,8 @@
       "counter": "14th LAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5655,8 +5655,8 @@
       "counter": "87th HAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5669,8 +5669,8 @@
       "counter": "88th HAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5683,8 +5683,8 @@
       "counter": "57th HAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5697,8 +5697,8 @@
       "counter": "16th LAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5711,8 +5711,8 @@
       "counter": "94th HAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5725,8 +5725,8 @@
       "counter": "2 SA LAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5739,8 +5739,8 @@
       "counter": "2nd LAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5753,8 +5753,8 @@
       "counter": "89th HAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5767,8 +5767,8 @@
       "counter": "25th LAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5781,8 +5781,8 @@
       "counter": "34th LAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5795,8 +5795,8 @@
       "counter": "68th HAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5809,8 +5809,8 @@
       "counter": "69th HAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5823,8 +5823,8 @@
       "counter": "82nd LAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5837,8 +5837,8 @@
       "counter": "53rd LAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5851,8 +5851,8 @@
       "counter": "56th LAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5865,8 +5865,8 @@
       "counter": "42nd LAA",
       "group": "CW Anti-Aircraft",
       "hex": [
-        44,
-        141
+        43,
+        140
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5879,8 +5879,8 @@
       "counter": "40th LAA [51]",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "aa",
@@ -5893,8 +5893,8 @@
       "counter": "\"A\" SpecSrvc Bn",
       "group": "CW Independent Infantry",
       "hex": [
-        27,
-        133
+        26,
+        132
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -5907,8 +5907,8 @@
       "counter": "Capetown Highlanders Bn [2/1 SA]",
       "group": "CW 2nd South African Division",
       "hex": [
-        47,
-        138
+        46,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -5921,8 +5921,8 @@
       "counter": "3/18 Royal Garhwals [10/5 In]",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -5935,8 +5935,8 @@
       "counter": "3/10 Baluch",
       "group": "CW Independent Infantry",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -5949,8 +5949,8 @@
       "counter": "1/1 Punjab",
       "group": "CW Independent Infantry",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -5963,8 +5963,8 @@
       "counter": "3rd Bn Legion Etrangere [1 FF]",
       "group": "CW 1st Free French Brigade",
       "hex": [
-        43,
-        142
+        42,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -5977,8 +5977,8 @@
       "counter": "2nd Bn de Marche [1 FF]",
       "group": "CW 1st Free French Brigade",
       "hex": [
-        43,
-        142
+        42,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -5991,8 +5991,8 @@
       "counter": "1st Bn de Fusiliers [1 FF]",
       "group": "CW 1st Free French Brigade",
       "hex": [
-        43,
-        142
+        42,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6005,8 +6005,8 @@
       "counter": "1st Sherwood Foresters",
       "group": "CW Independent Infantry",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6019,8 +6019,8 @@
       "counter": "1st Bn Infanterie de Marine [1 FF]",
       "group": "CW 1st Free French Brigade",
       "hex": [
-        43,
-        142
+        42,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6033,8 +6033,8 @@
       "counter": "Royal Yugoslav Guards",
       "group": "CW Independent Infantry",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6047,8 +6047,8 @@
       "counter": "1/4 Essex",
       "group": "CW Independent Infantry",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6061,8 +6061,8 @@
       "counter": "2/4 Gurkha",
       "group": "CW Independent Infantry",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6075,8 +6075,8 @@
       "counter": "3/9 Jat",
       "group": "CW Independent Infantry",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6089,8 +6089,8 @@
       "counter": "1/5 Mahratta LI",
       "group": "CW Independent Infantry",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6103,8 +6103,8 @@
       "counter": "1st South Wales Borderers",
       "group": "CW Independent Infantry",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6117,8 +6117,8 @@
       "counter": "2/8 Gurkha",
       "group": "CW Independent Infantry",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6131,8 +6131,8 @@
       "counter": "3/14 Punjab",
       "group": "CW Independent Infantry",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6145,8 +6145,8 @@
       "counter": "14th Sherwood Foresters",
       "group": "CW Independent Infantry",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6159,8 +6159,8 @@
       "counter": "Yorkshire Dragoons [I]",
       "group": "CW Independent Infantry",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6173,8 +6173,8 @@
       "counter": "1/2 Gurkha",
       "group": "CW Independent Infantry",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6187,8 +6187,8 @@
       "counter": "4th Borderers [23/70]",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6201,8 +6201,8 @@
       "counter": "Special Air Service Bde [I]",
       "group": "CW Independent Infantry",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6215,8 +6215,8 @@
       "counter": "1st The Royal Dragoons [R]",
       "group": "CW Corps Cavalry",
       "hex": [
-        45,
-        141
+        44,
+        140
       ],
       "side": "ALLIED",
       "role": "recon",
@@ -6229,8 +6229,8 @@
       "counter": "1st DOY Cavalry [R]",
       "group": "CW Corps Cavalry",
       "hex": [
-        45,
-        141
+        44,
+        140
       ],
       "side": "ALLIED",
       "role": "recon",
@@ -6243,8 +6243,8 @@
       "counter": "4th SA Armored Car",
       "group": "CW Corps Cavalry",
       "hex": [
-        45,
-        141
+        44,
+        140
       ],
       "side": "ALLIED",
       "role": "recon",
@@ -6257,8 +6257,8 @@
       "counter": "3rd SA Armored Car Bn",
       "group": "CW Corps Cavalry",
       "hex": [
-        45,
-        141
+        44,
+        140
       ],
       "side": "ALLIED",
       "role": "recon",
@@ -6271,8 +6271,8 @@
       "counter": "6th SA Armored Car",
       "group": "CW Corps Cavalry",
       "hex": [
-        45,
-        141
+        44,
+        140
       ],
       "side": "ALLIED",
       "role": "recon",
@@ -6285,8 +6285,8 @@
       "counter": "50th Recce [50]",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "recon",
@@ -6299,8 +6299,8 @@
       "counter": "12th Lancers [R]",
       "group": "CW Corps Cavalry",
       "hex": [
-        45,
-        141
+        44,
+        140
       ],
       "side": "ALLIED",
       "role": "recon",
@@ -6313,8 +6313,8 @@
       "counter": "10th QVOC Guides [R]",
       "group": "CW Corps Cavalry",
       "hex": [
-        45,
-        141
+        44,
+        140
       ],
       "side": "ALLIED",
       "role": "recon",
@@ -6327,8 +6327,8 @@
       "counter": "2nd Derbyshire Yeomanry [R, 8]",
       "group": "CW 8th Armoured Division",
       "hex": [
-        46,
-        139
+        45,
+        138
       ],
       "side": "ALLIED",
       "role": "recon",
@@ -6341,8 +6341,8 @@
       "counter": "1st Free French Flying Column [R]",
       "group": "CW Corps Cavalry",
       "hex": [
-        45,
-        141
+        44,
+        140
       ],
       "side": "ALLIED",
       "role": "recon",
@@ -6355,8 +6355,8 @@
       "counter": "106 RHA [AT]",
       "group": "CW Corps Anti-Tank",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "antitank",
@@ -6370,8 +6370,8 @@
       "counter": "73rd AT",
       "group": "CW Corps Anti-Tank",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "antitank",
@@ -6385,8 +6385,8 @@
       "counter": "102nd AT",
       "group": "CW Corps Anti-Tank",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "antitank",
@@ -6400,8 +6400,8 @@
       "counter": "23 Bde AT Coy [23/70]",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "antitank",
@@ -6415,8 +6415,8 @@
       "counter": "95th AT",
       "group": "CW Corps Anti-Tank",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "antitank",
@@ -6430,8 +6430,8 @@
       "counter": "2nd NA AT Coy [1 FF]",
       "group": "CW 1st Free French Brigade",
       "hex": [
-        43,
-        142
+        42,
+        141
       ],
       "side": "ALLIED",
       "role": "antitank",
@@ -6445,8 +6445,8 @@
       "counter": "13 AT [51]",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "antitank",
@@ -6460,8 +6460,8 @@
       "counter": "61st AT [51]",
       "group": "CW 51st Infantry Division",
       "hex": [
-        48,
-        140
+        47,
+        139
       ],
       "side": "ALLIED",
       "role": "antitank",
@@ -6475,8 +6475,8 @@
       "counter": "President Steyn MG [1 SA]",
       "group": "CW 1st South African Division",
       "hex": [
-        46,
-        138
+        45,
+        137
       ],
       "side": "ALLIED",
       "role": "mg",
@@ -6489,8 +6489,8 @@
       "counter": "Die Middelandse MG [2 SA]",
       "group": "CW 2nd South African Division",
       "hex": [
-        47,
-        138
+        46,
+        137
       ],
       "side": "ALLIED",
       "role": "mg",
@@ -6503,8 +6503,8 @@
       "counter": "2nd Cheshire MG [50]",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "mg",
@@ -6517,8 +6517,8 @@
       "counter": "HQ 4 SA Bde",
       "group": "CW 2nd South African Division",
       "hex": [
-        47,
-        138
+        46,
+        137
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -6531,8 +6531,8 @@
       "counter": "4 SA Bde I",
       "group": "CW 2nd South African Division",
       "hex": [
-        47,
-        138
+        46,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6545,8 +6545,8 @@
       "counter": "4 SA Bde II",
       "group": "CW 2nd South African Division",
       "hex": [
-        47,
-        138
+        46,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6559,8 +6559,8 @@
       "counter": "4 SA Bde III",
       "group": "CW 2nd South African Division",
       "hex": [
-        47,
-        138
+        46,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6573,8 +6573,8 @@
       "counter": "HQ 18 In Bde",
       "group": "CW 18th Indian Infantry Brigade",
       "hex": [
-        44,
-        140
+        43,
+        139
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -6587,8 +6587,8 @@
       "counter": "18 In Bde I",
       "group": "CW 18th Indian Infantry Brigade",
       "hex": [
-        44,
-        140
+        43,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6601,8 +6601,8 @@
       "counter": "18 In Bde II",
       "group": "CW 18th Indian Infantry Brigade",
       "hex": [
-        44,
-        140
+        43,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6615,8 +6615,8 @@
       "counter": "18 In Bde III",
       "group": "CW 18th Indian Infantry Brigade",
       "hex": [
-        44,
-        140
+        43,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6629,8 +6629,8 @@
       "counter": "HQ 2 Armd Div",
       "group": "CW 2nd Armoured Division",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -6643,8 +6643,8 @@
       "counter": "HQ Armd Bde [2 Armd]",
       "group": "CW 2nd Armoured Division",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -6657,8 +6657,8 @@
       "counter": "2 Armd Div Cruiser Regt I",
       "group": "CW 2nd Armoured Division",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -6672,8 +6672,8 @@
       "counter": "2 Armd Div Cruiser Regt II",
       "group": "CW 2nd Armoured Division",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -6687,8 +6687,8 @@
       "counter": "2 Armd Div Cruiser Regt III",
       "group": "CW 2nd Armoured Division",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -6702,8 +6702,8 @@
       "counter": "3rd Hussars [7]",
       "group": "CW 7th Armoured Division",
       "hex": [
-        45,
-        141
+        44,
+        140
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -6717,8 +6717,8 @@
       "counter": "HQ 22 Armd Bde",
       "group": "CW Corps Armour",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -6731,8 +6731,8 @@
       "counter": "22 Armd Bde Regt I",
       "group": "CW Corps Armour",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -6746,8 +6746,8 @@
       "counter": "22 Armd Bde Regt II",
       "group": "CW Corps Armour",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -6761,8 +6761,8 @@
       "counter": "22 Armd Bde Regt III",
       "group": "CW Corps Armour",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -6776,8 +6776,8 @@
       "counter": "HQ 2 Armd Bde [1]",
       "group": "CW 1st Armoured Division",
       "hex": [
-        43,
-        140
+        42,
+        139
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -6790,8 +6790,8 @@
       "counter": "2 Bays [1]",
       "group": "CW 1st Armoured Division",
       "hex": [
-        43,
-        140
+        42,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -6805,8 +6805,8 @@
       "counter": "10 Hussars [1]",
       "group": "CW 1st Armoured Division",
       "hex": [
-        43,
-        140
+        42,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -6820,8 +6820,8 @@
       "counter": "9 Lancers [1]",
       "group": "CW 1st Armoured Division",
       "hex": [
-        43,
-        140
+        42,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -6835,8 +6835,8 @@
       "counter": "HQ 1 Armd Div",
       "group": "CW 1st Armoured Division",
       "hex": [
-        43,
-        140
+        42,
+        139
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -6849,8 +6849,8 @@
       "counter": "HQ 23 Inf Bde [70]",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -6863,8 +6863,8 @@
       "counter": "HQ 7 In Bde (Rtn)",
       "group": "CW 4th Indian Division",
       "hex": [
-        44,
-        140
+        43,
+        139
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -6877,8 +6877,8 @@
       "counter": "7 In Bde (Rtn) I",
       "group": "CW 4th Indian Division",
       "hex": [
-        44,
-        140
+        43,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6891,8 +6891,8 @@
       "counter": "7 In Bde (Rtn) II",
       "group": "CW 4th Indian Division",
       "hex": [
-        44,
-        140
+        43,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6905,8 +6905,8 @@
       "counter": "7 In Bde (Rtn) III",
       "group": "CW 4th Indian Division",
       "hex": [
-        44,
-        140
+        43,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6919,8 +6919,8 @@
       "counter": "HQ 14 Inf Bde (Rtn)",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -6933,8 +6933,8 @@
       "counter": "14 Inf Bde (Rtn) I",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6947,8 +6947,8 @@
       "counter": "14 Inf Bde (Rtn) II",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6961,8 +6961,8 @@
       "counter": "14 Inf Bde (Rtn) III",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -6975,8 +6975,8 @@
       "counter": "HQ 150 Inf Bde (Rtn)",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -6989,8 +6989,8 @@
       "counter": "150 Inf Bde (Rtn) I",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7003,8 +7003,8 @@
       "counter": "150 Inf Bde (Rtn) II",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7017,8 +7017,8 @@
       "counter": "150 Inf Bde (Rtn) III",
       "group": "CW 50th Infantry Division",
       "hex": [
-        48,
-        138
+        47,
+        137
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7031,8 +7031,8 @@
       "counter": "6 NZ Bde (Rtn) I",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7045,8 +7045,8 @@
       "counter": "6 NZ Bde (Rtn) II",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7059,8 +7059,8 @@
       "counter": "6 NZ Bde (Rtn) III",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7073,8 +7073,8 @@
       "counter": "1 Armd Bde [2] (Rtn)",
       "group": "CW 2nd Armoured Division",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -7088,8 +7088,8 @@
       "counter": "2 NZ Div (Rtn) Bn 1",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7102,8 +7102,8 @@
       "counter": "2 NZ Div (Rtn) Bn 2",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7116,8 +7116,8 @@
       "counter": "2 NZ Div (Rtn) Bn 3",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7130,8 +7130,8 @@
       "counter": "2 NZ Div (Rtn) Bn 4",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7144,8 +7144,8 @@
       "counter": "2 NZ Div (Rtn) Bn 5",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7158,8 +7158,8 @@
       "counter": "2 NZ Div (Rtn) Bn 6",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7172,8 +7172,8 @@
       "counter": "2 NZ Div (Rtn) Bn 7",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7186,8 +7186,8 @@
       "counter": "1st Essex [23/70] (Rtn)",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7200,8 +7200,8 @@
       "counter": "1st Durham LI [23/70] (Rtn)",
       "group": "CW 70th Infantry Division",
       "hex": [
-        47,
-        141
+        46,
+        140
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7214,8 +7214,8 @@
       "counter": "HQ 10 In Bde (Rtn)",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -7228,8 +7228,8 @@
       "counter": "10 In Bde (Rtn) I",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7242,8 +7242,8 @@
       "counter": "10 In Bde (Rtn) II",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7256,8 +7256,8 @@
       "counter": "10 In Bde (Rtn) III",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7270,8 +7270,8 @@
       "counter": "28th Fld Arty [5 In] (Rtn)",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -7285,8 +7285,8 @@
       "counter": "HQ 5 In Div (Rtn)",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -7299,8 +7299,8 @@
       "counter": "HQ 9 In Bde (Rtn)",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "hq",
@@ -7313,8 +7313,8 @@
       "counter": "9 In Bde (Rtn) I",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7327,8 +7327,8 @@
       "counter": "9 In Bde (Rtn) II",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7341,8 +7341,8 @@
       "counter": "9 In Bde (Rtn) III",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7355,8 +7355,8 @@
       "counter": "144 Fld Arty [5 In] (Rtn)",
       "group": "CW 5th Indian Division",
       "hex": [
-        44,
-        142
+        43,
+        141
       ],
       "side": "ALLIED",
       "role": "artillery",
@@ -7370,8 +7370,8 @@
       "counter": "2 NZ Div core (Rtn)",
       "group": "CW 2nd New Zealand Division",
       "hex": [
-        47,
-        140
+        46,
+        139
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7384,8 +7384,8 @@
       "counter": "9 Aus Div core (Rtn)",
       "group": "CW 9th Australian Division",
       "hex": [
-        47,
-        139
+        46,
+        138
       ],
       "side": "ALLIED",
       "role": "infantry",
@@ -7398,8 +7398,8 @@
       "counter": "42 RTR (Scorpion)",
       "group": "CW Corps Armour",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",
@@ -7413,8 +7413,8 @@
       "counter": "44 RTR (Scorpion)",
       "group": "CW Corps Armour",
       "hex": [
-        46,
-        140
+        45,
+        139
       ],
       "side": "ALLIED",
       "role": "tank",

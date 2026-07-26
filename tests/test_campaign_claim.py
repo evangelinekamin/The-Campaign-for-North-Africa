@@ -143,20 +143,28 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
     the thing a still-early check CAN honestly pin. WHEN the take-and-hold's routing is retuned for the
     now-faithful Delta cost (or this check is moved to a later Game-Turn), THIS MUST BE INVERTED back to
     "the Commonwealth stands on Mersa Matruh and banks it" -- which is what the GT40+ measurement above
-    already shows is coming, not a capability this port has lost."""
+    already shows is coming, not a capability this port has lost.
+
+    *** RESTATED AGAIN 2026-07-26 (Phase 8.1b, the A/B/D/E section-seam correction). *** An Axis unit
+    now walks over the empty terminus as early as GT3 and nobody dislodges it by GT30 (see
+    test_campaign_concentration.py::test_the_railhead_is_held_and_the_faucet_keeps_running's RESTATED
+    note for the mechanism -- the retraction is graceful, the faucet does not hard-cancel, and this is
+    the SAME measured fact carried forward to GT30, not a second regression). So Mersa Matruh is no
+    longer merely un-arrived-at (the 2026-07-26 Delta-terrain note above); it is AXIS-OCCUPIED. The
+    "Commonwealth hasn't reached it yet" reading this test used to assert is no longer the honest one;
+    "the Axis got there first and nobody has retaken it" is."""
     fin = _run(30).final
     cw, ax = _banked(fin, Side.ALLIED), _banked(fin, Side.AXIS)
     # The Commonwealth holds Sidi Barrani again under the [8.37] stacking fix (see the RESTATED note
     # above, measured seed 4, GT30) -- the Axis's 15.53-concentrated reach for it did not survive the
     # higher stacking cap reshaping the opening moves.
     assert "Sidi Barrani" in cw
-    # Mersa Matruh is EN ROUTE, not yet banked, at GT30 under the corrected Delta terrain (see the
-    # 2026-07-26 RESTATED note above) -- neither side has reached it, so it is neither occupied nor
-    # banked by anyone, and the depot built to feed its eventual garrison is correctly standing by.
+    # Mersa Matruh is AXIS-OCCUPIED at GT30, not merely un-arrived-at (see the 2026-07-26 RESTATED
+    # note above) -- an Axis unit walked over the empty terminus by GT3 and nothing has retaken it.
     assert not campaign_claim._occupied(fin, Side.ALLIED, MATRUH), \
-        "the Commonwealth reached its railhead city earlier than the corrected Delta terrain predicts"
-    assert not campaign_claim._occupied(fin, Side.AXIS, MATRUH), \
-        "the Axis, not the Commonwealth, has taken the railhead city"
+        "the Commonwealth holds the railhead city -- update this restatement, the finding reversed"
+    assert campaign_claim._occupied(fin, Side.AXIS, MATRUH), \
+        "the Axis no longer holds the railhead city -- update this restatement, the finding reversed"
     assert "Mersa Matruh" not in cw and "Mersa Matruh" not in ax
     matruh = [s for s in fin.supplies if s.id == "AL-Stage-Matruh"]
     assert len(matruh) == 1 and matruh[0].hex == MATRUH, \
@@ -234,9 +242,20 @@ def test_occupying_sollum_brings_the_supply_chain_up_to_it():
     # reservoir. That the chain is ALIVE -- the rail faucet and the lorry park still filling it -- is
     # what this pins; the concentration edge decides only HOW FAR FORWARD the head reaches, and it is
     # the railhead now, not Sidi Barrani (measured seed 4, GT24: Matruh wet, AL-Stage-Barrani AXIS).
-    matruh = fin.supply("AL-Stage-Matruh")
-    assert matruh.ammo > 0 and matruh.fuel > 0, \
-        "the chain behind the railhead is dry -- the rail faucet or the lorry park is dead"
+    #
+    # RESTATED AGAIN 2026-07-26 (Phase 8.1b, the A/B/D/E section-seam correction): the head moved back
+    # ANOTHER bound. An Axis unit now walks over the empty Matruh terminus by GT3 (see
+    # test_campaign_concentration.py's RESTATED note -- the same measured fact, not a new regression)
+    # and the rail lane correctly drains the hex it no longer controls (AL-Stage-Matruh: 0 Ammo/0
+    # Fuel here). Sidi Barrani, in turn, is no longer overrun at this seed (its hex is Commonwealth-
+    # held again at GT24, matching the [8.37] stacking-fix restatement two notes up in
+    # test_campaign_claim.py::test_both_sides_take_the_cities_they_used_to_sprint_past), so the live
+    # chain sits where the 2026-07-25 note above says it sat before 15.53 concentration pushed it
+    # forward: the Sidi Barrani Field Supply Depot. Same claim, same mechanism (a 32.16 trace behind
+    # Sollum is alive), different depot, again.
+    barrani = fin.supply("AL-Stage-Barrani")
+    assert barrani.ammo > 0 and barrani.fuel > 0, \
+        "the chain behind Sollum is dry -- the rail faucet or the lorry park is dead"
 
 
 def test_you_do_not_besiege_a_city_you_could_not_hold():

@@ -15,13 +15,18 @@ So these are the verification gates scratchpad/port/terrain-key.md Sec 4d specif
   2. THE ANCHOR. The Qattara Depression is one 69-hex connected salt_marsh body with NO sea in its
      6-neighbourhood, plus a 25-hex southern lobe -- the geography that makes El Alamein a LINE.
   3. THE CORRIDOR. Measured on the real hex graph: the Mediterranean coast narrows to 9 hexes from
-     the marsh body just west of El Alamein, 11 at El Alamein itself, 26 back at Alexandria. If
-     these move, the grid or the classifier moved.
+     the marsh body just west of El Alamein, 10 at El Alamein itself, 25 back at Alexandria. If
+     these move, the grid or the classifier moved. (Phase 8.1b RESTATED this gate, port rule 5: the
+     El Alamein/Alexandria figures were 11/26 under a D/E section-seam bug this slice found tracing
+     hexsides -- game.coords.to_axial numbered the same physical hex two different ways at the D/E
+     join, so every distance crossing it was one hex too long. Fixed at the source (game.coords'
+     own A/B, D/E correction); D3133, west of the seam, is untouched.)
   4. WADI NATRUN, a free positive control: an 8-hex salt_marsh component the raster LABELS.
   5. THE CLASS CENSUS, per class and per section -- gravel 448 in particular (see
      test_gravel_is_the_disc_count, the review finding this file was written for).
-  6. THE SEAM. 21 axials carry two section labels; all 21 must agree, or load_sections' last-write-
-     wins merge becomes order-dependent.
+  6. THE SEAM. 70 axials carry two section labels (21 at C/D, 28 at A/B, 21 at D/E -- Phase 8.1b's
+     game.coords.to_axial correction, RESTATED from the original 21 C/D-only figure, port rule 5);
+     all 70 must agree, or load_sections' last-write-wins merge becomes order-dependent.
 """
 from __future__ import annotations
 
@@ -144,11 +149,19 @@ def test_wadi_natrun_is_the_labelled_8_hex_control():
     assert len(natrun) == 8
 
 
-def test_the_alamein_corridor_is_nine_to_eleven_hexes():
+def test_the_alamein_corridor_is_nine_to_ten_hexes():
     """GATE 3, THE POINT OF THE SLICE. Distance ON THE HEX GRAPH from the Mediterranean shore to
-    the Qattara body: 9 at its narrowest (D3133), 11 at El Alamein itself, and 26 back at
-    Alexandria -- i.e. the corridor an army must force narrows by two thirds in the 25 hexes
-    between the Delta and Alamein, exactly as the historical position does."""
+    the Qattara body: 9 at its narrowest (D3133, and now E3001/E3101 -- see below), 10 at El
+    Alamein itself, and 25 back at Alexandria -- i.e. the corridor an army must force narrows by
+    two thirds in the 25 hexes between the Delta and Alamein, exactly as the historical position
+    does.
+
+    RESTATED (Phase 8.1b, port rule 5): every E-section distance here used to read one hex
+    LONGER (11 at Alamein, 26 at Alexandria) because of the D/E section-seam bug this slice found
+    tracing hexsides -- the same physical hex at the D/E join decoded to two adjacent
+    game.coords.to_axial results, so a BFS crossing that seam paid for a phantom extra hop. Fixed
+    at the source (game.coords' own correction, not here), so E3001/E3101 -- one step into Map E --
+    now tie D3133's 9, instead of overcounting to 10."""
     ax = _by_axial()
     land = {h for h, k in ax.items() if k != "sea"}
     sea = {h for h, k in ax.items() if k == "sea"}
@@ -168,16 +181,27 @@ def test_the_alamein_corridor_is_nine_to_eleven_hexes():
 
     assert at("D3133") == 9                          # the narrowest coastal hex on the whole front
     assert at("D3231") == at("D3232") == 10
-    assert at("E3001") == at("E3101") == 10
-    assert at("E3002") == 11                         # El Alamein
-    assert at("E3714") == 26                         # Alexandria, the open end of the funnel
+    assert at("E3001") == at("E3101") == 9
+    assert at("E3002") == 10                         # El Alamein
+    assert at("E3714") == 25                         # Alexandria, the open end of the funnel
     # ...and D3133 really is on the shore, not an inland hex that happens to be close.
     assert any(nb in sea for nb in neighbors(coords.to_axial(coords.parse("D3133"))))
 
 
 def test_every_section_seam_axial_agrees():
-    """GATE 6. Sections overlap by one column, so 21 board-global axials carry two labels. If the
-    two disagree, cna_map.load_sections' last-write-wins merge silently becomes order-dependent."""
+    """GATE 6. Sections overlap by one column or row at every A-B-C-D-E join, so 70 board-global
+    axials carry two labels. If the two disagree, cna_map.load_sections' last-write-wins merge
+    silently becomes order-dependent.
+
+    RESTATED (Phase 8.1b, port rule 5): this gate used to read 21 -- true of the C/D join alone,
+    where two sections' raw grids coincide under the plain game.coords formula with no help
+    needed. It was never true of A/B or D/E: those two joins number the SAME physical hex a column
+    or row apart (found tracing hexsides -- confirmed by pixel proximity, to_pixel outputs 2-4 px
+    apart, the same redrawn hex, not two different ones), which used to read as 49 DIFFERENT
+    board-global axials rather than 49 more duplicates. game.coords.to_axial now carries a per-
+    section correction (mirroring 44.11's existing Malta shift) that re-aligns A/B and D/E exactly
+    like C/D, so all 70 pairs collapse for free here too -- this loop doesn't change, only what it
+    was always honestly counting."""
     seen: dict = {}
     clashes = []
     for section in _raw().values():
@@ -187,7 +211,7 @@ def test_every_section_seam_axial_agrees():
                 clashes.append((seen[key], (label, klass)))
             seen.setdefault(key, (label, klass))
     duplicates = sum(len(sec) for sec in _raw().values()) - len(seen)
-    assert duplicates == 21, f"{duplicates} duplicated axials"
+    assert duplicates == 70, f"{duplicates} duplicated axials"
     assert clashes == [], f"section seams disagree: {clashes}"
 
 

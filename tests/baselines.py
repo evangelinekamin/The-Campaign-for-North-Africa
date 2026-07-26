@@ -10,6 +10,110 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-26 (THIRD MOVE THE SAME DAY) -- CAUSE: Phase 8.1b Block B, the [8.35]/[8.42]
+escarpment HEXSIDE trace landing (tools/vassal/extract_hexsides.py -> data/hexsides_<section>.json,
+wired in game.cna_map._load_hexsides), plus a section-seam adjacency bug this slice found and fixed
+en route (game.coords._SEAM_SHIFT). THREE separable causes, all real, attributed below:
+
+    b4f2e8e2c955 / 6e74c608b476  ->  abc4300eccbb / a5da9203198d
+
+CAUSE 1 -- THE A/B AND D/E SECTION-SEAM BUG. Block A's read-only recon (scratchpad/port/
+hexside-trace.md Sec 6) found that unlike the C/D join (21 hexes, already coincide under the plain
+raw-grid formula), the A/B and D/E joins number the SAME physical hex two DIFFERENT board-global
+axials apart (confirmed by pixel proximity: the two labels' game.coords.to_pixel outputs sit 2-4 px
+apart, the same hex redrawn twice at the section boundary, not two different ones). Because
+game.coords.to_axial is what DEFINES adjacency (game.hexmap.neighbors' six axial directions), every
+hex on the wrong side of that one-column/row gap silently lost its true cross-seam neighbour -- not
+just the 49 duplicate hexes themselves. Caught by this slice's own min-vertex-cut probe
+(scratchpad/hexside/corridor2.py), which found the WHOLE El Alamein sector split into two
+disconnected halves at exactly the D/E line before the fix.
+
+Fixed at the source: game.coords._SEAM_SHIFT adds a per-section constant IN AXIAL SPACE (after the
+odd-q offset->axial conversion, not before it -- axial neighbours are parity-independent constant
+unit vectors, so a whole-section translation there preserves every internal adjacency exactly,
+unlike nudging the raw offset grid, which flips column parity and was caught distorting a purely
+Map-B-internal neighbour pair 147 px apart during development, tests/test_coords.py's own
+test_pixel_lattice_consistency). The correction CASCADES (B, C and D all carry the same constant,
+E an additional one) because B/C and C/D already agreed natively; shifting only the section on one
+side of a broken seam un-fixes whichever OTHER seam that section already had right. game.coords.
+to_pixel, and therefore every already-verified terrain sample, is completely untouched.
+
+Consequence, MEASURED: 6,741 land hexes on the full board -> 6,699 (42 fewer -- the phantom
+duplicates merge, mirroring C/D's existing 21); the Alamein/Alexandria corridor distances in
+tests/test_map_terrain_fills.py's GATE 3 each read one hex SHORTER (11 -> 10 at El Alamein, 26 -> 25
+at Alexandria) because a BFS crossing the old D/E gap no longer pays for a phantom extra hop; GATE 6
+duplicate count 21 -> 70 (21 C/D + 28 A/B + 21 D/E, all agreeing on terrain class, zero clashes).
+Both restated in place, port rule 5, with the reason in the docstring -- they were pinning the bug.
+
+CAUSE 2 -- THE ESCARPMENT TRACE ITSELF. 190 hexsides (378 directed UP_ESCARPMENT/DOWN_ESCARPMENT
+pairs after Cause 1's fix; 78 of them lie inside the ABC benchmark map used by rommels_arrival, all
+190 for siege_of_tobruk's single-section C load) go from `{}` (dead since TerrainMap.hexsides was
+introduced) to real data for the first time, so movement.step_cost's hexside-cost term and
+zoc.py's ZOC_BLOCKING_HEXSIDES both go live for the first time on the real map. [8.42]: "No vehicle
+may ever move up an escarpment" (unconditional, track or no track -- the terrain.py chart already
+encoded this correctly; it was simply never fed real data), [8.35]: the escarpment symbol (solid
+band + splash) is drawn wholly on the DOWN side, confirmed three independent ways (the rule's own
+words, PDF p.14; two ground truths of OPPOSITE compass sign, the Mediterranean coast and the
+Qattara Depression floor; the named Sollum/Halfaya Pass escarpment, every traced tick pointing out
+to sea) -- see scratchpad/port/hexside-trace.md and tools/vassal/extract_hexsides.py's own
+docstring for the full extraction spec (exact-colour mask, component filter, sample/accept
+thresholds, all measured not chosen).
+
+MEASURED, not assumed: landing the rim changes NEITHER the Alamein sector's minimum vertex cut
+(20 hexes for VEHICLE/MOTORIZED, 30 for FOOT, identical with and without the escarpment hexsides)
+NOR the cheapest coastal motorized route's cost -- the Qattara rim sits entirely on the depression's
+own north face, four hexes west of El Alamein's meridian, and only UP_ESCARPMENT/MAJOR_RIVER are
+ever prohibited to a vehicle in the whole [8.37] table, so an army simply walks around the
+depression's eastern tip on ground the rim never touches. tests/test_hexsides.py pins this finding
+directly (test_the_alamein_rim_does_not_narrow_the_front). The Block-A premise "8.1a is the floor,
+8.1b is the wall" is therefore false, and is recorded as such, not quietly dropped: what DOES
+narrow the front is [8.45]/[8.37] note 3 (light trucks/motorcycle units barred from Desert hexes
+outright), which the engine does not yet carry -- flagged, not implemented, here.
+
+CAUSE 3 -- STALE BAKED AXIALS IN data/reinforcements_desert_fox.json (rommels_arrival/
+siege_of_tobruk's default reinforcement schedule) AND data/reinforcements_campaign.json (the full
+campaign's). Both are NOT hex labels but raw `[q, r]` axial tuples, baked once by
+tools/vassal/build_campaign_reinforcements.py (or, for the desert-fox file, an undocumented earlier
+process -- no committed builder reproduces it) under WHATEVER game.coords.to_axial was in effect at
+generation time. Cause 1 changed to_axial, so every such baked tuple in a B/C/D/E-section hex now
+names a DIFFERENT physical hex than it did when it was written -- a unit's committed "hex" silently
+points 1 axial-row/column away from where it was actually meant to sit, with NO error, because the
+new coordinate is usually still on the map (56/56 desert-fox, 541/541 campaign entries land on real
+terrain either way -- confirmed, not assumed). Caught by tests/test_campaign_culmination.py::
+test_the_commonwealth_garrisons_every_hex_of_the_delta: the Polish Brigade's static desert-fox-style
+placement (recomputed fresh here as [43, 141]) newly LANDED on Cairo hex E1931 (63.71's own auto-win
+objective, freshly recomputed the same axial post-fix), occupying a Delta hex the standing garrison
+order expects empty at t0.
+
+NOT fixed by re-running build_campaign_reinforcements.py: it reproduces only 176 of the committed
+campaign file's 541 records (the file has been hand-extended since, by process this script's current
+form does not capture) -- confirmed by trial, then reverted. Fixed instead by a lossless, targeted
+migration (scratchpad/hexside/migrate_reinforcement_axials.py, not committed -- a one-off): for each
+baked axial, recover which SECTION it belonged to under the OLD (pre-Cause-1) to_axial (unambiguous
+for all 8,484 mainland hexes -- verified before writing, every physical hex's candidate section(s)
+agree on their _SEAM_SHIFT value) and add that section's shift, the exact inverse of what changed.
+541/541 and 56/56 records preserved; only "hex" moved (363 of 541 campaign entries, 5 of 56
+desert-fox); every migrated hex still lands on real terrain (541/541, 56/56, checked after writing).
+
+ATTRIBUTION, MEASURED (seed 42, ScriptedPolicy(AXIS) both sides, each reproduced twice; and the
+false-neuter trap from the slice above still applies for Causes 1-2 -- these patch the CALLER's
+binding, and both game.cna_map._load_hexsides and game.coords._SEAM_SHIFT are read via module-
+attribute access at call time, not captured by a `from X import name` at import time, so a plain
+monkeypatch of the defining module's own name is sufficient here, unlike movement.py's hexside_cost/
+salt_marsh_barred; Cause 3 is DATA, neutered by swapping the file back in, not by patching code):
+
+    live (all three causes)                               -> abc4300eccbb / a5da9203198d
+    NEUTER C -- reinforcements_desert_fox.json reverted to
+      its pre-migration content, Causes 1-2 still live      -> 7ceeabbcdf35 / a38f6b2fe5f7
+    NEUTER A -- (of the Cause-3-neutered state) hexsides off
+      too, seam fix still live                              -> 0b3b2f0c4d6d / 614fb9ecca4e
+    NEUTER B -- hexsides off AND seam fix off (game.coords.
+      _SEAM_SHIFT cleared) = FULL REVERT                    -> b4f2e8e2c955 / 6e74c608b476
+      (exactly the old committed baseline -- confirms all three causes together, and only together
+      with every one of them reverted, fully explain the move)
+
+Determinism holds: every value above reproduces byte-for-byte across two runs, live and neutered.
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-26 (SECOND MOVE THE SAME DAY) -- CAUSE: the Phase-8.1a REVIEW REPAIR. The
 adversarial review of the slice below found four defects; the two that move a signature are both
 fixed here, and both are corrections to the slice below, not new behaviour.
@@ -1136,8 +1240,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "b4f2e8e2c955"
-SIEGE_OF_TOBRUK = "6e74c608b476"
+ROMMELS_ARRIVAL = "abc4300eccbb"
+SIEGE_OF_TOBRUK = "a5da9203198d"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

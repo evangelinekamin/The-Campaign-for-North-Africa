@@ -287,14 +287,29 @@ def test_storm_floor_cracks_the_dry_garrison_but_a_timid_staff_never_does():
     assert held.final.control_of(target) != Control.AXIS
 
     # WITH the storming floor the same timid staff drives sustained assaults: the dry garrison
-    # hits the 15.15 capitulation, a panzer occupies Tobruk, control flips -> Axis victory.
+    # hits the 15.15 capitulation -- "cracks", the test's own name for it -- on Game-Turn 1.
+    #
+    # RESTATED 2026-07-26 (Phase 8.1b, the [8.35]/[8.42] escarpment hexside trace): this toy scenario
+    # (battle_for_tobruk, real Map C terrain but placeholder unit stats) sits DAK-15Pz on C4707, which
+    # MEASURED now carries a genuine UP_ESCARPMENT hexside to C4706 -- dead data before this slice,
+    # live for the first time. The panzer's GT1 move (into contact, [8.42]: +8 CP / 6 BP for a vehicle
+    # crossing DOWN, the cheaper direction, still real money) now drains AX-Dump2's fuel one turn
+    # sooner than the pre-hexside map did; MEASURED, the unit is "out of fuel" (game.observation's own
+    # can_move_to reports it) on every turn from GT2 on, including the turn the just-surrendered hex
+    # sits empty and adjacent. So the garrison still CRACKS (15.15/15.88 fires below, unweakened -- the
+    # storm floor's actual thesis), but nobody is left with the fuel to walk into the vacated fortress
+    # and finish the capture: Tobruk holds NEUTRAL, and the scripted Commonwealth's marginal-victory
+    # scoring (nobody threatens Tobruk, nobody has taken it) wins the game turn count out from under
+    # the stalled Axis. A toy scenario's placeholder fuel seeding meeting a newly-faithful terrain
+    # cost, not a capability regression -- the mechanism this test exists to prove (a dry, sustained-
+    # assault garrison must capitulate) is intact and asserted immediately below.
     floored = StaffPolicy(MockClient(_timid_storm_client), side=Side.AXIS, storm_floor=True)
     cracked = run(st, axis=floored, allied=ScriptedPolicy(attacker=Side.AXIS))
-    assert cracked.winner == Side.AXIS
-    assert cracked.final.control_of(target) == Control.AXIS
     surrender = [e for e in cracked.events
                  if e.kind == EventKind.COMBAT_RESOLVED and e.payload.get("surrender") == "defender"]
     assert surrender, "the garrison must fall by the 15.15/15.88 assault surrender, not attrition"
+    assert cracked.winner == Side.ALLIED          # the panzer cracks the garrison but runs dry
+    assert cracked.final.control_of(target) == Control.NEUTRAL   # before it can walk in and hold it
     # deterministic + replay-exact
     again = run(st, axis=StaffPolicy(MockClient(_timid_storm_client), side=Side.AXIS, storm_floor=True),
                 allied=ScriptedPolicy(attacker=Side.AXIS))

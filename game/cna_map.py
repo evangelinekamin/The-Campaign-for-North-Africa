@@ -1,12 +1,12 @@
 """Load extracted CNA map terrain into an engine TerrainMap.
 
-Bridges the map pipeline (data/terrain_<section>.json, from
-tools/vassal/extract_terrain.py) to the engine's geometry. Hex labels convert to
-a BOARD-GLOBAL axial via game.coords (the same axial the engine's movement uses),
-so several sections merge into one continuous map with cross-section adjacency for
-free — no seam data. Sea hexes are dropped so land units simply cannot enter them;
-hexside features (roads/tracks/escarpments) are not present yet (v1 background
-terrain only).
+Bridges the map pipeline (data/terrain_<section>.json from tools/vassal/extract_terrain.py,
+data/roads_<section>.json/data/hexsides_<section>.json from extract_roads.py/extract_hexsides.py)
+to the engine's geometry. Hex labels convert to a BOARD-GLOBAL axial via game.coords (the same
+axial the engine's movement uses), so several sections merge into one continuous map with
+cross-section adjacency for free — no seam data (game.coords.to_axial carries its own A/B and D/E
+correction, Phase 8.1b, found tracing hexsides). Sea hexes are dropped so land units simply cannot
+enter them.
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from collections import defaultdict, deque
 from . import coords
 from .hexmap import neighbors
 from .movement import TerrainMap, edge
-from .terrain import Terrain
+from .terrain import Hexside, Terrain
 
 _TERRAIN = {
     "clear": Terrain.CLEAR,
@@ -99,7 +99,11 @@ def _read(section: str) -> dict:
 
 def load_sections(sections: str) -> tuple[TerrainMap, dict]:
     """Return (TerrainMap, label->axial index) for the given sections' land hexes,
-    merged into one board-global map. `sections` is a string like "ABC"."""
+    merged into one board-global map. `sections` is a string like "ABC". Sections merge with
+    NO seam data needed: game.coords.to_axial carries its own A/B and D/E correction, so every
+    section's raw grid already lands a shared boundary hex on one board-global axial (like C/D's
+    naturally-coinciding 21) and this loop's unconditional `terrain[ax] = ...` -- last section
+    processed wins -- is the entire merge."""
     terrain: dict = {}
     index: dict = {}
     for section in sections:
@@ -111,12 +115,43 @@ def load_sections(sections: str) -> tuple[TerrainMap, dict]:
             terrain[ax] = _resolve(t)
             index[label] = ax
     roads, tracks = _load_edges(sections, terrain, index)
+    hexsides = _load_hexsides(sections, terrain)
     # Invert the label->axial index into axial->section-letter (rule 29.7 geometry): every hex
     # carries the section of the "S####" label it was transcribed under. Built after the edges so
     # the coastal road hexes _load_edges promotes to land are sectioned too. The global axial is
     # unique per hex (it stitches the sections with no seam), so no two labels collide on one hex.
     hex_sections = {ax: label[0].upper() for label, ax in index.items()}
-    return TerrainMap(terrain=terrain, roads=roads, tracks=tracks, sections=hex_sections), index
+    return TerrainMap(terrain=terrain, roads=roads, tracks=tracks, hexsides=hexsides,
+                       sections=hex_sections), index
+
+
+def _load_hexsides(sections: str, terrain: dict) -> dict:
+    """Load directed hexside features (tools/vassal/extract_hexsides.py output) as axial pairs.
+    Phase 8.1b: only ESCARPMENT is traced so far (wadi/ridge/slope are deferred --
+    scratchpad/port/hexside-trace.md Sec 4 -- their coverage statistic does not have this class's
+    clean bimodal gap). [8.35]/[8.42]: the escarpment symbol (band + splash) is drawn wholly on the
+    DOWN side, so data/hexsides_<section>.json's `[down_label, up_label]` pairs decode directly:
+    moving FROM the low hex INTO the high one crosses UP; the reverse crosses DOWN.
+
+    An edge whose down or up hex colour-sampled as sea (or was never a hex at all -- the tracer
+    covers the raster, not the engine's land set) has no entry in `terrain` and is silently
+    dropped, exactly like the [8.44]/road-hex debt cna_map._RULEBOOK_LAND documents -- not
+    promoted to land, because the extraction gives no evidence a hex is there, only that the band
+    passes through where one would be."""
+    hexsides: dict = {}
+    for section in sections:
+        path = os.path.normpath(os.path.join(_DATA, f"hexsides_{section}.json"))
+        if not os.path.exists(path):
+            continue
+        with open(path) as f:
+            data = json.load(f)
+        for down, up in data.get("escarpment", ()):
+            dx, ux = coords.to_axial(coords.parse(down)), coords.to_axial(coords.parse(up))
+            if dx not in terrain or ux not in terrain:
+                continue                                    # sea-touching edge -- see docstring
+            hexsides[(dx, ux)] = Hexside.UP_ESCARPMENT       # low -> high crosses UP
+            hexsides[(ux, dx)] = Hexside.DOWN_ESCARPMENT     # high -> low crosses DOWN
+    return hexsides
 
 
 def _load_edges(sections: str, terrain: dict, index: dict):

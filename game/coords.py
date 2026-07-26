@@ -18,8 +18,10 @@ sideways with vDescend and no hDescend):
     py    = dx*nx + x0                                   #   swap already applied)
 
 The raw grid is odd-q offset (odd nx columns carry the +dy/2 shift), so the global
-axial is q = nx, r = ny - (nx - (nx & 1)) // 2. Neighbours and distances follow
-exactly and are pixel-independent. See memory: vassal-coordinate-formula.
+axial is q = nx, r = ny - (nx - (nx & 1)) // 2, PLUS a per-section constant correction
+(_SEAM_SHIFT, Phase 8.1b) at the A/B and D/E joins, where each section's raw grid alone
+does not land the boundary on one shared axial the way C/D's happens to. Neighbours and
+distances follow exactly and are pixel-independent. See memory: vassal-coordinate-formula.
 """
 from __future__ import annotations
 
@@ -92,6 +94,57 @@ SECTIONS: dict[str, Section] = _load_sections()
 OFF_SCALE: frozenset[str] = frozenset({"M"})
 _OFF_SCALE_Q = max(s.gMR + s.hOff for k, s in SECTIONS.items() if k not in OFF_SCALE) + 1
 
+# THE A/B AND D/E SEAM CORRECTION -- adjacency space only; to_pixel is untouched and was never
+# wrong. Found tracing hexsides (Phase 8.1b): C/D's raw grids already agree at their shared
+# boundary column (21 hexes decode to the SAME (nx, ny) under the plain formula above, with no
+# help from anything below), but A/B and D/E do not -- the SAME physical hex gets a raw index one
+# column (A/B, nx) or one row (D/E, ny) apart, so the two labels' to_pixel outputs sit 2-4 px apart
+# (the same hex, redrawn twice at the section join) yet to_axial gave them ADJACENT-but-DIFFERENT
+# axials. That is worse than a cosmetic duplicate: to_axial (unlike to_pixel) also DEFINES
+# adjacency via AXIAL_DIRS, so every hex on the wrong side of that 1-unit gap silently loses its
+# cross-seam neighbours -- confirmed by hand and by the min-vertex-cut probe this slice runs, which
+# found the WHOLE El Alamein sector split into two disconnected halves at exactly this line before
+# this fix, not just a few duplicate hexes.
+#
+# THE CORRECTION IS APPLIED IN AXIAL SPACE, AFTER the odd-q offset->axial conversion below, NOT
+# to the raw (nx, ny) offset grid beforehand. That distinction is load-bearing, not cosmetic: an
+# odd-q offset grid's row term `ny - (nx - (nx & 1)) // 2` is PARITY-sensitive (an even column and
+# an odd column stagger differently), so nudging the raw nx by an odd amount before that formula
+# runs flips every hex's column parity and silently distorts EVERY neighbour relationship inside
+# the shifted section -- caught by test_pixel_lattice_consistency, which found a purely-internal
+# Map B neighbour pair sitting 147 px apart (one hex pitch is ~85 px) under a first draft of this
+# fix that shifted nx before conversion. A constant added to the AXIAL (q, r) pair has no such
+# problem: axial neighbours are six fixed unit vectors (AXIAL_DIRS) with no parity dependence at
+# all, so translating a whole section's axial space by one constant vector preserves every
+# relative adjacency inside it exactly, and only moves the section as a whole to align with its
+# neighbour -- the same principle 44.11's Malta shift already relies on, just added rather than
+# folded into nx.
+#
+# MEASURED, not chosen: for every one of the 28 A/B and 21 D/E hex pairs whose to_pixel outputs
+# coincide (<10 px apart, mutual nearest neighbour -- the same test that finds C/D's 21), the delta
+# between B's (or E's) NATIVE axial (the plain formula below, no correction) and its A-side (or
+# D-side) twin's is the SAME constant: (-1, 0) for B relative to A, (0, -1) for E relative to D.
+#
+# THE CORRECTION CASCADES, because A's error propagates down the chain: B/C and C/D each ALREADY
+# agree natively (0 relative shift -- confirmed the same way, by cross-section neighbour count, not
+# assumed), so whatever correction re-aligns B with A must carry unchanged through C and D to keep
+# THOSE joins aligned too, and E then adds its own (0, -1) on top of D's inherited correction. A
+# first draft that gave B alone (-1, 0) and left C/D/E at (0, 0) passed every A/B check but broke
+# the B/C join instead (test_cross_section_adjacency_is_seamless), which is how the cascade was
+# caught -- fixing one seam by shifting only the section on one side of it silently un-fixes its
+# OTHER seam if that section was already correctly aligned with its other neighbour.
+#
+# Round-trip (to_axial then from_axial) is exact over all 8,505 transcribed hexes with this
+# correction in place, every interior neighbour pair stays on the true ~85 px pixel lattice
+# (test_pixel_lattice_consistency), and all four section joins (A/B, B/C, C/D, D/E) now show
+# genuine cross-section axial adjacency, not just the two that used to accidentally work.
+_SEAM_SHIFT: dict[str, tuple[int, int]] = {
+    "B": (-1, 0),
+    "C": (-1, 0),
+    "D": (-1, 0),
+    "E": (-1, -1),
+}
+
 
 @dataclass(frozen=True, slots=True)
 class Hex:
@@ -130,10 +183,14 @@ def from_raw(section: str, nx: int, ny: int) -> Hex:
 def to_axial(h: Hex) -> tuple[int, int]:
     nx, ny = to_raw(h)
     q = nx + (_OFF_SCALE_Q if h.section in OFF_SCALE else 0)   # 44.11: the off-scale box, disjoint
-    return q, ny - (nx - (nx & 1)) // 2
+    r = ny - (nx - (nx & 1)) // 2
+    dq, dr = _SEAM_SHIFT.get(h.section, (0, 0))                # A/B, D/E seam correction, see above
+    return q + dq, r + dr
 
 
 def from_axial(section: str, q: int, r: int) -> Hex:
+    dq, dr = _SEAM_SHIFT.get(section, (0, 0))
+    q, r = q - dq, r - dr
     nx = q - (_OFF_SCALE_Q if section in OFF_SCALE else 0)
     ny = r + (nx - (nx & 1)) // 2
     return from_raw(section, nx, ny)

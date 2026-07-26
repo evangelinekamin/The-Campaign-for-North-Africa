@@ -23,6 +23,45 @@ def test_axial_roundtrip():
             assert coords.from_axial("C", *coords.to_axial(h)) == h
 
 
+def test_axial_roundtrip_holds_through_the_ab_de_seam_correction():
+    # game.coords._SEAM_SHIFT (Phase 8.1b) nudges B's and E's raw indices before computing the
+    # axial; the round trip must still be exact for the two corrected sections, not just C.
+    for section in ("A", "B", "D", "E"):
+        for xx in range(1, 55):
+            for yy in range(1, 35):
+                h = Hex(section, xx, yy)
+                assert coords.from_axial(section, *coords.to_axial(h)) == h
+
+
+def test_ab_and_de_seam_hexes_coincide():
+    # [8.1b] The A/B and D/E section joins redraw the SAME physical hex under each section's own
+    # raw numbering (confirmed by pixel proximity: their to_pixel outputs sit 2-4 px apart) --
+    # unlike C/D, which already coincides under the plain formula, A/B and D/E used to decode to
+    # two DIFFERENT board-global axials one column/row apart. They must now agree, exactly like
+    # C/D's existing 21 (tests/test_map_de.py / test_map_terrain_fills.py's "THE SEAM" gate).
+    ab_pairs = [("A0233", "B0200"), ("A0433", "B0400"), ("A1033", "B1000")]
+    de_pairs = [("D0233", "E0200"), ("D0433", "E0400"), ("D1033", "E1000")]
+    for a, b in ab_pairs + de_pairs:
+        assert coords.to_axial(parse(a)) == coords.to_axial(parse(b)), f"{a} != {b}"
+    # and C/D, untouched by this correction, still agrees too
+    assert coords.to_axial(parse("C0233")) == coords.to_axial(parse("D0200"))
+
+
+def test_ab_and_de_seam_neighbours_are_not_phantoms():
+    # The bug this closes: before the correction, a hex just west of the A/B or D/E join lost its
+    # TRUE cross-seam neighbour (the axial arithmetic landed one column short/long), which silently
+    # disconnected the map along the whole seam, not just at the 49 duplicate hexes themselves
+    # (confirmed against the real, transcribed board: a min-vertex-cut probe across the Alamein
+    # sector found the WHOLE region split into two disconnected halves at this exact line before
+    # this fix). Checked by AXIAL distance, matching test_cross_section_adjacency_is_seamless's own
+    # method -- coords.neighbours(h) always relabels its 6 results in h's OWN section (by design,
+    # per its docstring), so it can never literally return a far-section label even when correct.
+    a133, b200 = parse("A0133"), parse("B0200")
+    assert coords.distance(a133, b200) == 1
+    d133, e200 = parse("D0133"), parse("E0200")
+    assert coords.distance(d133, e200) == 1
+
+
 def test_six_neighbours_all_distance_one():
     h = parse("C4020")
     nbs = coords.neighbours(h)

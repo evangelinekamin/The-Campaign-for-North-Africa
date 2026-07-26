@@ -823,16 +823,25 @@ def _campaign_staging_dumps() -> list[SupplyUnit]:
 
     base=False deliberately: a field dump evaporates (49.3) and is NOT a rule-57 strategic base
     -- exempting it would both mislabel the chain and freeze its stock. Labelled hexes go through
-    coords; the four probed waypoints are passed as raw axial (no rulebook label)."""
+    coords; the four probed waypoints are passed as raw axial (no rulebook label).
+
+    W1/W2/W3's axials were RE-DERIVED 2026-07-26 (Phase 8.1b, the A/B/D/E section-seam correction):
+    a raw axial probed by eye is exactly as section-relative as a label is, and game.coords.to_axial
+    changed under these three (all in sections B/C, both corrected) -- unlike the labelled dumps
+    above, which re-resolve automatically through coords.to_axial/coords.parse, these would have
+    silently pointed one hex off their originally-probed spot on the Via Balbia. Migrated losslessly
+    (scratchpad/hexside/migrate_reinforcement_axials.py's method: recover the section each OLD axial
+    named, add that section's _SEAM_SHIFT) -- W1 (5,36)->(4,36), W2 (4,45)->(3,45), W3 (15,63)->
+    (14,63), each still B/C respectively, none stranded."""
     def ax(lbl: str):
         return coords.to_axial(coords.parse(lbl))
     return [
         SupplyUnit("AX-Stage-Tobruk", Side.AXIS, ax("C4807"), ammo=200, fuel=2000, stores=500, water=0),
         SupplyUnit("AX-Stage-Bardia", Side.AXIS, ax("C4321"), ammo=100, fuel=1000, stores=200, water=0),
-        SupplyUnit("AX-Stage-W1", Side.AXIS, (5, 36), ammo=0, fuel=0, stores=0, water=0),
-        SupplyUnit("AX-Stage-W2", Side.AXIS, (4, 45), ammo=0, fuel=0, stores=0, water=0),
+        SupplyUnit("AX-Stage-W1", Side.AXIS, (4, 36), ammo=0, fuel=0, stores=0, water=0),
+        SupplyUnit("AX-Stage-W2", Side.AXIS, (3, 45), ammo=0, fuel=0, stores=0, water=0),
         SupplyUnit("AX-Stage-Derna", Side.AXIS, ax("B5925"), ammo=0, fuel=250, stores=50, water=0),
-        SupplyUnit("AX-Stage-W3", Side.AXIS, (15, 63), ammo=0, fuel=0, stores=0, water=0),
+        SupplyUnit("AX-Stage-W3", Side.AXIS, (14, 63), ammo=0, fuel=0, stores=0, water=0),
         SupplyUnit("AX-Stage-C0716", Side.AXIS, ax("C0716"), ammo=100, fuel=50, stores=50, water=0),
     ]
 

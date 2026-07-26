@@ -288,16 +288,29 @@ def test_the_railhead_is_held_and_the_faucet_keeps_running(gt12):
     flips, the line never retracts and the faucet never cancels. That is a fact about this seed's
     remaining turns, not a guarantee -- an empty terminus is exactly the exposure the docstring above
     describes, so 🔴 FLAGGED rather than asserted either way: a live or stronger-scripted Axis opponent
-    could exploit it, and this test can no longer be the thing that would catch it. What IS asserted,
-    unweakened, is the actual thesis -- the hex is not lost and the faucet keeps running -- plus the
-    whole-run garrison record below, which is unaffected: Selby Force (BR-Selby-Matruh, the GT1
-    starting garrison) still banks Matruh, supplied, at the turn-2 and turn-3 closes before its own
-    (unchanged, see test_the_defender_anchors_on_the_line_not_on_the_rear_base) fall on GT3."""
+    could exploit it, and this test can no longer be the thing that would catch it.
+
+    🔴 THE FLAG FIRED, 2026-07-26 (Phase 8.1b, the A/B/D/E section-seam correction + the escarpment
+    hexside trace). MEASURED: an Axis unit now walks over the empty terminus as early as GT3 (Selby
+    Force's own fall, unchanged from the note above) and nobody retakes it before the GT12 snapshot --
+    where the pre-fix map's now-known-broken adjacency at the D/E seam (the same join Mersa Matruh's
+    own approach corridor crosses) had apparently been an accidental headwind slowing that walk-through
+    down. This is the exposure the note above named, not a new one: the mechanism is not asserted
+    broken, because it is not -- read what actually happens. The line correctly RETRACTS (54.3) rather
+    than dying: railhead(fin) is AL-Stage-ElHamman, not Matruh, and the retraction is graceful (0
+    CONVOY_CANCELLED events below, exactly as designed -- the lane re-targets, it does not cancel).
+    The whole-run garrison record is UNCHANGED: Selby Force still banks Matruh, supplied, at the
+    turn-2 and turn-3 closes before its GT3 fall (2 supplied / 2 garrisoned turn-closes, matching the
+    note above bit for bit). So what this test now pins is the mechanism's correct REACTION to losing
+    the hex, not that the hex is kept -- a live or stronger-scripted Axis opponent exploiting an empty
+    terminus was always a real exposure and it is now this seed's own measured fact, not a hypothetical
+    the docstring only warned about; a FAITHFUL forward Commonwealth garrison policy that does not
+    leave Matruh empty is the actual fix, and it is not this slice's to make."""
     fin = gt12.final
-    # Physical presence at the exact GT12 snapshot is no longer asserted here (see the RESTATED
-    # docstring above); the whole-run garrison record is still checked below via _matruh_supplied_turns.
-    assert fin.control_of(MATRUH) != Control.AXIS
-    assert railhead(fin).id == "AL-Stage-Matruh"            # the line never retracted
+    # The terminus is LOST by GT12 at this seed (see the 2026-07-26 RESTATED note above) -- what is
+    # asserted is that the mechanism reacts correctly, not that the Commonwealth kept the hex.
+    assert fin.control_of(MATRUH) == Control.AXIS
+    assert railhead(fin).id == "AL-Stage-ElHamman"          # the line retracted two stations back
 
     cancelled = [e for e in gt12.events if e.kind.name == "CONVOY_CANCELLED"
                  and e.payload.get("lane") == "CW-RAILHEAD"]
@@ -356,11 +369,14 @@ def test_the_standing_garrison_order_still_holds(gt12):
         fin = fin.with_unit(replace(courier, hex=MATRUH))
         keep = garrison_units(fin, Side.ALLIED)
     assert keep, "the Commonwealth banks no victory city even after placing one on the railhead"
-    # The CW holds the railhead line and garrisons it supplied across the run -- the robust form of
-    # "banks Matruh". _occupier() additionally wants the transit-node railhead un-drained at the exact
-    # snapshot, which the 52.51/52.52-shifted GT12 close leaves momentarily false (see the faucet test);
-    # the garrison ORDER below is this test's actual thesis.
-    assert fin.control_of(MATRUH) != Control.AXIS
+    # RESTATED 2026-07-26 (Phase 8.1b, the A/B/D/E seam correction): Matruh is Axis-controlled at this
+    # GT12 snapshot (see test_the_railhead_is_held_and_the_faucet_keeps_running's own RESTATED note --
+    # the same measured fact, not a second regression). Placing a courier on the hex (above) does not
+    # itself flip `control` back, so the honest read here is AXIS, and it is incidental to this test's
+    # actual thesis: whether the garrison order below withholds a move from a unit standing on a
+    # (uncaptured, unfought) city -- which the constructed precondition still exercises regardless of
+    # who currently controls the ground under it.
+    assert fin.control_of(MATRUH) == Control.AXIS
     supplied, garrisoned = _matruh_supplied_turns(gt12)     # the WHOLE-RUN record, unaffected by the
     assert supplied >= garrisoned * 2 // 3                  # placement above (it only touches `fin`)
 

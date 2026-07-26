@@ -86,7 +86,7 @@
       "group": "AU 9th Australian Division",
       "side": "ALLIED",
       "hex": [
-        15,
+        14,
         66
       ],
       "arrival_turn": 0,
@@ -97,7 +97,7 @@
       "group": "AU 9th Australian Division",
       "side": "ALLIED",
       "hex": [
-        15,
+        14,
         65
       ],
       "arrival_turn": 0,
@@ -108,7 +108,7 @@
       "group": "BR 2nd Armoured Division",
       "side": "ALLIED",
       "hex": [
-        16,
+        15,
         65
       ],
       "arrival_turn": 0,
@@ -119,7 +119,7 @@
       "group": "BR 2nd Armoured Division",
       "side": "ALLIED",
       "hex": [
-        16,
+        15,
         66
       ],
       "arrival_turn": 0,
@@ -130,7 +130,7 @@
       "group": "BR 2nd Armoured Division",
       "side": "ALLIED",
       "hex": [
-        15,
+        14,
         64
       ],
       "arrival_turn": 0,

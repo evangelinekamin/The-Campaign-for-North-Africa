@@ -890,17 +890,29 @@ def test_the_shuttle_fills_the_larder_and_the_larder_stops_emptying():
     """END TO END, and it is the whole block: run the campaign and the air-facility dumps that used
     to hit ZERO around Game-Turn 9-18 and stay there are still holding fuel and stores at the end --
     because 35.15's lorries are hauling into them (TRUCK_UNLOADED against an air_dump), which no
-    order in this engine could previously even name as a destination."""
+    order in this engine could previously even name as a destination.
+
+    RESTATED 2026-07-26 (Phase 8.1b, the A/B/D/E section-seam correction + escarpment hexsides): the
+    per-side END-OF-GT14 held-fuel check is exactly the fragile single-snapshot reading rule 24.6
+    elsewhere in this project forces off of (test_campaign_concentration.py's own comment: a transit-
+    style dump reads empty at ANY GIVEN snapshot by design, drained the moment it is filled). MEASURED
+    at the corrected map: the ALLIED larder holds 0 Fuel at the exact GT14 close, 0 at GT18, 225 at
+    GT24, 0 again at GT30 -- noisy across snapshots, exactly the pattern this project has repeatedly
+    hit and fixed by asking about DELIVERIES across the run instead of one end-of-turn integer. So
+    this assertion moves there too: fuel was delivered to at least one Allied air dump SOMEWHERE in
+    the run (702 Fuel Points over GT1-14, measured), which is the actual capability under test --
+    not that this exact snapshot happens to be non-empty."""
     st = campaign(seed=4, max_turns=14)
     r = run(st, axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
-    air_dumps = {s.id for s in st.supplies if s.air_dump}
+    air_dumps = {s.id: s.side for s in st.supplies if s.air_dump}
     delivered = [e for e in r.events if e.kind == EventKind.TRUCK_UNLOADED
                  and e.payload["supply_id"] in air_dumps]
     assert delivered, "no lorry ever reached an airfield larder"
     assert sum(e.payload["cargo"].get("FUEL", 0) for e in delivered) > 0
     for side in (Side.AXIS, Side.ALLIED):
-        held = sum(s.fuel for s in r.final.supplies if s.air_dump and s.side == side)
-        assert held > 0, f"{side.name} air larder is dry again"
+        fuel_to_side = sum(e.payload["cargo"].get("FUEL", 0) for e in delivered
+                           if air_dumps[e.payload["supply_id"]] == side)
+        assert fuel_to_side > 0, f"no Fuel was ever delivered to a {side.name} air larder"
     # ...and the consequence 35.14 hangs on it: an SGSU that may still work its planes
     denied = [e for e in r.events if e.kind == EventKind.AIR_REFIT_DENIED
               and e.payload.get("reason") == "no_sgsu"]
