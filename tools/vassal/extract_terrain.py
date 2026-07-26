@@ -4,9 +4,11 @@ Terrain on the CNA map is colour-coded, so we sample a small patch at each hex
 centre and classify by colour. Hex centres come from game.coords.to_pixel, which
 uses the EXACT VASSAL grid formula (data/cna_map_grid.json) — no per-section
 fitting, so every section (A-E, Malta) works from its published parameters. This
-recovers background terrain (clear / rough / desert / sea / vegetation); it does
-NOT recover hexside features (escarpment / wadi / road / track edges), which are
-line features added separately.
+recovers background terrain (clear / rough / desert / gravel / salt_marsh /
+mountain / delta / swamp / vegetation / sea — [8.37] Phase 8.1a, see
+scratchpad/port/terrain-key.md); it does NOT recover hexside features
+(escarpment / wadi / road / track edges), which are line features added
+separately (Phase 8.1b).
 
     python3 tools/vassal/extract_terrain.py [SECTIONS] [path/to/CNAv2.1.0.vmod]
     python3 tools/vassal/extract_terrain.py ABC          # extract Maps A, B, C
@@ -49,30 +51,75 @@ KNOWN_TERRAIN = {
 SAMPLE_RADIUS = 24        # patch half-size (px); covers most of a ~85px hex
 SEA_FRACTION = 0.55       # a hex is sea only if it is MOSTLY water
 
+# The Guthrie raster is FLAT VECTOR ART, not a photographic scan: a whole-raster census
+# (scratchpad/port/terrain-key.md Sec 2) finds each land terrain occupies exactly ONE RGB, bound to
+# the Terrain Key (images/TEC.png in the same .vmod, the [8.37] chart's own swatch panel) by pattern
+# + place-name. So classification is an exact-colour vote, not a CV/texture problem.
+FILL = {
+    "clear": (251, 250, 239),
+    "desert": (223, 207, 100),
+    "rough": (194, 185, 149),
+    "delta": (164, 178, 171),          # the Nile Delta
+    "salt_marsh": (186, 175, 129),     # the Qatara Depression / Wadi Natrun
+    "mountain": (151, 136, 66),        # Jebel Akhdar massif core
+    "vegetation": (203, 216, 91),      # keep the EXISTING key string, not "veg"
+}
+# Overlay glyphs, keyed by their own exact colour. salt_marsh's crackle net and vegetation's tree
+# stipple sit ON their fill and simply add to that fill's vote; gravel's pebble-ring and swamp's
+# grass-tuft glyphs sit on a bare CLEAR base and only ever PROMOTE a clear winner (there is no
+# "gravel fill" or "swamp fill" colour -- the glyph is the whole signal).
+GLYPH = {
+    "salt_marsh": (222, 207, 99),
+    "vegetation": (56, 142, 87),
+    "gravel": (170, 157, 97),
+    "swamp": (91, 161, 102),
+}
+GLYPH_MIN = 17             # px in the patch; the histogram gap terrain-key.md Sec 4a documents
+                           # (gravel: nothing between 5-16 and nothing above 37; swamp: nothing 0-40)
+
 
 def _masks(patch: np.ndarray) -> dict:
-    """Per-pixel terrain masks over an HxWx3 patch (vectorised; sea wins ties so a
-    coastal hex with real land is still land)."""
+    """Per-pixel terrain masks over an HxWx3 patch (vectorised). The sea test is
+    UNCHANGED and deliberately fuzzy -- it reads antialiased/shaded coastal blue
+    that an exact match misses; exact-matching it moves 27 hexes across the
+    land/sea line (terrain-key.md Sec 2, trap 2). Every land class below IS exact
+    colour: this is flat vector art, not a photograph."""
     R, G, B = patch[..., 0], patch[..., 1], patch[..., 2]
     sea = (B > R + 12) & (B > 120)
-    veg = (G > R + 8) & (G > B + 8) & ~sea
-    desert = (R > 195) & (G > 150) & (B < 135) & (R - B > 70) & ~sea & ~veg
-    clear = (R > 200) & (G > 195) & (B > 165) & ~sea & ~veg & ~desert
-    rough = ((R > 120) & (R < 215) & (G > 115) & (G < 200) & (B < 160)
-             & (np.abs(R - G) < 45) & ~sea & ~veg & ~desert & ~clear)
-    return {"sea": sea, "vegetation": veg, "desert": desert, "clear": clear, "rough": rough}
+    masks = {"sea": sea}
+    for name, (r, g, b) in FILL.items():
+        masks[name] = (R == r) & (G == g) & (B == b) & ~sea
+    return masks
 
 
 def classify_patch(patch: np.ndarray) -> str:
     """Classify a hex from a patch: sea only if mostly water, else the dominant
-    land terrain. This keeps thin coastal land (ports, the coast road corridor)
-    on the map instead of drowning it."""
+    land terrain by exact-colour vote (fold the salt-marsh/vegetation glyphs into
+    their fill's count), falling back to the gravel/swamp overlay glyphs ONLY
+    when nothing else won (they have no fill colour of their own -- they sit on
+    bare clear ground). This keeps thin coastal land (ports, the coast road
+    corridor) on the map instead of drowning it."""
     m = _masks(patch)
     total = patch.shape[0] * patch.shape[1]
     if m["sea"].sum() >= SEA_FRACTION * total:
         return "sea"
+    R, G, B = patch[..., 0], patch[..., 1], patch[..., 2]
     land = {k: int(v.sum()) for k, v in m.items() if k != "sea"}
-    return max(land, key=land.get) if any(land.values()) else "clear"
+    land["salt_marsh"] += int(((R == GLYPH["salt_marsh"][0]) & (G == GLYPH["salt_marsh"][1])
+                               & (B == GLYPH["salt_marsh"][2])).sum())
+    land["vegetation"] += int(((R == GLYPH["vegetation"][0]) & (G == GLYPH["vegetation"][1])
+                               & (B == GLYPH["vegetation"][2])).sum())
+    winner = max(land, key=land.get) if any(land.values()) else "clear"
+    if winner == "clear":
+        gravel_px = int(((R == GLYPH["gravel"][0]) & (G == GLYPH["gravel"][1])
+                         & (B == GLYPH["gravel"][2])).sum())
+        swamp_px = int(((R == GLYPH["swamp"][0]) & (G == GLYPH["swamp"][1])
+                        & (B == GLYPH["swamp"][2])).sum())
+        if gravel_px >= GLYPH_MIN:
+            return "gravel"
+        if swamp_px >= GLYPH_MIN:
+            return "swamp"
+    return winner
 
 
 def _bbox(section: str) -> tuple[int, int, int, int]:

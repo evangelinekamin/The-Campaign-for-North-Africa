@@ -46,6 +46,7 @@ class Terrain(str, Enum):
     MOUNTAIN = "MOUNTAIN"
     DELTA = "DELTA"
     DESERT = "DESERT"
+    SWAMP = "SWAMP"
     MAJOR_CITY = "MAJOR_CITY"
 
 
@@ -72,6 +73,16 @@ _HEX_ENTRY: dict[Terrain, tuple[float | None, float | None]] = {
     Terrain.MOUNTAIN: (4, 6),
     Terrain.DELTA: (2, 4),
     Terrain.DESERT: (3, 4),
+    # "May enter only on road or railroad" (8.37 note 4, PDF p.70) -- the note replaces BOTH the
+    # non-Mot and Mot CP cells outright, with no exception carved out for foot units, so off-road/
+    # off-track entry is prohibited to every mobility class. A Road/Track edge bypasses this table
+    # entirely (ROAD_ENTRY/TRACK_ENTRY in movement.step_cost), which is how the chart's "only on
+    # road or railroad" actually gets satisfied -- this pair only governs the case where neither is
+    # present. Known imprecision, flagged: the engine's Track feature does not distinguish from a
+    # Railroad, so a vehicle can enter Swamp off a Track today where the chart says only a Railroad
+    # should count -- the same coarseness already accepted for [8.37] notes 2/3 (untracked vehicle-
+    # class exceptions), not a new gap this slice invents.
+    Terrain.SWAMP: (PROHIBITED, PROHIBITED),
     Terrain.MAJOR_CITY: (1, 0.5),
 }
 
@@ -116,6 +127,13 @@ _HEX_BREAKDOWN: dict[Terrain, float] = {
     Terrain.MOUNTAIN: 12,
     Terrain.DELTA: 2,
     Terrain.DESERT: 24,
+    # The chart prints NO Breakdown-Value digit for Swamp (data/breakdown_rates.json's own
+    # _absent_note: "no independent BV") -- read the same way Track's blank BV cell reads (8.37
+    # note 8: "A track carries no BV of its own"), i.e. faithfully 0, not a guessed number. In
+    # practice this is nearly unreachable: off-road/off-track entry is PROHIBITED (_HEX_ENTRY
+    # above), a dry Road bypasses this table via ROAD_BREAKDOWN, so only the Track-halving branch
+    # in movement.breakdown_points ever consults it.
+    Terrain.SWAMP: 0,
     Terrain.MAJOR_CITY: 0.5,
 }
 

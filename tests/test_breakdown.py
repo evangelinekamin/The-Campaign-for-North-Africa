@@ -31,7 +31,7 @@ _TERRAIN_KEY = {
     "clear": Terrain.CLEAR, "gravel": Terrain.GRAVEL, "salt_marsh": Terrain.SALT_MARSH,
     "heavy_vegetation": Terrain.HEAVY_VEG, "rough": Terrain.ROUGH,
     "mountain": Terrain.MOUNTAIN, "delta": Terrain.DELTA, "desert": Terrain.DESERT,
-    "major_city": Terrain.MAJOR_CITY,
+    "swamp": Terrain.SWAMP, "major_city": Terrain.MAJOR_CITY,
 }
 _HEXSIDE_KEY = {
     "ridge": Hexside.RIDGE, "up_slope": Hexside.UP_SLOPE, "down_slope": Hexside.DOWN_SLOPE,

@@ -1,0 +1,12 @@
+{
+  "_comment": "[8.37] note 4 / [25.12] Major-City fortification roster: 'Alexandria and Cairo hexes are Level Three Fortifications, all others are Level Two.' Transcribed off SUMMARY OF IMPORTANT LOCATIONS (PDF page 73, read at 170 dpi -- scratchpad/map8/scan/p73-073.png), cross-checked against docs/rules/90-charts-tables-and-play-aids.md:192-224. The 'Major City' column is X for SIX places / ELEVEN hexes; Derna/Mersa Matruh/Sollum/Rosetta/Aboukir are ports, NOT Major Cities (no fortification), and Tripoli is off-map. See scratchpad/port/terrain-key.md Sec 5.",
+  "level_2": {
+    "_comment": "The four Level-2 Major Cities outside the Delta. Alexandria/Cairo (Level 3) are NOT repeated here -- game.scenario.delta_hexes() already reads their hexes off data/victory_cities.json's auto_win table (the SAME rule-64.71 hexes), so re-transcribing them here would be a second copy of one fact.",
+    "tobruk": ["C4807"],
+    "bardia": ["C4321"],
+    "benghazi": ["A4827"],
+    "helwan": ["E1430"],
+    "_benghazi_note": "Faithful, but previously withheld: game.scenario used to keep Benghazi's terrain MAJOR_CITY (for the unlimited 54.12 dump ceiling) while deliberately NOT granting its [25.12] fort, on the stated theory that the fort alone grants [15.82] retreat-immunity. That theory doesn't hold -- 15.82 keys on Terrain.MAJOR_CITY (game/engine.py), not on fortification level -- so Benghazi already had retreat-immunity either way, and withholding the fort was port-rule-6 debt paid here.",
+    "_helwan_note": "Absent from the engine entirely before this slice. E1430, campaign-only (section E)."
+  }
+}

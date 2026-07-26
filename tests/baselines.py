@@ -10,6 +10,76 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-26 -- CAUSE: Phase 8.1a, the [8.37] TERRAIN FILL RECLASSIFICATION (the Qattara
+Depression / El Alamein anchor, Jebel Akhdar Mountain, the Nile Delta, Rock/Gravel) + the [8.37]
+note-4 / [25.12] Major-City fort roster (Benghazi + Helwan added). Full account:
+scratchpad/port/terrain-key.md (the Block-A spec this slice built from).
+
+THE BUG THIS CLOSES: the map extractor (tools/vassal/extract_terrain.py) only ever classified 4 land
+fills (clear/rough/desert/vegetation) against a raster the Terrain Key (images/TEC.png, the SAME
+.vmod's own [8.37] swatch card, cross-checked verbatim against PDF page 70) prints FIFTEEN for. The
+Qattara Depression -- the terrain that historically STOPPED the Axis at Alamein -- was silently
+COARSENED into rough/desert, so no Salt Marsh existed on this map at all; the Nile Delta read as
+plain clear/rough; Jebel Akhdar carried no Mountain hex despite [24.44] naming Mountain as real board
+terrain and the anti-armor chart carrying a Mountain-hex shift. A whole-raster exact-colour census
+(the map is FLAT VECTOR ART -- one exact RGB per class, no texture/CV problem at all) found the true
+extent: gravel 394, delta 325, salt_marsh 270, mountain 109, swamp 17 (a genuinely new terrain -- see
+below), all reclassified in place of a share of the old clear/rough. This is a CORRECTION to a
+coarsened map (port rule 5), not new invented geography: the coastline is BYTE-IDENTICAL (sea stays
+exactly 1,750 hexes) and every one of the 21 section-seam axials that carry two labels agrees on its
+class under the new classifier.
+
+MEASURED: 1,118 land hexes reclassify (16.6% of the land map); 604 of them sit inside the ABC
+benchmark map both Desert Fox scenarios load. Verified by eye against the raster (not just by count):
+the Qattara Depression forms one 69-hex connected salt_marsh body (plus a 26-hex southern lobe and an
+8-hex Wadi Natrun component, both labelled "The Qatara Depression"/"WADI NATRUN" on the map) exactly
+where the book's own place-names put it, with the real hex-graph distance from the Mediterranean
+coast to that body narrowing to 9-11 hexes right at El Alamein (E3002 = 11, Alexandria E3714 = 26) --
+the historically-correct ~65km Alamein bottleneck, at this map's ~8km/hex scale. The small outlying
+Mountain hexes in sections C/D/E (flagged as possible escarpment-band artifacts by the Block-A spec)
+were individually eyeballed at native resolution: each is a genuine solid dark-olive-brown blob
+(exact RGB match, visually and numerically distinct from the charcoal-grey escarpment band) --
+isolated real hillocks (El Mesceca in section C, small knolls on the Qattara rim in section D, the
+Mokattam-hills analogue near Cairo in section E), not classifier contamination.
+
+Two engine-side additions this exposed: (1) game/cna_map.py's terrain-string lookup now RAISES on an
+unrecognised class instead of silently defaulting to CLEAR -- the exact bug class this slice exists
+to close. (2) Terrain.SWAMP (game/terrain.py) -- the [8.37] chart prints a Swamp row (17 Delta-lagoon
+hexes, section E) that had no engine member; off-road/off-rail entry is PROHIBITED to every mobility
+class (the chart note carves out no foot-unit exception) and its Breakdown Value is faithfully 0 (the
+chart's blank BV cell, read the same way Track's identically-blank cell reads -- "no independent BV
+of its own", not a guessed number). See game/terrain.py and data/city_forts.json for the citations.
+
+Separately, [8.37] note 4 / [25.12] ("Alexandria and Cairo hexes are Level Three Fortifications, all
+others are Level Two") -- scan-verified off PDF page 73's SUMMARY OF IMPORTANT LOCATIONS -- adds
+Benghazi and Helwan to game.scenario.MAJOR_CITIES (now data/city_forts.json, 4 Level-2 cities: Tobruk,
+Bardia, Benghazi, Helwan). Benghazi's fort was PREVIOUSLY WITHHELD on the theory that granting it
+would hand the Axis rear an unearned [15.82] retreat-immunity; that theory does not hold -- 15.82 keys
+on Terrain.MAJOR_CITY, which Benghazi already carried for its unlimited dump ceiling, not on fort
+level (game/engine.py) -- so the fort was faithful debt, paid here (port rule 6: never campaign-gate
+a faithful rule). Helwan (E1430) was absent from the engine entirely.
+
+NEUTER-PROOF, both causes isolated (scratchpad/map8/neuter_proof.py, seed 42,
+axis=allied=ScriptedPolicy(AXIS), each measurement reproduced twice byte-for-byte):
+
+    both reverted (old terrain, old fort roster)     -> 453f9ad1f231 / 42eedca02ae3  (= OLD baseline)
+    terrain LIVE,     fort roster reverted            -> 418ee22ffb61 / 63e08df24f84  (= NEW baseline)
+    terrain reverted, fort roster LIVE                -> 453f9ad1f231 / 42eedca02ae3  (= OLD baseline)
+    both live (the actual change)                     -> 418ee22ffb61 / 63e08df24f84  (= NEW baseline)
+
+So the ENTIRE signature move is the terrain reclassification. The fort-roster change, though
+faithful and real, is INVISIBLE to both benchmarks: Benghazi (A4827) sits deep in the Axis rear, well
+west of the whole Tobruk corridor either scenario fights over, so ScriptedPolicy vs ScriptedPolicy
+never generates an event anywhere near it and its terrain/fort change never enters either log. It
+still belongs in this commit (it is the same [8.37] chart, the same slice, and the campaign scenario
+-- not signature-pinned -- DOES route units near Benghazi), but it is not what moved these hashes.
+
+    rommels_arrival   453f9ad1f231 -> 418ee22ffb61
+    siege_of_tobruk   42eedca02ae3 -> 63e08df24f84
+
+Each reproduced twice, byte-for-byte.
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-25 -- CAUSE: rule [6.21]/[15.88] MOVEMENT DISCIPLINE -- the scripted policies
 stop voluntarily marching a unit into the guaranteed-surrender band (scratchpad/port/movement-
 discipline-spec.md, itself implementing scratchpad/port/cohesion-economy-audit.md's Q3).
@@ -985,8 +1055,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "453f9ad1f231"
-SIEGE_OF_TOBRUK = "42eedca02ae3"
+ROMMELS_ARRIVAL = "418ee22ffb61"
+SIEGE_OF_TOBRUK = "63e08df24f84"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

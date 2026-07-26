@@ -25,9 +25,30 @@ _TERRAIN = {
     "rough": Terrain.ROUGH,
     "desert": Terrain.DESERT,
     "vegetation": Terrain.HEAVY_VEG,
+    "gravel": Terrain.GRAVEL,
+    "salt_marsh": Terrain.SALT_MARSH,
+    "mountain": Terrain.MOUNTAIN,
+    "delta": Terrain.DELTA,
+    "swamp": Terrain.SWAMP,
     "unknown": Terrain.CLEAR,       # conservative default
 }
 _DATA = os.path.join(os.path.dirname(__file__), "..", "data")
+
+
+def _resolve(t: str) -> Terrain:
+    """Look up an extracted terrain string, LOUDLY: silently defaulting an unrecognised
+    class to CLEAR (the old `_TERRAIN.get(t, Terrain.CLEAR)`) is the exact bug class
+    Phase 8.1a exists to close -- a typo'd or newly-added extractor class would
+    otherwise vanish into open ground with no signal. `_TERRAIN["unknown"]` above stays
+    as the one deliberate, named exception (an extraction pass that could not classify
+    a hex at all, distinct from an unrecognised STRING)."""
+    try:
+        return _TERRAIN[t]
+    except KeyError:
+        raise ValueError(
+            f"unrecognised terrain class {t!r} in extracted data -- add a "
+            "game.cna_map._TERRAIN key (see tools/vassal/extract_terrain.py's "
+            "FILL/GLYPH tables)") from None
 
 # HEXES THE RULEBOOK ITSELF NAMES AS LAND, against a colour sample that reads them as sea.
 #
@@ -87,7 +108,7 @@ def load_sections(sections: str) -> tuple[TerrainMap, dict]:
             if t == "sea":
                 continue                # sea is off the land map -> impassable
             ax = coords.to_axial(coords.parse(label))
-            terrain[ax] = _TERRAIN.get(t, Terrain.CLEAR)
+            terrain[ax] = _resolve(t)
             index[label] = ax
     roads, tracks = _load_edges(sections, terrain, index)
     # Invert the label->axial index into axial->section-letter (rule 29.7 geometry): every hex

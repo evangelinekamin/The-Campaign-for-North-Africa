@@ -402,8 +402,18 @@ def test_the_campaign_run_wires_the_beat_into_the_loop_and_accumulates():
     must select the INFANTRY stream by type, not by side alone (rule 5 -- restate, don't weaken; the
     conservation identity below was already scoped to the infantry pool and would have silently
     summed a gun Point into a wrong total had the filter stayed side-only). Axis events are asserted
-    well-formed but their accounting lives with the coupling."""
-    res = run(campaign(seed=4, max_turns=8), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    well-formed but their accounting lives with the coupling.
+
+    RESTATED 2026-07-26 (Phase 8.1a, the [8.37] terrain fill reclassification): the window that used
+    to reach the pool's first SPEND moves GT8 -> GT12. The corrected Nile Delta / coastal-corridor
+    terrain costs (game.cna_map, this slice) slow the opening game's Commonwealth-side contact enough
+    that no unit yet needs rebuilding by GT8 (MEASURED, seed 4: drawn=0 at GT8/9/10, drawn=2 at GT12).
+    The production side this test's first half exists to guard (the flow-in wired into the loop, the
+    plan-turn/arrival-turn/points formulae) is untouched and still exercised at GT8 -- only Block
+    7.2b's later-added SPEND guard needed a window long enough to see a draw happen under the now-
+    slower opening tempo. 12 turns is the minimal extension that reaches it (rule 5 -- restate the
+    window, not the assertion)."""
+    res = run(campaign(seed=4, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     ev = [e for e in res.events if e.kind == EventKind.REPLACEMENTS_PRODUCED]
     cw = [e for e in ev if e.payload["side"] == Side.ALLIED.value and e.payload["type"] == "infantry"]
     assert cw, "the campaign must roll the CW Infantry Production stream"

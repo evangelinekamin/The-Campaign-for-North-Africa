@@ -27,6 +27,12 @@ def test_hex_entry_costs_match_chart():
     assert hex_entry_cost(Terrain.MAJOR_CITY, Mobility.VEHICLE) == 0.5
 
 
+def test_swamp_prohibits_off_road_entry_to_every_mobility_class():
+    # 8.37 note 4: "May enter only on road or railroad" -- no exception for foot units.
+    assert hex_entry_cost(Terrain.SWAMP, Mobility.FOOT) is None
+    assert hex_entry_cost(Terrain.SWAMP, Mobility.VEHICLE) is None
+
+
 def test_hexside_costs_and_prohibitions_match_chart():
     assert hexside_cost(Hexside.UP_ESCARPMENT, Mobility.FOOT) == 6
     assert hexside_cost(Hexside.UP_ESCARPMENT, Mobility.VEHICLE) is None  # 'P'

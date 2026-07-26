@@ -12,10 +12,11 @@
       "mountain": 12,
       "delta": 2,
       "desert": 24,
+      "swamp": 0,
       "major_city": 0.5,
       "_desert_note": "VERIFIED on PDF page 70: the Desert cell reads '24' (two full-size, baseline-aligned digits), NOT '2' with a footnote-4 superscript. Contrast the same row's Mot CP cost '4-superscript-3' where the 3 is clearly a small raised footnote -- the breakdown '24' has no such formatting. Desert=24 is also the thematically correct reading: it is the single highest terrain value on the chart (double Mountain's 12), which is precisely what makes the open desert -- not the enemy -- the main tank-killer. The prior project assumption Desert=2 (from terrain.py's comment) is OVERTURNED by the scan.",
       "_major_city_note": "PDF page 70 shows Major City Breakdown Value = 1/2 (0.5); its non-Mot CP cost is 1. (An earlier note that had 'Major City 1' conflated the CP-cost column with the breakdown column.)",
-      "_absent_note": "Swamp = may be entered only on road/railroad (no independent BV). Village/Bir/Oasis and Railroad = 'same as terrain in hex for all purposes' (BV inherited from the underlying hex). Fortification levels add no BV."
+      "_absent_note": "Swamp = may be entered only on road/railroad, hence no independent BV of its own on the chart -- transcribed as 0 (game/terrain.py, Phase 8.1a), the same reading given Track's identically blank BV cell (note 8: 'A track carries no BV of its own'). Village/Bir/Oasis and Railroad = 'same as terrain in hex for all purposes' (BV inherited from the underlying hex). Fortification levels add no BV."
     },
     "hexside": {
       "ridge": 2,

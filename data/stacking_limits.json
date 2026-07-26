@@ -11,9 +11,10 @@
     "mountain": 3,
     "delta": 6,
     "desert": 6,
+    "swamp": 6,
     "major_city": 8,
-    "_mountain_note": "Not yet reachable: no map hex is tagged Terrain.MOUNTAIN today (game/terrain.py's Terrain enum has the member; Phase 8.1 is what tags mountain hexes on the map). Wired faithfully anyway so the lookup is already correct the day it lands.",
-    "_swamp_note": "Swamp is also 6 on the chart ('may enter only on road or railroad') but has no Terrain enum member yet -- omitted pending that terrain landing, same reasoning as Mountain.",
+    "_mountain_note": "Phase 8.1a (2026-07-26) tagged the map's ~109 Mountain hexes (Jebel Akhdar + isolated outliers); this limit is now reachable.",
+    "_swamp_note": "Swamp is also 6 on the chart ('may enter only on road or railroad'). Phase 8.1a (2026-07-26) added Terrain.SWAMP (game/terrain.py) for the Delta's 17 lagoon hexes; this limit is now reachable too.",
     "_village_railroad_note": "Village/Bir/Oasis and Railroad print NO distinct Stacking Limit cell on the chart (fully blank rows, not dashed) -- rule 8.37's own reading note: they are 'Same as terrain in hex for all purposes', so they inherit whichever hex_terrain value their underlying Terrain already carries. Not a separate key."
   },
 

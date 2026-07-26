@@ -125,29 +125,42 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
     a city -- is untouched; only which SIDE currently reaches the one contested forward city moved, a
     third time, on a rule that has nothing to do with 64.73 or 15.53 and everything to do with how many
     Stacking Points a hex may hold while the campaign plays out its opening moves. Restated back onto
-    the Commonwealth, where 60.5/15.53 restatement before it also once had it."""
+    the Commonwealth, where 60.5/15.53 restatement before it also once had it.
+
+    *** RESTATED AGAIN 2026-07-26 (Phase 8.1a, the [8.37] TERRAIN FILL RECLASSIFICATION). *** The Nile
+    Delta -- the ground every Commonwealth reinforcement marches out of, from Alexandria/Cairo toward
+    the railhead -- was previously mis-sampled as plain clear/rough (Motorized entry 2/4 CP); it is now
+    genuine Delta terrain (2/4 CP too where it was already rough, but a straight DOUBLING, 2 CP -> 4 CP,
+    on the 276 hexes that used to read clear), and the coastal corridor further west now carries real
+    Gravel/Salt Marsh/Mountain in place of the old 4-class coarsening. MEASURED, seed 4, GT30: the
+    Commonwealth's Matruh-bound spearhead is markedly SLOWER leaving the Delta -- Polish-Bde-I/II sit 33
+    hexes from Mersa Matruh (were 16), 107th-RHA (the old GT30 garrison) sits 34 hexes out (was ON the
+    hex) -- so NO Allied combat unit has yet reached the railhead by Game-Turn 30. This is a DELAY, not
+    a lost capability: measured out to GT40/50/60 on the same seed, the Commonwealth DOES arrive and
+    hold Mersa Matruh (9-Aus-Cav-Regt garrisons it by GT40, 7-SA-Recce-Bn by GT50/60) -- the march simply
+    now takes the real chart's longer road, exactly as the correction intends. So the assertion moves
+    from "has arrived" to "is still marching, and the depot that will feed it is correctly waiting" --
+    the thing a still-early check CAN honestly pin. WHEN the take-and-hold's routing is retuned for the
+    now-faithful Delta cost (or this check is moved to a later Game-Turn), THIS MUST BE INVERTED back to
+    "the Commonwealth stands on Mersa Matruh and banks it" -- which is what the GT40+ measurement above
+    already shows is coming, not a capability this port has lost."""
     fin = _run(30).final
     cw, ax = _banked(fin, Side.ALLIED), _banked(fin, Side.AXIS)
     # The Commonwealth holds Sidi Barrani again under the [8.37] stacking fix (see the RESTATED note
     # above, measured seed 4, GT30) -- the Axis's 15.53-concentrated reach for it did not survive the
     # higher stacking cap reshaping the opening moves.
     assert "Sidi Barrani" in cw
-    # ...and stands on Mersa Matruh, and now BANKS it: the garrison is sent, it does not wander off,
-    # and 64.73 counts it because that garrison can trace its supply (pinned below).
-    assert campaign_claim._occupied(fin, Side.ALLIED, MATRUH), \
-        "the Commonwealth walked off its own railhead city"
-    assert "Mersa Matruh" in cw, "the railhead city is garrisoned but no longer banked"
-    # ...and the reason, pinned so it cannot regress silently -- on the ROBUST capability, not the
-    # depot's chaotic residual: the Commonwealth garrison on Mersa Matruh passes 64.73's supply trace
-    # (can trace Fuel AND Ammunition; 49.12 charges the foot brigade no fuel, so this comes down to
-    # Ammunition). This is what banks the city, and it does not depend on the co-located railhead's own
-    # residual, which the [53.11] stores buffer flips (0 here, 2 with the buffer suppressed) via relay
-    # chaos without unbanking the city (see the docstring).
-    matruh_garrison = [u for u in fin.units_at(MATRUH) if u.is_combat and u.side == Side.ALLIED]
-    assert any(fin.victory._supplied(fin, u) for u in matruh_garrison), \
-        "no Commonwealth garrison can trace Ammunition at its own railhead city"
+    # Mersa Matruh is EN ROUTE, not yet banked, at GT30 under the corrected Delta terrain (see the
+    # 2026-07-26 RESTATED note above) -- neither side has reached it, so it is neither occupied nor
+    # banked by anyone, and the depot built to feed its eventual garrison is correctly standing by.
+    assert not campaign_claim._occupied(fin, Side.ALLIED, MATRUH), \
+        "the Commonwealth reached its railhead city earlier than the corrected Delta terrain predicts"
+    assert not campaign_claim._occupied(fin, Side.AXIS, MATRUH), \
+        "the Axis, not the Commonwealth, has taken the railhead city"
+    assert "Mersa Matruh" not in cw and "Mersa Matruh" not in ax
     matruh = [s for s in fin.supplies if s.id == "AL-Stage-Matruh"]
-    assert len(matruh) == 1 and matruh[0].hex == MATRUH
+    assert len(matruh) == 1 and matruh[0].hex == MATRUH, \
+        "the railhead depot must still be staged and waiting for the (delayed) garrison"
     # The AXIS -- which used to bank whatever the garrison order happened to pin and throw the rest
     # away -- now holds its own rear: BENGHAZI (its port of arrival, never once garrisoned in 111
     # Game-Turns) and SOLLUM, on top of the Tobruk and Bardia it opens the war standing on.

@@ -35,7 +35,7 @@ _TERRAIN_KEY: dict[Terrain, str] = {
     Terrain.CLEAR: "clear", Terrain.GRAVEL: "gravel", Terrain.SALT_MARSH: "salt_marsh",
     Terrain.HEAVY_VEG: "heavy_vegetation", Terrain.ROUGH: "rough",
     Terrain.MOUNTAIN: "mountain", Terrain.DELTA: "delta", Terrain.DESERT: "desert",
-    Terrain.MAJOR_CITY: "major_city",
+    Terrain.SWAMP: "swamp", Terrain.MAJOR_CITY: "major_city",
 }
 
 

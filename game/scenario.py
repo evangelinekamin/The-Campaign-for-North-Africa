@@ -12,7 +12,9 @@ drives the road for the port (7,0); the Commonwealth holds it.
 """
 from __future__ import annotations
 
+import json
 import math
+import os
 import random
 from collections import deque
 from dataclasses import replace
@@ -57,20 +59,41 @@ def _initial_supply(supplies, units=()) -> dict:
     return {c: (sum(getattr(s, c.lower()) for s in supplies)
                 + sum(getattr(u, c.lower()) for u in units)) for c in COMMODITIES}
 
-# Fortified major cities of the corridor (rule 15.82): label -> fortification
-# level. A MAJOR_CITY hex both exempts its garrison from retreat/eviction and, at
-# the given level, stiffens the close-assault defense. Extensible -- add a label to
-# fortify another town. Tobruk (C4807) and Bardia (C4321) are the victory hexes.
-MAJOR_CITIES: dict[str, int] = {"C4807": 2, "C4321": 2}
+# Fortified major cities (rule 15.82 / [25.12] Level 2), transcribed in
+# data/city_forts.json (PDF p.73's SUMMARY OF IMPORTANT LOCATIONS -- see that
+# file's _comment and scratchpad/port/terrain-key.md Sec 5): Tobruk, Bardia,
+# Benghazi, Helwan. A MAJOR_CITY hex both exempts its garrison from
+# retreat/eviction (rule 15.82, keyed on terrain, not fort level -- see
+# game.engine's MAJOR_CITY check) and, at the given level, stiffens the
+# close-assault defense. Alexandria/Cairo (Level 3) are NOT in this table --
+# they are the rule-64.71 auto-win hexes, so delta_hexes() below reads them
+# once, off data/victory_cities.json, and stamps _DELTA_FORT itself.
+_CITY_FORTS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "city_forts.json")
+
+
+def _load_major_cities() -> dict[str, int]:
+    with open(os.path.normpath(_CITY_FORTS_PATH)) as f:
+        level_2 = json.load(f)["level_2"]
+    return {label: 2 for key, labels in level_2.items()
+            if not key.startswith("_") for label in labels}
+
+
+MAJOR_CITIES: dict[str, int] = _load_major_cities()
 
 
 def _apply_major_cities(terrain: dict) -> dict:
     """Mark each MAJOR_CITIES hex as MAJOR_CITY terrain (in place, fixing the data
     bug where coastal towns colour-sample as CLEAR) and return the fortification
-    map (hex -> level) for the TerrainMap."""
+    map (hex -> level) for the TerrainMap. Only fortifies hexes ALREADY present in
+    `terrain` -- i.e. within the sections this scenario actually loaded -- so the
+    same MAJOR_CITIES table naturally scopes itself: the ABC corridor benchmarks
+    (rommels_arrival/siege_of_tobruk) pick up the 3 of the 4 cities that lie in
+    Maps A-C (Tobruk, Bardia, Benghazi), the campaign (ABCDE) picks up all 4."""
     forts: dict = {}
     for label, level in MAJOR_CITIES.items():
         h = coords.to_axial(coords.parse(label))
+        if h not in terrain:
+            continue
         terrain[h] = Terrain.MAJOR_CITY
         forts[h] = level
     return forts
@@ -1595,15 +1618,17 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     for piece in (*units, *dumps, *water_sources, *air_supply):
         terrain.setdefault(piece.hex, Terrain.CLEAR)
     _connect_pieces(terrain, [p.hex for p in (*units, *dumps, *water_sources, *air_supply)])
+    # Benghazi (_AXIS_PORT_HEX) is now one of the MAJOR_CITIES (data/city_forts.json), so
+    # _apply_major_cities below both stamps its terrain MAJOR_CITY (unlimited 54.12 dump capacity,
+    # so the Axis port-of-arrival dump no longer clips the convoy to a 5000-fuel Other-Terrain
+    # ceiling and the designed 55.3 port tonnage becomes the sole gate) AND grants its faithful
+    # [25.12] Level 2 fort -- previously withheld on the mistaken theory that the fort alone grants
+    # [15.82] retreat-immunity; that rule keys on Terrain.MAJOR_CITY, not fort level (game.engine),
+    # so Benghazi already had retreat-immunity either way (see data/city_forts.json's own note).
     forts = _apply_major_cities(terrain)
     for h in delta_hexes():                          # rule 57 + 25.12: the Delta, at Level 3
         terrain[h] = Terrain.MAJOR_CITY
         forts[h] = _DELTA_FORT
-    # Benghazi is a city: stamp its terrain MAJOR_CITY (unlimited 54.12 dump capacity), so the Axis
-    # port-of-arrival dump no longer clips the convoy to a 5000-fuel Other-Terrain ceiling and the
-    # designed 55.3 port tonnage becomes the sole gate. Terrain only -- NOT added to _MAJOR_CITIES,
-    # so no 15.82 no-eviction fort is granted at the Axis rear.
-    terrain[coords.to_axial(coords.parse(_AXIS_PORT_HEX))] = Terrain.MAJOR_CITY
     tmap = replace(tmap, terrain=terrain, fortifications=forts)
 
     # THE WESTERN DESERT RAILWAY (rule 54.3), laid over the FINAL land map so it walks real hexes
