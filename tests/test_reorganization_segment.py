@@ -112,6 +112,49 @@ def test_the_maximum_attachment_chart_is_enforced_by_the_engine():
     assert res.final.unit("T1").attached_to == ""
 
 
+# --- the [8.37]/[9.31] boundary stacking guard on reorganization ----------------------
+# The two reject tests above fire on OTHER reasons (not a Parent Formation; the 19.72 chart).
+# These drive the stacking branch itself (engine._reorganize's "would exceed the [8.37] stacking
+# limit ... (9.31)"), the guard this fix added because attach/detach can RAISE a hex's total, not
+# only lower it -- a code path the fault-injection tests exercise against the invariant CHECKER
+# (test_invariants_delta.py) but that no test drove through the ENGINE's own boundary until here.
+
+def test_an_attach_that_would_overstack_the_hex_is_rejected():
+    # The subtlety the guard exists for: folding the FIRST unit into an empty Parent jumps that
+    # Parent from 0 (9.12) straight to its printed Stacking Points, so an attach can RAISE the
+    # total. DESERT caps at 6 (data/stacking_limits.json). Pre-attach the hex holds exactly 6 --
+    # an empty KG (0) + a tank (1) + five infantry (5); attaching the tank makes KG worth 2 while
+    # the tank drops to 0, a net +1 -> 7. The A/B is test_attach_folds_the_tree_... above, the
+    # identical lone-tank attach on an EMPTY hex, which succeeds; only the crowd trips this one.
+    hq = _u("KG", (0, 0), sp=2, org_type="ge_battle_group", is_combat=False, strength=1)
+    tank = _u("TK", (0, 0), is_tank=True)
+    inf = [_u(f"I{i}", (0, 0)) for i in range(5)]
+    res = _run([hq, tank] + inf, [OrganizationOrder("attach", unit_id="TK", parent_id="KG")])
+    assert _kinds(res.events, EventKind.UNIT_ATTACHED) == []
+    rej = [e for e in res.events if e.kind == EventKind.ORDER_REJECTED
+           and e.payload.get("order") == "attach"]
+    assert rej and "8.37" in rej[0].payload["reason"] and "stacking limit" in rej[0].payload["reason"]
+    assert res.final.unit("TK").attached_to == ""            # the attach did not happen
+
+
+def test_a_detach_that_would_overstack_the_hex_is_rejected():
+    # The mirror guard: a unit resumes its printed Stacking Points the instant it leaves the
+    # Parent's counter (19.12), which can push an already-crowded hex over [8.37] even though the
+    # Parent's own contribution is unchanged (another unit stays attached). KG (worth 2, keeping
+    # B1) + B0 (0, attached) + four loose infantry (4) = 6 at the DESERT limit; detaching B0 makes
+    # it worth 1 again -> 7. The boundary must reject and leave B0 attached.
+    hq = _u("KG", (0, 0), sp=2, org_type="ge_battle_group", is_combat=False, strength=1)
+    b0 = _u("B0", (0, 0), attached_to="KG")
+    b1 = _u("B1", (0, 0), attached_to="KG")
+    loose = [_u(f"L{i}", (0, 0)) for i in range(4)]
+    res = _run([hq, b0, b1] + loose, [OrganizationOrder("detach", unit_id="B0", parent_id="KG")])
+    assert _kinds(res.events, EventKind.UNIT_DETACHED) == []
+    rej = [e for e in res.events if e.kind == EventKind.ORDER_REJECTED
+           and e.payload.get("order") == "detach"]
+    assert rej and "8.37" in rej[0].payload["reason"] and "stacking limit" in rej[0].payload["reason"]
+    assert res.final.unit("B0").attached_to == "KG"          # the detach did not happen
+
+
 # --- form / disband a Kampfgruppe -----------------------------------------------------
 
 def test_form_kg_appends_a_headquarters_counter():

@@ -113,11 +113,20 @@ def test_incremental_verdict_matches_full_sweep_at_every_event():
 
     # The logs must have driven every guard family through the REAL engine (not a degenerate
     # log that trivially agrees). Byte-identity freezes these runs, so this coverage is stable.
+    #
+    # UNIT_ATTACHED is pinned here because the [8.37] per-terrain stacking slice added an
+    # _ATTACH_KINDS branch to check_event (it re-checks an attach's/detach's OWN hex): the recorded
+    # campaign folds emit UNIT_ATTACHED 36 times, so requiring it turns that branch's live
+    # equivalence coverage from incidental into asserted -- if a reshaped opening ever stopped
+    # emitting one, this fails loud rather than quietly dropping the new branch off the real-log
+    # proof. UNIT_DETACHED is deliberately NOT required: none of the three folds emit one (the
+    # campaign policy's stale-link detaches do not fire in these windows), so the detach half of
+    # the branch is bound by test_fault_unit_detached_overstacks_hex, not by a live log.
     required = {
         "SUPPLY_CONSUMED", "SUPPLY_ARRIVED", "SUPPLY_CAPTURED", "SUPPLY_DUMP_ESTABLISHED",
         "SUPPLY_DUMP_BLOWN", "WELL_REFILLED", "TRUCK_LOADED", "TRUCK_UNLOADED", "TRUCK_MOVED",
-        "UNIT_MOVED", "UNIT_RETREATED", "STEP_LOST", "CP_EXPENDED", "VEHICLE_BROKE_DOWN",
-        "PORT_EFFICIENCY_CHANGED", "STAGE_ADVANCED", "TURN_ADVANCED",
+        "UNIT_MOVED", "UNIT_RETREATED", "UNIT_ATTACHED", "STEP_LOST", "CP_EXPENDED",
+        "VEHICLE_BROKE_DOWN", "PORT_EFFICIENCY_CHANGED", "STAGE_ADVANCED", "TURN_ADVANCED",
     }
     assert required <= seen, f"equivalence logs did not exercise: {sorted(required - seen)}"
 
