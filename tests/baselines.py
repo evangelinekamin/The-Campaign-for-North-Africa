@@ -31,8 +31,11 @@ candidates/firing/sortie picks (game/policy.py) and CampaignCommonwealthPolicy._
 concentration pick (game/campaign_policy.py) -- the one shared base, so the Axis campaign inherits
 it too (CampaignAxisPolicy.movement -> super().movement()), with no campaign-gate (port rule 6).
 Applied per-move the allowance is exactly `cohesion + 17`, so a healthy unit still spends the
-rules-legal 8.16 dash, a battered one creeps at <=1x CPA, and a CPA-respecting move is never
-refused (a unit is never frozen).
+rules-legal 8.16 dash and a battered one still above the floor keeps its full <=1x-CPA move. A unit
+already AT or below the floor is held out of the forward advance entirely -- it would auto-surrender
+on the contact every call site steers it toward, so the discipline keeps it back to recover in place
+(6.24) rather than march it into that contact; the unhusbanded 10.31 retreat path still lets it fall
+back.
 
 Both benchmarks run ScriptedPolicy(AXIS) on both sides through the exact functions edited, and
 both move: at seed 42, Rommel's Arrival's open-desert dash and the siege's own perimeter jockeying

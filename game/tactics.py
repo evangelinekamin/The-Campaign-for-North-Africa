@@ -105,12 +105,19 @@ def voluntary_overage_dp(state: GameState, unit: Unit, cp_cost: float) -> int:
 
 def husbands_cohesion(state: GameState, unit: Unit, cp_cost: float,
                       floor: int = SURRENDER_FLOOR) -> bool:
-    """A competent commander does not VOLUNTARILY march a unit into the rule-15.88 auto-surrender
-    band (rule 6.0/8.16 permit a motorized unit to exceed its CPA 'at a price'; this is the price
-    no commander pays). True iff the unit's Cohesion after the predicted 6.21 overage stays
-    strictly above `floor` -- so a healthy unit may still dash (large affordable overage) while a
-    battered one may not step past guaranteed-surrender-on-contact. A self-restraint only: the
-    engine still prices and re-validates every move."""
+    """A competent commander does not VOLUNTARILY march a unit into -- or, if it is already there,
+    any step further toward -- the rule-15.88 auto-surrender band. Every call site feeding this
+    predicate proposes a move TOWARD the enemy or the objective, and rule 6.0/8.16 permit a
+    motorized unit to exceed its CPA 'at a price' that this restraint declines to pay. True iff the
+    unit's Cohesion after the predicted 6.21 overage stays strictly above `floor`:
+      * a unit still above the floor keeps its full CPA-respecting move (zero overage never lowers
+        Cohesion, so it always passes) and may spend as much overage as leaves it above the floor --
+        a healthy unit still dashes, a merely-battered one creeps at <=1x CPA;
+      * a unit ALREADY at or below the floor is held out of the forward advance entirely -- it would
+        auto-surrender the instant it made the contact ahead, so a commander does not send it there;
+        holding it lets 6.24 recover it in place, and the unhusbanded 10.31 retreat path still lets
+        it fall back.
+    A self-restraint only: the engine still prices and re-validates every move."""
     return unit.cohesion - voluntary_overage_dp(state, unit, cp_cost) > floor
 
 

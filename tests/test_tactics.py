@@ -12,8 +12,11 @@ It forecasts the SAME overage the engine will charge (a byte-exact mirror of
 engine._overage_dp/_disorganize_overage, kept apart to preserve the engine<->policy import
 break) and refuses a destination whose predicted post-move Cohesion would fall to <=-17 (rule
 15.88/17.24, a rulebook constant, not a balance dial). Applied per-move, the allowed overage is
-exactly `cohesion + 17`, so a healthy unit still dashes, a battered one creeps, and a unit is
-never frozen out of a CPA-respecting move.
+exactly `cohesion + 17`, so a healthy unit still dashes and a merely-battered one (above the floor)
+keeps its full CPA-respecting move. A unit ALREADY at or below the floor is held out of the forward
+advance entirely -- every call site proposes a move toward the enemy, and such a unit auto-surrenders
+on contact, so the discipline keeps it back to recover in place (6.24) rather than march it into the
+contact that ends it; the unhusbanded 10.31 retreat path still lets it fall back.
 """
 from __future__ import annotations
 
@@ -121,6 +124,21 @@ def test_battered_unit_at_minus_sixteen_is_never_frozen():
     state = _state([u])
     assert tactics.husbands_cohesion(state, u, 25.0)      # exactly 1x CPA: 0 overage
     assert not tactics.husbands_cohesion(state, u, 26.0)  # one CP over: 1 DP, -16-1=-17, disallowed
+
+
+def test_unit_already_in_the_surrender_band_is_held_out_of_the_forward_advance():
+    """The boundary the review flagged as uncovered (the -16 case above only reaches the floor, it
+    never sits AT or BELOW it). A unit already at or below the -17 floor auto-surrenders the instant
+    it makes the contact every call site steers it toward (15.88/17.24), so the discipline holds it
+    out of the forward advance ENTIRELY -- even a zero-overage <=1x-CPA step -- to let 6.24 recover
+    it in place rather than march it into the contact that ends it (the unhusbanded 10.31 retreat
+    still lets it fall back). Holding doomed units back, not creeping them forward, is what keeps a
+    full campaign fold stable under this fix: letting them advance churns seed 4's board (measured)."""
+    for cohesion in (-17, -20):
+        u = _unit(cpa=25, cohesion=cohesion)
+        state = _state([u])
+        assert not tactics.husbands_cohesion(state, u, 25.0)   # exactly 1x CPA, 0 overage: still held
+        assert not tactics.husbands_cohesion(state, u, 20.0)   # under 1x CPA, 0 overage: still held
 
 
 def test_the_allowance_is_cohesion_plus_seventeen():
