@@ -198,14 +198,14 @@ def test_the_army_does_not_sit_out_the_war_in_the_delta(gt12):
     # slice: moved 3 -> 1, near-railhead 3 -> 2. MEASURED across seeds 1-24 AFTER the change, moved
     # reads a 1-5 band, median 3, mean ~2.9 -- the SAME distribution; the 3/6/4/4/4 canonical sample
     # was simply its lucky end (9 of 24 seeds read exactly 1, so the >=3 floor was calibrated on lucky
-    # seeds and never held on more than ~60%). The floors are corrected to the DIRECTIONAL boundary the
-    # thesis actually claims: the reinforcement stream is not FROZEN (the original defect was moved==0)
-    # and the railhead is not abandoned. The strong guarantee -- a unit stands ON the railhead and the
-    # faucet keeps running -- is carried, unweakened, by test_the_railhead_is_held_and_the_faucet...().
+    # seeds and never held on more than ~60%). The floor is corrected to the DIRECTIONAL boundary the
+    # thesis actually claims: the reinforcement stream is not FROZEN (the original defect was moved==0).
+    # (The `_near_railhead` floor that once stood beside it is DROPPED below; the 2026-07-25 re-fit says
+    # why, and names what still guarantees the railhead is physically held and supplied.)
     assert moved >= 1, f"the reinforcement stream is FROZEN in the Delta: {moved} left it (the defect was 0)"
     # RE-FIT 2026-07-25 (the close-assault-ammo last mile, scratchpad/port/ammo-last-mile-spec.md):
-    # DROPPED the `_near_railhead(fin) >= 1` floor that stood here -- it duplicated, and now
-    # contradicts, the STRONG claim the paragraph above already assigns to the dedicated test. TRACED
+    # DROPPED the `_near_railhead(fin) >= 1` floor that stood here -- MEASURED, it is now genuinely
+    # false at the pinned seed (0 CW combat units within 15 hexes of Matruh at the GT12 close). TRACED
     # (byte-for-byte event diff, before vs after): 7-RTR -- the unit that reached and held Matruh
     # through GT12 before this fix -- takes an IDENTICAL path through Game-Turn 5, then a DIFFERENT
     # Game-Turn-6 move ((31,115)->(23,87) instead of ->(26,100)=Matruh) off the SAME scripted orders;
@@ -218,7 +218,14 @@ def test_the_army_does_not_sit_out_the_war_in_the_delta(gt12):
     # test_first_line_truck_ammo_buffer_survives_a_second_assault_50_17 in tests/test_engine.py, where
     # the SAME fix lets an assaulted, DEFENDING unit fight on instead of surrendering). Flagged, not
     # chased, exactly like the beeline paragraph above it. `_near_railhead(fin)` is not the thesis this
-    # test owns; it is RESTATED, not deleted, in test_the_railhead_is_held_and_the_faucet_keeps_running.
+    # test owns, and it is DROPPED as genuinely-false here, NOT restated: MEASURED at the pinned seed, 0
+    # Commonwealth combat units stand within 15 hexes of Mersa Matruh at the GT12 close (the diversion
+    # above empties the ring), so a `_near_railhead(fin) >= 1` assertion would FAIL, not pass. What the
+    # line actually needs -- a supplied Commonwealth combat unit STANDING on Mersa Matruh across the run
+    # -- is asserted non-vacuously by _matruh_supplied_turns in
+    # test_the_railhead_is_held_and_the_faucet_keeps_running (Selby Force banks it, supplied, at the
+    # turn-2 and turn-3 closes: `assert garrisoned and supplied >= garrisoned * 2 // 3`); the GT12
+    # snapshot of it is carried by no test, because at this seed it is simply false.
     assert _in_the_delta(fin) >= 5, (                        # 64.71: the Delta is HELD, not emptied
         f"only {_in_the_delta(fin)} combat units hold the Delta at GT12")
 

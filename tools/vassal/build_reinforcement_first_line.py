@@ -49,11 +49,18 @@ are recorded here for the record (the per-side total below is exact against the 
 but _seed_reinforcement_first_line skips a bucket with no combat-eligible recipient
 rather than force an attachment the roster has no unit for -- see
 tests/test_first_line.py for the exact accounting.
-ONE CASE is a discovered PRE-EXISTING off-by-one, not a new gap: the chart's GT40
-"10 In Bde"/"29 In Bde" (5th Indian Division) already sit in
-data/reinforcements_campaign_source.json at arrival_gt 39, one Game-Turn earlier than
-the scan prints -- out of scope for this slice (it is the existing schedule
-transcription, not the truck column), flagged here rather than silently worked around.
+ONE CASE was a discovered PRE-EXISTING off-by-one, CORRECTED 2026-07-25 (review repair,
+scratchpad/port/armour-elimination-diagnosis.md): the chart's GT40 "10 In Bde"/"29 In
+Bde" (5th Indian Division) sat in data/reinforcements_campaign_source.json at arrival_gt
+39, one Game-Turn earlier than the scan's "40 1"/"40 3" rows print. Because Part 2 splits
+the GT40 pool over the units that actually arrive at GT40, that off-by-one stranded all 79
+GT40 Truck Points on the lone str-6 1st DOY Cavalry [R] (318 Ammo Points, ~28 close
+assaults). Both brigades now read arrival_turn 40 in the runtime roster
+(data/reinforcements_campaign.json, the 8 HQ+battalion records) AND in the source file
+above, so the pool divides over its seven true recipients (the six Indian battalions + the
+recon regiment). Note the source's own build tool build_campaign_reinforcements.py is stale
+against that runtime roster (it emits 176 brigade-level records, not the checked-in 541
+battalion-level ones) -- a pre-existing tooling debt, so the runtime file was fixed directly.
 
     python3 tools/vassal/build_reinforcement_first_line.py
 
@@ -94,11 +101,11 @@ CW: dict[int, tuple[int, int, int]] = {
     37: (10, 34, 6),        # 1st SA Bde [1 SA]
     38: (30, 97, 22),       # OpS1 Capetown Highlanders.. 20L68M12H + OpS2 9 In Bde 10L25M5H
                             #   + OpS3 (5 In) 0L4M5H
-    40: (19, 50, 10),       # 10 In Bde 9L25M5H + 29 In Bde (Trucks (29/5 In)) 10L25M5H --
-                            # NOTE: reinforcements_campaign_source.json seats both at
-                            # arrival_gt 39, one GT before the scan's "40 1" / "40 3" rows
-                            # (pre-existing off-by-one in that file, not this transcription;
-                            # flagged above, left untouched -- out of scope for this slice).
+    40: (19, 50, 10),       # 10 In Bde 9L25M5H (scan "40 1") + 29 In Bde 10L25M5H
+                            # (Trucks (29/5 In), scan "40 3"). Both brigades arrive GT40 in
+                            # the roster now (arrival_gt-39 off-by-one CORRECTED 2026-07-25 so
+                            # the pool splits over its 7 true recipients, not the lone GT40
+                            # recon regiment -- see docstring).
     44: (10, 34, 6),        # 4 SA Bde [2 SA]
     51: (5, 30, 6),         # 22nd Armored Bde
     56: (2, 2, 0),          # HQ 1st Armored Div
