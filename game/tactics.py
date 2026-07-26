@@ -234,6 +234,31 @@ def breakdown_points_over(state: GameState, unit: Unit, path: list[Coord]) -> fl
                for a, b in zip(path, path[1:]))
 
 
+def may_step_into(state: GameState, units, src: Coord, dst: Coord) -> bool:
+    """May EVERY unit in `units` legally cross src -> dst -- i.e. is the step permitted by the
+    Terrain Effects Chart for its mobility class ([8.37] Swamp's "may enter only on road or
+    railroad", [8.44]'s Salt Marsh gate, and the [8.42] escarpment prohibition when 8.1b lands
+    the hexsides)? Cost is irrelevant here; only legality is.
+
+    This is the gate the FORCED relocations need. Voluntary movement (movement.reachable,
+    tactics.reachable_for, retreat-before-assault) already runs through movement.step_cost and
+    therefore already obeys the chart, but engine._retreat and engine._mandatory_retreat walk
+    raw `terrain` membership -- so without this a stack could be shoved into ground its own
+    movement rules forbid it to enter, and (worse) then be unable to leave.
+
+    FLAGGED, [8.44]'s own answer to this case is a rule the engine does not carry: "A prohibited
+    vehicle that enters a Salt Marsh hex without using the Track, WHATEVER THE REASON, is
+    Abandoned (see 5.33)" -- i.e. the book lets the retreat push the vehicle in and then destroys
+    it. 5.33 Abandonment has no engine concept at all (no salvage, no recovery, no marker), so
+    building half of it here would invent a loss the rules attach to a mechanism we do not have.
+    Excluding the hex from the retreat instead keeps the two things the rule guarantees -- a
+    barred vehicle never gains free passage through a marsh, and never ends its retreat frozen in
+    one -- and leaves 5.33 as named debt rather than a silent hole."""
+    weather = state.weather_at(src)
+    return all(movement.step_cost(state.terrain, src, dst, u.mobility, weather) is not None
+               for u in units)
+
+
 def bp_for_move(state: GameState, unit: Unit, prev: dict, dst: Coord) -> float:
     """Breakdown Points for a move to `dst`, reconstructing the min-CP path from a
     predecessor map (reachable_for_prev). The engine passes this straight into the

@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from .hexmap import Coord, is_adjacent, neighbors
 from .terrain import (Hexside, Mobility, Terrain, TRACK_ENTRY, ROAD_ENTRY,
                       ROAD_BREAKDOWN, breakdown_value, hex_entry_cost, hexside_cost,
-                      hexside_breakdown, is_motorized)
+                      hexside_breakdown, is_motorized, salt_marsh_barred)
 
 Edge = tuple
 
@@ -85,7 +85,8 @@ def sandstorm(weather: str) -> bool:
 def step_cost(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobility,
               weather: str = "normal") -> float | None:
     """CP to move from src into the adjacent hex dst, or None if impossible (off-map,
-    non-adjacent, or a prohibited terrain/hexside for this mobility). Weather (rule 29)
+    non-adjacent, a prohibited terrain/hexside for this mobility, or the [8.44] Salt
+    Marsh gate on either end of the edge). Weather (rule 29)
     couples in: a Rainstorm makes a Road behave as a Track (29.56) and closes wadi
     hexsides to everything but a Road (29.55); a Sandstorm doubles the whole cost
     (29.44). Under Normal/Hot weather this is byte-identical to the dry chart."""
@@ -108,6 +109,16 @@ def _step_cost_known_adjacent(tmap: TerrainMap, src: Coord, dst: Coord, mobility
     rain = rainstorm(weather)
     road_as_road = on_road and not rain                 # 29.56: a rained Road acts as a Track
     on_track_eff = on_track or (on_road and rain)
+
+    # [8.44] SALT MARSH, the quicksand grave: a barred vehicle class "may enter or leave a Salt Marsh
+    # hex only on a Road or Track" -- so the gate is on the EDGE, and it reads BOTH ends of it (enter
+    # dst, or leave src). Without this the chart's 2 CP Mot entry (cheaper than the DESERT 4 and ROUGH
+    # 4 that ring the Qattara Depression, at a sixth of the desert's Breakdown Value) would make the
+    # one terrain that historically stopped an army the best tank road on the board.
+    if not (on_road or on_track) and salt_marsh_barred(mot) and (
+            tmap.terrain[dst] == Terrain.SALT_MARSH
+            or tmap.terrain.get(src) == Terrain.SALT_MARSH):
+        return None
 
     if road_as_road:
         entry = ROAD_ENTRY[_mot(mot)]

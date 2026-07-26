@@ -234,7 +234,11 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
         "phase": state.phase.value,
         "weather": state.weather,
         "your_side": side.value,
-        "stack_limit": stacking.COMMON_HEX_LIMIT,  # [8.37]: what every terrain but a city allows
+        # [8.37]: the limit every terrain allows EXCEPT a Major City (8) and a MOUNTAIN hex (3) --
+        # the Jebel Akhdar's 109 mountain hexes went on the board in Phase 8.1a, so this advisory is
+        # a headline figure, not a per-hex truth. The engine checks the real per-hex limit
+        # (stacking.within_hex_limit) and rejects an over-stacked move whatever this said.
+        "stack_limit": stacking.COMMON_HEX_LIMIT,
         "objective": {"hex": list(target), "controlled_by": state.control_of(target).value},
         "your_units": [unit_view(u) for u in state.living(side)],
         # air_dump is [36.17] on the face of the counter: the pile IS an air facility, so it feeds

@@ -55,10 +55,12 @@ def hex_stack_limit(terrain: Terrain) -> int:
 # see data/stacking_limits.json's road_track_9_33 block for why Road/Track are not a Terrain).
 ROAD_TRACK_STACK_LIMIT: int = _data()["road_track_9_33"]["limit"]
 
-# The value every currently-mapped terrain shares except Major City (8) and the still-unmapped
-# Mountain (3) -- see hex_stack_limit for the real per-hex lookup. Exposed only for the LLM-
-# facing advisory in game.observation; every legality check in the engine resolves the true
-# per-hex terrain through hex_stack_limit / within_hex_limit, never this shortcut.
+# The value every mapped terrain shares except Major City (8) and MOUNTAIN (3) -- and Mountain is
+# no longer hypothetical: Phase 8.1a put 109 real Mountain hexes on the board (the Jebel Akhdar
+# massif), so this shortcut is now wrong for those hexes and right for the other ~6,600. See
+# hex_stack_limit for the real per-hex lookup. Exposed only for the LLM-facing advisory in
+# game.observation (which says so); every legality check in the engine resolves the true per-hex
+# terrain through hex_stack_limit / within_hex_limit, never this shortcut.
 COMMON_HEX_LIMIT: int = hex_stack_limit(Terrain.CLEAR)
 
 

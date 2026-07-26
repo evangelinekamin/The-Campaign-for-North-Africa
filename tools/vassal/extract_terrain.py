@@ -45,11 +45,41 @@ KNOWN_TERRAIN = {
     "C4021": "clear",   # Sollum (small port)
     "A4827": "clear",   # Benghazi (port, victory city 64.73)
     "E3714": "clear",   # Alexandria second hex (port, 64.71 auto-win objective)
+    # NOT Rosetta (E4019). It is a Port in the book's SUMMARY OF IMPORTANT LOCATIONS and a village
+    # water source, it is currently unreachable (Swamp with no road/track edge), and it is TEMPTING to
+    # add here -- an override was written and then REVERTED 2026-07-26. The five entries above correct
+    # a SAMPLING ARTIFACT (a harbour's water dominates the port hex's patch and it mis-samples as sea);
+    # E4019 is not that. The raster genuinely paints it the Key's swamp, tufts and all, read by eye.
+    # Forcing it `clear` would make the terrain data lie about the map to paper over a MISSING ROAD
+    # LAYER -- the debt is the road trace (8.1b), and the faithful fix is to trace the road, not to
+    # falsify the fill. See tests/test_map_terrain_fills.py, which pins exactly this.
 }
 
 
-SAMPLE_RADIUS = 24        # patch half-size (px); covers most of a ~85px hex
+SAMPLE_RADIUS = 24        # patch half-size (px); the FILL/sea sample (48x48 = 2,304 px)
 SEA_FRACTION = 0.55       # a hex is sea only if it is MOSTLY water
+
+# The GLYPH sample: the largest disc that fits INSIDE a hex (inradius 42.6 px at this grid), so it
+# can never bleed into a neighbour, and it sees 5,025 px -- 2.2x the fill patch's 2,304.
+#
+# WHY THE TWO SAMPLES DIFFER, and why that is not an inconsistency: a FILL is flat vector art that
+# saturates any sample taken inside it (a patch in a fill returns 1,964-2,304 of 2,304 px of that one
+# RGB), so widening the fill sample cannot sharpen the fill vote -- it only re-litigates which side of
+# a region BOUNDARY a straddling hex falls on, a different question this slice does not reopen (and
+# the sea test in particular must stay verbatim: terrain-key.md Sec 2 trap 2). A GLYPH is the exact
+# opposite: gravel and swamp have NO fill colour at all, so a sparse stipple's DENSITY is the entire
+# signal and the sample area IS the measurement.
+#
+# MEASURED, whole board (scratchpad/port/terrain-key.md Sec 4d.6 asked for exactly this eyeball):
+# over the 48x48 patch the gravel histogram is NOT bimodal -- 8,056 hexes at 0, then 2 at 5-8, 52 at
+# 9-16, 117 at 17-20, 277 at 21-37 -- so GLYPH_MIN=17 cut straight through a populated band and lost
+# 54 hexes to CLEAR. Over the disc the same histogram is decisively bimodal: 8,040 at 0, 17 at 1-4,
+# NOTHING AT ALL between 5 and 20, then 448 at 21+. Every threshold from 5 to 21 returns the same 448
+# hexes. Rendered and read by eye: A1618/A1619/A1620/A1621/A1622 are five adjacent hexes under one
+# unbroken pebble stipple that the patch classified gravel/clear/clear/clear/clear, and A1524 (a hex
+# whose centre a wadi band crosses, which is what suppressed its patch count) is uniformly stippled.
+# Swamp has no grey zone at all under either sample (nothing between 0 and 150 disc px).
+GLYPH_RADIUS = 40
 
 # The Guthrie raster is FLAT VECTOR ART, not a photographic scan: a whole-raster census
 # (scratchpad/port/terrain-key.md Sec 2) finds each land terrain occupies exactly ONE RGB, bound to
@@ -74,8 +104,8 @@ GLYPH = {
     "gravel": (170, 157, 97),
     "swamp": (91, 161, 102),
 }
-GLYPH_MIN = 17             # px in the patch; the histogram gap terrain-key.md Sec 4a documents
-                           # (gravel: nothing between 5-16 and nothing above 37; swamp: nothing 0-40)
+GLYPH_MIN = 17             # px in the GLYPH_RADIUS disc; it sits inside a genuinely empty histogram
+                           # gap (gravel: nothing between 5 and 20; swamp: nothing between 0 and 150)
 
 
 def _masks(patch: np.ndarray) -> dict:
@@ -92,32 +122,48 @@ def _masks(patch: np.ndarray) -> dict:
     return masks
 
 
-def classify_patch(patch: np.ndarray) -> str:
-    """Classify a hex from a patch: sea only if mostly water, else the dominant
-    land terrain by exact-colour vote (fold the salt-marsh/vegetation glyphs into
-    their fill's count), falling back to the gravel/swamp overlay glyphs ONLY
-    when nothing else won (they have no fill colour of their own -- they sit on
-    bare clear ground). This keeps thin coastal land (ports, the coast road
-    corridor) on the map instead of drowning it."""
+def _disc(radius: int) -> np.ndarray:
+    """The inscribed-disc stencil for a (2r+1)^2 window."""
+    yy, xx = np.mgrid[-radius:radius + 1, -radius:radius + 1]
+    return (yy * yy + xx * xx) <= radius * radius
+
+
+DISC = _disc(GLYPH_RADIUS)
+
+
+def _count(window: np.ndarray, colour: tuple, stencil: np.ndarray | None = None) -> int:
+    """Exact-colour pixel count in a window, optionally restricted to a stencil."""
+    hit = ((window[..., 0] == colour[0]) & (window[..., 1] == colour[1])
+           & (window[..., 2] == colour[2]))
+    return int((hit & stencil).sum() if stencil is not None else hit.sum())
+
+
+def classify_patch(patch: np.ndarray, glyph_window: np.ndarray | None = None) -> str:
+    """Classify a hex: sea only if mostly water, else the dominant land terrain by
+    exact-colour vote over `patch` (fold the salt-marsh/vegetation glyphs into their
+    fill's count), falling back to the gravel/swamp overlay glyphs ONLY when nothing
+    else won (they have no fill colour of their own -- they sit on bare clear ground).
+    This keeps thin coastal land (ports, the coast road corridor) on the map instead
+    of drowning it.
+
+    The sparse gravel/swamp glyphs are counted over `glyph_window` masked by the
+    inscribed DISC when one is supplied (see GLYPH_RADIUS: a stipple's density is the
+    whole signal, so it gets the widest sample that cannot bleed into a neighbour);
+    `patch` itself is the fallback for a hex too close to the raster edge to hold one."""
     m = _masks(patch)
     total = patch.shape[0] * patch.shape[1]
     if m["sea"].sum() >= SEA_FRACTION * total:
         return "sea"
-    R, G, B = patch[..., 0], patch[..., 1], patch[..., 2]
     land = {k: int(v.sum()) for k, v in m.items() if k != "sea"}
-    land["salt_marsh"] += int(((R == GLYPH["salt_marsh"][0]) & (G == GLYPH["salt_marsh"][1])
-                               & (B == GLYPH["salt_marsh"][2])).sum())
-    land["vegetation"] += int(((R == GLYPH["vegetation"][0]) & (G == GLYPH["vegetation"][1])
-                               & (B == GLYPH["vegetation"][2])).sum())
+    land["salt_marsh"] += _count(patch, GLYPH["salt_marsh"])
+    land["vegetation"] += _count(patch, GLYPH["vegetation"])
     winner = max(land, key=land.get) if any(land.values()) else "clear"
     if winner == "clear":
-        gravel_px = int(((R == GLYPH["gravel"][0]) & (G == GLYPH["gravel"][1])
-                         & (B == GLYPH["gravel"][2])).sum())
-        swamp_px = int(((R == GLYPH["swamp"][0]) & (G == GLYPH["swamp"][1])
-                        & (B == GLYPH["swamp"][2])).sum())
-        if gravel_px >= GLYPH_MIN:
+        window = patch if glyph_window is None else glyph_window
+        stencil = None if glyph_window is None else DISC
+        if _count(window, GLYPH["gravel"], stencil) >= GLYPH_MIN:
             return "gravel"
-        if swamp_px >= GLYPH_MIN:
+        if _count(window, GLYPH["swamp"], stencil) >= GLYPH_MIN:
             return "swamp"
     return winner
 
@@ -140,7 +186,7 @@ def extract(section: str, arr: np.ndarray) -> dict:
     ny_lo = int(math.floor((bx0 - s.y0) / s.dy)) - 1
     ny_hi = int(math.ceil((bx1 - s.y0) / s.dy)) + 1
     H, W = arr.shape[:2]
-    R = SAMPLE_RADIUS
+    R, D = SAMPLE_RADIUS, GLYPH_RADIUS
     out: dict = {}
     for nx in range(nx_lo, nx_hi + 1):
         for ny in range(ny_lo, ny_hi + 1):
@@ -152,7 +198,9 @@ def extract(section: str, arr: np.ndarray) -> dict:
             if not (R <= xi < W - R and R <= yi < H - R):
                 continue
             patch = arr[yi - R:yi + R, xi - R:xi + R].astype(np.int16)
-            out[h.label] = KNOWN_TERRAIN.get(h.label) or classify_patch(patch)
+            glyph = (arr[yi - D:yi + D + 1, xi - D:xi + D + 1].astype(np.int16)
+                     if D <= xi < W - D and D <= yi < H - D else None)
+            out[h.label] = KNOWN_TERRAIN.get(h.label) or classify_patch(patch, glyph)
     return out
 
 

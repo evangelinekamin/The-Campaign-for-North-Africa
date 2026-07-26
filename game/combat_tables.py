@@ -374,6 +374,7 @@ HEX_CA_SHIFT: dict[Terrain, int] = {
     Terrain.HEAVY_VEG: -1,         # L1
     Terrain.ROUGH: -2,             # L2
     Terrain.MOUNTAIN: -3,          # L3
+    Terrain.SWAMP: 0,              # the chart's dash (all three combat columns are "-" for Swamp)
     Terrain.MAJOR_CITY: 0,         # chart shows a fortification ref; deferred
 }
 
@@ -390,7 +391,7 @@ HEXSIDE_CA_SHIFT: dict[Hexside, int] = {
 # and hexside additions are handled by anti_armor_terrain_shift.
 HEX_AA_SHIFT: dict[Terrain, int] = {
     Terrain.CLEAR: 0, Terrain.GRAVEL: 0, Terrain.SALT_MARSH: 0,
-    Terrain.DELTA: 0, Terrain.DESERT: 0,
+    Terrain.DELTA: 0, Terrain.DESERT: 0, Terrain.SWAMP: 0,
     Terrain.HEAVY_VEG: -1,         # L1
     Terrain.ROUGH: -1,             # L1
     Terrain.MOUNTAIN: -2,          # L2
@@ -420,7 +421,7 @@ def anti_armor_terrain_shift(terrain: Terrain, fort_level: int) -> int:
 # Rough (L1) and Mountain (L2) shift barrage; every other terrain is "-" on the chart.
 HEX_BARRAGE_SHIFT: dict[Terrain, int] = {
     Terrain.CLEAR: 0, Terrain.GRAVEL: 0, Terrain.SALT_MARSH: 0, Terrain.HEAVY_VEG: 0,
-    Terrain.DELTA: 0, Terrain.DESERT: 0, Terrain.MAJOR_CITY: 0,
+    Terrain.DELTA: 0, Terrain.DESERT: 0, Terrain.MAJOR_CITY: 0, Terrain.SWAMP: 0,
     Terrain.ROUGH: -1,             # L1
     Terrain.MOUNTAIN: -2,          # L2
 }

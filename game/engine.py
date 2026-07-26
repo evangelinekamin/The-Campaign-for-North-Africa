@@ -26,7 +26,7 @@ from .invariants import check_event
 from .policy import AttackOrder, MoveOrder, Policy
 from .staff_events import clean_staff_payload
 from .state import Coord, GameState
-from .terrain import Terrain, is_motorized
+from .terrain import Terrain, is_motorized, salt_marsh_barred
 
 # Siege of Tobruk tuning knob (rule 25.14): how many effective barrages (a Pin or a
 # step loss) it takes to batter a fortification down one level. 1 = each effective
@@ -4833,7 +4833,8 @@ def _mandatory_retreat(r: _Run, side: Side, units: list, anchor: Coord) -> None:
             cur = trail[-1]
             for nb in sorted(neighbors(cur)):
                 if (nb not in terr.terrain or nb in blocked or nb in trail
-                        or distance(nb, anchor) < distance(cur, anchor)):
+                        or distance(nb, anchor) < distance(cur, anchor)
+                        or not tactics.may_step_into(r.state, units, cur, nb)):  # 8.37/8.44
                     continue
                 if distance(nb, anchor) == 3 and _fits(nb):
                     path = trail + [nb]
@@ -5158,6 +5159,30 @@ def _parents_of(r: _Run, units) -> list:
     return out
 
 
+def _salt_marsh_barred_assault(state: GameState, unit, target: Coord) -> bool:
+    """[8.44]: may this unit NOT join a Close Assault on `target` because of a Salt Marsh?
+
+    The rule body, verbatim off the scan (PDF page 15): "Because most vehicles are prohibited from
+    entering Salt Marshes in a normal manner, *no* motorized unit or AFV (tank, armored car, etc.)
+    may ever engage in Assault with units defending in a Salt Marsh hex." Note that this sentence
+    says MOTORIZED, not "barred" -- the [8.44] Light Truck / Recce / motorcycle-infantry exemption
+    is an exemption from the MOVEMENT ban only, and does not buy those classes an assault into the
+    marsh; nothing motorized assaults a marsh.
+
+    FLAGGED, and both halves are printed text. The rule body names only the DEFENDER's hex; [8.37]
+    chart note 2 restates the same case as "Motorized units may not engage in combat into/out of a
+    Salt Marsh (Case 8.44)" -- i.e. it also bars a motorized unit STANDING in a marsh from assaulting
+    out of it, which is the same physics (a vehicle in the quicksand cannot close). Both are the
+    book, so both are honoured here. What is deliberately NOT extended is the note's looser word
+    "combat": Barrage (12) and Anti-Armor (14) are fire, not closing, and the rule body's own scope
+    word is "Assault", so indirect fire into a marsh is left alone."""
+    if not is_motorized(unit.mobility):
+        return False
+    marsh = Terrain.SALT_MARSH
+    return (state.terrain.terrain.get(tuple(target)) == marsh          # into (8.44 body)
+            or state.terrain.terrain.get(tuple(unit.hex)) == marsh)    # out of (8.37 note 2)
+
+
 def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
                     target: Coord, pinned: set[str], charged: set[str],
                     fired_anti_armor: set[str] = frozenset()) -> bool:
@@ -5169,13 +5194,15 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     armed_atk = [u for u in attackers
                  if u.id not in pinned and u.cohesion > -26          # 6.26: -26 or worse may not attack
                  and not _waterless(u)                               # 52.51/52.52: no offensive assault when dry
+                 and not _salt_marsh_barred_assault(r.state, u, target)   # 8.44
                  and u.id not in fired_anti_armor                    # 14.26/15.21: not if it fired anti-armor
                  and _charge_ammo(r, side, actor, u, phasing=True)]
     if not armed_atk:
         r.emit(EventKind.ORDER_REJECTED, side, actor,
                {"order": "attack", "target": list(target),
-                "reason": "attackers out of ammo, pinned, out of water (52.51/52.52), assigned to "
-                          "anti-armor (15.21), or Cohesion -26 or worse (6.26)"})
+                "reason": "attackers out of ammo, pinned, out of water (52.51/52.52), motorized into "
+                          "or out of a Salt Marsh (8.44), assigned to anti-armor (15.21), or "
+                          "Cohesion -26 or worse (6.26)"})
         return False
     for u in armed_atk:                         # 6.3: the phasing Assault CP (5), once/segment
         _charge_combat_cp(r, side, u, charged)
@@ -5448,9 +5475,10 @@ def _resolve_surrender(r: _Run, side: Side, actor: str, target: Coord, attackers
 def _retreat(r: _Run, atk_side: Side, actor: str, defender_ids: list[str],
              attacker_hex: Coord, n: int) -> None:
     """Retreat the surviving defenders n hexes away from the attacker, toward the
-    nearest friendly supply/city, never into enemy ZOC or enemy units (rule 15.82);
-    each hex that cannot be retreated costs an extra 10% loss. The stack retreats
-    together. Retreat CP cost (15.82) is not charged yet (flagged)."""
+    nearest friendly supply/city, never into enemy ZOC or enemy units (rule 15.82),
+    and never into ground the stack's own mobility classes may not enter (8.37/8.44,
+    tactics.may_step_into); each hex that cannot be retreated costs an extra 10% loss.
+    The stack retreats together. Retreat CP cost (15.82) is not charged yet (flagged)."""
     survivors = [u for u in (r.state.unit(uid) for uid in defender_ids) if u and u.alive]
     if not survivors:
         return
@@ -5477,6 +5505,7 @@ def _retreat(r: _Run, atk_side: Side, actor: str, defender_ids: list[str],
         cands = [nb for nb in neighbors(cur)
                  if nb in r.state.terrain.terrain and nb not in blocked
                  and distance(nb, attacker_hex) > distance(cur, attacker_hex)
+                 and tactics.may_step_into(r.state, survivors, cur, nb)   # 8.37/8.44
                  and _fits(nb)]
         if not cands:
             break

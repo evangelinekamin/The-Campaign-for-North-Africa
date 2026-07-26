@@ -32,9 +32,24 @@ class Mobility(str, Enum):
 
 NON_MOT_CLASSES = frozenset({Mobility.FOOT, Mobility.CAMEL})
 
+# [8.44], read verbatim off the scan (PDF page 15) and restated by [8.37] chart note 2 (page 70):
+# "Vehicles, except for Light Trucks, Recce-type units, and motorcycle infantry may enter or leave a
+# Salt Marsh hex only on a Road or Track." So the three named light classes are EXEMPT and keep the
+# chart's 2 CP Mot entry; every other vehicle class is barred off-road/off-track. Foot and Camel are
+# not vehicles and are never barred -- which is also where the rule's last sentence lands for free:
+# "the one camel unit in the game (the Italian Meharisti Camel Cavalry) travels as infantry in non-
+# track Salt Marsh hexes" is already true here, because CAMEL is in NON_MOT_CLASSES and therefore
+# pays the chart's non-Mot 3 CP, exactly as infantry does.
+SALT_MARSH_EXEMPT = frozenset({Mobility.LIGHT_TRUCK, Mobility.RECCE, Mobility.MOTORCYCLE})
+
 
 def is_motorized(m: Mobility) -> bool:
     return m not in NON_MOT_CLASSES
+
+
+def salt_marsh_barred(m: Mobility) -> bool:
+    """[8.44]: may this mobility class NOT enter or leave a Salt Marsh hex off a Road/Track?"""
+    return is_motorized(m) and m not in SALT_MARSH_EXEMPT
 
 
 class Terrain(str, Enum):
@@ -73,15 +88,29 @@ _HEX_ENTRY: dict[Terrain, tuple[float | None, float | None]] = {
     Terrain.MOUNTAIN: (4, 6),
     Terrain.DELTA: (2, 4),
     Terrain.DESERT: (3, 4),
-    # "May enter only on road or railroad" (8.37 note 4, PDF p.70) -- the note replaces BOTH the
-    # non-Mot and Mot CP cells outright, with no exception carved out for foot units, so off-road/
-    # off-track entry is prohibited to every mobility class. A Road/Track edge bypasses this table
-    # entirely (ROAD_ENTRY/TRACK_ENTRY in movement.step_cost), which is how the chart's "only on
-    # road or railroad" actually gets satisfied -- this pair only governs the case where neither is
-    # present. Known imprecision, flagged: the engine's Track feature does not distinguish from a
-    # Railroad, so a vehicle can enter Swamp off a Track today where the chart says only a Railroad
-    # should count -- the same coarseness already accepted for [8.37] notes 2/3 (untracked vehicle-
-    # class exceptions), not a new gap this slice invents.
+    # "May enter only on road or railroad" -- the Swamp row's OWN cell text on [8.37] (PDF p.70,
+    # re-read at 450 dpi), spanning the non-Mot, Mot AND Breakdown-Value columns outright, with no
+    # exception carved out for foot units, so off-road/off-rail entry is prohibited to every
+    # mobility class. A Road/Track edge bypasses this table entirely (ROAD_ENTRY/TRACK_ENTRY in
+    # movement.step_cost), which is how "only on road or railroad" actually gets satisfied -- this
+    # pair only governs the case where neither is present.
+    #
+    # NOT note 4, and the scan is worth recording because the printed chart is confusing here: the
+    # row IS printed "Swamp{superscript 4}", but note 4 reads "Alexandria and Cairo hexes are Level
+    # Three Fortifications, all others are Level Two" -- a fortification note that says nothing
+    # whatever about swamp, and that plainly belongs to the Major City row directly above (which is
+    # printed with NO superscript at all, and whose Combat-Adjustment cell is the cross-reference
+    # "See Fortifications"). Read as a typesetting slip in the 1979 chart, recorded rather than
+    # "corrected": nothing depends on it, because the fort roster this engine builds
+    # (data/city_forts.json) is independently stated in prose by [25.12].
+    #
+    # Known imprecision, flagged (LATENT -- all 17 Swamp hexes carry zero road/track/rail edges
+    # today, so nothing reaches this branch): the engine's Track feature does not distinguish a
+    # Track from a Railroad, so once 8.1b traces edges here a vehicle could enter Swamp off a mere
+    # Track, where the chart admits only a Road or Railroad -- and, because Swamp's Breakdown Value
+    # is the chart's blank cell (0, see _HEX_BREAKDOWN), it would do so at zero Breakdown cost, the
+    # safest ground on the board. The same Track/Railroad coarseness is already accepted for [8.37]
+    # notes 2/3; it is not a gap this slice invents, but it is the one to close first in 8.1b.
     Terrain.SWAMP: (PROHIBITED, PROHIBITED),
     Terrain.MAJOR_CITY: (1, 0.5),
 }

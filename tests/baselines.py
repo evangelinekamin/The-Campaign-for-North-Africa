@@ -10,6 +10,71 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-26 (SECOND MOVE THE SAME DAY) -- CAUSE: the Phase-8.1a REVIEW REPAIR. The
+adversarial review of the slice below found four defects; the two that move a signature are both
+fixed here, and both are corrections to the slice below, not new behaviour.
+
+  418ee22ffb61 / 63e08df24f84  ->  b4f2e8e2c955 / 6e74c608b476
+
+CAUSE 1 -- [8.44] SALT MARSH WAS NOT IMPLEMENTED, which INVERTED the whole point of the slice. The
+chart gives Salt Marsh 2 CP motorized entry and Breakdown Value 6, against the DESERT 4 / ROUGH 4 and
+BV 24 / 8 that ring the Qattara Depression -- so with the fill landed and the RULE missing, the one
+terrain that historically stopped an army was the best tank road on the board: the cheapest motorized
+west-east route across the map ran TWELVE CONSECUTIVE HEXES through the depression. [8.44] (scan
+PDF p.15, restated by [8.37] note 2): "Vehicles, except for Light Trucks, Recce-type units, and
+motorcycle infantry may enter or leave a Salt Marsh hex only on a Road or Track." Now gated on the
+EDGE (both ends, enter-or-leave) in movement.step_cost, with the three named classes exempt; Camel
+falls out for free (non-motorized, so it pays the chart's non-Mot 3 CP "as infantry", which is
+[8.44]'s own last sentence). FLAGGED AS NAMED DEBT, not silently half-built: [8.44]'s "a prohibited
+vehicle that enters a Salt Marsh hex without using the Track, WHATEVER THE REASON, is Abandoned (see
+5.33)" has no engine concept of Abandonment at all, so forced relocations (engine._retreat /
+_mandatory_retreat, via the new tactics.may_step_into) EXCLUDE the hex instead -- which keeps both
+things the rule guarantees (a barred vehicle never gains free passage, and never ends a retreat
+frozen in a marsh) and leaves 5.33 as debt rather than an invented loss.
+
+CAUSE 2 -- 54 GRAVEL HEXES WERE RECORDED AS CLEAR (extraction defect). Gravel has no fill colour,
+only a sparse ring stipple, so its class is a DENSITY measurement and the 48x48 centre patch (2,304
+px, ~37% of a hex) made GLYPH_MIN a coin flip. Re-measured over the largest disc that fits INSIDE a
+hex (inradius 42.6 px, 5,025 px, cannot bleed into a neighbour) the histogram is cleanly bimodal --
+6,307 hexes at 0-4 px, an empty gap, then 448 at 21-72 -- and EVERY threshold from 10 to 20 returns
+the same 448. Committed count was 394; the 54 missed hexes are all inside the ABC benchmark map
+(A 34 / B 20), some denser than accepted ones (A1309=53, A0711=49 vs accepted A1625=39). Gravel
+394 -> 448. Nothing else moved: re-running the extractor changes exactly 54 hexes, all clear->gravel,
+with an identical hex set and the coastline still byte-identical at 1,750 sea.
+
+ATTRIBUTION, MEASURED (seed 42, ScriptedPolicy(AXIS) both sides, each reproduced twice; and note the
+false-neuter trap recorded under the slice below -- these patch the CALLER's binding):
+
+    pre-repair (the slice below, as committed b389399)  -> 418ee22ffb61 / 63e08df24f84
+    repair code live, gravel data reverted to 394       -> 8cf9b5288a63 / e49d052d4efb
+    repair code live, gravel 448 (= SHIPPED)            -> b4f2e8e2c955 / 6e74c608b476
+    SHIPPED but game.movement.salt_marsh_barred neutered-> 4b0330a6ad9d / 135661f48c6b
+
+So both causes are real and separable: the code repair moves the hashes off the pre-repair value on
+its own, the gravel correction moves them again, and neutering the [8.44] gate at the binding
+movement.step_cost actually resolved moves them a third way -- i.e. [8.44] is live on both
+benchmarks, NOT invisible as a first (wrongly-targeted) neuter suggested.
+
+DELIBERATELY *NOT* FIXED -- ROSETTA (E4019), and the reasoning is worth keeping because the wrong fix
+was written first and reverted. E4019 is a PORT in the book's SUMMARY OF IMPORTANT LOCATIONS and a
+village water source (data/wells.json); the new fill classifies it Swamp, [8.37]'s Swamp row is "may
+enter only on road or railroad", and data/roads_E.json carries 0 road and 0 track edges touching any
+swamp hex -- so a book-named Port is currently unreachable by every unit in the game (it was CLEAR
+and reachable before this slice). The review filed that as a defect and proposed adding E4019 to
+extract_terrain.KNOWN_TERRAIN as a forced `clear`; that override was written, and then REVERTED.
+
+WHY: the five entries already in KNOWN_TERRAIN correct a SAMPLING ARTIFACT -- a harbour's water
+dominates the port hex's centre patch and it mis-samples as sea. E4019 is not that. The raster
+genuinely paints it the Terrain Key's swamp, tufts and all (rendered and read by eye). Forcing it
+`clear` would make the terrain data LIE ABOUT THE MAP in order to paper over a MISSING ROAD LAYER,
+which is the one thing this port's rules forbid: the debt is the road trace (Phase 8.1b), and the
+faithful fix is to trace the road, not to falsify the fill. tests/test_map_terrain_fills.py pins
+exactly this, and says so in its own docstring ("What must NOT happen is the debt being paid by
+falsifying E4019's terrain"). Swamp stays 17. WHEN 8.1b TRACES THAT ROAD, restate that test to
+assert the corridor exists.
+
+-------------------------------------------------------------------------------------------------
+
 RE-BASELINED 2026-07-26 -- CAUSE: Phase 8.1a, the [8.37] TERRAIN FILL RECLASSIFICATION (the Qattara
 Depression / El Alamein anchor, Jebel Akhdar Mountain, the Nile Delta, Rock/Gravel) + the [8.37]
 note-4 / [25.12] Major-City fort roster (Benghazi + Helwan added). Full account:
@@ -63,9 +128,25 @@ NEUTER-PROOF, both causes isolated (scratchpad/map8/neuter_proof.py, seed 42,
 axis=allied=ScriptedPolicy(AXIS), each measurement reproduced twice byte-for-byte):
 
     both reverted (old terrain, old fort roster)     -> 453f9ad1f231 / 42eedca02ae3  (= OLD baseline)
-    terrain LIVE,     fort roster reverted            -> 418ee22ffb61 / 63e08df24f84  (= NEW baseline)
+    terrain LIVE,     fort roster reverted            -> [SEE CORRECTION BELOW -- NOT MEASURED]
     terrain reverted, fort roster LIVE                -> 453f9ad1f231 / 42eedca02ae3  (= OLD baseline)
     both live (the actual change)                     -> 418ee22ffb61 / 63e08df24f84  (= NEW baseline)
+
+*** CORRECTION, 2026-07-26 (the adversarial review of this very slice, finding 4). THE TWO
+"fort roster reverted" ROWS ABOVE WERE NEVER ACTUALLY MEASURED.*** scratchpad/map8/neuter_proof.py
+called importlib.reload(scenario) INSIDE its measure(), which re-executed
+MAJOR_CITIES = _load_major_cities() and silently wiped the very override the row was testing -- so
+all four rows ran with the LIVE fort roster. The CONCLUSION survives (the reviewer re-isolated the
+fort roster properly at runtime, without the reload, and it is genuinely neuter on both benchmarks --
+Benghazi sits west of the corridor either scenario fights over), but per port rule 4 a re-baseline
+may not carry a proof that was not run, so the unmeasured cells are struck rather than trusted.
+
+THE SAME TRAP BIT THE REPAIR PASS, and is recorded here because it will bite the next person too:
+game/movement.py does `from .terrain import salt_marsh_barred`, so monkeypatching
+game.terrain.salt_marsh_barred does NOT reach movement.step_cost's already-bound reference. A neuter
+of the terrain-module symbol reported "[8.44] is invisible to both benchmarks"; neutering the REAL
+binding (game.movement.salt_marsh_barred) shows it moves both. A neuter proof must patch the symbol
+the CALLER resolved, not the one the definition lives under.
 
 So the ENTIRE signature move is the terrain reclassification. The fort-roster change, though
 faithful and real, is INVISIBLE to both benchmarks: Benghazi (A4827) sits deep in the Axis rear, well
@@ -1055,8 +1136,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "418ee22ffb61"
-SIEGE_OF_TOBRUK = "63e08df24f84"
+ROMMELS_ARRIVAL = "b4f2e8e2c955"
+SIEGE_OF_TOBRUK = "6e74c608b476"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

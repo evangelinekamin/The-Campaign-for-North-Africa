@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from game.terrain import (Hexside, Mobility, Terrain, hex_entry_cost,
-                          hexside_cost, is_motorized)
+                          hexside_cost, is_motorized, salt_marsh_barred)
 
 
 def test_motorization_classification():
@@ -28,9 +28,27 @@ def test_hex_entry_costs_match_chart():
 
 
 def test_swamp_prohibits_off_road_entry_to_every_mobility_class():
-    # 8.37 note 4: "May enter only on road or railroad" -- no exception for foot units.
+    # The Swamp row's own spanned cell on [8.37] (NOT note 4, which is the fortification note --
+    # see game/terrain.py): "May enter only on road or railroad", with no exception for foot units.
     assert hex_entry_cost(Terrain.SWAMP, Mobility.FOOT) is None
     assert hex_entry_cost(Terrain.SWAMP, Mobility.VEHICLE) is None
+
+
+def test_salt_marsh_bars_only_the_vehicle_classes_844_names():
+    """[8.44] (PDF p.15, restated by [8.37] chart note 2): "Vehicles, except for Light Trucks,
+    Recce-type units, and motorcycle infantry may enter or leave a Salt Marsh hex only on a Road
+    or Track." Foot and Camel are not vehicles -- and the Camel case is the rule's own last
+    sentence ("travels as infantry in non-track Salt Marsh hexes"), satisfied because CAMEL pays
+    the chart's non-Mot 3 CP."""
+    assert salt_marsh_barred(Mobility.MOTORIZED)
+    assert salt_marsh_barred(Mobility.VEHICLE)
+    for exempt in (Mobility.LIGHT_TRUCK, Mobility.RECCE, Mobility.MOTORCYCLE):
+        assert not salt_marsh_barred(exempt)
+    assert not salt_marsh_barred(Mobility.FOOT)
+    assert not salt_marsh_barred(Mobility.CAMEL)
+    # The chart's own cells still stand behind the gate: the marsh is CHEAP for whoever may use it.
+    assert hex_entry_cost(Terrain.SALT_MARSH, Mobility.FOOT) == 3
+    assert hex_entry_cost(Terrain.SALT_MARSH, Mobility.LIGHT_TRUCK) == 2
 
 
 def test_hexside_costs_and_prohibitions_match_chart():

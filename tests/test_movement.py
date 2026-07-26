@@ -78,6 +78,32 @@ def test_escarpment_prohibitions_and_track_exception():
     assert step_cost(down_map, (0, 0), (1, 0), Mobility.FOOT) == 3
 
 
+def test_salt_marsh_gate_bars_vehicles_off_road_and_track():
+    """[8.44] / [8.37] note 2: a barred vehicle "may enter or leave a Salt Marsh hex only on a
+    Road or Track" -- so the gate reads BOTH ends of the edge, and the exempt light classes and
+    the foot/camel column still pay the chart's plain cell. Without it the marsh's 2 CP Mot entry
+    would be the CHEAPEST motorized ground on the board (Desert and Rough are both 4)."""
+    terr = {(0, 0): Terrain.CLEAR, (1, 0): Terrain.SALT_MARSH, (2, 0): Terrain.CLEAR}
+    tmap = TerrainMap(terrain=terr)
+    for barred in (Mobility.MOTORIZED, Mobility.VEHICLE):
+        assert step_cost(tmap, (0, 0), (1, 0), barred) is None      # may not ENTER
+        assert step_cost(tmap, (1, 0), (2, 0), barred) is None      # nor LEAVE
+    assert step_cost(tmap, (0, 0), (1, 0), Mobility.FOOT) == 3      # chart non-Mot cell
+    assert step_cost(tmap, (0, 0), (1, 0), Mobility.CAMEL) == 3     # 8.44: travels as infantry
+    for exempt in (Mobility.LIGHT_TRUCK, Mobility.RECCE, Mobility.MOTORCYCLE):
+        assert step_cost(tmap, (0, 0), (1, 0), exempt) == 2         # chart Mot cell
+
+    # ... and a Road or a Track opens it to everyone, at that edge's own cost.
+    on_track = TerrainMap(terrain=terr, tracks=frozenset({edge((0, 0), (1, 0))}))
+    assert step_cost(on_track, (0, 0), (1, 0), Mobility.VEHICLE) == 1
+    on_road = TerrainMap(terrain=terr, roads=frozenset({edge((0, 0), (1, 0))}))
+    assert step_cost(on_road, (0, 0), (1, 0), Mobility.VEHICLE) == 0.5
+    # A road/track on the FAR side does not license the barred step it does not cross.
+    far = TerrainMap(terrain=terr, tracks=frozenset({edge((1, 0), (2, 0))}))
+    assert step_cost(far, (0, 0), (1, 0), Mobility.VEHICLE) is None
+    assert step_cost(far, (1, 0), (2, 0), Mobility.VEHICLE) == 1
+
+
 def test_offmap_and_noncontiguous_return_none():
     tmap = clear_line()
     assert step_cost(tmap, (0, 0), (5, 0), Mobility.FOOT) is None     # not adjacent
