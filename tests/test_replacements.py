@@ -392,12 +392,20 @@ def test_the_campaign_run_wires_the_beat_into_the_loop_and_accumulates():
 
     RESTATED for Block B (20.62 the Axis convoy coupling): REPLACEMENTS_PRODUCED is no longer a
     Commonwealth-only event -- the Axis now ALSO brings in Infantry Replacement Points, charged
-    tonnage against the convoy (its own test file). This test owns the COMMONWEALTH flow-in, so it
-    filters to the ALLIED events and scopes the conservation identity to the Commonwealth pool; the
-    Axis events are asserted well-formed but their accounting lives with the coupling."""
+    tonnage against the convoy (its own test file). This test owns the COMMONWEALTH [INFANTRY] flow-
+    in specifically (20.7/20.78B, engine._replacement_production) -- NOT the sibling 20.78C tank/gun
+    equipment flow-in (engine._cw_equipment_production), which shares the SAME EventKind/side/actor
+    but is need-driven off the CW's current tank/gun deficit and has its own dedicated coverage
+    (test_cw_equipment_production.py). RESTATED again for the [8.37] per-terrain stacking limit: a
+    higher stacking cap reshapes this short fold's early combat/movement enough that the equipment
+    flow-in's deficit can now open before Game-Turn 8 too (it did not before), so the ALLIED filter
+    must select the INFANTRY stream by type, not by side alone (rule 5 -- restate, don't weaken; the
+    conservation identity below was already scoped to the infantry pool and would have silently
+    summed a gun Point into a wrong total had the filter stayed side-only). Axis events are asserted
+    well-formed but their accounting lives with the coupling."""
     res = run(campaign(seed=4, max_turns=8), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     ev = [e for e in res.events if e.kind == EventKind.REPLACEMENTS_PRODUCED]
-    cw = [e for e in ev if e.payload["side"] == Side.ALLIED.value]
+    cw = [e for e in ev if e.payload["side"] == Side.ALLIED.value and e.payload["type"] == "infantry"]
     assert cw, "the campaign must roll the CW Infantry Production stream"
     assert min(e.payload["plan_turn"] for e in cw) == 3        # the first productive plan turn
     for e in cw:

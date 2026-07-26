@@ -69,7 +69,8 @@ def test_full_entry_hex_would_crash_without_the_deferral():
     # Documents the bug the fix defuses: a dormant reinforcement popping onto a full hex at the
     # TURN_ADVANCED fold trips the 9.31 stacking invariant. This is the raw pop, WITHOUT the
     # _defer_crowded_reinforcements guard -- it must raise.
-    residents = [_unit(f"R{i}", ENTRY, sp=1) for i in range(stacking.DEFAULT_HEX_LIMIT)]  # hex full
+    residents = [_unit(f"R{i}", ENTRY, sp=1)                 # hex full: [8.37] Clear limit is 6
+                 for i in range(stacking.hex_stack_limit(Terrain.CLEAR))]
     reinf = _unit("REINF", ENTRY, sp=1, arrival=2)
     r = _Run(_state(residents + [reinf], turn=1))
     with pytest.raises(InvariantViolation):
@@ -79,7 +80,8 @@ def test_full_entry_hex_would_crash_without_the_deferral():
 # --- (1) full entry hex delays the arrival until room opens -------------------
 
 def test_reinforcement_delays_when_entry_hex_full_then_arrives_when_room_opens():
-    residents = [_unit(f"R{i}", ENTRY, sp=1) for i in range(stacking.DEFAULT_HEX_LIMIT)]  # 5 pts = full
+    residents = [_unit(f"R{i}", ENTRY, sp=1)                 # 6 pts = full ([8.37] Clear limit)
+                 for i in range(stacking.hex_stack_limit(Terrain.CLEAR))]
     reinf = _unit("REINF", ENTRY, sp=1, arrival=2)
     r = _Run(_state(residents + [reinf], turn=1))
 

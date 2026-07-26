@@ -1563,7 +1563,7 @@ pro rata because 53.12 would otherwise be violated.
 | # | Item | Deps | ⏱ |
 |---|---|---|---|
 | **8.0** | 🔴 **ONE-DAY SPIKE: does the hexside data exist?** Escarpments, wadis, slopes, salt marsh, mountain. If the VASSAL source carries them → **L**. If they must be traced off a 14310×4632 map scan → **XL**, and re-scope. | — | 1 |
-| **8.1** | **T1-3 the map's terrain** — hexsides, salt marsh (**the Qattara Depression / the Alamein line**), escarpment (**Halfaya**), mountain (**Jebel Akhdar**), gravel, delta, and all ten Major Cities at their [8.37] note-4 fort levels. Read the **[8.37] Stacking Points column** off the scan and delete `DEFAULT_HEX_LIMIT` (**I3**). | 8.0 | 9–29 |
+| **8.1** | **T1-3 the map's terrain** — hexsides, salt marsh (**the Qattara Depression / the Alamein line**), escarpment (**Halfaya**), mountain (**Jebel Akhdar**), gravel, delta, and all ten Major Cities at their [8.37] note-4 fort levels. ~~Read the **[8.37] Stacking Points column** off the scan and delete `DEFAULT_HEX_LIMIT` (**I3**).~~ **I3 DONE 2026-07-25** (ahead of the rest of 8.1, out of sequence — `game/stacking.py::hex_stack_limit` + `data/stacking_limits.json`, terrain-keyed: 6 default / 3 mountain / 8 major_city; `DEFAULT_HEX_LIMIT` deleted). Mountain reads 3 correctly but is inert (no map hex is tagged `Terrain.MOUNTAIN` yet) until the REST of 8.1 — the hexside/mountain/salt-marsh/escarpment/gravel/delta map tagging — lands. | 8.0 | 9–29 |
 | **8.2** | **24.3 / 24.4 construction of minefields and fortifications** + **26 minefields**. **El Alamein gets its Devil's Gardens.** Needs the Scorpion (3.2) and an engineer HQᴱ (23.14). | 8.1 | 8 |
 
 ---

@@ -10,6 +10,84 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-25 -- CAUSE: rule [8.37] THE PER-TERRAIN STACKING LIMIT (replacing the
+DEFAULT_HEX_LIMIT=5 placeholder) + the delta-vs-full invariant mismatch it exposed.
+
+game/stacking.py's DEFAULT_HEX_LIMIT=5 was a flagged placeholder ("verify per-terrain vs scan") --
+it matched no real chart value. The [8.37] Terrain Effects Chart's Stacking-Points column (scan-
+verified PDF page 70, scratchpad/port/transcriptions/8.37-terrain-effects-chart.md) is now wired
+from data/stacking_limits.json: every terrain is 6 (clear/gravel/salt_marsh/heavy_vegetation/
+rough/delta/desert -- everything reachable on the map today) EXCEPT Mountain (3, not yet reachable
+-- no map hex is tagged Mountain) and Major City (8). within_hex_limit no longer takes a `limit`
+override; it always resolves the true per-terrain cap (stacking.hex_stack_limit).
+
+Raising the common case 5 -> 6 legalises the 6-stacks that were repeatedly crashing campaign folds
+(game.invariants._check_stack_at raising "6 > limit 5" -- seed 7 at hex (24, 83), seed 24 at hex
+(30, 103), scratchpad/ammo_ab_measure.py's own flagged note). Both are now clean: seed 7 folds to
+GT111/111 (262,890 events), seed 24 to GT111/111 (262,074 events), each ending on a clean
+invariants.check(final) sweep.
+
+THE SECOND FIX, found fixing the first: test_invariants_delta's equivalence test documented a real
+coverage hole -- UNIT_DETACHED changes a unit's [9.21] stacking contribution (organization.size
+reads Unit.attached_to) WITHOUT moving its hex, so it is not a _UNIT_MOVE_KINDS case, and
+check_event never re-checked the hex the full sweep (adjudication.stacking_violations) does.
+game/invariants.py now checks UNIT_ATTACHED/UNIT_DETACHED's own (unmoved) hex too (_ATTACH_KINDS),
+so check_event and check() agree at every event (test_incremental_verdict_matches_full_sweep_at_
+every_event, plus two new fault-injection tests that exercise check_event directly on a manually
+built over-stack).
+
+THAT FIX ALONE CRASHED LIVE CAMPAIGNS, and did, in testing: [9.12]'s HQ Stacking Point value is a
+hard binary ("'0' when it has no combat units of any type attached; the printed number ... when it
+represents the division or brigade as a combat unit") -- so the unit that makes a Parent Formation's
+FIRST attach can jump the Parent's own contribution from 0 straight to its full printed value,
+RAISING a hex's total even though [9.13]'s whole point is that organizing SHRINKS it (true in
+aggregate, not necessarily on the first counter folded in). game/campaign_policy.py's
+concentrate_formations already gated its OWN proposals on exactly this ("the 9.14 stacking gate",
+test_concentrate_respects_the_9_14_stacking_gate, restated here -- its "3 loose + a 3-SP HQ = 6, over
+the 5-limit" scenario no longer overflows the real 6-limit, so it now uses 4 loose units) -- but
+engine._reorganize, the shared acceptance point every policy's attach/detach order passes through
+regardless of which policy proposed it, did not, so a live campaign could still walk an over-stack
+into existence and then have check_event (correctly, per the fix above) refuse to let it stand.
+engine._reorganize's "attach" and "detach" branches now carry the same [8.37] guard every movement
+destination already gets -- simulate the fold/unfold and reject the order (no CP charged, retryable
+next Reorganization Segment) rather than cross the limit -- a second, universal layer beside the
+existing policy-level gate, exactly as the engine already validates movement regardless of which
+policy proposed it.
+
+OWNER RULING CANDIDATE, surfaced by this repair, not resolved by it: [9.14] caps a hex "at the end of
+any Movement Segment" and [9.31] bars a unit from "ceasing movement" over the limit -- both textually
+about MOVEMENT. Reading them to also gate the Reorganization Segment's attach/detach (as this fix and
+the pre-existing concentrate_formations gate both do) is the CONSERVATIVE reading, not the only
+defensible one: every OpStage runs Reorganization strictly BEFORE that side's Movement Segment
+(game.engine.run), so a transient organizational bump would, on every case measured here, have self-
+resolved before the next STAGE_ADVANCED boundary sweep even with no gate at all. This port took the
+conservative reading -- never let the board go over-limit, by any path -- because the alternative risks
+a live-engine crash on a rules-grey-area state, and the cost is small (an occasionally-deferred
+consolidation, not a lost unit). One path is NOT covered: engine._maybe_disband_battle_group's FORCED
+cascade of Italian detaches when a Kampfgruppe's last German leaves (Kampfgruppen HQ's sheet note 2,
+a mandatory unwind with no sensible "reject") emits UNIT_DETACHED directly and bypasses the new gate.
+Flagged as a residual risk, but currently STRUCTURALLY UNREACHABLE, not merely unobserved: no policy
+in the codebase (CampaignAxisPolicy, CampaignCommonwealthPolicy, StaffPolicy, the LLM policy) issues a
+"form_kg" order (grep-confirmed), so BATTLE_GROUP_FORMED never fires, no ge_battle_group HQ ever exists
+on the board, and _maybe_disband_battle_group's own guard (hq.org_type != "ge_battle_group") can never
+match -- matching test_organization_campaign.py's own note that the dynamic 19.71 Battle Group is
+"flagged and deferred as speculative AI". Revisit this gate the day a policy forms one.
+
+ATTRIBUTION, CHECKED: neither game/invariants.py's _ATTACH_KINDS fix nor engine.py's new attach/
+detach guard reaches either Desert Fox benchmark -- both run ScriptedPolicy, whose .organization()
+returns [] unconditionally (game/policy.py), so _reorganize is never even called and no UNIT_ATTACHED
+/UNIT_DETACHED is ever emitted on either log. Neutering ONLY the terrain-limit change (monkeypatching
+stacking.hex_stack_limit to return the old flat 5 unconditionally, leaving the data file, the [8.37]
+lookup machinery, and both the invariants.py/engine.py fixes in place) reproduces the OLD signatures
+EXACTLY (b03f538ccb8a / fb0b8678dc74). So the entire move is the terrain-limit number, 5 -> 6, and
+nothing else in this slice touches either benchmark.
+
+    rommels_arrival   b03f538ccb8a -> 851b58b89246
+    siege_of_tobruk   fb0b8678dc74 -> f91683c03dde
+
+Each reproduced twice, byte-for-byte.
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-25 -- CAUSE: rule [50.17]/[53.11]/[54.2] THE CLOSE-ASSAULT-AMMO LAST MILE
 (armour-elimination diagnosis, scratchpad/port/armour-elimination-diagnosis.md +
 scratchpad/port/ammo-last-mile-spec.md). Part 1 of a two-part supply fix moves these logs; Part 2
@@ -863,8 +941,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "b03f538ccb8a"
-SIEGE_OF_TOBRUK = "fb0b8678dc74"
+ROMMELS_ARRIVAL = "851b58b89246"
+SIEGE_OF_TOBRUK = "f91683c03dde"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

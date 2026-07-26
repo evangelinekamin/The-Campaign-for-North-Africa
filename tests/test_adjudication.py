@@ -62,9 +62,11 @@ def test_validate_batch_drops_off_map_destination_without_crashing():
 # --- validate_batch: over-stack ----------------------------------------------
 
 def test_validate_batch_flags_combined_over_stack():
-    # Two 3-point units each legal alone, but both ordered onto the same empty hex
-    # -> 6 > 5 stacking limit: a conflict only the COMBINED batch reveals.
-    units = [_unit("A", (1, 0), sp=3), _unit("B", (2, 0), sp=3)]
+    # Two units (3 and 4 points) each legal alone on a Clear hex (limit 6, [8.37]), but both
+    # ordered onto the same empty hex -> 7 > 6 -- a conflict only the COMBINED batch reveals.
+    # (Restated from "3+3=6 > the old flat 5-limit": the real per-terrain limit, 6, no longer
+    # overflows at 6, rule 5 -- restate, don't weaken.)
+    units = [_unit("A", (1, 0), sp=3), _unit("B", (2, 0), sp=4)]
     state = _state(units)
     orders = [MoveOrder("A", (3, 0)), MoveOrder("B", (3, 0))]
 
@@ -136,7 +138,9 @@ def test_validate_batch_ignores_unknown_ids():
 # --- stacking_violations: single source of truth -----------------------------
 
 def test_stacking_violations_flags_resting_over_stack():
-    state = _state([_unit("A", (3, 0), sp=3), _unit("B", (3, 0), sp=3)])
+    # 3 + 4 = 7, over the [8.37] Clear limit of 6 (restated from the old flat 5-limit's 3+3=6;
+    # rule 5, restate don't weaken -- see test_validate_batch_flags_combined_over_stack).
+    state = _state([_unit("A", (3, 0), sp=3), _unit("B", (3, 0), sp=4)])
     violations = adjudication.stacking_violations(state)
     assert len(violations) == 1
     assert violations[0].kind == "over-stack"
@@ -151,10 +155,12 @@ def test_stacking_violations_empty_when_within_limit():
 # --- invariants delegation: behavior preserved (raise-first) -----------------
 
 def test_invariants_still_raises_on_over_stack_unchanged():
-    state = _state([_unit("A", (3, 0), sp=3), _unit("B", (3, 0), sp=3)])
+    # 3 + 4 = 7, over the [8.37] Clear limit of 6 (restated from the old flat 5-limit's 3+3=6;
+    # rule 5, restate don't weaken).
+    state = _state([_unit("A", (3, 0), sp=3), _unit("B", (3, 0), sp=4)])
     with pytest.raises(invariants.InvariantViolation) as exc:
         invariants.check(state)
-    assert str(exc.value) == "stacking exceeded at (3, 0): 6 points (limit 5)"
+    assert str(exc.value) == "stacking exceeded at (3, 0): 7 points (limit 6)"
 
 
 def test_invariants_passes_when_within_limit():

@@ -1,0 +1,24 @@
+{
+  "_comment": "[8.37] TERRAIN EFFECTS CHART, the 'Stacking¹ Limit' column (PDF page 70, transcribed scratchpad/port/transcriptions/8.37-terrain-effects-chart.md). Rule 9.14: 'the maximum number of Stacking Points which may be in that hex at the end of any Movement Segment.' Mirrors data/breakdown_rates.json's terrain_breakdown_values_8_37 block (the SAME chart's Breakdown-Value column) -- a sibling file rather than a sibling key, since 'breakdown_rates' would be a misnomer for stacking data. Replaces game/stacking.py's old DEFAULT_HEX_LIMIT=5 placeholder, which the transcription found did not match ANY real value on the chart.",
+
+  "hex_terrain": {
+    "_comment": "Every terrain is 6 EXCEPT Mountain (3) and Major City (8). Hexside features (Ridge, slopes, escarpments, rivers), the three Fortification levels, and both Minefield rows all print a dash in this column on the chart -- they are overlays on a hex whose base Terrain already supplies the limit, not independent hex-occupancy types, so none of them get a key here (game/stacking.hex_stack_limit keys ONLY on Terrain).",
+    "clear": 6,
+    "gravel": 6,
+    "salt_marsh": 6,
+    "heavy_vegetation": 6,
+    "rough": 6,
+    "mountain": 3,
+    "delta": 6,
+    "desert": 6,
+    "major_city": 8,
+    "_mountain_note": "Not yet reachable: no map hex is tagged Terrain.MOUNTAIN today (game/terrain.py's Terrain enum has the member; Phase 8.1 is what tags mountain hexes on the map). Wired faithfully anyway so the lookup is already correct the day it lands.",
+    "_swamp_note": "Swamp is also 6 on the chart ('may enter only on road or railroad') but has no Terrain enum member yet -- omitted pending that terrain landing, same reasoning as Mountain.",
+    "_village_railroad_note": "Village/Bir/Oasis and Railroad print NO distinct Stacking Limit cell on the chart (fully blank rows, not dashed) -- rule 8.37's own reading note: they are 'Same as terrain in hex for all purposes', so they inherit whichever hex_terrain value their underlying Terrain already carries. Not a separate key."
+  },
+
+  "road_track_9_33": {
+    "_comment": "Rule 9.33 prose ('a separate 5-point limit for road/track movement') independently confirmed by the SAME 8.37 chart: both the Road and Track rows print '5⁷' in the Stacking Limit column, footnote 7 ('Applies only to the units/truck points in that hex at that time') being exactly the rule-9.33 movement-THROUGH-a-stack case -- distinct from the rule-9.14 at-rest hex cap hex_terrain governs above (a Clear hex still caps at 6 for who is SITTING there at Segment end). NOT a Terrain enum member: Road/Track are movement-mode overlays on a hex, not a base terrain, so this is its own flat limit rather than a hex_terrain entry.",
+    "limit": 5
+  }
+}

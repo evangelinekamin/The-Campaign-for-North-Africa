@@ -187,7 +187,7 @@ def _check_stack_at(state: GameState, coord) -> None:
         pts = stacking.hex_points(units, terrain)
         raise InvariantViolation(
             f"stacking exceeded at {coord}: {pts} points "
-            f"(limit {stacking.DEFAULT_HEX_LIMIT})")
+            f"(limit {stacking.hex_stack_limit(terrain)})")
 
 
 def _check_no_dup_ids(state: GameState) -> None:
@@ -306,6 +306,16 @@ _UNIT_KINDS = frozenset({
     EventKind.SGSU_SUPPLIED, EventKind.SGSU_UNSUPPLIED,         # 35.14 the SGSU upkeep counter
     EventKind.UNIT_REFILLED, EventKind.UNIT_SUPPLY_CONSUMED})   # Phase 4 unit pools
 
+# Events that fold onto Unit.attached_to (19.41-19.44): the touched unit's own [9.21] stacking
+# contribution flips between its printed value and zero, and its former/new Parent Formation's
+# contribution can flip the other way (organization.size reads the whole co-located stack) --
+# all WITHOUT any unit's hex changing, so this is not a _UNIT_MOVE_KINDS case. Resolved by
+# p["unit_id"]'s CURRENT (unmoved) hex: 19.12/19.13 guarantee an attached unit always stands in
+# its Parent's hex, so that one hex is where the [8.37] total can have changed. This is the gap
+# test_invariants_delta's equivalence test caught (a real UNIT_DETACHED left a hex over the
+# stacking limit that the full sweep saw and the incremental checker did not).
+_ATTACH_KINDS = frozenset({EventKind.UNIT_ATTACHED, EventKind.UNIT_DETACHED})
+
 # Events that change a dump's pools or hex, resolved by p["supply_id"].
 _DUMP_ID_KINDS = frozenset({
     EventKind.SUPPLY_EVAPORATED, EventKind.WELL_REFILLED, EventKind.SUPPLY_DUMP_BLOWN,
@@ -371,6 +381,10 @@ def check_event(pre: GameState, post: GameState, event: Event) -> None:
         _check_stack_at(post, tuple(p["to"]))
     elif kind in _UNIT_KINDS:
         _check_unit(post.unit(p["unit_id"]), post.terrain)
+    elif kind in _ATTACH_KINDS:
+        u = post.unit(p["unit_id"])
+        _check_unit(u, post.terrain)
+        _check_stack_at(post, u.hex)
     # COMBAT_RESOLVED folds only the 15.81 Engaged marker (no guarded field), so nothing to check.
 
     # --- supply / truck / unit-pool slice ---

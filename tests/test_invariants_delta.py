@@ -86,6 +86,13 @@ def _recorded_logs():
     # smallest fold (5,690 events) that drives all three families clean. What is asserted is the
     # COVERAGE, so re-measuring the seed when the opening moves is the maintenance this test is for --
     # never dropping the requirement.
+    #
+    # THE GAP NAMED ABOVE IS NOW CLOSED (the [8.37] per-terrain stacking limit slice): check_event
+    # gained an _ATTACH_KINDS branch that re-checks UNIT_ATTACHED/UNIT_DETACHED's own hex, so a
+    # UNIT_DETACHED that overstacks a hex no longer needs dodging -- see
+    # test_fault_unit_detached_overstacks_hex / test_fault_unit_attached_hex_still_checked_for_
+    # stacking below for direct coverage. Left on seed-14/mt3 regardless: re-measuring which seed is
+    # smallest is unrelated maintenance, not evidence either seed is now special.
     yield ("campaign:14/mt3",
            run(campaign(seed=14, max_turns=3), CampaignAxisPolicy(), CampaignCommonwealthPolicy()))
 
@@ -143,12 +150,46 @@ def test_fault_unit_broken_down_negative(base):
 
 
 def test_fault_overstacked_destination(base):
+    # stacking_points=99 is unambiguously over EVERY [8.37] terrain limit (3..8) on its own --
+    # restated from the pre-8.37 value of 6, which was calibrated to the old flat
+    # DEFAULT_HEX_LIMIT=5 placeholder and would no longer be over-limit on most terrain now that
+    # the real per-terrain limits (data/stacking_limits.json) are wired (rule 5: restate, don't
+    # weaken, when a corrected rule makes the old magic number stop proving what it once proved).
     u = base.units[0]
-    heavy = replace(u, stacking_points=6, arrival_turn=1,
+    heavy = replace(u, stacking_points=99, arrival_turn=1,
                     is_garrison_home=False, is_pure_aa=False, is_first_line_truck=False)
     post = base.with_unit(heavy)
     ev = _ev(EventKind.UNIT_MOVED,
              {"unit_id": u.id, "from": list(u.hex), "to": list(u.hex), "cp_spent": 0.0})
+    assert _verdict(lambda: check_event(base, post, ev)) is not None
+
+
+def test_fault_unit_detached_overstacks_hex(base):
+    # THE DOCUMENTED GAP (test_incremental_verdict_matches_full_sweep_at_every_event's own comment,
+    # a real UNIT_DETACHED at seq=5587 of a recorded campaign log): detaching folds onto
+    # Unit.attached_to only (19.43/19.44) -- the unit's hex never changes, so this is not a
+    # _UNIT_MOVE_KINDS case -- but it flips the unit's [9.21] stacking contribution from zero
+    # (represented by its former Parent's counter) back to its own printed value, which can push
+    # its hex over the [8.37] limit exactly as a move onto a crowded hex would. check_event must
+    # catch this on the DETACHED unit's own (unmoved) hex, matching the full sweep.
+    u = base.units[0]
+    heavy = replace(u, attached_to="", stacking_points=99)
+    post = base.with_unit(heavy)
+    ev = _ev(EventKind.UNIT_DETACHED, {"unit_id": u.id, "parent_id": "SOME-HQ", "cp": 1.0})
+    assert _verdict(lambda: check_event(base, post, ev)) is not None
+
+
+def test_fault_unit_attached_hex_still_checked_for_stacking(base):
+    # Symmetric coverage: UNIT_ATTACHED folds onto the SAME Unit.attached_to field (19.41/19.42),
+    # so its hex needs the same stacking recheck -- here the OTHER co-located counter is what
+    # overstacks the hex, proving the ATTACHED slice actually re-examines the hex rather than
+    # trusting that attaching a unit can only ever REDUCE a hex's total.
+    u = base.units[0]
+    other = base.units[1]
+    heavy_neighbor = replace(other, hex=u.hex, attached_to="", stacking_points=99)
+    post = base.with_unit(heavy_neighbor).with_unit(replace(u, attached_to="SOME-HQ"))
+    ev = _ev(EventKind.UNIT_ATTACHED,
+             {"unit_id": u.id, "parent_id": "SOME-HQ", "assigned": True, "cp": 1.0})
     assert _verdict(lambda: check_event(base, post, ev)) is not None
 
 

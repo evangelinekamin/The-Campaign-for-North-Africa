@@ -83,12 +83,15 @@ def test_concentrate_reconciles_a_link_a_split_left_stale():
 
 def test_concentrate_respects_the_9_14_stacking_gate():
     # A super-regiment HQ (SP 3) counts 0 while bare but its full 3 once a unit attaches (9.12/9.13),
-    # so folding a single battalion into it while three loose units share the hex would make 3+0+3 = 6,
-    # over the 5-point limit. The formation may not concentrate here yet (9.14/9.31): no attach.
+    # so folding a single battalion into it while four loose units share the hex would make 3+0+4 = 7,
+    # over the [8.37] Desert limit of 6 (data/stacking_limits.json -- restated from the pre-8.37 "3
+    # loose units, over the 5-point limit" scenario, which no longer overflows now that the real
+    # per-terrain limit, 6, replaces the old flat DEFAULT_HEX_LIMIT=5 placeholder: rule 5, restate
+    # don't weaken). The formation may not concentrate here yet (9.14/9.31): no attach.
     H = (2, 2)
     hq = _u("SR", H, org_type="it_tank_regiment_super")
     bn = _u("SR-I", H, assigned_to="SR")
-    loose = [_u(f"X{i}", H) for i in range(3)]
+    loose = [_u(f"X{i}", H) for i in range(4)]
     orders = concentrate_formations(_state([hq, bn, *loose]), Side.AXIS)
     assert not [o for o in orders if o.kind == "attach"]
 

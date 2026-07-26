@@ -113,12 +113,25 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
     replacement flow -- takes SIDI BARRANI, the forward city the enemy used to bank while its
     battalions sat scattered. So the Commonwealth banks Mersa Matruh (still garrisoned, still tracing
     its supply, below) and the AXIS banks Sidi Barrani. The take-and-hold thesis is unchanged: an army
-    keeps what it banks and goes and gets the rest -- and now the Axis goes and gets this one."""
+    keeps what it banks and goes and gets the rest -- and now the Axis goes and gets this one.
+
+    *** RESTATED AGAIN 2026-07-25, LATER THE SAME DAY (the [8.37] per-terrain stacking limit). ***
+    game/stacking.py's DEFAULT_HEX_LIMIT=5 placeholder is replaced by the real chart value -- 6 for
+    every terrain reachable today, 8 for a Major City -- and that alone reshapes GT1-30 enough to flip
+    Sidi Barrani BACK to the Commonwealth (measured seed 4, GT30: cw = {Mersa Matruh, Sidi Barrani},
+    ax = {Bardia, Benghazi, Derna, Giarabub, Tobruk} -- the Axis holding is not merely unchanged, it is
+    WIDER than before, Derna and Giarabub joining Tobruk/Bardia/Benghazi). The take-and-hold thesis this
+    test actually guards -- an army keeps what it banks, goes and gets the rest, and never double-banks
+    a city -- is untouched; only which SIDE currently reaches the one contested forward city moved, a
+    third time, on a rule that has nothing to do with 64.73 or 15.53 and everything to do with how many
+    Stacking Points a hex may hold while the campaign plays out its opening moves. Restated back onto
+    the Commonwealth, where 60.5/15.53 restatement before it also once had it."""
     fin = _run(30).final
     cw, ax = _banked(fin, Side.ALLIED), _banked(fin, Side.AXIS)
-    # The Axis, fighting concentrated (15.53), now TAKES the forward city the Commonwealth used to
-    # bank against its scattered battalions -- see the RESTATED note above (measured seed 4, GT30).
-    assert "Sidi Barrani" in ax
+    # The Commonwealth holds Sidi Barrani again under the [8.37] stacking fix (see the RESTATED note
+    # above, measured seed 4, GT30) -- the Axis's 15.53-concentrated reach for it did not survive the
+    # higher stacking cap reshaping the opening moves.
+    assert "Sidi Barrani" in cw
     # ...and stands on Mersa Matruh, and now BANKS it: the garrison is sent, it does not wander off,
     # and 64.73 counts it because that garrison can trace its supply (pinned below).
     assert campaign_claim._occupied(fin, Side.ALLIED, MATRUH), \

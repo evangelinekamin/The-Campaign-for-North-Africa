@@ -234,7 +234,7 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
         "phase": state.phase.value,
         "weather": state.weather,
         "your_side": side.value,
-        "stack_limit": stacking.DEFAULT_HEX_LIMIT,
+        "stack_limit": stacking.COMMON_HEX_LIMIT,  # [8.37]: what every terrain but a city allows
         "objective": {"hex": list(target), "controlled_by": state.control_of(target).value},
         "your_units": [unit_view(u) for u in state.living(side)],
         # air_dump is [36.17] on the face of the counter: the pile IS an air facility, so it feeds

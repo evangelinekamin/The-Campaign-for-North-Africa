@@ -3848,6 +3848,16 @@ def _reorganize(r: _Run, side: Side, order) -> None:
         why = organization.may_attach(parent, already, unit, turn=r.state.turn, board=board)
         if why:
             return reject(why)
+        # [8.37]/[9.31]: folding `unit` into the Parent's counter (19.12) can RAISE the hex's
+        # stacking total, not just lower it -- 9.12's Parent contributes zero only "when it has
+        # no combat units of any type attached", so the unit that makes it the FIRST can jump the
+        # Parent straight to its printed value. Simulate the fold and reject rather than walk the
+        # board over-limit, the same guard every movement destination already gets.
+        present = r.state.units_at(unit.hex)
+        folded = tuple(replace(u, attached_to=parent.id) if u.id == unit.id else u
+                       for u in present)
+        if not stacking.within_hex_limit(folded, r.state.terrain.terrain[unit.hex]):
+            return reject(f"would exceed the [8.37] stacking limit at {unit.hex} (9.31)")
         assigned = unit.assigned_to == parent.id
         r.emit(EventKind.UNIT_ATTACHED, side, actor,
                {"unit_id": unit.id, "parent_id": parent.id, "assigned": assigned})
@@ -3862,6 +3872,14 @@ def _reorganize(r: _Run, side: Side, order) -> None:
         why = organization.may_detach(parent, unit, segment="REORGANIZATION")
         if why:
             return reject(why)
+        # [8.37]/[9.31]: the mirror of the attach guard above -- `unit` resumes its own printed
+        # Stacking Point value the instant it leaves the Parent's counter (19.12), which can push
+        # an already-crowded hex over the limit even when the Parent's OWN contribution is
+        # unchanged (other units remain attached to it).
+        present = r.state.units_at(unit.hex)
+        unfolded = tuple(replace(u, attached_to="") if u.id == unit.id else u for u in present)
+        if not stacking.within_hex_limit(unfolded, r.state.terrain.terrain[unit.hex]):
+            return reject(f"would exceed the [8.37] stacking limit at {unit.hex} (9.31)")
         r.emit(EventKind.UNIT_DETACHED, side, actor,
                {"unit_id": unit.id, "parent_id": parent.id})
         price = cp_costs.detach_cost()
