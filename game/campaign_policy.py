@@ -629,7 +629,8 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
             target = spring.hex if spring is not None else assembly   # nothing ahead: straight at it
             cands = [c for c in reach
                      if c != u.hex and distance(c, assembly) < here   # only ever toward the line
-                     and self._stacking_ok(state, u, c)]
+                     and self._stacking_ok(state, u, c)
+                     and tactics.husbands_cohesion(state, u, reach[c])]  # 6.21/15.88: don't dash to surrender
             if cands:
                 dest = min(cands, key=lambda c: (distance(c, target), reach[c], c))
                 orders.append(MoveOrder(u.id, dest))

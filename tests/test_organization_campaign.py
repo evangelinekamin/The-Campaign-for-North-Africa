@@ -153,8 +153,18 @@ def test_15_53_organization_size_tier_fires_in_a_full_campaign():
     """Gate 7A measured 0 firings of the [15.53] >=2-SP tiers over 111 turns. With the tree driven,
     a real campaign fires them: the close-assault resolver records the Organization-Size tier in
     COMBAT_RESOLVED whenever a FORMATION (>= Brigade / Battle Group) takes part -- absent otherwise,
-    which is why the two benchmarks stay byte-identical (test in test_campaign_culmination)."""
-    res = run(campaign(seed=1941, max_turns=6), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    which is why the two benchmarks stay byte-identical (test in test_campaign_culmination).
+
+    RE-PINNED 1941 -> 7 (2026-07-25, the 6.21/15.88 movement-discipline fix, scratchpad/port/
+    movement-discipline-spec.md): the scripted policies now decline a voluntary destination that
+    would dash a unit's Cohesion through the -17 auto-surrender floor, so the early concentration
+    is a beat more conservative and seed 1941's own first 6 Game-Turns no longer happen to catch a
+    formation standing on the defence (attacker>=2 still fires; measured seed 1941 needs max_turns
+    16+ before a defender>=2 event appears -- a timing artifact of THIS seed's early contacts, not
+    a broken mechanism). Seed 7 is not shopped for green: it is one of the project's own canonical
+    seeds (tests/baselines.py's own CAMPAIGN_SEED history, the cohesion-economy audit) and clears
+    both thresholds with margin at the original max_turns=6 (attacker>=2 x2, defender>=2 x2)."""
+    res = run(campaign(seed=7, max_turns=6), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     tier = [e for e in res.events if e.kind == EventKind.COMBAT_RESOLVED
             and max(e.payload.get("attacker_size", 0), e.payload.get("defender_size", 0)) >= 2]
     assert len(tier) >= 2, "the [15.53] Organization-Size tier is inert -- the setup tree does not fire"

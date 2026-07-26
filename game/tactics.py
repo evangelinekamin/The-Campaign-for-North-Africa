@@ -7,6 +7,7 @@ engine<->policy import cycle and guarantees decider and validator agree.
 from __future__ import annotations
 
 import functools
+import math
 from collections import OrderedDict
 
 from . import cp_costs, movement, zoc
@@ -80,6 +81,37 @@ def effective_cpa(state: GameState, unit: Unit) -> int:
             and unit.hex == r.anchor_hex == r.hex):
         return unit.cpa + 5
     return unit.cpa
+
+
+SURRENDER_FLOOR = -17     # rule 15.88 / 17.24: a unit at <= -17 auto-Surrenders when assaulted / on contact
+
+
+def _overage_dp(cp_used: float, cpa: int) -> int:
+    """Mirror of engine._overage_dp (6.21): Disorganization Points from CP spent over CPA. Kept
+    here, not imported, to hold the decider on the policy side of the engine<->policy import
+    boundary (as effective_cpa is) -- the determinism baseline catches any drift from
+    engine.py:4652."""
+    return max(0, math.floor(cp_used - cpa))
+
+
+def voluntary_overage_dp(state: GameState, unit: Unit, cp_cost: float) -> int:
+    """The 6.21 DP `unit` would NEWLY earn by voluntarily spending `cp_cost` more CP this
+    Operations Stage on top of what it has already used -- exactly the increment
+    engine._disorganize_overage will charge for the move (reads the live cp_used and the same
+    31.4-effective CPA)."""
+    cpa = effective_cpa(state, unit)
+    return _overage_dp(unit.cp_used + cp_cost, cpa) - _overage_dp(unit.cp_used, cpa)
+
+
+def husbands_cohesion(state: GameState, unit: Unit, cp_cost: float,
+                      floor: int = SURRENDER_FLOOR) -> bool:
+    """A competent commander does not VOLUNTARILY march a unit into the rule-15.88 auto-surrender
+    band (rule 6.0/8.16 permit a motorized unit to exceed its CPA 'at a price'; this is the price
+    no commander pays). True iff the unit's Cohesion after the predicted 6.21 overage stays
+    strictly above `floor` -- so a healthy unit may still dash (large affordable overage) while a
+    battered one may not step past guaranteed-surrender-on-contact. A self-restraint only: the
+    engine still prices and re-validates every move."""
+    return unit.cohesion - voluntary_overage_dp(state, unit, cp_cost) > floor
 
 
 def rommel_reach(state: GameState) -> dict[Coord, float]:

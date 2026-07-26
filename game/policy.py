@@ -292,6 +292,7 @@ class ScriptedPolicy(Policy):
                     if c != u.hex and distance(c, target) <= here_dist
                     and self._stacking_ok(state, u, c)
                     and any(state.enemies_at(nb, side) for nb in neighbors(c))
+                    and tactics.husbands_cohesion(state, u, reach[c])   # 6.21/15.88: don't dash to surrender
                 ]
                 if firing:
                     dest = min(firing, key=lambda c: (distance(c, target), reach[c], c))
@@ -302,6 +303,7 @@ class ScriptedPolicy(Policy):
                 if c != u.hex
                 and distance(c, target) < here_dist          # only advance toward objective
                 and self._stacking_ok(state, u, c)
+                and tactics.husbands_cohesion(state, u, reach[c])       # 6.21/15.88: don't dash to surrender
             ]
             if candidates:
                 dest = min(candidates, key=lambda c: (distance(c, target), reach[c], c))
@@ -492,7 +494,8 @@ class ScriptedPolicy(Policy):
             for h in exposed:
                 for c in neighbors(h):
                     if (c != u.hex and c in reach and self._stacking_ok(state, u, c)
-                            and not self._uncovers(state, side, u, c)):
+                            and not self._uncovers(state, side, u, c)
+                            and tactics.husbands_cohesion(state, u, reach[c])):  # 6.21/15.88
                         key = (distance(c, h), reach[c], c)
                         if best is None or key < best[0]:
                             best = (key, c)

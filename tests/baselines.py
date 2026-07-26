@@ -10,6 +10,47 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-25 -- CAUSE: rule [6.21]/[15.88] MOVEMENT DISCIPLINE -- the scripted policies
+stop voluntarily marching a unit into the guaranteed-surrender band (scratchpad/port/movement-
+discipline-spec.md, itself implementing scratchpad/port/cohesion-economy-audit.md's Q3).
+
+THE BUG: every voluntary-advance destination pick (ScriptedPolicy.movement's candidates/firing
+picks, ScriptedPolicy._defender_moves' sortie pick, CampaignCommonwealthPolicy._march's
+concentration pick) chose "closest to the objective, CP cost only a tiebreak" with NO cohesion
+awareness anywhere in the movement path -- so a motorized unit could dash to the 8.16 2x-CPA reach
+ceiling and earn ~CPA Disorganization Points (6.21) in a single UNIT_MOVED, 0 -> -25 straight
+through the [15.88]/[17.24] -17 auto-surrender floor in one move. Rules-legal (6.0 lets a motorized
+unit exceed its CPA "at a price") but a price no rational commander pays.
+
+THE FIX is a POLICY change -- the rulebook and the engine are untouched, no COHESION_CHANGED
+magnitude moves and apply stays pure. game/tactics.py adds husbands_cohesion, a mirror of
+engine._overage_dp/_disorganize_overage kept on the policy side of the engine<->policy import
+break (as effective_cpa already is): a voluntary destination is disallowed iff the unit's Cohesion
+after the 6.21 overage it would newly earn reaching it falls to <=-17. ANDed into ScriptedPolicy's
+candidates/firing/sortie picks (game/policy.py) and CampaignCommonwealthPolicy._march's
+concentration pick (game/campaign_policy.py) -- the one shared base, so the Axis campaign inherits
+it too (CampaignAxisPolicy.movement -> super().movement()), with no campaign-gate (port rule 6).
+Applied per-move the allowance is exactly `cohesion + 17`, so a healthy unit still spends the
+rules-legal 8.16 dash, a battered one creeps at <=1x CPA, and a CPA-respecting move is never
+refused (a unit is never frozen).
+
+Both benchmarks run ScriptedPolicy(AXIS) on both sides through the exact functions edited, and
+both move: at seed 42, Rommel's Arrival's open-desert dash and the siege's own perimeter jockeying
+each propose at least one voluntary move whose predicted post-Cohesion would have punched through
+-17, which the fix now excludes in favour of a nearer destination.
+
+ATTRIBUTION, CHECKED: monkeypatching tactics.husbands_cohesion to an unconditional `True` (a
+no-op, every other change in this slice left in place) reproduces the OLD signatures EXACTLY on
+both benchmarks (851b58b89246 / f91683c03dde). So the entire move is this one predicate -- the
+reach search, the CP costs, the 6.21 rate and the -17 threshold itself are all unchanged.
+
+    rommels_arrival   851b58b89246 -> 453f9ad1f231
+    siege_of_tobruk   f91683c03dde -> 42eedca02ae3
+
+Each reproduced twice, byte-for-byte. The CAMPAIGN is not signature-pinned (see CAMPAIGN_SEED
+below); its measured effect is reported in the commit that lands this baseline.
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-25 -- CAUSE: rule [8.37] THE PER-TERRAIN STACKING LIMIT (replacing the
 DEFAULT_HEX_LIMIT=5 placeholder) + the delta-vs-full invariant mismatch it exposed.
 
@@ -941,8 +982,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "851b58b89246"
-SIEGE_OF_TOBRUK = "f91683c03dde"
+ROMMELS_ARRIVAL = "453f9ad1f231"
+SIEGE_OF_TOBRUK = "42eedca02ae3"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 
