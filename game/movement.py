@@ -43,7 +43,6 @@ class TerrainMap:
     roads: frozenset = frozenset()                      # of edge(a, b)
     tracks: frozenset = frozenset()                     # of edge(a, b)
     fortifications: dict[Coord, int] = field(default_factory=dict)  # hex -> fort level (15.82)
-    minefields: frozenset = frozenset()                 # of Coord: defensive minefield belt
     rails: frozenset = frozenset()                      # of edge(a, b): Commonwealth railroad (54.3)
     # Hex -> its map-section letter (A-E, or M=Malta), from the "S####" label the map was
     # transcribed under (game.cna_map). This is the geometry rule 29.7 needs: a foul-weather
@@ -231,32 +230,39 @@ def path_cost(tmap: TerrainMap, path: list[Coord], mobility: Mobility,
 def reachable(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
               *, blocked: frozenset = frozenset(),
               terminal=None, passable=None, start_cost: float = 0.0,
-              weather: str = "normal") -> dict[Coord, float]:
+              extra_cost=None, weather: str = "normal") -> dict[Coord, float]:
     """All hexes reachable from start within `budget` CP (Dijkstra). `blocked`
     hexes (e.g. enemy-occupied) cannot be entered. Continual Movement allows
     exceeding CPA, so the caller passes whatever budget it is willing to spend.
 
-    Two optional predicates let callers (e.g. zoc.py) layer rules on top of pure
+    Three optional hooks let callers (e.g. zoc.py, game.tactics) layer rules on top of pure
     terrain cost without re-implementing the search:
       - terminal(coord): if True, the hex may be ENTERED but not expanded from
         (rule 10.23 "must cease movement upon entering an enemy-controlled hex");
       - passable(here, nb): if False, that specific step is forbidden
         (rule 10.24 "no move from one enemy-controlled hex into another").
+      - extra_cost(here, nb): additional CP a mover-specific rule adds to this one step (rule
+        26.21/26.24's minefield surcharge, which depends on the MOVER's own side/CPA/escort and
+        so cannot live in the shared (mobility, weather)-keyed _adjacency cache -- it is applied
+        here, in the relaxation, instead). None (the default) adds nothing and costs nothing extra
+        to check, so every caller that never asks stays byte-identical.
     start_cost seeds the start hex (e.g. a break-off cost paid to leave a ZOC)."""
     return _search(tmap, start, budget, mobility, blocked=blocked, terminal=terminal,
-                   passable=passable, start_cost=start_cost, weather=weather)[0]
+                   passable=passable, start_cost=start_cost, extra_cost=extra_cost,
+                   weather=weather)[0]
 
 
 def reachable_prev(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
                    *, blocked: frozenset = frozenset(), terminal=None, passable=None,
-                   start_cost: float = 0.0,
+                   start_cost: float = 0.0, extra_cost=None,
                    weather: str = "normal") -> tuple[dict[Coord, float], dict[Coord, Coord]]:
     """`reachable`, additionally returning the predecessor map of the min-CP Dijkstra
     tree so the actual step-by-step path to a reached hex can be reconstructed (the
     Breakdown-Point accrual needs the hexes and hexsides the mover crossed, not just
     the destination and total cost)."""
     return _search(tmap, start, budget, mobility, blocked=blocked, terminal=terminal,
-                   passable=passable, start_cost=start_cost, weather=weather)
+                   passable=passable, start_cost=start_cost, extra_cost=extra_cost,
+                   weather=weather)
 
 
 def connected(tmap: TerrainMap, sources, mobility: Mobility,
@@ -381,7 +387,8 @@ def _reverse_adjacency(tmap: TerrainMap, mobility: Mobility,
 
 
 def _search(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
-            *, blocked, terminal, passable, start_cost, weather="normal") -> tuple[dict, dict]:
+            *, blocked, terminal, passable, start_cost, extra_cost=None,
+            weather="normal") -> tuple[dict, dict]:
     # A Sandstorm reuses the Normal table doubled at use (29.44); a Rainstorm has its own table
     # (29.55/29.56); every other label behaves as Normal, so it maps to the Normal table too.
     if sandstorm(weather):
@@ -405,6 +412,8 @@ def _search(tmap: TerrainMap, start: Coord, budget: float, mobility: Mobility,
             if passable is not None and not passable(here, nb):
                 continue
             nc = cost + step * scale
+            if extra_cost is not None:
+                nc += extra_cost(here, nb)                # 26.21/26.24: outside the shared cache
             if nc <= budget and nc < best.get(nb, _INF):
                 best[nb] = nc
                 prev[nb] = here

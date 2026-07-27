@@ -16,8 +16,8 @@ from dataclasses import dataclass, replace
 from typing import Protocol
 
 from . import (air, basing, calendar, combat, combat_tables, construction, cp_costs, initiative,
-               logistics_data, malta, organization, replacements, stacking, supply, tactics,
-               weather, wells, zoc)
+               logistics_data, malta, minefields, movement, organization, replacements, stacking,
+               supply, tactics, weather, wells, zoc)
 from .apply import apply
 from .dice import DiceBox
 from .events import CONTROL_OF, Control, Event, EventKind, Phase, Side
@@ -25,7 +25,7 @@ from .hexmap import distance, is_adjacent, neighbors
 from .invariants import check_event
 from .policy import AttackOrder, MoveOrder, Policy
 from .staff_events import clean_staff_payload
-from .state import Coord, GameState
+from .state import Coord, GameState, Minefield
 from .terrain import Hexside, Terrain, is_motorized, salt_marsh_barred
 
 # Siege of Tobruk tuning knob (rule 25.14): how many effective barrages (a Pin or a
@@ -3389,7 +3389,10 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
                    {"unit_id": c.id, "from": list(c.hex), "to": list(order.to), "cp_spent": 0})
         _disorganize_overage(r, side, actor, u.id, old_cp,        # 6.21: overrun past CPA (8.16/8.17)
                              old_cp + reach[order.to], tactics.effective_cpa(r.state, u))
+        _minefield_encounter(r, side, actor, u,                   # 26.15/26.23/26.25: reveal + roll
+                             movement.reconstruct_path(prev, u.hex, order.to))
         _react(r, policies, side, u.id)         # 8.5: the non-phasing side may slide aside
+    _sweep_revealed_dummies(r, side, actor)      # 26.14/26.23: end of this Movement Phase
 
 
 def _attached_index(state: GameState) -> dict:
@@ -3515,6 +3518,8 @@ def _react(r: _Run, policies: dict, phasing: Side, mover_id: str) -> None:
         r.emit(EventKind.REACTION_MOVED, reacting, actor, payload)   # 8.51: reaction IS movement
         _disorganize_overage(r, reacting, actor, u.id, old_cp,      # 6.21: reacting past CPA earns DP
                              old_cp + reach[order.to], tactics.effective_cpa(r.state, u))
+        _minefield_encounter(r, reacting, actor, u,                 # 26.15/26.23/26.25: reaction IS
+                             movement.reconstruct_path(prev, u.hex, order.to))   # movement (8.51)
 
 
 def _reserve_shuffle(r: _Run, side: Side, actor: str, order: MoveOrder, u,
@@ -3539,6 +3544,7 @@ def _reserve_shuffle(r: _Run, side: Side, actor: str, order: MoveOrder, u,
         return
     r.emit(EventKind.UNIT_MOVED, side, actor,
            {"unit_id": u.id, "from": list(u.hex), "to": list(dest), "cp_spent": 0})
+    _minefield_encounter(r, side, actor, u, [u.hex, dest])   # 26.15/26.25: CP-free is not mine-free
 
 
 def _exploitation_eligible(state: GameState, side: Side,
@@ -4516,20 +4522,33 @@ def _construction(r: _Run, policy: Policy, side: Side) -> None:
     Fires only when a policy issues a BuildOrder, so every scenario in this repo that does not
     construct emits no Phase.CONSTRUCTION and stays byte-identical."""
     orders = policy.construction(r.state, side)
-    projects = [h for h, n in sorted(r.state.construction.items())
-                if n >= construction.RAIL_COMPANY_STAGES]
+    projects = [(item, hx) for (item, hx), n in sorted(r.state.construction.items())
+                if n >= construction.PROJECT_STAGES.get(item, math.inf)]
     if not orders and not projects:
         return
     r.go(Phase.CONSTRUCTION, side)
     actor = f"{side.value}/Engineers"
-    for hx in projects:                                  # a. the Construction Completion Step (24.11)
-        _complete_rail(r, side, actor, hx)
+    for item, hx in projects:                            # a. the Construction Completion Step (24.11)
+        if item == construction.RAIL:
+            _complete_rail(r, side, actor, hx)
+        elif item in (construction.REAL_MINEFIELD, construction.DUMMY_MINEFIELD):
+            _complete_minefield(r, side, actor, item, hx)
+        elif item == construction.FORT:
+            _complete_fort(r, side, actor, hx)
+        elif item == construction.CLEAR_MINEFIELD:
+            _complete_clear_minefield(r, side, actor, hx)
     booked: set = set()
     for order in orders:                                 # b. Initiation / Continuation
         if order.item == construction.RAIL:
             _build_rail(r, side, actor, order, booked)
         elif order.item == construction.DUMP:
             _build_dump(r, side, actor, order)
+        elif order.item in (construction.REAL_MINEFIELD, construction.DUMMY_MINEFIELD):
+            _build_minefield(r, side, actor, order, booked)
+        elif order.item == construction.FORT:
+            _build_fort(r, side, actor, order, booked)
+        elif order.item == construction.CLEAR_MINEFIELD:
+            _build_clear_minefield(r, side, actor, order, booked)
     r.building |= booked                                 # 24.12: they may not move this stage
 
 
@@ -4579,7 +4598,7 @@ def _build_rail(r: _Run, side: Side, actor: str, order, booked: set) -> None:
                       "only the two NZ Railroad Construction companies, standing on the railhead, "
                       "may build railroad (24.61 / Construction Chart: 'limited to head or track')")
         return
-    progress = r.state.construction.get(hx, 0)
+    progress = r.state.construction.get((construction.RAIL, hx), 0)
     if progress == 0:                                     # 24.64/24.13: the Stores are expended AT THE
         dump = construction.dump_at(r.state, side, head)  # START, out of the pile the gang stands on
         if dump is None or dump.stores < construction.RAIL_STORES:
@@ -4629,6 +4648,222 @@ def _reject_build(r: _Run, side: Side, actor: str, order, reason: str) -> None:
     r.emit(EventKind.ORDER_REJECTED, side, actor,
            {"order": "construction", "item": order.item, "hex": list(order.hex),
             "unit_ids": list(order.unit_ids), "reason": reason})
+
+
+# --- [24.3] CONSTRUCTING MINEFIELDS ---------------------------------------------------------------
+
+def _build_minefield(r: _Run, side: Side, actor: str, order, booked: set) -> None:
+    """[24.31]/[24.32]/[24.33]/[24.34] Lay one Op-Stage of a Real or Dummy minefield. The Store/
+    Ammo Points (15+15 real, 3+0 dummy) are expended ONCE, at the start (24.33/24.34) -- exactly
+    the same "first stage only" idiom _build_rail already uses for the 24.64 Store Point."""
+    hx = tuple(order.hex)
+    if not construction.minefield_buildable(r.state, side, hx):
+        _reject_build(r, side, actor, order,
+                      "may not lay a minefield here: wrong terrain, Enemy-controlled, a belt "
+                      "already stands, or a fortification is going up on the hex "
+                      "(24.35/24.36/24.46)")
+        return
+    u = next((u for u in (r.state.unit(uid) for uid in order.unit_ids)
+              if u is not None and r.state.on_map(u)
+              and construction.can_lay_minefield(r.state, side, u, hx)), None)
+    if u is None:
+        _reject_build(r, side, actor, order,
+                      "needs an Engineer battalion/company -- or, Commonwealth only, an HQ with "
+                      "Engineering capability -- standing on the site, CP unspent (24.31/24.17)")
+        return
+    real = order.item == construction.REAL_MINEFIELD
+    progress = r.state.construction.get((order.item, hx), 0)
+    if progress == 0:
+        need_stores, need_ammo = construction.minefield_supplies(real)
+        if (construction.stores_at(r.state, side, hx) < need_stores
+                or construction.commodity_at(r.state, side, hx, supply.AMMO) < need_ammo):
+            _reject_build(r, side, actor, order,
+                          "needs Stores/Ammo on hand at the START of construction (24.33/24.34)")
+            return
+        for sid, qty in construction.stores_draw(r.state, side, hx, need_stores):
+            r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+                   {"supply_id": sid, "commodity": supply.STORES, "qty": qty, "unit_id": u.id})
+        for sid, qty in construction.commodity_draw(r.state, side, hx, supply.AMMO, need_ammo):
+            r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+                   {"supply_id": sid, "commodity": supply.AMMO, "qty": qty, "unit_id": u.id})
+    r.emit(EventKind.CONSTRUCTION_ADVANCED, side, actor,
+           {"item": order.item, "hex": list(hx), "unit_ids": [u.id], "stages": 1,
+            "progress": progress + 1})
+    booked.add(u.id)
+
+
+def _complete_minefield(r: _Run, side: Side, actor: str, item: str, hx: Coord) -> None:
+    """[24.32] The belt is laid. `side`/`actor` are whichever Player's Construction Segment
+    happens to be running when the threshold is crossed -- NOT necessarily who built it: 48
+    V.C.4 runs first-side-then-second-side within one Operations Stage, so a project banked
+    under one side's Segment can mature and complete under the OTHER's very next one, same
+    stage (test_construction.py's two-NZRRC-companies case exercises exactly this for rail,
+    which owns nothing and so never noticed). A minefield DOES have an owner -- Friendly to one
+    side, Enemy to the other -- so the true builder is read back off construction_owner (set by
+    every CONSTRUCTION_ADVANCED this project banked) rather than trusted from the calling side.
+
+    Re-checks the site against the OWNER (mirrors _complete_rail's re-check of the railhead): a
+    hex the owner no longer controls drops the work rather than plant a minefield under enemy
+    control (24.36)."""
+    owner = r.state.construction_owner.get((item, hx), side)
+    owner_actor = f"{owner.value}/Engineers"
+    if not construction.minefield_buildable(r.state, owner, hx):
+        r.emit(EventKind.CONSTRUCTION_ADVANCED, owner, owner_actor,
+               {"item": item, "hex": list(hx), "unit_ids": [], "stages": 0, "progress": 0})
+        return
+    r.emit(EventKind.MINEFIELD_CONSTRUCTED, owner, owner_actor,
+           {"item": item, "hex": list(hx), "side": owner.value, "real": item == construction.REAL_MINEFIELD})
+
+
+def _build_clear_minefield(r: _Run, side: Side, actor: str, order, booked: set) -> None:
+    """[26.13]/[24.38] One Op-Stage of an Engineer sitting on a minefield, CP-free."""
+    hx = tuple(order.hex)
+    u = next((u for u in (r.state.unit(uid) for uid in order.unit_ids)
+              if u is not None and r.state.on_map(u)
+              and construction.can_clear_minefield(r.state, side, u, hx)), None)
+    if u is None:
+        _reject_build(r, side, actor, order,
+                      "needs an Engineer unit standing on a minefield hex, CP unspent (26.13)")
+        return
+    progress = r.state.construction.get((construction.CLEAR_MINEFIELD, hx), 0)
+    r.emit(EventKind.CONSTRUCTION_ADVANCED, side, actor,
+           {"item": construction.CLEAR_MINEFIELD, "hex": list(hx), "unit_ids": [u.id],
+            "stages": 1, "progress": progress + 1})
+    booked.add(u.id)
+
+
+def _complete_clear_minefield(r: _Run, side: Side, actor: str, hx: Coord) -> None:
+    """[26.13]/[24.38] The full, uninterrupted, CP-free Operations Stage is banked: the belt --
+    real or dummy, Friendly or Enemy -- is lifted."""
+    if hx not in r.state.minefields:              # nothing left to clear (already gone somehow)
+        r.emit(EventKind.CONSTRUCTION_ADVANCED, side, actor,
+               {"item": construction.CLEAR_MINEFIELD, "hex": list(hx), "unit_ids": [],
+                "stages": 0, "progress": 0})
+        return
+    r.emit(EventKind.MINEFIELD_CLEARED, side, actor,
+           {"hex": list(hx), "item": construction.CLEAR_MINEFIELD})
+
+
+# --- [24.4] CONSTRUCTING FORTIFICATIONS -----------------------------------------------------------
+
+def _build_fort(r: _Run, side: Side, actor: str, order, booked: set) -> None:
+    """[24.42]/[24.43] One Construction Segment of the three a Level needs, banked once an
+    Engineering-capable unit AND an Infantry battalion (3+ TOE) are both found standing together,
+    CP-unspent, among the order's named units. The 30 Stores are spent once, at the start."""
+    hx = tuple(order.hex)
+    if not construction.fort_buildable(r.state, side, hx):
+        _reject_build(r, side, actor, order,
+                      "may not build a fortification here: excluded terrain, Enemy ZOC (new "
+                      "build only), another construction project already running on the hex, "
+                      "or already at its capped Level (24.44/24.46/24.48)")
+        return
+    named = [u for u in (r.state.unit(uid) for uid in order.unit_ids)
+             if u is not None and r.state.on_map(u)]
+    pair = None
+    for e in named:
+        for i in named:
+            if e.id != i.id and construction.can_build_fort(r.state, side, e, i, hx):
+                pair = (e, i)
+                break
+        if pair:
+            break
+    if pair is None:
+        _reject_build(r, side, actor, order,
+                      "needs an Engineering-capable unit AND an Infantry battalion (3+ TOE) "
+                      "standing together, CP unspent (24.42)")
+        return
+    engineer_u, infantry_u = pair
+    progress = r.state.construction.get((construction.FORT, hx), 0)
+    if progress == 0:
+        if construction.stores_at(r.state, side, hx) < minefields.FORT_STORES:
+            _reject_build(r, side, actor, order,
+                          "needs 30 Stores on hand at the START of construction (24.43)")
+            return
+        for sid, qty in construction.stores_draw(r.state, side, hx, minefields.FORT_STORES):
+            r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+                   {"supply_id": sid, "commodity": supply.STORES, "qty": qty, "unit_id": engineer_u.id})
+    r.emit(EventKind.CONSTRUCTION_ADVANCED, side, actor,
+           {"item": construction.FORT, "hex": list(hx), "unit_ids": [engineer_u.id, infantry_u.id],
+            "stages": 1, "progress": progress + 1})
+    booked.update((engineer_u.id, infantry_u.id))
+
+
+def _complete_fort(r: _Run, side: Side, actor: str, hx: Coord) -> None:
+    """[24.42] The fourth Construction Segment opens with the Level complete (24.42: "at the
+    beginning of the fourth Construction Segment, the Fortification Level is complete"). Re-checks
+    the cap/terrain/ZOC gate (mirrors _complete_minefield/_complete_rail) before placing it."""
+    if not construction.fort_buildable(r.state, side, hx):
+        r.emit(EventKind.CONSTRUCTION_ADVANCED, side, actor,
+               {"item": construction.FORT, "hex": list(hx), "unit_ids": [], "stages": 0, "progress": 0})
+        return
+    r.emit(EventKind.FORT_LEVEL_BUILT, side, actor,
+           {"item": construction.FORT, "hex": list(hx), "level": r.state.fort_level(hx) + 1})
+
+
+# --- [26.2] MEETING A MINEFIELD IN MOVEMENT -------------------------------------------------------
+
+def _minefield_encounter(r: _Run, side: Side, actor: str, u, path: list) -> None:
+    """[26.15]/[26.23]/[26.24]/[26.25] Whatever `u` meets crossing a minefield belt, hex by hex
+    along the path it actually walked (the CP surcharge itself already rode `reach[order.to]` via
+    game.tactics' extra_cost hook; this is the SEPARATE reveal + destruction-roll consequence of
+    having walked through one). Applies only to the mover itself, not any 19.12 carried subsidiary
+    -- FLAGGED, the same simplification game.tactics._co_located_subtree's own [6.15] note already
+    accepts for a Parent's carried formation.
+
+    Called from EVERY way a unit crosses ground under its own power or under orders: ordinary
+    Movement (8.1), a Reaction (8.51: "reaction IS movement"), a Retreat Before Assault (13.21:
+    "it is Voluntary Movement"), a Reserve I administrative shuffle (18.22), and both forced
+    retreats (10.36's three-hex withdrawal and 15.82's post-assault one). 26.25 is written as
+    "WHENEVER a vehicle enters an Enemy minefield", and a tank driven backwards into a belt is
+    exactly the case the Devil's Gardens were laid for.
+
+    FLAGGED: a dummy revealed by a retreat is swept by the NEXT Movement Phase's
+    _sweep_revealed_dummies rather than at the end of the Combat Phase that revealed it -- 26.14
+    anchors the sweep to "the end of that Movement Phase", which a combat retreat is not part of,
+    so the belt outliving the combat is the conservative reading.
+
+    Escort (26.24, exempting the 26.25 roll) is read off the LIVE board at each step's origin,
+    i.e. immediately after `u` (and any subsidiary it carries) has already left that hex this same
+    order -- the same snapshot game.tactics' extra_cost hook read the CP surcharge against, since
+    nothing else moves in between within one order's processing."""
+    if len(path) < 2 or not r.state.minefields:
+        return
+    for here, dst in zip(path, path[1:]):
+        belt = r.state.minefields.get(dst)
+        if belt is None:
+            continue
+        if belt.side != side and not belt.revealed:                   # 26.15/26.23
+            r.emit(EventKind.MINEFIELD_REVEALED, side, actor, {"hex": list(dst)})
+        # 26.25: a REAL enemy belt, a vehicle, no Engineer escort. A dummy rolls nothing -- it has
+        # no mines in it (26.11/26.23: "the only difference" is scoped to the COST of entry).
+        if not minefields.rolls_destruction(
+                belt, side, u.mobility, minefields.engineer_present(r.state, here, side)):
+            continue
+        mover = r.state.unit(u.id)
+        if mover is None or not mover.alive:
+            continue
+        die = r.d6("minefield")
+        hit = minefields.destroys(die)
+        r.emit(EventKind.MINEFIELD_TRIGGERED, side, actor,
+               {"unit_id": u.id, "hex": list(dst), "hit": hit}, rng_draws=(die,))
+        if hit:
+            r.emit(EventKind.STEP_LOST, side, actor,
+                   {"unit_id": u.id, "amount": 1, "role": "minefield"})
+
+
+def _sweep_revealed_dummies(r: _Run, side: Side, actor: str) -> None:
+    """[26.14]/[26.23]: "not removed until the end of that Movement Phase of the Operations
+    Stage" -- so every mover this SAME call still pays to enter a just-revealed dummy, and it
+    clears only once this function runs, unconditionally, at the end of every _movement() call.
+
+    FLAGGED SIMPLIFICATION: a Continual-Movement pulse (game.engine._continual_movement) is its
+    own _movement() call, so a dummy revealed in one pulse is swept at THAT pulse's end rather
+    than surviving to the end of the whole 8.2 exploitation sequence a strict reading of "Movement
+    Phase" might intend. Immaterial while nothing in this repo ever lays a minefield (no OOB
+    engineer exists to build one, per game.minefields.is_engineer's docstring)."""
+    for hx, belt in list(r.state.minefields.items()):
+        if belt.revealed and not belt.real:
+            r.emit(EventKind.MINEFIELD_CLEARED, side, actor, {"hex": list(hx)})
 
 
 def _other(side: Side) -> Side:
@@ -4858,6 +5093,7 @@ def _mandatory_retreat(r: _Run, side: Side, units: list, anchor: Coord) -> None:
         if bp:
             payload["bp"] = bp
         r.emit(EventKind.UNIT_RETREATED, side, actor, payload)
+        _minefield_encounter(r, side, actor, u, path)    # 26.25: "whenever a vehicle enters..."
         live = r.state.unit(u.id)                       # 10.36: "playing all CP's for such movement"
         spend = max(0.0, tactics.effective_cpa(r.state, live) - live.cp_used)
         if spend > 0:
@@ -4918,6 +5154,8 @@ def _retreat_before_assault(r: _Run, policy: Policy, side: Side, phasing: Side,
         r.emit(EventKind.UNIT_MOVED, side, actor, payload)   # 13.21: retreat-before-assault IS movement
         _disorganize_overage(r, side, actor, u.id, old_cp,       # 6.21: retreat past CPA earns DP too
                              old_cp + reach[order.to], tactics.effective_cpa(r.state, u))
+        _minefield_encounter(r, side, actor, u,                  # 26.15/26.23/26.25: it IS movement
+                             movement.reconstruct_path(prev, u.hex, order.to))
 
 
 def _rba_cp_cap(state: GameState, unit, reach: dict) -> dict:
@@ -5086,8 +5324,13 @@ def _anti_armor_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
             if raw <= 0:
                 continue
             d1, d2 = r.d6("anti_armor"), r.d6("anti_armor")
+            # 26.26/[8.37] note 13: the L1 belongs to whoever is being FIRED AT, and only for a
+            # belt HE laid -- on his own hex, or under the firers wading through it (minefields.
+            # defender_shift). A belt the firer laid is the chart's Enemy Minefield row: no shift.
             shift = combat_tables.anti_armor_terrain_shift(      # 14.32 terrain / fortification
-                state0.terrain.terrain[tgt], state0.fort_level(tgt))
+                state0.terrain.terrain[tgt], state0.fort_level(tgt),
+                minefield=minefields.defender_shift(state0, _other(firing), tgt,
+                                                    [u.hex for u in armed]))
             dmg = combat_tables.anti_armor_damage(combat.actual_points(raw, False),
                                                    d1 * 10 + d2, phasing=is_phasing,
                                                    terrain_shift=shift)
@@ -5270,7 +5513,11 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     # Close Assault via the real differential engine (rule 15 / §15.79 CRT).
     hexside_shift = _assault_hexside_shift(r.state.terrain, {u.hex for u in armed_atk}, target)  # 15.33/35/36
     fort = r.state.fort_level(target)          # §15.82 current level (25.14 may have reduced it)
-    mined = target in r.state.terrain.minefields                # defensive minefield belt
+    # 26.26/[8.37] note 13: the defender's own column, granted by a belt HE laid -- standing on the
+    # hex being assaulted ("occupying a Friendly minefield") or under the assaulting forces ("if
+    # assaulting forces are in an Enemy minefield"). A belt the ATTACKER laid grants nothing (the
+    # chart's Enemy Minefield row prints "-" for both Anti-Armor and Close Assault).
+    mined = minefields.defender_shift(r.state, _other(side), target, {u.hex for u in armed_atk})
     # Morale is rolled FIRST (rule 15 order): each side's 17.4 roll adjusts its
     # Basic Morale by Cohesion, and the difference shifts the assault column (15.62).
     atk_m, atk_md, atk_surr = _adjusted_morale(r, armed_atk)
@@ -5569,6 +5816,9 @@ def _retreat(r: _Run, atk_side: Side, actor: str, defender_ids: list[str],
             if bp:
                 payload["bp"] = bp
             r.emit(EventKind.UNIT_RETREATED, atk_side, actor, payload)
+            # 26.25: the belt does not care that the retreat was forced. The mover's OWN side is
+            # what makes a belt Friendly or Enemy, so this is def_side, not the attacker's.
+            _minefield_encounter(r, def_side, actor, u, path)
     for _ in range(n - done):                                   # 15.82: 10% per un-retreated hex
         for u in survivors:
             cur_u = r.state.unit(u.id)

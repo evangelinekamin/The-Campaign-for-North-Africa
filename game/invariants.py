@@ -418,5 +418,5 @@ def check_event(pre: GameState, post: GameState, event: Event) -> None:
         # MALTA_REINFORCED writes BOTH malta_planes and malta_strike, so a mis-split arrival is a
         # bad slice and must be caught on the touched slice rather than at the next boundary sweep.
         _check_malta_unfit(post)
-    elif kind == EventKind.FORT_REDUCED:
+    elif kind in (EventKind.FORT_REDUCED, EventKind.FORT_LEVEL_BUILT):
         _check_fort(tuple(p["hex"]), p["level"])

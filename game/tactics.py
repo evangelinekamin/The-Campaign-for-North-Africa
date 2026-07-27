@@ -10,7 +10,7 @@ import functools
 import math
 from collections import OrderedDict
 
-from . import cp_costs, movement, zoc
+from . import cp_costs, minefields, movement, zoc
 from .events import Side
 from .hexmap import Coord
 from .state import GameState, Unit
@@ -191,6 +191,22 @@ def enemy_zoc_excluding(state: GameState, mover_side: Side, exclude_id: str) -> 
     return zoc.control_map(by_hex, state.terrain)
 
 
+def _mine_extra_cost(state: GameState, unit: Unit):
+    """[26.21/26.22/26.24] The per-step CP hook movement._search applies outside its shared
+    (mobility, weather) cache: 0 for every edge that doesn't enter a minefield hex, otherwise
+    minefields.entry_surcharge read against `unit`'s own side/mobility/CPA and whatever Engineer
+    escort stands at the step's ORIGIN. None (skip the hook entirely) when the board carries no
+    minefield at all, so every scenario that never lays or meets one pays no extra Dijkstra work
+    and stays byte-identical."""
+    if not state.minefields:
+        return None
+    side, mobility, cpa = unit.side, unit.mobility, unit.cpa
+
+    def extra(here: Coord, nb: Coord) -> float:
+        return minefields.entry_surcharge(state, side, mobility, cpa, here, nb)
+    return extra
+
+
 def reachable_for(state: GameState, unit: Unit, enemy_zoc: frozenset,
                   enemy_occupied: frozenset, roster: tuple | None = None) -> dict[Coord, float]:
     """Hexes `unit` can legally reach this segment within its remaining CPA. Pass a
@@ -205,7 +221,8 @@ def reachable_for(state: GameState, unit: Unit, enemy_zoc: frozenset,
     return zoc.reachable_with_zoc(
         state.terrain, unit.hex, budget, unit.mobility,
         enemy_zoc=enemy_zoc, friendly_negators=negators, enemy_occupied=enemy_occupied,
-        break_off=_break_off_cost(unit), weather=state.weather_at(unit.hex))
+        break_off=_break_off_cost(unit), extra_cost=_mine_extra_cost(state, unit),
+        weather=state.weather_at(unit.hex))
 
 
 def reachable_for_prev(state: GameState, unit: Unit, enemy_zoc: frozenset,
@@ -220,7 +237,8 @@ def reachable_for_prev(state: GameState, unit: Unit, enemy_zoc: frozenset,
     return zoc.reachable_with_zoc_prev(
         state.terrain, unit.hex, budget, unit.mobility,
         enemy_zoc=enemy_zoc, friendly_negators=negators, enemy_occupied=enemy_occupied,
-        break_off=_break_off_cost(unit), weather=state.weather_at(unit.hex))
+        break_off=_break_off_cost(unit), extra_cost=_mine_extra_cost(state, unit),
+        weather=state.weather_at(unit.hex))
 
 
 def breakdown_points_over(state: GameState, unit: Unit, path: list[Coord]) -> float:
@@ -230,8 +248,11 @@ def breakdown_points_over(state: GameState, unit: Unit, path: list[Coord]) -> fl
     if not unit.breaks_down or len(path) < 2:
         return 0.0
     weather = state.weather_at(unit.hex)               # 29.7: the storm the mover set out under
-    return sum(movement.breakdown_points(state.terrain, a, b, unit.mobility, weather)
+    total = sum(movement.breakdown_points(state.terrain, a, b, unit.mobility, weather)
                for a, b in zip(path, path[1:]))
+    if state.minefields:                                # 26.22: added on top of the terrain BV
+        total += sum(minefields.breakdown_surcharge(state, unit.side, dst) for dst in path[1:])
+    return total
 
 
 def may_step_into(state: GameState, units, src: Coord, dst: Coord) -> bool:

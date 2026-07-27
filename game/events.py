@@ -240,6 +240,30 @@ class EventKind(str, Enum):
     CONSTRUCTION_ADVANCED = "CONSTRUCTION_ADVANCED"
     CONSTRUCTION_COMPLETED = "CONSTRUCTION_COMPLETED"
     SUPPLY_DUMP_CONSTRUCTED = "SUPPLY_DUMP_CONSTRUCTED"
+    # [26.1]/[24.3] MINEFIELDS -- laid by construction, met in movement, lifted by an engineer or a
+    # dummy's own expiry. GameState.minefields (hex -> Minefield: side, real, revealed) is the
+    # dynamic belt overlay; nothing on the static TerrainMap carries one (matching fort_levels).
+    #
+    # MINEFIELD_CONSTRUCTED {hex, side, real} is 24.32's Completion Step: the one-Op-Stage project
+    # banked in GameState.construction (keyed (item, hex), same mechanism as a railroad hex) is laid.
+    #
+    # MINEFIELD_REVEALED {hex} is 26.15 (a Friendly minefield flips the instant an Enemy unit enters
+    # it) and 26.23 (an Enemy dummy is revealed the same way). Folds Minefield.revealed=True only --
+    # the belt is NOT removed by this event alone (26.23: a revealed dummy still costs every mover
+    # that enters it for the rest of THIS Movement Phase).
+    #
+    # MINEFIELD_CLEARED {hex} removes the belt outright: an Engineer that started an Operations
+    # Stage in the hex, spent no Capability Points, and remained to its end (26.13/24.38), OR a
+    # revealed dummy swept at the end of the Movement Phase that revealed it (26.14/26.23).
+    #
+    # MINEFIELD_TRIGGERED {unit_id, hex, hit} with rng_draws=(die,) certifies 26.25's destruction
+    # die (one per battalion-sized-or-smaller vehicle unit entering an unescorted Enemy minefield;
+    # 5-6 destroys one TOE Strength Point) -- the STEP_LOST that follows on a hit rides the existing
+    # event, exactly as every other "roll, then remove a step" seam in this engine does.
+    MINEFIELD_CONSTRUCTED = "MINEFIELD_CONSTRUCTED"
+    MINEFIELD_REVEALED = "MINEFIELD_REVEALED"
+    MINEFIELD_CLEARED = "MINEFIELD_CLEARED"
+    MINEFIELD_TRIGGERED = "MINEFIELD_TRIGGERED"
     # [32.32] MOTORIZATION -- the thirty Truck Points under a desert column, and the freight they
     # are therefore not hauling. "Motorization Points may be attached/detached to supply units ONLY
     # DURING THE ORGANIZATION PHASE of an OpStage. A supply unit not assigned the minimum necessary
@@ -354,6 +378,11 @@ class EventKind(str, Enum):
     CP_EXPENDED = "CP_EXPENDED"
     COHESION_CHANGED = "COHESION_CHANGED"
     FORT_REDUCED = "FORT_REDUCED"
+    # [24.4] FORT_LEVEL_BUILT {hex, level} is 24.42's Completion Step -- the dual of FORT_REDUCED
+    # (siege battery knocking a wall DOWN a level) for construction raising one UP. Same fold
+    # (GameState.fort_levels), a different event name because "REDUCED" would misdescribe the
+    # direction: a reader of the log should be able to tell which happened without opening payload.
+    FORT_LEVEL_BUILT = "FORT_LEVEL_BUILT"
     HEX_CONTROL_CHANGED = "HEX_CONTROL_CHANGED"
     PHASE_ADVANCED = "PHASE_ADVANCED"
     TURN_ADVANCED = "TURN_ADVANCED"

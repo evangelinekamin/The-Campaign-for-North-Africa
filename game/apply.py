@@ -10,7 +10,7 @@ from dataclasses import replace
 from . import organization, supply
 from .events import Control, Event, EventKind, Phase, Side
 from .movement import edge
-from .state import GameState, Rommel, StepRecord, SupplyUnit, Unit, VP
+from .state import GameState, Minefield, Rommel, StepRecord, SupplyUnit, Unit, VP
 from .terrain import Mobility
 
 
@@ -26,11 +26,17 @@ def apply(state: GameState, event: Event) -> GameState:
              EventKind.SEGMENT_ADVANCED, EventKind.AIR_STRIKE_RESOLVED,
              EventKind.AIR_MISSION_GROUNDED, EventKind.AIR_REFIT_DENIED,
              EventKind.STAFF_INTENT, EventKind.STAFF_PROPOSAL, EventKind.STAFF_CONSTRAINT,
-             EventKind.STAFF_ADJUDICATION, EventKind.STAFF_DISSENT):
+             EventKind.STAFF_ADJUDICATION, EventKind.STAFF_DISSENT,
+             EventKind.MINEFIELD_TRIGGERED):
         # markers / audit records. SEGMENT_ADVANCED (8.2) opens a Continual-Movement pulse but
         # the CP/BP accumulators PERSIST across it (only STAGE/TURN_ADVANCED reset them), so it
         # folds to identity -- PORT_UNLOADED's top-up likewise rides SUPPLY_ARRIVED, and
         # AIR_REFIT_DENIED (35.14/38.36) leaves a squadron exactly as unfit as it already was.
+        # MINEFIELD_TRIGGERED (26.25) certifies the destruction die; the STEP_LOST it causes on a
+        # hit rides its own separate event. (26.25's OTHER half -- "one die for all 2nd and 3rd
+        # line trucks", destroying "one unattached Truck Point" -- is NOT built, and neither is its
+        # "battalion-sized (or less)" size restriction on the per-unit die: this engine rolls once
+        # per moving combat unit and never for a truck column. Flagged in data/minefields.json.)
         return state
 
     if k == EventKind.PORT_EFFICIENCY_CHANGED:
@@ -360,9 +366,14 @@ def apply(state: GameState, event: Event) -> GameState:
 
     if k == EventKind.CONSTRUCTION_ADVANCED:
         # 24.11/24.62: one Construction Segment of work banked on the site, counted in COMPANY-
-        # STAGES. Pure bookkeeping onto the Under Construction marker; the Store Points it costs
-        # ride the SUPPLY_CONSUMED emitted beside it.
-        return state.with_construction(tuple(p["hex"]), p["progress"])
+        # STAGES (or, for a minefield/fortification, plain Op-Stages -- the same counter, a
+        # different threshold). Pure bookkeeping onto the Under Construction marker, keyed
+        # (item, hex) -- NOT by side (see with_construction's docstring: a project matured under
+        # one side's Construction Segment may complete under the OTHER's very next one, same
+        # stage). event.side is recorded into construction_owner alongside it, for the one project
+        # type (a minefield) that needs to remember who is actually building it. The Store/Ammo
+        # Points it costs ride the SUPPLY_CONSUMED emitted beside it.
+        return state.with_construction(p["item"], tuple(p["hex"]), p["progress"], side=event.side)
 
     if k == EventKind.CONSTRUCTION_COMPLETED:
         # 24.11a/24.67: the track is laid. The new hex joins the map's rail edge-set, extending the
@@ -372,7 +383,41 @@ def apply(state: GameState, event: Event) -> GameState:
         # "unbuilt railroad hexes simply do not exist" until they are built (24.67).
         hx, frm = tuple(p["hex"]), tuple(p["from"])
         tmap = replace(state.terrain, rails=state.terrain.rails | {edge(frm, hx)})
-        return replace(state, terrain=tmap).with_construction(hx, 0)
+        return replace(state, terrain=tmap).with_construction(p["item"], hx, 0)
+
+    if k == EventKind.MINEFIELD_CONSTRUCTED:
+        # 24.32's Completion Step: the belt is laid, owned by whichever side's engineer actually
+        # banked the progress (construction_owner -- NOT event.side, which is only whichever
+        # side's Completion Step happened to cross the threshold; see with_construction). Clears
+        # the (item, hex) Under Construction marker the same way CONSTRUCTION_COMPLETED does.
+        hx = tuple(p["hex"])
+        st = state.with_minefield(hx, Minefield(Side(p["side"]), bool(p["real"])))
+        return st.with_construction(p["item"], hx, 0)
+
+    if k == EventKind.MINEFIELD_REVEALED:
+        # 26.15/26.23: the belt's real/dummy status is now known to the opposing side. The belt
+        # itself is untouched -- entering it still costs every mover for the rest of this Phase.
+        mf = state.minefields[tuple(p["hex"])]
+        return state.with_minefield(tuple(p["hex"]), Minefield(mf.side, mf.real, revealed=True))
+
+    if k == EventKind.MINEFIELD_CLEARED:
+        # 26.13/24.38 (an Engineer's full, CP-free Operations Stage) or 26.14/26.23 (a revealed
+        # dummy, swept at the end of the Movement Phase that revealed it): the belt is gone. The
+        # 26.13 route also carries "item" (CLEAR_MINEFIELD) to lift its own Under Construction
+        # marker in the same fold, same idiom as CONSTRUCTION_COMPLETED/FORT_LEVEL_BUILT; the
+        # 26.14/26.23 dummy-expiry route was never a construction project and carries none.
+        st = state.with_minefield(tuple(p["hex"]), None)
+        item = p.get("item")
+        return st.with_construction(item, tuple(p["hex"]), 0) if item else st
+
+    if k == EventKind.FORT_LEVEL_BUILT:
+        # 24.42/24.48: one Level of fortification completes. Same fold as FORT_REDUCED (a physical
+        # wall height, game.state.fort_level reads whichever direction last set it) -- a distinct
+        # event name only so a reader of the log can tell "battered down" from "built up" apart.
+        # Also clears the (item, hex) Under Construction marker, same as CONSTRUCTION_COMPLETED.
+        # No ownership to track: a fort is a physical wall, not a Friendly/Enemy-relative belt.
+        st = state.with_fort_level(tuple(p["hex"]), p["level"])
+        return st.with_construction(p["item"], tuple(p["hex"]), 0)
 
     if k == EventKind.SUPPLY_CONSUMED:
         su = state.supply(p["supply_id"])

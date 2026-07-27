@@ -63,17 +63,30 @@ class DemolitionOrder:
 class BuildOrder:
     """[24.0] One construction project, initiated or continued in the Construction Segment.
 
-    `item` is what is being built -- 'RAIL' (24.6: a new hex of the Alexandria-Mersa Matruh-Tobruk
-    line, buildable only by the two New Zealand Railroad Construction companies, 24.61) or 'DUMP'
-    (24.9: a supply dump, buildable by any one TOE Strength Point of any type, for 3 CP and 20
-    Store Points). `unit_ids` are the units doing the work -- more than one because 24.62 makes the
-    PAIR of NZRRC companies twice as fast as one. `hex` is the site.
+    `item` is what is being built, one of game.construction's six:
 
-    Everything else the rule demands -- who may build (24.61/23.13), whether the site is the next
-    hex of the surveyed line (24.67), whether the enemy holds it (24.65), the Store Points on hand
-    (24.64/24.13), the weather (24.22) -- the engine re-validates (game.engine._construction), like
-    every other order."""
-    item: str                       # 'RAIL' (24.6) | 'DUMP' (24.9)
+      'RAIL'            24.6: a new hex of the Alexandria-Mersa Matruh-Tobruk line, buildable only
+                        by the two New Zealand Railroad Construction companies (24.61)
+      'DUMP'            24.9: a supply dump, by any one TOE Strength Point of any type, 3 CP + 20
+                        Store Points
+      'REAL_MINEFIELD'  24.33: one Op-Stage, 15 Stores + 15 Ammo, by an EBn/ECoy (or a Commonwealth
+                        HQ with Engineering capability, 24.31/[24.17])
+      'DUMMY_MINEFIELD' 24.34: the same, for 3 Stores and no Ammo
+      'FORT'            24.42: one Level of fortification -- three Construction Segments, 30
+                        Stores, an Engineering unit AND an Infantry battalion of 3+ TOE
+      'CLEAR_MINEFIELD' 26.13/[24.18]: one full CP-free Operations Stage by an Engineer unit (or a
+                        23.15 Scorpion battalion at 6+ TOE) lifts the belt it is standing on
+
+    `unit_ids` are the units doing the work -- more than one because 24.62 makes the PAIR of NZRRC
+    companies twice as fast as one, and because 24.42 needs an engineer AND an infantry battalion.
+    `hex` is the site.
+
+    Everything else the rule demands -- who may build (24.61/23.13/24.31), whether the site is the
+    next hex of the surveyed line (24.67), whether the enemy holds it (24.65/24.36), the terrain
+    (24.35/24.44), the supplies on hand (24.64/24.13/24.33/24.43), whether another project is
+    already running on the hex (24.46), the weather (24.22) -- the engine re-validates
+    (game.engine._construction), like every other order."""
+    item: str                       # see the docstring: six items, 24.3/24.4/24.6/24.9/26.13
     hex: Coord
     unit_ids: tuple[str, ...]
 

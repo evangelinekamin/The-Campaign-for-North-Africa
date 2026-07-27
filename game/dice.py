@@ -71,6 +71,10 @@ SUBSYSTEMS: tuple[str, ...] = (
                           #   Game-Turn (GT3-107), THE conditional per-turn drawer of rule 20's
                           #   FLOW IN. Its own stream so the random production of Replacement Points
                           #   can never perturb (or be perturbed by) a weather or combat die.
+    "minefield",          # [26.25] the mine-destruction die -- one per unescorted vehicle unit
+                          #   entering an Enemy minefield, THE conditional drawer of rule 26 (no
+                          #   die at all unless a belt exists on the board and something walks
+                          #   into it unescorted, which no scenario in this repo does yet).
 )
 
 

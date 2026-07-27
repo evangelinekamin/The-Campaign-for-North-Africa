@@ -38,7 +38,7 @@ AXIS_LANE = "1"          # rommels_arrival's Axis Mediterranean convoy lane (sce
 # --- the derivation ----------------------------------------------------------------------------
 
 def test_every_subsystem_gets_its_own_distinct_stream():
-    """18 subsystems, 18 different sequences. If two shared a seed they would roll in lockstep
+    """19 subsystems, 19 different sequences. If two shared a seed they would roll in lockstep
     and a 'correlated' engine is only marginally better than a desynchronised one.
 
     The count moved from 15 to 16 when the [38.37] Aircraft Refit Table got its own `air_refit`
@@ -51,10 +51,14 @@ def test_every_subsystem_gets_its_own_distinct_stream():
     rule 20's `cw_production` stream (Block 7.2a): the [20.78B] Commonwealth Infantry Production roll
     is ONE 2d6 per Game-Turn, drawn CONDITIONALLY -- only in a scenario that models the CW Production
     system (the campaign, GT3-107) -- so the random production of Replacement Points must not perturb
-    a weather or combat die, nor be perturbed by one."""
+    a weather or combat die, nor be perturbed by one. It moved to 19 with rule 26's `minefield`
+    stream (Phase 8.2): the [26.25] mine-destruction die is drawn CONDITIONALLY -- only for an
+    unescorted vehicle unit entering an Enemy minefield, which no scenario in this repo triggers yet
+    (no OOB engineer exists to lay one) -- so the day one does, that die must not perturb (or be
+    perturbed by) anything else on the board."""
     box = DiceBox(1941)
     draws = {sub: [box.d6(sub) for _ in range(40)] for sub in SUBSYSTEMS}
-    assert len(SUBSYSTEMS) == 18                                      # + cw_production (rule 20.78B)
+    assert len(SUBSYSTEMS) == 19                                      # + minefield (rule 26.25)
     assert len({tuple(v) for v in draws.values()}) == len(SUBSYSTEMS)
 
 

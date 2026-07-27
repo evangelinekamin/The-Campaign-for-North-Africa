@@ -21,6 +21,21 @@ from .terrain import Mobility
 
 
 @dataclass(frozen=True, slots=True)
+class Minefield:
+    """[26.1] One minefield belt, standing on a hex. `side` is who LAID it -- a mover of that
+    same side reads it as the TEC's "Friendly Minefield" row, any other side as "Enemy Minefield"
+    (the labels are relative to the mover, not fixed to the counter, exactly as the two TEC rows
+    are two readings of one physical belt). `real` distinguishes an actual minefield from a dummy
+    (26.11); `revealed` is whether the OPPOSING side has discovered which it is -- irrelevant to
+    the laying side, which always knows its own belt (26.12's "Friendly minefields -- paths
+    through which are known"). A dummy with revealed=True is cleared at the end of the Movement
+    Phase that revealed it (26.14/26.23); see game.engine._sweep_revealed_dummies."""
+    side: Side
+    real: bool
+    revealed: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class StepRecord:
     """One sub-unit's step (brief §4.2): a counter is a record, not a scalar —
     combat step-losses live here."""
@@ -70,10 +85,26 @@ class Unit:
     # 'RAIL' is the two New Zealand Railroad Construction companies -- "the only units that may
     # BUILD railroads" (24.61) and, per 23.13, "used solely for the construction and repair of
     # Railroads". 'ROAD' is the 1st South African Road Construction Battalion, "used solely for
-    # Road work" (23.13). An engineer is NOT a combat unit "in any way, shape or form" (23.11), so
-    # it carries is_combat=False and never banks a city, exerts a ZOC or is assaulted. Default ''
-    # keeps every scenario without engineers byte-identical.
-    engineer: str = ''             # '' | 'RAIL' (NZRRC, 24.61) | 'ROAD' (1 SA RC Bn, 23.13)
+    # Road work" (23.13). The other three are 23.0's own taxonomy of general engineers ("Engineer
+    # Battalions, Engineer companies, and Headquarters Units with Engineer capability") plus 23.15's
+    # one special case, and the Construction Chart's units column distinguishes all of them:
+    #   'ENGINEER'     an Engineer battalion or company (the chart's EBn / ECoy)
+    #   'HQ_ENGINEER'  23.14's HQ "with a letter E next to their Stacking Points" (the chart's
+    #                  HQ-E; its Real/Fake Minefield rows admit only the ALLIED one, CHQ-E)
+    #   'SCORPION'     23.15's two refitted CW tank battalions -- engineer status for ANTI-MINEFIELD
+    #                  purposes only, and only while holding 6+ Scorpion TOE (game.minefields)
+    # Minefields (24.31/26.13/26.24) and fortifications (24.42) gate on these, never on 'RAIL' or
+    # 'ROAD', because 23.13/24.61 restrict those two to their one named job.
+    # FLAGGED: no OOB in this repo seeds 'ENGINEER' or 'HQ_ENGINEER' -- the German/Italian/
+    # Commonwealth engineer battalions and the CW HQ-Engineering flag are an untranscribed OOB gap
+    # (the same class of gap the 4.45 organisation-tree work found and named), so the 24.3/24.4
+    # CONSTRUCTION paths are built and CORRECT but currently UNREACHABLE by any live scenario. The
+    # 'SCORPION' counters ARE seeded (data/reinforcements_campaign.json, GT99), so rule 26's
+    # clearing/escort half is reachable. An engineer battalion is NOT a combat unit "in any way,
+    # shape or form" (23.11), so it carries is_combat=False and never banks a city, exerts a ZOC or
+    # is assaulted -- a Scorpion battalion, being a tank battalion, obviously still is one. Default
+    # '' keeps every scenario without engineers byte-identical.
+    engineer: str = ''             # '' | 'RAIL' | 'ROAD' | 'ENGINEER' | 'HQ_ENGINEER' | 'SCORPION'
     formation: str = ''            # OOB organisational group; the staff layer addresses by it
     # The counter's NATIONALITY as the order of battle built it ('IT' Italian, 'GE' German, 'CW'
     # Commonwealth; game.oob._nat). Nationality is already what selects a counter's stats at build
@@ -621,6 +652,12 @@ class GameState:
     # terrain.fortifications. Default OFF / empty keeps the canonical benchmark exact.
     siege_rules: bool = False
     fort_levels: dict = field(default_factory=dict)
+    # [26.1] MINEFIELDS: hex -> Minefield, the dynamic belt overlay -- nothing on the static
+    # TerrainMap, exactly like fort_levels above (a belt is laid or lifted in play, 24.3/26.13, not
+    # printed on the 1979 map; no [60.31]-style setup chart in this port's scope places one at t0,
+    # so this starts empty in every scenario and stays empty until a 24.3 BuildOrder completes).
+    # Default {} keeps every scenario that never lays or meets a minefield byte-identical.
+    minefields: dict = field(default_factory=dict)
     # Naval-convoy timetable (rules 48/56): the supply SOURCE. Default () keeps every
     # convoy-less scenario byte-identical; the engine fires the faucet only on a
     # convoy's arrival_turn (game.engine._naval_convoys).
@@ -830,6 +867,11 @@ class GameState:
     # engineers no construction order can ever validate, so every other scenario is byte-identical.
     construction: dict = field(default_factory=dict)
     rail_line: tuple = ()
+    # `construction_owner` is (item, hex) -> the Side actually laying it, for the ONE project type
+    # (26.1's minefield) whose ownership outlives the Under Construction marker and cannot be
+    # inferred from whichever side's Completion Step happens to fire the completion (see
+    # with_construction's docstring). Empty for every scenario that never lays one.
+    construction_owner: dict = field(default_factory=dict)
 
     # --- [32.32] MOTORIZATION POINTS: THE LORRIES UNDER THE DESERT COLUMN -----------------------
     # `motorization` is the ATTACHMENT LEDGER: supply_id -> ((truck_id, points), ...), the Truck
@@ -1023,14 +1065,42 @@ class GameState:
         fort_levels[coord] = level
         return replace(self, fort_levels=fort_levels)
 
-    def with_construction(self, coord: Coord, stages: int) -> "GameState":
-        """Set (or, at 0, clear) the company-stages of work accrued on `coord` (rule 24.11)."""
+    def with_construction(self, item: str, coord: Coord, stages: int,
+                          side: "Side | None" = None) -> "GameState":
+        """Set (or, at 0, clear) the company-stages of `item`'s work accrued on `coord` (rule
+        24.11). Keyed by (item, coord) -- NOT by side: 24.11a's Completion Step is a mechanical
+        fact of the Operations Stage rolling over ("completed at the beginning of the Construction
+        Segment of a succeeding Operations Stage"), and BOTH Players run a Construction Segment
+        every stage, so a project may mature under one side's Segment and complete under the
+        OTHER's very next one within the SAME stage (48 V.C.4 runs first-side-then-second-side
+        beat-by-beat) -- exactly what the two-NZRRC-companies-in-one-stage rail case already
+        exercises. That is fine for RAIL/DUMP, which own nothing. It is NOT fine for a minefield,
+        whose OWNER (Friendly to one side, Enemy to the other) is meaning-bearing state -- so
+        `side`, when given, ALSO records who is building it in construction_owner, independent of
+        whichever side's Completion Step happens to cross the threshold (game.engine.
+        _complete_minefield reads this back rather than trusting its own calling side)."""
         work = dict(self.construction)
+        key = (item, coord)
+        owner = dict(self.construction_owner)
         if stages > 0:
-            work[coord] = stages
+            work[key] = stages
+            if side is not None:
+                owner[key] = side
         else:
-            work.pop(coord, None)
-        return replace(self, construction=work)
+            work.pop(key, None)
+            owner.pop(key, None)
+        return replace(self, construction=work, construction_owner=owner)
+
+    def with_minefield(self, coord: Coord, minefield: "Minefield | None") -> "GameState":
+        """Lay, update or lift the minefield belt at `coord` (24.3/26.13/26.14/26.15/26.23).
+        `minefield=None` removes it -- an engineer clearing it (26.13), a dummy expiring at the
+        end of the Movement Phase that revealed it (26.14/26.23)."""
+        mf = dict(self.minefields)
+        if minefield is None:
+            mf.pop(coord, None)
+        else:
+            mf[coord] = minefield
+        return replace(self, minefields=mf)
 
     def with_supply(self, su: "SupplyUnit") -> "GameState":
         supplies = tuple(su if s.id == su.id else s for s in self.supplies)

@@ -361,9 +361,18 @@ FORT_CA_SHIFT_BY_LEVEL: dict[int, int] = {1: -2, 2: -3, 3: -4}
 # Defensive minefield belt: a flat column shift toward the defender when the
 # assault crosses into a mined hex. Rule 26.26 ("the defending Player adjusts all
 # columns ONE in his favor") and 8.37 (minefield close-assault = L1) both fix this
-# at a single column. The clearing / reveal minigame (rule 26.1) is DEFERRED --
-# this models only the belt's static one-column drag on the assault.
+# at a single column. WHO gets it is game.minefields.defender_shift's question, not
+# this table's: the belt must be the DEFENDER's own, lying either on the assaulted
+# hex or under the assaulting forces. Applied once whichever clause of 26.26/note 13
+# fires -- the Friendly-Minefield row's own L1 and note 13's "if not already
+# receiving them" grant are the SAME shift, not additive, so callers pass a boolean.
 MINEFIELD_CA_SHIFT: int = -1
+
+# The Anti-Armor twin of MINEFIELD_CA_SHIFT -- [8.37]'s Enemy/Friendly Minefield rows both print
+# "L1" in the Anti Armor column too (note 13 names Anti-Armor explicitly alongside Close Assault).
+# Combined with anti_armor_terrain_shift's terrain/fortification "best of" the same way CA adds
+# its own minefield term on top of HEX_CA_SHIFT/FORT_CA_SHIFT_BY_LEVEL (see combat.resolve).
+MINEFIELD_AA_SHIFT: int = -1
 
 
 # Close-Assault column shifts from the Terrain Effects Chart (8.37): negative =
@@ -404,7 +413,7 @@ HEX_AA_SHIFT: dict[Terrain, int] = {
 FORT_AA_SHIFT: dict[int, int] = {1: -1, 2: -2, 3: -2}
 
 
-def anti_armor_terrain_shift(terrain: Terrain, fort_level: int) -> int:
+def anti_armor_terrain_shift(terrain: Terrain, fort_level: int, minefield: bool = False) -> int:
     """Rule 14.32/14.33: the Actual-Anti-Armor-Points column shift (<= 0, columns
     left) protecting armour in a target hex. The defender takes the BEST of the hex
     terrain OR the fortification -- they are NOT cumulative (14.33). The fortification
@@ -413,10 +422,18 @@ def anti_armor_terrain_shift(terrain: Terrain, fort_level: int) -> int:
     from several hexes, so no single 'all attackers through this hexside' feature
     exists. The one hexside cell that is NOT a shift -- Up Escarpment's Anti-Armor P
     -- is not deferred: a prohibition is per-firer, not aggregate, and engine.
-    _anti_armor_step drops any (firer hex -> target hex) that crosses one."""
+    _anti_armor_step drops any (firer hex -> target hex) that crosses one.
+
+    `minefield` (26.26/8.37 note 13) is ADDED on top of the terrain/fortification best-of, not
+    folded into it -- the "not cumulative" clause of 14.33 governs terrain vs fortification only;
+    a minefield present on the target hex is a separate defensive feature entirely, exactly as
+    combat.resolve already adds MINEFIELD_CA_SHIFT on top of its own terrain/fortification shift."""
     terrain_shift = HEX_AA_SHIFT.get(terrain, 0)
     fort_shift = FORT_AA_SHIFT.get(fort_level, -2) if terrain == Terrain.MAJOR_CITY and fort_level > 0 else 0
-    return min(terrain_shift, fort_shift)
+    shift = min(terrain_shift, fort_shift)
+    if minefield:
+        shift += MINEFIELD_AA_SHIFT
+    return shift
 
 
 # Barrage terrain column-band shifts from the Terrain Effects Chart (8.37): negative

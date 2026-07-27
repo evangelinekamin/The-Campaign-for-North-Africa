@@ -890,7 +890,12 @@ def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
         # Zealand Railroad Construction companies (the only units that may build railroad, 24.61),
         # 'ROAD' for the 1 SA Road Construction Battalion (23.13). '' for everything else, which is
         # every unit in every OOB that carries no engineer row -- so nothing else moves.
-        engineer=s.get("engineer", ""),
+        # A MODEL may carry it too, and exactly one does: [23.15]'s Scorpion ("these two battalions
+        # are engineer units but possess only anti-minefield capabilities"), which is a property of
+        # the flail tanks the 42nd/44th RTR were refitted with, not of the 'tank' role they share
+        # with every other Commonwealth armoured battalion. Hence model-over-role here, the same
+        # precedence every other stat on this counter already follows.
+        engineer=model.get("engineer", s.get("engineer", "")),
         arrival_turn=arrival_turn,
         formation=rec["group"],
         # The nationality the stats were selected under, carried onto the counter: [38.37] prints
