@@ -80,6 +80,23 @@ def is_scorpion_engineer(u) -> bool:
     return u.engineer == SCORPION and u.effective_strength >= SCORPION_MIN_TOE
 
 
+def is_engineer_counter(u) -> bool:
+    """Is `u` an ENGINEER COUNTER in the sense of [23.11] -- the Case that says "Engineer counters
+    have no real combat value, nor do they exert Zones of Control. They are NOT COMBAT UNITS IN ANY
+    WAY, SHAPE, OR FORM. Engineer units may never enter Enemy-controlled hexes voluntarily"?
+
+    That is 23.0's three kinds (EBn, ECoy, HQ-with-Engineering) plus 23.13's two rail/road
+    engineering companies -- every `engineer` value EXCEPT 'SCORPION'.
+
+    A 23.15 Scorpion battalion is NOT one. It is a Commonwealth TANK battalion (42/44 RTR, 8 TOE of
+    flail tanks, is_combat=True) that "possesses engineer unit status" strictly "for ANTI-MINEFIELD
+    capabilities" -- the exact clause game.minefields' own SCORPION docstring and
+    data/minefields.json's _capabilities key both record. 23.11 is written about counters with no
+    combat value; reading it onto a flail battalion would forbid the one unit in the Commonwealth
+    order of battle whose entire purpose is to breach INTO an enemy position at El Alamein."""
+    return bool(u.engineer) and u.engineer != SCORPION
+
+
 def is_engineer(u) -> bool:
     """Does `u` carry the ANTI-MINEFIELD engineer capability rule 26 asks for -- 26.13/24.38's
     clearing, 26.24's escort discount, 26.25's exemption?

@@ -3342,10 +3342,15 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
             _reject(r, side, actor, order,              # construction project this Operations Stage
                     "involved in construction: may not move or spend CP this OpStage (24.12)")
             continue
-        if u.engineer and r.state.control_of(order.to) == CONTROL_OF[_other(side)]:
-            _reject(r, side, actor, order,              # 23.11: "Engineer units may never enter
+        # 23.11: "Engineer units may never enter Enemy-controlled hexes voluntarily." Keyed on the
+        # ENGINEER-COUNTER predicate, not on `u.engineer` being truthy: 23.15's Scorpion battalions
+        # are tank battalions carrying engineer status for anti-minefield purposes ONLY, and 23.11
+        # is written about counters that are "not combat units in any way, shape, or form".
+        if (minefields.is_engineer_counter(u)
+                and r.state.control_of(order.to) == CONTROL_OF[_other(side)]):
+            _reject(r, side, actor, order,
                     "an engineer may not voluntarily enter an enemy-controlled hex (23.11)")
-            continue                                    # Enemy-controlled hexes voluntarily"
+            continue
         if u.effective_strength == 0:                   # 21.44: all vehicles broken down
             _reject(r, side, actor, order, "all vehicles broken down, may not move (21.44)")
             continue

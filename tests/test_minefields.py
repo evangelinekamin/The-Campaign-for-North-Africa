@@ -423,6 +423,42 @@ def test_the_oob_actually_seeds_the_two_scorpion_battalions():
     assert all(not construction.lays_minefield(u) for u in flails)   # 23.15: anti-minefield ONLY
 
 
+def test_23_11_binds_engineer_counters_and_never_a_scorpion_battalion():
+    """[23.11] (scan, PDF p.35, verbatim): "Engineer counters have no real combat value, nor do
+    they exert Zones of Control. They are NOT COMBAT UNITS IN ANY WAY, SHAPE, OR FORM. Engineer
+    units may never enter Enemy-controlled hexes voluntarily."
+
+    That Case is written about the counters 23.0 enumerates -- Engineer Battalions, Engineer
+    companies, HQs with Engineer capability -- plus 23.13's two rail/road engineering companies.
+    It is NOT written about a 23.15 Scorpion battalion, which is a Commonwealth TANK battalion
+    (is_combat=True, 8 TOE of flails) granted engineer status strictly "for ANTI-MINEFIELD
+    capabilities". Reading 23.11 onto it would forbid the one Commonwealth unit whose whole
+    purpose is to breach INTO an Axis position -- and the engine's gate did exactly that, because
+    it keyed on `u.engineer` being truthy and the 8.2 slice had just tagged the flails 'SCORPION'.
+    """
+    for role in ('ENGINEER', 'HQ_ENGINEER', 'RAIL', 'ROAD'):
+        assert mf.is_engineer_counter(_unit("E", Side.ALLIED, H[0], engineer=role)), role
+    assert not mf.is_engineer_counter(
+        _unit("SC42", Side.ALLIED, H[0], engineer='SCORPION', is_tank=True, steps=10))
+    assert not mf.is_engineer_counter(_unit("PBI", Side.ALLIED, H[0]))     # no engineer row at all
+
+
+def test_a_scorpion_battalion_may_advance_into_an_enemy_controlled_hex():
+    """The live half of the Case above, through the engine's own movement gate: a flail battalion
+    ordered onto an Axis-controlled hex MOVES (23.15/23.11), while a genuine Engineer counter
+    given the identical order is rejected. Both are on the board at once so the two verdicts come
+    out of one Movement Phase and one board."""
+    flail = _unit("SC42", Side.ALLIED, H[0], engineer='SCORPION', is_tank=True, steps=10)
+    sapper = _unit("EN", Side.ALLIED, H[0], engineer='ENGINEER', is_combat=False)
+    r = _Run(_state([flail, sapper], control={H[1]: Control.AXIS}))
+    policy = _Build(moves=[MoveOrder(flail.id, H[1]), MoveOrder(sapper.id, H[1])])
+    _movement(r, {Side.ALLIED: policy, Side.AXIS: policy}, Side.ALLIED)
+    moved = {e.payload["unit_id"] for e in r.events if e.kind == EventKind.UNIT_MOVED}
+    rejected = {e.payload.get("unit_id") for e in r.events if e.kind == EventKind.ORDER_REJECTED}
+    assert flail.id in moved, "23.15: a Scorpion battalion is a tank battalion, not an engineer counter"
+    assert sapper.id in rejected, "23.11: an Engineer counter may not voluntarily enter one"
+
+
 # --- [24.4] CONSTRUCTION: a fortification Level (engine-level) -------------------------------------
 
 def test_fortification_needs_engineer_and_infantry_together_thirty_stores_three_stages():
