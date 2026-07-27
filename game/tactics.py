@@ -237,8 +237,8 @@ def breakdown_points_over(state: GameState, unit: Unit, path: list[Coord]) -> fl
 def may_step_into(state: GameState, units, src: Coord, dst: Coord) -> bool:
     """May EVERY unit in `units` legally cross src -> dst -- i.e. is the step permitted by the
     Terrain Effects Chart for its mobility class ([8.37] Swamp's "may enter only on road or
-    railroad", [8.44]'s Salt Marsh gate, and the [8.42] escarpment prohibition when 8.1b lands
-    the hexsides)? Cost is irrelevant here; only legality is.
+    railroad", [8.44]'s Salt Marsh gate, [8.45]'s Desert gate, and the [8.42] escarpment
+    prohibition when 8.1b lands the hexsides)? Cost is irrelevant here; only legality is.
 
     This is the gate the FORCED relocations need. Voluntary movement (movement.reachable,
     tactics.reachable_for, retreat-before-assault) already runs through movement.step_cost and

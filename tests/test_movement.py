@@ -104,6 +104,29 @@ def test_salt_marsh_gate_bars_vehicles_off_road_and_track():
     assert step_cost(far, (1, 0), (2, 0), Mobility.VEHICLE) == 1
 
 
+def test_desert_gate_bars_entry_only_no_road_or_track_exemption():
+    """[8.45] / [8.37] note 3: Light Trucks and motorcycle infantry "may not enter any Desert
+    hexes, whether traversed by Tracks or not" -- entry only (unlike [8.44]'s enter-or-leave), and
+    with no Road exemption either: the rule names Track by itself to close that loophole and says
+    nothing at all about Road, in contrast to [8.44]'s explicit "Road or Track" two paragraphs
+    earlier."""
+    terr = {(0, 0): Terrain.CLEAR, (1, 0): Terrain.DESERT, (2, 0): Terrain.CLEAR}
+    tmap = TerrainMap(terrain=terr)
+    for barred in (Mobility.LIGHT_TRUCK, Mobility.MOTORCYCLE):
+        assert step_cost(tmap, (0, 0), (1, 0), barred) is None       # may not ENTER
+        assert step_cost(tmap, (1, 0), (2, 0), barred) == 2          # but MAY leave -- entry-only
+    assert step_cost(tmap, (0, 0), (1, 0), Mobility.FOOT) == 3        # chart non-Mot cell, ungated
+    assert step_cost(tmap, (0, 0), (1, 0), Mobility.RECCE) == 4       # ungated: not "motorcycle" Recce
+
+    # Neither a Track nor a Road opens it -- the opposite of the Salt Marsh gate.
+    on_track = TerrainMap(terrain=terr, tracks=frozenset({edge((0, 0), (1, 0))}))
+    assert step_cost(on_track, (0, 0), (1, 0), Mobility.LIGHT_TRUCK) is None
+    on_road = TerrainMap(terrain=terr, roads=frozenset({edge((0, 0), (1, 0))}))
+    assert step_cost(on_road, (0, 0), (1, 0), Mobility.LIGHT_TRUCK) is None
+    # ... while an unbarred class rides the road/track discount through the same hex normally.
+    assert step_cost(on_road, (0, 0), (1, 0), Mobility.VEHICLE) == 0.5
+
+
 def test_offmap_and_noncontiguous_return_none():
     tmap = clear_line()
     assert step_cost(tmap, (0, 0), (5, 0), Mobility.FOOT) is None     # not adjacent

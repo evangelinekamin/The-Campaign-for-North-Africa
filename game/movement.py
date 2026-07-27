@@ -20,8 +20,8 @@ from dataclasses import dataclass, field
 
 from .hexmap import Coord, is_adjacent, neighbors
 from .terrain import (Hexside, Mobility, Terrain, TRACK_ENTRY, ROAD_ENTRY,
-                      ROAD_BREAKDOWN, breakdown_value, hex_entry_cost, hexside_cost,
-                      hexside_breakdown, is_motorized, salt_marsh_barred)
+                      ROAD_BREAKDOWN, breakdown_value, desert_barred, hex_entry_cost,
+                      hexside_cost, hexside_breakdown, is_motorized, salt_marsh_barred)
 
 Edge = tuple
 
@@ -102,9 +102,9 @@ def _escarpment_vehicle(feature: Hexside, mobility: Mobility) -> bool:
 def step_cost(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobility,
               weather: str = "normal") -> float | None:
     """CP to move from src into the adjacent hex dst, or None if impossible (off-map,
-    non-adjacent, a prohibited terrain/hexside for this mobility, or the [8.44] Salt
-    Marsh gate on either end of the edge). Weather (rule 29)
-    couples in: a Rainstorm makes a Road behave as a Track (29.56) and closes wadi
+    non-adjacent, a prohibited terrain/hexside for this mobility, the [8.44] Salt
+    Marsh gate on either end of the edge, or the [8.45] Desert gate on dst). Weather
+    (rule 29) couples in: a Rainstorm makes a Road behave as a Track (29.56) and closes wadi
     hexsides to everything but a Road (29.55); a Sandstorm doubles the whole cost
     (29.44). Under Normal/Hot weather this is byte-identical to the dry chart."""
     if not tmap.exists(dst) or not is_adjacent(src, dst):
@@ -135,6 +135,13 @@ def _step_cost_known_adjacent(tmap: TerrainMap, src: Coord, dst: Coord, mobility
     if not (on_road or on_track) and salt_marsh_barred(mot) and (
             tmap.terrain[dst] == Terrain.SALT_MARSH
             or tmap.terrain.get(src) == Terrain.SALT_MARSH):
+        return None
+
+    # [8.45] DESERT: forbidden to Light Trucks and motorcycle infantry ENTERING the hex,
+    # "whether traversed by Tracks or not" -- unlike Salt Marsh, no Road or Track opens it, and
+    # only the destination is gated (a barred unit that is already in a Desert hex may still
+    # leave it). See terrain.desert_barred / DESERT_BARRED for why the check is unconditional.
+    if desert_barred(mot) and tmap.terrain[dst] == Terrain.DESERT:
         return None
 
     if road_as_road:

@@ -10,6 +10,25 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+NOT RE-BASELINED 2026-07-26 -- [8.45] DESERT (game.terrain.DESERT_BARRED / desert_barred, gated in
+movement.step_cost) landed and both signatures were RE-MEASURED, not assumed, to prove it: still
+abc4300eccbb / a5da9203198d, byte-identical. This is not a null result -- it is the honest shape of
+a faithfully-transcribed rule with no live consumer yet. [8.45] bars Mobility.LIGHT_TRUCK and
+Mobility.MOTORCYCLE from ENTERING a Desert hex; grep of every data/*.json and every game/*.py call
+site shows NO Unit and NO TruckFormation is ever constructed with either mobility today -- truck
+convoys path at SUPPLY_MOBILITY (Mobility.MOTORIZED, game/supply.py) regardless of their own
+"light"/"medium"/"heavy" truck_class, and LIGHT_TRUCK/MOTORCYCLE appear only in
+_TRUCK_BP_MOBILITY's Breakdown-Point accrual (movement.breakdown_points, which [8.45] does not
+gate) and oob._fuel_role_default. The neuter-proof runs the OTHER direction from the usual one: with
+game.movement.desert_barred patched to always-True (the maximally aggressive gate), both benchmark
+signatures STILL do not move, confirming the gate is correctly wired to a mobility class the engine
+does not yet instantiate for movement, not silently dead code. A min-vertex-cut probe
+(scratchpad/gate845_desert.py) on the Mobility.LIGHT_TRUCK step graph -- the closest live proxy for
+the "first-line truck" the faucet audit (project memory) names -- measures the gate narrowing the
+Alamein-sector front from 27 to 13 hexes while leaving the VEHICLE/MOTORIZED cut (12) byte-for-byte
+unchanged; that number is a graph property of the CHART, not of anything the campaign currently
+plays, until a later slice threads a real first-line-truck mobility class into unit/convoy movement.
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-26 (THIRD MOVE THE SAME DAY) -- CAUSE: Phase 8.1b Block B, the [8.35]/[8.42]
 escarpment HEXSIDE trace landing (tools/vassal/extract_hexsides.py -> data/hexsides_<section>.json,
 wired in game.cna_map._load_hexsides), plus a section-seam adjacency bug this slice found and fixed

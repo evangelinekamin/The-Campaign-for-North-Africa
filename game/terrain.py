@@ -42,6 +42,42 @@ NON_MOT_CLASSES = frozenset({Mobility.FOOT, Mobility.CAMEL})
 # pays the chart's non-Mot 3 CP, exactly as infantry does.
 SALT_MARSH_EXEMPT = frozenset({Mobility.LIGHT_TRUCK, Mobility.RECCE, Mobility.MOTORCYCLE})
 
+# [8.45], read verbatim off the scan (PDF page 15) and restated by [8.37] chart note 3 (page 70):
+# "Desert hexes are forbidden to Light Trucks, Motorcycle infantry, and motorcycle Recce units whose
+# weight was not sufficient enough to provide the traction necessary for moving vehicles through the
+# soft surface. Such units may not enter any Desert hexes, whether traversed by Tracks or not." /
+# chart note 3: "Light Trucks, motorcycle reconnaissance units, and motorcycle infantry units may not
+# enter, even via a track."
+#
+# This is the DUAL of [8.44], not its twin -- three things read differently on the scan, each
+# checked against the printed word rather than copied from the Salt Marsh gate:
+#
+#   1. ENTER, not "enter or leave": 8.44 bars a class from crossing the edge in EITHER direction
+#      ("may enter or leave... only on a Road or Track"); 8.45 bars only entry ("may not enter any
+#      Desert hexes"). A barred unit already standing in a Desert hex (however it got there) may
+#      still leave normally -- the gate below reads only the destination hex, never the source.
+#
+#   2. NO exemption at all, not even a Road: 8.44's exemption is explicit and reads "Road or Track";
+#      8.45 mentions Track ONLY to close the one loophole a reader fresh off 8.44 would reach for --
+#      "whether traversed by Tracks or not" -- and says nothing whatever about a Road. Two rulebook
+#      paragraphs apart, the designer wrote "Road or Track" once and then, choosing his words again,
+#      wrote neither. Read as written: the bar is unconditional. A Road through the open desert is
+#      also not something the 1979 map draws -- the two facts agree.
+#
+#   3. The named class list does not partition this engine's Mobility enum the way [8.44]'s did.
+#      8.44 exempts "Recce-type units" as a whole -- which is exactly Mobility.RECCE, one class, one
+#      name, no ambiguity. 8.45 bars "motorcycle Recce units" -- a NAMED SUBSET of Recce, called out
+#      by name because the book itself distinguishes it from the wheeled/armoured-car recce that
+#      SALT_MARSH_EXEMPT's Mobility.RECCE actually represents (data/unit_stats.json's "recon" entries
+#      carry an armor_protection rating and a 40-45 CPA -- an armoured car, not a motorcycle). This
+#      engine has no separate motorcycle-recce class to bar without also catching every armoured-car
+#      recce unit the book does NOT forbid from the desert -- which would be worse than the gap it
+#      closes, since armoured-car recce screening the open desert is exactly what those units did.
+#      FLAGGED DEBT: DESERT_BARRED below covers Light Trucks and (foot-)motorcycle infantry, the two
+#      classes the engine CAN name exactly; "motorcycle Recce units" specifically is left ungated
+#      until the OOB carries a class finer than Mobility.RECCE to hang it on.
+DESERT_BARRED = frozenset({Mobility.LIGHT_TRUCK, Mobility.MOTORCYCLE})
+
 
 def is_motorized(m: Mobility) -> bool:
     return m not in NON_MOT_CLASSES
@@ -50,6 +86,13 @@ def is_motorized(m: Mobility) -> bool:
 def salt_marsh_barred(m: Mobility) -> bool:
     """[8.44]: may this mobility class NOT enter or leave a Salt Marsh hex off a Road/Track?"""
     return is_motorized(m) and m not in SALT_MARSH_EXEMPT
+
+
+def desert_barred(m: Mobility) -> bool:
+    """[8.45]: may this mobility class NOT ENTER a Desert hex, on any terms -- Road, Track or
+    open ground alike? Unlike salt_marsh_barred there is no exemption to check for and no need to
+    gate leaving: see the DESERT_BARRED comment above for why."""
+    return m in DESERT_BARRED
 
 
 class Terrain(str, Enum):
