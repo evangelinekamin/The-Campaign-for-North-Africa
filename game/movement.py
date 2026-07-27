@@ -3,7 +3,10 @@
 Movement is "Continual Movement" on a Capability Point Allowance (rule 6.0/8.2):
 entering a hex and crossing a hexside each cost CP per the Terrain Effects Chart
 (terrain.py). Roads negate hexside costs and cheapen entry; tracks give 1 CP/hex
-and halve hexside costs (except a vehicle's CP down an escarpment — note 8).
+and halve hexside costs. Neither helps a VEHICLE across an escarpment: [8.33]
+excepts exactly that case from the ignore-the-terrain rule, so [8.42]'s "no vehicle
+may ever move up an escarpment" is unconditional and the down crossing keeps its
+full +8 CP / 6 BP (note 8 for the track, [8.33] for the road).
 
 This module is pure: given a TerrainMap + a unit's mobility/CPA, it answers
 "what does this step/path cost?" and "where can this unit reach?". Zones of
@@ -82,6 +85,20 @@ def sandstorm(weather: str) -> bool:
     return weather == "sandstorm"
 
 
+_ESCARPMENTS = (Hexside.UP_ESCARPMENT, Hexside.DOWN_ESCARPMENT)
+
+
+def _escarpment_vehicle(feature: Hexside, mobility: Mobility) -> bool:
+    """[8.33]'s ONE carve-out from the Road/Track "ignore the terrain" rule, verbatim: "Units which
+    are moving along Roads or Tracks ignore, for movement purposes, any other terrain in the hex or
+    hexside, WITH THE EXCEPTION OF VEHICLES CROSSING ESCARPMENTS (see 8.42)." So chart note 6's
+    "Road negates all hexside terrain feature entry costs and Breakdown Point Values" stops at an
+    escarpment for a motorized unit -- [8.42] then binds unconditionally ("No vehicle may ever move
+    'up' an escarpment"), and the down crossing keeps its full +8 CP / 6 BP, the same figures 8.42
+    prints for the Track case. A foot unit on a road is NOT excepted and still pays nothing."""
+    return feature in _ESCARPMENTS and is_motorized(mobility)
+
+
 def step_cost(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobility,
               weather: str = "normal") -> float | None:
     """CP to move from src into the adjacent hex dst, or None if impossible (off-map,
@@ -130,8 +147,8 @@ def _step_cost_known_adjacent(tmap: TerrainMap, src: Coord, dst: Coord, mobility
             return None
 
     feature = tmap.hexsides.get((src, dst))
-    if feature is None or road_as_road:                 # dry road negates hexside costs (note 6)
-        add = 0.0
+    if feature is None or (road_as_road and not _escarpment_vehicle(feature, mot)):
+        add = 0.0                                       # dry road negates hexside costs (note 6)
     else:
         if rain and feature == Hexside.WADI and not on_road:   # 29.55: wadi shut except by road
             return None
@@ -154,10 +171,12 @@ def breakdown_points(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobilit
                      weather: str = "normal") -> float:
     """Breakdown Points accrued moving one step src->dst (rule 21.21 / 8.37), the
     pure dual of step_cost. Foot/camel accrue none (21.11). A Road contributes its
-    own 1/2 value and NEGATES the hexside (note 6); a Track HALVES both the entered-
-    hex and hexside value EXCEPT down an escarpment for a vehicle (note 8); during a
-    Rainstorm a Road counts as a Track (29.56). A Light Truck moving off-road garners
-    one extra Breakdown Point per hex entered and per hexside crossed (54.2 note)."""
+    own 1/2 value and NEGATES the hexside (note 6) -- except for a vehicle crossing an
+    escarpment, which [8.33] excepts from the whole road/track ignore-terrain rule
+    (_escarpment_vehicle); a Track HALVES both the entered-hex and hexside value
+    EXCEPT down an escarpment for a vehicle (note 8); during a Rainstorm a Road counts
+    as a Track (29.56). A Light Truck moving off-road garners one extra Breakdown
+    Point per hex entered and per hexside crossed (54.2 note)."""
     if not is_motorized(mobility):
         return 0.0
     e = (src, dst) if src <= dst else (dst, src)         # normalized undirected edge, no allocation churn
@@ -175,8 +194,8 @@ def breakdown_points(tmap: TerrainMap, src: Coord, dst: Coord, mobility: Mobilit
         entry = breakdown_value(tmap.terrain[dst])
 
     feature = tmap.hexsides.get((src, dst))
-    if feature is None or road_as_road:                    # road negates hexside BP (note 6)
-        add = 0.0
+    if feature is None or (road_as_road and not _escarpment_vehicle(feature, mobility)):
+        add = 0.0                                          # road negates hexside BP (note 6)
     else:
         base = hexside_breakdown(feature)
         if base is None:                                   # prohibited hexside (defensive)

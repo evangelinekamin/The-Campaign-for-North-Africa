@@ -26,7 +26,7 @@ from .invariants import check_event
 from .policy import AttackOrder, MoveOrder, Policy
 from .staff_events import clean_staff_payload
 from .state import Coord, GameState
-from .terrain import Terrain, is_motorized, salt_marsh_barred
+from .terrain import Hexside, Terrain, is_motorized, salt_marsh_barred
 
 # Siege of Tobruk tuning knob (rule 25.14): how many effective barrages (a Pin or a
 # step loss) it takes to batter a fortification down one level. 1 = each effective
@@ -5067,6 +5067,12 @@ def _anti_armor_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
             if u.anti_armor <= 0 or not u.is_combat or u.id in pinned:   # 12.44 pinned can't fire
                 continue
             for nb in neighbors(u.hex):
+                # [8.37] Up Escarpment, Anti-Armor column: P. Not a shift -- a PROHIBITION: a firer
+                # on the down side may not shoot at armour on the plateau above it. Unreachable
+                # while TerrainMap.hexsides was empty; live since the 8.1b trace landed. Skipped, not
+                # broken out of, so the firer may still engage another adjacent armour hex.
+                if state0.terrain.hexsides.get((u.hex, nb)) is Hexside.UP_ESCARPMENT:
+                    continue
                 if any(t.is_armor for t in state0.enemies_at(nb, firing)):
                     by_target.setdefault(nb, []).append(u)
                     break

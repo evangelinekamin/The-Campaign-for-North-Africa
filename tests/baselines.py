@@ -45,19 +45,24 @@ at Alexandria) because a BFS crossing the old D/E gap no longer pays for a phant
 duplicate count 21 -> 70 (21 C/D + 28 A/B + 21 D/E, all agreeing on terrain class, zero clashes).
 Both restated in place, port rule 5, with the reason in the docstring -- they were pinning the bug.
 
-CAUSE 2 -- THE ESCARPMENT TRACE ITSELF. 190 hexsides (378 directed UP_ESCARPMENT/DOWN_ESCARPMENT
-pairs after Cause 1's fix; 78 of them lie inside the ABC benchmark map used by rommels_arrival, all
-190 for siege_of_tobruk's single-section C load) go from `{}` (dead since TerrainMap.hexsides was
-introduced) to real data for the first time, so movement.step_cost's hexside-cost term and
-zoc.py's ZOC_BLOCKING_HEXSIDES both go live for the first time on the real map. [8.42]: "No vehicle
-may ever move up an escarpment" (unconditional, track or no track -- the terrain.py chart already
-encoded this correctly; it was simply never fed real data), [8.35]: the escarpment symbol (solid
-band + splash) is drawn wholly on the DOWN side, confirmed three independent ways (the rule's own
-words, PDF p.14; two ground truths of OPPOSITE compass sign, the Mediterranean coast and the
-Qattara Depression floor; the named Sollum/Halfaya Pass escarpment, every traced tick pointing out
-to sea) -- see scratchpad/port/hexside-trace.md and tools/vassal/extract_hexsides.py's own
-docstring for the full extraction spec (exact-colour mask, component filter, sample/accept
-thresholds, all measured not chosen).
+CAUSE 2 -- THE ESCARPMENT TRACE ITSELF. 194 hexsides traced, of which 189 load (5 have a down or an
+up hex that colour-sampled as sea and are dropped rather than invented into land), i.e. 378 directed
+UP_ESCARPMENT/DOWN_ESCARPMENT entries after Cause 1's fix -- 79 of them inside the ABC benchmark map
+that rommels_arrival AND siege_of_tobruk both load (siege_of_tobruk is an ABC scenario, not a
+single-section C one; a genuine C-only load carries 38). They go from `{}` (dead since
+TerrainMap.hexsides was introduced) to real data for the first time, so FOUR consumers go live on
+the real map at once: movement.step_cost's hexside CP, movement.breakdown_points' hexside BP,
+zoc.py's ZOC_BLOCKING_HEXSIDES, and engine._assault_hexside_shift's [15.33/15.35/15.36] close-assault
+differential. [8.42]: "No vehicle may ever move up an escarpment" -- and it really is unconditional,
+road or track, because [8.33] excepts exactly this case from the road/track ignore-the-terrain rule
+("...with the exception of vehicles crossing Escarpments (see 8.42)"); the code did NOT encode that
+exception when this note first claimed it did, and now does (movement._escarpment_vehicle).
+[8.35]: the escarpment symbol (solid band + splash) is drawn wholly on the DOWN side, confirmed
+three independent ways (the rule's own words, PDF p.14; two ground truths of OPPOSITE compass sign,
+the Mediterranean coast and the Qattara Depression floor; the named Sollum/Halfaya Pass escarpment,
+every traced tick pointing out to sea) -- see scratchpad/port/hexside-trace.md and
+tools/vassal/extract_hexsides.py's own docstring for the full extraction spec (exact-colour mask,
+sample/accept thresholds, all measured not chosen).
 
 MEASURED, not assumed: landing the rim changes NEITHER the Alamein sector's minimum vertex cut
 (20 hexes for VEHICLE/MOTORIZED, 30 for FOOT, identical with and without the escarpment hexsides)
@@ -113,6 +118,39 @@ salt_marsh_barred; Cause 3 is DATA, neutered by swapping the file back in, not b
       with every one of them reverted, fully explain the move)
 
 Determinism holds: every value above reproduces byte-for-byte across two runs, live and neutered.
+
+NOT RE-BASELINED 2026-07-26 (the 8.1b REVIEW REPAIR) -- recorded here because a NON-move is a
+measurement too, and this one changed data and two rules without touching either signature:
+
+    abc4300eccbb / a5da9203198d   (unchanged, verified live after every fix below)
+
+  * THE ACCEPTANCE RULE WAS RE-DERIVED and the data RE-TRACED, 190 -> 194 hexsides. The first cut
+    filtered the mask by connected-component size on a claimed "empty trough at max-inscribed-radius
+    3-4"; re-measured, the trough is NOT empty (r=3: 4 components / 452 px, r=4: 3 / 1,355 px) and
+    the filter dropped FOUR REAL band segments (the Qattara north rim at the notch west of El
+    Alamein, the Qara rim, and the Tobruk and Tocra coastal escarpments -- band broken up by the
+    vegetation and lettering glyphs drawn over it), a fifth going to a PEAK_MIN the filter had
+    pushed one bin too high, while still admitting one edge the map does not orient at all
+    (C3526/C3527: a band CORNER whose ink straddles the hexside, side-ratio 0.91). Component size
+    does not separate band from lettering; SIDEDNESS does, and sidedness is [8.35] itself ("the
+    splash contours ... are always on the 'down' side"), so the rule that ORIENTS an edge is now
+    also the rule that ACCEPTS it: one-sidedness <= 0.5 (measured gap: 194 edges at <= 0.341, then
+    nothing until 0.809 and 0.912, which are the map's own lettering and that corner). Every added
+    and every rejected edge was rendered and read by eye off the raster.
+  * [8.33]'s ONE EXCEPTION was missing, and this note used to assert the opposite of what the code
+    did. "Units which are moving along Roads or Tracks ignore, for movement purposes, any other
+    terrain in the hex or hexside, with the exception of vehicles crossing Escarpments (see 8.42)."
+    movement.step_cost/breakdown_points negated the hexside term on any dry road, so the ONE traced
+    escarpment that a road crosses (A5533/B5400, Tocra) let a vehicle drive UP it. Fixed.
+  * [8.37]'s Up Escarpment ANTI-ARMOR "P" was live-but-unimplemented, the same class of gap 8.1a's
+    review found in [8.44]. A P is not a column shift, so combat_tables' shift-deferral note did not
+    cover it; engine._anti_armor_step now drops any (firer hex -> target hex) pair that crosses one.
+
+None of the three moves a benchmark: the affected geometry (Tocra, Sofafi, the Qattara rim) is
+nowhere near either scenario's fighting, and no unit in either ever crosses an escarpment or fires
+anti-armor across one. Re-measured live after the last fix landed, twice: still abc4300eccbb /
+a5da9203198d, so the ATTRIBUTION table above and the constants at the foot of this file all stand
+exactly as printed.
 --------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-26 (SECOND MOVE THE SAME DAY) -- CAUSE: the Phase-8.1a REVIEW REPAIR. The
 adversarial review of the slice below found four defects; the two that move a signature are both

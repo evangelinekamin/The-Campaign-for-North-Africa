@@ -48,7 +48,7 @@ from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy 
 from game.campaign_victory import CampaignVictory                        # noqa: E402
 from game.engine import _convoy_dest, determinism_signature, run         # noqa: E402
 from game.events import Control, Side                                    # noqa: E402
-from game.hexmap import distance                                         # noqa: E402
+from game.hexmap import distance, is_adjacent                            # noqa: E402
 from game.policy import ScriptedPolicy                                   # noqa: E402
 from game.scenario import (_campaign_cw_rail_line, _campaign_rail_cargo,  # noqa: E402
                            _RAIL_TONS_PER_OPSTAGE, campaign, rommels_arrival,
@@ -398,8 +398,20 @@ def test_the_commonwealth_trucks_actually_run():
     # truck correctly declining to drive into an enemy-held hex and then having no fallback is the same
     # algorithm gap the docstring already named, now reached by a route the old, less-connected map
     # never produced. Not fixed here (still game.relay's, still out of this slice's scope).
+    #
+    # REPAIRED 2026-07-26 (8.1b review): an exclusion list that only NAMES ids is a place a real
+    # regression can hide. The diagnosis above is therefore ASSERTED, not narrated -- if any of the
+    # three stops being one hop short of an Axis-held Matruh, or if a fifth truck joins them, this
+    # test fails instead of quietly excusing it.
     _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK = {
         "AL-Truck-Alex-M", "AL-Truck-Alex-L", "AL-Truck-Airfield-M", "AL-Truck-Airfield-H"}
+    stuck = {t.id: t for t in res.final.trucks if t.id in _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK}
+    assert set(stuck) == _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK, "the excused set moved"
+    assert res.final.control_of(MATRUH) is Control.AXIS, "the railhead is friendly -- re-diagnose"
+    for tid in ("AL-Truck-Alex-L", "AL-Truck-Airfield-M", "AL-Truck-Airfield-H"):
+        assert is_adjacent(stuck[tid].hex, MATRUH), \
+            f"{tid} is not one step short of the railhead ({stuck[tid].hex}) -- re-diagnose"
+    assert not is_adjacent(stuck["AL-Truck-Alex-M"].hex, MATRUH)   # the 8.1a case, a different hex
     for t in res.final.trucks:              # nobody drove back to the Delta and idled there
         if t.side == Side.ALLIED and t.line != 1 and t.id not in _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK:
             assert distance(t.hex, CAIRO) >= distance(MATRUH, CAIRO), \

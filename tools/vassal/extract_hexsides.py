@@ -7,35 +7,59 @@ a band detector, not a patch classifier or extract_roads.py's ridge filter:
   1. MASK: exact colour (94, 97, 98) -- and nothing else. terrain-key.md originally listed
      (51, 53, 51) and (84, 88, 89) as "escarpment secondary tones", but both occur in open clear
      terrain thousands of px from any escarpment, and (51, 53, 51) occurs over open sea -- they are
-     the map's generic line/label ink (grid, track dashes, text). Then keep WHOLE connected
-     components whose max inscribed radius >= MIN_RADIUS (opening BY RECONSTRUCTION, not a plain
-     morphological opening, which shaves the band's own edge and costs real coverage). This is not
-     a free parameter: the per-component max-inscribed-radius histogram is sharply bimodal --
-     ~1,000 components at r<=4 totalling ~8,000px (splash speckles and the map's own lettering,
-     e.g. "The Qatara Depression" is set in the same charcoal) versus ~100 components at r>=5
-     totalling ~110,000px (the solid bands) -- with an empty trough at r=3-4.
+     the map's generic line/label ink (grid, track dashes, text). NOTHING is filtered out of the
+     mask: the map's own charcoal lettering ("The Qatara Depression" is set in this exact ink) is
+     left in, and rejected in step 3 where it is separable, rather than in the mask where it is not.
+     The first cut of this tool dropped whole connected components below a max-inscribed-radius of
+     5px on a claimed "empty trough at r=3-4"; re-measured, THE TROUGH IS NOT EMPTY (r=3: 4
+     components / 452 px; r=4: 3 components / 1,355 px, three of them 378-533 px band segments
+     broken by the vegetation and lettering glyphs drawn over them), and the filter silently cost
+     FOUR real hexsides -- the Qattara north rim at the notch west of El Alamein, the Qara rim, and
+     the Tobruk and Tocra coastal escarpments -- while the one lettering artifact it did catch there
+     is caught by step 3(a) anyway. Component size does not separate band from lettering; SIDEDNESS
+     does. (A fifth edge, the second of the two at Tocra, was lost to a PEAK_MIN that had been set
+     one bin above the real trough because the filter had emptied the bins below it.)
   2. PROFILE: for every adjacent hex pair (game.hexmap neighbours, board-global axial), NSAMP points
      along the shared hexside (the perpendicular bisector of the two centres, corners excluded --
      three bands meet at a hex corner and a corner sample reads a NEIGHBOURING hexside's band), and
      at each one the ink count at every signed 1px normal offset out to TMAX.
-  3. ACCEPT: peak count within +-NEAR px >= PEAK_MIN of NSAMP. The peak histogram over edges with
-     any ink has a measured EMPTY gap at 11-12/21 (reproduced at every NEAR in {3, 6, 9}) between a
-     low "bleed" hump (an edge merely adjacent to a real one, clipping its splash fringe) and a
-     cluster at a near-perfect NSAMP; PEAK_MIN sits in that gap, not chosen freely.
-  4. ORIENT: [8.35], PDF p.14, verbatim -- "The splash contours of the respective terrain symbols
-     are always on the 'down' side of the slope or escarpment." And the map draws the WHOLE symbol
-     (solid band AND splash fringe) on that one side, with the band's own crisp edge sitting ON the
-     hexside line -- so ink side = DOWN, full stop; no band/splash separation is needed. Confirmed
-     three independent ways (scratchpad/port/hexside-trace.md Sec 2): the rule's own words; two
-     ground truths of OPPOSITE compass sign (the Mediterranean coast: down = seaward, 55 for / 0
-     against; the Qattara Depression floor: down = into the depression, 67 for / 5 against -- a
-     method that merely learned "north is down" could not pass both); and the named Sollum/Halfaya
-     Pass escarpment, where every traced tick points north-east, out to sea, exactly as [8.42]
-     describes the Libyan Plateau rising from the coastal strip.
+  3. ORIENT AND ACCEPT, one measurement -- [8.35], PDF p.14, verbatim: "The splash contours of the
+     respective terrain symbols are always on the 'down' side of the slope or escarpment." The map
+     draws the WHOLE symbol (solid band AND splash fringe) on that one side, with the band's own
+     crisp edge sitting ON the hexside line -- so ink side = DOWN, full stop; no band/splash
+     separation is needed. That rule is also the ACCEPTANCE test, which is the point: if the ink
+     straddles the hexside, the map has named no down side, and [8.35] says that is therefore not an
+     escarpment hexside at all. So an edge is accepted only when
+        (a) it is ONE-SIDED: min(ink either side) / max(...) <= SIDE_MAX. Measured, sharply
+            bimodal with a wide EMPTY gap: 194 edges at <= 0.341 (median 0.000 -- the far side is
+            literally empty), then nothing until 0.809 and 0.912, which are the map's lettering
+            (the "D" of "Depression" standing on a hexside) and one band CORNER (two bands meeting
+            at a hexside's lower vertex, ink dx -4..+2 across the line). Both were accepted by the
+            first cut; both are rejected here, and eye-checked on the raster.
+        (b) its peak ink count within +-NEAR px reaches PEAK_MIN of NSAMP. Over the ONE-SIDED
+            edges this histogram has a measured EMPTY trough at 10-11/21 between a low "bleed" hump
+            (<=9: an edge merely clipping a NEIGHBOURING hexside's band) and the real cluster
+            (>=12, 181 of them at a perfect 21); PEAK_MIN sits in that trough, and the accepted set
+            is identical for PEAK_MIN 10, 11 and 12.
+     Orientation confirmed three independent ways (scratchpad/port/hexside-trace.md Sec 2): the
+     rule's own words; two ground truths of OPPOSITE compass sign (the Mediterranean coast: down =
+     seaward; the Qattara Depression floor: down = into the depression -- a method that merely
+     learned "north is down" could not pass both); and the named Sollum/Halfaya Pass escarpment,
+     where every traced tick points north-east, out to sea, exactly as [8.42] describes the Libyan
+     Plateau rising from the coastal strip.
 
 This is the promoted, committed form of Phase 8.1b Block A's read-only recon
-(scratchpad/port/hexside-trace.md and scratchpad/hexside/*.py) -- same thresholds, same geometry,
-same orientation rule, reproducible from the raster alone.
+(scratchpad/port/hexside-trace.md and scratchpad/hexside/*.py) -- same geometry, same orientation
+rule, reproducible from the raster alone.
+
+WHAT THIS DATA TURNS ON, AND WHAT IT DOES NOT (the recon's Sec 3.6 ship-blocking flag, retired by
+measurement rather than by silence). Block A warned that landing escarpments without a road/track
+layer would make Halfaya Pass and the Sollum escarpment one-way for every vehicle. One-way is
+exactly what [8.42] says they are, and measured on the loaded map that costs nothing: of 189 loaded
+edges exactly ONE coincides with a road (A5533/B5400 at Tocra) and none with a track or a railroad,
+and forward VEHICLE reachability over the whole board is identical with the rim and with it
+stripped -- every hex above an escarpment is still reachable, by the long way round. The flag was
+real and is answered by measurement; tests/test_hexsides.py pins both halves.
 
     python3 tools/vassal/extract_hexsides.py [SECTIONS] [path/to/CNAv2.1.0.vmod]
     python3 tools/vassal/extract_hexsides.py ABCDE      # the whole board (the default)
@@ -60,7 +84,6 @@ import zipfile
 
 import numpy as np
 from PIL import Image
-from scipy import ndimage
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from game import cna_map, coords  # noqa: E402
@@ -74,11 +97,11 @@ _DATA = os.path.join(os.path.dirname(__file__), "..", "..", "data")
 # ONLY this colour -- see the module docstring's Sec 1 palette correction.
 ESCARPMENT = (94, 97, 98)
 
-MIN_RADIUS = 5    # px; the component-filter cut sits in the measured r=3-4 trough
 NSAMP = 21        # sample points along a hexside
 FRAC = 0.78       # fraction of the half-edge sampled (corners excluded; flat between 0.6 and 0.85)
 NEAR = 9          # px; acceptance window around the hexside line
-PEAK_MIN = 13     # of NSAMP; the measured empty-bin (11-12) threshold
+PEAK_MIN = 12     # of NSAMP; sits in the measured empty 10-11 trough of the one-sided edges
+SIDE_MAX = 0.5    # max weak-side/strong-side ink ratio; sits in the measured empty 0.35-0.81 gap
 TMAX = 34         # px; profile half-width
 SQ3 = math.sqrt(3)
 
@@ -91,21 +114,6 @@ def _pack(rgb: tuple[int, int, int]) -> int:
 def _packed_map(arr: np.ndarray) -> np.ndarray:
     a = arr.astype(np.uint32)
     return (a[..., 0] << 16) | (a[..., 1] << 8) | a[..., 2]
-
-
-def _band_mask(packed: np.ndarray, colour: int, min_r: int) -> np.ndarray:
-    """Keep WHOLE connected components whose max inscribed radius >= min_r (opening by
-    reconstruction -- see the module docstring's Sec 1)."""
-    m = packed == colour
-    if not min_r:
-        return m
-    lab, n = ndimage.label(m, structure=np.ones((3, 3)))
-    if n == 0:
-        return m
-    dt = ndimage.distance_transform_edt(m)
-    mx = ndimage.maximum(dt, lab, index=np.arange(1, n + 1))
-    keep = np.concatenate([[False], mx >= min_r])
-    return keep[lab]
 
 
 def _all_hexes(sections: str) -> dict:
@@ -170,33 +178,31 @@ def _profile(mask: np.ndarray, hexes: dict, edges: list) -> tuple[np.ndarray, np
 
 def trace_escarpment(arr: np.ndarray) -> tuple[dict, dict]:
     """Return ({section: [[down_label, up_label], ...]}, stats) over the WHOLE board."""
-    packed = _packed_map(arr)
-    mask = _band_mask(packed, _pack(ESCARPMENT), MIN_RADIUS)
+    mask = _packed_map(arr) == _pack(ESCARPMENT)
     hexes = _all_hexes("ABCDE")
     edges = _all_edges(hexes)
     prof, offs = _profile(mask, hexes, edges)
-    near = np.abs(offs) <= NEAR
-    peak = prof[:, near].max(axis=1)
+    peak = prof[:, np.abs(offs) <= NEAR].max(axis=1)
 
     out: dict = {s: [] for s in "ABCDE"}
-    accepted = ties = 0
+    accepted = two_sided = 0
     for i, (a, b) in enumerate(edges):
         if peak[i] < PEAK_MIN:
             continue
         row = prof[i]
         pos = int(row[offs > 0].sum())
         neg = int(row[offs < 0].sum())
-        if pos == neg:
-            ties += 1
+        if min(pos, neg) > SIDE_MAX * max(pos, neg):    # [8.35] names no down side here -> not an
+            two_sided += 1                              # escarpment hexside; Sec 3(a)
             continue
         accepted += 1
-        down, up = (b, a) if pos > neg else (a, b)      # ink (splash) side = DOWN, Sec 4
+        down, up = (b, a) if pos > neg else (a, b)      # ink (splash) side = DOWN, Sec 3
         down_label, up_label = hexes[down][2], hexes[up][2]
         out[down_label[0]].append([down_label, up_label])
     for s in out:
         out[s].sort()
-    stats = {"candidates": int((peak >= PEAK_MIN).sum()), "accepted": accepted, "ties": ties,
-             "mask_px": int(mask.sum())}
+    stats = {"candidates": int((peak >= PEAK_MIN).sum()), "accepted": accepted,
+             "two_sided": two_sided, "mask_px": int(mask.sum())}
     return out, stats
 
 
@@ -207,10 +213,8 @@ def main() -> int:
     arr = np.asarray(Image.open(io.BytesIO(zipfile.ZipFile(vmod).read(MAP_IMAGE))).convert("RGB"))
     by_section, stats = trace_escarpment(arr)
     print(f"escarpment: {stats['candidates']} candidates (peak>={PEAK_MIN}), "
-          f"{stats['accepted']} oriented, {stats['ties']} ties, mask {stats['mask_px']} px")
-    if stats["ties"]:
-        print(f"WARNING: {stats['ties']} edges failed to orient -- geometry or mask moved",
-              file=sys.stderr)
+          f"{stats['accepted']} oriented, {stats['two_sided']} rejected two-sided, "
+          f"mask {stats['mask_px']} px")
     for section in letters:
         edges = by_section.get(section, [])
         path = os.path.normpath(os.path.join(_DATA, f"hexsides_{section}.json"))

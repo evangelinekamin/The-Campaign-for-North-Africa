@@ -409,8 +409,11 @@ def anti_armor_terrain_shift(terrain: Terrain, fort_level: int) -> int:
     left) protecting armour in a target hex. The defender takes the BEST of the hex
     terrain OR the fortification -- they are NOT cumulative (14.33). The fortification
     anti-armor benefit reaches armour targets only in a Major City hex (8.37 note 12).
-    Hexside additions (14.33) are deferred: the anti-armor step combines firers from
-    several hexes, so no single 'all attackers through this hexside' feature exists."""
+    Hexside column SHIFTS (14.33) are deferred: the anti-armor step combines firers
+    from several hexes, so no single 'all attackers through this hexside' feature
+    exists. The one hexside cell that is NOT a shift -- Up Escarpment's Anti-Armor P
+    -- is not deferred: a prohibition is per-firer, not aggregate, and engine.
+    _anti_armor_step drops any (firer hex -> target hex) that crosses one."""
     terrain_shift = HEX_AA_SHIFT.get(terrain, 0)
     fort_shift = FORT_AA_SHIFT.get(fort_level, -2) if terrain == Terrain.MAJOR_CITY and fort_level > 0 else 0
     return min(terrain_shift, fort_shift)

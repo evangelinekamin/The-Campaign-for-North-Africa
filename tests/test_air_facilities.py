@@ -898,10 +898,16 @@ def test_the_shuttle_fills_the_larder_and_the_larder_stops_emptying():
     style dump reads empty at ANY GIVEN snapshot by design, drained the moment it is filled). MEASURED
     at the corrected map: the ALLIED larder holds 0 Fuel at the exact GT14 close, 0 at GT18, 225 at
     GT24, 0 again at GT30 -- noisy across snapshots, exactly the pattern this project has repeatedly
-    hit and fixed by asking about DELIVERIES across the run instead of one end-of-turn integer. So
-    this assertion moves there too: fuel was delivered to at least one Allied air dump SOMEWHERE in
-    the run (702 Fuel Points over GT1-14, measured), which is the actual capability under test --
-    not that this exact snapshot happens to be non-empty."""
+    hit and fixed by asking about DELIVERIES across the run instead of one end-of-turn integer.
+
+    REPAIRED 2026-07-26 (8.1b review): moving a STOCK claim to a FLOW claim and stopping there
+    DROPS the property this test is named for -- "the larder stops emptying" is about held fuel,
+    and every other restatement in this slice INVERTED into a stronger measured claim rather than
+    a weaker one. So the stock claim comes back in the form the measurement supports: the larder
+    holds fuel at some point DURING the run (the maximum over every intermediate state, re-folded
+    from the log), not at one arbitrarily chosen snapshot. That is strictly stronger than the flow
+    claim -- a delivery that was drained in the same beat it landed would satisfy the flow claim
+    and fail this one -- and it is exactly what "used to hit ZERO and STAY there" denies."""
     st = campaign(seed=4, max_turns=14)
     r = run(st, axis=CampaignAxisPolicy(), allied=CampaignCommonwealthPolicy())
     air_dumps = {s.id: s.side for s in st.supplies if s.air_dump}
@@ -909,10 +915,18 @@ def test_the_shuttle_fills_the_larder_and_the_larder_stops_emptying():
                  and e.payload["supply_id"] in air_dumps]
     assert delivered, "no lorry ever reached an airfield larder"
     assert sum(e.payload["cargo"].get("FUEL", 0) for e in delivered) > 0
+    peak = {Side.AXIS: 0, Side.ALLIED: 0}
+    walk = r.initial
+    for e in r.events:
+        walk = apply(walk, e)
+        for side in peak:
+            peak[side] = max(peak[side], sum(s.fuel for s in walk.supplies
+                                             if s.air_dump and s.side == side))
     for side in (Side.AXIS, Side.ALLIED):
         fuel_to_side = sum(e.payload["cargo"].get("FUEL", 0) for e in delivered
                            if air_dumps[e.payload["supply_id"]] == side)
         assert fuel_to_side > 0, f"no Fuel was ever delivered to a {side.name} air larder"
+        assert peak[side] > 0, f"{side.name} air larder never held a Fuel Point all run"
     # ...and the consequence 35.14 hangs on it: an SGSU that may still work its planes
     denied = [e for e in r.events if e.kind == EventKind.AIR_REFIT_DENIED
               and e.payload.get("reason") == "no_sgsu"]
