@@ -1,0 +1,48 @@
+{
+ "seeds": [
+  4
+ ],
+ "max_turns": 30,
+ "results": [
+  {
+   "seed": 4,
+   "max_turns": 30,
+   "reason": "Axis Smashing Victory: 1840-10 Victory Points (64.76)",
+   "autopsy": {
+    "AXIS": {
+     "best_ammo_ever_under_an_engineer": 0,
+     "best_stores_ever_under_an_engineer": 0,
+     "engineer_segments": 222,
+     "engineer_segments_on_a_LEGAL_lay_site": 165,
+     "engineer_segments_standing_on_a_dump": 0,
+     "max_dumps_meeting_24_33_15S_15A_anywhere": 6,
+     "max_dumps_meeting_24_43_30S_anywhere": 5,
+     "min_hexes_to_a_24_33_capable_dump_ever": 29,
+     "n_for_that_mean": 165,
+     "order/DUMP": 5,
+     "segments": 90,
+     "segments_with_a_24_33_capable_dump_SOMEWHERE": 57,
+     "segments_with_a_lay_capable_engineer_on_map": 57,
+     "short_of_BOTH": 165,
+     "sum_hexes_to_the_nearest_24_33_capable_dump": 5214
+    },
+    "ALLIED": {
+     "best_ammo_ever_under_an_engineer": 124998926,
+     "best_stores_ever_under_an_engineer": 124994101,
+     "engineer_segments": 33,
+     "engineer_segments_on_a_LEGAL_lay_site": 31,
+     "engineer_segments_standing_on_a_dump": 2,
+     "max_dumps_meeting_24_33_15S_15A_anywhere": 28,
+     "max_dumps_meeting_24_43_30S_anywhere": 29,
+     "min_hexes_to_a_24_33_capable_dump_ever": 1,
+     "n_for_that_mean": 31,
+     "segments": 90,
+     "segments_with_a_24_33_capable_dump_SOMEWHERE": 30,
+     "segments_with_a_lay_capable_engineer_on_map": 30,
+     "short_of_BOTH": 31,
+     "sum_hexes_to_the_nearest_24_33_capable_dump": 61
+    }
+   }
+  }
+ ]
+}

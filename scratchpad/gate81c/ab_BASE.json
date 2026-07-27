@@ -1,0 +1,1267 @@
+{
+ "seeds": [
+  1941,
+  7,
+  4,
+  24,
+  2026,
+  99,
+  1
+ ],
+ "probe": false,
+ "max_turns": null,
+ "results": [
+  {
+   "seed": 1941,
+   "probe": false,
+   "max_turns": null,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 1079-20 Victory Points (64.76)",
+   "events": 265149,
+   "signature": "8fec99f7a9e39b09",
+   "engineering_events": {
+    "CONSTRUCTION_ADVANCED/ALLIED": 2,
+    "CONSTRUCTION_COMPLETED/AXIS": 2,
+    "CONSTRUCTION_ORDER_REJECTED/AXIS": 1
+   },
+   "engineering_event_total": 5,
+   "engineering_event_sample": [
+    {
+     "turn": 0,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "AXIS",
+     "payload": {
+      "item": "DUMP",
+      "hex": [
+       24,
+       76
+      ],
+      "reason": "needs 1 TOE Strength Point with 3 CP and 20 Stores in the hex (24.9)"
+     }
+    },
+    {
+     "turn": 103,
+     "kind": "CONSTRUCTION_ADVANCED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       99
+      ],
+      "stages": 2,
+      "progress": 2
+     }
+    },
+    {
+     "turn": 103,
+     "kind": "CONSTRUCTION_COMPLETED",
+     "side": "AXIS",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       99
+      ]
+     }
+    },
+    {
+     "turn": 104,
+     "kind": "CONSTRUCTION_ADVANCED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ],
+      "stages": 2,
+      "progress": 2
+     }
+    },
+    {
+     "turn": 104,
+     "kind": "CONSTRUCTION_COMPLETED",
+     "side": "AXIS",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ]
+     }
+    }
+   ],
+   "final_minefields": 0,
+   "fortifications_raised_above_the_static_roster": {},
+   "r_alamein": 118,
+   "r_alexandria": 133,
+   "r_tobruk": 66,
+   "axis_ground_high_water_r": 107,
+   "axis_ground_high_water_turn": 3,
+   "axis_ground_high_water_offset_from_alamein": -11,
+   "axis_ground_high_water_per_turn": {
+    "0": 93,
+    "2": 100,
+    "3": 107,
+    "4": 107,
+    "6": 107,
+    "9": 79,
+    "10": 99,
+    "11": 21,
+    "12": 14,
+    "13": 21,
+    "14": 21,
+    "15": 14,
+    "16": 21,
+    "18": 8,
+    "21": 21,
+    "22": 24,
+    "23": 24,
+    "24": 21,
+    "25": 21,
+    "26": 27,
+    "27": 20,
+    "28": 22,
+    "29": 20,
+    "30": 20,
+    "31": 20,
+    "32": 9,
+    "33": 20,
+    "34": 20,
+    "35": 20,
+    "36": 6,
+    "37": 76,
+    "39": 20,
+    "40": 6,
+    "41": 22,
+    "42": 25,
+    "43": 22,
+    "45": 6,
+    "49": 2,
+    "50": 6,
+    "52": 4,
+    "55": 66,
+    "58": 4,
+    "59": 4,
+    "60": 3,
+    "61": 3,
+    "62": 4,
+    "63": 77,
+    "66": 6,
+    "67": 3,
+    "68": 6,
+    "70": 3,
+    "71": 6,
+    "74": 6,
+    "75": 77,
+    "76": 6,
+    "82": 8,
+    "83": 67,
+    "84": 77,
+    "85": 76,
+    "86": 20,
+    "87": 33,
+    "88": 3,
+    "89": 3,
+    "90": 5,
+    "91": 33,
+    "92": 39,
+    "93": 43,
+    "94": 40,
+    "95": 8,
+    "97": 23,
+    "98": 39,
+    "104": 56,
+    "105": 76,
+    "106": 62,
+    "107": 76,
+    "108": 37,
+    "111": 23
+   },
+   "axis_east_at_end": 77,
+   "cw_west_at_end": 77,
+   "axis_units_alive": 94,
+   "cw_units_alive": 193
+  },
+  {
+   "seed": 7,
+   "probe": false,
+   "max_turns": null,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 688-180 Victory Points (64.76)",
+   "events": 261163,
+   "signature": "c26c67e1cc844fae",
+   "engineering_events": {
+    "CONSTRUCTION_ADVANCED/ALLIED": 2,
+    "CONSTRUCTION_COMPLETED/ALLIED": 1,
+    "CONSTRUCTION_COMPLETED/AXIS": 1,
+    "CONSTRUCTION_ORDER_REJECTED/ALLIED": 4,
+    "CONSTRUCTION_ORDER_REJECTED/AXIS": 1
+   },
+   "engineering_event_total": 9,
+   "engineering_event_sample": [
+    {
+     "turn": 0,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "AXIS",
+     "payload": {
+      "item": "DUMP",
+      "hex": [
+       24,
+       76
+      ],
+      "reason": "needs 1 TOE Strength Point with 3 CP and 20 Stores in the hex (24.9)"
+     }
+    },
+    {
+     "turn": 106,
+     "kind": "CONSTRUCTION_ADVANCED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       99
+      ],
+      "stages": 2,
+      "progress": 2
+     }
+    },
+    {
+     "turn": 107,
+     "kind": "CONSTRUCTION_COMPLETED",
+     "side": "AXIS",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       99
+      ]
+     }
+    },
+    {
+     "turn": 107,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ],
+      "reason": "one Store Point must be present with the engineer and expended (24.64)"
+     }
+    },
+    {
+     "turn": 107,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ],
+      "reason": "one Store Point must be present with the engineer and expended (24.64)"
+     }
+    },
+    {
+     "turn": 108,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ],
+      "reason": "one Store Point must be present with the engineer and expended (24.64)"
+     }
+    },
+    {
+     "turn": 109,
+     "kind": "CONSTRUCTION_ADVANCED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ],
+      "stages": 2,
+      "progress": 2
+     }
+    },
+    {
+     "turn": 109,
+     "kind": "CONSTRUCTION_COMPLETED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ]
+     }
+    },
+    {
+     "turn": 109,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ],
+      "reason": "no hex may be skipped: build from the railhead (24.67)"
+     }
+    }
+   ],
+   "final_minefields": 0,
+   "fortifications_raised_above_the_static_roster": {},
+   "r_alamein": 118,
+   "r_alexandria": 133,
+   "r_tobruk": 66,
+   "axis_ground_high_water_r": 130,
+   "axis_ground_high_water_turn": 6,
+   "axis_ground_high_water_offset_from_alamein": 12,
+   "axis_ground_high_water_per_turn": {
+    "0": 93,
+    "2": 100,
+    "3": 108,
+    "4": 121,
+    "5": 123,
+    "6": 130,
+    "10": 23,
+    "11": 21,
+    "12": 14,
+    "13": 21,
+    "14": 21,
+    "15": 14,
+    "16": 21,
+    "18": 8,
+    "20": 22,
+    "21": 53,
+    "22": 24,
+    "23": 76,
+    "24": 21,
+    "25": 21,
+    "27": 20,
+    "28": 54,
+    "29": 20,
+    "30": 27,
+    "31": 30,
+    "32": 9,
+    "33": 33,
+    "34": 33,
+    "35": 33,
+    "36": 6,
+    "37": 7,
+    "39": 33,
+    "40": 6,
+    "43": 22,
+    "45": 6,
+    "46": 53,
+    "49": 2,
+    "50": 6,
+    "52": 4,
+    "58": 4,
+    "59": 4,
+    "60": 3,
+    "61": 3,
+    "62": 5,
+    "65": 77,
+    "66": 6,
+    "67": 3,
+    "68": 6,
+    "70": 87,
+    "71": 6,
+    "74": 6,
+    "76": 6,
+    "82": 8,
+    "86": 33,
+    "87": 33,
+    "88": 3,
+    "89": 3,
+    "90": 5,
+    "91": 33,
+    "92": 33,
+    "93": 26,
+    "94": 37,
+    "95": 8,
+    "97": 18,
+    "98": 34,
+    "107": 15,
+    "108": 28,
+    "111": 15
+   },
+   "axis_east_at_end": 78,
+   "cw_west_at_end": 54,
+   "axis_units_alive": 98,
+   "cw_units_alive": 215
+  },
+  {
+   "seed": 4,
+   "probe": false,
+   "max_turns": null,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 864-30 Victory Points (64.76)",
+   "events": 255211,
+   "signature": "e9f9fc74f8cd470f",
+   "engineering_events": {
+    "CONSTRUCTION_ADVANCED/ALLIED": 2,
+    "CONSTRUCTION_COMPLETED/AXIS": 2,
+    "CONSTRUCTION_ORDER_REJECTED/ALLIED": 2,
+    "CONSTRUCTION_ORDER_REJECTED/AXIS": 1
+   },
+   "engineering_event_total": 7,
+   "engineering_event_sample": [
+    {
+     "turn": 0,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "AXIS",
+     "payload": {
+      "item": "DUMP",
+      "hex": [
+       24,
+       76
+      ],
+      "reason": "needs 1 TOE Strength Point with 3 CP and 20 Stores in the hex (24.9)"
+     }
+    },
+    {
+     "turn": 104,
+     "kind": "CONSTRUCTION_ADVANCED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       99
+      ],
+      "stages": 2,
+      "progress": 2
+     }
+    },
+    {
+     "turn": 105,
+     "kind": "CONSTRUCTION_COMPLETED",
+     "side": "AXIS",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       99
+      ]
+     }
+    },
+    {
+     "turn": 105,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ],
+      "reason": "one Store Point must be present with the engineer and expended (24.64)"
+     }
+    },
+    {
+     "turn": 105,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ],
+      "reason": "one Store Point must be present with the engineer and expended (24.64)"
+     }
+    },
+    {
+     "turn": 106,
+     "kind": "CONSTRUCTION_ADVANCED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ],
+      "stages": 2,
+      "progress": 2
+     }
+    },
+    {
+     "turn": 106,
+     "kind": "CONSTRUCTION_COMPLETED",
+     "side": "AXIS",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ]
+     }
+    }
+   ],
+   "final_minefields": 0,
+   "fortifications_raised_above_the_static_roster": {},
+   "r_alamein": 118,
+   "r_alexandria": 133,
+   "r_tobruk": 66,
+   "axis_ground_high_water_r": 133,
+   "axis_ground_high_water_turn": 8,
+   "axis_ground_high_water_offset_from_alamein": 15,
+   "axis_ground_high_water_per_turn": {
+    "0": 93,
+    "2": 100,
+    "3": 111,
+    "4": 114,
+    "5": 119,
+    "6": 122,
+    "7": 130,
+    "8": 133,
+    "9": 133,
+    "10": 23,
+    "11": 21,
+    "12": 14,
+    "13": 21,
+    "14": 21,
+    "15": 14,
+    "16": 21,
+    "18": 8,
+    "21": 22,
+    "22": 24,
+    "23": 24,
+    "24": 23,
+    "25": 23,
+    "27": 27,
+    "28": 23,
+    "29": 17,
+    "30": 37,
+    "31": 49,
+    "32": 9,
+    "33": 20,
+    "34": 20,
+    "35": 20,
+    "36": 6,
+    "37": 7,
+    "38": 76,
+    "39": 77,
+    "40": 6,
+    "43": 22,
+    "45": 6,
+    "49": 2,
+    "50": 6,
+    "52": 4,
+    "58": 4,
+    "59": 4,
+    "60": 3,
+    "61": 3,
+    "62": 5,
+    "64": 54,
+    "66": 6,
+    "67": 3,
+    "68": 6,
+    "70": 3,
+    "71": 6,
+    "72": 76,
+    "73": 76,
+    "74": 76,
+    "76": 6,
+    "77": 67,
+    "78": 77,
+    "82": 8,
+    "86": 20,
+    "87": 33,
+    "88": 39,
+    "89": 53,
+    "90": 5,
+    "91": 39,
+    "92": 33,
+    "93": 37,
+    "94": 43,
+    "95": 22,
+    "96": 37,
+    "97": 45,
+    "98": 39,
+    "102": 62,
+    "103": 74,
+    "104": 76,
+    "105": 76
+   },
+   "axis_east_at_end": 77,
+   "cw_west_at_end": 74,
+   "axis_units_alive": 90,
+   "cw_units_alive": 230
+  },
+  {
+   "seed": 24,
+   "probe": false,
+   "max_turns": null,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 1217-20 Victory Points (64.76)",
+   "events": 266580,
+   "signature": "b22cc90b419d38a8",
+   "engineering_events": {
+    "CONSTRUCTION_ADVANCED/ALLIED": 2,
+    "CONSTRUCTION_COMPLETED/ALLIED": 1,
+    "CONSTRUCTION_COMPLETED/AXIS": 1,
+    "CONSTRUCTION_ORDER_REJECTED/ALLIED": 2,
+    "CONSTRUCTION_ORDER_REJECTED/AXIS": 1
+   },
+   "engineering_event_total": 7,
+   "engineering_event_sample": [
+    {
+     "turn": 0,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "AXIS",
+     "payload": {
+      "item": "DUMP",
+      "hex": [
+       24,
+       76
+      ],
+      "reason": "needs 1 TOE Strength Point with 3 CP and 20 Stores in the hex (24.9)"
+     }
+    },
+    {
+     "turn": 76,
+     "kind": "CONSTRUCTION_ADVANCED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       99
+      ],
+      "stages": 2,
+      "progress": 2
+     }
+    },
+    {
+     "turn": 76,
+     "kind": "CONSTRUCTION_COMPLETED",
+     "side": "AXIS",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       99
+      ]
+     }
+    },
+    {
+     "turn": 76,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ],
+      "reason": "one Store Point must be present with the engineer and expended (24.64)"
+     }
+    },
+    {
+     "turn": 77,
+     "kind": "CONSTRUCTION_ADVANCED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ],
+      "stages": 2,
+      "progress": 2
+     }
+    },
+    {
+     "turn": 77,
+     "kind": "CONSTRUCTION_COMPLETED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ]
+     }
+    },
+    {
+     "turn": 77,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ],
+      "reason": "no hex may be skipped: build from the railhead (24.67)"
+     }
+    }
+   ],
+   "final_minefields": 0,
+   "fortifications_raised_above_the_static_roster": {},
+   "r_alamein": 118,
+   "r_alexandria": 133,
+   "r_tobruk": 66,
+   "axis_ground_high_water_r": 133,
+   "axis_ground_high_water_turn": 7,
+   "axis_ground_high_water_offset_from_alamein": 15,
+   "axis_ground_high_water_per_turn": {
+    "0": 93,
+    "2": 100,
+    "3": 107,
+    "4": 112,
+    "5": 123,
+    "6": 128,
+    "7": 133,
+    "8": 77,
+    "9": 77,
+    "10": 23,
+    "11": 21,
+    "12": 79,
+    "13": 21,
+    "14": 21,
+    "15": 14,
+    "16": 21,
+    "18": 8,
+    "21": 22,
+    "22": 24,
+    "23": 24,
+    "24": 21,
+    "25": 21,
+    "26": 26,
+    "27": 23,
+    "28": 54,
+    "29": 20,
+    "30": 20,
+    "31": 20,
+    "32": 9,
+    "33": 20,
+    "34": 20,
+    "35": 20,
+    "36": 22,
+    "37": 7,
+    "38": 27,
+    "39": 20,
+    "40": 6,
+    "43": 53,
+    "45": 6,
+    "49": 2,
+    "50": 6,
+    "52": 4,
+    "58": 4,
+    "59": 4,
+    "60": 76,
+    "61": 3,
+    "62": 5,
+    "66": 6,
+    "67": 3,
+    "68": 6,
+    "70": 3,
+    "71": -2,
+    "74": 6,
+    "76": 6,
+    "79": 71,
+    "80": 76,
+    "82": 8,
+    "86": 67,
+    "87": 77,
+    "88": 3,
+    "89": 3,
+    "90": 5,
+    "91": 39,
+    "92": 33,
+    "93": 43,
+    "94": 24,
+    "95": 8,
+    "97": 23,
+    "98": 39,
+    "101": 8,
+    "102": 29,
+    "103": 42,
+    "106": 77,
+    "108": 76,
+    "109": 62,
+    "110": 75
+   },
+   "axis_east_at_end": 92,
+   "cw_west_at_end": 76,
+   "axis_units_alive": 100,
+   "cw_units_alive": 208
+  },
+  {
+   "seed": 2026,
+   "probe": false,
+   "max_turns": null,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 597-10 Victory Points (64.76)",
+   "events": 252372,
+   "signature": "a5b2c6fbdf9538b5",
+   "engineering_events": {
+    "CONSTRUCTION_ADVANCED/ALLIED": 2,
+    "CONSTRUCTION_COMPLETED/AXIS": 2,
+    "CONSTRUCTION_ORDER_REJECTED/ALLIED": 1,
+    "CONSTRUCTION_ORDER_REJECTED/AXIS": 1
+   },
+   "engineering_event_total": 6,
+   "engineering_event_sample": [
+    {
+     "turn": 0,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "AXIS",
+     "payload": {
+      "item": "DUMP",
+      "hex": [
+       24,
+       76
+      ],
+      "reason": "needs 1 TOE Strength Point with 3 CP and 20 Stores in the hex (24.9)"
+     }
+    },
+    {
+     "turn": 106,
+     "kind": "CONSTRUCTION_ADVANCED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       99
+      ],
+      "stages": 2,
+      "progress": 2
+     }
+    },
+    {
+     "turn": 106,
+     "kind": "CONSTRUCTION_COMPLETED",
+     "side": "AXIS",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       99
+      ]
+     }
+    },
+    {
+     "turn": 107,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ],
+      "reason": "one Store Point must be present with the engineer and expended (24.64)"
+     }
+    },
+    {
+     "turn": 107,
+     "kind": "CONSTRUCTION_ADVANCED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ],
+      "stages": 2,
+      "progress": 2
+     }
+    },
+    {
+     "turn": 107,
+     "kind": "CONSTRUCTION_COMPLETED",
+     "side": "AXIS",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ]
+     }
+    }
+   ],
+   "final_minefields": 0,
+   "fortifications_raised_above_the_static_roster": {},
+   "r_alamein": 118,
+   "r_alexandria": 133,
+   "r_tobruk": 66,
+   "axis_ground_high_water_r": 133,
+   "axis_ground_high_water_turn": 6,
+   "axis_ground_high_water_offset_from_alamein": 15,
+   "axis_ground_high_water_per_turn": {
+    "0": 93,
+    "2": 100,
+    "3": 111,
+    "4": 119,
+    "5": 128,
+    "6": 133,
+    "7": 122,
+    "10": 23,
+    "11": 21,
+    "12": 14,
+    "13": 21,
+    "14": 21,
+    "15": 14,
+    "16": 21,
+    "18": 8,
+    "20": 22,
+    "21": 53,
+    "22": 24,
+    "23": 24,
+    "24": 21,
+    "25": 21,
+    "26": 27,
+    "27": 20,
+    "28": 76,
+    "29": 20,
+    "30": 20,
+    "31": 54,
+    "32": 9,
+    "33": 33,
+    "34": 33,
+    "35": 26,
+    "36": 6,
+    "37": 7,
+    "39": 33,
+    "40": 6,
+    "43": 22,
+    "45": 6,
+    "49": 2,
+    "50": 6,
+    "52": 4,
+    "53": 53,
+    "58": 4,
+    "59": 4,
+    "60": 3,
+    "61": 3,
+    "62": 5,
+    "65": 100,
+    "66": 99,
+    "67": 85,
+    "68": 6,
+    "70": 3,
+    "71": 4,
+    "74": 6,
+    "75": 23,
+    "76": 6,
+    "80": 67,
+    "81": 77,
+    "82": 8,
+    "86": 67,
+    "87": 76,
+    "88": 3,
+    "89": 3,
+    "90": 5,
+    "91": 33,
+    "92": 41,
+    "93": 45,
+    "94": 36,
+    "95": 50,
+    "96": 77,
+    "97": 23,
+    "103": 76
+   },
+   "axis_east_at_end": 121,
+   "cw_west_at_end": 78,
+   "axis_units_alive": 105,
+   "cw_units_alive": 176
+  },
+  {
+   "seed": 99,
+   "probe": false,
+   "max_turns": null,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 834-20 Victory Points (64.76)",
+   "events": 266035,
+   "signature": "097c46a72e8c3877",
+   "engineering_events": {
+    "CONSTRUCTION_ADVANCED/ALLIED": 2,
+    "CONSTRUCTION_COMPLETED/AXIS": 2,
+    "CONSTRUCTION_ORDER_REJECTED/AXIS": 1
+   },
+   "engineering_event_total": 5,
+   "engineering_event_sample": [
+    {
+     "turn": 0,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "AXIS",
+     "payload": {
+      "item": "DUMP",
+      "hex": [
+       24,
+       76
+      ],
+      "reason": "needs 1 TOE Strength Point with 3 CP and 20 Stores in the hex (24.9)"
+     }
+    },
+    {
+     "turn": 108,
+     "kind": "CONSTRUCTION_ADVANCED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       99
+      ],
+      "stages": 2,
+      "progress": 2
+     }
+    },
+    {
+     "turn": 108,
+     "kind": "CONSTRUCTION_COMPLETED",
+     "side": "AXIS",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       99
+      ]
+     }
+    },
+    {
+     "turn": 109,
+     "kind": "CONSTRUCTION_ADVANCED",
+     "side": "ALLIED",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ],
+      "stages": 2,
+      "progress": 2
+     }
+    },
+    {
+     "turn": 109,
+     "kind": "CONSTRUCTION_COMPLETED",
+     "side": "AXIS",
+     "payload": {
+      "item": "RAIL",
+      "hex": [
+       25,
+       98
+      ]
+     }
+    }
+   ],
+   "final_minefields": 0,
+   "fortifications_raised_above_the_static_roster": {},
+   "r_alamein": 118,
+   "r_alexandria": 133,
+   "r_tobruk": 66,
+   "axis_ground_high_water_r": 123,
+   "axis_ground_high_water_turn": 5,
+   "axis_ground_high_water_offset_from_alamein": 5,
+   "axis_ground_high_water_per_turn": {
+    "0": 93,
+    "2": 100,
+    "3": 112,
+    "4": 117,
+    "5": 123,
+    "7": 81,
+    "10": 23,
+    "11": 21,
+    "12": 14,
+    "13": 21,
+    "14": 21,
+    "15": 14,
+    "16": 21,
+    "18": 8,
+    "20": 22,
+    "21": 53,
+    "22": 24,
+    "23": 24,
+    "24": 23,
+    "25": 77,
+    "26": 77,
+    "27": 20,
+    "28": 76,
+    "29": 20,
+    "30": 20,
+    "31": 20,
+    "32": 9,
+    "33": 54,
+    "34": 20,
+    "35": 26,
+    "36": 6,
+    "37": 7,
+    "39": 33,
+    "40": 6,
+    "43": 22,
+    "45": 6,
+    "46": 53,
+    "49": 2,
+    "50": 6,
+    "52": 4,
+    "58": 4,
+    "59": 4,
+    "60": 2,
+    "61": 3,
+    "62": 4,
+    "66": 6,
+    "67": 3,
+    "68": 6,
+    "70": 3,
+    "71": 6,
+    "73": 77,
+    "74": 6,
+    "76": 67,
+    "77": 77,
+    "78": 86,
+    "80": 86,
+    "82": 59,
+    "83": 76,
+    "86": 33,
+    "87": 33,
+    "88": 3,
+    "89": 3,
+    "90": 5,
+    "91": 39,
+    "92": 33,
+    "93": 41,
+    "94": 41,
+    "95": 25,
+    "97": 18,
+    "98": 24,
+    "106": 79
+   },
+   "axis_east_at_end": 94,
+   "cw_west_at_end": 77,
+   "axis_units_alive": 104,
+   "cw_units_alive": 165
+  },
+  {
+   "seed": 1,
+   "probe": false,
+   "max_turns": null,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 1356-80 Victory Points (64.76)",
+   "events": 253951,
+   "signature": "89edfc5807750f0d",
+   "engineering_events": {
+    "CONSTRUCTION_ORDER_REJECTED/AXIS": 1
+   },
+   "engineering_event_total": 1,
+   "engineering_event_sample": [
+    {
+     "turn": 0,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "AXIS",
+     "payload": {
+      "item": "DUMP",
+      "hex": [
+       24,
+       76
+      ],
+      "reason": "needs 1 TOE Strength Point with 3 CP and 20 Stores in the hex (24.9)"
+     }
+    }
+   ],
+   "final_minefields": 0,
+   "fortifications_raised_above_the_static_roster": {},
+   "r_alamein": 118,
+   "r_alexandria": 133,
+   "r_tobruk": 66,
+   "axis_ground_high_water_r": 133,
+   "axis_ground_high_water_turn": 7,
+   "axis_ground_high_water_offset_from_alamein": 15,
+   "axis_ground_high_water_per_turn": {
+    "0": 93,
+    "2": 100,
+    "3": 102,
+    "4": 114,
+    "5": 122,
+    "6": 130,
+    "7": 133,
+    "8": 133,
+    "10": 23,
+    "11": 21,
+    "12": 14,
+    "13": 21,
+    "14": 21,
+    "15": 14,
+    "16": 21,
+    "18": 8,
+    "19": 22,
+    "21": 53,
+    "22": 24,
+    "23": 24,
+    "24": 20,
+    "25": 21,
+    "26": 26,
+    "27": 20,
+    "28": 23,
+    "29": 20,
+    "30": 20,
+    "31": 17,
+    "32": 9,
+    "33": 20,
+    "34": 20,
+    "35": 27,
+    "36": 6,
+    "37": 7,
+    "38": 23,
+    "39": 20,
+    "40": 6,
+    "43": 22,
+    "45": 6,
+    "49": 2,
+    "50": 6,
+    "52": 4,
+    "58": 4,
+    "59": 4,
+    "60": 2,
+    "61": 3,
+    "62": 4,
+    "65": 59,
+    "66": 77,
+    "67": 3,
+    "68": 6,
+    "70": 3,
+    "71": 6,
+    "74": 6,
+    "76": 6,
+    "82": 8,
+    "86": 52,
+    "87": 33,
+    "88": 59,
+    "89": 75,
+    "90": 5,
+    "91": 33,
+    "92": 59,
+    "93": 77,
+    "94": 40,
+    "95": 24,
+    "97": 23,
+    "98": 39,
+    "99": 17,
+    "100": 30,
+    "101": 40,
+    "110": 3
+   },
+   "axis_east_at_end": 78,
+   "cw_west_at_end": 65,
+   "axis_units_alive": 100,
+   "cw_units_alive": 183
+  }
+ ]
+}

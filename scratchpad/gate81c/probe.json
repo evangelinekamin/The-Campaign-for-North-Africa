@@ -1,0 +1,618 @@
+{
+ "seeds": [
+  1941,
+  7,
+  4,
+  24,
+  2026,
+  99,
+  1
+ ],
+ "max_turns": null,
+ "results": [
+  {
+   "seed": 1941,
+   "max_turns": null,
+   "reason": "Axis Smashing Victory: 1079-30 Victory Points (64.76)",
+   "signature": "36807bdc36cf796e",
+   "autopsy": {
+    "AXIS": {
+     "best_ammo_ever_under_an_engineer": 0,
+     "best_stores_ever_under_an_engineer": 0,
+     "engineer_segments": 2949,
+     "engineer_segments_on_a_LEGAL_fort_site": 127,
+     "engineer_segments_on_a_LEGAL_lay_site": 2406,
+     "engineer_segments_on_a_LEGAL_site_AND_a_dump": 0,
+     "engineer_segments_standing_on_a_dump": 0,
+     "fort_site_legal_but_NO_INFANTRY_PARTNER": 2279,
+     "max_dumps_meeting_24_33_15S_15A_anywhere": 6,
+     "max_dumps_meeting_24_43_30S_anywhere": 6,
+     "max_lay_capable_engineers_on_map": 14,
+     "min_hexes_to_a_24_33_capable_dump_ever": 26,
+     "n_for_that_any_mean": 2949,
+     "n_for_that_mean": 2406,
+     "order/DUMP": 5,
+     "segments": 333,
+     "segments_with_a_24_33_capable_dump_SOMEWHERE": 300,
+     "segments_with_a_lay_capable_engineer_on_map": 300,
+     "short_of_BOTH": 2406,
+     "sum_hexes_to_the_nearest_24_33_capable_dump": 74267,
+     "sum_hexes_to_the_nearest_dump_of_ANY_richness": 90978
+    },
+    "ALLIED": {
+     "best_ammo_ever_under_an_engineer": 124999939,
+     "best_stores_ever_under_an_engineer": 124994101,
+     "engineer_segments": 1638,
+     "engineer_segments_on_a_LEGAL_fort_site": 11,
+     "engineer_segments_on_a_LEGAL_lay_site": 698,
+     "engineer_segments_on_a_LEGAL_site_AND_a_dump": 0,
+     "engineer_segments_standing_on_a_dump": 159,
+     "fort_site_legal_but_NO_INFANTRY_PARTNER": 687,
+     "max_dumps_meeting_24_33_15S_15A_anywhere": 51,
+     "max_dumps_meeting_24_43_30S_anywhere": 50,
+     "max_lay_capable_engineers_on_map": 10,
+     "min_hexes_to_a_24_33_capable_dump_ever": 1,
+     "n_for_that_any_mean": 1638,
+     "n_for_that_mean": 698,
+     "segments": 333,
+     "segments_with_a_24_33_capable_dump_SOMEWHERE": 273,
+     "segments_with_a_lay_capable_engineer_on_map": 273,
+     "short_of_BOTH": 698,
+     "sum_hexes_to_the_nearest_24_33_capable_dump": 1413,
+     "sum_hexes_to_the_nearest_dump_of_ANY_richness": 2412
+    }
+   },
+   "affordable_sites": {}
+  },
+  {
+   "seed": 7,
+   "max_turns": null,
+   "reason": "Axis Smashing Victory: 938-80 Victory Points (64.76)",
+   "signature": "3fb5d8ebe0eaa843",
+   "autopsy": {
+    "AXIS": {
+     "best_ammo_ever_under_an_engineer": 0,
+     "best_stores_ever_under_an_engineer": 0,
+     "engineer_segments": 2949,
+     "engineer_segments_on_a_LEGAL_fort_site": 222,
+     "engineer_segments_on_a_LEGAL_lay_site": 2406,
+     "engineer_segments_on_a_LEGAL_site_AND_a_dump": 0,
+     "engineer_segments_standing_on_a_dump": 0,
+     "fort_site_legal_but_NO_INFANTRY_PARTNER": 2184,
+     "max_dumps_meeting_24_33_15S_15A_anywhere": 7,
+     "max_dumps_meeting_24_43_30S_anywhere": 7,
+     "max_lay_capable_engineers_on_map": 14,
+     "min_hexes_to_a_24_33_capable_dump_ever": 24,
+     "n_for_that_any_mean": 2949,
+     "n_for_that_mean": 2406,
+     "order/DUMP": 5,
+     "segments": 333,
+     "segments_with_a_24_33_capable_dump_SOMEWHERE": 300,
+     "segments_with_a_lay_capable_engineer_on_map": 300,
+     "short_of_BOTH": 2406,
+     "sum_hexes_to_the_nearest_24_33_capable_dump": 73002,
+     "sum_hexes_to_the_nearest_dump_of_ANY_richness": 89894
+    },
+    "ALLIED": {
+     "best_ammo_ever_under_an_engineer": 124998926,
+     "best_stores_ever_under_an_engineer": 124994101,
+     "engineer_segments": 1638,
+     "engineer_segments_on_a_LEGAL_fort_site": 135,
+     "engineer_segments_on_a_LEGAL_lay_site": 846,
+     "engineer_segments_on_a_LEGAL_site_AND_a_dump": 137,
+     "engineer_segments_on_an_AFFORDABLE_fort_site": 56,
+     "engineer_segments_on_an_AFFORDABLE_lay_site": 72,
+     "engineer_segments_standing_on_a_dump": 234,
+     "fort_site_legal_but_NO_INFANTRY_PARTNER": 711,
+     "max_dumps_meeting_24_33_15S_15A_anywhere": 49,
+     "max_dumps_meeting_24_43_30S_anywhere": 48,
+     "max_lay_capable_engineers_on_map": 10,
+     "min_hexes_to_a_24_33_capable_dump_ever": 0,
+     "n_for_that_any_mean": 1638,
+     "n_for_that_mean": 846,
+     "order/DUMP": 1,
+     "segments": 333,
+     "segments_with_a_24_33_capable_dump_SOMEWHERE": 273,
+     "segments_with_a_lay_capable_engineer_on_map": 273,
+     "short_of_BOTH": 709,
+     "short_of_STORES_only": 65,
+     "sum_hexes_to_the_nearest_24_33_capable_dump": 1515,
+     "sum_hexes_to_the_nearest_dump_of_ANY_richness": 2332
+    }
+   },
+   "affordable_sites": {
+    "ALLIED": {
+     "LAY": {
+      "n": 72,
+      "game_turns": [
+       66,
+       111
+      ],
+      "r_offset_from_alamein_min_max": [
+       -15,
+       -15
+      ],
+      "r_offset_histogram": {
+       "-15": 72
+      },
+      "units": {
+       "2/1-Aus-Pioneer-Bn": 72
+      },
+      "east_of_alamein": 0,
+      "within_5_hexes_of_the_alamein_meridian": 0
+     },
+     "FORT": {
+      "n": 56,
+      "game_turns": [
+       70,
+       111
+      ],
+      "r_offset_from_alamein_min_max": [
+       -15,
+       -15
+      ],
+      "r_offset_histogram": {
+       "-15": 56
+      },
+      "units": {
+       "2/1-Aus-Pioneer-Bn": 56
+      },
+      "east_of_alamein": 0,
+      "within_5_hexes_of_the_alamein_meridian": 0
+     }
+    }
+   }
+  },
+  {
+   "seed": 4,
+   "max_turns": null,
+   "reason": "Axis Smashing Victory: 955-30 Victory Points (64.76)",
+   "signature": "fecd76a14caf3ddf",
+   "autopsy": {
+    "AXIS": {
+     "best_ammo_ever_under_an_engineer": 0,
+     "best_stores_ever_under_an_engineer": 0,
+     "engineer_segments": 2949,
+     "engineer_segments_on_a_LEGAL_fort_site": 50,
+     "engineer_segments_on_a_LEGAL_lay_site": 2406,
+     "engineer_segments_on_a_LEGAL_site_AND_a_dump": 0,
+     "engineer_segments_standing_on_a_dump": 0,
+     "fort_site_legal_but_NO_INFANTRY_PARTNER": 2356,
+     "max_dumps_meeting_24_33_15S_15A_anywhere": 6,
+     "max_dumps_meeting_24_43_30S_anywhere": 6,
+     "max_lay_capable_engineers_on_map": 14,
+     "min_hexes_to_a_24_33_capable_dump_ever": 26,
+     "n_for_that_any_mean": 2949,
+     "n_for_that_mean": 2406,
+     "order/DUMP": 5,
+     "segments": 333,
+     "segments_with_a_24_33_capable_dump_SOMEWHERE": 300,
+     "segments_with_a_lay_capable_engineer_on_map": 300,
+     "short_of_BOTH": 2406,
+     "sum_hexes_to_the_nearest_24_33_capable_dump": 74177,
+     "sum_hexes_to_the_nearest_dump_of_ANY_richness": 90827
+    },
+    "ALLIED": {
+     "best_ammo_ever_under_an_engineer": 124998926,
+     "best_stores_ever_under_an_engineer": 124994101,
+     "engineer_segments": 1487,
+     "engineer_segments_on_a_LEGAL_fort_site": 23,
+     "engineer_segments_on_a_LEGAL_lay_site": 679,
+     "engineer_segments_on_a_LEGAL_site_AND_a_dump": 4,
+     "engineer_segments_on_an_AFFORDABLE_fort_site": 3,
+     "engineer_segments_on_an_AFFORDABLE_lay_site": 4,
+     "engineer_segments_standing_on_a_dump": 79,
+     "fort_site_legal_but_NO_INFANTRY_PARTNER": 656,
+     "max_dumps_meeting_24_33_15S_15A_anywhere": 50,
+     "max_dumps_meeting_24_43_30S_anywhere": 48,
+     "max_lay_capable_engineers_on_map": 9,
+     "min_hexes_to_a_24_33_capable_dump_ever": 0,
+     "n_for_that_any_mean": 1487,
+     "n_for_that_mean": 679,
+     "segments": 333,
+     "segments_with_a_24_33_capable_dump_SOMEWHERE": 273,
+     "segments_with_a_lay_capable_engineer_on_map": 273,
+     "short_of_BOTH": 675,
+     "sum_hexes_to_the_nearest_24_33_capable_dump": 1372,
+     "sum_hexes_to_the_nearest_dump_of_ANY_richness": 2343
+    }
+   },
+   "affordable_sites": {
+    "ALLIED": {
+     "LAY": {
+      "n": 4,
+      "game_turns": [
+       57,
+       60
+      ],
+      "r_offset_from_alamein_min_max": [
+       -10,
+       8
+      ],
+      "r_offset_histogram": {
+       "-10": 1,
+       "8": 3
+      },
+      "units": {
+       "2/1-Aus-Pioneer-Bn": 4
+      },
+      "east_of_alamein": 3,
+      "within_5_hexes_of_the_alamein_meridian": 0
+     },
+     "FORT": {
+      "n": 3,
+      "game_turns": [
+       57,
+       60
+      ],
+      "r_offset_from_alamein_min_max": [
+       -10,
+       8
+      ],
+      "r_offset_histogram": {
+       "-10": 1,
+       "8": 2
+      },
+      "units": {
+       "2/1-Aus-Pioneer-Bn": 3
+      },
+      "east_of_alamein": 2,
+      "within_5_hexes_of_the_alamein_meridian": 0
+     }
+    }
+   }
+  },
+  {
+   "seed": 24,
+   "max_turns": null,
+   "reason": "Axis Smashing Victory: 1235-30 Victory Points (64.76)",
+   "signature": "bbed451066639879",
+   "autopsy": {
+    "AXIS": {
+     "best_ammo_ever_under_an_engineer": 0,
+     "best_stores_ever_under_an_engineer": 0,
+     "engineer_segments": 2949,
+     "engineer_segments_on_a_LEGAL_fort_site": 97,
+     "engineer_segments_on_a_LEGAL_lay_site": 2406,
+     "engineer_segments_on_a_LEGAL_site_AND_a_dump": 0,
+     "engineer_segments_standing_on_a_dump": 0,
+     "fort_site_legal_but_NO_INFANTRY_PARTNER": 2309,
+     "max_dumps_meeting_24_33_15S_15A_anywhere": 7,
+     "max_dumps_meeting_24_43_30S_anywhere": 7,
+     "max_lay_capable_engineers_on_map": 14,
+     "min_hexes_to_a_24_33_capable_dump_ever": 26,
+     "n_for_that_any_mean": 2949,
+     "n_for_that_mean": 2406,
+     "order/DUMP": 5,
+     "segments": 333,
+     "segments_with_a_24_33_capable_dump_SOMEWHERE": 300,
+     "segments_with_a_lay_capable_engineer_on_map": 300,
+     "short_of_BOTH": 2406,
+     "sum_hexes_to_the_nearest_24_33_capable_dump": 76222,
+     "sum_hexes_to_the_nearest_dump_of_ANY_richness": 89818
+    },
+    "ALLIED": {
+     "best_ammo_ever_under_an_engineer": 124998926,
+     "best_stores_ever_under_an_engineer": 124994101,
+     "engineer_segments": 1638,
+     "engineer_segments_on_a_LEGAL_fort_site": 10,
+     "engineer_segments_on_a_LEGAL_lay_site": 667,
+     "engineer_segments_on_a_LEGAL_site_AND_a_dump": 0,
+     "engineer_segments_standing_on_a_dump": 26,
+     "fort_site_legal_but_NO_INFANTRY_PARTNER": 657,
+     "max_dumps_meeting_24_33_15S_15A_anywhere": 46,
+     "max_dumps_meeting_24_43_30S_anywhere": 45,
+     "max_lay_capable_engineers_on_map": 10,
+     "min_hexes_to_a_24_33_capable_dump_ever": 1,
+     "n_for_that_any_mean": 1638,
+     "n_for_that_mean": 667,
+     "order/RAIL": 2,
+     "segments": 333,
+     "segments_with_a_24_33_capable_dump_SOMEWHERE": 273,
+     "segments_with_a_lay_capable_engineer_on_map": 273,
+     "short_of_BOTH": 667,
+     "sum_hexes_to_the_nearest_24_33_capable_dump": 1333,
+     "sum_hexes_to_the_nearest_dump_of_ANY_richness": 2539
+    }
+   },
+   "affordable_sites": {}
+  },
+  {
+   "seed": 2026,
+   "max_turns": null,
+   "reason": "Axis Smashing Victory: 603-20 Victory Points (64.76)",
+   "signature": "1b69337443816fe8",
+   "autopsy": {
+    "AXIS": {
+     "best_ammo_ever_under_an_engineer": 0,
+     "best_stores_ever_under_an_engineer": 0,
+     "engineer_segments": 2949,
+     "engineer_segments_on_a_LEGAL_fort_site": 44,
+     "engineer_segments_on_a_LEGAL_lay_site": 2406,
+     "engineer_segments_on_a_LEGAL_site_AND_a_dump": 0,
+     "engineer_segments_standing_on_a_dump": 0,
+     "fort_site_legal_but_NO_INFANTRY_PARTNER": 2362,
+     "max_dumps_meeting_24_33_15S_15A_anywhere": 7,
+     "max_dumps_meeting_24_43_30S_anywhere": 7,
+     "max_lay_capable_engineers_on_map": 14,
+     "min_hexes_to_a_24_33_capable_dump_ever": 24,
+     "n_for_that_any_mean": 2949,
+     "n_for_that_mean": 2406,
+     "order/DUMP": 5,
+     "segments": 333,
+     "segments_with_a_24_33_capable_dump_SOMEWHERE": 300,
+     "segments_with_a_lay_capable_engineer_on_map": 300,
+     "short_of_BOTH": 2406,
+     "sum_hexes_to_the_nearest_24_33_capable_dump": 73130,
+     "sum_hexes_to_the_nearest_dump_of_ANY_richness": 90310
+    },
+    "ALLIED": {
+     "best_ammo_ever_under_an_engineer": 124998926,
+     "best_stores_ever_under_an_engineer": 124994101,
+     "engineer_segments": 1638,
+     "engineer_segments_on_a_LEGAL_fort_site": 146,
+     "engineer_segments_on_a_LEGAL_lay_site": 800,
+     "engineer_segments_on_a_LEGAL_site_AND_a_dump": 136,
+     "engineer_segments_on_an_AFFORDABLE_fort_site": 58,
+     "engineer_segments_on_an_AFFORDABLE_lay_site": 62,
+     "engineer_segments_standing_on_a_dump": 243,
+     "fort_site_legal_but_NO_INFANTRY_PARTNER": 654,
+     "max_dumps_meeting_24_33_15S_15A_anywhere": 57,
+     "max_dumps_meeting_24_43_30S_anywhere": 57,
+     "max_lay_capable_engineers_on_map": 10,
+     "min_hexes_to_a_24_33_capable_dump_ever": 0,
+     "n_for_that_any_mean": 1638,
+     "n_for_that_mean": 800,
+     "segments": 333,
+     "segments_with_a_24_33_capable_dump_SOMEWHERE": 273,
+     "segments_with_a_lay_capable_engineer_on_map": 273,
+     "short_of_BOTH": 664,
+     "short_of_STORES_only": 74,
+     "sum_hexes_to_the_nearest_24_33_capable_dump": 1401,
+     "sum_hexes_to_the_nearest_dump_of_ANY_richness": 2322
+    }
+   },
+   "affordable_sites": {
+    "ALLIED": {
+     "LAY": {
+      "n": 62,
+      "game_turns": [
+       61,
+       111
+      ],
+      "r_offset_from_alamein_min_max": [
+       13,
+       13
+      ],
+      "r_offset_histogram": {
+       "13": 62
+      },
+      "units": {
+       "2/1-Aus-Pioneer-Bn": 62
+      },
+      "east_of_alamein": 62,
+      "within_5_hexes_of_the_alamein_meridian": 0
+     },
+     "FORT": {
+      "n": 58,
+      "game_turns": [
+       61,
+       111
+      ],
+      "r_offset_from_alamein_min_max": [
+       13,
+       13
+      ],
+      "r_offset_histogram": {
+       "13": 58
+      },
+      "units": {
+       "2/1-Aus-Pioneer-Bn": 58
+      },
+      "east_of_alamein": 58,
+      "within_5_hexes_of_the_alamein_meridian": 0
+     }
+    }
+   }
+  },
+  {
+   "seed": 99,
+   "max_turns": null,
+   "reason": "Axis Smashing Victory: 772-20 Victory Points (64.76)",
+   "signature": "8d06a0878e4c823f",
+   "autopsy": {
+    "AXIS": {
+     "best_ammo_ever_under_an_engineer": 0,
+     "best_stores_ever_under_an_engineer": 0,
+     "engineer_segments": 2949,
+     "engineer_segments_on_a_LEGAL_fort_site": 46,
+     "engineer_segments_on_a_LEGAL_lay_site": 2406,
+     "engineer_segments_on_a_LEGAL_site_AND_a_dump": 0,
+     "engineer_segments_standing_on_a_dump": 0,
+     "fort_site_legal_but_NO_INFANTRY_PARTNER": 2360,
+     "max_dumps_meeting_24_33_15S_15A_anywhere": 6,
+     "max_dumps_meeting_24_43_30S_anywhere": 6,
+     "max_lay_capable_engineers_on_map": 14,
+     "min_hexes_to_a_24_33_capable_dump_ever": 24,
+     "n_for_that_any_mean": 2949,
+     "n_for_that_mean": 2406,
+     "order/DUMP": 5,
+     "segments": 333,
+     "segments_with_a_24_33_capable_dump_SOMEWHERE": 300,
+     "segments_with_a_lay_capable_engineer_on_map": 300,
+     "short_of_BOTH": 2406,
+     "sum_hexes_to_the_nearest_24_33_capable_dump": 72279,
+     "sum_hexes_to_the_nearest_dump_of_ANY_richness": 89266
+    },
+    "ALLIED": {
+     "best_ammo_ever_under_an_engineer": 124998926,
+     "best_stores_ever_under_an_engineer": 124994101,
+     "engineer_segments": 1532,
+     "engineer_segments_on_a_LEGAL_fort_site": 43,
+     "engineer_segments_on_a_LEGAL_lay_site": 731,
+     "engineer_segments_on_a_LEGAL_site_AND_a_dump": 14,
+     "engineer_segments_on_an_AFFORDABLE_fort_site": 3,
+     "engineer_segments_on_an_AFFORDABLE_lay_site": 3,
+     "engineer_segments_standing_on_a_dump": 113,
+     "fort_site_legal_but_NO_INFANTRY_PARTNER": 687,
+     "max_dumps_meeting_24_33_15S_15A_anywhere": 54,
+     "max_dumps_meeting_24_43_30S_anywhere": 50,
+     "max_lay_capable_engineers_on_map": 9,
+     "min_hexes_to_a_24_33_capable_dump_ever": 0,
+     "n_for_that_any_mean": 1532,
+     "n_for_that_mean": 731,
+     "segments": 333,
+     "segments_with_a_24_33_capable_dump_SOMEWHERE": 273,
+     "segments_with_a_lay_capable_engineer_on_map": 273,
+     "short_of_AMMO_only": 1,
+     "short_of_BOTH": 727,
+     "sum_hexes_to_the_nearest_24_33_capable_dump": 1635,
+     "sum_hexes_to_the_nearest_dump_of_ANY_richness": 2359
+    }
+   },
+   "affordable_sites": {
+    "ALLIED": {
+     "LAY": {
+      "n": 3,
+      "game_turns": [
+       64,
+       67
+      ],
+      "r_offset_from_alamein_min_max": [
+       -20,
+       -8
+      ],
+      "r_offset_histogram": {
+       "-20": 2,
+       "-8": 1
+      },
+      "units": {
+       "2/1-Aus-Pioneer-Bn": 3
+      },
+      "east_of_alamein": 0,
+      "within_5_hexes_of_the_alamein_meridian": 0
+     },
+     "FORT": {
+      "n": 3,
+      "game_turns": [
+       64,
+       67
+      ],
+      "r_offset_from_alamein_min_max": [
+       -20,
+       -8
+      ],
+      "r_offset_histogram": {
+       "-20": 2,
+       "-8": 1
+      },
+      "units": {
+       "2/1-Aus-Pioneer-Bn": 3
+      },
+      "east_of_alamein": 0,
+      "within_5_hexes_of_the_alamein_meridian": 0
+     }
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "max_turns": null,
+   "reason": "Axis Smashing Victory: 1437-30 Victory Points (64.76)",
+   "signature": "71f7d26c6d06590f",
+   "autopsy": {
+    "AXIS": {
+     "best_ammo_ever_under_an_engineer": 0,
+     "best_stores_ever_under_an_engineer": 0,
+     "engineer_segments": 2949,
+     "engineer_segments_on_a_LEGAL_fort_site": 81,
+     "engineer_segments_on_a_LEGAL_lay_site": 2406,
+     "engineer_segments_on_a_LEGAL_site_AND_a_dump": 0,
+     "engineer_segments_standing_on_a_dump": 0,
+     "fort_site_legal_but_NO_INFANTRY_PARTNER": 2325,
+     "max_dumps_meeting_24_33_15S_15A_anywhere": 7,
+     "max_dumps_meeting_24_43_30S_anywhere": 7,
+     "max_lay_capable_engineers_on_map": 14,
+     "min_hexes_to_a_24_33_capable_dump_ever": 26,
+     "n_for_that_any_mean": 2949,
+     "n_for_that_mean": 2406,
+     "order/DUMP": 5,
+     "segments": 333,
+     "segments_with_a_24_33_capable_dump_SOMEWHERE": 300,
+     "segments_with_a_lay_capable_engineer_on_map": 300,
+     "short_of_BOTH": 2406,
+     "sum_hexes_to_the_nearest_24_33_capable_dump": 76339,
+     "sum_hexes_to_the_nearest_dump_of_ANY_richness": 93853
+    },
+    "ALLIED": {
+     "best_ammo_ever_under_an_engineer": 124998926,
+     "best_stores_ever_under_an_engineer": 124994101,
+     "engineer_segments": 1561,
+     "engineer_segments_on_a_LEGAL_fort_site": 66,
+     "engineer_segments_on_a_LEGAL_lay_site": 753,
+     "engineer_segments_on_a_LEGAL_site_AND_a_dump": 7,
+     "engineer_segments_on_an_AFFORDABLE_fort_site": 5,
+     "engineer_segments_on_an_AFFORDABLE_lay_site": 5,
+     "engineer_segments_standing_on_a_dump": 93,
+     "fort_site_legal_but_NO_INFANTRY_PARTNER": 687,
+     "max_dumps_meeting_24_33_15S_15A_anywhere": 50,
+     "max_dumps_meeting_24_43_30S_anywhere": 48,
+     "max_lay_capable_engineers_on_map": 9,
+     "min_hexes_to_a_24_33_capable_dump_ever": 0,
+     "n_for_that_any_mean": 1561,
+     "n_for_that_mean": 753,
+     "order/RAIL": 4,
+     "segments": 333,
+     "segments_with_a_24_33_capable_dump_SOMEWHERE": 273,
+     "segments_with_a_lay_capable_engineer_on_map": 273,
+     "short_of_BOTH": 746,
+     "short_of_STORES_only": 2,
+     "sum_hexes_to_the_nearest_24_33_capable_dump": 1960,
+     "sum_hexes_to_the_nearest_dump_of_ANY_richness": 2396
+    }
+   },
+   "affordable_sites": {
+    "ALLIED": {
+     "LAY": {
+      "n": 5,
+      "game_turns": [
+       60,
+       62
+      ],
+      "r_offset_from_alamein_min_max": [
+       3,
+       3
+      ],
+      "r_offset_histogram": {
+       "3": 5
+      },
+      "units": {
+       "2/1-Aus-Pioneer-Bn": 5
+      },
+      "east_of_alamein": 5,
+      "within_5_hexes_of_the_alamein_meridian": 5
+     },
+     "FORT": {
+      "n": 5,
+      "game_turns": [
+       60,
+       62
+      ],
+      "r_offset_from_alamein_min_max": [
+       3,
+       3
+      ],
+      "r_offset_histogram": {
+       "3": 5
+      },
+      "units": {
+       "2/1-Aus-Pioneer-Bn": 5
+      },
+      "east_of_alamein": 5,
+      "within_5_hexes_of_the_alamein_meridian": 5
+     }
+    }
+   }
+  }
+ ]
+}

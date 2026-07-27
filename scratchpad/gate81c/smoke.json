@@ -1,0 +1,110 @@
+{
+ "seeds": [
+  4
+ ],
+ "probe": true,
+ "max_turns": 30,
+ "results": [
+  {
+   "seed": 4,
+   "probe": true,
+   "max_turns": 30,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 1840-10 Victory Points (64.76)",
+   "events": 43060,
+   "signature": "7b879a24257418ab",
+   "engineering_events": {
+    "CONSTRUCTION_ORDER_REJECTED/AXIS": 1
+   },
+   "engineering_event_total": 1,
+   "engineering_event_sample": [
+    {
+     "turn": 0,
+     "kind": "CONSTRUCTION_ORDER_REJECTED",
+     "side": "AXIS",
+     "payload": {
+      "item": "DUMP",
+      "hex": [
+       24,
+       76
+      ],
+      "reason": "needs 1 TOE Strength Point with 3 CP and 20 Stores in the hex (24.9)"
+     }
+    }
+   ],
+   "final_minefields": 0,
+   "fortifications_raised_above_the_static_roster": {},
+   "r_alamein": 118,
+   "r_alexandria": 133,
+   "r_tobruk": 66,
+   "axis_ground_high_water_r": 133,
+   "axis_ground_high_water_turn": 8,
+   "axis_ground_high_water_offset_from_alamein": 15,
+   "axis_ground_high_water_per_turn": {
+    "0": 93,
+    "2": 100,
+    "3": 111,
+    "4": 114,
+    "5": 119,
+    "6": 122,
+    "7": 130,
+    "8": 133,
+    "9": 133,
+    "10": 23,
+    "11": 21,
+    "12": 14,
+    "13": 21,
+    "14": 21,
+    "15": 14,
+    "16": 21,
+    "18": 8,
+    "21": 22,
+    "22": 24,
+    "23": 24,
+    "24": 23,
+    "25": 23,
+    "27": 27,
+    "28": 23,
+    "29": 32,
+    "30": 45
+   },
+   "axis_east_at_end": 100,
+   "cw_west_at_end": 73,
+   "axis_units_alive": 84,
+   "cw_units_alive": 64,
+   "construction_opportunity": {
+    "AXIS": {
+     "clear_sites_legal_26_13": 0,
+     "engineer_counters_on_map_max": 8,
+     "fort_sites_affordable_24_43": 0,
+     "fort_sites_legal_24_42": 11,
+     "lay_sites_affordable_24_33": 0,
+     "lay_sites_legal_24_31": 165,
+     "order/DUMP": 5,
+     "orders_issued": 5,
+     "segments": 90,
+     "segments_with_a_legal_fort_site": 10,
+     "segments_with_a_legal_lay_site": 57,
+     "segments_with_an_affordable_fort_site": 0,
+     "segments_with_an_affordable_lay_site": 0,
+     "segments_with_an_engineer_on_map": 57
+    },
+    "ALLIED": {
+     "clear_sites_legal_26_13": 0,
+     "engineer_counters_on_map_max": 5,
+     "fort_sites_affordable_24_43": 0,
+     "fort_sites_legal_24_42": 1,
+     "lay_sites_affordable_24_33": 0,
+     "lay_sites_legal_24_31": 31,
+     "orders_issued": 0,
+     "segments": 90,
+     "segments_with_a_legal_fort_site": 1,
+     "segments_with_a_legal_lay_site": 30,
+     "segments_with_an_affordable_fort_site": 0,
+     "segments_with_an_affordable_lay_site": 0,
+     "segments_with_an_engineer_on_map": 75
+    }
+   }
+  }
+ ]
+}

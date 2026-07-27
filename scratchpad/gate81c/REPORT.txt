@@ -1,0 +1,150 @@
+GATE 8.1c -- CAN THE DEVIL'S GARDENS NOW BE BUILT?   measured 2026-07-27
+
+  BASE  e73409a  the last commit before the 8.1b engineer order of battle
+  HEAD  e068c2f  306bcfe (seed the engineer counters) + e068c2f (its 23.11/23.14 repair)
+  Rule 26, 24.3 and 24.4 shipped earlier, at aa4b6a2, an ancestor of BOTH arms, so the only
+  thing that differs between them is the ORDER OF BATTLE.  Nothing in game/ or data/ was
+  touched by this gate; every driver lives in scratchpad/ and is read-only.
+
+  census   scratchpad/gate81c_census.py, both trees, static over campaign(seed=1).t0
+  A/B      scratchpad/gate81c_ab.py,     both trees, seeds 1941 7 4 24 2026 99 1, 7 workers,
+           each arm one process, full GT1-111
+  autopsy  scratchpad/gate81c_probe.py,  HEAD, same seven seeds, same shape
+  BASE reproduced all seven of the 8.2 gate's own HEAD-arm signatures (gate82_ab_HEAD3.log,
+  run at 2737e5e) byte for byte, and the probed and unprobed HEAD runs agree seed for seed --
+  two independent confirmations of the cross-process reproducibility that gate's provenance
+  note left open.
+
+  The autopsy's dump indexing was refactored for speed mid-gate; probe_smoke.json (pre) and
+  probe_smoke2.json (post) are the 30-turn seed-4 pair proving it moved no measured number.
+====================================================================================================
+1. THE CENSUS -- every counter the 111-turn campaign ever contains
+====================================================================================================
+  units in the order of battle:  BASE 718  ->  HEAD 732  (+14)
+
+  engineer flag                BASE   HEAD
+  ALLIED/ENGINEER                 0      1
+  ALLIED/HQ_ENGINEER              0     10
+  ALLIED/RAIL                     2      2
+  ALLIED/ROAD                     1      1
+  ALLIED/SCORPION                 2      2
+  AXIS/ENGINEER                   0     14
+
+  capability (rule)                            BASE AX/AL     HEAD AX/AL
+  LAY_a_belt_24_31                                    0/0          14/11
+  BUILD_a_fortification_24_42                         0/0          14/11
+  CLEAR_a_belt_26_13                                  0/2          14/13
+  ESCORT_through_a_belt_26_24                         0/2          14/13
+
+  cumulative lay-capable counters on the order of battle, by Game-Turn:
+    GT  1 (September 1940):  Axis  0   Commonwealth  0
+    GT 12 (December 1940):  Axis  1   Commonwealth  0
+    GT 24 (March 1941):  Axis  6   Commonwealth  1
+    GT 36 (June 1941):  Axis  9   Commonwealth  4
+    GT 48 (September 1941):  Axis  9   Commonwealth  5
+    GT 60 (December 1941):  Axis 10   Commonwealth  5
+    GT 72 (March 1942):  Axis 11   Commonwealth  7
+    GT 84 (June 1942):  Axis 12   Commonwealth 10
+    GT 96 (September 1942):  Axis 14   Commonwealth 11
+    GT111 (January 1943):  Axis 14   Commonwealth 11
+
+====================================================================================================
+   ...and what that buys, at [24.32]'s one Operations Stage per hex (3 stages / GT):
+====================================================================================================
+    GT 72:  7 CW lay-capable counters ->  30 hexes = 5 Op-Stages = 1.7 Game-Turns   (the 8.2 gate's depth-1 full-width band at the Alamein meridian)
+    GT 72:  7 CW lay-capable counters ->  12 hexes = 2 Op-Stages = 0.7 Game-Turns   (the 8.2 gate's 12-hex VEHICLE min-vertex cut)
+    GT 96: 11 CW lay-capable counters ->  30 hexes = 3 Op-Stages = 1.0 Game-Turns   (the same band)
+    GT 96: 11 CW lay-capable counters ->  12 hexes = 2 Op-Stages = 0.7 Game-Turns   (the same cut)
+    price of the 30-hex band: 450 Stores + 450 Ammunition; of the 12-hex cut: 180 + 180   (data/minefields.json)
+
+====================================================================================================
+2 + 3 + 4. THE A/B -- seven full 111-turn campaigns per arm
+====================================================================================================
+  anchors: El Alamein r=118   Alexandria r=133   Tobruk r=66
+  hw = furthest-east axial r of an Axis GROUND move (air missions excluded by kind)
+
+    seed arm   winner   belts  forts+  eng.ev   hw   GT  hw>=GT48   GT  end  grade
+    1941 BASE  AXIS         0       0       5  107    3        77   63   77  Axis Smashing Victory: 1079-20 Victory Points (64.76)
+    1941 HEAD  AXIS         0       0       1  107    3        77   67   77  Axis Smashing Victory: 1079-30 Victory Points (64.76)
+
+       7 BASE  AXIS         0       0       9  130    6        87   70   78  Axis Smashing Victory: 688-180 Victory Points (64.76)
+       7 HEAD  AXIS         0       0       1  130    6        81   61   78  Axis Smashing Victory: 938-80 Victory Points (64.76)
+
+       4 BASE  AXIS         0       0       7  133    8        77   78   77  Axis Smashing Victory: 864-30 Victory Points (64.76)
+       4 HEAD  AXIS         0       0       1  133    8        77   79   77  Axis Smashing Victory: 955-30 Victory Points (64.76)
+
+      24 BASE  AXIS         0       0       7  133    7        77   87   92  Axis Smashing Victory: 1217-20 Victory Points (64.76)
+      24 HEAD  AXIS         0       0       5  133    7        92   60   77  Axis Smashing Victory: 1235-30 Victory Points (64.76)
+
+    2026 BASE  AXIS         0       0       6  133    6       100   65  121  Axis Smashing Victory: 597-10 Victory Points (64.76)
+    2026 HEAD  AXIS         0       0       1  133    6        77   81   78  Axis Smashing Victory: 603-20 Victory Points (64.76)
+
+      99 BASE  AXIS         0       0       5  123    5        86   78   94  Axis Smashing Victory: 834-20 Victory Points (64.76)
+      99 HEAD  AXIS         0       0       1  123    5       123   61   80  Axis Smashing Victory: 772-20 Victory Points (64.76)
+
+       1 BASE  AXIS         0       0       1  133    7        77   66   78  Axis Smashing Victory: 1356-80 Victory Points (64.76)
+       1 HEAD  AXIS         0       0       7  133    7        76   94   78  Axis Smashing Victory: 1437-30 Victory Points (64.76)
+
+  VP delta, HEAD minus BASE (positive = the Commonwealth gained):
+    seed  1941: Axis  1079 ->  1079   CW   20 ->   30   CW-ward swing    +10
+    seed     7: Axis   688 ->   938   CW  180 ->   80   CW-ward swing   -350
+    seed     4: Axis   864 ->   955   CW   30 ->   30   CW-ward swing    -91
+    seed    24: Axis  1217 ->  1235   CW   20 ->   30   CW-ward swing     -8
+    seed  2026: Axis   597 ->   603   CW   10 ->   20   CW-ward swing     +4
+    seed    99: Axis   834 ->   772   CW   20 ->   20   CW-ward swing    +62
+    seed     1: Axis  1356 ->  1437   CW   80 ->   30   CW-ward swing   -131
+    3 seeds toward the Commonwealth, 4 toward the Axis, 0 unmoved  -- RANDOM IN SIGN
+
+====================================================================================================
+2b. THE AUTOPSY -- which clause of 24.31/24.33/24.42/24.43 actually refuses
+====================================================================================================
+  Every column is an engineer-SEGMENT: one lay-capable counter, one Construction
+  Segment.  [24.32] prices a belt hex at ONE such segment, so the AFFORDABLE column is
+  belt hexes the side could have laid and did not.
+
+    seed side     segs  legalLAY  affLAY  legalFRT  affFRT  onDump  lgl+dmp   dist  orders
+    1941 AXIS      333      2406       0       127       0       0        0   30.9  {'DUMP': 5}
+    1941 ALLIED    333       698       0        11       0     159        0    2.0  NONE
+       7 AXIS      333      2406       0       222       0       0        0   30.3  {'DUMP': 5}
+       7 ALLIED    333       846      72       135      56     234      137    1.8  {'DUMP': 1}
+       4 AXIS      333      2406       0        50       0       0        0   30.8  {'DUMP': 5}
+       4 ALLIED    333       679       4        23       3      79        4    2.0  NONE
+      24 AXIS      333      2406       0        97       0       0        0   31.7  {'DUMP': 5}
+      24 ALLIED    333       667       0        10       0      26        0    2.0  {'RAIL': 2}
+    2026 AXIS      333      2406       0        44       0       0        0   30.4  {'DUMP': 5}
+    2026 ALLIED    333       800      62       146      58     243      136    1.8  NONE
+      99 AXIS      333      2406       0        46       0       0        0   30.0  {'DUMP': 5}
+      99 ALLIED    333       731       3        43       3     113       14    2.2  NONE
+       1 AXIS      333      2406       0        81       0       0        0   31.7  {'DUMP': 5}
+       1 ALLIED    333       753       5        66       5      93        7    2.6  {'RAIL': 4}
+
+  dist = mean hexes from a lay-capable engineer on a legal site to the nearest
+         friendly dump holding 24.33's 15 Stores + 15 Ammunition.
+
+  WHERE the price WAS payable, and by whom -- the r offset is from the El Alamein
+  meridian, negative = west of it (the attacker's side):
+    seed  1941: no affordable site in the whole war, either side
+    seed     7: ALLIED LAY   72 segments, GT66-111, r offset [-15, -15], 0 east of Alamein -- 2/1-Aus-Pioneer-Bn
+    seed     7: ALLIED FORT  56 segments, GT70-111, r offset [-15, -15], 0 east of Alamein -- 2/1-Aus-Pioneer-Bn
+    seed     4: ALLIED LAY    4 segments, GT57-60, r offset [-10, 8], 3 east of Alamein -- 2/1-Aus-Pioneer-Bn
+    seed     4: ALLIED FORT   3 segments, GT57-60, r offset [-10, 8], 2 east of Alamein -- 2/1-Aus-Pioneer-Bn
+    seed    24: no affordable site in the whole war, either side
+    seed  2026: ALLIED LAY   62 segments, GT61-111, r offset [13, 13], 62 east of Alamein -- 2/1-Aus-Pioneer-Bn
+    seed  2026: ALLIED FORT  58 segments, GT61-111, r offset [13, 13], 58 east of Alamein -- 2/1-Aus-Pioneer-Bn
+    seed    99: ALLIED LAY    3 segments, GT64-67, r offset [-20, -8], 0 east of Alamein -- 2/1-Aus-Pioneer-Bn
+    seed    99: ALLIED FORT   3 segments, GT64-67, r offset [-20, -8], 0 east of Alamein -- 2/1-Aus-Pioneer-Bn
+    seed     1: ALLIED LAY    5 segments, GT60-62, r offset [3, 3], 5 east of Alamein -- 2/1-Aus-Pioneer-Bn
+    seed     1: ALLIED FORT   5 segments, GT60-62, r offset [3, 3], 5 east of Alamein -- 2/1-Aus-Pioneer-Bn
+
+====================================================================================================
+VERIFICATION -- the probe is an observation, not an intervention
+====================================================================================================
+    seed     A/B (unprobed)   autopsy (probed)  match
+    1941   36807bdc36cf796e   36807bdc36cf796e  OK
+       7   3fb5d8ebe0eaa843   3fb5d8ebe0eaa843  OK
+       4   fecd76a14caf3ddf   fecd76a14caf3ddf  OK
+      24   bbed451066639879   bbed451066639879  OK
+    2026   1b69337443816fe8   1b69337443816fe8  OK
+      99   8d06a0878e4c823f   8d06a0878e4c823f  OK
+       1   71f7d26c6d06590f   71f7d26c6d06590f  OK
+  -> all seven byte-identical

@@ -1,0 +1,82 @@
+{
+ "seed": 1,
+ "units_the_war_ever_contains": 718,
+ "engineer_flag_census": {
+  "ALLIED/RAIL": 2,
+  "ALLIED/ROAD": 1,
+  "ALLIED/SCORPION": 2
+ },
+ "capability": {
+  "LAY_a_belt_24_31": {
+   "AXIS": 0,
+   "ALLIED": 0,
+   "total": 0
+  },
+  "BUILD_a_fortification_24_42": {
+   "AXIS": 0,
+   "ALLIED": 0,
+   "total": 0
+  },
+  "CLEAR_a_belt_26_13": {
+   "AXIS": 0,
+   "ALLIED": 2,
+   "total": 2
+  },
+  "ESCORT_through_a_belt_26_24": {
+   "AXIS": 0,
+   "ALLIED": 2,
+   "total": 2
+  },
+  "24_42_infantry_partner_pool_3plus_TOE": {
+   "AXIS": 144,
+   "ALLIED": 205,
+   "total": 349
+  }
+ },
+ "arrival_turn_of_every_lay_capable_counter": [],
+ "roster_LAY": [],
+ "roster_CLEAR_or_ESCORT_only": [
+  {
+   "id": "42-RTR-(Scorpion)",
+   "side": "ALLIED",
+   "flag": "SCORPION",
+   "arrival_turn": 99,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "44-RTR-(Scorpion)",
+   "side": "ALLIED",
+   "flag": "SCORPION",
+   "arrival_turn": 99,
+   "on_map_at_setup": false,
+   "hex": null
+  }
+ ],
+ "roster_RAIL_ROAD_specialists": [
+  {
+   "id": "1-SA-Road-Constr-Bn",
+   "side": "ALLIED",
+   "flag": "ROAD",
+   "arrival_turn": 6,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "10-NZ-RR-Constr-Coy",
+   "side": "ALLIED",
+   "flag": "RAIL",
+   "arrival_turn": 6,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "13-NZ-RR-Constr-Coy",
+   "side": "ALLIED",
+   "flag": "RAIL",
+   "arrival_turn": 6,
+   "on_map_at_setup": false,
+   "hex": null
+  }
+ ]
+}

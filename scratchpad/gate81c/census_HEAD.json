@@ -1,0 +1,367 @@
+{
+ "seed": 1,
+ "units_the_war_ever_contains": 732,
+ "engineer_flag_census": {
+  "ALLIED/ENGINEER": 1,
+  "ALLIED/HQ_ENGINEER": 10,
+  "ALLIED/RAIL": 2,
+  "ALLIED/ROAD": 1,
+  "ALLIED/SCORPION": 2,
+  "AXIS/ENGINEER": 14
+ },
+ "capability": {
+  "LAY_a_belt_24_31": {
+   "AXIS": 14,
+   "ALLIED": 11,
+   "total": 25
+  },
+  "BUILD_a_fortification_24_42": {
+   "AXIS": 14,
+   "ALLIED": 11,
+   "total": 25
+  },
+  "CLEAR_a_belt_26_13": {
+   "AXIS": 14,
+   "ALLIED": 13,
+   "total": 27
+  },
+  "ESCORT_through_a_belt_26_24": {
+   "AXIS": 14,
+   "ALLIED": 13,
+   "total": 27
+  },
+  "24_42_infantry_partner_pool_3plus_TOE": {
+   "AXIS": 143,
+   "ALLIED": 206,
+   "total": 349
+  }
+ },
+ "arrival_turn_of_every_lay_capable_counter": [
+  [
+   12,
+   1
+  ],
+  [
+   21,
+   4
+  ],
+  [
+   22,
+   1
+  ],
+  [
+   24,
+   1
+  ],
+  [
+   25,
+   1
+  ],
+  [
+   28,
+   1
+  ],
+  [
+   30,
+   1
+  ],
+  [
+   32,
+   1
+  ],
+  [
+   34,
+   1
+  ],
+  [
+   36,
+   1
+  ],
+  [
+   38,
+   1
+  ],
+  [
+   50,
+   1
+  ],
+  [
+   62,
+   1
+  ],
+  [
+   66,
+   1
+  ],
+  [
+   68,
+   1
+  ],
+  [
+   75,
+   2
+  ],
+  [
+   76,
+   1
+  ],
+  [
+   81,
+   1
+  ],
+  [
+   92,
+   2
+  ],
+  [
+   93,
+   1
+  ]
+ ],
+ "roster_LAY": [
+  {
+   "id": "HQ-70-Inf-Div",
+   "side": "ALLIED",
+   "flag": "HQ_ENGINEER",
+   "arrival_turn": 21,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "2/1-Aus-Pioneer-Bn",
+   "side": "ALLIED",
+   "flag": "ENGINEER",
+   "arrival_turn": 30,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "HQ-1-SA-Div",
+   "side": "ALLIED",
+   "flag": "HQ_ENGINEER",
+   "arrival_turn": 32,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "HQ-2-SA-Div",
+   "side": "ALLIED",
+   "flag": "HQ_ENGINEER",
+   "arrival_turn": 36,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "HQ-5-In-Div",
+   "side": "ALLIED",
+   "flag": "HQ_ENGINEER",
+   "arrival_turn": 38,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "HQ-1-Free-French-Bde",
+   "side": "ALLIED",
+   "flag": "HQ_ENGINEER",
+   "arrival_turn": 62,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "HQ-50-Inf-Div",
+   "side": "ALLIED",
+   "flag": "HQ_ENGINEER",
+   "arrival_turn": 68,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "HQ-2-Free-French-Bde",
+   "side": "ALLIED",
+   "flag": "HQ_ENGINEER",
+   "arrival_turn": 75,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "HQ-5-In-Div-(Rtn)",
+   "side": "ALLIED",
+   "flag": "HQ_ENGINEER",
+   "arrival_turn": 75,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "HQ-10-In-Div",
+   "side": "ALLIED",
+   "flag": "HQ_ENGINEER",
+   "arrival_turn": 81,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "HQ-51-Inf-Div",
+   "side": "ALLIED",
+   "flag": "HQ_ENGINEER",
+   "arrival_turn": 92,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "60th-Engineer-Bn",
+   "side": "AXIS",
+   "flag": "ENGINEER",
+   "arrival_turn": 12,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "200-Pioneer-Bn-[5-Le]",
+   "side": "AXIS",
+   "flag": "ENGINEER",
+   "arrival_turn": 21,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "27th-Engineer-Bn",
+   "side": "AXIS",
+   "flag": "ENGINEER",
+   "arrival_turn": 21,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "51st-Engineer-Bn",
+   "side": "AXIS",
+   "flag": "ENGINEER",
+   "arrival_turn": 21,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "17th-Engineer-Bn",
+   "side": "AXIS",
+   "flag": "ENGINEER",
+   "arrival_turn": 22,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "25th-Engineer-Bn",
+   "side": "AXIS",
+   "flag": "ENGINEER",
+   "arrival_turn": 24,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "55th-Engineer-Bn",
+   "side": "AXIS",
+   "flag": "ENGINEER",
+   "arrival_turn": 25,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "33-Pioneer-Bn",
+   "side": "AXIS",
+   "flag": "ENGINEER",
+   "arrival_turn": 28,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "900-Pioneer-Bn",
+   "side": "AXIS",
+   "flag": "ENGINEER",
+   "arrival_turn": 34,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "101st-Engineer-Bn",
+   "side": "AXIS",
+   "flag": "ENGINEER",
+   "arrival_turn": 50,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "778-Naval-Eng-Koy",
+   "side": "AXIS",
+   "flag": "ENGINEER",
+   "arrival_turn": 66,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "288-Pioneer-Coy",
+   "side": "AXIS",
+   "flag": "ENGINEER",
+   "arrival_turn": 76,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "16th-Engineer-Bn",
+   "side": "AXIS",
+   "flag": "ENGINEER",
+   "arrival_turn": 92,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "200-Pioneer-Bn-[164]",
+   "side": "AXIS",
+   "flag": "ENGINEER",
+   "arrival_turn": 93,
+   "on_map_at_setup": false,
+   "hex": null
+  }
+ ],
+ "roster_CLEAR_or_ESCORT_only": [
+  {
+   "id": "42-RTR-(Scorpion)",
+   "side": "ALLIED",
+   "flag": "SCORPION",
+   "arrival_turn": 99,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "44-RTR-(Scorpion)",
+   "side": "ALLIED",
+   "flag": "SCORPION",
+   "arrival_turn": 99,
+   "on_map_at_setup": false,
+   "hex": null
+  }
+ ],
+ "roster_RAIL_ROAD_specialists": [
+  {
+   "id": "1-SA-Road-Constr-Bn",
+   "side": "ALLIED",
+   "flag": "ROAD",
+   "arrival_turn": 6,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "10-NZ-RR-Constr-Coy",
+   "side": "ALLIED",
+   "flag": "RAIL",
+   "arrival_turn": 6,
+   "on_map_at_setup": false,
+   "hex": null
+  },
+  {
+   "id": "13-NZ-RR-Constr-Coy",
+   "side": "ALLIED",
+   "flag": "RAIL",
+   "arrival_turn": 6,
+   "on_map_at_setup": false,
+   "hex": null
+  }
+ ]
+}
