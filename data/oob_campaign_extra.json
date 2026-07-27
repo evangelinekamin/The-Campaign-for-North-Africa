@@ -100,7 +100,7 @@
     "side": "AXIS",
     "kind": "unit",
     "nationality": "IT",
-    "role": "infantry"
+    "role": "engineer"
   },
   {
     "counter": "IT 115 - 62 Marm",
@@ -199,7 +199,7 @@
     "side": "AXIS",
     "kind": "unit",
     "nationality": "IT",
-    "role": "infantry"
+    "role": "engineer"
   },
   {
     "counter": "IT Aresca - LTC",
@@ -327,5 +327,80 @@
     "kind": "unit",
     "nationality": "IT",
     "role": "infantry"
+  },
+  {
+    "_comment": "Phase 8.1c division-HQ pass (2026-07-27): the [4.44B]/[4.45b] OA charts print this division/garrison's own HQ counter and this OOB carried its sub-units but no HQ, so the formation could never concentrate ([15.53] stayed unreachable for it, exactly the 8.1a/8.1b/OOB-parent-tree gap this closes for one more formation). 1st Libyan Infantry HQ^E, scan p.148, counter abbr '1 Libyan', ID 'b', Arrives D. Co-located with the division's own sole seeded counter (IT 1 Libyan).",
+    "counter": "IT 1 Libyan Div HQ - none",
+    "group": "IT 1st Libyan Infantry Division (Sibille)",
+    "hex": "C4020",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "hq",
+    "morale": -2
+  },
+  {
+    "_comment": "2nd Libyan Infantry HQ^E, scan p.148, counter abbr '2 Libyan', ID 'b', Arrives D.",
+    "counter": "IT 2 Libyan Div HQ - none",
+    "group": "IT 2nd Libyan (Prescatori) Infantry Division",
+    "hex": "C4014",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "hq",
+    "morale": -2
+  },
+  {
+    "_comment": "31st Gaf S di C HQ^E, Tobruk Garrison sheet scan p.155, counter abbr '31 GaF', ID 'f', Arrives D. No sub-battalion of the 31st (I/II/III) is seeded in this OOB (pre-existing extraction gap, not fixed here) -- the HQ stands alone, flagged.",
+    "counter": "IT 31 GaF HQ - none",
+    "group": "IT Tobruk Garrison",
+    "hex": "C4807",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "hq",
+    "morale": -3
+  },
+  {
+    "_comment": "32nd Gaf S di C HQ^E, Tobruk Garrison sheet scan p.155, counter abbr '32 GaF', ID 'f', Arrives D. Parents the one 32nd-Gaf battalion this OOB does seed (III - 32 GaF); see the org-tree edit.",
+    "counter": "IT 32 GaF HQ - none",
+    "group": "IT Tobruk Garrison",
+    "hex": "C4807",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "hq",
+    "morale": -3
+  },
+  {
+    "_comment": "30th Gaf S di C HQ^E, Bardia Garrison sheet scan p.156, counter abbr '32GaF' (a printed misprint for '30GaF', transcribed as printed), ID 'f', Arrives D. No 30th-Gaf sub-battalion is seeded in this OOB -- the HQ stands alone, flagged. Placed at the book's own Bardia hex (C4321), which the pre-existing, unrelated 'IT Barka Garrison' single-counter group also occupies -- left untouched.",
+    "counter": "IT 30 GaF HQ - none",
+    "group": "IT Bardia Garrison",
+    "hex": "C4321",
+    "side": "AXIS",
+    "kind": "unit",
+    "nationality": "IT",
+    "role": "hq",
+    "morale": -3
+  },
+  {
+    "_comment": "7th Armoured Div HQ^E, scan p.117, counter abbr '7', ID 'b', Arrives D. This OOB's only seeded 7th Armoured elements are three 7th Support Group units (the tank brigades/regiments are unseeded -- a pre-existing, much larger extraction gap, not fixed here). Explicit morale (Basic Morale +2): no FORMATION_MORALE entry keys '7th Armoured' today, so the 3 pre-existing siblings default to 0 -- flagged, not fixed, to stay surgical to the HQ ask.",
+    "counter": "HQ 7 Armd Div",
+    "group": "BR 7th Armoured Division",
+    "hex": "C3922",
+    "side": "ALLIED",
+    "kind": "unit",
+    "role": "hq_engineer",
+    "morale": 2
+  },
+  {
+    "_comment": "4th Indian Div HQ^E, scan p.126, counter abbr '4 In', ID 'a', Arrives D. Per data/unit_stats.json's _hq_engineer_comment the chart's 4th Indian Div HQ row also prints the 'E' superscript (confirmed against the transcription's own owner-ruling note on this sheet) -- that comment's list of four missing CW HQ^E counters omitted this one; corrected here. Co-located with the division's own GT1 counter (IN 31 Fld - 4 In); its other elements phase in later by reinforcement (see reinforcements_campaign.json).",
+    "counter": "HQ 4 In Div",
+    "group": "IN 4th Indian Division",
+    "hex": "C4131",
+    "side": "ALLIED",
+    "kind": "unit",
+    "role": "hq_engineer",
+    "morale": 1
   }
 ]

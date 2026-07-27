@@ -3151,17 +3151,19 @@
       "arrival_turn": 90
     },
     {
-      "counter": "44 Inf Div body",
+      "_comment": "8.1c: this record used to be a fabricated 'Div body' stand-in with no OA-chart basis (is_combat infantry, no such counter is printed). Replaced with the real 44th Infantry Div HQ^E the chart prints (scan p.118, counter abbr '44', ID 'a', Arrives 2/90) -- same hex/turn, so nothing else about the muster moves.",
+      "counter": "HQ 44 Inf Div",
       "group": "CW 44th Infantry Division",
       "hex": [
         47,
         138
       ],
       "side": "ALLIED",
-      "role": "infantry",
+      "role": "hq_engineer",
       "nationality": null,
       "morale": 2,
-      "arrival_turn": 90
+      "arrival_turn": 90,
+      "arrival_stage": 2
     },
     {
       "counter": "190 Pzjg Bn",
@@ -4238,7 +4240,7 @@
     },
     {
       "counter": "RECAM Recon Group",
-      "group": "IT Unassigned Reconnaissance",
+      "group": "IT RECAM",
       "hex": [
         46,
         -9
@@ -4248,7 +4250,8 @@
       "nationality": "IT",
       "morale": 0,
       "arrival_turn": 45,
-      "arrival_stage": 1
+      "arrival_stage": 1,
+      "_comment": "8.1c: re-homed from 'IT Unassigned Reconnaissance' to its own RECAM formation now that formation has an HQ -- same turn (45) and hex it always had, so this is a relabel, not a new placement."
     },
     {
       "counter": "IV Genoa MG Bn",
@@ -7623,6 +7626,109 @@
       "morale": 1,
       "arrival_turn": 30,
       "model": "aus_pioneer"
+    },
+    {
+      "_comment": "Phase 8.1c division-HQ pass (2026-07-27): the [4.44B]/[4.45b] OA charts print this division/garrison's own HQ counter and this OOB carried its sub-units but no HQ, so the formation could never concentrate ([15.53] stayed unreachable for it, exactly the 8.1a/8.1b/OOB-parent-tree gap this closes for one more formation). Ariete (132nd) Div HQ^E, scan p.147, counter abbr 'Ariete', ID 'd', Arrives 1/18. The book's regiment-level intermediates (132 Regt Corazzata HQ, 8th Bersaglieri Regt HQ) are not seeded as separate counters in this OOB, so the division's five flat sub-units attach directly to the Div HQ.",
+      "counter": "Ariete Div HQ",
+      "group": "IT 132 Ariete Division",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "hq",
+      "nationality": "IT",
+      "morale": 1,
+      "arrival_turn": 18,
+      "arrival_stage": 1
+    },
+    {
+      "_comment": "Littorio (133rd) Div HQ^E, scan p.148, counter abbr 'Littorio', ID 'd', Arrives 3/62.",
+      "counter": "Littorio Div HQ",
+      "group": "IT 133 Littorio Division",
+      "hex": [
+        44,
+        -2
+      ],
+      "side": "AXIS",
+      "role": "hq",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 62,
+      "arrival_stage": 3
+    },
+    {
+      "_comment": "185th Folgore Div HQ^E, scan p.154, counter abbr '185 Folg', ID 'b', Arrives 2/94.",
+      "counter": "Folgore Div HQ",
+      "group": "IT 185 Folgore Division",
+      "hex": [
+        45,
+        -10
+      ],
+      "side": "AXIS",
+      "role": "hq",
+      "nationality": "IT",
+      "morale": 1,
+      "arrival_turn": 94,
+      "arrival_stage": 2
+    },
+    {
+      "_comment": "136th Giovani Fascisti Div HQ^E, scan p.154, counter abbr '136GGFF', ID 'b', Arrives 1/97.",
+      "counter": "136 GGFF Div HQ",
+      "group": "IT 136 GGFF Division",
+      "hex": [
+        45,
+        -3
+      ],
+      "side": "AXIS",
+      "role": "hq",
+      "nationality": "IT",
+      "morale": -3,
+      "arrival_turn": 97,
+      "arrival_stage": 1
+    },
+    {
+      "_comment": "RECAM HQ, scan p.154, counter abbr 'RECAM', ID 'a', Arrives 1/45. The chart's own sheet prints RECAM as a top-level (d=0) formation with no further parent -- faithful reading: none is seeded here. The 31 Guastatori Engineer Bn the same sheet gives RECAM (ID bbb) has no counter anywhere in this OOB (pre-existing gap, flagged in the 8.1b engineer pass and not fixed here) so it stays independent -- there is nothing yet to attach.",
+      "counter": "RECAM HQ",
+      "group": "IT RECAM",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "hq",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 45,
+      "arrival_stage": 1
+    },
+    {
+      "_comment": "6th Australian Div HQ^E, scan p.124, counter abbr '6 Aus', ID 'a', Arrives D on the chart; this OOB stages the division's own elements in from GT7 (matching the sheet's own note (a): 'arrived quite early, albeit in sections'), so the HQ is anchored to its earliest seeded element (2/2 Aus Fld Arty, GT7) rather than invented as a bare GT1 counter with nothing yet to command.",
+      "counter": "HQ 6 Aus Div",
+      "group": "CW 6th Australian Division",
+      "hex": [
+        45,
+        140
+      ],
+      "side": "ALLIED",
+      "role": "hq_engineer",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 7
+    },
+    {
+      "_comment": "2nd New Zealand Div HQ^E, scan p.129, counter abbr '2 NZ', ID 'a', Arrives D on the chart; staged the same way as 6th Australian above, anchored to its earliest seeded element (6 NZ Fld Arty, GT2).",
+      "counter": "HQ 2 NZ Div",
+      "group": "CW 2nd New Zealand Division",
+      "hex": [
+        43,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "hq_engineer",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 2
     }
   ]
 }

@@ -841,7 +841,7 @@
   "kind": "unit",
   "counter": "IT 64 - Cat (ENG)",
   "group": "IT 64th Catanzaro Division",
-  "role": "infantry",
+  "role": "engineer",
   "px": [
    6830,
    1880
@@ -854,7 +854,7 @@
   "kind": "unit",
   "counter": "IT 204 - 4CCNN (ENG)",
   "group": "IT 4th CCNN (3 January) Division",
-  "role": "infantry",
+  "role": "engineer",
   "px": [
    6872,
    1807

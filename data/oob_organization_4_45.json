@@ -2,13 +2,14 @@
  "_source": "[4.45a/b/c] Organization at Arrival Charts (scratchpad/port/transcriptions/4.45a-oa-allied.md, 4.45b-oa-italian.md, 4.45c-oa-german.md), mapped onto the campaign OOB counters (oob_italian.json + oob_campaign_extra.json + reinforcements_campaign.json). Keyed by counter string; game.oob._seed_organization resolves parent counters to engine unit ids and sets Unit.assigned_to (19.11, the paper parent) + Unit.org_type (the [19.3] Formation Organization row on an HQ). attached_to is NOT seeded: the VASSAL extraction scatters each formation one unit per hex, so no formation is co-located at setup (19.12 attachment requires the same hex); the tree is the paper structure that makes [15.53] REACHABLE once a formation concentrates and attaches. PROVENANCE: every tree here is transcribed from the OA charts EXCEPT the two flagged reconstructions (62nd Marmarica / 63rd Cirene, see _flags), which are inferred from the counter naming, not charted.",
  "_org_types": "The [19.3] row names live in data/formation_organization.json.",
  "_flags": [
-  "Melded Italian reinforcement divisions (Ariete, Littorio, Trieste, Trento, Bologna, Brescia, Savona, Sabratha, Sirte, Pistoia, Pavia, Folgore, GGFF) carry NO HQ counter in the OOB (2-4 melded counters each) -- not seedable, left independent.",
-  "64th Catanzaro (chart p.153) and 2nd Libyan (chart p.148) ARE on the OA chart as division sheets, but the game carries no seedable division-HQ counter for either, so each division's two infantry regiments are seeded as independent SP-2 Parent Formations (the divisional Arty/MG/Eng stay independent) -- the regiment->battalion structure is TRANSCRIBED.",
+  "SUPERSEDED 2026-07-27 (Phase 8.1c division-HQ pass) for Ariete, Littorio, Folgore and 136 GGFF: each of these four DOES carry an HQ counter printed on its own [4.44b] sheet (Ariete p.147, Littorio p.148, Folgore p.154, 136 GGFF p.154) and it is now seeded (reinforcements_campaign.json) with its melded sub-units re-parented to it. Still true, unresolved, for the OTHER melded Italian reinforcement divisions this flag names -- Trieste, Trento, Bologna, Brescia, Savona, Sabratha, Sirte, Pistoia, Pavia -- which carry no HQ counter in this OOB (2-4 melded counters each) and stay independent, not seedable without inventing a counter the book does not print for them here.",
+  "SUPERSEDED 2026-07-27 (Phase 8.1c division-HQ pass) for 2nd Libyan: its Div HQ^E (scan p.148, counter '2 Libyan') is now seeded (oob_campaign_extra.json) and its two infantry regiments (IT 3 Libyan / IT 4 Libyan) re-parented under it -- their own regiment->battalion structure is unchanged, still transcribed. 64th Catanzaro (chart p.153) is UNCHANGED by that pass -- it is not in the 8.1c task's named list -- and still carries no seedable division-HQ counter, so its two infantry regiments stay independent SP-2 Parent Formations exactly as this flag originally described.",
   "JUDGEMENT CALL (not transcribed): 62nd Marmarica and 63rd Cirene appear NOWHERE on the OA chart -- they are named only as the historical attachment destinations of the LXII(L)/LXIII(L) tank battalions (LTC sheet note b, chart p.149). Their two-regiment structure (115+116 / 157+158, each with I/II/III battalions) is RECONSTRUCTED from the oob_campaign_extra.json counter naming plus the universal Italian binary-division pattern -- matching that file's own 'Cirene/Marmarica reconstructed (no [4.44b] sheet)' provenance note, NOT an OA transcription.",
   "4th CCNN battalion 170: the OA puts it under the 270th Legion but counter 'IT 170 - 240-4CN' states the 240th; the counter's stated parent is followed.",
   "Garrisons (Tobruk/Benghazi/Bardia/Derna/minor) and all Unassigned/Corps/Non-Divisional sheets are flat lists of independent units (OA), correctly left with no parent.",
   "LATENT (found by the Gate D honesty audit 2026-07-25, behaviorally INERT here): the CW 1st and 2nd Armoured Divisions' armored regiments (2 Bays/10 Hussars/9 Lancers under 1 Armd Div; the cruiser regts + 2/7 RTR under 2 Armd Div) are parented to the DIVISION HQ, one tier too high -- the [4.45a] scan (PDF p.116) and transcription 4.45a-oa-allied.md:88-91 nest them at L2 under the 2nd Armoured Bde HQ, leaving that brigade HQ childless. Inert in this slice because concentrate_formations attaches only under COMBAT HQs and both the division and brigade HQs are non-combat (neuter==base determinism holds regardless); it becomes a real faithfulness bug only when non-combat HQ-follows-formation movement lands. A correct fix must re-read the whole [4.45a] CW armored chart (p.116-132) to enumerate every armored-brigade regiment and its brigade parent -- a partial fix would leave the tree internally inconsistent; tracked as a CW-armored-OOB follow-up.",
-  "The five ENGINEER counters the 8.1b OOB pass added whose formation IS treed are treed here (2026-07-27, review repair): 200 Pioneer Bn [5 Le], 33 Pioneer Bn, 900 Pioneer Bn, 200 Pioneer Bn [164], 2/1 Aus Pioneer Bn. Each is TRANSCRIBED from the OA chart's own assignment notation -- [4.44b]'s key (scan p.147, verbatim): \"A unit whose name is indented two spaces possesses a parent formation. Its parent unit is the first unit above it on the sheet whose name is not indented.\" All five print at that one indent under their division headquarters (5th Light p.162, 15th Panzer p.163, 90th Light p.166, 164th Light p.164, 9th Australian p.125), exactly like the Panzerjaeger/Flak/Aufklarungs battalions already treed beside them. NOT treed, correctly: the eight Italian Engineer Battalions (Trento, Brescia, Sabratha, Pavia, Bologna, Savona, Trieste, Pistoia) -- those divisions are melded counters with no HQ in this OOB, so the WHOLE formation is untreed, not just its engineer (the first flag above); 778 Naval Eng Koy, which the chart itself files under 'Unassigned Infantry Units' (p.164) with no parent; and 288 Pioneer Coy, already treed under 288 Son HQ."
+  "The five ENGINEER counters the 8.1b OOB pass added whose formation IS treed are treed here (2026-07-27, review repair): 200 Pioneer Bn [5 Le], 33 Pioneer Bn, 900 Pioneer Bn, 200 Pioneer Bn [164], 2/1 Aus Pioneer Bn. Each is TRANSCRIBED from the OA chart's own assignment notation -- [4.44b]'s key (scan p.147, verbatim): \"A unit whose name is indented two spaces possesses a parent formation. Its parent unit is the first unit above it on the sheet whose name is not indented.\" All five print at that one indent under their division headquarters (5th Light p.162, 15th Panzer p.163, 90th Light p.166, 164th Light p.164, 9th Australian p.125), exactly like the Panzerjaeger/Flak/Aufklarungs battalions already treed beside them. NOT treed, correctly: the eight Italian Engineer Battalions (Trento, Brescia, Sabratha, Pavia, Bologna, Savona, Trieste, Pistoia) -- those divisions are melded counters with no HQ in this OOB, so the WHOLE formation is untreed, not just its engineer (the first flag above); 778 Naval Eng Koy, which the chart itself files under 'Unassigned Infantry Units' (p.164) with no parent; and 288 Pioneer Coy, already treed under 288 Son HQ.",
+  "Phase 8.1c division-HQ pass (2026-07-27): seeded the HQ counters the [4.44B]/[4.45b] OA charts print but this OOB never carried -- Ariete, Littorio, Folgore, 1st Libyan, 2nd Libyan, 136 GGFF, RECAM, and the 31st/32nd Gaf S di C (Tobruk) and 30th Gaf S di C (Bardia) on the Axis side; 7th Armoured, 44th Infantry, 6th Australian, 4th Indian and 2nd New Zealand on the Commonwealth side. All fifteen are role hq/hq_engineer, is_combat False. MEASURED, campaign_policy.concentrate_formations at t0 (both sides, seed 4): ZERO attach orders name any of the fifteen, before or after this pass (16 Axis / 0 Allied orders either way) -- concentrate_formations only attaches under a COMBAT parent (see its own docstring), and every one of these fifteen HQs is non-combat, exactly like every pre-existing German Parent Formation the docstring already names. So this pass is currently INERT for live concentration (org_type on a bare non-combat HQ has no reader until the HQ-follows-its-formation movement this project has not built), and it is not claimed to be more than that: it completes the OOB and the paper tree the book prints, ready for whenever that mechanism lands. 'HQ 44 Inf Div' REPLACES the fabricated '44 Inf Div body' stand-in (no OA-chart basis, is_combat True) with the real, non-combat counter the chart prints. 'RECAM HQ' re-homes the pre-existing 'RECAM Recon Group' reinforcement from the catch-all 'Unassigned Reconnaissance' formation to its own -- same turn and hex, a relabel not a new placement. 31 Guastatori Engineer Bn (RECAM's own chart-printed engineer battalion, ID bbb) has no counter anywhere in this OOB and is left independent, flagged, not fabricated -- there is nothing yet to attach. The 30th/31st Gaf S di C HQs stand with NO sub-battalion at all (their I/II/III battalions are unseeded, a pre-existing extraction gap); 32nd Gaf S di C parents the one battalion this OOB does seed (IT III - 32 GaF)."
  ],
  "tree": {
   "1 Armd Bde [2] (Rtn)": {
@@ -25,7 +26,7 @@
   },
   "1 Fld Arty Regt [4 In]": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 4 In Div"
   },
   "1 Greek Bde I": {
    "org_type": "",
@@ -393,35 +394,35 @@
   },
   "2 NZ Div (Rtn) Bn 1": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 2 NZ Div"
   },
   "2 NZ Div (Rtn) Bn 2": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 2 NZ Div"
   },
   "2 NZ Div (Rtn) Bn 3": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 2 NZ Div"
   },
   "2 NZ Div (Rtn) Bn 4": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 2 NZ Div"
   },
   "2 NZ Div (Rtn) Bn 5": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 2 NZ Div"
   },
   "2 NZ Div (Rtn) Bn 6": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 2 NZ Div"
   },
   "2 NZ Div (Rtn) Bn 7": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 2 NZ Div"
   },
   "2 NZ Div core (Rtn)": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 2 NZ Div"
   },
   "2 RTR": {
    "org_type": "",
@@ -449,7 +450,7 @@
   },
   "2/1 Aus Fld Arty [6 Aus]": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 6 Aus Div"
   },
   "2/1 Aus Pioneer Bn": {
    "org_type": "",
@@ -457,7 +458,7 @@
   },
   "2/2 Aus Fld Arty": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 6 Aus Div"
   },
   "2/2 Aus MG Bn": {
    "org_type": "",
@@ -709,7 +710,7 @@
   },
   "4 In Div core (Rtn)": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 4 In Div"
   },
   "4 RTR": {
    "org_type": "",
@@ -742,10 +743,6 @@
   "433 PzGren Regt": {
    "org_type": "",
    "parent": "HQ 164 Light Div"
-  },
-  "44 Inf Div body": {
-   "org_type": "",
-   "parent": ""
   },
   "4th Borderers [23/70]": {
    "org_type": "",
@@ -789,11 +786,11 @@
   },
   "57 AT Regt [44]": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 44 Inf Div"
   },
   "57th Fld Arty [44]": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 44 Inf Div"
   },
   "580 Aufkl Bn": {
    "org_type": "",
@@ -801,7 +798,7 @@
   },
   "58th Fld Arty [44]": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 44 Inf Div"
   },
   "6 NZ Bde (Rtn) I": {
    "org_type": "",
@@ -829,7 +826,7 @@
   },
   "6 NZ Fld Arty": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 2 NZ Div"
   },
   "6 SA Bde I": {
    "org_type": "",
@@ -865,7 +862,7 @@
   },
   "65th Fld Arty [44]": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 44 Inf Div"
   },
   "69 Inf Bde I": {
    "org_type": "",
@@ -905,7 +902,7 @@
   },
   "7 NZ AT Regt": {
    "org_type": "",
-   "parent": ""
+   "parent": "HQ 2 NZ Div"
   },
   "7 RTR": {
    "org_type": "",
@@ -1025,11 +1022,11 @@
   },
   "HQ 11 In Bde (Rtn)": {
    "org_type": "cw_infantry_brigade",
-   "parent": ""
+   "parent": "HQ 4 In Div"
   },
   "HQ 131 Inf Bde": {
    "org_type": "cw_infantry_brigade",
-   "parent": ""
+   "parent": "HQ 44 Inf Div"
   },
   "HQ 14 Inf Bde": {
    "org_type": "cw_infantry_brigade",
@@ -1089,7 +1086,7 @@
   },
   "HQ 19 Aus Bde": {
    "org_type": "cw_infantry_brigade",
-   "parent": ""
+   "parent": "HQ 6 Aus Div"
   },
   "HQ 2 Armd Bde [1]": {
    "org_type": "cw_armor_brigade_II",
@@ -1177,7 +1174,7 @@
   },
   "HQ 5 NZ Bde": {
    "org_type": "cw_infantry_brigade",
-   "parent": ""
+   "parent": "HQ 2 NZ Div"
   },
   "HQ 5 Pz Regt": {
    "org_type": "ge_armored_regiment",
@@ -1197,7 +1194,7 @@
   },
   "HQ 6 NZ Bde": {
    "org_type": "cw_infantry_brigade",
-   "parent": ""
+   "parent": "HQ 2 NZ Div"
   },
   "HQ 6 SA Bde": {
    "org_type": "cw_infantry_brigade",
@@ -1209,11 +1206,11 @@
   },
   "HQ 7 In Bde": {
    "org_type": "cw_infantry_brigade",
-   "parent": ""
+   "parent": "HQ 4 In Div"
   },
   "HQ 7 In Bde (Rtn)": {
    "org_type": "cw_infantry_brigade",
-   "parent": ""
+   "parent": "HQ 4 In Div"
   },
   "HQ 70 Inf Div": {
    "org_type": "cw_infantry_division",
@@ -1373,7 +1370,7 @@
   },
   "IT 3 Libyan - 2 Libyan": {
    "org_type": "it_infantry_regiment",
-   "parent": ""
+   "parent": "IT 2 Libyan Div HQ - none"
   },
   "IT 4 CCNN - (4CN)": {
    "org_type": "it_semi_motorized_infantry_division",
@@ -1381,7 +1378,7 @@
   },
   "IT 4 Libyan - 2 Libyan": {
    "org_type": "it_infantry_regiment",
-   "parent": ""
+   "parent": "IT 2 Libyan Div HQ - none"
   },
   "IT 70 - 240-4CN": {
    "org_type": "",
@@ -1554,6 +1551,166 @@
   "V/Burchardt Bn": {
    "org_type": "",
    "parent": "HQ Ramcke Bde"
+  },
+  "IT 1 Libyan Div HQ - none": {
+   "org_type": "it_libyan_division",
+   "parent": ""
+  },
+  "IT 2 Libyan Div HQ - none": {
+   "org_type": "it_libyan_division",
+   "parent": ""
+  },
+  "IT 31 GaF HQ - none": {
+   "org_type": "it_infantry_regiment",
+   "parent": ""
+  },
+  "IT 32 GaF HQ - none": {
+   "org_type": "it_infantry_regiment",
+   "parent": ""
+  },
+  "IT 30 GaF HQ - none": {
+   "org_type": "it_infantry_regiment",
+   "parent": ""
+  },
+  "HQ 7 Armd Div": {
+   "org_type": "cw_armor_division_I",
+   "parent": ""
+  },
+  "HQ 4 In Div": {
+   "org_type": "cw_infantry_division",
+   "parent": ""
+  },
+  "Ariete Div HQ": {
+   "org_type": "it_armor_division",
+   "parent": ""
+  },
+  "Littorio Div HQ": {
+   "org_type": "it_armor_division",
+   "parent": ""
+  },
+  "Folgore Div HQ": {
+   "org_type": "it_libyan_division",
+   "parent": ""
+  },
+  "136 GGFF Div HQ": {
+   "org_type": "it_semi_motorized_infantry_division",
+   "parent": ""
+  },
+  "RECAM HQ": {
+   "org_type": "it_recam",
+   "parent": ""
+  },
+  "HQ 44 Inf Div": {
+   "org_type": "cw_infantry_division",
+   "parent": ""
+  },
+  "HQ 6 Aus Div": {
+   "org_type": "cw_infantry_division",
+   "parent": ""
+  },
+  "HQ 2 NZ Div": {
+   "org_type": "cw_infantry_division",
+   "parent": ""
+  },
+  "8 Bersaglieri Regt": {
+   "org_type": "",
+   "parent": "Ariete Div HQ"
+  },
+  "Ariete Arty": {
+   "org_type": "",
+   "parent": "Ariete Div HQ"
+  },
+  "I(L) Carri Bn": {
+   "org_type": "",
+   "parent": "Ariete Div HQ"
+  },
+  "IX Carri Bn": {
+   "org_type": "",
+   "parent": "Ariete Div HQ"
+  },
+  "VIII Carri Bn": {
+   "org_type": "",
+   "parent": "Ariete Div HQ"
+  },
+  "12 Bersaglieri Regt": {
+   "org_type": "",
+   "parent": "Littorio Div HQ"
+  },
+  "I Carri Bn": {
+   "org_type": "",
+   "parent": "Littorio Div HQ"
+  },
+  "II Carri Bn": {
+   "org_type": "",
+   "parent": "Littorio Div HQ"
+  },
+  "Littorio Arty": {
+   "org_type": "",
+   "parent": "Littorio Div HQ"
+  },
+  "Folgore Arty": {
+   "org_type": "",
+   "parent": "Folgore Div HQ"
+  },
+  "Folgore Para 1": {
+   "org_type": "",
+   "parent": "Folgore Div HQ"
+  },
+  "Folgore Para 2": {
+   "org_type": "",
+   "parent": "Folgore Div HQ"
+  },
+  "136 Arty Regt": {
+   "org_type": "",
+   "parent": "136 GGFF Div HQ"
+  },
+  "I/136 Bn": {
+   "org_type": "",
+   "parent": "136 GGFF Div HQ"
+  },
+  "II/136 Bn": {
+   "org_type": "",
+   "parent": "136 GGFF Div HQ"
+  },
+  "III/136 HW Bn": {
+   "org_type": "",
+   "parent": "136 GGFF Div HQ"
+  },
+  "IT 1 Libyan - none": {
+   "org_type": "",
+   "parent": "IT 1 Libyan Div HQ - none"
+  },
+  "IT 2 Libyan (ART)": {
+   "org_type": "",
+   "parent": "IT 2 Libyan Div HQ - none"
+  },
+  "IT III - 32 GaF": {
+   "org_type": "",
+   "parent": "IT 32 GaF HQ - none"
+  },
+  "RECAM Recon Group": {
+   "org_type": "",
+   "parent": "RECAM HQ"
+  },
+  "BR 3 RHA - 7Spt-7": {
+   "org_type": "",
+   "parent": "HQ 7 Armd Div"
+  },
+  "BR 1 KRRC - 7Spt-7": {
+   "org_type": "",
+   "parent": "HQ 7 Armd Div"
+  },
+  "BR 4 RHA - 7Spt-7": {
+   "org_type": "",
+   "parent": "HQ 7 Armd Div"
+  },
+  "3rd Hussars [7]": {
+   "org_type": "",
+   "parent": "HQ 7 Armd Div"
+  },
+  "IN 31 Fld - 4 In": {
+   "org_type": "",
+   "parent": "HQ 4 In Div"
   }
  }
 }

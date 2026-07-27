@@ -152,20 +152,38 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
     the SAME measured fact carried forward to GT30, not a second regression). So Mersa Matruh is no
     longer merely un-arrived-at (the 2026-07-26 Delta-terrain note above); it is AXIS-OCCUPIED. The
     "Commonwealth hasn't reached it yet" reading this test used to assert is no longer the honest one;
-    "the Axis got there first and nobody has retaken it" is."""
+    "the Axis got there first and nobody has retaken it" is.
+
+    *** RESTATED AGAIN 2026-07-27 (Phase 8.1c, the 23.11 (ENG) correction). *** Four Italian
+    counters the [4.44b] chart itself prints as Engineer Battalions -- 64th Catanzaro, 4th CCNN,
+    63rd Cirene, 62nd Marmarica (game.oob.classify's "(ENG)" branch docstring names all four) --
+    were fighting this whole campaign as combat infantry, because each record's own `role` field
+    said so explicitly and short-circuited the classifier. Flipped to their book-printed
+    `engineer` role (is_combat False, per data/unit_stats.json), which is what they always should
+    have been. MEASURED, seed CAMPAIGN_SEED, GT30: the Axis border screen these four used to
+    thicken as phantom infantry no longer masks the true Italian dispositions, and the
+    take-and-hold reads a STRONGER Axis opening, not a weaker one -- the Commonwealth banks NO
+    city at all by GT30 (cw == set()), and the Axis banks Sidi Barrani and Sollum on top of
+    everything it already held (Tobruk, Bardia, Benghazi, Giarabub, Mersa Matruh). This is the
+    faithful reading (port rule 5: the old pin enshrined the bug, not a rule), not a rebalancing
+    choice -- the four counters simply stop being counted as line infantry."""
     fin = _run(30).final
     cw, ax = _banked(fin, Side.ALLIED), _banked(fin, Side.AXIS)
-    # The Commonwealth holds Sidi Barrani again under the [8.37] stacking fix (see the RESTATED note
-    # above, measured seed 4, GT30) -- the Axis's 15.53-concentrated reach for it did not survive the
-    # higher stacking cap reshaping the opening moves.
-    assert "Sidi Barrani" in cw
+    # The Commonwealth banks NOTHING by GT30 under the 23.11 correction (see the 2026-07-27
+    # RESTATED note above) -- the four Engineer counters that used to fight as phantom infantry no
+    # longer thicken the Axis border screen or mask the true opening.
+    assert cw == set(), f"the Commonwealth banked a city again -- update this restatement: {sorted(cw)}"
+    # Sidi Barrani and Sollum both flip to the Axis under the same correction.
+    assert {"Sidi Barrani", "Sollum"} <= ax, f"the Axis lost its forward gains: {sorted(ax)}"
     # Mersa Matruh is AXIS-OCCUPIED at GT30, not merely un-arrived-at (see the 2026-07-26 RESTATED
     # note above) -- an Axis unit walked over the empty terminus by GT3 and nothing has retaken it.
     assert not campaign_claim._occupied(fin, Side.ALLIED, MATRUH), \
         "the Commonwealth holds the railhead city -- update this restatement, the finding reversed"
     assert campaign_claim._occupied(fin, Side.AXIS, MATRUH), \
         "the Axis no longer holds the railhead city -- update this restatement, the finding reversed"
-    assert "Mersa Matruh" not in cw and "Mersa Matruh" not in ax
+    # Mersa Matruh is now BANKED outright by the Axis (not merely occupied-but-unbanked) under the
+    # 23.11 correction above.
+    assert "Mersa Matruh" in ax, "Mersa Matruh is no longer banked -- update this restatement"
     matruh = [s for s in fin.supplies if s.id == "AL-Stage-Matruh"]
     assert len(matruh) == 1 and matruh[0].hex == MATRUH, \
         "the railhead depot must still be staged and waiting for the (delayed) garrison"

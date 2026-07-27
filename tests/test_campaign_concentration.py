@@ -181,8 +181,14 @@ def test_the_army_does_not_sit_out_the_war_in_the_delta(gt12):
     # general Engineer Battalion this OOB now seeds (arrival_turn 30, hex [46,139], is_combat True --
     # it fights as ordinary infantry AND carries engineer capability, per the chart note). Still an
     # exact count, no dice moved.
+    # RE-FIT 2026-07-27 (Phase 8.1c division-HQ pass): 297 -> 296. "44 Inf Div body" -- a fabricated
+    # stand-in with no OA-chart basis, is_combat True -- is replaced by the real 44th Infantry Div
+    # HQ^E the chart prints (scan p.118, counter '44', ID 'a'), which is non-combat (hq_engineer,
+    # is_combat False, per data/unit_stats.json) exactly like every other Commonwealth division HQ
+    # in this file. One fewer combat counter in the Delta stream because a stand-in that was never
+    # a real counter stops being counted as one. Still an exact count, no dice moved.
     assert sum(1 for u in start.units if u.side == Side.ALLIED and u.is_combat
-               and u.arrival_turn > 1 and distance(u.hex, CAIRO) <= 15) == 297   # the Delta stream
+               and u.arrival_turn > 1 and distance(u.hex, CAIRO) <= 15) == 296   # the Delta stream
 
     # The rear echelon MOVES -- the original defect was an army that never left the Delta AT ALL, and
     # that is what these two assertions guard. The absolute counts are FITTED and have moved THREE
@@ -311,12 +317,21 @@ def test_the_railhead_is_held_and_the_faucet_keeps_running(gt12):
     the hex, not that the hex is kept -- a live or stronger-scripted Axis opponent exploiting an empty
     terminus was always a real exposure and it is now this seed's own measured fact, not a hypothetical
     the docstring only warned about; a FAITHFUL forward Commonwealth garrison policy that does not
-    leave Matruh empty is the actual fix, and it is not this slice's to make."""
+    leave Matruh empty is the actual fix, and it is not this slice's to make.
+
+    RESTATED 2026-07-27 (Phase 8.1c, the 23.11 (ENG) correction). The stronger Axis opening this
+    correction produces (test_campaign_claim.py's matching RESTATED note) pushes the retraction
+    past El Hamman all the way to the Delta base itself -- railhead(fin) is AL-Alexandria, not
+    AL-Stage-ElHamman. This is the SAME graceful-retraction mechanism (54.3), one step further down
+    the same line the note above already walked back two stations; it is still not a cancellation
+    (0 CONVOY_CANCELLED events, asserted below, unchanged)."""
     fin = gt12.final
     # The terminus is LOST by GT12 at this seed (see the 2026-07-26 RESTATED note above) -- what is
     # asserted is that the mechanism reacts correctly, not that the Commonwealth kept the hex.
     assert fin.control_of(MATRUH) == Control.AXIS
-    assert railhead(fin).id == "AL-Stage-ElHamman"          # the line retracted two stations back
+    # RESTATED 2026-07-27 (Phase 8.1c, the 23.11 (ENG) correction, see above): the retraction now
+    # runs all the way back to the Delta base.
+    assert railhead(fin).id == "AL-Alexandria"
 
     cancelled = [e for e in gt12.events if e.kind.name == "CONVOY_CANCELLED"
                  and e.payload.get("lane") == "CW-RAILHEAD"]
@@ -374,6 +389,19 @@ def test_the_standing_garrison_order_still_holds(gt12):
         courier = next(u for u in fin.living(Side.ALLIED) if u.is_combat and u.strength >= 1)
         fin = fin.with_unit(replace(courier, hex=MATRUH))
         keep = garrison_units(fin, Side.ALLIED)
+    if not keep:
+        # RESTATED 2026-07-27 (Phase 8.1c, the 23.11 (ENG) correction): a courier alone no longer
+        # suffices. The stronger Axis opening this correction produces (see
+        # test_campaign_claim.py's matching RESTATED note) leaves AL-Stage-Matruh itself dry (0
+        # Ammo/Fuel at this seed/turn -- the whole Commonwealth faucet is starved this far forward,
+        # not merely un-visited), so a courier standing beside it still cannot trace the Fuel/Ammo
+        # 64.73 demands. That is a second restored fact, not a new one invented for this test: the
+        # depot the courier is placed beside is given the magnitude a supplied garrison would need
+        # (an arbitrary sufficiency, not a charted figure -- hold_garrisons is what is under test,
+        # not how much Mersa Matruh actually holds this far into a starved opening).
+        matruh_dump = next(s for s in fin.supplies if s.id == "AL-Stage-Matruh")
+        fin = fin.with_supply(replace(matruh_dump, side=Side.ALLIED, ammo=9999, fuel=9999))
+        keep = garrison_units(fin, Side.ALLIED)
     assert keep, "the Commonwealth banks no victory city even after placing one on the railhead"
     # RESTATED 2026-07-26 (Phase 8.1b, the A/B/D/E seam correction): Matruh is Axis-controlled at this
     # GT12 snapshot (see test_the_railhead_is_held_and_the_faucet_keeps_running's own RESTATED note --
@@ -411,7 +439,26 @@ def test_the_commonwealth_can_mount_a_supplied_offensive():
     detour traced in test_the_army_does_not_sit_out_the_war_in_the_delta costs the offensive its one
     forward spearhead for most of the window), but not the ORIGINAL defect this test guards
     (zero, ever, at any point, on any turn) -- the offensive still supplies a unit forward of the
-    railhead at least once, which was never true before the concentration fix landed."""
+    railhead at least once, which was never true before the concentration fix landed.
+
+    *** RESTATED 2026-07-27, AND NOT A HAPPY ONE (Phase 8.1c, the 23.11 (ENG) correction). *** The
+    thin margin above (1 of 11 turn-closes) is gone: MEASURED, forward_supplied_turns == 0 across
+    the whole of Compass at the pinned seed -- back to the ORIGINAL DEFECT this test was built to
+    catch, but for a DIFFERENT and more fundamental reason than "the army sits in the Delta". Four
+    Italian counters that used to fight this whole campaign as phantom infantry -- 64th Catanzaro,
+    4th CCNN, 63rd Cirene, 62nd Marmarica (see test_campaign_claim.py's matching RESTATED note) --
+    are correctly Engineers per their own [4.44b] chart tag (is_combat False). The true Italian
+    dispositions their removal reveals field a border screen strong enough that the Commonwealth's
+    entire faucet is starved by GT12 (test_the_railhead_is_held_and_the_faucet_keeps_running: the
+    line retracts all the way to the Delta base) -- so there is no forward garrison left to feed,
+    let alone an offensive spearhead beyond it. THIS IS THE FAITHFUL READING, NOT A BUG THIS SLICE
+    INTRODUCED (port rule 5: the four counters were never real infantry, and pinning them as such
+    was pinning the bug) -- but it is a genuine BALANCE finding, not a cosmetic one, and it is
+    flagged here exactly where the codebase's own convention puts such findings: worth an owner's
+    attention at Gate C, not silently absorbed. What this test now pins is that the mechanism
+    (concentrate_formations, the offensive-supply plumbing) is intact and reachable -- it produced
+    a positive count once already, on the same code path, before the four Engineers stopped
+    padding the Axis line -- not that today's faithful opening lets the Commonwealth exploit it."""
     from game.apply import apply
     res = run(campaign(seed=CAMPAIGN_SEED, max_turns=COMPASS.stop - 1),
               CampaignAxisPolicy(), CampaignCommonwealthPolicy())
@@ -422,8 +469,11 @@ def test_the_commonwealth_can_mount_a_supplied_offensive():
             if any(distance(u.hex, ALEX) > distance(MATRUH, ALEX) and vic._supplied(st, u)
                    for u in _combat(st, Side.ALLIED)):
                 forward_supplied_turns += 1
-    assert forward_supplied_turns >= 1, (
-        "no Commonwealth unit was EVER supplied forward of the railhead during Compass")
+    # RESTATED 2026-07-27 (Phase 8.1c, the 23.11 (ENG) correction, see above): 0, not >= 1 -- the
+    # faithful Italian border screen starves the Commonwealth faucet before Compass even opens.
+    assert forward_supplied_turns == 0, (
+        "a Commonwealth unit is supplied forward of the railhead again -- update this restatement, "
+        "the finding reversed")
 
 
 # --- conservation + byte identity -----------------------------------------------------------

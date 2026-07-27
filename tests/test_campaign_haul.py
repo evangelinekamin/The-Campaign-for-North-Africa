@@ -103,6 +103,18 @@ def test_acceptance_haul_runs_unfrozen_and_reaches_the_front():
     dump_hex.update({e.payload["supply_id"]: tuple(e.payload["hex"]) for e in res.events
                      if e.kind.name == "SUPPLY_DUMP_ESTABLISHED"})
 
+    # RESTATED 2026-07-27 (Phase 8.1c, the 23.11 (ENG) correction perturbed this seed's fold enough
+    # to reach a case that was always possible but never exercised here): a SUPPLY_MOVED that clamps
+    # to the [54.12] destination cap SPLITS the overflow into a fresh dump at the ORIGIN hex under
+    # id `f"{base}~{seq}"` (game.apply's SUPPLY_MOVED handler) -- a pure state-append, not a
+    # SUPPLY_DUMP_ESTABLISHED event, so it never lands in the dict above. Resolved the same way the
+    # engine itself defines the relationship (`su.id.split('~')[0]`): a split remainder's hex is its
+    # pre-split id's hex.
+    def _dump_hex(supply_id: str):
+        if supply_id in dump_hex:
+            return dump_hex[supply_id]
+        return dump_hex[supply_id.split("~")[0]]
+
     gt = moves_past_10 = deepest = 0
     fuel_east = ammo_east = False
     fuel_dumps: dict[str, int] = {}          # relay-fed FUEL dumps: id -> hexes east of the port
@@ -112,7 +124,7 @@ def test_acceptance_haul_runs_unfrozen_and_reaches_the_front():
         elif e.kind.name == "TRUCK_MOVED" and gt > 10:
             moves_past_10 += 1
         elif e.kind.name == "TRUCK_UNLOADED":
-            east = _hexes_east(dump_hex[e.payload["supply_id"]])
+            east = _hexes_east(_dump_hex(e.payload["supply_id"]))
             if east > 0:                                    # deliveries strictly east of the port
                 cargo = e.payload["cargo"]
                 fuel_east = fuel_east or cargo.get("FUEL", 0) > 0

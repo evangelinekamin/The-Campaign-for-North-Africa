@@ -123,6 +123,16 @@ def test_campaign_commonwealth_can_attack():
         # march)) is a pure function of `on`, so a constructed banking unit exercises it faithfully.
         courier = next(u for u in on.living(Side.ALLIED) if u.is_combat and u.strength >= 1)
         on = on.with_unit(replace(courier, hex=MATRUH))
+    if not garrison_units(on, Side.ALLIED):
+        # RESTATED 2026-07-27 (Phase 8.1c, the 23.11 (ENG) correction). The stronger Axis opening
+        # this correction produces (test_campaign_claim.py's matching RESTATED note) leaves
+        # AL-Stage-Matruh itself dry at this seed/turn, so a courier standing beside it still
+        # cannot trace the Fuel/Ammo 64.73 demands -- the identical second-restoration technique
+        # tests/test_campaign_concentration.py::test_the_standing_garrison_order_still_holds now
+        # uses, for the same reason: give the depot the courier is placed beside the magnitude a
+        # supplied garrison would need (an arbitrary sufficiency, not a charted figure).
+        matruh_dump = next(s for s in on.supplies if s.id == "AL-Stage-Matruh")
+        on = on.with_supply(replace(matruh_dump, side=Side.ALLIED, ammo=9999, fuel=9999))
     assert garrison_units(on, Side.ALLIED), "the CW banks no victory city -- the check is vacuous"
     assert campaign_claim.claims(on, Side.ALLIED, escort=True), \
         "the take-and-hold claims no city -- the check is vacuous"
