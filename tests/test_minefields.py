@@ -13,11 +13,12 @@ p.104) from:
     unit PLUS an Infantry battalion (3+ TOE), capped at Level 2 (field) or the hex's own printed
     Major-City cap (25.12).
 
-FLAGGED, not silently assumed: no OOB in this repo seeds a unit with engineer='ENGINEER' (or
-CW-HQ-Engineering) -- see game.minefields.is_engineer and game.construction.builds_engineering's
-docstrings. Every test below builds its own synthetic Engineer/Infantry counters to exercise the
-mechanism directly, exactly as game.minefields' module docstring says it must be exercised until
-that OOB gap closes.
+The OOB gap this file used to flag is CLOSED: the Phase 8.1b engineer pass (2026-07-27) seeds 25
+counters able to lay a belt under 24.31 in the campaign order of battle (14 Axis Engineer
+battalions/companies, 10 Commonwealth HQ^E, the 2/1 Australian Pioneer Bn). The tests below still
+build their own synthetic Engineer/Infantry counters, because a unit test of a rule should state
+the rule's inputs rather than depend on a schedule -- but they are no longer the only way the
+mechanism can be reached. tests/test_oob.py holds the census assertions over the real OOB.
 
 The OWNER RULINGS this file pins the ENGINE'S side of (data/minefields.json carries each, and the
 conflicting text, in full):
@@ -423,39 +424,73 @@ def test_the_oob_actually_seeds_the_two_scorpion_battalions():
     assert all(not construction.lays_minefield(u) for u in flails)   # 23.15: anti-minefield ONLY
 
 
-def test_23_11_binds_engineer_counters_and_never_a_scorpion_battalion():
+def test_23_11_binds_engineer_counters_and_never_a_combat_unit_or_an_hq():
     """[23.11] (scan, PDF p.35, verbatim): "Engineer counters have no real combat value, nor do
     they exert Zones of Control. They are NOT COMBAT UNITS IN ANY WAY, SHAPE, OR FORM. Engineer
     units may never enter Enemy-controlled hexes voluntarily."
 
-    That Case is written about the counters 23.0 enumerates -- Engineer Battalions, Engineer
-    companies, HQs with Engineer capability -- plus 23.13's two rail/road engineering companies.
-    It is NOT written about a 23.15 Scorpion battalion, which is a Commonwealth TANK battalion
-    (is_combat=True, 8 TOE of flails) granted engineer status strictly "for ANTI-MINEFIELD
-    capabilities". Reading 23.11 onto it would forbid the one Commonwealth unit whose whole
-    purpose is to breach INTO an Axis position -- and the engine's gate did exactly that, because
-    it keyed on `u.engineer` being truthy and the 8.2 slice had just tagged the flails 'SCORPION'.
+    The Case states its own premise in the sentence before the restriction, and the predicate is
+    read against that premise. It binds the counters that meet it: Engineer Battalions, Engineer
+    companies (is_combat False by 23.11 itself) and 23.13's two rail/road engineering companies.
+    Three counters carry engineering capability and do NOT meet it, each by a rule of its own:
+
+      * 23.15's Scorpion battalion -- a Commonwealth TANK battalion (is_combat True, 8 TOE of
+        flails) granted engineer status strictly "for ANTI-MINEFIELD capabilities". Reading 23.11
+        onto it would forbid the one Commonwealth unit whose whole purpose is to breach INTO an
+        Axis position.
+      * The 2/1 Australian Pioneer Bn -- [4.44B] OA chart, 9th Australian Division sheet, note b
+        (scan p.125): "Pioneer Battalions in the Australian army were engineer battalions WITH
+        FULL-FLEDGED INFANTRY CAPABILITIES. This unit possesses all normal engineer battalion
+        capabilities plus those of its 'q' ID Code." The chart denies 23.11's premise in as many
+        words for this counter.
+      * 23.14's HQ^E -- "Headquarters units with a letter E next to their Stacking Points have
+        Engineering capability (see Section 24.0) but OTHERWISE THEY ARE TREATED LIKE ANY OTHER HQ
+        UNIT." A plain HQ may enter an enemy-controlled hex, so an HQ^E must too.
     """
-    for role in ('ENGINEER', 'HQ_ENGINEER', 'RAIL', 'ROAD'):
-        assert mf.is_engineer_counter(_unit("E", Side.ALLIED, H[0], engineer=role)), role
-    assert not mf.is_engineer_counter(
+    for role in ('ENGINEER', 'RAIL', 'ROAD'):
+        assert mf.is_engineer_counter(
+            _unit("E", Side.ALLIED, H[0], engineer=role, is_combat=False)), role
+    assert not mf.is_engineer_counter(                                    # 23.15
         _unit("SC42", Side.ALLIED, H[0], engineer='SCORPION', is_tank=True, steps=10))
+    assert not mf.is_engineer_counter(                                    # [4.44B] note b
+        _unit("2/1AusP", Side.ALLIED, H[0], engineer='ENGINEER', is_combat=True))
+    assert not mf.is_engineer_counter(                                    # 23.14
+        _unit("HQ7", Side.ALLIED, H[0], engineer='HQ_ENGINEER', is_combat=False))
     assert not mf.is_engineer_counter(_unit("PBI", Side.ALLIED, H[0]))     # no engineer row at all
 
 
-def test_a_scorpion_battalion_may_advance_into_an_enemy_controlled_hex():
-    """The live half of the Case above, through the engine's own movement gate: a flail battalion
-    ordered onto an Axis-controlled hex MOVES (23.15/23.11), while a genuine Engineer counter
-    given the identical order is rejected. Both are on the board at once so the two verdicts come
-    out of one Movement Phase and one board."""
+def test_engineering_capability_survives_the_23_11_exemptions():
+    """The exemptions above are exemptions from 23.11's RESTRICTIONS ONLY -- every one of those
+    three counters keeps the engineering capability its own rule grants it, or the carve-out would
+    have quietly disarmed rule 24/26. 24.31 is Commonwealth-HQ-inclusive; is_engineer is rule 26's
+    clear/escort predicate (RAIL/ROAD excluded by 23.13's "used solely for...")."""
+    pioneer = _unit("2/1AusP", Side.ALLIED, H[0], engineer='ENGINEER', is_combat=True)
+    hq_e = _unit("HQ7", Side.ALLIED, H[0], engineer='HQ_ENGINEER', is_combat=False)
     flail = _unit("SC42", Side.ALLIED, H[0], engineer='SCORPION', is_tank=True, steps=10)
+    for u in (pioneer, hq_e, flail):
+        assert mf.is_engineer(u), u.id
+    assert construction.lays_minefield(pioneer) and construction.lays_minefield(hq_e)   # 24.31
+    assert not construction.lays_minefield(flail)          # 23.15: clears, builds nothing
+
+
+def test_a_combat_engineer_and_an_hq_e_may_advance_into_an_enemy_controlled_hex():
+    """The live half of the Case above, through the engine's own movement gate: a flail battalion,
+    the Australian Pioneer Bn and an HQ^E ordered onto an Axis-controlled hex all MOVE, while a
+    genuine Engineer counter given the identical order is rejected. All four are on the board at
+    once so the verdicts come out of one Movement Phase and one board."""
+    flail = _unit("SC42", Side.ALLIED, H[0], engineer='SCORPION', is_tank=True, steps=10)
+    pioneer = _unit("2/1AusP", Side.ALLIED, H[0], engineer='ENGINEER', is_combat=True)
+    hq_e = _unit("HQ7", Side.ALLIED, H[0], engineer='HQ_ENGINEER', is_combat=False)
     sapper = _unit("EN", Side.ALLIED, H[0], engineer='ENGINEER', is_combat=False)
-    r = _Run(_state([flail, sapper], control={H[1]: Control.AXIS}))
-    policy = _Build(moves=[MoveOrder(flail.id, H[1]), MoveOrder(sapper.id, H[1])])
+    movers = (flail, pioneer, hq_e, sapper)
+    r = _Run(_state(movers, control={H[1]: Control.AXIS}))
+    policy = _Build(moves=[MoveOrder(u.id, H[1]) for u in movers])
     _movement(r, {Side.ALLIED: policy, Side.AXIS: policy}, Side.ALLIED)
     moved = {e.payload["unit_id"] for e in r.events if e.kind == EventKind.UNIT_MOVED}
     rejected = {e.payload.get("unit_id") for e in r.events if e.kind == EventKind.ORDER_REJECTED}
     assert flail.id in moved, "23.15: a Scorpion battalion is a tank battalion, not an engineer counter"
+    assert pioneer.id in moved, "[4.44B] note b: full-fledged infantry capabilities"
+    assert hq_e.id in moved, "23.14: otherwise treated like any other HQ unit"
     assert sapper.id in rejected, "23.11: an Engineer counter may not voluntarily enter one"
 
 

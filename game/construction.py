@@ -43,12 +43,15 @@ THE TWO SLICES BUILT HERE, and they are the two the campaign was starving for.
 PHASE 8.2 ADDED TWO MORE SLICES: 24.3 (minefields) and 24.4 (fortifications) -- see the REAL_MINEFIELD
 / DUMMY_MINEFIELD / FORT / CLEAR_MINEFIELD items below and game.minefields for rule 26's effects.
 Both are gated on the general Engineering capabilities (state.Unit.engineer: 'ENGINEER' for an
-Engineer battalion/company, 'HQ_ENGINEER' for 23.14's HQ with an E beside its Stacking Points),
-which no OOB in this repo currently seeds -- the flagged gap game.minefields' own docstring names.
-Built and correct; unreachable by any live scenario until that OOB gap closes.
+Engineer battalion/company, 'HQ_ENGINEER' for 23.14's HQ with an E beside its Stacking Points).
+The Phase 8.1b engineer pass (2026-07-27) CLOSED the OOB gap this docstring used to flag: the
+campaign order of battle now seeds 25 counters able to lay a belt under 24.31 (14 Axis Engineer
+battalions/companies, 10 Commonwealth HQ^E, 1 Commonwealth Engineer battalion). What still builds
+nothing is the POLICY layer -- no Policy.construction implementation in this repo proposes a
+REAL_MINEFIELD/DUMMY_MINEFIELD/FORT order, only 24.6 rail and 24.9 dumps.
 
-The ONE anti-minefield capability that IS reachable is 23.15's: the two Commonwealth tank battalions
-refitted with Scorpion flails (42/44 RTR, data/reinforcements_campaign.json, arriving GT99, and
+Another anti-minefield capability, reachable since long before that, is 23.15's: the two CW tank
+battalions refitted with Scorpion flails (42/44 RTR, data/reinforcements_campaign.json, GT99, and
 on-map in the [63.0] El Alamein scenarios). They carry engineer='SCORPION' from the OOB's model row
 and, per 23.15, count as engineers ONLY for anti-minefield purposes and ONLY while they hold six or
 more Scorpion TOE Strength Points -- so they clear belts ([24.18]'s Real Minefield row: "Any E or

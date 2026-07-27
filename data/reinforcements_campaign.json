@@ -7425,7 +7425,7 @@
       "model": "scorpion"
     },
     {
-      "_comment": "Phase 8.1b engineer-OOB pass (2026-07-27): the [24.31]/rule-26 census found ZERO units able to LAY a belt (game.minefields.GENERAL_ENGINEER/HQ_ENGINEER) anywhere in this file -- every Engineer Battalion/Company and HQ^E the [4.44B]/[4.45b]/[4.45c] OA charts give either side was untranscribed. This record and the ones through '2/1 Aus Pioneer Bn' below close the gap for every NEW-to-this-file formation that has a citable engineer counter; they do NOT invent formations this file never had (RECAM's 31 Guastatori Engineer Bn, the Ariete/Littorio/Folgore/Libyan/136th-GGFF/Gaf-S-di-C HQ^E division HQs, and most of the Tobruk-garrison Gaf battalions have no seeded parent counter to attach the flag to -- flagged, not fabricated). NOT INCLUDED, DELIBERATELY: four ALREADY-seeded Italian counters (data/oob_italian.json's 'IT VIII-II - Bnghzi'/'IT 64 - Cat (ENG)'/'IT 204 - 4CCNN (ENG)', data/oob_campaign_extra.json's 'IT 63 Cir (ENG)'/'IT 62 Marm (ENG)') whose counter names ALREADY carry the '(ENG)' tag but whose role is still 'infantry' (combat) -- see game.oob.classify's '(ENG)' branch docstring for why: flipping them is_combat True->False all at once (the faithful 23.11 correction) measurably reshapes the September-1940 opening's balance of who banks Sidi Barrani/Sollum, and that needs its own measured pass through tests/test_campaign_claim.py and test_campaign_concentration.py, not a same-commit tack-on.",
+      "_comment": "Phase 8.1b engineer-OOB pass (2026-07-27): the [24.31]/rule-26 census found ZERO units able to LAY a belt (game.minefields.GENERAL_ENGINEER/HQ_ENGINEER) anywhere in this file -- every Engineer Battalion/Company and HQ^E the [4.44B]/[4.45b]/[4.45c] OA charts give either side was untranscribed. This record and the ones through '2/1 Aus Pioneer Bn' below close the gap for every NEW-to-this-file formation that has a citable engineer counter. CENSUS, measured on the built campaign OOB (the 8.1b commit message's '0 to 15' was wrong): units that may LAY a belt under 24.31 go from 0 to 25 -- 14 Axis Engineer battalions/companies (6 German Pioneer, 8 Italian Genio) plus 10 Commonwealth HQ^E plus the 2/1 Australian Pioneer Bn. The clear/escort set (26.24) is those 25 plus the two GT99 Scorpion battalions. they do NOT invent formations this file never had (RECAM's 31 Guastatori Engineer Bn (scan p.154, ID bbb, 1/45), the Ariete/Littorio/Folgore/Libyan/136th-GGFF/Gaf-S-di-C HQ^E division HQs, and most of the Tobruk-garrison Gaf battalions have no seeded parent counter to attach the flag to -- flagged, not fabricated). NAMED IN FULL 2026-07-27 (8.1b review repair), because 'flagged' means nothing if the flag does not say WHICH counter. Also absent, also scan-verified, also not fabricated: the three Blackshirt Engineer Battalions -- 201st Engineer Bn (1st CCNN '23rd March' Division sheet, scan p.160, ID bbb, Arrives D), 202nd Engineer Bn (2nd CCNN '28th October', p.159, bbb, D) and 203rd Engineer Bn (3rd CCNN '21st April', p.160, bbb, D). The 2nd and 3rd CCNN Divisions have no counters at all in this OOB, and the 1st CCNN is a single consolidated counter ('IT 1 CCNN - (1CN)') with no divisional roster to hang an engineer battalion on. And on the Commonwealth side, the four HQ^E division headquarters the chart prints and this repo has no counter for -- see data/unit_stats.json's _hq_engineer_comment, which names them with page, counter abbreviation and arrival. NOT INCLUDED, DELIBERATELY: four ALREADY-seeded Italian counters (data/oob_italian.json's 'IT VIII-II - Bnghzi'/'IT 64 - Cat (ENG)'/'IT 204 - 4CCNN (ENG)', data/oob_campaign_extra.json's 'IT 63 Cir (ENG)'/'IT 62 Marm (ENG)') whose counter names ALREADY carry the '(ENG)' tag but whose role is still 'infantry' (combat) -- see game.oob.classify's '(ENG)' branch docstring for why: flipping them is_combat True->False all at once (the faithful 23.11 correction) measurably reshapes the September-1940 opening's balance of who banks Sidi Barrani/Sollum, and that needs its own measured pass through tests/test_campaign_claim.py and test_campaign_concentration.py, not a same-commit tack-on.",
       "counter": "51st Engineer Bn",
       "group": "IT 102 Trento Division",
       "hex": [
@@ -7538,7 +7538,8 @@
       "arrival_stage": 2
     },
     {
-      "counter": "200 Pioneer Bn",
+      "_counter_comment": "SUFFIXED 2026-07-27 (8.1b review repair). The book genuinely prints '200th Pioneer Bn' on BOTH the 5th Light sheet (scan p.162, ID gg, 2/21) and the 164th Light sheet (p.164, ID gg, 3/93) -- two different counters, one name, and the transcription of each is right. But game.oob.build keys counter_to_id by this string to resolve the [4.45] parent tree, so the bare name made the 5th Light's counter unaddressable (last record wins) and would have hung its tree entry on the 164th's battalion. Disambiguated with the bracket suffix this file already uses for exactly this ('HQ 23 Inf Bde [70]', 'HQ 2 Armd Bde [1]', '57 AT Regt [44]'): the bracket carries the parent formation.",
+      "counter": "200 Pioneer Bn [5 Le]",
       "group": "GE 5th Light Division",
       "hex": [
         45,
@@ -7566,6 +7567,7 @@
       "arrival_stage": 1
     },
     {
+      "_morale_comment": "CORRECTED 2026-07-27 (8.1b review repair) 2 -> 1. The [4.45c] 90th Light ('The Afrika') Division sheet prints 'Basic Morale: +1' (scan p.166, read verbatim), and the OA chart's Basic Morale is the rating for EVERY unit on the sheet. This record was seeded at 2 by copying its ten already-seeded siblings. FLAGGED, DEFERRED, NOT FIXED HERE: those ten (155 Schutzen Regt, 361 Afrika Regt, 613 Flak Bn, 580 Aufkl Bn, HQ 90 Light Div, III/255 Schutzen Bn, III/347 Schutzen Bn, 190 Arty Bn, 190 Pzjg Bn, and the 90th's returning core) all still carry 2 against the same sheet -- a pre-existing group-wide transcription error, inherited here rather than introduced. Correcting ten COMBAT units' morale moves every campaign fold and belongs in its own measured pass, on the same reasoning as the four '(ENG)' Italian counters below; correcting the one record this pass added does not, because it is a non-combat Engineer counter with no combat rating for morale to modify.",
       "counter": "900 Pioneer Bn",
       "group": "GE 90th Light Division",
       "hex": [
@@ -7575,12 +7577,12 @@
       "side": "AXIS",
       "role": "engineer",
       "nationality": "GE",
-      "morale": 2,
+      "morale": 1,
       "arrival_turn": 34,
       "arrival_stage": 1
     },
     {
-      "counter": "200 Pioneer Bn",
+      "counter": "200 Pioneer Bn [164]",
       "group": "GE 164th Light Division",
       "hex": [
         44,
@@ -7608,6 +7610,7 @@
       "arrival_stage": 3
     },
     {
+      "_arrival_comment": "The [4.44B] 9th Australian Division sheet prints Arrives 3/29 (Operations Stage 3 of Game-Turn 29) for this counter, and this record says turn 30 with no stage. That is CORRECT BY THIS FILE'S OWN CONVENTION, not a slip: the 9 Aus Cav Regt, also printed 3/29, is likewise seeded as turn 30 with no stage and the same entry hex [46, 139]. The convention rounds a stage-3 arrival to the head of the next Game-Turn rather than model an in-turn entry stage. Noted here because the arrival column is the one cell a reader checks against the chart.",
       "counter": "2/1 Aus Pioneer Bn",
       "group": "CW 9th Australian Division",
       "hex": [

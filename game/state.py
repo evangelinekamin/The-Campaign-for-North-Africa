@@ -95,15 +95,19 @@ class Unit:
     #                  purposes only, and only while holding 6+ Scorpion TOE (game.minefields)
     # Minefields (24.31/26.13/26.24) and fortifications (24.42) gate on these, never on 'RAIL' or
     # 'ROAD', because 23.13/24.61 restrict those two to their one named job.
-    # FLAGGED: no OOB in this repo seeds 'ENGINEER' or 'HQ_ENGINEER' -- the German/Italian/
-    # Commonwealth engineer battalions and the CW HQ-Engineering flag are an untranscribed OOB gap
-    # (the same class of gap the 4.45 organisation-tree work found and named), so the 24.3/24.4
-    # CONSTRUCTION paths are built and CORRECT but currently UNREACHABLE by any live scenario. The
-    # 'SCORPION' counters ARE seeded (data/reinforcements_campaign.json, GT99), so rule 26's
-    # clearing/escort half is reachable. An engineer battalion is NOT a combat unit "in any way,
-    # shape or form" (23.11), so it carries is_combat=False and never banks a city, exerts a ZOC or
-    # is assaulted -- a Scorpion battalion, being a tank battalion, obviously still is one. Default
-    # '' keeps every scenario without engineers byte-identical.
+    # The campaign OOB SEEDS all of these as of the Phase 8.1b engineer pass (2026-07-27): 14 Axis
+    # 'ENGINEER' (6 German Pioneer + 8 Italian Genio battalions), 10 Commonwealth 'HQ_ENGINEER'
+    # division/brigade HQs, 1 Commonwealth 'ENGINEER' (the 2/1 Australian Pioneer Bn), the 3
+    # 'RAIL'/'ROAD' construction counters and the 2 GT99 'SCORPION' flail battalions -- 30 counters,
+    # 25 of which may LAY a belt under 24.31. Before that pass the census was ZERO and the 24.3/24.4
+    # CONSTRUCTION paths were unreachable; they are reachable now, and what still builds nothing is
+    # the POLICY layer (no Policy.construction implementation proposes a minefield or a fort).
+    # An engineer battalion is NOT a combat unit "in any way, shape or form" (23.11), so it carries
+    # is_combat=False and never banks a city, exerts a ZOC or is assaulted. Three counters carry
+    # engineering capability and ARE combat units or HQs -- the Scorpion tank battalions (23.15),
+    # the 2/1 Australian Pioneer Bn ([4.44B] note b) and 23.14's HQ^E -- see
+    # game.minefields.is_engineer_counter for which rule exempts each. Default '' keeps every
+    # scenario without engineers byte-identical.
     engineer: str = ''             # '' | 'RAIL' | 'ROAD' | 'ENGINEER' | 'HQ_ENGINEER' | 'SCORPION'
     formation: str = ''            # OOB organisational group; the staff layer addresses by it
     # The counter's NATIONALITY as the order of battle built it ('IT' Italian, 'GE' German, 'CW'

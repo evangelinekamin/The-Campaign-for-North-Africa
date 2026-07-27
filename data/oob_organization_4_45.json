@@ -7,7 +7,8 @@
   "JUDGEMENT CALL (not transcribed): 62nd Marmarica and 63rd Cirene appear NOWHERE on the OA chart -- they are named only as the historical attachment destinations of the LXII(L)/LXIII(L) tank battalions (LTC sheet note b, chart p.149). Their two-regiment structure (115+116 / 157+158, each with I/II/III battalions) is RECONSTRUCTED from the oob_campaign_extra.json counter naming plus the universal Italian binary-division pattern -- matching that file's own 'Cirene/Marmarica reconstructed (no [4.44b] sheet)' provenance note, NOT an OA transcription.",
   "4th CCNN battalion 170: the OA puts it under the 270th Legion but counter 'IT 170 - 240-4CN' states the 240th; the counter's stated parent is followed.",
   "Garrisons (Tobruk/Benghazi/Bardia/Derna/minor) and all Unassigned/Corps/Non-Divisional sheets are flat lists of independent units (OA), correctly left with no parent.",
-  "LATENT (found by the Gate D honesty audit 2026-07-25, behaviorally INERT here): the CW 1st and 2nd Armoured Divisions' armored regiments (2 Bays/10 Hussars/9 Lancers under 1 Armd Div; the cruiser regts + 2/7 RTR under 2 Armd Div) are parented to the DIVISION HQ, one tier too high -- the [4.45a] scan (PDF p.116) and transcription 4.45a-oa-allied.md:88-91 nest them at L2 under the 2nd Armoured Bde HQ, leaving that brigade HQ childless. Inert in this slice because concentrate_formations attaches only under COMBAT HQs and both the division and brigade HQs are non-combat (neuter==base determinism holds regardless); it becomes a real faithfulness bug only when non-combat HQ-follows-formation movement lands. A correct fix must re-read the whole [4.45a] CW armored chart (p.116-132) to enumerate every armored-brigade regiment and its brigade parent -- a partial fix would leave the tree internally inconsistent; tracked as a CW-armored-OOB follow-up."
+  "LATENT (found by the Gate D honesty audit 2026-07-25, behaviorally INERT here): the CW 1st and 2nd Armoured Divisions' armored regiments (2 Bays/10 Hussars/9 Lancers under 1 Armd Div; the cruiser regts + 2/7 RTR under 2 Armd Div) are parented to the DIVISION HQ, one tier too high -- the [4.45a] scan (PDF p.116) and transcription 4.45a-oa-allied.md:88-91 nest them at L2 under the 2nd Armoured Bde HQ, leaving that brigade HQ childless. Inert in this slice because concentrate_formations attaches only under COMBAT HQs and both the division and brigade HQs are non-combat (neuter==base determinism holds regardless); it becomes a real faithfulness bug only when non-combat HQ-follows-formation movement lands. A correct fix must re-read the whole [4.45a] CW armored chart (p.116-132) to enumerate every armored-brigade regiment and its brigade parent -- a partial fix would leave the tree internally inconsistent; tracked as a CW-armored-OOB follow-up.",
+  "The five ENGINEER counters the 8.1b OOB pass added whose formation IS treed are treed here (2026-07-27, review repair): 200 Pioneer Bn [5 Le], 33 Pioneer Bn, 900 Pioneer Bn, 200 Pioneer Bn [164], 2/1 Aus Pioneer Bn. Each is TRANSCRIBED from the OA chart's own assignment notation -- [4.44b]'s key (scan p.147, verbatim): \"A unit whose name is indented two spaces possesses a parent formation. Its parent unit is the first unit above it on the sheet whose name is not indented.\" All five print at that one indent under their division headquarters (5th Light p.162, 15th Panzer p.163, 90th Light p.166, 164th Light p.164, 9th Australian p.125), exactly like the Panzerjaeger/Flak/Aufklarungs battalions already treed beside them. NOT treed, correctly: the eight Italian Engineer Battalions (Trento, Brescia, Sabratha, Pavia, Bologna, Savona, Trieste, Pistoia) -- those divisions are melded counters with no HQ in this OOB, so the WHOLE formation is untreed, not just its engineer (the first flag above); 778 Naval Eng Koy, which the chart itself files under 'Unassigned Infantry Units' (p.164) with no parent; and 288 Pioneer Coy, already treed under 288 Son HQ."
  ],
  "tree": {
   "1 Armd Bde [2] (Rtn)": {
@@ -450,6 +451,10 @@
    "org_type": "",
    "parent": ""
   },
+  "2/1 Aus Pioneer Bn": {
+   "org_type": "",
+   "parent": "HQ 9 Aus Div"
+  },
   "2/2 Aus Fld Arty": {
    "org_type": "",
    "parent": ""
@@ -489,6 +494,14 @@
   "20 In Bde Grp III": {
    "org_type": "",
    "parent": "HQ 20 In Bde Grp"
+  },
+  "200 Pioneer Bn [164]": {
+   "org_type": "",
+   "parent": "HQ 164 Light Div"
+  },
+  "200 Pioneer Bn [5 Le]": {
+   "org_type": "",
+   "parent": "HQ 5 Le Div"
   },
   "21 In Bde Grp I": {
    "org_type": "",
@@ -663,6 +676,10 @@
    "parent": "HQ 15 Panzer Div"
   },
   "33 Aufkl Bn": {
+   "org_type": "",
+   "parent": "HQ 15 Panzer Div"
+  },
+  "33 Pioneer Bn": {
    "org_type": "",
    "parent": "HQ 15 Panzer Div"
   },
@@ -957,6 +974,10 @@
   "9 Lancers [1]": {
    "org_type": "",
    "parent": "HQ 1 Armd Div"
+  },
+  "900 Pioneer Bn": {
+   "org_type": "",
+   "parent": "HQ 90 Light Div"
   },
   "Capetown Highlanders Bn [2/1 SA]": {
    "org_type": "",

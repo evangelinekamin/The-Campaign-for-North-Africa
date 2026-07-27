@@ -207,6 +207,13 @@ def classify(counter: str, group: str) -> "str | None":
     # measured pass through tests/test_campaign_claim.py & test_campaign_concentration.py, not a
     # same-commit tack-on). This classify() branch is forward-looking infrastructure only: it makes
     # a future re-extraction (or the four records once someone does that pass) resolve correctly.
+    # A COMMONWEALTH "(ENG)" counter would raise KeyError at _make_unit's stats[nat][role], and that
+    # is the RIGHT answer, not a hole to plug: the [4.46a] Commonwealth Unit Characteristics Chart
+    # (scan p.133-134) prints NO Engineer Bn-Eq row at all. Its only engineering rows are 'uu'
+    # Construction (Road/RR), which 23.13 restricts to railroad/road work, and -- for the one CW
+    # general engineer in the game -- the ordinary infantry row 'q' the 2/1 Australian Pioneer Bn's
+    # own chart note assigns it. There is no CW engineer row to resolve to, so inventing a stat line
+    # for one would be fabricating a counter the book does not print. Fail loud instead.
     if "(ENG)" in c:
         return "engineer"
 

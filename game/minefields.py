@@ -85,16 +85,41 @@ def is_engineer_counter(u) -> bool:
     have no real combat value, nor do they exert Zones of Control. They are NOT COMBAT UNITS IN ANY
     WAY, SHAPE, OR FORM. Engineer units may never enter Enemy-controlled hexes voluntarily"?
 
-    That is 23.0's three kinds (EBn, ECoy, HQ-with-Engineering) plus 23.13's two rail/road
-    engineering companies -- every `engineer` value EXCEPT 'SCORPION'.
+    23.11 is the ENGINEER BATTALION/COMPANY case, and it states its own premise in the sentence
+    before the restriction: a counter it governs is one with no combat value that exerts no ZOC.
+    So the predicate is the `engineer` flag AND that premise -- `is_combat` False -- AND not an
+    HQ. Two counters carry engineering capability while failing that premise, and the charts say
+    so in their own words:
 
-    A 23.15 Scorpion battalion is NOT one. It is a Commonwealth TANK battalion (42/44 RTR, 8 TOE of
-    flail tanks, is_combat=True) that "possesses engineer unit status" strictly "for ANTI-MINEFIELD
-    capabilities" -- the exact clause game.minefields' own SCORPION docstring and
-    data/minefields.json's _capabilities key both record. 23.11 is written about counters with no
-    combat value; reading it onto a flail battalion would forbid the one unit in the Commonwealth
-    order of battle whose entire purpose is to breach INTO an enemy position at El Alamein."""
-    return bool(u.engineer) and u.engineer != SCORPION
+      * [23.15]'s SCORPION battalions. A Commonwealth TANK battalion (42/44 RTR, 8 TOE of flails,
+        is_combat True) that "possesses engineer unit status" strictly "for ANTI-MINEFIELD
+        capabilities" -- the clause data/minefields.json's _capabilities key records verbatim.
+        Reading 23.11 onto it would forbid the one unit in the Commonwealth order of battle whose
+        entire purpose is to breach INTO an enemy position at El Alamein.
+      * The 2/1 AUSTRALIAN PIONEER BATTALION. [4.44B] OA chart, 9th Australian Division sheet,
+        note b (scan p.125, read verbatim): "Pioneer Battalions in the Australian army were
+        engineer battalions with full-fledged infantry capabilities. This unit possesses all
+        normal engineer battalion capabilities plus those of its 'q' ID Code." ID 'q' is an
+        Infantry Bn-Eq (CPA 10, Close Assault 1/1, 6 TOE), so the chart itself denies 23.11's
+        premise for this counter: it IS a combat unit, it DOES exert a ZOC (game.zoc keys on
+        is_combat), and barring it from enemy-controlled ground would make it the only infantry
+        battalion in the game that may not advance. It keeps every ENGINEER capability -- it lays
+        belts, clears them and escorts (is_engineer below) -- because that is what the note says.
+
+    HQ_ENGINEER is likewise not one, on [23.14]: "Headquarters units with a letter E next to their
+    Stacking Points have Engineering capability (see Section 24.0) but OTHERWISE THEY ARE TREATED
+    LIKE ANY OTHER HQ UNIT." A plain HQ may enter an enemy-controlled hex; applying 23.11's
+    movement ban to an HQ^E would treat it unlike any other HQ in a respect other than its
+    engineering capability, which is exactly what 23.14 forbids. FLAGGED as the judgement call it
+    is: 23.0's GENERAL RULE lists "Headquarters Units with Engineer capability" among "three types
+    of Engineer units", so 23.0 and 23.14 pull opposite ways. 23.14 wins because in this rulebook
+    the Cases govern the General Rule, because 23.14 is the Case written specifically about this
+    counter, and because the alternative strands every division HQ carrying an E the moment the
+    enemy projects a ZOC across its division's front.
+
+    The 'RAIL'/'ROAD' construction counters (23.13) and the EBn/ECoy counters ARE 23.11 counters:
+    they are is_combat False, oca/dca 0, sp 0 -- the rule encoded as data."""
+    return bool(u.engineer) and not u.is_combat and u.engineer != HQ_ENGINEER
 
 
 def is_engineer(u) -> bool:

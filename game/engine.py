@@ -3343,9 +3343,11 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
                     "involved in construction: may not move or spend CP this OpStage (24.12)")
             continue
         # 23.11: "Engineer units may never enter Enemy-controlled hexes voluntarily." Keyed on the
-        # ENGINEER-COUNTER predicate, not on `u.engineer` being truthy: 23.15's Scorpion battalions
-        # are tank battalions carrying engineer status for anti-minefield purposes ONLY, and 23.11
-        # is written about counters that are "not combat units in any way, shape, or form".
+        # ENGINEER-COUNTER predicate, not on `u.engineer` being truthy: 23.11 states its own premise
+        # ("not combat units in any way, shape, or form"), and three counters carry engineering
+        # capability without meeting it -- 23.15's Scorpion flail battalions, the 2/1 Australian
+        # Pioneer Bn ([4.44B] note b: "engineer battalions with full-fledged infantry capabilities")
+        # and 23.14's HQ^E ("otherwise they are treated like any other HQ unit"). See the predicate.
         if (minefields.is_engineer_counter(u)
                 and r.state.control_of(order.to) == CONTROL_OF[_other(side)]):
             _reject(r, side, actor, order,
