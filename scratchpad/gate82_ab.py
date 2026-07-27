@@ -18,6 +18,18 @@ rather than crashing.
 Usage:
   PYTHONPATH=<tree> python3 <tree>/scratchpad/gate82_ab.py --seeds 1941 7 4 24 2026 99 1 \
       --workers 7 --out <path.json>
+
+PROVENANCE OF THE GATE'S OWN A/B (recorded because the arms did not all run at one commit).
+BASE was a detached worktree at 7b2c2cc, the last commit before the 8.2 slice. The HEAD arm was
+run three times: trial 1 at aa4b6a2, then -- after another session committed the 23.11/23.15
+engineer-counter repair 2737e5e into this same working tree at 22:45 -- trials 2 and 3 at
+2737e5e. TRIALS 2 AND 3 ARE THE GATE'S RESULT (they measure the whole 8.2 block, repair
+included, and agree with each other seed for seed). Trial 1 is retained only as the observation
+that first exposed the cross-process non-reproducibility: at aa4b6a2 it reported seeds 7/24/99
+differing from base, while an ISOLATED single-process run of seed 24 at that same commit
+returned base's own 266,580-event log -- same seed, same tree, two different logs. The three
+read-only probes (gate82_capability / gate82_legal_belt / gate82_sanity) were re-run at 2737e5e
+and are byte-identical to their pre-repair output, so questions 1 and 4 are unaffected.
 """
 from __future__ import annotations
 
