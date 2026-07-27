@@ -79,6 +79,36 @@ is WIDER than VEHICLE's 12 only because [8.44] exempts light trucks INTO the mar
 collapses light trucks back toward the vehicle floor rather than sealing a front, and the passable
 width at El Alamein's own meridian moves only 30 -> 28. The direction was right; "the desert seals
 Alamein" is not what the graph says.
+
+GATE ADDENDUM 2026-07-26, NO SIGNATURE MOVE (a measurement, not a change -- game/ and data/ are
+untouched; drivers scratchpad/gate845_front.py, gate845_ab.py, gate845_compare.py). The block gate
+ran the FULL 111-turn campaign A/B, seeds 1941 7 4 24 2026 99 1, against the pre-slice tree
+4a08f4d, plus a THIRD arm: HEAD's bodies with ONLY the Desert gate switched off (neutered at
+game.movement.desert_barred -- step_cost is the rule's sole call site, and the neuter is proven
+live by reading the patched symbol back inside all 7 folds, all False, against True in an
+unpatched HEAD process). Two published claims are corrected by it:
+
+  * THE DESERT GATE MOVES THE CAMPAIGN BY EXACTLY NOTHING. HEAD == the gate-off arm on all 7
+    campaign signatures, and on every derived figure (events, truck moves, rejections, survivors,
+    victory reason, Axis high-water, Axis position at war's end). The whole BASE -> HEAD campaign
+    delta -- all 7 signatures move -- is Cause A + Cause B, not the bar. Which also refines the
+    paragraph above: campaign/1941's light convoy relocations 784 -> 768 are the [8.44] MARSH
+    EXEMPTION arriving through the truck-class pathing fix, ALONE. "[8.44] and [8.45] together
+    redrawing which hex the dispatcher picks" credited the Desert bar with a share it does not
+    have; measured, its share is zero. The rule is faithfully transcribed and correctly wired and
+    the scripted dispatcher simply never asks it a question: light TRUCK_MOVED events ending in
+    Desert are 0/0, and Axis GROUND moves into Desert are 0/0, on every one of the 7 seeds.
+
+  * THE FRONT NARROWS IN THE DEEP SOUTH, NOT AT ALAMEIN, and the 27 -> 13 is now verified rather
+    than merely computed: deleting each cut disconnects the sector, and every one of its hexes is
+    load-bearing (restoring any single one reopens a route) -- for all 5 mobility classes, both
+    arms. WHERE it runs: pre-gate the LIGHT_TRUCK cut is two runs, a 7-hex coastal shoulder at El
+    Alamein (E3001..D2431) and a 20-hex wall (E2003..D0127) that terminates ON THE RASTER'S
+    SOUTHERN EDGE. Post-gate the coastal shoulder survives UNCHANGED and the southern wall
+    collapses to 6 scattered choke hexes, none touching the map edge. So the gate does not build
+    the Alamein position -- the coastal shoulder is identical before and after, and identical to
+    what VEHICLE already had -- it removes the light truck's 20-hex desert highway around it. The
+    cheapest west->east route is 75.5 CP for every class in both arms, unchanged.
 --------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-26 (THIRD MOVE THE SAME DAY) -- CAUSE: Phase 8.1b Block B, the [8.35]/[8.42]
 escarpment HEXSIDE trace landing (tools/vassal/extract_hexsides.py -> data/hexsides_<section>.json,
