@@ -10,24 +10,75 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
-NOT RE-BASELINED 2026-07-26 -- [8.45] DESERT (game.terrain.DESERT_BARRED / desert_barred, gated in
-movement.step_cost) landed and both signatures were RE-MEASURED, not assumed, to prove it: still
-abc4300eccbb / a5da9203198d, byte-identical. This is not a null result -- it is the honest shape of
-a faithfully-transcribed rule with no live consumer yet. [8.45] bars Mobility.LIGHT_TRUCK and
-Mobility.MOTORCYCLE from ENTERING a Desert hex; grep of every data/*.json and every game/*.py call
-site shows NO Unit and NO TruckFormation is ever constructed with either mobility today -- truck
-convoys path at SUPPLY_MOBILITY (Mobility.MOTORIZED, game/supply.py) regardless of their own
-"light"/"medium"/"heavy" truck_class, and LIGHT_TRUCK/MOTORCYCLE appear only in
-_TRUCK_BP_MOBILITY's Breakdown-Point accrual (movement.breakdown_points, which [8.45] does not
-gate) and oob._fuel_role_default. The neuter-proof runs the OTHER direction from the usual one: with
-game.movement.desert_barred patched to always-True (the maximally aggressive gate), both benchmark
-signatures STILL do not move, confirming the gate is correctly wired to a mobility class the engine
-does not yet instantiate for movement, not silently dead code. A min-vertex-cut probe
-(scratchpad/gate845_desert.py) on the Mobility.LIGHT_TRUCK step graph -- the closest live proxy for
-the "first-line truck" the faucet audit (project memory) names -- measures the gate narrowing the
-Alamein-sector front from 27 to 13 hexes while leaving the VEHICLE/MOTORIZED cut (12) byte-for-byte
-unchanged; that number is a graph property of the CHART, not of anything the campaign currently
-plays, until a later slice threads a real first-line-truck mobility class into unit/convoy movement.
+RE-BASELINED 2026-07-26 (FOURTH MOVE THE SAME DAY) -- CAUSE: the [8.45] DESERT REVIEW REPAIR, whose
+first repair was to THE ENTRY THAT USED TO STAND HERE. That entry read "NOT RE-BASELINED... the
+honest shape of a faithfully-transcribed rule with no live consumer yet", on the strength of a grep
+that found no Unit and no TruckFormation carrying Mobility.LIGHT_TRUCK or MOTORCYCLE. THE GREP WAS
+RIGHT AND THE CONCLUSION WAS WRONG: both classes the rule names exist in this engine today, and
+[8.45] had been landed at a seam where neither of them lived.
+
+    abc4300eccbb / a5da9203198d  ->  87f3baeb4530 / b2a2f8bf6ab9
+
+CAUSE A -- LIGHT TRUCKS. game.supply.reachable_truck_moves pathed EVERY convoy at SUPPLY_MOBILITY
+(Medium) whatever its own 54.2 truck_class, on a comment claiming "the classes differ only in
+Breakdown Points, so the chosen path is the same". True until [8.45] landed; false after it. The
+book distinguishes the classes in a PROHIBITION as well as a price, in BOTH directions at once, and
+a Light convoy was being routed around both rules: denied [8.44]'s Salt Marsh exemption ("Vehicles,
+EXCEPT FOR LIGHT TRUCKS, Recce-type units, and motorcycle infantry...") and granted [8.45]'s Desert
+("forbidden to Light Trucks"). Five campaign and two benchmark formations are Light. Fixed by
+supply.TRUCK_MOBILITY, the same table that already chose the Breakdown class, now also chosen for
+the path (and for truck_bp_for_move's path RECONSTRUCTION, which must agree with it or the 21.21
+accrual is billed over a route the convoy was never allowed to drive).
+
+CAUSE B -- MOTORCYCLE INFANTRY, WHICH THE OOB HAD MIS-TYPED TWICE. The 15th Kradschutzen Bn was
+`motor_infantry` in data/reinforcements_campaign.json and `recon` in data/reinforcements_desert_fox.
+json -- the same historical battalion, two different counters, neither of them the book's. Read off
+the scan: [4.45c] (PDF p.162) prints "Kradschutzen = Motorcycle infantry"; the OA sheet (p.163)
+gives the battalion ID Code 'g'; [4.46c] (p.137) gives 'g' as Infantry Bn-Eq, CPA 25, Close Assault
+3/2, Max TOE 7; and a census of every ID Code on the German OA sheets finds 'g' on EXACTLY ONE
+counter -- this one. Now typed `motorcycle_infantry` (data/unit_stats.json), which makes three
+rules live on it at once: [8.44] marsh exemption, [8.45] desert bar, and [49.12] "Fuel users... do
+NOT INCLUDE MOTORCYCLES" (which in turn corrected data/logistics_rates.json's engine_proxy, where
+MOTORCYCLE read 1 against oob._fuel_role_default's 0 -- a disagreement nothing could see until the
+class had its first counter).
+
+ATTRIBUTION, MEASURED (seed 42, ScriptedPolicy(AXIS) both sides, each figure reproduced twice):
+
+    live (A+B)                                            -> 87f3baeb4530 / b2a2f8bf6ab9
+    NEUTER A -- supply.reachable_truck_moves/truck_bp_for_move
+      restored to HEAD's bodies (every convoy at Medium)   -> 87f3baeb4530 / b2a2f8bf6ab9
+      i.e. CAUSE A MOVES NEITHER BENCHMARK AT ALL
+    NEUTER B -- 15 Krad back to `recon` in the desert-fox
+      OOB (data, swapped in place), A still live           -> abc4300eccbb / a5da9203198d
+      i.e. EXACTLY the old baseline: CAUSE B IS THE WHOLE MOVE, and A+B off is the old baseline too
+
+A NEW INSTANCE OF THE NEUTER TRAP, recorded because it cost an hour and would have been published
+as an attribution: the first Cause-A neuter flattened supply.TRUCK_MOBILITY wholesale to MOTORIZED.
+That is not HEAD -- HEAD accrued a Light convoy's Breakdown Points at LIGHT_TRUCK (the 54.2 off-road
++1) while pathing it at Medium -- so the "full revert" measured 86263f0ce5c0 / e26a61c0e277, a state
+that has never existed in this repository. The trap here is not the import binding but the SHARED
+TABLE: neutering a symbol that two rules read neuters both of them. The published neuter restores
+the two function bodies instead.
+
+WHY CAUSE A MOVES NOTHING, MEASURED RATHER THAN ASSUMED -- because an unchanged signature is equally
+consistent with dead code, which is precisely the error the entry above made. Instrumented over the
+real runs: reachable_truck_moves is asked for a LIGHT convoy 76 times in rommel/42 (56,553 hexes of
+light reach flooded) and 2,433 times in campaign/1941 (1,557,322 hexes); the code is hot. What the
+scripted convoy dispatcher never did was CHOOSE a Desert destination: light TRUCK_MOVED events
+ending in a Desert hex number ZERO both before and after the repair, in all three scenarios. So
+[8.45]'s bite on convoys is a reach/graph restriction, not a stream of lorries that had been
+crossing the sand sea. It is not inert either -- in campaign/1941 the repair moves light convoy
+relocations 784 -> 768, the [8.44] marsh exemption and the [8.45] bar together redrawing which hex
+the dispatcher picks. The two benchmark scenarios each make only 4 light convoy moves, all
+identical under both graphs, which is the whole reason their signatures sit still.
+
+CORRECTED FROM THE SAME ENTRY, since a log that silently edits itself is worthless: the min-vertex-
+cut probe's 27 -> 13 reproduces (scratchpad/gate845_desert.py, independently re-run by the review),
+but its framing did not. That widening to 27 is mostly the Qattara -- pre-gate the LIGHT_TRUCK cut
+is WIDER than VEHICLE's 12 only because [8.44] exempts light trucks INTO the marsh -- so [8.45]
+collapses light trucks back toward the vehicle floor rather than sealing a front, and the passable
+width at El Alamein's own meridian moves only 30 -> 28. The direction was right; "the desert seals
+Alamein" is not what the graph says.
 --------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-26 (THIRD MOVE THE SAME DAY) -- CAUSE: Phase 8.1b Block B, the [8.35]/[8.42]
 escarpment HEXSIDE trace landing (tools/vassal/extract_hexsides.py -> data/hexsides_<section>.json,
@@ -1297,8 +1348,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "abc4300eccbb"
-SIEGE_OF_TOBRUK = "a5da9203198d"
+ROMMELS_ARRIVAL = "87f3baeb4530"
+SIEGE_OF_TOBRUK = "b2a2f8bf6ab9"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

@@ -253,7 +253,18 @@ def may_step_into(state: GameState, units, src: Coord, dst: Coord) -> bool:
     building half of it here would invent a loss the rules attach to a mechanism we do not have.
     Excluding the hex from the retreat instead keeps the two things the rule guarantees -- a
     barred vehicle never gains free passage through a marsh, and never ends its retreat frozen in
-    one -- and leaves 5.33 as named debt rather than a silent hole."""
+    one -- and leaves 5.33 as named debt rather than a silent hole.
+
+    THE ONE HOLE THIS GATE CANNOT CLOSE, and it is SETUP, not movement: [8.45] is entry-only and
+    has no 5.33 Abandonment clause, so a class barred from Desert that is PLACED in one has every
+    move legal (it may always leave) unless every neighbour is Desert too -- of which the engine's
+    deep sand-sea interiors have plenty. Nothing can reach that state by moving; only an OOB or
+    scenario that deploys a Light Truck formation or a motorcycle unit into the sand can create it.
+    MEASURED, not assumed, at the point [8.45] gained its first live consumers: zero of the five
+    campaign / two benchmark Light convoys and neither Kradschutzen counter starts on a Desert hex,
+    and a TruckFormation has exactly one mover in the engine (engine._truck_move, gated by
+    supply.reachable_truck_moves) with no forced-relocation path at all. FLAGGED for the OOB slice
+    that adds the book's seven Italian Bersaglieri Mitrg battalions."""
     weather = state.weather_at(src)
     return all(movement.step_cost(state.terrain, src, dst, u.mobility, weather) is not None
                for u in units)

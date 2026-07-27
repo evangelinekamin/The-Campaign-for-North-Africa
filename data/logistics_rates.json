@@ -179,9 +179,9 @@
         "MOTORIZED": 1,
         "RECCE": 1,
         "LIGHT_TRUCK": 1,
-        "MOTORCYCLE": 1
+        "MOTORCYCLE": 0
       },
-      "fuel_cost_formula": "fuel_rate(unit) * ceil(cp/5) * max(1, toe_strength_points)   -- the full 49.13 law", "_comment": "fuel_rate_by_mobility is the FALLBACK only: a unit carrying a charted per-model [4.47-4.49] rate uses that. The x-TOE multiply is present (game/supply.py fuel_cost); the note that said it was missing was stale.",
+      "fuel_cost_formula": "fuel_rate(unit) * ceil(cp/5) * max(1, toe_strength_points)   -- the full 49.13 law", "_comment": "fuel_rate_by_mobility is the FALLBACK only: a unit carrying a charted per-model [4.47-4.49] rate uses that. The x-TOE multiply is present (game/supply.py fuel_cost); the note that said it was missing was stale. MOTORCYCLE was 1 and is 0 as of the [8.45] review repair (2026-07-26): [49.12] prints the exception in so many words -- 'Fuel users include HQ's with non-parenthesized TOE Strength Points and all gun class units. They do NOT INCLUDE MOTORCYCLES or the towing of tanks and trucks back to repair facilities.' game/oob.py _fuel_role_default already zeroed the class on that authority; this table disagreed with it, and the disagreement was invisible until the 15th Kradschutzen Bn became the engine's first MOTORCYCLE counter (the two seams meet at supply.fuel_rate's `unit.fuel_rate or _FUEL_RATE_PROXY[...]`, whose `or` silently prefers the proxy over a legitimately-zero charted rate -- FLAGGED as a falsy-zero seam, harmless now that both halves read 0, and a real trap for any future class whose charted rate is genuinely zero).",
       "location": "game/supply.py _FUEL_RATE_PROXY / fuel_rate() / fuel_cost()"
     }
   },

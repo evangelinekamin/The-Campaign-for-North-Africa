@@ -61,8 +61,21 @@ SALT_MARSH_EXEMPT = frozenset({Mobility.LIGHT_TRUCK, Mobility.RECCE, Mobility.MO
 #      8.45 mentions Track ONLY to close the one loophole a reader fresh off 8.44 would reach for --
 #      "whether traversed by Tracks or not" -- and says nothing whatever about a Road. Two rulebook
 #      paragraphs apart, the designer wrote "Road or Track" once and then, choosing his words again,
-#      wrote neither. Read as written: the bar is unconditional. A Road through the open desert is
-#      also not something the 1979 map draws -- the two facts agree.
+#      wrote neither. Read as written: the bar is unconditional.
+#      THE COUNTER-ARGUMENT, recorded beside the ruling because it is the honest one: [8.37] note 2
+#      restates 8.44 as "may only enter/leave the hex on a TRACK" -- dropping the Road the body rule
+#      plainly grants -- which proves the chart notes are casual about the word "Road". So note 3's
+#      "may not enter, even via a track" may equally be loose shorthand for "even via a road or
+#      track". Both readings of that carelessness land on the SAME gate: either 8.45 names no
+#      exemption (read strictly) or its "track" stands for "road or track" (read loosely as note 2
+#      demonstrably does), and a Road opens nothing either way. What was written here before the
+#      review and is NOT true, struck rather than quietly deleted: "A Road through the open desert
+#      is also not something the 1979 map draws." The engine's own extracted road layer draws EIGHT
+#      road edges touching a Desert hex -- D1930-D1931-D1932-D1933-E2000-E2001 (the Siwa/Jarabub
+#      run) plus B0525-B0526, B0529-B0530 and B0402-B0403 -- and 16 track edges likewise, where the
+#      book is explicit. An unchecked supporting fact that happened to flatter the ruling. Measured,
+#      it is not load-bearing: a Road-exempt variant of this gate leaves every live Light convoy's
+#      reach identical (scratchpad/rep845/roadexempt.py).
 #
 #   3. The named class list does not partition this engine's Mobility enum the way [8.44]'s did.
 #      8.44 exempts "Recce-type units" as a whole -- which is exactly Mobility.RECCE, one class, one

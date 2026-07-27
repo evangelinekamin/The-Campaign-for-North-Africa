@@ -222,6 +222,11 @@ def classify(counter: str, group: str) -> "str | None":
         return "artillery"                           # Horse/Field/Medium regiments, ArKo, 155mm
     if "OAS" in c or "Oasis" in c:
         return "oasis"
+    if "Krad" in c:
+        # [4.45c] German Organization at Arrival Chart, its own key: "Kradschutzen = Motorcycle
+        # infantry". A distinct class, not a flavour of motor infantry -- [8.44] exempts it from
+        # the Salt Marsh vehicle bar, [8.45] forbids it Desert hexes, [49.12] it burns no fuel.
+        return "motorcycle_infantry"
     if "KRRC" in c or "FMtMr" in c:
         return "motor_infantry"                      # King's Royal Rifle Corps = motor bn
     if "RTR" in c or "LTC" in c:

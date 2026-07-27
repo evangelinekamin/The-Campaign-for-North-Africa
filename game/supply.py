@@ -578,25 +578,45 @@ def column_legs(state: GameState, side: Side, truck_ids: tuple) -> tuple:
     return ()                                          # 32.32: short of thirty -> no column at all
 
 
+# [54.2]/[8.44]/[8.45] THE MOBILITY CLASS A CONVOY MOVES AS -- its own. The three charted truck
+# classes are one game piece each, and the rulebook distinguishes them in three places: the 54.2
+# per-Point capacity and convoy CPA (already read from TRUCK_CHARS above), the 54.2 off-road +1
+# Breakdown Point that only a Light Truck pays, and -- the reason this table is no longer private
+# to the Breakdown accrual -- the two TERRAIN PROHIBITIONS the chart notes name by class:
+#
+#     [8.44]  "Vehicles, EXCEPT FOR LIGHT TRUCKS, Recce-type units, and motorcycle infantry may
+#             enter or leave a Salt Marsh hex only on a Road or Track."   -> a Light convoy is
+#             EXEMPT from the marsh bar every Medium/Heavy convoy obeys.
+#     [8.45]  "Desert hexes are forbidden to LIGHT TRUCKS, Motorcycle infantry, and motorcycle
+#             Recce units..."                                             -> a Light convoy may
+#             not enter a Desert hex at all, "whether traversed by Tracks or not".
+#
+# The [8.37] chart charges every motorized class the same CP, so this changes no cost -- but it is
+# NOT true (as this comment said before the [8.45] review caught it) that "the chosen path is the
+# same and only the accrual differs". Since [8.45] landed, the classes differ in a PROHIBITION, and
+# a prohibition changes the graph, not the price. Pathing every convoy at SUPPLY_MOBILITY routed
+# the engine's own five campaign / two benchmark LIGHT formations around BOTH rules at once: it
+# denied them the marsh the book grants them and granted them the desert the book forbids them
+# (measured before the fix: AL-Truck-Alex-L reached 2 Desert hexes; the rommels_arrival light park
+# reached 47). SUPPLY_MOBILITY stays MOTORIZED for the supply TRACE, where it is right for a
+# different reason -- [32.51] denominates a traced supply point as a MEDIUM Truck Point.
+TRUCK_MOBILITY = {"light": Mobility.LIGHT_TRUCK,
+                  "medium": Mobility.MOTORIZED, "heavy": Mobility.MOTORIZED}
+
+
 def reachable_truck_moves(state: GameState, truck: TruckFormation) -> dict:
     """Hexes a truck convoy can relocate to this Truck Convoy Phase: within its 53.22
-    extended convoy CPA as medium-truck movement, blocked by enemy ZOC not negated by a
-    friendly unit (the identical 32.16 trace-blocking reused from reachable_moves).
+    extended convoy CPA, moving as its OWN 54.2 truck class (TRUCK_MOBILITY -- so a Light
+    convoy carries [8.44]'s Salt Marsh exemption and [8.45]'s Desert prohibition with it),
+    blocked by enemy ZOC not negated by a friendly unit (the identical 32.16 trace-blocking
+    reused from reachable_moves).
 
     NOT the 64.71 line of supply -- see truck_trace_reach below. This is one lorry's MOVE in one
     Phase, budgeted at the formation's own convoy CPA (30 or 40); that is a trace of an army's
     supply line, budgeted at the rulebook's 90 or 60."""
     return _reach.reach(state.terrain, truck.hex,
-                        truck_convoy_cpa(truck.truck_class), SUPPLY_MOBILITY,
+                        truck_convoy_cpa(truck.truck_class), TRUCK_MOBILITY[truck.truck_class],
                         trace_blocked(state, truck.side))
-
-
-# [21.11]/[54.2] The mobility class a truck accrues Breakdown Points AS -- only Light Trucks
-# carry the 54.2 off-road +1 BP/hex+hexside penalty; Medium/Heavy accrue the plain motorized
-# value. (Movement COST is Medium for every class, SUPPLY_MOBILITY -- the classes differ only
-# in Breakdown Points, so the chosen path is the same and only the accrual differs.)
-_TRUCK_BP_MOBILITY = {"light": Mobility.LIGHT_TRUCK,
-                      "medium": Mobility.MOTORIZED, "heavy": Mobility.MOTORIZED}
 
 
 def truck_bp_for_move(state: GameState, truck: TruckFormation, dst: Coord) -> float:
@@ -605,13 +625,13 @@ def truck_bp_for_move(state: GameState, truck: TruckFormation, dst: Coord) -> fl
     54.2 class (light trucks pay the off-road +1). The engine feeds this into the TRUCK_MOVED
     faucet the way bp_for_move feeds UNIT_MOVED. Zero for a hop with no motorized accrual, so a
     scenario whose trucks never leave a road stays byte-identical."""
+    mob = TRUCK_MOBILITY[truck.truck_class]        # the SAME class reachable_truck_moves pathed at
     _, prev = movement.reachable_prev(state.terrain, truck.hex,
-                                      truck_convoy_cpa(truck.truck_class), SUPPLY_MOBILITY,
+                                      truck_convoy_cpa(truck.truck_class), mob,
                                       blocked=trace_blocked(state, truck.side))
     path = movement.reconstruct_path(prev, truck.hex, dst)
     if len(path) < 2:
         return 0.0
-    mob = _TRUCK_BP_MOBILITY[truck.truck_class]
     weather = state.weather_at(truck.hex)               # 29.7: the storm the convoy set out under
     return sum(movement.breakdown_points(state.terrain, a, b, mob, weather)
                for a, b in zip(path, path[1:]))

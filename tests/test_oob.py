@@ -50,6 +50,26 @@ def test_oob_classify_prefers_counter_identity_over_group():
     assert oob.classify("AL SGSU 250RAF", "AL SGSU") == "sgsu"     # rules 3.21/35.0, not a combat piece
 
 
+def test_the_15th_kradschutzen_is_typed_motorcycle_infantry():
+    """[4.45c] German Organization at Arrival Chart prints its own key -- "Kradschutzen =
+    Motorcycle infantry" (PDF p.162) -- and lists the 15th Kradschutzen Bn under ID Code 'g'
+    (p.163); [4.46c] gives 'g' as Infantry Bn-Eq, CPA 25, Close Assault 3/2, Max TOE 7 (p.137).
+    A census of the German OA sheets finds 'g' on exactly ONE counter, this one.
+
+    The typing MATTERS, which is why it is asserted rather than left to the OOB: the rulebook
+    names motorcycle infantry as a class in three separate rules, and this counter is the only
+    piece in the engine that answers to any of them -- [8.44] exempts it from the Salt Marsh
+    vehicle bar, [8.45] forbids it Desert hexes, and [49.12] "Fuel users... do not include
+    motorcycles". It used to be `motor_infantry` here and `recon` in the campaign OOB: the same
+    historical battalion, two different counters, neither of them the book's."""
+    from game.terrain import Mobility
+    u = {x.id: x for x in oob.build(sections="ABC")[0]}["GE-15-Krad"]
+    assert u.mobility == Mobility.MOTORCYCLE
+    assert (u.cpa, u.oca, u.dca, u.strength) == (25, 3, 2, 7)     # the printed 'g' row
+    assert supply.fuel_rate(u) == 0                               # [49.12], not a fuel user
+    assert oob.classify("GE 15 Krad", "GE 15th Panzer Division") == "motorcycle_infantry"
+
+
 def test_per_model_stats_override_role():
     u = {x.id: x for x in oob.build(sections="ABC")[0]}
     assert u["BR-4-RTR"].armor_protection == 6         # Matilda II -- heavy armour

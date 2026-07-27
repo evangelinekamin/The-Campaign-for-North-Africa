@@ -1213,7 +1213,7 @@
         -8
       ],
       "side": "AXIS",
-      "role": "motor_infantry",
+      "role": "motorcycle_infantry",
       "nationality": "GE",
       "morale": 2,
       "arrival_turn": 27
