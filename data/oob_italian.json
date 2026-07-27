@@ -971,7 +971,8 @@
   "kind": "unit",
   "counter": "IT 1 Libyan - none",
   "group": "IT 1st Libyan Infantry Division (Sibille)",
-  "role": "infantry",
+  "role": "hq_engineer",
+  "_role_comment": "ROLE CORRECTED 2026-07-27 (8.1c review repair), infantry -> hq_engineer. THIS COUNTER IS THE 1st LIBYAN INFANTRY DIVISION HQ^E, and it was being fought as a 6-step, CPA-10 infantry battalion. Three independent sources agree and none dissents. (1) [4.44b], scan p.148: the 1st Libyan Infantry Division sheet has exactly ONE un-indented (d0, no parent formation) row, \"1st Libyan Infantry HQ^E | 1 Libyan | b | N | D\"; every other row on the sheet is indented and would carry its parent in this file naming convention (as \"IT 3 Libyan - 2 Libyan\" and \"IT XVI-4L - 2 Libyan\" do). The \"- none\" suffix IS that d0. (2) The counter art: the CNAv2.1.0 module draws this very image (images/IT 1 Libyan - none.svg) with the Eng \"E\" layer visible -- one of only 22 counters in the whole game that carry it, and one of the nine Italian HQ^E (see data/unit_stats.json IT _hq_engineer_comment). (3) [60.31] deploys \"C4020: 1 Libyan Div (I)\", which is this record hex. The 8.1c pass did not ask which chart row this counter was and seeded a SECOND copy of the same HQ (\"IT 1 Libyan Div HQ - none\") beside it, then parented this record under its own duplicate in the [4.45] tree; the duplicate is deleted and this record carries the role. CONSEQUENCE, STATED: the 1st Libyan Division now has NO combat counter on the map at all. That is not a loss this repair caused -- it is the size of a PRE-EXISTING extraction gap becoming visible. The sheet prints eleven counters (Div HQ, two Regt HQs, six Libyan battalions, an artillery regiment and an anti-tank company, all \"D\") and the VASSAL campaign extraction carried exactly one of them, the HQ. FLAGGED, NOT FIXED HERE: the other ten have no counter in this repo.",
   "px": [
    7383,
    1661

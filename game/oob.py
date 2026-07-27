@@ -200,13 +200,19 @@ def classify(counter: str, group: str) -> "str | None":
         return "aa"
     # [23.0]/[24.31] Engineer-Type: the "(ENG)" counter-type tag, same convention as (ART)/(MG)/(AA)
     # below -- the 64th Catanzaro/4th CCNN/63rd Cirene/62nd Marmarica Engineer Battalions all carry
-    # it. NOT YET APPLIED to those four live records (Phase 8.1b engineer-OOB pass found them, and
-    # found that flipping is_combat True->False on all four AT ONCE reshapes the September-1940
-    # opening enough to flip who banks Sidi Barrani/Sollum and dries the Barrani supply chain by
-    # GT24-30 -- a real, faithful, but large campaign-narrative correction that needs its own
-    # measured pass through tests/test_campaign_claim.py & test_campaign_concentration.py, not a
-    # same-commit tack-on). This classify() branch is forward-looking infrastructure only: it makes
-    # a future re-extraction (or the four records once someone does that pass) resolve correctly.
+    # it. APPLIED 2026-07-27 (Phase 8.1c): all four live records now state role "engineer"
+    # explicitly, so they never reach this branch, and it is again what it always was for a
+    # re-extraction -- the rule that resolves an un-roled "(ENG)" counter correctly.
+    # WHERE THE TAG COMES FROM, PER COUNTER, because two of the four are NOT chart rows and the
+    # 8.1c commit message wrongly claimed all four were. TRANSCRIBED FROM [4.44b]: the 64th
+    # Engineer Bn (scan p.153, ID 'bbb') = "IT 64 - Cat (ENG)", and the 204th Engineer Bn (p.161,
+    # 'bbb') = "IT 204 - 4CCNN (ENG)". NOT ON ANY OA SHEET: the 62nd Marmarica and 63rd Cirene
+    # divisions have no sheet anywhere in [4.44b] (its inventory runs p.147-161; both divisions are
+    # named only in the LTC sheet's note b, as attachment destinations), and their records are
+    # RECONSTRUCTED -- data/oob_organization_4_45.json's _flags says so itself. Their "(ENG)" tag is
+    # still a book source, just a different one: it is on the COUNTER, whose module art is
+    # "IT 62 - 62 Mrm (ENG)" / "IT 63 - 63 Cir (ENG)". Chart authority for two, counter-sheet
+    # authority for two; the correction is right either way, the provenance claim was not.
     # A COMMONWEALTH "(ENG)" counter would raise KeyError at _make_unit's stats[nat][role], and that
     # is the RIGHT answer, not a hole to plug: the [4.46a] Commonwealth Unit Characteristics Chart
     # (scan p.133-134) prints NO Engineer Bn-Eq row at all. Its only engineering rows are 'uu'

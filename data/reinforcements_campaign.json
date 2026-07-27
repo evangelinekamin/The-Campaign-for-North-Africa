@@ -3151,7 +3151,7 @@
       "arrival_turn": 90
     },
     {
-      "_comment": "8.1c: this record used to be a fabricated 'Div body' stand-in with no OA-chart basis (is_combat infantry, no such counter is printed). Replaced with the real 44th Infantry Div HQ^E the chart prints (scan p.118, counter abbr '44', ID 'a', Arrives 2/90) -- same hex/turn, so nothing else about the muster moves.",
+      "_comment": "8.1c: this record used to be a fabricated 'Div body' stand-in with no OA-chart basis (is_combat infantry, no such counter is printed). Replaced with the real 44th Infantry Div HQ^E the chart prints (scan p.118, counter abbr '44', ID 'a', Arrives 2/90) -- same hex/turn, so nothing else about the muster moves. RESIDUAL GAP, FLAGGED 2026-07-27 in the 8.1c review repair, because deleting the stand-in removed the only counter that stood for it: the stand-in was is_combat and the real HQ is not, so this division lost one combat counter in the GT90 Alamein window and NOTHING replaced it. What [4.44B] p.118 prints for the 44th and this file still does NOT carry, counter by counter: 132nd Infantry Bde HQ and 133rd Infantry Bde HQ (both ID 'a', 2/90), their six battalions (4th/5th Royal West Kents and 2nd Buffs, 2nd/4th/5th Royal Sussex, all ID 'm', 2/90), the 6th Cheshire MG Bn (ID 'u', 2/90), the 44th Recce Regt (ID 'll', 2/90) and the 30th Light AA Regt (ID 'ee', 2/90) -- eleven chart-printed counters. What this file DOES carry is 131 Bde (its HQ plus three generic battalions), the 57th Anti-tank and the 57th/58th/65th Field Artillery. Not fixed here: seeding eleven combat counters into the Alamein window is an OOB slice with its own measurement, not a review repair, and the stand-in was never the book's answer to them.",
       "counter": "HQ 44 Inf Div",
       "group": "CW 44th Infantry Division",
       "hex": [
@@ -7428,7 +7428,7 @@
       "model": "scorpion"
     },
     {
-      "_comment": "Phase 8.1b engineer-OOB pass (2026-07-27): the [24.31]/rule-26 census found ZERO units able to LAY a belt (game.minefields.GENERAL_ENGINEER/HQ_ENGINEER) anywhere in this file -- every Engineer Battalion/Company and HQ^E the [4.44B]/[4.45b]/[4.45c] OA charts give either side was untranscribed. This record and the ones through '2/1 Aus Pioneer Bn' below close the gap for every NEW-to-this-file formation that has a citable engineer counter. CENSUS, measured on the built campaign OOB (the 8.1b commit message's '0 to 15' was wrong): units that may LAY a belt under 24.31 go from 0 to 25 -- 14 Axis Engineer battalions/companies (6 German Pioneer, 8 Italian Genio) plus 10 Commonwealth HQ^E plus the 2/1 Australian Pioneer Bn. The clear/escort set (26.24) is those 25 plus the two GT99 Scorpion battalions. they do NOT invent formations this file never had (RECAM's 31 Guastatori Engineer Bn (scan p.154, ID bbb, 1/45), the Ariete/Littorio/Folgore/Libyan/136th-GGFF/Gaf-S-di-C HQ^E division HQs, and most of the Tobruk-garrison Gaf battalions have no seeded parent counter to attach the flag to -- flagged, not fabricated). NAMED IN FULL 2026-07-27 (8.1b review repair), because 'flagged' means nothing if the flag does not say WHICH counter. Also absent, also scan-verified, also not fabricated: the three Blackshirt Engineer Battalions -- 201st Engineer Bn (1st CCNN '23rd March' Division sheet, scan p.160, ID bbb, Arrives D), 202nd Engineer Bn (2nd CCNN '28th October', p.159, bbb, D) and 203rd Engineer Bn (3rd CCNN '21st April', p.160, bbb, D). The 2nd and 3rd CCNN Divisions have no counters at all in this OOB, and the 1st CCNN is a single consolidated counter ('IT 1 CCNN - (1CN)') with no divisional roster to hang an engineer battalion on. And on the Commonwealth side, the four HQ^E division headquarters the chart prints and this repo has no counter for -- see data/unit_stats.json's _hq_engineer_comment, which names them with page, counter abbreviation and arrival. NOT INCLUDED, DELIBERATELY: FIVE ALREADY-seeded Italian counters the [4.44b] chart prints as Engineer Battalions and this file still builds as combat infantry (COUNT AND CLAIM CORRECTED 2026-07-27 by the gate-honesty audit, which read the five records: the sentence said 'four' over a list of five, and asserted the '(ENG)' tag for a counter that does not carry it). FOUR carry the tag in the counter string -- data/oob_italian.json's 'IT 64 - Cat (ENG)' (64th Engineer Bn, scan p.153, ID bbb, Arrives D) and 'IT 204 - 4CCNN (ENG)' (p.161, bbb, D), data/oob_campaign_extra.json's 'IT 63 Cir (ENG)' and 'IT 62 Marm (ENG)' (the two RECONSTRUCTED divisions, on no OA sheet at all -- see data/oob_organization_4_45.json's judgement-call flag). The FIFTH, data/oob_italian.json's 'IT VIII-II - Bnghzi', carries NO '(ENG)' tag: it is the Benghazi Garrison's VIII/II Engineer Bn (scan p.155, read for this audit), the one Engineer counter on the whole Italian chart printed with an INFANTRY ID code ('bb', CPA 8, Close Assault 5/7) -- the misprint data/unit_stats.json's IT _engineer_comment flags, and the reason its combat build is at least the ID code the book prints. All five carry an explicit role 'infantry' in data, so game.oob.classify's '(ENG)' branch cannot reach any of them -- see game.oob.classify's '(ENG)' branch docstring for why: flipping them is_combat True->False all at once (the faithful 23.11 correction) measurably reshapes the September-1940 opening's balance of who banks Sidi Barrani/Sollum, and that needs its own measured pass through tests/test_campaign_claim.py and test_campaign_concentration.py, not a same-commit tack-on.",
+      "_comment": "Phase 8.1b engineer-OOB pass (2026-07-27): the [24.31]/rule-26 census found ZERO units able to LAY a belt (game.minefields.GENERAL_ENGINEER/HQ_ENGINEER) anywhere in this file -- every Engineer Battalion/Company and HQ^E the [4.44B]/[4.45b]/[4.45c] OA charts give either side was untranscribed. This record and the ones through '2/1 Aus Pioneer Bn' below close the gap for every NEW-to-this-file formation that has a citable engineer counter. CENSUS, measured on the built campaign OOB (the 8.1b commit message's '0 to 15' was wrong): units that may LAY a belt under 24.31 went from 0 to 25 -- 14 Axis Engineer battalions/companies (6 German Pioneer, 8 Italian Genio) plus 10 Commonwealth HQ^E plus the 2/1 Australian Pioneer Bn. The clear/escort set (26.24) was those 25 plus the two GT99 Scorpion battalions. RE-MEASURED 2026-07-27 after the 8.1c division-HQ pass and its review repair, on campaign(seed=4), 745 units: LAY (24.31/24.17 EBn+ECoy+CHQ-E) = 34, 18 Axis + 16 Allied; BUILD A FORTIFICATION ([24.42] AnyE, either side) = 43, 27 Axis + 16 Allied; ESCORT/CLEAR (23.21/26.24, plus the two Scorpions) = 45, 27 Axis + 18 Allied. The Axis LAY figure did NOT move and is not meant to: the nine Italian HQ^E this repair seeded are AnyE but not CHQ-E, so they build forts and escort and clear and may not sow mines. they do NOT invent formations this file never had (RECAM's 31 Guastatori Engineer Bn (scan p.154, ID bbb, 1/45) and most of the Tobruk-garrison Gaf battalions have no seeded parent counter to attach the flag to -- flagged, not fabricated). SUPERSEDED IN PART 2026-07-27: this sentence also listed the Ariete/Littorio/Folgore/Libyan/136th-GGFF/Gaf-S-di-C HQ^E division HQs as having no counter. The 8.1c division-HQ pass seeded all nine, and its review repair gave them the hq_engineer role the chart's own TYPE key calls for. NAMED IN FULL 2026-07-27 (8.1b review repair), because 'flagged' means nothing if the flag does not say WHICH counter. Also absent, also scan-verified, also not fabricated: the three Blackshirt Engineer Battalions -- 201st Engineer Bn (1st CCNN '23rd March' Division sheet, scan p.160, ID bbb, Arrives D), 202nd Engineer Bn (2nd CCNN '28th October', p.159, bbb, D) and 203rd Engineer Bn (3rd CCNN '21st April', p.160, bbb, D). The 2nd and 3rd CCNN Divisions have no counters at all in this OOB, and the 1st CCNN is a single consolidated counter ('IT 1 CCNN - (1CN)') with no divisional roster to hang an engineer battalion on. SUPERSEDED 2026-07-27: this sentence also named 'the four HQ^E division headquarters the chart prints and this repo has no counter for' on the Commonwealth side. There were five, not four, and the 8.1c division-HQ pass seeded all five (7th Armoured, 4th Indian, 6th Australian, 2nd New Zealand at-start in data/oob_campaign_extra.json; 44th Infantry at its charted 2/90 in this file). NOT INCLUDED, DELIBERATELY -- AND SUPERSEDED FOR FOUR OF THE FIVE 2026-07-27, when the 8.1c pass applied the 23.11 correction to them (they now build as Engineers, is_combat False); only 'IT VIII-II - Bnghzi' still builds as combat infantry. The census as it stood: FIVE ALREADY-seeded Italian counters the [4.44b] chart prints as Engineer Battalions and this file then built as combat infantry (COUNT AND CLAIM CORRECTED 2026-07-27 by the gate-honesty audit, which read the five records: the sentence said 'four' over a list of five, and asserted the '(ENG)' tag for a counter that does not carry it). FOUR carry the tag in the counter string -- data/oob_italian.json's 'IT 64 - Cat (ENG)' (64th Engineer Bn, scan p.153, ID bbb, Arrives D) and 'IT 204 - 4CCNN (ENG)' (p.161, bbb, D), data/oob_campaign_extra.json's 'IT 63 Cir (ENG)' and 'IT 62 Marm (ENG)' (the two RECONSTRUCTED divisions, on no OA sheet at all -- see data/oob_organization_4_45.json's judgement-call flag). The FIFTH, data/oob_italian.json's 'IT VIII-II - Bnghzi', carries NO '(ENG)' tag: it is the Benghazi Garrison's VIII/II Engineer Bn (scan p.155, read for this audit), the one Engineer counter on the whole Italian chart printed with an INFANTRY ID code ('bb', CPA 8, Close Assault 5/7) -- the misprint data/unit_stats.json's IT _engineer_comment flags, and the reason its combat build is at least the ID code the book prints. All five carry an explicit role 'infantry' in data, so game.oob.classify's '(ENG)' branch cannot reach any of them -- see game.oob.classify's '(ENG)' branch docstring for why: flipping them is_combat True->False all at once (the faithful 23.11 correction) measurably reshapes the September-1940 opening's balance of who banks Sidi Barrani/Sollum, and that needs its own measured pass through tests/test_campaign_claim.py and test_campaign_concentration.py, not a same-commit tack-on.",
       "counter": "51st Engineer Bn",
       "group": "IT 102 Trento Division",
       "hex": [
@@ -7628,7 +7628,7 @@
       "model": "aus_pioneer"
     },
     {
-      "_comment": "Phase 8.1c division-HQ pass (2026-07-27): the [4.44B]/[4.45b] OA charts print this division/garrison's own HQ counter and this OOB carried its sub-units but no HQ, so the formation could never concentrate ([15.53] stayed unreachable for it, exactly the 8.1a/8.1b/OOB-parent-tree gap this closes for one more formation). Ariete (132nd) Div HQ^E, scan p.147, counter abbr 'Ariete', ID 'd', Arrives 1/18. The book's regiment-level intermediates (132 Regt Corazzata HQ, 8th Bersaglieri Regt HQ) are not seeded as separate counters in this OOB, so the division's five flat sub-units attach directly to the Div HQ.",
+      "_comment": "Phase 8.1c division-HQ pass (2026-07-27): the [4.44B]/[4.45b] OA charts print this division/garrison's own HQ counter and this OOB carried its sub-units but no HQ, so the formation could never concentrate ([15.53] stayed unreachable for it, exactly the 8.1a/8.1b/OOB-parent-tree gap this closes for one more formation). Ariete (132nd) Div HQ^E, scan p.147, counter abbr 'Ariete', ID 'd', Arrives 1/18. The book's regiment-level intermediates (132 Regt Corazzata HQ, 8th Bersaglieri Regt HQ) are not seeded as separate counters in this OOB, so the division's five flat sub-units attach directly to the Div HQ. ROLE CORRECTED 2026-07-27 (8.1c review repair), hq -> hq_engineer: the [4.44b] TYPE key prints \"HQ^E = Headquarters with engineering capability\" against \"HQ = Headquarters without engineering capability\" (scan p.147), and this record own comment already said HQ^E while setting the non-E role. See data/unit_stats.json IT _hq_engineer_comment for the nine-row roster, the counter-art corroboration and what [24.42]/[24.31] do and do not let an Axis HQ^E do.",
       "counter": "Ariete Div HQ",
       "group": "IT 132 Ariete Division",
       "hex": [
@@ -7636,14 +7636,14 @@
         -9
       ],
       "side": "AXIS",
-      "role": "hq",
+      "role": "hq_engineer",
       "nationality": "IT",
       "morale": 1,
       "arrival_turn": 18,
       "arrival_stage": 1
     },
     {
-      "_comment": "Littorio (133rd) Div HQ^E, scan p.148, counter abbr 'Littorio', ID 'd', Arrives 3/62.",
+      "_comment": "Littorio (133rd) Div HQ^E, scan p.148, counter abbr 'Littorio', ID 'd', Arrives 3/62. ROLE CORRECTED 2026-07-27 (8.1c review repair), hq -> hq_engineer: the [4.44b] TYPE key prints \"HQ^E = Headquarters with engineering capability\" against \"HQ = Headquarters without engineering capability\" (scan p.147), and this record own comment already said HQ^E while setting the non-E role. See data/unit_stats.json IT _hq_engineer_comment for the nine-row roster, the counter-art corroboration and what [24.42]/[24.31] do and do not let an Axis HQ^E do.",
       "counter": "Littorio Div HQ",
       "group": "IT 133 Littorio Division",
       "hex": [
@@ -7651,14 +7651,14 @@
         -2
       ],
       "side": "AXIS",
-      "role": "hq",
+      "role": "hq_engineer",
       "nationality": "IT",
       "morale": 0,
       "arrival_turn": 62,
       "arrival_stage": 3
     },
     {
-      "_comment": "185th Folgore Div HQ^E, scan p.154, counter abbr '185 Folg', ID 'b', Arrives 2/94.",
+      "_comment": "185th Folgore Div HQ^E, scan p.154, counter abbr '185 Folg', ID 'b', Arrives 2/94. ROLE CORRECTED 2026-07-27 (8.1c review repair), hq -> hq_engineer: the [4.44b] TYPE key prints \"HQ^E = Headquarters with engineering capability\" against \"HQ = Headquarters without engineering capability\" (scan p.147), and this record own comment already said HQ^E while setting the non-E role. See data/unit_stats.json IT _hq_engineer_comment for the nine-row roster, the counter-art corroboration and what [24.42]/[24.31] do and do not let an Axis HQ^E do.",
       "counter": "Folgore Div HQ",
       "group": "IT 185 Folgore Division",
       "hex": [
@@ -7666,14 +7666,14 @@
         -10
       ],
       "side": "AXIS",
-      "role": "hq",
+      "role": "hq_engineer",
       "nationality": "IT",
       "morale": 1,
       "arrival_turn": 94,
       "arrival_stage": 2
     },
     {
-      "_comment": "136th Giovani Fascisti Div HQ^E, scan p.154, counter abbr '136GGFF', ID 'b', Arrives 1/97.",
+      "_comment": "136th Giovani Fascisti Div HQ^E, scan p.154, counter abbr '136GGFF', ID 'b', Arrives 1/97. ROLE CORRECTED 2026-07-27 (8.1c review repair), hq -> hq_engineer: the [4.44b] TYPE key prints \"HQ^E = Headquarters with engineering capability\" against \"HQ = Headquarters without engineering capability\" (scan p.147), and this record own comment already said HQ^E while setting the non-E role. See data/unit_stats.json IT _hq_engineer_comment for the nine-row roster, the counter-art corroboration and what [24.42]/[24.31] do and do not let an Axis HQ^E do.",
       "counter": "136 GGFF Div HQ",
       "group": "IT 136 GGFF Division",
       "hex": [
@@ -7681,14 +7681,14 @@
         -3
       ],
       "side": "AXIS",
-      "role": "hq",
+      "role": "hq_engineer",
       "nationality": "IT",
       "morale": -3,
       "arrival_turn": 97,
       "arrival_stage": 1
     },
     {
-      "_comment": "RECAM HQ, scan p.154, counter abbr 'RECAM', ID 'a', Arrives 1/45. The chart's own sheet prints RECAM as a top-level (d=0) formation with no further parent -- faithful reading: none is seeded here. The 31 Guastatori Engineer Bn the same sheet gives RECAM (ID bbb) has no counter anywhere in this OOB (pre-existing gap, flagged in the 8.1b engineer pass and not fixed here) so it stays independent -- there is nothing yet to attach.",
+      "_comment": "RECAM HQ, scan p.154, counter abbr 'RECAM', ID 'a', Arrives 1/45. ROLE DELIBERATELY LEFT `hq`, NOT hq_engineer (checked 2026-07-27 in the 8.1c review repair, which flipped the other four Italian division HQs in this file): the RECAM sheet prints a plain \"RECAM HQ\", with no E superscript, and the module counter art draws no Eng layer on \"IT RECAM - none.svg\". The chart makes the distinction per row, not per nation. The chart's own sheet prints RECAM as a top-level (d=0) formation with no further parent -- faithful reading: none is seeded here. The 31 Guastatori Engineer Bn the same sheet gives RECAM (ID bbb) has no counter anywhere in this OOB (pre-existing gap, flagged in the 8.1b engineer pass and not fixed here) so it stays independent -- there is nothing yet to attach.",
       "counter": "RECAM HQ",
       "group": "IT RECAM",
       "hex": [
@@ -7701,34 +7701,6 @@
       "morale": -1,
       "arrival_turn": 45,
       "arrival_stage": 1
-    },
-    {
-      "_comment": "6th Australian Div HQ^E, scan p.124, counter abbr '6 Aus', ID 'a', Arrives D on the chart; this OOB stages the division's own elements in from GT7 (matching the sheet's own note (a): 'arrived quite early, albeit in sections'), so the HQ is anchored to its earliest seeded element (2/2 Aus Fld Arty, GT7) rather than invented as a bare GT1 counter with nothing yet to command.",
-      "counter": "HQ 6 Aus Div",
-      "group": "CW 6th Australian Division",
-      "hex": [
-        45,
-        140
-      ],
-      "side": "ALLIED",
-      "role": "hq_engineer",
-      "nationality": null,
-      "morale": 1,
-      "arrival_turn": 7
-    },
-    {
-      "_comment": "2nd New Zealand Div HQ^E, scan p.129, counter abbr '2 NZ', ID 'a', Arrives D on the chart; staged the same way as 6th Australian above, anchored to its earliest seeded element (6 NZ Fld Arty, GT2).",
-      "counter": "HQ 2 NZ Div",
-      "group": "CW 2nd New Zealand Division",
-      "hex": [
-        43,
-        139
-      ],
-      "side": "ALLIED",
-      "role": "hq_engineer",
-      "nationality": null,
-      "morale": 1,
-      "arrival_turn": 2
     }
   ]
 }

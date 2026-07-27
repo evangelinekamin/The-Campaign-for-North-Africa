@@ -123,16 +123,16 @@ def test_campaign_commonwealth_can_attack():
         # march)) is a pure function of `on`, so a constructed banking unit exercises it faithfully.
         courier = next(u for u in on.living(Side.ALLIED) if u.is_combat and u.strength >= 1)
         on = on.with_unit(replace(courier, hex=MATRUH))
-    if not garrison_units(on, Side.ALLIED):
-        # RESTATED 2026-07-27 (Phase 8.1c, the 23.11 (ENG) correction). The stronger Axis opening
-        # this correction produces (test_campaign_claim.py's matching RESTATED note) leaves
-        # AL-Stage-Matruh itself dry at this seed/turn, so a courier standing beside it still
-        # cannot trace the Fuel/Ammo 64.73 demands -- the identical second-restoration technique
-        # tests/test_campaign_concentration.py::test_the_standing_garrison_order_still_holds now
-        # uses, for the same reason: give the depot the courier is placed beside the magnitude a
-        # supplied garrison would need (an arbitrary sufficiency, not a charted figure).
-        matruh_dump = next(s for s in on.supplies if s.id == "AL-Stage-Matruh")
-        on = on.with_supply(replace(matruh_dump, side=Side.ALLIED, ammo=9999, fuel=9999))
+    # WITHDRAWN 2026-07-27 (the 8.1c review repair). The 8.1c pass added a SECOND fallback here --
+    # give AL-Stage-Matruh ammo=9999/fuel=9999 so a courier standing beside a dry depot could still
+    # trace the 64.73 demands -- because the (ENG) correction as it landed starved the Commonwealth
+    # faucet this far forward. Repairing that pass's own defects (the 1st Libyan Division HQ was
+    # seeded twice and its real counter left fighting as infantry; see data/oob_italian.json's
+    # _role_comment) moved the fold back: MEASURED at CAMPAIGN_SEED, garrison_units(on) is
+    # {'BR-2SctGds'} on the real board, so neither fallback fires at all now and the second one was
+    # a scaffold with nothing to hold up. The FIRST fallback (the courier, 2026-07-25) is left in
+    # place: it is older than this arc, it is currently unexercised too, and it is the honest guard
+    # for a fold that has lost this example before.
     assert garrison_units(on, Side.ALLIED), "the CW banks no victory city -- the check is vacuous"
     assert campaign_claim.claims(on, Side.ALLIED, escort=True), \
         "the take-and-hold claims no city -- the check is vacuous"

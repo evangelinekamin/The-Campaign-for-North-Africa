@@ -404,23 +404,22 @@ def test_the_commonwealth_trucks_actually_run():
     # three stops being one hop short of an Axis-held Matruh, or if a fifth truck joins them, this
     # test fails instead of quietly excusing it.
     #
-    # RESTATED 2026-07-27 (Phase 8.1c, the 23.11 (ENG) correction). The stronger, earlier Axis grip
-    # on Mersa Matruh this correction produces (test_campaign_concentration.py's matching RESTATED
-    # note: the railhead is lost by GT3 and the retraction now runs all the way to the Delta base)
-    # changes WHERE two of the three livelocked trucks stop, not THAT they stop. MEASURED:
-    # AL-Truck-Airfield-M and AL-Truck-Airfield-H now drive INTO Mersa Matruh itself (GT1/GT2, before
-    # or as control flips) and then never move again through GT24 -- sitting ON the Axis-held hex,
-    # not one step short of it. AL-Truck-Alex-L is unchanged: still one hop short at (26, 99). Same
-    # bug (game.relay._step_toward's single-step livelock, not fixed here), a different resting
-    # place for two of its three sufferers.
+    # RESTATED 2026-07-27 (Phase 8.1c, the 23.11 (ENG) correction), then RE-MEASURED the same day by
+    # the 8.1c review repair, which corrected two defects of that pass in the September-1940 line
+    # (see data/oob_italian.json's _role_comment on 'IT 1 Libyan - none'). The earlier Axis grip on
+    # Mersa Matruh changes WHERE the livelocked trucks stop, not THAT they stop -- and on the
+    # repaired tree ALL THREE stop the same way. MEASURED at GT24: AL-Truck-Alex-L, AL-Truck-
+    # Airfield-M and AL-Truck-Airfield-H all sit ON Mersa Matruh (25, 100) itself, having driven in
+    # before or as control flipped, and none moves again. (The 8.1c restatement had Alex-L one hop
+    # short at (26, 99) and only the two Airfield trucks on the hex; that split was the unrepaired
+    # tree's.) Same bug throughout -- game.relay._step_toward's single-step livelock, not fixed
+    # here -- and AL-Truck-Alex-M remains the separate 8.1a case at a hex nowhere near the railhead.
     _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK = {
         "AL-Truck-Alex-M", "AL-Truck-Alex-L", "AL-Truck-Airfield-M", "AL-Truck-Airfield-H"}
     stuck = {t.id: t for t in res.final.trucks if t.id in _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK}
     assert set(stuck) == _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK, "the excused set moved"
     assert res.final.control_of(MATRUH) is Control.AXIS, "the railhead is friendly -- re-diagnose"
-    assert is_adjacent(stuck["AL-Truck-Alex-L"].hex, MATRUH), \
-        f"AL-Truck-Alex-L is not one step short of the railhead ({stuck['AL-Truck-Alex-L'].hex}) -- re-diagnose"
-    for tid in ("AL-Truck-Airfield-M", "AL-Truck-Airfield-H"):
+    for tid in ("AL-Truck-Alex-L", "AL-Truck-Airfield-M", "AL-Truck-Airfield-H"):
         assert stuck[tid].hex == MATRUH, \
             f"{tid} is no longer sitting on the Axis-held railhead ({stuck[tid].hex}) -- re-diagnose"
     assert not is_adjacent(stuck["AL-Truck-Alex-M"].hex, MATRUH)   # the 8.1a case, a different hex
