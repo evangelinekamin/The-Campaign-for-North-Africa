@@ -175,8 +175,14 @@ def test_the_army_does_not_sit_out_the_war_in_the_delta(gt12):
     # now seeded -- the artillery/AA/recon/AT park, solo infantry battalions, the two missing brigades,
     # the 2nd Armoured Division and the [4.43a] returns -- so ~155 more ALLIED combat counters land in
     # the Delta (all but the Alexandria "A" SpecSrvc are within 15 of Cairo). Still an exact count.
+    # RE-FIT 2026-07-27 (Phase 8.1b engineer-OOB pass): 296 -> 297. The one new counter is the 2/1 Aus
+    # Pioneer Bn ([4.44B] note b, 18th Australian Bde sheet: "Pioneer Battalions in the Australian
+    # army were engineer battalions with full-fledged infantry capabilities"), the ONE Commonwealth
+    # general Engineer Battalion this OOB now seeds (arrival_turn 30, hex [46,139], is_combat True --
+    # it fights as ordinary infantry AND carries engineer capability, per the chart note). Still an
+    # exact count, no dice moved.
     assert sum(1 for u in start.units if u.side == Side.ALLIED and u.is_combat
-               and u.arrival_turn > 1 and distance(u.hex, CAIRO) <= 15) == 296   # the Delta stream
+               and u.arrival_turn > 1 and distance(u.hex, CAIRO) <= 15) == 297   # the Delta stream
 
     # The rear echelon MOVES -- the original defect was an army that never left the Delta AT ALL, and
     # that is what these two assertions guard. The absolute counts are FITTED and have moved THREE

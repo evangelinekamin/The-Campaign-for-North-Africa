@@ -96,7 +96,16 @@ def test_classify_italian_tenth_army_counters():
     # The Giarabub "(AA)" emplaced flak is an Anti-Aircraft-Type unit (rule 3.23 / 46.17 Pure
     # Flak) -> the `aa` role, NOT the old antitank proxy that stood in before the AA role existed.
     assert oob.classify("IT Grbub - Grbub (AA)", "IT Giariabub Oasis Complex Garrison") == "aa"
-    assert oob.classify("IT 64 - Cat (ENG)", "IT 64th Catanzaro Division") == "infantry"
+    # RESTATED, Phase 8.1b engineer-OOB pass: "(ENG)" used to fall through to the infantry default
+    # with no engineer distinction at all. classify() now carries an "(ENG)" branch -- the same
+    # counter-type-tag convention as (MG)/(ART)/(AA) -- for a future re-extraction. The four LIVE
+    # records (64th Catanzaro/4th CCNN/63rd Cirene/62nd Marmarica) still carry an explicit
+    # "role": "infantry" override in data/ and so still build as combat infantry: flipping all four
+    # to non-combat Engineers in the same pass that found them reshaped the September-1940 opening
+    # enough to move which side banks Sidi Barrani/Sollum by GT24-30 (game/oob.py's classify()
+    # docstring), a real correction deferred to its own measured pass. This assertion pins the
+    # CLASSIFIER's fallback only, independent of that data-side follow-up.
+    assert oob.classify("IT 64 - Cat (ENG)", "IT 64th Catanzaro Division") == "engineer"
     # "IT X Cp" (X Corpo's guns) carries NO weapon marker on the counter, so the counter-only
     # classifier cannot type it: it defaults to infantry, and data/oob_italian.json carries an
     # explicit role:"artillery" for it (the data-driven path that replaces the old group guess).

@@ -725,7 +725,7 @@
         140
       ],
       "side": "ALLIED",
-      "role": "hq",
+      "role": "hq_engineer",
       "nationality": null,
       "morale": 1,
       "arrival_turn": 21
@@ -1475,7 +1475,7 @@
         137
       ],
       "side": "ALLIED",
-      "role": "hq",
+      "role": "hq_engineer",
       "nationality": null,
       "morale": 0,
       "arrival_turn": 32
@@ -1839,7 +1839,7 @@
         141
       ],
       "side": "ALLIED",
-      "role": "hq",
+      "role": "hq_engineer",
       "nationality": null,
       "morale": 0,
       "arrival_turn": 36
@@ -2101,7 +2101,7 @@
         140
       ],
       "side": "ALLIED",
-      "role": "hq",
+      "role": "hq_engineer",
       "nationality": null,
       "morale": 1,
       "arrival_turn": 38
@@ -2468,7 +2468,7 @@
         140
       ],
       "side": "ALLIED",
-      "role": "hq",
+      "role": "hq_engineer",
       "nationality": null,
       "morale": 1,
       "arrival_turn": 62
@@ -2563,7 +2563,7 @@
         140
       ],
       "side": "ALLIED",
-      "role": "hq",
+      "role": "hq_engineer",
       "nationality": null,
       "morale": 1,
       "arrival_turn": 68
@@ -2760,7 +2760,7 @@
         141
       ],
       "side": "ALLIED",
-      "role": "hq",
+      "role": "hq_engineer",
       "nationality": null,
       "morale": 1,
       "arrival_turn": 75
@@ -2867,7 +2867,7 @@
         138
       ],
       "side": "ALLIED",
-      "role": "hq",
+      "role": "hq_engineer",
       "nationality": null,
       "morale": 1,
       "arrival_turn": 81
@@ -3367,7 +3367,7 @@
         139
       ],
       "side": "ALLIED",
-      "role": "hq",
+      "role": "hq_engineer",
       "nationality": null,
       "morale": 1,
       "arrival_turn": 92
@@ -4640,7 +4640,7 @@
         -7
       ],
       "side": "AXIS",
-      "role": "motor_infantry",
+      "role": "engineer",
       "nationality": "GE",
       "morale": 1,
       "arrival_turn": 76,
@@ -7289,7 +7289,7 @@
         141
       ],
       "side": "ALLIED",
-      "role": "hq",
+      "role": "hq_engineer",
       "nationality": null,
       "morale": 1,
       "arrival_turn": 75,
@@ -7423,6 +7423,203 @@
       "arrival_turn": 99,
       "arrival_stage": 1,
       "model": "scorpion"
+    },
+    {
+      "_comment": "Phase 8.1b engineer-OOB pass (2026-07-27): the [24.31]/rule-26 census found ZERO units able to LAY a belt (game.minefields.GENERAL_ENGINEER/HQ_ENGINEER) anywhere in this file -- every Engineer Battalion/Company and HQ^E the [4.44B]/[4.45b]/[4.45c] OA charts give either side was untranscribed. This record and the ones through '2/1 Aus Pioneer Bn' below close the gap for every NEW-to-this-file formation that has a citable engineer counter; they do NOT invent formations this file never had (RECAM's 31 Guastatori Engineer Bn, the Ariete/Littorio/Folgore/Libyan/136th-GGFF/Gaf-S-di-C HQ^E division HQs, and most of the Tobruk-garrison Gaf battalions have no seeded parent counter to attach the flag to -- flagged, not fabricated). NOT INCLUDED, DELIBERATELY: four ALREADY-seeded Italian counters (data/oob_italian.json's 'IT VIII-II - Bnghzi'/'IT 64 - Cat (ENG)'/'IT 204 - 4CCNN (ENG)', data/oob_campaign_extra.json's 'IT 63 Cir (ENG)'/'IT 62 Marm (ENG)') whose counter names ALREADY carry the '(ENG)' tag but whose role is still 'infantry' (combat) -- see game.oob.classify's '(ENG)' branch docstring for why: flipping them is_combat True->False all at once (the faithful 23.11 correction) measurably reshapes the September-1940 opening's balance of who banks Sidi Barrani/Sollum, and that needs its own measured pass through tests/test_campaign_claim.py and test_campaign_concentration.py, not a same-commit tack-on.",
+      "counter": "51st Engineer Bn",
+      "group": "IT 102 Trento Division",
+      "hex": [
+        46,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "engineer",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 21,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "27th Engineer Bn",
+      "group": "IT 27 Brescia Division",
+      "hex": [
+        46,
+        -5
+      ],
+      "side": "AXIS",
+      "role": "engineer",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 21,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "60th Engineer Bn",
+      "group": "IT 60 Sabratha Division",
+      "hex": [
+        45,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "engineer",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 12,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "17th Engineer Bn",
+      "group": "IT 17 Pavia Division",
+      "hex": [
+        47,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "engineer",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 22,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "25th Engineer Bn",
+      "group": "IT 25 Bologna Division",
+      "hex": [
+        47,
+        -8
+      ],
+      "side": "AXIS",
+      "role": "engineer",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 24,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "55th Engineer Bn",
+      "group": "IT 55 Savona Division",
+      "hex": [
+        47,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "engineer",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 25,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "101st Engineer Bn",
+      "group": "IT 101 Trieste Division",
+      "hex": [
+        47,
+        -6
+      ],
+      "side": "AXIS",
+      "role": "engineer",
+      "nationality": "IT",
+      "morale": 0,
+      "arrival_turn": 50,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "16th Engineer Bn",
+      "group": "IT 16 Pistoia Division",
+      "hex": [
+        44,
+        -2
+      ],
+      "side": "AXIS",
+      "role": "engineer",
+      "nationality": "IT",
+      "morale": -1,
+      "arrival_turn": 92,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "200 Pioneer Bn",
+      "group": "GE 5th Light Division",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "engineer",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 21,
+      "arrival_stage": 2
+    },
+    {
+      "counter": "33 Pioneer Bn",
+      "group": "GE 15 Panzer Division",
+      "hex": [
+        45,
+        -8
+      ],
+      "side": "AXIS",
+      "role": "engineer",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 28,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "900 Pioneer Bn",
+      "group": "GE 90th Light Division",
+      "hex": [
+        46,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "engineer",
+      "nationality": "GE",
+      "morale": 2,
+      "arrival_turn": 34,
+      "arrival_stage": 1
+    },
+    {
+      "counter": "200 Pioneer Bn",
+      "group": "GE 164th Light Division",
+      "hex": [
+        44,
+        -9
+      ],
+      "side": "AXIS",
+      "role": "engineer",
+      "nationality": "GE",
+      "morale": 1,
+      "arrival_turn": 93,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "778 Naval Eng Koy",
+      "group": "GE Unassigned Infantry Units",
+      "hex": [
+        45,
+        -7
+      ],
+      "side": "AXIS",
+      "role": "engineer",
+      "nationality": "GE",
+      "morale": 1,
+      "arrival_turn": 66,
+      "arrival_stage": 3
+    },
+    {
+      "counter": "2/1 Aus Pioneer Bn",
+      "group": "CW 9th Australian Division",
+      "hex": [
+        46,
+        139
+      ],
+      "side": "ALLIED",
+      "role": "infantry",
+      "nationality": null,
+      "morale": 1,
+      "arrival_turn": 30,
+      "model": "aus_pioneer"
     }
   ]
 }

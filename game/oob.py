@@ -198,6 +198,17 @@ def classify(counter: str, group: str) -> "str | None":
     # Anti-Aircraft-Type (rule 3.23); the AA/Flak symbol on the counter -> Pure Flak (46.17).
     if "LAA" in c or "HAA" in c or "(AA)" in c:
         return "aa"
+    # [23.0]/[24.31] Engineer-Type: the "(ENG)" counter-type tag, same convention as (ART)/(MG)/(AA)
+    # below -- the 64th Catanzaro/4th CCNN/63rd Cirene/62nd Marmarica Engineer Battalions all carry
+    # it. NOT YET APPLIED to those four live records (Phase 8.1b engineer-OOB pass found them, and
+    # found that flipping is_combat True->False on all four AT ONCE reshapes the September-1940
+    # opening enough to flip who banks Sidi Barrani/Sollum and dries the Barrani supply chain by
+    # GT24-30 -- a real, faithful, but large campaign-narrative correction that needs its own
+    # measured pass through tests/test_campaign_claim.py & test_campaign_concentration.py, not a
+    # same-commit tack-on). This classify() branch is forward-looking infrastructure only: it makes
+    # a future re-extraction (or the four records once someone does that pass) resolve correctly.
+    if "(ENG)" in c:
+        return "engineer"
 
     if c.startswith("IT "):                          # 1940 Italian 10th Army (rule 60.31 / [4.44b])
         if "(MG)" in c or "(MMG)" in c:
