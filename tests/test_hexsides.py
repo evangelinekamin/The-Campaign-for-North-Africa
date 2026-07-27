@@ -245,6 +245,58 @@ def test_anti_armor_fire_may_not_cross_an_up_escarpment():
                     (up, home): Hexside.DOWN_ESCARPMENT}) == [flat]
 
 
+def test_15_34_a_motorized_unit_may_never_close_assault_up_an_escarpment():
+    """[15.34], scan p.23, verbatim: "Certain terrain prohibits full Close Assaults or Probes by
+    certain types of units. MOTORIZED UNITS MAY NEVER ASSAULT UP AN ESCARPMENT, EVEN IF IT IS
+    CROSSED BY A TRACK. (You may, of course, take your infantry out of the Trucks and then
+    Assault.)"
+
+    The sentence immediately after it -- "Motorized units may not assault units defending in Salt
+    Marshes" -- was already implemented (engine._salt_marsh_barred_assault); this one was not, and
+    like the [8.37] Anti-Armor "P" it was UNREACHABLE while TerrainMap.hexsides was empty, so the
+    escarpment trace is what makes it bite. It is a PROHIBITION, not the Up Escarpment L3 column
+    shift that engine._assault_hexside_shift already applies: the chart's L3 prices the assault
+    a non-motorized unit is allowed to make, and 15.34 forbids the motorized one outright.
+
+    Four cases, so that nothing passes by merely silencing the attacker: the motorized unit is
+    barred UP, the SAME unit resolves with the rim removed, FOOT resolves across the very same
+    escarpment (the rule's own "take your infantry out of the Trucks" parenthetical), and the
+    motorized unit resolves coming DOWN -- only "up" is named."""
+    from game.engine import _Run, _resolve_combat
+    from game.events import EventKind, Phase, Side
+    from game.movement import TerrainMap
+    from game.state import GameState, StepRecord, Unit, VP
+    from game.terrain import Terrain
+
+    low, high = (0, 0), neighbors((0, 0))[0]
+    terr = {low: Terrain.CLEAR, high: Terrain.CLEAR}
+    rim = {(low, high): Hexside.UP_ESCARPMENT, (high, low): Hexside.DOWN_ESCARPMENT}
+
+    def assault(attacker_hex, target, mobility, hexsides):
+        atk = Unit("A", Side.AXIS, attacker_hex, (StepRecord("inf", 4),), mobility=mobility,
+                   cpa=10, stacking_points=1, oca=4, dca=2, ammo=100)
+        dfn = Unit("D", Side.ALLIED, target, (StepRecord("inf", 4),), mobility=Mobility.FOOT,
+                   cpa=10, stacking_points=1, oca=2, dca=2, ammo=100)
+        st = GameState(turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS, seed=3,
+                       weather="clear", vp=VP(),
+                       terrain=TerrainMap(terrain=terr, hexsides=hexsides), control={},
+                       units=(atk, dfn), target_hex=target, supplies=(),
+                       consumed={"AMMO": 0}, initial_supply={"AMMO": 0})
+        r = _Run(st)
+        resolved = _resolve_combat(r, Side.AXIS, "AXIS/Front", [atk], [dfn], target, set(), set())
+        rejected = [e for e in r.events if e.kind is EventKind.ORDER_REJECTED]
+        return resolved, rejected, atk
+
+    resolved, rejected, atk = assault(low, high, Mobility.MOTORIZED, rim)
+    assert resolved is False, "[15.34] a motorized unit assaulted UP an escarpment"
+    assert rejected, "the barred assault must be rejected loudly, not silently dropped"
+    assert atk.ammo == 100, "a barred attacker must not spend its close-assault load"
+
+    assert assault(low, high, Mobility.MOTORIZED, {})[0] is True    # control: the rim is the cause
+    assert assault(low, high, Mobility.FOOT, rim)[0] is True        # "take your infantry out"
+    assert assault(high, low, Mobility.MOTORIZED, rim)[0] is True   # only "up" is named
+
+
 def test_the_alamein_rim_does_not_narrow_the_front():
     """[8.1b's headline finding]: only UP_ESCARPMENT and MAJOR_RIVER are prohibited to a vehicle in
     the whole [8.37] hexside table, and the Qattara rim's escarpment lies entirely on the

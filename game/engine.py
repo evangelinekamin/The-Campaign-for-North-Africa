@@ -5189,6 +5189,43 @@ def _salt_marsh_barred_assault(state: GameState, unit, target: Coord) -> bool:
             or state.terrain.terrain.get(tuple(unit.hex)) == marsh)    # out of (8.37 note 2)
 
 
+def _escarpment_barred_assault(state: GameState, unit, target: Coord) -> bool:
+    """[15.34]: may this unit NOT join a Close Assault on `target` because it would be attacking
+    UP an escarpment?
+
+    Verbatim off the scan (PDF page 23), the sentence immediately before the Salt Marsh one that
+    _salt_marsh_barred_assault already implements: "Certain terrain prohibits full Close Assaults
+    or Probes by certain types of units. Motorized units may never assault up an Escarpment, even
+    if it is crossed by a Track. (You may, of course, take your infantry out of the Trucks and then
+    Assault.)"
+
+    A PROHIBITION, not a column shift -- the same distinction [8.37]'s Up Escarpment Anti-Armor "P"
+    turns on, and the reason _assault_hexside_shift does not cover this: that function applies the
+    chart's Up Escarpment Close Assault L3, which prices the assault a NON-motorized unit is
+    allowed to make. Like the Anti-Armor P, this was unreachable while TerrainMap.hexsides was
+    empty and went live with the 8.1b escarpment trace.
+
+    "Even if it is crossed by a Track" needs no code here: the hexside feature is read straight
+    off the map and no road/track term is consulted, which is the combat twin of [8.33]'s
+    movement exception (movement._escarpment_vehicle). Only "up" is named, so a descent is not
+    barred, and only motorized units are named, so foot climbs at the chart's L3.
+
+    The ORDER_REJECTED catalogue below is deliberately NOT extended with this cause, and the
+    reason is measured, not a dodge: that payload string is a STATIC list that already cannot say
+    which of its six causes fired (ammo, Pin, water, marsh, anti-armor, Cohesion), so naming a
+    seventh buys no diagnostic power -- while editing it moves BOTH benchmark signatures, because
+    the text is hashed into every ORDER_REJECTED event the scripted benchmarks already emit for
+    ammo and Pin. Measured 2026-07-26 three ways: this prohibition live with the string untouched
+    reproduces abc4300eccbb / a5da9203198d exactly; the string edited with the prohibition
+    NEUTERED moves them to 1511fa027b22 / 13c4888dec18; both together give that same moved pair.
+    So the rule itself is a byte-for-byte non-move in both benchmarks (no scripted unit ever
+    assaults up one of the 189 traced escarpments) and the whole delta was cosmetic. The RULE is
+    not gated in any way -- it binds unconditionally, on every map, for every motorized unit."""
+    if not is_motorized(unit.mobility):
+        return False
+    return state.terrain.hexsides.get((tuple(unit.hex), tuple(target))) is Hexside.UP_ESCARPMENT
+
+
 def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
                     target: Coord, pinned: set[str], charged: set[str],
                     fired_anti_armor: set[str] = frozenset()) -> bool:
@@ -5201,6 +5238,7 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
                  if u.id not in pinned and u.cohesion > -26          # 6.26: -26 or worse may not attack
                  and not _waterless(u)                               # 52.51/52.52: no offensive assault when dry
                  and not _salt_marsh_barred_assault(r.state, u, target)   # 8.44
+                 and not _escarpment_barred_assault(r.state, u, target)   # 8.42/15.34
                  and u.id not in fired_anti_armor                    # 14.26/15.21: not if it fired anti-armor
                  and _charge_ammo(r, side, actor, u, phasing=True)]
     if not armed_atk:
