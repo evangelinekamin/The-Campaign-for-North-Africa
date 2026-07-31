@@ -1,13 +1,13 @@
 ====================================================================================================
 0. PROVENANCE / NEUTER PROOFS
 ====================================================================================================
-  seed 1941: BASE 2338b5fe7b7c476d  HEAD f45564894d3a1d36  FACOFF 6f802a599646e06a [differs (good)]
-  seed 7: BASE 8c4c7aa09e965439  HEAD df9dda3149fae20c  FACOFF e61fd0e915156f56 [differs (good)]
-  seed 4: BASE 9091c4595051c82a  HEAD 420afe5bd36231e1  FACOFF d2f87d83d90879d6 [differs (good)]
-  seed 24: BASE c7eb582385286bef  HEAD a5e6bf883a32ce86  FACOFF ded82ce359b7c92a [differs (good)]
-  seed 2026: BASE 9e4544138e317bab  HEAD f4f2ce6a4e3e05c9  FACOFF 89c4fbb654a89e18 [differs (good)]
-  seed 99: BASE ba39290c77d08068  HEAD 9fdc43e6a00079f3  FACOFF 29eae1299aa8c327 [differs (good)]
-  seed 1: BASE 045b5f7340244949  HEAD 8647506e74ddfcfe  FACOFF cd37930b605bb881 [differs (good)]
+  seed 1941: BASE 2338b5fe7b7c476d  HEAD f45564894d3a1d36  NOOP f45564894d3a1d36 [IDENTICAL]  FACOFF 6f802a599646e06a [differs (good)]
+  seed 7: BASE 8c4c7aa09e965439  HEAD df9dda3149fae20c  NOOP df9dda3149fae20c [IDENTICAL]  FACOFF e61fd0e915156f56 [differs (good)]
+  seed 4: BASE 9091c4595051c82a  HEAD 420afe5bd36231e1  NOOP 420afe5bd36231e1 [IDENTICAL]  FACOFF d2f87d83d90879d6 [differs (good)]
+  seed 24: BASE c7eb582385286bef  HEAD a5e6bf883a32ce86  NOOP a5e6bf883a32ce86 [IDENTICAL]  FACOFF ded82ce359b7c92a [differs (good)]
+  seed 2026: BASE 9e4544138e317bab  HEAD f4f2ce6a4e3e05c9  NOOP f4f2ce6a4e3e05c9 [IDENTICAL]  FACOFF 89c4fbb654a89e18 [differs (good)]
+  seed 99: BASE ba39290c77d08068  HEAD 9fdc43e6a00079f3  NOOP 9fdc43e6a00079f3 [IDENTICAL]  FACOFF 29eae1299aa8c327 [differs (good)]
+  seed 1: BASE 045b5f7340244949  HEAD 8647506e74ddfcfe  NOOP 8647506e74ddfcfe [IDENTICAL]  FACOFF cd37930b605bb881 [differs (good)]
   major facility hexes (HEAD): [[14, 66], [25, 133], [26, 132], [43, 140], [43, 141], [44, 139], [44, 140], [45, 139]]
 
 ====================================================================================================
@@ -122,6 +122,7 @@
   BASE: absurdities=NONE errors=NONE seconds=[529.1, 533.2, 537.8, 521.9, 503.8, 552.1, 508.5]
   HEAD: absurdities=NONE errors=NONE seconds=[493.7, 540.5, 516.5, 526.5, 468.3, 509.9, 515.4]
   FACOFF: absurdities=NONE errors=NONE seconds=[447.3, 456.8, 440.6, 458.8, 443.6, 451.5, 429.4]
+  NOOP: absurdities=NONE errors=NONE seconds=[297.1, 318.1, 305.9, 318.9, 276.6, 295.4, 300.7]
   seed 1941: biggest single repair HEAD {'truck': 2, 'toe': 2} BASE {'truck': 2, 'toe': 2} | alive AX/CW 185/218 -> 183/272
   seed 7: biggest single repair HEAD {'truck': 2, 'toe': 2} BASE {'truck': 2, 'toe': 2} | alive AX/CW 188/244 -> 196/231
   seed 4: biggest single repair HEAD {'truck': 2, 'toe': 2} BASE {'truck': 2, 'toe': 2} | alive AX/CW 189/233 -> 190/278

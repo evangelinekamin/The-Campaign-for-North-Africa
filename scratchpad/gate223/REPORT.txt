@@ -35,14 +35,14 @@ ARMS AND PROVENANCE
                  differs from live.  A patch that is called but changes nothing is dead too.
     INERTNESS    the read-only instrumentation (delegating wrappers on engine's four repair
                  helpers) reproduces the un-instrumented signature byte for byte, and the noop
-                 arm reproduces live's -- see the NOOP section at the foot of this file.
+                 arm reproduces live's in ALL SEVEN full-length wars -- see the appendix.
 
   ONE PROVENANCE NOTE, RECORDED RATHER THAN GLOSSED.  The BASE and HEAD-live arms ran at
   35edbdd; a concurrent agent then landed f3fa0a8 (a DOCSTRING-ONLY edit to
   game/repair.py::_static_major_facility_hexes) at 02:02, between phase 1 and phase 2, so the
   facility_off and noop arms ran at f3fa0a8.  The noop signature check settles it: noop at
-  f3fa0a8 must equal live at 35edbdd byte for byte, which proves the docstring commit inert
-  and the neuter machinery inert in one comparison.
+  f3fa0a8 equals live at 35edbdd byte for byte in ALL SEVEN wars (appendix C), which proves
+  the docstring commit inert and the neuter machinery inert in one comparison.
 
   THE CHARTS WERE RE-READ OFF THE SCAN FOR THIS GATE, not taken on trust.  PDF p.103 at
   400dpi: the [22.8] Broken Down Vehicle Repair Table's Major column is 75/75/50/50/50/33/33/
@@ -313,4 +313,19 @@ B. THE NEUTER REACHES.  game/engine.py does "from . import ... repair ..." (a MO
    entered it 39 + 69 times.  The in-process assertions (_assert_neuter_reached) would have
    killed the run rather than report a number had either failed.
 
-C. THE FULL-LENGTH NOOP ARM.  See NOOP_RESULT below.
+C. THE FULL-LENGTH NOOP ARM -- AND IT PAYS FOR ITSELF TWICE.  Seven full 111-turn wars with
+   the identity transform installed:
+
+     seed 1941  live f45564894d3a1d36   noop f45564894d3a1d36   IDENTICAL
+     seed    7  live df9dda3149fae20c   noop df9dda3149fae20c   IDENTICAL
+     seed    4  live 420afe5bd36231e1   noop 420afe5bd36231e1   IDENTICAL
+     seed   24  live a5e6bf883a32ce86   noop a5e6bf883a32ce86   IDENTICAL
+     seed 2026  live f4f2ce6a4e3e05c9   noop f4f2ce6a4e3e05c9   IDENTICAL
+     seed   99  live 9fdc43e6a00079f3   noop 9fdc43e6a00079f3   IDENTICAL
+     seed    1  live 8647506e74ddfcfe   noop 8647506e74ddfcfe   IDENTICAL
+
+   The wrapper was called 667 times per war (once per Repair Phase that had anything to
+   repair), returning the same 8-hex roster every time.  Byte-identical logs, so the neuter
+   machinery is inert -- AND, because the noop arm ran at f3fa0a8 while the live arm ran at
+   35edbdd, the same comparison proves the concurrent docstring commit behaviourally inert
+   over seven complete wars.  Both provenance worries are closed by one table.
