@@ -131,10 +131,27 @@ def _tripoli_hexes(state: GameState) -> frozenset:
 def _static_major_facility_hexes() -> frozenset:
     """The part of [22.31]'s roster that never varies within a process: Alexandria + Cairo
     ("all hexes", campaign_victory's own 64.71 auto_win table -- two Alexandria hexes, five
-    Cairo) and Tobruk ("for whoever controls it" -- the facility is side-neutral; the
-    ordinary 22.13a enemy-control gate the caller already applies is what decides who may
-    use it). Cached: this is a Repair-Phase-frequency call (game.engine._repair, up to twice
-    per Operations Stage) re-parsing a small, unchanging JSON file for no reason otherwise."""
+    Cairo) and Tobruk, which this roster carries UNCONDITIONALLY, for both sides alike.
+
+    OPEN OWNER RULING, flagged here rather than resolved -- 22.31 qualifies Tobruk and only
+    Tobruk, "(for whoever controls it)", and nothing in this engine enforces that qualifier.
+    An earlier draft of this docstring claimed "the ordinary 22.13a enemy-control gate the
+    caller already applies is what decides who may use it". That was true when it was
+    written; the review repair then deleted the gate on the Facility branch, CORRECTLY,
+    because 22.13a prints its own exception ("The only exception to this is if the vehicles
+    are in a Major Repair Facility, in which case the presence of an Enemy Zone of Control
+    has no effect", doubled by 22.37) -- and the sentence outlived the code it described,
+    taking with it the only thing that had stood in for 22.31's qualifier. The tension is IN
+    THE BOOK, not in the transcription: 22.13a exempts a Major Facility from the control bar
+    outright, while 22.31 hands Tobruk's facility to a controller, and this engine's
+    territorial state.control_of is a stricter proxy than the ZOC-controlled hex of 10.0 that
+    22.13a actually exempts. Choosing between them is an owner call. It is MEASURABLY INERT
+    today: zero repairs occur at Tobruk for a side that does not control the hex, across both
+    benchmarks and a full 111-turn campaign(4) -- the same three logs on which the 22.13a
+    exemption itself never fires (the attribution table in tests/baselines.py).
+
+    Cached: this is a Repair-Phase-frequency call (game.engine._repair, up to twice per
+    Operations Stage) re-parsing a small, unchanging JSON file for no reason otherwise."""
     aw = campaign_victory.load_victory_cities()
     hexes = {coords.to_axial(coords.parse(h))
              for h in aw["auto_win"]["alexandria"] + aw["auto_win"]["cairo"]}
