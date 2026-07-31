@@ -60,8 +60,13 @@ tank bn with 6+ TOE of Scorpions") and escort movers through them (26.24), and t
 DELIBERATELY NOT BUILT (24 is a big rule and this is the smallest faithful slice of it):
   * 24.5 roads (the 1 SA Road Construction Battalion is seeded and idle -- it exists, it is the
     rulebook's unit, and it has no unfinished-road overlay to build on because the map's
-    unfinished-road hexes are untranscribed), 24.7 air facilities, 24.8 repair facilities, and the
-    24.18 Demolition Chart's rail/road/port destruction (24.66 and the rest of §6 there).
+    unfinished-road hexes are untranscribed), 24.7 air facilities, 24.8 TEMPORARY repair facility
+    construction (game.repair's module docstring has the full accounting: no village/town hex
+    roster to site one on, a chart-vs-prose Fuel/Op-Stage contradiction, and no Policy would ever
+    order one anyway -- the same "built, undriven" shape as this file's own minefields/forts),
+    and the 24.18 Demolition Chart's rail/road/port destruction (24.66 and the rest of §6 there).
+    MAJOR repair facilities need no construction at all (24.81: "already in existence") and ARE
+    built -- see game.repair and rule 22.3.
   * 24.21's ten Water Points per site in Hot weather, and 24.23's pinned-by-artillery halt.
   * 52.22's water pipeline following the new rails ("the Commonwealth Player may consider any
     OPERATING Railroad hex to be a pipeline for water"). It is a real rule and it falls out of a

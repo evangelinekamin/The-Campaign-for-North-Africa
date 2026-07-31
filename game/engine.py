@@ -16,8 +16,8 @@ from dataclasses import dataclass, replace
 from typing import Protocol
 
 from . import (air, basing, calendar, combat, combat_tables, construction, cp_costs, initiative,
-               logistics_data, malta, minefields, movement, organization, replacements, stacking,
-               supply, tactics, weather, wells, zoc)
+               logistics_data, malta, minefields, movement, organization, repair, replacements,
+               stacking, supply, tactics, weather, wells, zoc)
 from .apply import apply
 from .dice import DiceBox
 from .events import CONTROL_OF, Control, Event, EventKind, Phase, Side
@@ -3722,57 +3722,162 @@ def _repaired_count(vclass: str, result: int, broken: int) -> int:
     return min(result, broken)
 
 
+def _field_repair_vehicle(r: _Run, side: Side, actor: str, u) -> None:
+    """[22.2]/[22.8] Field Repair for a broken-down tank/SPA or AC/Recce TOE Strength Point,
+    away from any Repair Facility. Tanks pre-pay one in-hex Fuel Point per broken TOE before
+    rolling (22.26: 'present in the hex' -- supply.in_hex_draw, NOT the abstract 32.16
+    half-CPA trace supply.plan_draw used to read this through, a Section-32-abstract-game
+    bug this restructuring also closes); AC/Recce repairs free (22.24). No partial attempt:
+    the whole broken pool is pre-paid or none of it is."""
+    cur = r.state.unit(u.id)
+    vclass = "tank" if cur.is_tank else "ac_recce"
+    if vclass == "tank":                                # 22.26: one Fuel Point per broken TOE, before rolling
+        draws = supply.in_hex_draw(r.state, cur, supply.FUEL, _REPAIR_FUEL_PER_TOE * cur.broken_down)
+        if draws is None:
+            return                                       # 22.13b: no supplies -> no repair
+        for tag, ref_id, qty in draws:
+            if tag == "unit":                            # 49.14 tank, own pool first (49.16)
+                r.emit(EventKind.UNIT_SUPPLY_CONSUMED, side, actor,
+                       {"unit_id": ref_id, "commodity": supply.FUEL, "qty": qty})
+            else:                                        # a co-located dump (54.11/54.15)
+                r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+                       {"supply_id": ref_id, "commodity": supply.FUEL, "qty": qty, "unit_id": cur.id})
+    die = r.d6("repair")
+    cur = r.state.unit(u.id)                            # re-read after the fuel draw
+    repaired = _repaired_count(vclass, combat_tables.field_repair(vclass, die), cur.broken_down)
+    if repaired > 0:
+        r.emit(EventKind.VEHICLE_REPAIRED, side, actor,
+               {"unit_id": cur.id, "amount": repaired}, rng_draws=(die,))   # 22.8: certify the roll
+
+
+def _field_repair_trucks(r: _Run, side: Side, actor: str, trucks) -> None:
+    """[22.23] ONE die for the whole hex, free of any supply cost, spread over the hex's
+    broken Truck Points in id order (defender's-choice idiom)."""
+    die = r.d6("repair")
+    allowance = combat_tables.field_repair("truck", die)  # 1 -> 2 Points, 2 -> 1 Point, else 0
+    first = True                                        # the hex's one roll spreads over its trucks,
+    for t in sorted(trucks, key=lambda t: t.id):        # defender's choice = id order
+        if allowance <= 0:
+            break
+        take = min(allowance, r.state.truck(t.id).broken_down)
+        if take > 0:
+            r.emit(EventKind.TRUCK_REPAIRED, side, actor,   # certify the hex's die on its first fold
+                   {"truck_id": t.id, "amount": take}, rng_draws=(die,) if first else ())
+            allowance -= take
+            first = False
+
+
+def _facility_repair_vehicle(r: _Run, side: Side, actor: str, u) -> None:
+    """[22.34]/[22.35] Major-Facility repair for a broken-down tank/SPA or AC/Recce TOE
+    Strength Point: EVERY class pays 1 Fuel + 1 Stores per point attempted (22.35, unlike
+    Field Repair's free AC/Recce), drawn in-hex (own pool first, then a co-located dump --
+    supply.in_hex_draw, same mechanism as the Field tank fuel draw above). The die result is
+    a PERCENTAGE of that type repaired for every class (22.34), not Field's flat AC/Recce
+    count, shifted by the hex's own fortification damage (22.34a,
+    game.repair.facility_die_modifier). No partial attempt."""
+    cur = r.state.unit(u.id)
+    vclass = "tank" if cur.is_tank else "ac_recce"
+    points = cur.broken_down
+    fuel_draws = supply.in_hex_draw(r.state, cur, supply.FUEL, repair.FACILITY_FUEL_PER_POINT * points)
+    if fuel_draws is None:
+        return                                          # 22.13b: no supplies -> no repair
+    stores_draws = supply.in_hex_draw(r.state, cur, supply.STORES, repair.FACILITY_STORES_PER_POINT * points)
+    if stores_draws is None:
+        return
+    for commodity, draws in ((supply.FUEL, fuel_draws), (supply.STORES, stores_draws)):
+        for tag, ref_id, qty in draws:
+            if tag == "unit":
+                r.emit(EventKind.UNIT_SUPPLY_CONSUMED, side, actor,
+                       {"unit_id": ref_id, "commodity": commodity, "qty": qty})
+            else:
+                r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+                       {"supply_id": ref_id, "commodity": commodity, "qty": qty, "unit_id": cur.id})
+    die = r.d6("repair")
+    cur = r.state.unit(u.id)                            # re-read after the supply draws
+    modified = die + repair.facility_die_modifier(r.state, cur.hex)          # 22.34a
+    pct = combat_tables.facility_repair("major", modified)
+    repaired = repair.facility_repaired_count(pct, cur.broken_down)
+    if repaired > 0:
+        r.emit(EventKind.VEHICLE_REPAIRED, side, actor,
+               {"unit_id": cur.id, "amount": repaired}, rng_draws=(die,))   # the RAW roll; the 22.34a
+                                                         # shift is a pure function of state, replayed
+                                                         # from fort_level rather than re-recorded here
+
+
+def _facility_repair_trucks(r: _Run, side: Side, actor: str, hexpos, trucks) -> None:
+    """[22.34]/[22.35] Major-Facility repair for a hex's broken Truck Points: ONE die for the
+    whole hex (mirroring 22.23's grouping), a PERCENTAGE result (22.34, not Field's flat
+    count), and 1 Fuel + 1 Stores per point ATTEMPTED (22.35) drawn from the hex's own dumps
+    -- NOT a truck's own carried cargo (that is freight in transit, not the formation's fuel
+    tank; the draw goes through game.construction's hex-wide dump helpers, the same source
+    RAIL/DUMP construction already draws from, rather than supply.in_hex_draw's own-pool
+    branch)."""
+    points = sum(r.state.truck(t.id).broken_down for t in trucks)
+    need_fuel = repair.FACILITY_FUEL_PER_POINT * points
+    need_stores = repair.FACILITY_STORES_PER_POINT * points
+    if (construction.commodity_at(r.state, side, hexpos, "FUEL") < need_fuel
+            or construction.commodity_at(r.state, side, hexpos, "STORES") < need_stores):
+        return                                          # 22.13b: no supplies -> no repair
+    for commodity, need in ((supply.FUEL, need_fuel), (supply.STORES, need_stores)):
+        for sid, qty in construction.commodity_draw(r.state, side, hexpos, commodity, need):
+            r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
+                   {"supply_id": sid, "commodity": commodity, "qty": qty})
+    die = r.d6("repair")
+    modified = die + repair.facility_die_modifier(r.state, hexpos)           # 22.34a
+    pct = combat_tables.facility_repair("major", modified)
+    repaired = repair.facility_repaired_count(pct, points)
+    first = True
+    for t in sorted(trucks, key=lambda t: t.id):        # defender's choice = id order
+        if repaired <= 0:
+            break
+        take = min(repaired, r.state.truck(t.id).broken_down)
+        if take > 0:
+            r.emit(EventKind.TRUCK_REPAIRED, side, actor,
+                   {"truck_id": t.id, "amount": take}, rng_draws=(die,) if first else ())
+            repaired -= take
+            first = False
+
+
 def _repair(r: _Run, side: Side) -> None:
-    """Repair Phase (rule 22.12): the phasing side field-repairs its broken-down vehicles.
-    Each such unit in a non-enemy hex (22.13a), weather permitting (22.13d), expends the
-    22.15 Fuel and rolls one die on the 22.8 Field column; the repaired TOE flows back to
-    the operational pool (VEHICLE_REPAIRED). Fires only when the side actually has broken
-    vehicles to repair, so every pre-breakdown scenario stays byte-identical."""
+    """Repair Phase (rule 22.12): field AND facility repairs both fire here -- the rule
+    makes no procedural distinction ('All repairs are undertaken in the Repair Phase'). A
+    vehicle standing on a Major Repair Facility hex (22.31, repair.major_facility_hexes)
+    repairs on the strictly-better Facility die column (22.34) instead of the Field one
+    (22.8) -- no unit ever rolls both, and no rational Player would ever prefer Field's
+    worse odds when a Facility is available (75/50/33/25/25/10/10/10 beats 25/10/10/10/0/0
+    on every roll). Major Facilities are never weather-blocked (22.36), unlike Field Repair
+    (22.13d); the enemy-control gate (22.13a) is unchanged either way. Fires only when the
+    side actually has broken vehicles to repair, so every pre-breakdown scenario stays
+    byte-identical."""
     enemy_ctrl = CONTROL_OF[_other(side)]
+    facility_hexes = repair.major_facility_hexes(r.state)
     repairable = [u for u in r.state.living(side)
                   if u.broken_down > 0 and u.breaks_down
                   and r.state.control_of(u.hex) != enemy_ctrl                 # 22.13a
-                  and not _field_repair_blocked(r.state.weather_at(u.hex))]   # 22.13d, per section
-    repairable_trucks = [t for t in r.state.trucks                            # 22.23 truck column
+                  and (u.hex in facility_hexes                                # 22.36
+                       or not _field_repair_blocked(r.state.weather_at(u.hex)))]  # 22.13d
+    repairable_trucks = [t for t in r.state.trucks                            # 22.23/22.34 truck column
                          if t.side == side and t.broken_down > 0
                          and r.state.control_of(t.hex) != enemy_ctrl          # 22.13a
-                         and not _field_repair_blocked(r.state.weather_at(t.hex))]  # 22.13d
+                         and (t.hex in facility_hexes                         # 22.36
+                              or not _field_repair_blocked(r.state.weather_at(t.hex)))]  # 22.13d
     if not repairable and not repairable_trucks:
         return
     r.go(Phase.REPAIR, side)
     actor = f"{side.value}/Repair"
     for u in sorted(repairable, key=lambda u: u.id):
-        cur = r.state.unit(u.id)
-        vclass = "tank" if cur.is_tank else "ac_recce"
-        if vclass == "tank":                            # 22.26: one Fuel Point per broken TOE, before rolling
-            draws = supply.plan_draw(r.state, cur, supply.FUEL, _REPAIR_FUEL_PER_TOE * cur.broken_down)
-            if draws is None:
-                continue                                # 22.13b: no supplies -> no repair
-            for sid, qty in draws:
-                r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
-                       {"supply_id": sid, "commodity": supply.FUEL, "qty": qty, "unit_id": cur.id})
-        die = r.d6("repair")
-        cur = r.state.unit(u.id)                        # re-read after the fuel draw
-        repaired = _repaired_count(vclass, combat_tables.field_repair(vclass, die), cur.broken_down)
-        if repaired > 0:
-            r.emit(EventKind.VEHICLE_REPAIRED, side, actor,
-                   {"unit_id": cur.id, "amount": repaired}, rng_draws=(die,))   # 22.8: certify the roll
-    by_hex: dict = {}                                   # 22.23: ONE die per HEX, not per formation
+        if u.hex in facility_hexes:
+            _facility_repair_vehicle(r, side, actor, u)
+        else:
+            _field_repair_vehicle(r, side, actor, u)
+    by_hex: dict = {}                                   # 22.23/22.34: ONE die per HEX, not per formation
     for t in repairable_trucks:
         by_hex.setdefault(t.hex, []).append(t)
     for hexpos in sorted(by_hex):
-        die = r.d6("repair")
-        allowance = combat_tables.field_repair("truck", die)  # 1 -> 2 Points, 2 -> 1 Point, else 0
-        first = True                                    # the hex's one roll spreads over its trucks,
-        for t in sorted(by_hex[hexpos], key=lambda t: t.id):  # defender's choice = id order
-            if allowance <= 0:
-                break
-            take = min(allowance, r.state.truck(t.id).broken_down)
-            if take > 0:
-                r.emit(EventKind.TRUCK_REPAIRED, side, actor,   # certify the hex's die on its first fold
-                       {"truck_id": t.id, "amount": take}, rng_draws=(die,) if first else ())
-                allowance -= take
-                first = False
+        if hexpos in facility_hexes:
+            _facility_repair_trucks(r, side, actor, hexpos, by_hex[hexpos])
+        else:
+            _field_repair_trucks(r, side, actor, by_hex[hexpos])
 
 
 def _reject(r: _Run, side: Side, actor: str, order: MoveOrder, reason: str,

@@ -82,9 +82,11 @@
       "tds_or_mobile_repair_in_hex": -1,
       "major_city_fort_level_2": 1,
       "major_city_fort_level_1_or_0": 2,
-      "_note": "Subtract 1 for a Tank Delivery Squadron / Mobile Tank Repair Squad in the same hex (a deferred special). Add 1 (fort level 2) or 2 (fort level <=1) for a repair facility in a Major City hex."
+      "_note": "Subtract 1 for a Tank Delivery Squadron / Mobile Tank Repair Squad in the same hex (a deferred special, 22.6/22.7 -- no OOB counter for either exists, so unreachable). Add 1 (fort level 2) or 2 (fort level <=1) for a repair facility in a Major City hex.",
+      "_owner_ruling_2026_07_30": "This chart footnote ('at present two' / 'at present one or zero') is a SHORTHAND that only equals rule 22.34a's own prose ('reduced by one' -> +1, 'reduced by two or three' -> +2) for a Level-3 Major City (Alexandria/Cairo). For a Level-2 Major City (Tobruk/Bardia/Benghazi/Helwan) the two readings diverge: the chart's literal 'at present two' would add +1 to an UNDAMAGED Level-2 city (its own printed/never-reduced level), contradicting 22.34a's own conditional ('if the Enemy Player succeeds in REDUCING...'). RULING: the numbered rule's prose wins (matching game.construction.fort_buildable's precedent for the same chart-vs-prose class of conflict) -- game.repair.facility_die_modifier keys the modifier off (static fortification level - current fort_level), not off the current level in isolation. See scratchpad/port/transcriptions/22.3-cw-rear-area-recovery.md section 5. Scan-verified at 300dpi (PDF p.103), not an OCR artefact."
     },
-    "_scope_note": "Fork B uses only the two FIELD tank/truck/AC-recce columns each Repair Phase. The Temporary/Major Facility columns are transcribed for completeness/future use."
+    "_scope_note": "Fork B uses only the two FIELD tank/truck/AC-recce columns each Repair Phase. The Temporary/Major Facility columns are transcribed for completeness/future use.",
+    "_facility_consumed_2026_07_30": "The Temporary/Major Facility columns are now READ by game.combat_tables.facility_repair (the 22.3 slice) -- 'future use' above has arrived. Only the 'major' column is ever reached in practice: Major Repair Facilities (Tripoli/Tobruk/Alexandria/Cairo, 22.31) already exist and need no construction, while Temporary Repair Facilities (24.8) remain unbuilt (see game/repair.py's module docstring for why) -- the 'temporary' column stays transcribed-but-unreachable, same shape as the die_modifiers' TDS/Mobile-Repair entry above."
   },
 
   "vehicle_repair_supply_costs_22_15": {

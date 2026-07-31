@@ -10,6 +10,46 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-30 -- CAUSE: rule 22.3 FACILITY REPAIRS (the Tier-2 slice), which lands with
+one adjacent, pre-existing bug fix in the same function it restructures.
+
+    87f3baeb4530 / b2a2f8bf6ab9  ->  34e439545995 / 9c3565293760
+
+CAUSE A -- FACILITY REPAIR ITSELF. engine._repair now routes a broken-down vehicle standing on a
+Major Repair Facility hex (22.31: Alexandria/Cairo/Tobruk, "already in existence" per 24.81 --
+game.repair.major_facility_hexes) onto the 22.34 Facility die column instead of the 22.8 Field one
+-- a different (better) percentage, a different (1 Fuel + 1 Stores per point, 22.35) cost, and no
+weather gate (22.36). Tobruk (C4807) is a Major Repair Facility in EVERY scenario, including both
+benchmarks, so any unit that breaks down while standing there now repairs differently than before.
+
+CAUSE B -- THE ADJACENT BUG. Field Repair's tank/SPA Fuel draw (22.26, "present in the hex") was
+reading supply.plan_draw -- rule 32.16's ABSTRACT ½-CPA trace, the exact bug class CLAUDE.md names
+("the ½-CPA supply trace... has bitten this project twice"). Facility Repair (22.35, same "present
+in the hex" wording) needed the correct supply.in_hex_draw regardless, and since this change already
+restructures engine._repair function-by-function, the adjacent Field-tank draw was corrected in the
+same pass rather than left inconsistent beside new code that gets it right. A tank funding its field
+repair from a dump within half-CPA but off its own hex now correctly goes unfunded.
+
+NEUTER-PROOF (seed 42, ScriptedPolicy(AXIS) both sides, each figure reproduced twice):
+
+    live (A+B)                                                    -> 34e439545995 / 9c3565293760
+    NEUTER A -- engine.repair.major_facility_hexes patched to
+      return frozenset() (B still live)                           -> 9a6d888d6ae8 / 7f7bb79ef3c4
+      i.e. NEITHER benchmark reproduces the old baseline with A alone neutered: B independently
+      moves both logs too, so this is a two-cause move, not one masquerading as one.
+    git-stash of every file this change touches (repair.py moved
+      aside, engine/combat_tables/dice/breakdown_rates.json
+      reverted) reproduces the documented OLD baseline exactly     -> 87f3baeb4530 / b2a2f8bf6ab9
+      (the clean, whole-file neuter -- patching supply.in_hex_draw in-process to fall back onto
+      plan_draw was tried FIRST and rejected: it also touches the movement-fuel/stores-distribution/
+      ammo-draw call sites this change never modifies, which is a false neuter, not a true one --
+      recorded so the trap is not re-walked-into next time this file needs a partial-B neuter).
+
+Determinism holds: every figure above reproduces byte-for-byte across two runs. Full accounting,
+scan cites and the two owner-visible chart-vs-prose rulings (the 22.34a die-modifier footnote; the
+24.8 Construction Chart's Fuel/Op-Stage figures, moot because 24.8 stays unbuilt) live in
+scratchpad/port/transcriptions/22.3-cw-rear-area-recovery.md and game/repair.py's module docstring.
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-26 (FOURTH MOVE THE SAME DAY) -- CAUSE: the [8.45] DESERT REVIEW REPAIR, whose
 first repair was to THE ENTRY THAT USED TO STAND HERE. That entry read "NOT RE-BASELINED... the
 honest shape of a faithfully-transcribed rule with no live consumer yet", on the strength of a grep
@@ -1378,8 +1418,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "87f3baeb4530"
-SIEGE_OF_TOBRUK = "b2a2f8bf6ab9"
+ROMMELS_ARRIVAL = "34e439545995"
+SIEGE_OF_TOBRUK = "9c3565293760"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

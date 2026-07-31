@@ -414,14 +414,28 @@ def test_the_commonwealth_trucks_actually_run():
     # short at (26, 99) and only the two Airfield trucks on the hex; that split was the unrepaired
     # tree's.) Same bug throughout -- game.relay._step_toward's single-step livelock, not fixed
     # here -- and AL-Truck-Alex-M remains the separate 8.1a case at a hex nowhere near the railhead.
+    # RESTATED 2026-07-30 (rule 22.3 Facility Repair + the adjacent 22.26 in-hex-draw fix,
+    # tests/baselines.py has the full attribution): the campaign fold's early Game-Turns are
+    # exactly where Repair Phase supply draws run, so the trajectory that puts AL-Truck-Alex-L
+    # within reach of Mersa Matruh at all shifts too -- it now stops TWO hexes short, (25, 98),
+    # instead of landing exactly on the railhead. MEASURED this is the SAME game.relay._step_
+    # toward livelock, not a new one: supply.reachable_truck_moves(final_state, the truck) at
+    # (25, 98) contains 898 hexes and NONE of them is strictly closer to MATRUH than (25, 98)
+    # itself (the truck's own distance, 2, is the reachable-set minimum) -- the identical "no
+    # reachable hex makes net progress" dead end the docstring above names, landed one Convoy
+    # Phase earlier than before. AL-Truck-Airfield-M/H are unaffected (still exactly on MATRUH,
+    # their own step-toward dead end unrelated to this slice's changes).
     _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK = {
         "AL-Truck-Alex-M", "AL-Truck-Alex-L", "AL-Truck-Airfield-M", "AL-Truck-Airfield-H"}
     stuck = {t.id: t for t in res.final.trucks if t.id in _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK}
     assert set(stuck) == _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK, "the excused set moved"
     assert res.final.control_of(MATRUH) is Control.AXIS, "the railhead is friendly -- re-diagnose"
-    for tid in ("AL-Truck-Alex-L", "AL-Truck-Airfield-M", "AL-Truck-Airfield-H"):
+    for tid in ("AL-Truck-Airfield-M", "AL-Truck-Airfield-H"):
         assert stuck[tid].hex == MATRUH, \
             f"{tid} is no longer sitting on the Axis-held railhead ({stuck[tid].hex}) -- re-diagnose"
+    assert stuck["AL-Truck-Alex-L"].hex == (25, 98), \
+        f"AL-Truck-Alex-L is no longer stuck two hexes short of the railhead " \
+        f"({stuck['AL-Truck-Alex-L'].hex}) -- re-diagnose"
     assert not is_adjacent(stuck["AL-Truck-Alex-M"].hex, MATRUH)   # the 8.1a case, a different hex
     for t in res.final.trucks:              # nobody drove back to the Delta and idled there
         if t.side == Side.ALLIED and t.line != 1 and t.id not in _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK:

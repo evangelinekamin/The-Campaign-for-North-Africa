@@ -438,3 +438,172 @@ def test_repair_skipped_in_enemy_controlled_hex():
     _repair(r, Side.AXIS)
     assert not r.events                                          # 22.13a
     assert r.state.unit("T1").broken_down == 6
+
+
+def test_field_tank_repair_no_longer_funds_off_a_half_cpa_dump():
+    # A Section-32-abstract-game regression guard: 22.26 requires Fuel "present in the
+    # hex", not merely within the CPA-half trace of 32.16. A dump one hex away (well
+    # inside a CPA-20 tank's half-CPA-10 reach) must NOT fund the repair.
+    from game.engine import _Run, _repair
+    from game.movement import TerrainMap
+    from game.state import GameState, VP
+    tmap = TerrainMap(terrain={(0, 0): Terrain.DESERT, (1, 0): Terrain.DESERT},
+                      roads=frozenset({frozenset({(0, 0), (1, 0)})}))
+    tank = _tank(broken=6, strength=10)
+    dump = SupplyUnit("AX-Dump", Side.AXIS, (1, 0), ammo=0, fuel=50)   # adjacent, NOT co-located
+    st = GameState(turn=1, max_turns=9, phase=Phase.COMBAT, active_side=Side.AXIS,
+                   seed=1, weather="clear", vp=VP(), terrain=tmap,
+                   control={}, units=(tank,), target_hex=(0, 0),
+                   supplies=(dump,), consumed={}, initial_supply={"FUEL": 50})
+    r = _Run(st)
+    r.state = st
+    r.dice.load("repair", _FixedDie(3))
+    _repair(r, Side.AXIS)
+    assert not any(e.kind == EventKind.SUPPLY_CONSUMED for e in r.events)
+    assert not any(e.kind == EventKind.VEHICLE_REPAIRED for e in r.events)  # 22.13b: not present IN the hex
+    assert r.state.unit("T1").broken_down == 6
+
+
+# --- Step 6: Facility Repair (22.3) -----------------------------------------
+
+from game import repair as _repair_mod
+
+
+def _a_facility_hex():
+    """A real Major Repair Facility hex (22.31 -- Alexandria/Cairo/Tobruk), computed off
+    the same chart-of-record function the engine uses, never hardcoded."""
+    from game.movement import TerrainMap
+    from game.state import GameState, VP
+    blank = GameState(turn=1, max_turns=1, phase=Phase.MOVEMENT, active_side=Side.AXIS,
+                      seed=1, weather="clear", vp=VP(), terrain=TerrainMap(terrain={}),
+                      control={}, units=(), target_hex=(0, 0), supplies=(),
+                      consumed={}, initial_supply={})
+    return sorted(_repair_mod.major_facility_hexes(blank))[0]
+
+
+def _facility_repair_run(tank, *, weather="clear", die=3, fuel=50, stores=50):
+    from game.engine import _Run, _repair
+    from game.movement import TerrainMap
+    from game.state import GameState, VP
+    hx = _a_facility_hex()
+    tank = replace(tank, hex=hx)
+    tmap = TerrainMap(terrain={hx: Terrain.DESERT})
+    dump = SupplyUnit("AX-Dump", Side.AXIS, hx, ammo=0, fuel=fuel, stores=stores)
+    st = GameState(turn=1, max_turns=9, phase=Phase.COMBAT, active_side=Side.AXIS,
+                   seed=1, weather=weather, vp=VP(), terrain=tmap,
+                   control={}, units=(tank,), target_hex=hx, supplies=(dump,),
+                   consumed={}, initial_supply={"FUEL": fuel, "STORES": stores})
+    r = _Run(st)
+    r.state = st
+    r.dice.load("repair", _FixedDie(die))
+    _repair(r, Side.AXIS)
+    return r
+
+
+def test_facility_repair_uses_the_major_column_percentage():
+    r = _facility_repair_run(_tank(broken=8, strength=10), die=3)   # die 3 -> Major 50%
+    assert r.state.unit("T1").broken_down == 4          # ceil(50% of 8) = 4
+    assert any(e.kind == EventKind.VEHICLE_REPAIRED for e in r.events)
+
+
+def test_facility_repair_beats_field_repair_on_the_same_die():
+    # die=3 gives Field Tank 10%* and Major Facility 50% -- the whole point of the beat
+    # routing a facility hex through the better column.
+    field = _repair_run(_tank(broken=8, strength=10), die=3)
+    facility = _facility_repair_run(_tank(broken=8, strength=10), die=3)
+    field_amt = next(e for e in field.events if e.kind == EventKind.VEHICLE_REPAIRED).payload["amount"]
+    facility_amt = next(e for e in facility.events
+                        if e.kind == EventKind.VEHICLE_REPAIRED).payload["amount"]
+    assert facility_amt > field_amt
+
+
+def test_facility_repair_charges_both_fuel_and_stores():
+    r = _facility_repair_run(_tank(broken=4, strength=10), die=3, fuel=50, stores=50)
+    consumed = {e.payload["commodity"] for e in r.events if e.kind == EventKind.SUPPLY_CONSUMED}
+    assert consumed == {"FUEL", "STORES"}                # 22.35: one of EACH per point attempted
+    assert r.state.consumed["FUEL"] == 4 and r.state.consumed["STORES"] == 4
+
+
+def test_facility_repair_needs_stores_not_just_fuel():
+    r = _facility_repair_run(_tank(broken=4, strength=10), die=3, fuel=50, stores=0)
+    assert not any(e.kind == EventKind.SUPPLY_CONSUMED for e in r.events)
+    assert not any(e.kind == EventKind.VEHICLE_REPAIRED for e in r.events)  # 22.13b: Stores present, but zero
+    assert r.state.unit("T1").broken_down == 4
+
+
+def test_facility_repair_never_weather_blocked():
+    # 22.36: "Major Facilities are never affected by Weather" -- unlike Field Repair.
+    for w in ("rainstorm", "sandstorm"):
+        r = _facility_repair_run(_tank(broken=4, strength=10), weather=w, die=3)
+        assert any(e.kind == EventKind.VEHICLE_REPAIRED for e in r.events), w
+
+
+def test_off_facility_hex_still_uses_field_repair():
+    # Regression: nothing about adding the facility path changes an ordinary desert hex.
+    r = _repair_run(_tank(broken=8, strength=10), die=3)   # die 3 -> Field Tank 10%*
+    assert r.state.unit("T1").broken_down == 7             # ceil(10% of 8) = 1 repaired
+
+
+def test_facility_repair_truck_uses_percentage_not_flat_count():
+    from game.engine import _Run, _repair
+    from game.movement import TerrainMap
+    from game.state import GameState, TruckFormation, VP
+    hx = _a_facility_hex()
+    truck = TruckFormation("TR1", Side.AXIS, hx, "medium", points=10, broken_down=8)
+    tmap = TerrainMap(terrain={hx: Terrain.DESERT})
+    dump = SupplyUnit("AX-Dump", Side.AXIS, hx, ammo=0, fuel=50, stores=50)
+    st = GameState(turn=1, max_turns=9, phase=Phase.COMBAT, active_side=Side.AXIS,
+                   seed=1, weather="clear", vp=VP(), terrain=tmap,
+                   control={}, units=(), target_hex=hx, trucks=(truck,), supplies=(dump,),
+                   consumed={}, initial_supply={"FUEL": 50, "STORES": 50})
+    r = _Run(st)
+    r.state = st
+    r.dice.load("repair", _FixedDie(3))                  # die 3 -> Major 50%
+    _repair(r, Side.AXIS)
+    assert r.state.truck("TR1").broken_down == 4          # ceil(50% of 8) = 4, NOT the field flat count
+    consumed = {e.payload["commodity"] for e in r.events if e.kind == EventKind.SUPPLY_CONSUMED}
+    assert consumed == {"FUEL", "STORES"}                 # 22.35, unlike Field's free trucks (22.23)
+
+
+def test_facility_repair_truck_needs_supplies_present_in_the_hex():
+    from game.engine import _Run, _repair
+    from game.movement import TerrainMap
+    from game.state import GameState, TruckFormation, VP
+    hx = _a_facility_hex()
+    truck = TruckFormation("TR1", Side.AXIS, hx, "medium", points=10, broken_down=8)
+    tmap = TerrainMap(terrain={hx: Terrain.DESERT})
+    st = GameState(turn=1, max_turns=9, phase=Phase.COMBAT, active_side=Side.AXIS,
+                   seed=1, weather="clear", vp=VP(), terrain=tmap,
+                   control={}, units=(), target_hex=hx, trucks=(truck,), supplies=(),
+                   consumed={}, initial_supply={})
+    r = _Run(st)
+    r.state = st
+    r.dice.load("repair", _FixedDie(3))
+    _repair(r, Side.AXIS)
+    assert not any(e.kind == EventKind.SUPPLY_CONSUMED for e in r.events)
+    assert not any(e.kind == EventKind.TRUCK_REPAIRED for e in r.events)
+    assert r.state.truck("TR1").broken_down == 8
+
+
+def test_facility_repair_skipped_in_enemy_controlled_hex():
+    # 22.13a applies to a Major Facility exactly as it does to Field Repair -- Alexandria
+    # under enemy control is not a place the Commonwealth repairs anything.
+    from game.engine import _Run, _repair
+    from game.events import Control
+    from game.movement import TerrainMap
+    from game.state import GameState, VP
+    hx = _a_facility_hex()
+    tank = replace(_tank(broken=6, strength=10), hex=hx)
+    tmap = TerrainMap(terrain={hx: Terrain.DESERT})
+    dump = SupplyUnit("AX-Dump", Side.AXIS, hx, ammo=0, fuel=50, stores=50)
+    st = GameState(turn=1, max_turns=9, phase=Phase.COMBAT, active_side=Side.AXIS,
+                   seed=1, weather="clear", vp=VP(), terrain=tmap,
+                   control={hx: Control.ALLIED}, units=(tank,), target_hex=hx,
+                   supplies=(dump,), consumed={}, initial_supply={"FUEL": 50, "STORES": 50})
+    r = _Run(st)
+    r.state = st
+    r.dice.load("repair", _FixedDie(3))
+    _repair(r, Side.AXIS)
+    assert not any(e.kind == EventKind.SUPPLY_CONSUMED for e in r.events)
+    assert not any(e.kind == EventKind.VEHICLE_REPAIRED for e in r.events)  # 22.13a
+    assert r.state.unit("T1").broken_down == 6

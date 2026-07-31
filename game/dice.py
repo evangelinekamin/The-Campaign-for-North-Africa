@@ -61,7 +61,7 @@ SUBSYSTEMS: tuple[str, ...] = (
                           #   -- its own stream because BOTH halves draw conditionally (a raid is
                           #   ordered or not; a facility below its ceiling is rolled for or not)
     "breakdown",          # [21.38] the vehicle Breakdown Table
-    "repair",             # [22.8] the field-repair columns
+    "repair",             # [22.8] the field- AND facility-repair columns (22.2/22.3)
     "demolition",         # [54.17] blowing a supply dump
     "barrage",            # [12.6] the Barrage CRT
     "anti_armor",         # [14.6] the Anti-Armor CRT

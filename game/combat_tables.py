@@ -501,8 +501,7 @@ def breakdown_result(bp: float, bar: int, weather_shift: int, roll: int) -> int:
     return 0
 
 
-# [22.8] BROKEN DOWN VEHICLE REPAIR TABLE, the two FIELD columns (Fork B repairs only
-# in the field; the Temporary/Major Facility columns are deferred). One die: for a tank/
+# [22.8] BROKEN DOWN VEHICLE REPAIR TABLE, the three FIELD columns. One die: for a tank/
 # SPA the cell is a PERCENTAGE of that type repaired; for an armored-car/recce it is a
 # number of TOE Strength Points; for a truck a number of Truck Points. Transcribed from
 # data/breakdown_rates.json (chart-of-record) and bound to it by test_breakdown. Die 0
@@ -522,6 +521,29 @@ def field_repair(vclass: str, die: int) -> int:
     repaired; for 'ac_recce' the TOE Strength Points repaired; for 'truck' the Truck
     Points repaired. Rolls off the table are 0 (no repair)."""
     return _FIELD_REPAIR[vclass].get(die, 0)
+
+
+# [22.8]/[22.34] The two FACILITY columns (Temporary/Major) -- the 22.3 slice this table's
+# old comment named "deferred". Unlike Field Repair's three per-class columns, a Repair
+# Facility uses ONE percentage per column applied to WHATEVER class is being repaired --
+# truck, AC/Recce or tank/SPA alike (22.34: "the result of the dieroll is the percentage of
+# that type of vehicle that may be Repaired"). Die can run 0-8 via the 22.34a Major-City
+# fortification-damage modifier (game.repair.facility_die_modifier); dice above 8 clamp to
+# the chart's own ceiling row. "Temporary" is transcribed for chart-of-record completeness
+# but never reached in play -- 24.8 Temporary Repair Facility construction is named debt
+# (game.repair's module docstring); only Major Repair Facilities (22.31, "already in
+# existence") are ever consulted.
+_FACILITY_REPAIR: dict[str, dict[int, int]] = {
+    "temporary": {0: 50, 1: 50, 2: 33, 3: 25, 4: 25, 5: 10, 6: 10, 7: 10, 8: 10},
+    "major":     {0: 75, 1: 75, 2: 50, 3: 50, 4: 50, 5: 33, 6: 33, 7: 25, 8: 10},
+}
+
+
+def facility_repair(kind: str, die: int) -> int:
+    """Rule 22.8 Facility columns ('temporary' or 'major'): the percentage of the repaired
+    class's broken TOE/Truck Points, for every vehicle class alike (22.34). `die` is clamped
+    to the chart's printed 0-8 range (22.34a's modifiers cannot push it further)."""
+    return _FACILITY_REPAIR[kind][max(0, min(8, die))]
 
 
 # [21.14]/[54.2] Truck Breakdown Adjustment Rating: ALL Truck Points are "2 Left" -- a
