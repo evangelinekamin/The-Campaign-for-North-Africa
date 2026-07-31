@@ -384,6 +384,13 @@ class EventKind(str, Enum):
     # direction: a reader of the log should be able to tell which happened without opening payload.
     FORT_LEVEL_BUILT = "FORT_LEVEL_BUILT"
     HEX_CONTROL_CHANGED = "HEX_CONTROL_CHANGED"
+    # [54.41] RAIL_CONTROL_CHANGED {hex, side} -- a land combat unit PASSED THROUGH a built rail
+    # hex, so its Player is now "the last player to have a land combat unit of any type pass
+    # through that hex". A SEPARATE event from HEX_CONTROL_CHANGED because it folds a separate
+    # field and answers a separate question: 54.41's control is sticky and claimed by transit,
+    # while HEX_CONTROL_CHANGED reports sole combat OCCUPANCY at a phase boundary. Emitted only
+    # for hexes the built railway runs through, so every railway-less scenario stays silent.
+    RAIL_CONTROL_CHANGED = "RAIL_CONTROL_CHANGED"
     PHASE_ADVANCED = "PHASE_ADVANCED"
     TURN_ADVANCED = "TURN_ADVANCED"
     VICTORY_CHECKED = "VICTORY_CHECKED"

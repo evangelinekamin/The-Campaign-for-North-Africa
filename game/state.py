@@ -914,6 +914,14 @@ class GameState:
     # engineers no construction order can ever validate, so every other scenario is byte-identical.
     construction: dict = field(default_factory=dict)
     rail_line: tuple = ()
+    # [54.41] RAIL CONTROL IS ITS OWN NOTION, and deliberately NOT `control` above. 54.41: "To
+    # control a rail hex the Axis player must be the last player to have a land combat unit of any
+    # type PASS THROUGH that hex." That is STICKY (it survives the unit marching on) and BROADER
+    # than `control`, which engine._record_control derives from SOLE COMBAT OCCUPANCY at a phase
+    # boundary -- a unit that transits a rail hex and keeps going claims it under 54.41 and not
+    # under `control`. Coord -> Side, written only by engine._rail_control_claim, and only for
+    # hexes the built railway actually runs through. Empty for every scenario with no railway.
+    rail_control: dict = field(default_factory=dict)
     # `construction_owner` is (item, hex) -> the Side actually laying it, for the ONE project type
     # (26.1's minefield) whose ownership outlives the Under Construction marker and cannot be
     # inferred from whichever side's Completion Step happens to fire the completion (see
@@ -1112,6 +1120,16 @@ class GameState:
         control = dict(self.control)
         control[coord] = ctrl
         return replace(self, control=control)
+
+    def rail_control_of(self, coord: Coord) -> "Side | None":
+        """[54.41] Which Player last had a land combat unit pass through this rail hex, or None if
+        neither has since the scenario opened. Distinct from control_of -- see the field's note."""
+        return self.rail_control.get(coord)
+
+    def with_rail_control(self, coord: Coord, side: "Side") -> "GameState":
+        rail_control = dict(self.rail_control)
+        rail_control[coord] = side
+        return replace(self, rail_control=rail_control)
 
     def with_fort_level(self, coord: Coord, level: int) -> "GameState":
         fort_levels = dict(self.fort_levels)

@@ -710,6 +710,11 @@ def apply(state: GameState, event: Event) -> GameState:
     if k == EventKind.HEX_CONTROL_CHANGED:
         return state.with_control(tuple(p["coord"]), Control(p["control"]))
 
+    if k == EventKind.RAIL_CONTROL_CHANGED:
+        # [54.41] the last Player to pass a land combat unit through this rail hex. Sticky: nothing
+        # ever clears it, it is only overwritten by the other side doing the same.
+        return state.with_rail_control(tuple(p["hex"]), Side(p["side"]))
+
     if k == EventKind.VICTORY_CHECKED:
         return replace(state, vp=VP(axis=p["axis"], allied=p["allied"]))
 

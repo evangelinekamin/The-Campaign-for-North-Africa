@@ -16,8 +16,8 @@ from dataclasses import dataclass, replace
 from typing import Protocol
 
 from . import (air, basing, calendar, combat, combat_tables, construction, cp_costs, initiative,
-               logistics_data, malta, minefields, movement, organization, repair, replacements,
-               stacking, supply, tactics, weather, wells, zoc)
+               logistics_data, malta, minefields, movement, organization, rail, repair,
+               replacements, stacking, supply, tactics, weather, wells, zoc)
 from .apply import apply
 from .dice import DiceBox
 from .events import CONTROL_OF, Control, Event, EventKind, Phase, Side
@@ -3418,7 +3418,7 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
                    {"unit_id": c.id, "from": list(c.hex), "to": list(order.to), "cp_spent": 0})
         _disorganize_overage(r, side, actor, u.id, old_cp,        # 6.21: overrun past CPA (8.16/8.17)
                              old_cp + reach[order.to], tactics.effective_cpa(r.state, u))
-        _minefield_encounter(r, side, actor, u,                   # 26.15/26.23/26.25: reveal + roll
+        _traversed(r, side, actor, u,                   # 26.15/26.23/26.25: reveal + roll
                              movement.reconstruct_path(prev, u.hex, order.to))
         _react(r, policies, side, u.id)         # 8.5: the non-phasing side may slide aside
     _sweep_revealed_dummies(r, side, actor)      # 26.14/26.23: end of this Movement Phase
@@ -3547,7 +3547,7 @@ def _react(r: _Run, policies: dict, phasing: Side, mover_id: str) -> None:
         r.emit(EventKind.REACTION_MOVED, reacting, actor, payload)   # 8.51: reaction IS movement
         _disorganize_overage(r, reacting, actor, u.id, old_cp,      # 6.21: reacting past CPA earns DP
                              old_cp + reach[order.to], tactics.effective_cpa(r.state, u))
-        _minefield_encounter(r, reacting, actor, u,                 # 26.15/26.23/26.25: reaction IS
+        _traversed(r, reacting, actor, u,                 # 26.15/26.23/26.25: reaction IS
                              movement.reconstruct_path(prev, u.hex, order.to))   # movement (8.51)
 
 
@@ -3573,7 +3573,7 @@ def _reserve_shuffle(r: _Run, side: Side, actor: str, order: MoveOrder, u,
         return
     r.emit(EventKind.UNIT_MOVED, side, actor,
            {"unit_id": u.id, "from": list(u.hex), "to": list(dest), "cp_spent": 0})
-    _minefield_encounter(r, side, actor, u, [u.hex, dest])   # 26.15/26.25: CP-free is not mine-free
+    _traversed(r, side, actor, u, [u.hex, dest])   # 26.15/26.25: CP-free is not mine-free
 
 
 def _exploitation_eligible(state: GameState, side: Side,
@@ -5285,6 +5285,37 @@ def _complete_fort(r: _Run, side: Side, actor: str, hx: Coord) -> None:
 
 # --- [26.2] MEETING A MINEFIELD IN MOVEMENT -------------------------------------------------------
 
+def _traversed(r: _Run, side: Side, actor: str, u, path: list) -> None:
+    """EVERYTHING that follows from `u` having walked `path`, in one place.
+
+    Two rules key off the hexes a unit CROSSED rather than the hex it ended in, and they must see
+    exactly the same path or they disagree about where the army has been: rule 26's minefield
+    encounter, and [54.41]'s rail control. This is the single hook every mover calls, so adding a
+    third such rule later means editing one function rather than hunting seven call sites -- and
+    missing one of those is silent unfaithfulness, not a crash."""
+    _minefield_encounter(r, side, actor, u, path)
+    _rail_control_claim(r, u, path)
+
+
+def _rail_control_claim(r: _Run, u, path: list) -> None:
+    """[54.41] "To control a rail hex the Axis player must be the last player to have a land combat
+    unit of any type pass through that hex." So every built rail hex on `path` passes to the
+    MOVER'S OWN side -- deliberately `u.side` and not the `side` the caller is acting for, which on
+    a forced retreat is the side that caused the move rather than the side that made it.
+
+    "Land combat unit of any type" is read as `u.is_combat`: 54.41 is about who has soldiers on the
+    ground, and a supply column or an HQ passing down the line does not take possession of it. Both
+    Players claim, not just the Axis -- the rule is written from the Axis's side because he is the
+    one borrowing the line, but a hex is controlled by "the LAST player" to cross it, so the
+    Commonwealth re-crossing its own railway has to take it back or the Axis's claim would be
+    permanent. Silent for every scenario with no built railway (rail.claims returns [] at once)."""
+    if not u.is_combat or not r.state.terrain.rails:
+        return
+    for hx in rail.claims(r.state, u.side, path):
+        r.emit(EventKind.RAIL_CONTROL_CHANGED, u.side, "SYSTEM",
+               {"hex": list(hx), "side": u.side.value})
+
+
 def _minefield_encounter(r: _Run, side: Side, actor: str, u, path: list) -> None:
     """[26.15]/[26.23]/[26.24]/[26.25] Whatever `u` meets crossing a minefield belt, hex by hex
     along the path it actually walked (the CP surcharge itself already rode `reach[order.to]` via
@@ -5576,7 +5607,7 @@ def _mandatory_retreat(r: _Run, side: Side, units: list, anchor: Coord) -> None:
         if bp:
             payload["bp"] = bp
         r.emit(EventKind.UNIT_RETREATED, side, actor, payload)
-        _minefield_encounter(r, side, actor, u, path)    # 26.25: "whenever a vehicle enters..."
+        _traversed(r, side, actor, u, path)    # 26.25: "whenever a vehicle enters..."
         live = r.state.unit(u.id)                       # 10.36: "playing all CP's for such movement"
         spend = max(0.0, tactics.effective_cpa(r.state, live) - live.cp_used)
         if spend > 0:
@@ -5637,7 +5668,7 @@ def _retreat_before_assault(r: _Run, policy: Policy, side: Side, phasing: Side,
         r.emit(EventKind.UNIT_MOVED, side, actor, payload)   # 13.21: retreat-before-assault IS movement
         _disorganize_overage(r, side, actor, u.id, old_cp,       # 6.21: retreat past CPA earns DP too
                              old_cp + reach[order.to], tactics.effective_cpa(r.state, u))
-        _minefield_encounter(r, side, actor, u,                  # 26.15/26.23/26.25: it IS movement
+        _traversed(r, side, actor, u,                  # 26.15/26.23/26.25: it IS movement
                              movement.reconstruct_path(prev, u.hex, order.to))
 
 
@@ -6301,7 +6332,7 @@ def _retreat(r: _Run, atk_side: Side, actor: str, defender_ids: list[str],
             r.emit(EventKind.UNIT_RETREATED, atk_side, actor, payload)
             # 26.25: the belt does not care that the retreat was forced. The mover's OWN side is
             # what makes a belt Friendly or Enemy, so this is def_side, not the attacker's.
-            _minefield_encounter(r, def_side, actor, u, path)
+            _traversed(r, def_side, actor, u, path)
     for _ in range(n - done):                                   # 15.82: 10% per un-retreated hex
         for u in survivors:
             cur_u = r.state.unit(u.id)
