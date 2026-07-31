@@ -37,7 +37,14 @@ NAMED DEBT, NOT BUILT HERE:
     flagged for minefields and fortifications in game.construction's own module docstring)
     -- a Temporary Facility, capped at two per side, would sit unused. Building the
     Major-Facility half alone delivers the load-bearing value the port plan names without
-    half-building 24.8.
+    half-building 24.8. SEPARATE, SMALLER, AND BETTER FOUNDED (found during the review repair,
+    flagged not built): 22.31's OTHER source of Temporary Facilities is the scenario itself --
+    "those in existence at the start of a scenario are designated in that scenario" -- and
+    data/oob_desert_fox.json already carries two such records (Temp rep fac-01 at C4908 and
+    D3913). game.oob builds nothing from them, so combat_tables' `temporary` column stays
+    unreachable in play; that ingest, not 24.8, is the natural next slice here. A Temporary
+    Facility inherits NEITHER exemption the Major one gets: 22.36 weather-blocks it and 22.37
+    bars it in an Enemy ZOC unless it stands in a Major City.
   * 21.6 TOWING. Broken-down and destroyed vehicles reach a Repair Facility by being towed
     there (21.61-21.67, one full sub-rule of chapter 21) -- zero code exists for this
     anywhere in the engine. Without it, a unit can only be repaired at a Facility if it
@@ -52,22 +59,62 @@ NAMED DEBT, NOT BUILT HERE:
     data/breakdown_rates.json's die_modifiers) is consequently unreachable.
   * 22.34b's same-Op-Stage bombing-threshold neutralization of a non-Major-City Temporary
     Facility -- moot while no Temporary Facility can be built, noted for completeness.
+  * 22.33/22.25's "one die per TYPE of tank" is a die per COUNTER in game.engine._repair, and
+    that is a PROXY, flagged rather than silently taken. 22.25 rolls "once for the PzII's and
+    once for the PzIV Specials" in a hex; this engine carries NO per-counter tank type at play
+    time -- data/unit_stats.json's per-model ratings are resolved at BUILD time
+    (game.oob._make_unit) and the model NAME is never kept on the counter, and for all but ten
+    Italian records it is not transcribed per counter at all but supplied by
+    oob.MODEL_DEFAULTS, one default per (nationality, role). Grouping the repair die on that
+    default would MERGE the types the book explicitly separates -- every German panzer
+    battalion in a hex under one die -- which is a larger error in the opposite direction, and
+    reaching for it would mean inventing a per-counter type the order of battle does not
+    print. One counter is one battalion of one type, so a die per counter never merges two
+    types; it only splits a type that happens to field two battalions in one hex. AC/Recce
+    needs no such proxy and does not get one: 22.24 rolls "one die for all the A/C's and Recce
+    points in the hex" with no type subdivision at all, so they pool per hex and per
+    nationality (22.14, the Axis repairs German separately from Italian) -- as Truck Points
+    already did (22.23).
 """
 from __future__ import annotations
 
+import json
 import math
+import os
 from functools import lru_cache
 
 from . import campaign_victory, coords
 from .hexmap import Coord
 from .state import GameState
 
+_PATH = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "..", "data", "breakdown_rates.json"))
+
+
+@lru_cache(maxsize=1)
+def _supply_costs() -> dict:
+    """[22.15] VEHICLE REPAIR SUPPLY COSTS CHART -- the chart of record for what a repair
+    attempt costs BEFORE it is rolled (data/breakdown_rates.json's
+    vehicle_repair_supply_costs_22_15, scan-verified PDF p.102: Field/Bd/Truck,AC,Recce =
+    None; Field/Bd/Tank,SPA,TD = 1 Fuel; Facility/Bd/All = 1 Fuel and 1 Stores). READ from the
+    data rather than re-typed as a literal beside it: the block was transcribed and, as the
+    review of this slice found, nothing in the engine read it."""
+    with open(_PATH) as fh:
+        return json.load(fh)["vehicle_repair_supply_costs_22_15"]
+
+
 # [22.35] "For each Truck Point, Gun or Tank TOE Strength Point undergoing repair the Player
 # must have present in that hex and expend (before rolling for Repairs) one Store Point and
-# one Fuel Point." Unlike Field Repair (22.23/22.24: trucks and AC/Recce repair free), EVERY
-# class pays at a Facility.
-FACILITY_FUEL_PER_POINT: int = 1
-FACILITY_STORES_PER_POINT: int = 1
+# one Fuel Point." Unlike Field Repair, EVERY class pays at a Facility -- the chart's single
+# `Facility | Bd | All` row.
+FACILITY_FUEL_PER_POINT: int = _supply_costs()["facility_bd_all"]["fuel"]
+FACILITY_STORES_PER_POINT: int = _supply_costs()["facility_bd_all"]["stores"]
+# [22.26] Field Repair's own cost, the chart's `Field | Bd | Tank, SPA, TD` row: one Fuel Point
+# per tank TOE Strength Point ATTEMPTED ("He may attempt to repair only those Tank TOE Strength
+# Points he has expended Fuel for"). The chart's `Field | Bd | Truck, AC, Recce` row is "None"
+# -- 22.23/22.24 repair those free, which is exactly why the Field die is still worth rolling
+# on a Major Facility hex whose dumps have run dry (game.engine._repair's fallback).
+FIELD_TANK_FUEL_PER_TOE: int = _supply_costs()["field_bd_tank_spa_td"]["fuel"]
 
 
 def _tripoli_hexes(state: GameState) -> frozenset:
@@ -127,12 +174,15 @@ def facility_die_modifier(state: GameState, hx: Coord) -> int:
     return 1 if reduction == 1 else 2
 
 
-def facility_repaired_count(result_pct: int, broken: int) -> int:
+def facility_repaired_count(result_pct: int, attempted: int) -> int:
     """[22.34]/[22.25] The Facility columns are ALWAYS a percentage of that vehicle type
     repaired -- for trucks and AC/Recce too, unlike Field Repair's flat truck/AC-Recce point
     counts ('the result of the dieroll is the percentage of that type of vehicle that may be
-    Repaired', 22.34). Fractions round up (22.25), except the single-TOE 10% exception
-    ('if only attempting to repair a single TOE Strength Point, treat as a 0% result').
+    Repaired', 22.34). `attempted` is the number of points supplies were actually expended for,
+    which 22.35 makes the pool undergoing repair ('He may attempt to repair only those points
+    he has expended supplies for'), not necessarily the whole broken pool. Fractions round up
+    (22.25), except the single-TOE 10% exception ('if only attempting to repair a single TOE
+    Strength Point, treat as a 0% result').
 
     TRANSCRIPTION NOTE (scan p.103, 600dpi, scratchpad/port/22.3-scan/p103_228table.png):
     every OTHER 10% cell on this chart prints the asterisk that ties it to the single-TOE
@@ -143,8 +193,8 @@ def facility_repaired_count(result_pct: int, broken: int) -> int:
     natural 6 PLUS a Major City reduced to Level <=1) -- a narrow enough case that a
     dedicated (column, die) special-case would be disproportionate to what it changes.
     Flagged rather than silently either way."""
-    if broken <= 0:
+    if attempted <= 0:
         return 0
-    if broken == 1 and result_pct == 10:
+    if attempted == 1 and result_pct == 10:
         return 0
-    return min(broken, math.ceil(result_pct / 100 * broken))
+    return min(attempted, math.ceil(result_pct / 100 * attempted))

@@ -206,13 +206,16 @@ def commodity_at(state: GameState, side: Side, hx: Coord, commodity: str) -> int
 
 def commodity_draw(state: GameState, side: Side, hx: Coord, commodity: str,
                    qty: int) -> list[tuple[str, int]]:
-    """[24.13]/[32.15] Spend `qty` Points of `commodity` OUT OF THE HEX: ((supply_id, qty), ...),
+    """[24.13] Spend `qty` Points of `commodity` OUT OF THE HEX: ((supply_id, qty), ...),
     the piles drawn from and how much each gives up. Field dumps first (by id), the bottomless
     rule-57 base last, so a garrison spends what it carried before it spends Cairo's.
 
     THE BUG THIS FIXES, and it is a real one that predates rule 32.32. `commodity_at` counts what
-    EVERY friendly dump on the hex holds -- 24.13's "on hand in the hex", and correct, since 32.15
-    lets a Player rearrange supplies among co-located Supply Units for free -- but engine._build_dump
+    EVERY friendly dump on the hex holds -- which is 24.13's "on hand in the hex" and nothing else.
+    (An earlier version of this docstring reached for [32.15] to justify pooling co-located dumps;
+    32.15 is the ABSTRACT game, which does not apply here -- CLAUDE.md's own bug class -- and
+    nothing rests on it: 24.13's "must BEGIN the Construction Segment in the given hex", like
+    22.35's "present in that hex", is already hex-wide on its own terms.) But engine._build_dump
     used to consume the whole quantity from ONE of them (`dump_at`, the first by id). Two dumps
     sharing a hex with the stores split between them passed the check and over-drained the named
     one: MEASURED, "supply AL-Field-22-87 has negative STORES pool -6", an InvariantViolation that

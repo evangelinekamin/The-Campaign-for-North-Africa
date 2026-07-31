@@ -10,8 +10,77 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-07-31 -- CAUSE: the 22.3 REVIEW REPAIR. The adversarial review of the slice below
+found four real rule defects in it; three move both benchmarks, the fourth is measurably inert, and
+all four are attributed separately below.
+
+    34e439545995 / 9c3565293760  ->  d889e5b21c4e / 1f826374a883
+
+CAUSE B -- THE FIELD FALLBACK WAS MISSING, which made a Facility hex REPAIR LESS than the book
+allows. engine._repair routed every broken vehicle/truck on a Major Facility hex into the Facility
+path with no alternative, and that path simply returned when 22.35's 1 Fuel + 1 Stores per point
+could not be paid. The book never makes Facility Repair mandatory or exclusive: 22.32 says such a
+vehicle "MAY undergo Repairs", and 22.22 grants Field Repair "in ANY hex in which there is a Broken
+down vehicle stacked with a Friendly unit of any type", excluding no Facility hex -- and the [22.15]
+chart makes Field truck and AC/Recce repair FREE, so a Player on a drained Tobruk still has the
+22.23 die by right. MEASURED on the shipped code: 4 of 34 facility truck-repair calls per benchmark,
+209 broken Truck Points, now roll that free die where the slice below repaired nothing. The false
+premise that licensed the routing ("no rational Player would ever prefer Field's worse odds when a
+Facility is available") is deleted from the docstring with the behaviour.
+
+CAUSE C -- NO PARTIAL ATTEMPT, against 22.35's own last sentence ("He may attempt to repair only
+those points he has expended supplies for") and 22.26's verbatim twin for the Field tank's Fuel.
+Both pre-paid the whole broken pool or nothing. engine._prepay_repairs now pays for as many points
+as the hex can fund and the die's percentage applies to the points ATTEMPTED (22.25's "undergoing
+repair"), which is also where the single-TOE 10% exception now keys.
+
+CAUSE D -- ONE DIE PER COUNTER WHERE THE BOOK ROLLS ONE PER TYPE PER HEX (22.33). 22.24 is explicit
+-- "the Player rolls one die for ALL the A/C's and Recce points in the hex" -- so AC/Recce now pool
+per hex and per nationality (22.14: the Axis repairs German separately from Italian), exactly as
+Truck Points already did under 22.23. TANKS DELIBERATELY DO NOT POOL and that refusal is reasoned in
+game.repair's module docstring: 22.25 rolls per tank TYPE, this engine keeps no per-counter tank type
+at play time, and grouping on oob.MODEL_DEFAULTS (one default per nationality+role) would MERGE the
+types the book separates -- a larger error in the opposite direction, and an invented attribute the
+order of battle does not print. On these two benchmarks the pooling itself never fires (measured:
+zero hexes ever hold two broken AC/Recce counters of one nationality), so D's whole contribution
+here is the ORDER in which counters draw from the repair stream, which the per-hex/per-type grouping
+changes.
+
+CAUSE A -- 22.13a's MAJOR-FACILITY EXCEPTION WAS DROPPED, and a test in the slice below enshrined
+the inverse ("22.13a applies to a Major Facility exactly as it does to Field Repair"). The book:
+"If the vehicles to be Repaired are in an Enemy-controlled hex... The only exception to this is if
+the vehicles are in a Major Repair Facility, in which case the presence of an Enemy Zone of Control
+has no effect", doubled by 22.37. Fixed, and the test restated to assert the printed rule. Note that
+state.control_of is territorial last-sole-occupier control, not the book's ZOC-controlled hex (10.0),
+i.e. a STRICTER proxy than the thing 22.13a exempts; the exemption is applied to the proxy because
+the proxy is what stands in for 22.13a here. IT MOVES NEITHER BENCHMARK, twice over (below).
+
+ATTRIBUTION, MEASURED (seed 42, ScriptedPolicy(AXIS) both sides, every row reproduced twice
+byte-for-byte; the neuters patch the symbols the CALLER resolves -- engine._repair looks up
+_facility_repair_units/_facility_repair_trucks and those look up _prepay_repairs as module globals
+at call time, so assigning them on game.engine reaches the live call sites, unlike the
+`from X import name` trap recorded further down this file):
+
+    live (A+B+C+D)                                        -> d889e5b21c4e / 1f826374a883
+    NEUTER B -- the field fallback off (a facility group
+      that cannot pay claims the attempt anyway)          -> 684c9d8b0fd9 / 64ed1e7d2a70
+    NEUTER B+C -- and the pre-pay back to all-or-nothing  -> c2ca2af11b88 / d96651673d90
+    NEUTER B+C+D -- and engine._repair back to one die
+      per counter in global id order                      -> 34e439545995 / 9c3565293760  (= OLD)
+    NEUTER B+C+D+A -- and 22.13a re-applied to Facility
+      hexes (the full behavioural revert)                 -> 34e439545995 / 9c3565293760  (= OLD)
+
+So B, C and D each move both logs, the three together fully explain the move (B+C+D reproduces the
+old baseline EXACTLY, so nothing else in this repair touches either log), and CAUSE A IS INERT ON
+BOTH BENCHMARKS -- proven twice, once by the identical B+C+D and B+C+D+A rows and once by
+instrumenting the live runs: zero facility repairs occur in an enemy-controlled hex on either log.
+The 6 Alexandria facility calls a 36-turn campaign/4 makes (CampaignAxisPolicy vs
+CampaignCommonwealthPolicy) are all funded in full, so none of B, C or A fires there either.
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-30 -- CAUSE: rule 22.3 FACILITY REPAIRS (the Tier-2 slice), which lands with
-one adjacent, pre-existing bug fix in the same function it restructures.
+one adjacent, pre-existing bug fix in the same function it restructures. SUPERSEDED by the review
+repair above, which moved these two hashes again; the account below is kept because its two causes
+are still live in the engine and its neuter table is still the proof of THAT move.
 
     87f3baeb4530 / b2a2f8bf6ab9  ->  34e439545995 / 9c3565293760
 
@@ -1418,8 +1487,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "34e439545995"
-SIEGE_OF_TOBRUK = "9c3565293760"
+ROMMELS_ARRIVAL = "d889e5b21c4e"
+SIEGE_OF_TOBRUK = "1f826374a883"
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 

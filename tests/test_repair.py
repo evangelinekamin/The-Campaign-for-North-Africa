@@ -134,3 +134,19 @@ def test_facility_repair_table_matches_chart_of_record():
 def test_facility_repair_clamps_outside_the_charted_range():
     assert ct.facility_repair("major", -3) == ct.facility_repair("major", 0)
     assert ct.facility_repair("major", 20) == ct.facility_repair("major", 8)
+
+
+# --- the [22.15] supply costs, bound to the chart of record -------------------
+
+def test_repair_supply_costs_match_the_22_15_chart():
+    # The review of this slice found the [22.15] VEHICLE REPAIR SUPPLY COSTS CHART transcribed
+    # into data/breakdown_rates.json and read by NOTHING -- the engine carried its own literal
+    # 1s beside it. game.repair now reads the chart; this binds the whole of it, so no row of
+    # it can drift from the code again.
+    chart = _BRK["vehicle_repair_supply_costs_22_15"]
+    assert repair.FACILITY_FUEL_PER_POINT == chart["facility_bd_all"]["fuel"]
+    assert repair.FACILITY_STORES_PER_POINT == chart["facility_bd_all"]["stores"]
+    assert repair.FIELD_TANK_FUEL_PER_TOE == chart["field_bd_tank_spa_td"]["fuel"]
+    # The free row is what makes engine._repair's Field fallback worth taking on a Facility hex
+    # whose dumps are dry (22.23/22.24: trucks and AC/Recce repair at no supply cost at all).
+    assert chart["field_bd_truck_ac_recce"] == {"fuel": 0, "stores": 0}

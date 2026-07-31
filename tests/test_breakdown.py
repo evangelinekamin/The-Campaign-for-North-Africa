@@ -524,11 +524,48 @@ def test_facility_repair_charges_both_fuel_and_stores():
     assert r.state.consumed["FUEL"] == 4 and r.state.consumed["STORES"] == 4
 
 
-def test_facility_repair_needs_stores_not_just_fuel():
+def test_facility_repair_needs_stores_not_just_fuel_and_then_falls_back_to_the_field_die():
+    # RESTATED (not weakened) after the 22.3 review: the Facility COLUMN is unavailable with
+    # zero Stores (22.35 charges 1 Fuel AND 1 Stores per point), but the book never takes the
+    # FIELD die away from a Facility hex -- 22.22 grants Field Repair "in any hex in which
+    # there is a Broken down vehicle stacked with a Friendly unit of any type" and excludes no
+    # Facility hex; 22.32 only says such a vehicle "may undergo Repairs". So the beat falls
+    # back to the 22.8 Field Tank column (die 3 -> 10%* of 4 = 1), paying 22.26's Fuel only.
     r = _facility_repair_run(_tank(broken=4, strength=10), die=3, fuel=50, stores=0)
-    assert not any(e.kind == EventKind.SUPPLY_CONSUMED for e in r.events)
-    assert not any(e.kind == EventKind.VEHICLE_REPAIRED for e in r.events)  # 22.13b: Stores present, but zero
-    assert r.state.unit("T1").broken_down == 4
+    assert r.state.consumed.get("STORES", 0) == 0        # no Facility attempt was ever paid for
+    assert r.state.consumed["FUEL"] == 4                 # 22.26: 1 Fuel per TOE attempted
+    assert r.state.unit("T1").broken_down == 3           # ceil(10% of 4) = 1, the FIELD result
+
+
+def test_facility_falls_back_to_the_free_field_truck_die_when_the_dumps_are_dry():
+    # The measured case behind the review's first finding: a Truck Point standing on Tobruk
+    # with a drained dump was repairing NOTHING, where 22.23's field die (free, no supply
+    # expenditure at all) was still his by right. Die 1 -> two Truck Points (22.23).
+    from game.engine import _Run, _repair
+    from game.movement import TerrainMap
+    from game.state import GameState, TruckFormation, VP
+    hx = _a_facility_hex()
+    truck = TruckFormation("TR1", Side.AXIS, hx, "medium", points=10, broken_down=8)
+    tmap = TerrainMap(terrain={hx: Terrain.DESERT})
+    st = GameState(turn=1, max_turns=9, phase=Phase.COMBAT, active_side=Side.AXIS,
+                   seed=1, weather="clear", vp=VP(), terrain=tmap,
+                   control={}, units=(), target_hex=hx, trucks=(truck,), supplies=(),
+                   consumed={}, initial_supply={})
+    r = _Run(st)
+    r.state = st
+    r.dice.load("repair", _FixedDie(1))
+    _repair(r, Side.AXIS)
+    assert not any(e.kind == EventKind.SUPPLY_CONSUMED for e in r.events)   # 22.23: free
+    assert r.state.truck("TR1").broken_down == 6                            # two points repaired
+
+
+def test_facility_repair_attempts_only_the_points_it_paid_for():
+    # [22.35] "He may attempt to repair only those points he has expended supplies for" -- a
+    # PARTIAL attempt is the rule, not a concession. 3 Stores caps the attempt at 3 of the 8
+    # broken TOE; die 3 -> Major 50% of the THREE attempted = 2 (ceil 1.5), not 4 of 8.
+    r = _facility_repair_run(_tank(broken=8, strength=10), die=3, fuel=50, stores=3)
+    assert r.state.consumed["FUEL"] == 3 and r.state.consumed["STORES"] == 3
+    assert r.state.unit("T1").broken_down == 6
 
 
 def test_facility_repair_never_weather_blocked():
@@ -585,9 +622,16 @@ def test_facility_repair_truck_needs_supplies_present_in_the_hex():
     assert r.state.truck("TR1").broken_down == 8
 
 
-def test_facility_repair_skipped_in_enemy_controlled_hex():
-    # 22.13a applies to a Major Facility exactly as it does to Field Repair -- Alexandria
-    # under enemy control is not a place the Commonwealth repairs anything.
+def test_facility_repair_is_not_blocked_by_enemy_control():
+    # RESTATED (not weakened) after the 22.3 review, which caught this test asserting the
+    # INVERSE of the printed rule. 22.13a bars repair in an Enemy-controlled hex and then
+    # prints its own exception: "The only exception to this is if the vehicles are in a Major
+    # Repair Facility, in which case the presence of an Enemy Zone of Control has no effect."
+    # 22.37 says it twice: "Major Repair Facilities may be used when in Enemy ZOC's." (This
+    # engine's control_of is territorial last-sole-occupier control, a STRICTER proxy than the
+    # book's ZOC-controlled hex of 10.0 -- the exemption is applied to the proxy because the
+    # proxy is what stands in for 22.13a here.) Field Repair keeps the gate:
+    # test_repair_skipped_in_enemy_controlled_hex above pins that, unchanged.
     from game.engine import _Run, _repair
     from game.events import Control
     from game.movement import TerrainMap
@@ -604,6 +648,72 @@ def test_facility_repair_skipped_in_enemy_controlled_hex():
     r.state = st
     r.dice.load("repair", _FixedDie(3))
     _repair(r, Side.AXIS)
-    assert not any(e.kind == EventKind.SUPPLY_CONSUMED for e in r.events)
-    assert not any(e.kind == EventKind.VEHICLE_REPAIRED for e in r.events)  # 22.13a
-    assert r.state.unit("T1").broken_down == 6
+    assert r.state.consumed["FUEL"] == 6 and r.state.consumed["STORES"] == 6   # 22.35
+    assert r.state.unit("T1").broken_down == 3                                 # Major 50% of 6
+
+
+def _recce(uid: str, hx, *, broken: int, strength: int = 6, nationality: str = "GE") -> Unit:
+    """An armored-car / recce counter: armored (so 21.11 breaks it down) but not a tank, i.e.
+    the [22.8] chart's AC/R column."""
+    return Unit(uid, Side.AXIS, hx, (StepRecord("recon", strength),),
+                mobility=Mobility.VEHICLE, cpa=25, stacking_points=1, oca=2, dca=2,
+                anti_armor=2, armor_protection=2, is_tank=False, broken_down=broken,
+                nationality=nationality)
+
+
+def _recce_run(units, *, hx=(0, 0), facility=False, die=1, fuel=0, stores=0):
+    from game.engine import _Run, _repair
+    from game.movement import TerrainMap
+    from game.state import GameState, VP
+    if facility:
+        hx = _a_facility_hex()
+    units = tuple(replace(u, hex=hx) for u in units)
+    tmap = TerrainMap(terrain={hx: Terrain.DESERT})
+    dumps = (SupplyUnit("AX-Dump", Side.AXIS, hx, ammo=0, fuel=fuel, stores=stores),)
+    st = GameState(turn=1, max_turns=9, phase=Phase.COMBAT, active_side=Side.AXIS,
+                   seed=1, weather="clear", vp=VP(), terrain=tmap, control={},
+                   units=units, target_hex=hx, supplies=dumps, consumed={},
+                   initial_supply={"FUEL": fuel, "STORES": stores})
+    r = _Run(st)
+    r.state = st
+    r.dice.load("repair", _FixedDie(die))
+    _repair(r, Side.AXIS)
+    return r
+
+
+def test_field_ac_recce_rolls_one_die_for_the_whole_hex():
+    # [22.24] "To field repair armored cars and/or Recce TOE Strength Points, the Player rolls
+    # one die for ALL the A/C's and Recce points in the hex. If he rolls a 1 he may repair one
+    # such TOE Strength Point." One die, ONE point for the hex -- not one point per counter,
+    # which is what a die-per-counter was quietly paying out. Free (22.24), like 22.23's trucks.
+    r = _recce_run([_recce("R1", (0, 0), broken=2), _recce("R2", (0, 0), broken=2)], die=1)
+    repaired = [e for e in r.events if e.kind == EventKind.VEHICLE_REPAIRED]
+    assert len(repaired) == 1 and repaired[0].payload["amount"] == 1
+    assert r.state.unit("R1").broken_down + r.state.unit("R2").broken_down == 3
+
+
+def test_ac_recce_of_different_nationalities_repair_separately():
+    # [22.14] "the Axis Player must repair German vehicles separately from Italian vehicles" --
+    # so a German and an Italian recce counter in one hex are two groups, two dice, two points.
+    r = _recce_run([_recce("R1", (0, 0), broken=2, nationality="GE"),
+                    _recce("R2", (0, 0), broken=2, nationality="IT")], die=1)
+    assert len(([e for e in r.events if e.kind == EventKind.VEHICLE_REPAIRED])) == 2
+    assert r.state.unit("R1").broken_down == 1 and r.state.unit("R2").broken_down == 1
+
+
+def test_facility_ac_recce_pools_the_percentage_over_the_hex():
+    # [22.34] the Facility column is a percentage for AC/Recce too, over the pooled hex group
+    # (22.24), and [22.35] charges every one of its points: die 1 -> Major 75% of 4 = 3.
+    r = _recce_run([_recce("R1", (0, 0), broken=2), _recce("R2", (0, 0), broken=2)],
+                   facility=True, die=1, fuel=50, stores=50)
+    assert r.state.consumed["FUEL"] == 4 and r.state.consumed["STORES"] == 4
+    assert r.state.unit("R1").broken_down + r.state.unit("R2").broken_down == 1
+
+
+def test_field_tank_repair_attempts_only_the_toe_it_has_fuel_for():
+    # [22.26] "He may attempt to repair only those Tank TOE Strength Points he has expended
+    # Fuel for" -- the same partial-attempt sentence 22.35 prints for a Facility. Two Fuel
+    # against eight broken TOE: attempt two, pay two, and die 0 -> 25% of the TWO attempted = 1.
+    r = _repair_run(_tank(broken=8, strength=10), die=0, fuel=2)
+    assert r.state.consumed["FUEL"] == 2
+    assert r.state.unit("T1").broken_down == 7
