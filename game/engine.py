@@ -4917,12 +4917,17 @@ def _ship_unload(r: _Run, side: Side, actor: str, ship) -> bool:
 def _sea_leg_cp(origin, dest) -> int:
     """[56.31] "Each sea hex costs one point" -- the CP cost of the passage between two ports.
 
-    PROXY, FLAGGED (see the transcription): this engine has no Terrain.SEA layer and no sea-hex
-    adjacency graph, so the hex COUNT is game.hexmap.distance, the straight-line axial distance
-    between the two port hexes -- the same geographic proxy game.relay uses for truck hops and the
-    book's own [56.18] Air Distance Chart uses for bases. A real coastal route bends around the
-    Cyrenaican bulge and is LONGER than the chord (the Benghazi-Tobruk chord this campaign sails
-    runs overland across the bulge), so this under-states the true 56.31 cost."""
+    The hex COUNT is game.hexmap.distance, the straight-line axial distance between the two port
+    hexes -- this engine has no Terrain.SEA layer, so no coastline is traced.
+
+    THAT IS NOT A PROXY ON THE LANE THIS CAMPAIGN SAILS, it is the book's own figure. The [37.42]
+    LAND DISTANCE CHART (PDF p.072) prints Benghazi (A4827) to Tobruk (C4807) as 46 hexes, which is
+    exactly what this returns, and the chart's own note says its distances are measured "cutting
+    across the Mediterranean (assuming an all-sea hex grid) where necessary" -- i.e. the book
+    measures a sea passage as the straight chord too, and does NOT bend it around the Cyrenaican
+    bulge. (Contrast [56.26]'s ROAD DISTANCE TABLE, which prints the same pair as 102 by road.)
+    A different port pair with a genuinely concave coast could still diverge; flagged for that
+    case, not for this one."""
     return distance(origin.hex, dest.hex) * _SHIP_SEA_HEX_CP_56_31
 
 
