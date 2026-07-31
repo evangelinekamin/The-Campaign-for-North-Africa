@@ -1,0 +1,316 @@
+GATE 22.3 -- FACILITY REPAIRS: THE MEASUREMENT
+==============================================================================================
+2026-07-31.  Read-only gate on the Tier-2 [22.3] slice (48dbad1 + 35edbdd, docstring repair
+f3fa0a8).  Nothing in game/ or data/ was touched by this gate.
+
+ARMS AND PROVENANCE
+------------------------------------------------------------------------------------------
+  BASE          detached worktree at 88e5314 -- the last commit before 48dbad1.
+  HEAD (live)   35edbdd, the 22.3 slice with its review repair.
+  facility_off  HEAD with game.repair.major_facility_hexes neutered to the empty set.
+  noop          HEAD with the SAME patch machinery installed as an identity transform.
+  seeds 1941 7 4 24 2026 99 1, full 111-turn campaign(), CampaignAxis/CommonwealthPolicy.
+  Drivers: scratchpad/gate223_ab.py (arms), gate223_breakdown_geo.py (the diagnosis probe),
+  gate223_report.py (the fold).  Arm files: this directory.
+
+  WHY THREE ARMS.  The 22.3 commit bundles three independent changes:
+    (a) FACILITY ROUTING -- the [22.34] Major column at Alexandria/Cairo/Tobruk, 1 Fuel + 1
+        Stores per point (22.35), the 22.34a die shift, and exemption from the weather
+        (22.36) and enemy-control (22.13a) gates.
+    (b) THE FIELD TANK FUEL DRAW -- supply.plan_draw (rule 32.16's ABSTRACT half-CPA trace, a
+        Section-32 rule that does not apply to this engine) -> supply.in_hex_draw, which is
+        what 22.26 "present in the hex" actually says.
+    (c) THE PARTIAL ATTEMPT (22.26/22.35) replacing BASE's all-or-nothing forfeit, plus
+        [22.24]'s "one die for all the A/C's and Recce points in the hex" pooling replacing
+        BASE's one-die-per-counter.
+  BASE->HEAD measures all three.  facility_off->live isolates (a), which is what this slice
+  is actually asked about.
+
+  NEUTER PROOFS (all three asserted, none assumed):
+    REACH        repair.major_facility_hexes was called through the wrapper in every war and
+                 the real roster it wraps is non-empty (8 hexes).  Asserted in-process; the
+                 run dies rather than report a number.
+    CONSEQUENCE  in facility_off the instrumented facility path was entered ZERO times in all
+                 7 wars (paths facility/unit = facility/truck = 0 calls), and every signature
+                 differs from live.  A patch that is called but changes nothing is dead too.
+    INERTNESS    the read-only instrumentation (delegating wrappers on engine's four repair
+                 helpers) reproduces the un-instrumented signature byte for byte, and the noop
+                 arm reproduces live's -- see the NOOP section at the foot of this file.
+
+  ONE PROVENANCE NOTE, RECORDED RATHER THAN GLOSSED.  The BASE and HEAD-live arms ran at
+  35edbdd; a concurrent agent then landed f3fa0a8 (a DOCSTRING-ONLY edit to
+  game/repair.py::_static_major_facility_hexes) at 02:02, between phase 1 and phase 2, so the
+  facility_off and noop arms ran at f3fa0a8.  The noop signature check settles it: noop at
+  f3fa0a8 must equal live at 35edbdd byte for byte, which proves the docstring commit inert
+  and the neuter machinery inert in one comparison.
+
+  THE CHARTS WERE RE-READ OFF THE SCAN FOR THIS GATE, not taken on trust.  PDF p.103 at
+  400dpi: the [22.8] Broken Down Vehicle Repair Table's Major column is 75/75/50/50/50/33/33/
+  25/10 for dice 0-8 and the Temporary column 50/50/33/25/25/10/10/10/10, digit for digit as
+  data/breakdown_rates.json and combat_tables._FACILITY_REPAIR carry them; the die-8 Major
+  cell does print a bare "10%" with no asterisk, exactly as game/repair.py flagged.  PDF
+  p.035: 22.35/22.36/22.37 verbatim as transcribed.  The 22.34a chart-vs-prose conflict is
+  real and reads as the transcription describes ("at present two" vs "reducing ... by one").
+
+==============================================================================================
+1. THE MECHANISM -- how much does the Commonwealth actually recover under 22.3?
+==============================================================================================
+
+WHAT THE RULE RESTORES is broken-down TOE Strength Points (tanks, armoured cars, recce) and
+broken-down Truck Points, so those are the units of account.
+
+  OVER SEVEN 111-TURN WARS:
+    Facility TOE points recovered ............ 54   (5 / 4 / 13 / 10 / 8 / 8 / 6 per war)
+    Field    TOE points recovered ........... 1286
+    Facility share of TOE recovery ........... 4.0%
+    Facility TRUCK points recovered .......... 128  (ZERO in six wars; all 128 in seed 1)
+    Field    TRUCK points recovered ......... 2689
+    Facility share of truck recovery ......... 4.5%, and it is one seed, not a rate
+
+  EVERY FACILITY REPAIR IN ALL SEVEN WARS WAS COMMONWEALTH.  The Axis got zero, in every war.
+
+  WHERE.  Unit repairs: 51 points at axial r=132 and 3 at r=133 -- BOTH ALEXANDRIA HEXES AND
+  NOTHING ELSE.  Truck repairs: all 128 at r=139, one Cairo hex, one seed.  Tobruk (r=66), a
+  Major Facility for whoever holds it and the only one the Axis can reach on this map, saw
+  ZERO repairs by either side in seven wars.
+
+  WHO.  In six of seven seeds the SAME THREE COUNTERS take every facility repair in the war:
+  2-RTR and 7-RTR on Game-Turn 5 and 3rd-Hussars-[7] on Game-Turn 6, at Alexandria.  Seed 4
+  adds four more and names the pattern outright: 2-Armd-Div-Cruiser-Regt-I/II at GT27 and
+  Tiger-Convoy:-Matilda at GT38 -- i.e. the next formations to ARRIVE in the Delta.  The
+  Major Facility is reached by, and only by, the Eighth Army's rear echelon on its way out of
+  the Delta.
+
+  THE FACILITY COLUMN IS EXACTLY AS STRONG AS THE BOOK SAYS.  Of the points it was allowed to
+  attempt it repaired 54/78 = 69% (units) and 128/226 = 57% (trucks); the Field column
+  repaired 1286 of 77,412 offered point-attempts (1.7%) and 2689 of 243,084 (1.1%).  Per
+  attempt the Major column is roughly forty times the Field one.  It simply almost never gets
+  to see anything.
+
+  [22.35] NEVER BIT.  Fuel spent 78 = Stores spent 78 = points offered 78 (units); 226 = 226
+  = 226 (trucks).  Every single point ever presented to a Major Facility was funded: the
+  Delta's dumps always paid.  The FIELD FALLBACK the review repair added (correctly -- 22.22
+  grants Field Repair in "any hex") therefore never fired once in a campaign, in seven wars.
+  It is right, and it is inert here.
+
+  [22.34a] IS UNREACHABLE IN THE CAMPAIGN.  No Major-Facility hex ever loses a Fortification
+  Level in a whole war (Alexandria/Cairo stay at 3, Tobruk at 2, measured on seeds 1941/1/4).
+  The modifier never fires, and with it the [22.8] Major column's die-7 (25%) and die-8 (10%)
+  rows are never reached -- transcribed-but-unreachable, the same shape as the Temporary
+  column.  Nothing to fix; the modifier is correct and its trigger (bombing/barrage of the
+  Delta) is a thing this campaign does not do.
+
+WHY SO LITTLE -- THE PRECISE DIAGNOSIS (scratchpad/gate223/GEO.json)
+------------------------------------------------------------------------------------------
+21.6 TOWING does not exist in this engine (named debt in game/repair.py).  A broken vehicle
+can therefore only ever use a facility if it is STANDING ON ONE when the Repair Phase comes
+round.  Measured, for every broken point in the war, by hex distance to the nearest of the
+eight Major-Facility hexes:
+
+  Commonwealth TOE, seed 1941 / 1 / 4:
+    on a facility hex (d0) ......  2 /  2 / 11        (0.8% / 0.5% / 3.8% of what broke)
+    1-5 hexes away .............. 77 / 99 / 72
+    6+ hexes away .............. 170 /300 /203        (68% / 75% / 71%)
+  AXIS TOE, all three seeds:  ONE HUNDRED PERCENT at 6+ hexes.  Not one Axis TOE point broke
+    within five hexes of a facility in any war -- which is the whole of why the Axis scored
+    zero facility repairs.  The DAK is never near Alexandria or Cairo, and Tobruk is a hex it
+    drives through, not one it breaks down on.
+  TRUCKS: 100% at 6+ hexes in seeds 1941 and 4.  Seed 1 is the exception that proves it --
+    20 points broke ON a Cairo hex and 44 two hexes away, and that one lingering Commonwealth
+    truck park is the entire 128-point truck facility total of this gate.
+
+  THE PORT PLAN'S OWN VERDICT ON THIS ITEM WAS "HIGH -- this is the Commonwealth's entire
+  rear-area recovery economy" (00-THE-PORT-PLAN.md:1146).  MEASURED, IT IS NOT AN ECONOMY.
+  It is a 4%-of-recovery side channel, and the reason is nameable in one line: the book's own
+  delivery mechanism for a facility -- 21.6 towing -- is unbuilt, so the facility can only
+  serve what happens to break down on top of it.  22.3 is not mis-built; it is starved of
+  input by a different unbuilt rule.
+
+==============================================================================================
+2. DOES IT REACH THE FRONT?
+==============================================================================================
+YES -- ALL OF IT, IN EVERY SEED, AND FOR A STRUCTURAL REASON.
+
+Every counter that took a facility repair subsequently marched WEST out of the Delta:
+
+  seed   counters  points   r at repair -> best r reached   moved   west of Alexandria
+  1941      3         5         132 -> 76                    3/3      5/5 points
+     7      3         4         132 -> 93                    3/3      4/4
+     4      7        13         132 -> 85                    7/7     13/13
+    24      3        10         132 -> 85                    3/3     10/10
+  2026      3         8         132 -> 94                    3/3      8/8
+    99      3         8         132 -> 94                    3/3      8/8
+     1      3         6         132 -> 77                    3/3      6/6
+     1  (trucks) 3   128        139 -> 86                    3/3    128/128 points
+
+  Median advance after repair: 38-56 hexes in six seeds, 6 hexes in seed 2026 (whose median
+  counter stopped at El Hamman while its best reached r=94).  ALL SEVEN seeds put repaired
+  counters west of Mersa Matruh (r<100); four put them west of Sidi Barrani (r<86); one
+  (1941) put two of three west of Bardia (r<77).  NONE ever got west of Tobruk (r<66) -- the
+  Axis rout holds them east of it, which is a fact about the campaign, not about 22.3.
+
+  THE REASON IT REACHES THE FRONT IS THE SAME REASON THERE IS SO LITTLE OF IT.  The only
+  vehicles a facility can serve are ones already moving through the Delta toward the front;
+  Alexandria is the last facility hex on the way out.  The rule catches the Eighth Army's
+  armour mid-march, mends it, and the march continues.  There is no "recovered in the rear and
+  stranded there" failure mode to report -- the geometry forbids it.
+
+  ONE UNFLAGGED DEBT THIS QUESTION EXPOSES -- [22.5], and it is exactly about reaching the
+  front.  Scan-verified, PDF p.035: "Repaired vehicles are treated as REPLACEMENT POINTS for
+  that type of unit.  See Case 20.2. ... they follow all the rules laid down for Replacement
+  Points, except that they do not have to undergo Training."  This engine instead heals the
+  counter that broke, in place (apply.py:518-521, which cites 22.5 for behaviour 22.5 does not
+  describe).  The pool the rule names ALREADY EXISTS in state -- replacement_pool,
+  credit_replacements, replacements_available, and the replacement_training ledger 22.5
+  explicitly says to skip.  While field repair was the only repair, in-place healing and the
+  pool coincided (the vehicle is repaired where its parent stands).  22.3 breaks that
+  coincidence: under the book, materiel repaired in Cairo becomes a pooled Tank/Recce
+  Replacement Point that 20.2 can allot to ANY eligible unit and ship forward, which is a
+  second, larger route to the front that this engine does not have.  22.5 is not in
+  game/repair.py's NAMED DEBT list.  It should be, and it is the natural next slice on this
+  rule -- smaller than 21.6 towing and it needs no new state.
+
+==============================================================================================
+3. THE BALANCE -- MECHANISM, NOT VERDICT
+==============================================================================================
+WINNER AND 64.76 GRADE: **Axis Smashing Victory, 7/7, in every arm** -- BASE, HEAD, and
+facility_off alike.  Nothing about 22.3 moves the grade.
+
+THE FACILITY HALF ALONE (facility_off -> live) IS RANDOM IN SIGN.  This is the arm that
+answers the question actually asked:
+
+  seed    Axis VP        CW VP     Axis 64.73 geographic    CW TOE recovery rate
+  1941    +41            +50            -125                 77.0% -> 77.1%
+     7    -17            -10               0                 60.2% -> 68.2%
+     4     +9              0               0                 77.5% -> 76.9%
+    24   -105            +10               0                 97.1% -> 63.3%
+  2026   +127              0               0                 63.7% -> 76.6%
+    99    -20            +10             -50                 67.2% -> 57.3%
+     1     -5              0             +25                 77.9% -> 80.3%
+  SIGN TALLY: Axis VP up 3 / down 4.  CW recovery rate up 4 / down 3.  Geography flat in four
+  seeds and signed both ways in the other three.  Every one of these numbers is larger than
+  the 5-13 TOE points the facility actually added -- the facility half is BELOW THE NOISE
+  FLOOR of the campaign's own chaotic divergence.  CHAOS, NOT BIAS.
+
+THE ONE SYSTEMATIC EFFECT IN THE WHOLE COMMIT IS NOT THE FACILITY.  It is (b)+(c), the
+abstract-trace fuel fix and the 22.24 pooling, measured as BASE -> facility_off:
+
+  Commonwealth TOE recovery rate: -12.8 pp mean, DOWN IN 6 OF 7 SEEDS
+  Axis         TOE recovery rate: -11.2 pp mean, DOWN IN 6 OF 7 SEEDS
+  (and then the facility half gives back +2.8pp to the Axis / -3.0pp to the CW, random)
+
+  BASE -> HEAD end to end: CW TOE recovery 87.2% -> 71.4% (down 7/7), Axis 50.9% -> 42.6%
+  (down 6/7).  Truck recovery is flat (+2.5pp CW, +3.3pp Axis) because field truck repair is
+  free and untouched.
+  So the 22.3 commit REDUCES vehicle recovery for BOTH SIDES, hardest for the Commonwealth
+  (which has 26 breakable tank counters to the Axis's 28 but far more of the war spent
+  moving).  That is the FAITHFUL direction: 22.26 says the Fuel must be "present in the hex",
+  and rule 32.16's half-CPA trace is a Section-32 ABSTRACT-GAME rule that does not apply here.
+  The Major Facility hands back about one fifth of what the abstract-trace fix took away.
+
+THE VP TOTALS MOVED A LOT AND IT IS BOOKKEEPING, NOT GROUND -- the 8.1c pattern again.
+BASE -> HEAD, decomposed:
+
+  seed   Axis total     Axis 64.73 geographic   Axis non-geographic (64.74)
+  1941    419 -> 1061      290 -> 290  (flat)      129 -> 771   (+642)
+     7    832 ->  843      415 -> 390  (-25)       417 -> 453   (+36)
+     4    455 ->  571      415 -> 415  (flat)       40 -> 156   (+116)
+    24    628 ->  787      390 -> 415  (+25)       238 -> 372   (+134)
+  2026    407 ->  725      390 -> 415  (+25)        17 -> 310   (+293)
+    99    448 ->  512      290 -> 390  (+100)      158 -> 122   (-36)
+     1    983 ->  906      415 -> 415  (flat)      568 -> 491   (-77)
+
+  GEOGRAPHY (64.73) is flat in three seeds and moves by one city (+-25) in three more, once
+  by 100 -- signed BOTH WAYS, i.e. chaos.  Commonwealth geography: +40, -50, and flat in five.
+  The city ledgers differ by a single hex each time (Sollum and Bardia changing hands).
+  THE COMMONWEALTH'S NON-GEOGRAPHIC SCORE IS EXACTLY 0.0 IN EVERY SEED OF EVERY ARM: 64.75
+  withdrawal points never fire and CW 64.74 equipment scoring is (deliberately) reverted, so
+  the Commonwealth scores geography and nothing else, while the Axis's score is DOMINATED by
+  64.74 unused infantry Replacement Points (129-771 of a 419-1061 total).
+  And that category is not tracking the mechanism: seed 1941 moved Axis 64.74 by +642 on a CW
+  recovery change of -7 points, while seed 99 moved it by -36 on a change of -129.  The VP
+  move is not proportional to anything 22.3 did.  It is chaos amplified through a half-scored,
+  Axis-only category.
+
+  CALL: NO BALANCE SHIFT ATTRIBUTABLE TO 22.3.  The grade is unchanged 7/7; the facility half
+  is random in sign; the geographic score is random in sign; the large VP numbers live in the
+  one category the scoreboard scores for one side only.  Gate C (N>=30) is the real read, and
+  this rule should not be expected to show up in it.
+
+==============================================================================================
+4. SANITY
+==============================================================================================
+  * NO ABSURDITIES in any arm, any seed.  Repaired points never exceeded broken points within
+    a run (checked per class per side, in-process); no counter ended with negative
+    broken_down; no repair landed on a counter absent from the final state; game.invariants
+    never raised.
+  * NO RESURRECTION.  Repair only ever reduces an existing counter's broken_down; nothing
+    re-raises a dead unit or a destroyed truck formation.
+  * NO RUNAWAY.  Largest single repair: 3 TOE points, and 9 Truck Points -- the latter only in
+    seed 1 and only on the facility path, which is correct and is the [22.34] percentage
+    column's own signature (the Field truck column is capped at 2 by the chart).
+  * TERMINATION.  All 21 campaigns completed; 429-552 s each, no outliers.
+  * ONE PRE-EXISTING FLAG FOUND WHILE READING THE CHART FOR THIS GATE, out of scope and
+    affecting BOTH arms identically: the [22.8] Field Truck cells are CODES, not point counts
+    -- the chart's own legend reads "1 = One Light or Medium Truck Point is repaired; 2 = One
+    HEAVY Truck Point (or any combination of Medium and Light Truck Points equal to two)".
+    combat_tables._FIELD_REPAIR returns a flat 2/1 and engine._field_repair_trucks spends it
+    without consulting TruckFormation.truck_class, so a die of 0/1 repairs TWO points of a
+    HEAVY formation where the book repairs one.  The campaign fields 1 Axis and 3 Commonwealth
+    heavy formations, so the error is small and two-sided.  It predates 22.3 (the 21.11/22.23
+    pass) and is NOT this gate's to fix; recorded so it is not rediscovered.
+  * CHECKED AND INERT, not a defect: [22.14] grants the Commonwealth "may repair all his
+    vehicles together" while the Axis must split German from Italian, and engine._repair keys
+    the AC/Recce pool on nationality for BOTH sides -- but every Commonwealth counter in this
+    order of battle carries the single nationality label "CW" (410 of 410), so the key never
+    splits the Commonwealth.  Axis is IT 230 / GE 105, which is the split the rule wants.
+  * CHECKED AND INERT: the OPEN OWNER RULING f3fa0a8 records (22.31 qualifies Tobruk "for
+    whoever controls it" and nothing enforces the qualifier) is inert at campaign scale too --
+    ZERO repairs occurred at Tobruk for either side across seven full wars, so no controller
+    question was ever put.
+  * BENIGN, RECORDED: engine._prepay_repairs always attempts the MAXIMUM number of points the
+    hex can fund.  That is optimal under a percentage column and free at Alexandria/Cairo (the
+    rule-57 base), so it costs nothing today; it is a decision the book leaves to the Player
+    ("he must decide how many attempts he will make", 22.42's wording for the destroyed-tank
+    case) and would want a policy hook the day a facility exists somewhere supply is scarce.
+
+==============================================================================================
+WHAT THIS GATE RECOMMENDS (no code changed here)
+==============================================================================================
+  1. ADD [22.5] TO game/repair.py's NAMED DEBT, and build it next on this rule: repaired
+     vehicles become Replacement Points (skipping Training), not an in-place heal.  The pool
+     already exists; it is the book's own second route from a rear facility to the front.
+  2. LEAVE 22.3 EXACTLY AS BUILT.  It is faithful, it is measurably correct where it fires,
+     and its smallness is not its fault.
+  3. CORRECT THE PORT PLAN'S EXPECTATION for this row: 22.3 is not "the Commonwealth's entire
+     rear-area recovery economy" until 21.6 TOWING exists.  Towing is what turns eight hexes
+     of Major Facility into an economy; without it the facility serves 4% of recovery.  If a
+     future slice wants the plan's promised effect, 21.6 is the item to cost, not 24.8.
+
+==============================================================================================
+APPENDIX -- THE NEUTER AND INSTRUMENT PROOFS, IN FULL
+==============================================================================================
+A. THE READ-ONLY INSTRUMENT IS INERT.  gate223_ab.py wraps engine._facility_repair_units /
+   _facility_repair_trucks / _field_repair_units / _field_repair_trucks with pure delegating
+   recorders, so the column a repaired point came off is THE FUNCTION THE ENGINE CALLED and
+   not a heuristic over which commodities were spent.  Proved inert by running the same seed
+   with the wrappers installed and uninstalled (--instrument on|off), campaign(1941) truncated
+   to 12 turns:
+       instrument on   sig 2cfb3f2cf005f55a      (inert_instrument_on_12turn.json)
+       instrument off  sig 2cfb3f2cf005f55a      (inert_instrument_off_12turn.json)
+   Byte-identical.  Truncation is legitimate here: a wrapper is either inert or it is not, and
+   that does not depend on turn count.
+
+B. THE NEUTER REACHES.  game/engine.py does "from . import ... repair ..." (a MODULE import),
+   so repair.major_facility_hexes is an attribute lookup at call time and rebinding
+   game.repair.major_facility_hexes reaches engine._repair.  This is the trap tests/baselines.py
+   records (patching a symbol the caller did not resolve through), and it is the reason the
+   patch goes on the module attribute rather than on a from-imported name.
+       noop          sig 2cfb3f2cf005f55a      identical to live -- the machinery is inert
+       facility_off  sig e6f529e37e0b40b5      differs -- the switch has consequence
+   and at FULL length, in all seven wars, the facility_off arm entered the instrumented
+   facility path ZERO times (paths facility/unit = facility/truck = 0 calls) while live
+   entered it 39 + 69 times.  The in-process assertions (_assert_neuter_reached) would have
+   killed the run rather than report a number had either failed.
+
+C. THE FULL-LENGTH NOOP ARM.  See NOOP_RESULT below.

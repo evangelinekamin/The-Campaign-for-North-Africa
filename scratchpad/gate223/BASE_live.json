@@ -1,0 +1,715 @@
+{
+ "seeds": [
+  1941,
+  7,
+  4,
+  24,
+  2026,
+  99,
+  1
+ ],
+ "arm": "live",
+ "max_turns": null,
+ "instrument": "on",
+ "results": [
+  {
+   "seed": 1941,
+   "arm": "live",
+   "max_turns": null,
+   "seconds": 529.1,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 419-30 Victory Points (64.76)",
+   "events": 272932,
+   "signature": "0bac61eacd08dc75ae4e1e38509138a4",
+   "signature8": "2338b5fe7b7c476d",
+   "neuter": {},
+   "major_facility_hexes": [],
+   "broken_points": {
+    "toe": {
+     "AXIS": 53,
+     "ALLIED": 250
+    },
+    "truck": {
+     "AXIS": 264,
+     "ALLIED": 217
+    }
+   },
+   "repaired_points": {
+    "truck": {
+     "ALLIED": 185,
+     "AXIS": 198
+    },
+    "toe": {
+     "AXIS": 31,
+     "ALLIED": 199
+    }
+   },
+   "repair_events": {
+    "truck/ALLIED": 144,
+    "toe/AXIS": 31,
+    "truck/AXIS": 143,
+    "toe/ALLIED": 196
+   },
+   "repair_toe_by_turn_bucket": {
+    "-19-0": {
+     "AXIS": 3
+    },
+    "1-20": {
+     "AXIS": 11,
+     "ALLIED": 12
+    },
+    "101-120": {
+     "ALLIED": 25
+    },
+    "21-40": {
+     "AXIS": 12,
+     "ALLIED": 22
+    },
+    "41-60": {
+     "ALLIED": 35,
+     "AXIS": 3
+    },
+    "61-80": {
+     "ALLIED": 79,
+     "AXIS": 1
+    },
+    "81-100": {
+     "ALLIED": 26,
+     "AXIS": 1
+    }
+   },
+   "paths": {},
+   "front_reach_units": {},
+   "front_reach_trucks": {},
+   "facility_unit_rows": [],
+   "victory_total_axis": 419.0,
+   "victory_total_cw": 30.0,
+   "geographic_64_73": {
+    "AXIS": 290,
+    "ALLIED": 30
+   },
+   "nongeographic": {
+    "AXIS": 129.0,
+    "ALLIED": 0.0
+   },
+   "cities_held_at_end": {
+    "AXIS": [
+     "Benghazi",
+     "Giarabub",
+     "Tobruk"
+    ],
+    "ALLIED": [
+     "Mersa Matruh",
+     "Sidi Barrani",
+     "Sollum"
+    ]
+   },
+   "sanity_absurd": [],
+   "biggest_single_repair": {
+    "truck": 2,
+    "toe": 2
+   },
+   "axis_units_alive": 185,
+   "cw_units_alive": 218
+  },
+  {
+   "seed": 7,
+   "arm": "live",
+   "max_turns": null,
+   "seconds": 533.2,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 832-20 Victory Points (64.76)",
+   "events": 280603,
+   "signature": "2815d0dace2a3221ed9169c67ca3c4f2",
+   "signature8": "8c4c7aa09e965439",
+   "neuter": {},
+   "major_facility_hexes": [],
+   "broken_points": {
+    "toe": {
+     "AXIS": 39,
+     "ALLIED": 270
+    },
+    "truck": {
+     "AXIS": 298,
+     "ALLIED": 229
+    }
+   },
+   "repaired_points": {
+    "truck": {
+     "ALLIED": 188,
+     "AXIS": 205
+    },
+    "toe": {
+     "AXIS": 21,
+     "ALLIED": 238
+    }
+   },
+   "repair_events": {
+    "truck/ALLIED": 143,
+    "toe/AXIS": 21,
+    "truck/AXIS": 140,
+    "toe/ALLIED": 233
+   },
+   "repair_toe_by_turn_bucket": {
+    "-19-0": {
+     "AXIS": 5
+    },
+    "1-20": {
+     "AXIS": 2,
+     "ALLIED": 12
+    },
+    "101-120": {
+     "ALLIED": 45
+    },
+    "21-40": {
+     "AXIS": 6,
+     "ALLIED": 20
+    },
+    "41-60": {
+     "ALLIED": 14,
+     "AXIS": 5
+    },
+    "61-80": {
+     "ALLIED": 109
+    },
+    "81-100": {
+     "ALLIED": 38,
+     "AXIS": 3
+    }
+   },
+   "paths": {},
+   "front_reach_units": {},
+   "front_reach_trucks": {},
+   "facility_unit_rows": [],
+   "victory_total_axis": 832.0,
+   "victory_total_cw": 20.0,
+   "geographic_64_73": {
+    "AXIS": 415,
+    "ALLIED": 20
+   },
+   "nongeographic": {
+    "AXIS": 417.0,
+    "ALLIED": 0.0
+   },
+   "cities_held_at_end": {
+    "AXIS": [
+     "Bardia",
+     "Benghazi",
+     "Giarabub",
+     "Sollum",
+     "Tobruk"
+    ],
+    "ALLIED": [
+     "Mersa Matruh",
+     "Sidi Barrani"
+    ]
+   },
+   "sanity_absurd": [],
+   "biggest_single_repair": {
+    "truck": 2,
+    "toe": 2
+   },
+   "axis_units_alive": 188,
+   "cw_units_alive": 244
+  },
+  {
+   "seed": 4,
+   "arm": "live",
+   "max_turns": null,
+   "seconds": 537.8,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 455-20 Victory Points (64.76)",
+   "events": 277273,
+   "signature": "45c0b6143580821d075895731abbf6e9",
+   "signature8": "9091c4595051c82a",
+   "neuter": {},
+   "major_facility_hexes": [],
+   "broken_points": {
+    "toe": {
+     "AXIS": 51,
+     "ALLIED": 294
+    },
+    "truck": {
+     "AXIS": 299,
+     "ALLIED": 144
+    }
+   },
+   "repaired_points": {
+    "truck": {
+     "ALLIED": 94,
+     "AXIS": 283
+    },
+    "toe": {
+     "AXIS": 24,
+     "ALLIED": 249
+    }
+   },
+   "repair_events": {
+    "truck/ALLIED": 67,
+    "truck/AXIS": 190,
+    "toe/AXIS": 24,
+    "toe/ALLIED": 245
+   },
+   "repair_toe_by_turn_bucket": {
+    "-19-0": {
+     "AXIS": 2
+    },
+    "1-20": {
+     "AXIS": 2,
+     "ALLIED": 14
+    },
+    "101-120": {
+     "AXIS": 5,
+     "ALLIED": 55
+    },
+    "21-40": {
+     "AXIS": 10,
+     "ALLIED": 31
+    },
+    "41-60": {
+     "ALLIED": 74,
+     "AXIS": 5
+    },
+    "61-80": {
+     "ALLIED": 47
+    },
+    "81-100": {
+     "ALLIED": 28
+    }
+   },
+   "paths": {},
+   "front_reach_units": {},
+   "front_reach_trucks": {},
+   "facility_unit_rows": [],
+   "victory_total_axis": 455.0,
+   "victory_total_cw": 20.0,
+   "geographic_64_73": {
+    "AXIS": 415,
+    "ALLIED": 20
+   },
+   "nongeographic": {
+    "AXIS": 40.0,
+    "ALLIED": 0.0
+   },
+   "cities_held_at_end": {
+    "AXIS": [
+     "Bardia",
+     "Benghazi",
+     "Giarabub",
+     "Sollum",
+     "Tobruk"
+    ],
+    "ALLIED": [
+     "Mersa Matruh",
+     "Sidi Barrani"
+    ]
+   },
+   "sanity_absurd": [],
+   "biggest_single_repair": {
+    "truck": 2,
+    "toe": 2
+   },
+   "axis_units_alive": 189,
+   "cw_units_alive": 233
+  },
+  {
+   "seed": 24,
+   "arm": "live",
+   "max_turns": null,
+   "seconds": 521.9,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 628-20 Victory Points (64.76)",
+   "events": 270788,
+   "signature": "68b1bc22becd3e8a75ffd084a3dfd3ea",
+   "signature8": "c7eb582385286bef",
+   "neuter": {},
+   "major_facility_hexes": [],
+   "broken_points": {
+    "toe": {
+     "AXIS": 53,
+     "ALLIED": 174
+    },
+    "truck": {
+     "AXIS": 287,
+     "ALLIED": 159
+    }
+   },
+   "repaired_points": {
+    "toe": {
+     "AXIS": 26,
+     "ALLIED": 158
+    },
+    "truck": {
+     "AXIS": 181,
+     "ALLIED": 110
+    }
+   },
+   "repair_events": {
+    "toe/AXIS": 26,
+    "truck/AXIS": 127,
+    "truck/ALLIED": 81,
+    "toe/ALLIED": 155
+   },
+   "repair_toe_by_turn_bucket": {
+    "-19-0": {
+     "AXIS": 4
+    },
+    "1-20": {
+     "AXIS": 5,
+     "ALLIED": 19
+    },
+    "101-120": {
+     "ALLIED": 33
+    },
+    "21-40": {
+     "AXIS": 10,
+     "ALLIED": 23
+    },
+    "41-60": {
+     "ALLIED": 52,
+     "AXIS": 4
+    },
+    "61-80": {
+     "ALLIED": 14
+    },
+    "81-100": {
+     "ALLIED": 17,
+     "AXIS": 3
+    }
+   },
+   "paths": {},
+   "front_reach_units": {},
+   "front_reach_trucks": {},
+   "facility_unit_rows": [],
+   "victory_total_axis": 628.0,
+   "victory_total_cw": 20.0,
+   "geographic_64_73": {
+    "AXIS": 390,
+    "ALLIED": 20
+   },
+   "nongeographic": {
+    "AXIS": 238.0,
+    "ALLIED": 0.0
+   },
+   "cities_held_at_end": {
+    "AXIS": [
+     "Bardia",
+     "Benghazi",
+     "Giarabub",
+     "Tobruk"
+    ],
+    "ALLIED": [
+     "Mersa Matruh",
+     "Sidi Barrani"
+    ]
+   },
+   "sanity_absurd": [],
+   "biggest_single_repair": {
+    "toe": 2,
+    "truck": 2
+   },
+   "axis_units_alive": 190,
+   "cw_units_alive": 290
+  },
+  {
+   "seed": 2026,
+   "arm": "live",
+   "max_turns": null,
+   "seconds": 503.8,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 407-20 Victory Points (64.76)",
+   "events": 274110,
+   "signature": "280ba7c095b3e866756e35f0e0d73078",
+   "signature8": "9e4544138e317bab",
+   "neuter": {},
+   "major_facility_hexes": [],
+   "broken_points": {
+    "toe": {
+     "AXIS": 55,
+     "ALLIED": 198
+    },
+    "truck": {
+     "AXIS": 263,
+     "ALLIED": 129
+    }
+   },
+   "repaired_points": {
+    "toe": {
+     "AXIS": 32,
+     "ALLIED": 191
+    },
+    "truck": {
+     "AXIS": 177,
+     "ALLIED": 78
+    }
+   },
+   "repair_events": {
+    "toe/AXIS": 32,
+    "truck/AXIS": 120,
+    "truck/ALLIED": 61,
+    "toe/ALLIED": 191
+   },
+   "repair_toe_by_turn_bucket": {
+    "-19-0": {
+     "AXIS": 4
+    },
+    "1-20": {
+     "AXIS": 13,
+     "ALLIED": 14
+    },
+    "101-120": {
+     "ALLIED": 26
+    },
+    "21-40": {
+     "AXIS": 10,
+     "ALLIED": 20
+    },
+    "41-60": {
+     "ALLIED": 63,
+     "AXIS": 2
+    },
+    "61-80": {
+     "ALLIED": 43,
+     "AXIS": 2
+    },
+    "81-100": {
+     "ALLIED": 25,
+     "AXIS": 1
+    }
+   },
+   "paths": {},
+   "front_reach_units": {},
+   "front_reach_trucks": {},
+   "facility_unit_rows": [],
+   "victory_total_axis": 407.0,
+   "victory_total_cw": 20.0,
+   "geographic_64_73": {
+    "AXIS": 390,
+    "ALLIED": 20
+   },
+   "nongeographic": {
+    "AXIS": 17.0,
+    "ALLIED": 0.0
+   },
+   "cities_held_at_end": {
+    "AXIS": [
+     "Bardia",
+     "Benghazi",
+     "Giarabub",
+     "Tobruk"
+    ],
+    "ALLIED": [
+     "Mersa Matruh",
+     "Sidi Barrani"
+    ]
+   },
+   "sanity_absurd": [],
+   "biggest_single_repair": {
+    "toe": 1,
+    "truck": 2
+   },
+   "axis_units_alive": 189,
+   "cw_units_alive": 277
+  },
+  {
+   "seed": 99,
+   "arm": "live",
+   "max_turns": null,
+   "seconds": 552.1,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 448-80 Victory Points (64.76)",
+   "events": 286117,
+   "signature": "317efc16616ef01e56aa5be31341a9e8",
+   "signature8": "ba39290c77d08068",
+   "neuter": {},
+   "major_facility_hexes": [],
+   "broken_points": {
+    "toe": {
+     "AXIS": 45,
+     "ALLIED": 304
+    },
+    "truck": {
+     "AXIS": 307,
+     "ALLIED": 201
+    }
+   },
+   "repaired_points": {
+    "truck": {
+     "ALLIED": 159,
+     "AXIS": 220
+    },
+    "toe": {
+     "AXIS": 18,
+     "ALLIED": 251
+    }
+   },
+   "repair_events": {
+    "truck/ALLIED": 116,
+    "toe/AXIS": 17,
+    "truck/AXIS": 154,
+    "toe/ALLIED": 240
+   },
+   "repair_toe_by_turn_bucket": {
+    "-19-0": {
+     "AXIS": 4
+    },
+    "1-20": {
+     "AXIS": 1,
+     "ALLIED": 10
+    },
+    "101-120": {
+     "ALLIED": 28
+    },
+    "21-40": {
+     "AXIS": 6,
+     "ALLIED": 24
+    },
+    "41-60": {
+     "ALLIED": 59,
+     "AXIS": 4
+    },
+    "61-80": {
+     "ALLIED": 57
+    },
+    "81-100": {
+     "ALLIED": 73,
+     "AXIS": 3
+    }
+   },
+   "paths": {},
+   "front_reach_units": {},
+   "front_reach_trucks": {},
+   "facility_unit_rows": [],
+   "victory_total_axis": 448.0,
+   "victory_total_cw": 80.0,
+   "geographic_64_73": {
+    "AXIS": 290,
+    "ALLIED": 80
+   },
+   "nongeographic": {
+    "AXIS": 158.0,
+    "ALLIED": 0.0
+   },
+   "cities_held_at_end": {
+    "AXIS": [
+     "Benghazi",
+     "Giarabub",
+     "Tobruk"
+    ],
+    "ALLIED": [
+     "Bardia",
+     "Mersa Matruh",
+     "Sidi Barrani",
+     "Sollum"
+    ]
+   },
+   "sanity_absurd": [],
+   "biggest_single_repair": {
+    "truck": 2,
+    "toe": 2
+   },
+   "axis_units_alive": 185,
+   "cw_units_alive": 277
+  },
+  {
+   "seed": 1,
+   "arm": "live",
+   "max_turns": null,
+   "seconds": 508.5,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 983-20 Victory Points (64.76)",
+   "events": 279968,
+   "signature": "af8c5f39bd87ba3bdee24910efcb4e37",
+   "signature8": "045b5f7340244949",
+   "neuter": {},
+   "major_facility_hexes": [],
+   "broken_points": {
+    "toe": {
+     "AXIS": 42,
+     "ALLIED": 232
+    },
+    "truck": {
+     "AXIS": 265,
+     "ALLIED": 214
+    }
+   },
+   "repaired_points": {
+    "toe": {
+     "AXIS": 21,
+     "ALLIED": 204
+    },
+    "truck": {
+     "AXIS": 190,
+     "ALLIED": 204
+    }
+   },
+   "repair_events": {
+    "toe/AXIS": 21,
+    "truck/AXIS": 131,
+    "truck/ALLIED": 146,
+    "toe/ALLIED": 203
+   },
+   "repair_toe_by_turn_bucket": {
+    "-19-0": {
+     "AXIS": 3
+    },
+    "1-20": {
+     "AXIS": 3,
+     "ALLIED": 15
+    },
+    "101-120": {
+     "ALLIED": 21
+    },
+    "21-40": {
+     "ALLIED": 41,
+     "AXIS": 12
+    },
+    "41-60": {
+     "ALLIED": 94,
+     "AXIS": 2
+    },
+    "61-80": {
+     "ALLIED": 24
+    },
+    "81-100": {
+     "ALLIED": 9,
+     "AXIS": 1
+    }
+   },
+   "paths": {},
+   "front_reach_units": {},
+   "front_reach_trucks": {},
+   "facility_unit_rows": [],
+   "victory_total_axis": 983.0,
+   "victory_total_cw": 20.0,
+   "geographic_64_73": {
+    "AXIS": 415,
+    "ALLIED": 20
+   },
+   "nongeographic": {
+    "AXIS": 568.0,
+    "ALLIED": 0.0
+   },
+   "cities_held_at_end": {
+    "AXIS": [
+     "Bardia",
+     "Benghazi",
+     "Giarabub",
+     "Sollum",
+     "Tobruk"
+    ],
+    "ALLIED": [
+     "Mersa Matruh",
+     "Sidi Barrani"
+    ]
+   },
+   "sanity_absurd": [],
+   "biggest_single_repair": {
+    "toe": 2,
+    "truck": 2
+   },
+   "axis_units_alive": 193,
+   "cw_units_alive": 287
+  }
+ ]
+}

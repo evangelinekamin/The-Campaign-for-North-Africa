@@ -1,0 +1,1665 @@
+{
+ "seeds": [
+  1941,
+  7,
+  4,
+  24,
+  2026,
+  99,
+  1
+ ],
+ "arm": "facility_off",
+ "max_turns": null,
+ "instrument": "on",
+ "results": [
+  {
+   "seed": 1941,
+   "arm": "facility_off",
+   "max_turns": null,
+   "seconds": 447.3,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 1020-20 Victory Points (64.76)",
+   "events": 275121,
+   "signature": "360f2c2247b4094377512f4f4e0da4f4",
+   "signature8": "6f802a599646e06a",
+   "neuter": {
+    "calls": 667,
+    "hexes_seen": 8,
+    "hexes_returned": 0
+   },
+   "major_facility_hexes": [],
+   "broken_points": {
+    "toe": {
+     "AXIS": 47,
+     "ALLIED": 217
+    },
+    "truck": {
+     "AXIS": 257,
+     "ALLIED": 202
+    }
+   },
+   "repaired_points": {
+    "truck": {
+     "ALLIED": 159,
+     "AXIS": 211
+    },
+    "toe": {
+     "AXIS": 20,
+     "ALLIED": 167
+    }
+   },
+   "repair_events": {
+    "truck/ALLIED": 125,
+    "toe/AXIS": 20,
+    "truck/AXIS": 147,
+    "toe/ALLIED": 165
+   },
+   "repair_toe_by_turn_bucket": {
+    "-19-0": {
+     "AXIS": 3
+    },
+    "1-20": {
+     "AXIS": 8,
+     "ALLIED": 10
+    },
+    "101-120": {
+     "ALLIED": 25
+    },
+    "21-40": {
+     "AXIS": 7,
+     "ALLIED": 20
+    },
+    "41-60": {
+     "ALLIED": 92,
+     "AXIS": 2
+    },
+    "61-80": {
+     "ALLIED": 10
+    },
+    "81-100": {
+     "ALLIED": 10
+    }
+   },
+   "paths": {
+    "facility/truck": {
+     "calls": 0,
+     "funded": 0,
+     "points": 0,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 0,
+     "offered_unfunded": 0,
+     "points_by_side": {},
+     "calls_by_side": {},
+     "offered_by_side": {},
+     "points_by_hex_r": {}
+    },
+    "facility/unit": {
+     "calls": 0,
+     "funded": 0,
+     "points": 0,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 0,
+     "offered_unfunded": 0,
+     "points_by_side": {},
+     "calls_by_side": {},
+     "offered_by_side": {},
+     "points_by_hex_r": {}
+    },
+    "field/truck": {
+     "calls": 737,
+     "funded": 737,
+     "points": 370,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 31284,
+     "offered_unfunded": 0,
+     "points_by_side": {
+      "ALLIED": 159,
+      "AXIS": 211
+     },
+     "calls_by_side": {
+      "ALLIED": 314,
+      "AXIS": 423
+     },
+     "offered_by_side": {
+      "ALLIED": 10594,
+      "AXIS": 20690
+     },
+     "points_by_hex_r": {
+      "20": 168,
+      "28": 4,
+      "30": 2,
+      "36": 24,
+      "43": 1,
+      "45": 1,
+      "54": 1,
+      "57": 1,
+      "58": 2,
+      "77": 7,
+      "85": 4,
+      "86": 9,
+      "88": 1,
+      "92": 1,
+      "100": 140,
+      "110": 1,
+      "123": 3
+     }
+    },
+    "field/unit": {
+     "calls": 4888,
+     "funded": 4888,
+     "points": 187,
+     "fuel": 694,
+     "stores": 0,
+     "offered": 12295,
+     "offered_unfunded": 0,
+     "points_by_side": {
+      "AXIS": 20,
+      "ALLIED": 167
+     },
+     "calls_by_side": {
+      "AXIS": 2668,
+      "ALLIED": 2220
+     },
+     "offered_by_side": {
+      "AXIS": 6322,
+      "ALLIED": 5973
+     },
+     "points_by_hex_r": {
+      "22": 6,
+      "23": 3,
+      "75": 3,
+      "79": 1,
+      "80": 4,
+      "82": 12,
+      "83": 4,
+      "84": 4,
+      "85": 7,
+      "86": 2,
+      "87": 12,
+      "88": 8,
+      "89": 3,
+      "90": 1,
+      "91": 8,
+      "92": 10,
+      "94": 7,
+      "100": 2,
+      "104": 3,
+      "108": 3,
+      "114": 1,
+      "115": 1,
+      "116": 1,
+      "117": 6,
+      "118": 2,
+      "119": 4,
+      "120": 5,
+      "121": 2,
+      "122": 1,
+      "123": 5,
+      "124": 1,
+      "125": 3,
+      "127": 9,
+      "128": 3,
+      "129": 2,
+      "130": 5,
+      "131": 4,
+      "132": 7,
+      "133": 2,
+      "135": 3,
+      "136": 3,
+      "138": 1,
+      "139": 9,
+      "141": 2,
+      "142": 2
+     }
+    }
+   },
+   "front_reach_units": {},
+   "front_reach_trucks": {},
+   "facility_unit_rows": [],
+   "victory_total_axis": 1020.0,
+   "victory_total_cw": 20.0,
+   "geographic_64_73": {
+    "AXIS": 415,
+    "ALLIED": 20
+   },
+   "nongeographic": {
+    "AXIS": 605.0,
+    "ALLIED": 0.0
+   },
+   "cities_held_at_end": {
+    "AXIS": [
+     "Bardia",
+     "Benghazi",
+     "Giarabub",
+     "Sollum",
+     "Tobruk"
+    ],
+    "ALLIED": [
+     "Mersa Matruh",
+     "Sidi Barrani"
+    ]
+   },
+   "sanity_absurd": [],
+   "biggest_single_repair": {
+    "truck": 2,
+    "toe": 2
+   },
+   "axis_units_alive": 198,
+   "cw_units_alive": 287
+  },
+  {
+   "seed": 7,
+   "arm": "facility_off",
+   "max_turns": null,
+   "seconds": 456.8,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 860-30 Victory Points (64.76)",
+   "events": 265906,
+   "signature": "d61a5bf0c15035143dc0f912d5c03f8a",
+   "signature8": "e61fd0e915156f56",
+   "neuter": {
+    "calls": 667,
+    "hexes_seen": 8,
+    "hexes_returned": 0
+   },
+   "major_facility_hexes": [],
+   "broken_points": {
+    "toe": {
+     "AXIS": 41,
+     "ALLIED": 176
+    },
+    "truck": {
+     "AXIS": 278,
+     "ALLIED": 252
+    }
+   },
+   "repaired_points": {
+    "truck": {
+     "ALLIED": 190,
+     "AXIS": 194
+    },
+    "toe": {
+     "AXIS": 15,
+     "ALLIED": 106
+    }
+   },
+   "repair_events": {
+    "truck/ALLIED": 145,
+    "toe/AXIS": 15,
+    "truck/AXIS": 136,
+    "toe/ALLIED": 103
+   },
+   "repair_toe_by_turn_bucket": {
+    "-19-0": {
+     "AXIS": 3
+    },
+    "1-20": {
+     "AXIS": 1,
+     "ALLIED": 6
+    },
+    "101-120": {
+     "ALLIED": 57,
+     "AXIS": 1
+    },
+    "21-40": {
+     "AXIS": 5,
+     "ALLIED": 17
+    },
+    "41-60": {
+     "AXIS": 3,
+     "ALLIED": 14
+    },
+    "61-80": {
+     "ALLIED": 6
+    },
+    "81-100": {
+     "ALLIED": 6,
+     "AXIS": 2
+    }
+   },
+   "paths": {
+    "facility/truck": {
+     "calls": 0,
+     "funded": 0,
+     "points": 0,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 0,
+     "offered_unfunded": 0,
+     "points_by_side": {},
+     "calls_by_side": {},
+     "offered_by_side": {},
+     "points_by_hex_r": {}
+    },
+    "facility/unit": {
+     "calls": 0,
+     "funded": 0,
+     "points": 0,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 0,
+     "offered_unfunded": 0,
+     "points_by_side": {},
+     "calls_by_side": {},
+     "offered_by_side": {},
+     "points_by_hex_r": {}
+    },
+    "field/truck": {
+     "calls": 730,
+     "funded": 730,
+     "points": 384,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 43056,
+     "offered_unfunded": 0,
+     "points_by_side": {
+      "ALLIED": 190,
+      "AXIS": 194
+     },
+     "calls_by_side": {
+      "ALLIED": 346,
+      "AXIS": 384
+     },
+     "offered_by_side": {
+      "ALLIED": 16665,
+      "AXIS": 26391
+     },
+     "points_by_hex_r": {
+      "20": 164,
+      "21": 2,
+      "23": 5,
+      "25": 1,
+      "30": 1,
+      "32": 1,
+      "36": 8,
+      "43": 1,
+      "45": 2,
+      "57": 1,
+      "77": 8,
+      "86": 16,
+      "92": 2,
+      "100": 170,
+      "123": 2
+     }
+    },
+    "field/unit": {
+     "calls": 4335,
+     "funded": 4335,
+     "points": 121,
+     "fuel": 402,
+     "stores": 0,
+     "offered": 8809,
+     "offered_unfunded": 0,
+     "points_by_side": {
+      "AXIS": 15,
+      "ALLIED": 106
+     },
+     "calls_by_side": {
+      "AXIS": 3357,
+      "ALLIED": 978
+     },
+     "offered_by_side": {
+      "AXIS": 6856,
+      "ALLIED": 1953
+     },
+     "points_by_hex_r": {
+      "22": 2,
+      "23": 1,
+      "37": 3,
+      "53": 3,
+      "54": 2,
+      "76": 2,
+      "77": 3,
+      "78": 1,
+      "80": 4,
+      "83": 1,
+      "86": 3,
+      "87": 4,
+      "89": 4,
+      "90": 5,
+      "93": 7,
+      "94": 7,
+      "100": 3,
+      "107": 2,
+      "109": 4,
+      "110": 1,
+      "112": 3,
+      "114": 1,
+      "118": 3,
+      "120": 3,
+      "121": 2,
+      "127": 4,
+      "129": 4,
+      "130": 11,
+      "131": 3,
+      "132": 2,
+      "133": 15,
+      "135": 1,
+      "136": 4,
+      "138": 2,
+      "139": 1
+     }
+    }
+   },
+   "front_reach_units": {},
+   "front_reach_trucks": {},
+   "facility_unit_rows": [],
+   "victory_total_axis": 860.0,
+   "victory_total_cw": 30.0,
+   "geographic_64_73": {
+    "AXIS": 390,
+    "ALLIED": 30
+   },
+   "nongeographic": {
+    "AXIS": 470.0,
+    "ALLIED": 0.0
+   },
+   "cities_held_at_end": {
+    "AXIS": [
+     "Bardia",
+     "Benghazi",
+     "Giarabub",
+     "Tobruk"
+    ],
+    "ALLIED": [
+     "Mersa Matruh",
+     "Sidi Barrani",
+     "Sollum"
+    ]
+   },
+   "sanity_absurd": [],
+   "biggest_single_repair": {
+    "truck": 2,
+    "toe": 2
+   },
+   "axis_units_alive": 195,
+   "cw_units_alive": 223
+  },
+  {
+   "seed": 4,
+   "arm": "facility_off",
+   "max_turns": null,
+   "seconds": 440.6,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 562-20 Victory Points (64.76)",
+   "events": 278303,
+   "signature": "786e1081baa78964df6623c12c73bdac",
+   "signature8": "d2f87d83d90879d6",
+   "neuter": {
+    "calls": 667,
+    "hexes_seen": 8,
+    "hexes_returned": 0
+   },
+   "major_facility_hexes": [],
+   "broken_points": {
+    "toe": {
+     "AXIS": 50,
+     "ALLIED": 240
+    },
+    "truck": {
+     "AXIS": 310,
+     "ALLIED": 138
+    }
+   },
+   "repaired_points": {
+    "truck": {
+     "ALLIED": 92,
+     "AXIS": 300
+    },
+    "toe": {
+     "ALLIED": 186,
+     "AXIS": 17
+    }
+   },
+   "repair_events": {
+    "truck/ALLIED": 70,
+    "truck/AXIS": 211,
+    "toe/ALLIED": 182,
+    "toe/AXIS": 17
+   },
+   "repair_toe_by_turn_bucket": {
+    "1-20": {
+     "ALLIED": 10,
+     "AXIS": 2
+    },
+    "101-120": {
+     "ALLIED": 25,
+     "AXIS": 2
+    },
+    "21-40": {
+     "AXIS": 6,
+     "ALLIED": 36
+    },
+    "41-60": {
+     "AXIS": 6,
+     "ALLIED": 35
+    },
+    "61-80": {
+     "ALLIED": 18
+    },
+    "81-100": {
+     "ALLIED": 62,
+     "AXIS": 1
+    }
+   },
+   "paths": {
+    "facility/truck": {
+     "calls": 0,
+     "funded": 0,
+     "points": 0,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 0,
+     "offered_unfunded": 0,
+     "points_by_side": {},
+     "calls_by_side": {},
+     "offered_by_side": {},
+     "points_by_hex_r": {}
+    },
+    "facility/unit": {
+     "calls": 0,
+     "funded": 0,
+     "points": 0,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 0,
+     "offered_unfunded": 0,
+     "points_by_side": {},
+     "calls_by_side": {},
+     "offered_by_side": {},
+     "points_by_hex_r": {}
+    },
+    "field/truck": {
+     "calls": 779,
+     "funded": 779,
+     "points": 392,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 22588,
+     "offered_unfunded": 0,
+     "points_by_side": {
+      "ALLIED": 92,
+      "AXIS": 300
+     },
+     "calls_by_side": {
+      "ALLIED": 185,
+      "AXIS": 594
+     },
+     "offered_by_side": {
+      "ALLIED": 6108,
+      "AXIS": 16480
+     },
+     "points_by_hex_r": {
+      "20": 163,
+      "21": 8,
+      "22": 6,
+      "23": 3,
+      "27": 1,
+      "28": 1,
+      "30": 1,
+      "36": 103,
+      "42": 1,
+      "43": 3,
+      "76": 1,
+      "77": 9,
+      "86": 14,
+      "100": 72,
+      "101": 3,
+      "123": 2,
+      "135": 1
+     }
+    },
+    "field/unit": {
+     "calls": 5217,
+     "funded": 5217,
+     "points": 203,
+     "fuel": 734,
+     "stores": 0,
+     "offered": 11202,
+     "offered_unfunded": 0,
+     "points_by_side": {
+      "ALLIED": 186,
+      "AXIS": 17
+     },
+     "calls_by_side": {
+      "AXIS": 3017,
+      "ALLIED": 2200
+     },
+     "offered_by_side": {
+      "AXIS": 6222,
+      "ALLIED": 4980
+     },
+     "points_by_hex_r": {
+      "22": 2,
+      "24": 3,
+      "53": 7,
+      "54": 3,
+      "76": 2,
+      "77": 6,
+      "81": 5,
+      "85": 1,
+      "86": 14,
+      "87": 3,
+      "88": 13,
+      "99": 9,
+      "108": 2,
+      "109": 15,
+      "110": 1,
+      "112": 4,
+      "113": 1,
+      "115": 3,
+      "116": 5,
+      "117": 6,
+      "118": 2,
+      "119": 2,
+      "120": 6,
+      "121": 1,
+      "123": 11,
+      "124": 1,
+      "127": 3,
+      "128": 5,
+      "129": 1,
+      "130": 3,
+      "131": 3,
+      "132": 12,
+      "133": 10,
+      "134": 3,
+      "135": 5,
+      "136": 6,
+      "137": 5,
+      "138": 7,
+      "139": 11,
+      "142": 1
+     }
+    }
+   },
+   "front_reach_units": {},
+   "front_reach_trucks": {},
+   "facility_unit_rows": [],
+   "victory_total_axis": 562.0,
+   "victory_total_cw": 20.0,
+   "geographic_64_73": {
+    "AXIS": 415,
+    "ALLIED": 20
+   },
+   "nongeographic": {
+    "AXIS": 147.0,
+    "ALLIED": 0.0
+   },
+   "cities_held_at_end": {
+    "AXIS": [
+     "Bardia",
+     "Benghazi",
+     "Giarabub",
+     "Sollum",
+     "Tobruk"
+    ],
+    "ALLIED": [
+     "Mersa Matruh",
+     "Sidi Barrani"
+    ]
+   },
+   "sanity_absurd": [],
+   "biggest_single_repair": {
+    "truck": 2,
+    "toe": 2
+   },
+   "axis_units_alive": 191,
+   "cw_units_alive": 280
+  },
+  {
+   "seed": 24,
+   "arm": "facility_off",
+   "max_turns": null,
+   "seconds": 458.8,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 892-10 Victory Points (64.76)",
+   "events": 274292,
+   "signature": "1601c07bb5cb1505f3a1eb6a49316f0c",
+   "signature8": "ded82ce359b7c92a",
+   "neuter": {
+    "calls": 667,
+    "hexes_seen": 8,
+    "hexes_returned": 0
+   },
+   "major_facility_hexes": [],
+   "broken_points": {
+    "toe": {
+     "AXIS": 59,
+     "ALLIED": 70
+    },
+    "truck": {
+     "AXIS": 286,
+     "ALLIED": 220
+    }
+   },
+   "repaired_points": {
+    "toe": {
+     "AXIS": 31,
+     "ALLIED": 68
+    },
+    "truck": {
+     "ALLIED": 172,
+     "AXIS": 190
+    }
+   },
+   "repair_events": {
+    "toe/AXIS": 31,
+    "truck/ALLIED": 128,
+    "truck/AXIS": 129,
+    "toe/ALLIED": 68
+   },
+   "repair_toe_by_turn_bucket": {
+    "-19-0": {
+     "AXIS": 2
+    },
+    "1-20": {
+     "AXIS": 6,
+     "ALLIED": 13
+    },
+    "101-120": {
+     "AXIS": 6,
+     "ALLIED": 1
+    },
+    "21-40": {
+     "AXIS": 8,
+     "ALLIED": 28
+    },
+    "41-60": {
+     "AXIS": 5,
+     "ALLIED": 11
+    },
+    "61-80": {
+     "ALLIED": 4
+    },
+    "81-100": {
+     "ALLIED": 11,
+     "AXIS": 4
+    }
+   },
+   "paths": {
+    "facility/truck": {
+     "calls": 0,
+     "funded": 0,
+     "points": 0,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 0,
+     "offered_unfunded": 0,
+     "points_by_side": {},
+     "calls_by_side": {},
+     "offered_by_side": {},
+     "points_by_hex_r": {}
+    },
+    "facility/unit": {
+     "calls": 0,
+     "funded": 0,
+     "points": 0,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 0,
+     "offered_unfunded": 0,
+     "points_by_side": {},
+     "calls_by_side": {},
+     "offered_by_side": {},
+     "points_by_hex_r": {}
+    },
+    "field/truck": {
+     "calls": 716,
+     "funded": 716,
+     "points": 362,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 42819,
+     "offered_unfunded": 0,
+     "points_by_side": {
+      "ALLIED": 172,
+      "AXIS": 190
+     },
+     "calls_by_side": {
+      "ALLIED": 344,
+      "AXIS": 372
+     },
+     "offered_by_side": {
+      "ALLIED": 11842,
+      "AXIS": 30977
+     },
+     "points_by_hex_r": {
+      "20": 162,
+      "21": 2,
+      "24": 2,
+      "25": 2,
+      "26": 3,
+      "28": 4,
+      "30": 1,
+      "36": 9,
+      "54": 3,
+      "77": 2,
+      "86": 14,
+      "100": 154,
+      "101": 3,
+      "135": 1
+     }
+    },
+    "field/unit": {
+     "calls": 3877,
+     "funded": 3877,
+     "points": 99,
+     "fuel": 323,
+     "stores": 0,
+     "offered": 7967,
+     "offered_unfunded": 0,
+     "points_by_side": {
+      "AXIS": 31,
+      "ALLIED": 68
+     },
+     "calls_by_side": {
+      "AXIS": 3421,
+      "ALLIED": 456
+     },
+     "offered_by_side": {
+      "AXIS": 7361,
+      "ALLIED": 606
+     },
+     "points_by_hex_r": {
+      "23": 1,
+      "24": 6,
+      "53": 7,
+      "54": 5,
+      "76": 3,
+      "80": 1,
+      "84": 2,
+      "88": 5,
+      "90": 1,
+      "128": 7,
+      "129": 3,
+      "130": 10,
+      "131": 8,
+      "132": 7,
+      "133": 13,
+      "134": 2,
+      "135": 3,
+      "136": 6,
+      "138": 2,
+      "139": 6,
+      "142": 1
+     }
+    }
+   },
+   "front_reach_units": {},
+   "front_reach_trucks": {},
+   "facility_unit_rows": [],
+   "victory_total_axis": 892.0,
+   "victory_total_cw": 10.0,
+   "geographic_64_73": {
+    "AXIS": 415,
+    "ALLIED": 10
+   },
+   "nongeographic": {
+    "AXIS": 477.0,
+    "ALLIED": 0.0
+   },
+   "cities_held_at_end": {
+    "AXIS": [
+     "Bardia",
+     "Benghazi",
+     "Giarabub",
+     "Sollum",
+     "Tobruk"
+    ],
+    "ALLIED": [
+     "Mersa Matruh"
+    ]
+   },
+   "sanity_absurd": [],
+   "biggest_single_repair": {
+    "toe": 1,
+    "truck": 2
+   },
+   "axis_units_alive": 201,
+   "cw_units_alive": 223
+  },
+  {
+   "seed": 2026,
+   "arm": "facility_off",
+   "max_turns": null,
+   "seconds": 443.6,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 598-20 Victory Points (64.76)",
+   "events": 282115,
+   "signature": "eeb08b33a747e0eff7ff50cf03e997da",
+   "signature8": "89c4fbb654a89e18",
+   "neuter": {
+    "calls": 667,
+    "hexes_seen": 8,
+    "hexes_returned": 0
+   },
+   "major_facility_hexes": [],
+   "broken_points": {
+    "toe": {
+     "AXIS": 64,
+     "ALLIED": 226
+    },
+    "truck": {
+     "AXIS": 268,
+     "ALLIED": 220
+    }
+   },
+   "repaired_points": {
+    "toe": {
+     "AXIS": 27,
+     "ALLIED": 144
+    },
+    "truck": {
+     "AXIS": 176,
+     "ALLIED": 172
+    }
+   },
+   "repair_events": {
+    "toe/AXIS": 27,
+    "truck/AXIS": 119,
+    "truck/ALLIED": 126,
+    "toe/ALLIED": 137
+   },
+   "repair_toe_by_turn_bucket": {
+    "-19-0": {
+     "AXIS": 2
+    },
+    "1-20": {
+     "AXIS": 5,
+     "ALLIED": 11
+    },
+    "101-120": {
+     "ALLIED": 13
+    },
+    "21-40": {
+     "ALLIED": 31,
+     "AXIS": 4
+    },
+    "41-60": {
+     "ALLIED": 17,
+     "AXIS": 9
+    },
+    "61-80": {
+     "ALLIED": 24
+    },
+    "81-100": {
+     "ALLIED": 48,
+     "AXIS": 7
+    }
+   },
+   "paths": {
+    "facility/truck": {
+     "calls": 0,
+     "funded": 0,
+     "points": 0,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 0,
+     "offered_unfunded": 0,
+     "points_by_side": {},
+     "calls_by_side": {},
+     "offered_by_side": {},
+     "points_by_hex_r": {}
+    },
+    "facility/unit": {
+     "calls": 0,
+     "funded": 0,
+     "points": 0,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 0,
+     "offered_unfunded": 0,
+     "points_by_side": {},
+     "calls_by_side": {},
+     "offered_by_side": {},
+     "points_by_hex_r": {}
+    },
+    "field/truck": {
+     "calls": 683,
+     "funded": 683,
+     "points": 348,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 44420,
+     "offered_unfunded": 0,
+     "points_by_side": {
+      "AXIS": 176,
+      "ALLIED": 172
+     },
+     "calls_by_side": {
+      "ALLIED": 313,
+      "AXIS": 370
+     },
+     "offered_by_side": {
+      "ALLIED": 11427,
+      "AXIS": 32993
+     },
+     "points_by_hex_r": {
+      "19": 2,
+      "20": 156,
+      "21": 2,
+      "25": 4,
+      "28": 3,
+      "36": 6,
+      "77": 3,
+      "86": 25,
+      "96": 1,
+      "100": 141,
+      "101": 2,
+      "107": 1,
+      "123": 1,
+      "135": 1
+     }
+    },
+    "field/unit": {
+     "calls": 5163,
+     "funded": 5163,
+     "points": 171,
+     "fuel": 687,
+     "stores": 0,
+     "offered": 15445,
+     "offered_unfunded": 0,
+     "points_by_side": {
+      "AXIS": 27,
+      "ALLIED": 144
+     },
+     "calls_by_side": {
+      "AXIS": 2634,
+      "ALLIED": 2529
+     },
+     "offered_by_side": {
+      "AXIS": 6772,
+      "ALLIED": 8673
+     },
+     "points_by_hex_r": {
+      "22": 6,
+      "23": 2,
+      "24": 3,
+      "53": 4,
+      "54": 5,
+      "74": 6,
+      "76": 1,
+      "77": 1,
+      "78": 7,
+      "81": 6,
+      "86": 5,
+      "87": 4,
+      "88": 7,
+      "91": 4,
+      "92": 3,
+      "93": 1,
+      "105": 1,
+      "106": 3,
+      "109": 8,
+      "110": 3,
+      "111": 2,
+      "112": 2,
+      "113": 1,
+      "114": 3,
+      "116": 4,
+      "117": 4,
+      "118": 4,
+      "119": 2,
+      "120": 1,
+      "121": 4,
+      "123": 2,
+      "125": 1,
+      "127": 5,
+      "128": 4,
+      "129": 3,
+      "130": 4,
+      "131": 8,
+      "132": 13,
+      "133": 6,
+      "134": 1,
+      "136": 3,
+      "139": 11,
+      "141": 1,
+      "142": 2
+     }
+    }
+   },
+   "front_reach_units": {},
+   "front_reach_trucks": {},
+   "facility_unit_rows": [],
+   "victory_total_axis": 598.0,
+   "victory_total_cw": 20.0,
+   "geographic_64_73": {
+    "AXIS": 415,
+    "ALLIED": 20
+   },
+   "nongeographic": {
+    "AXIS": 183.0,
+    "ALLIED": 0.0
+   },
+   "cities_held_at_end": {
+    "AXIS": [
+     "Bardia",
+     "Benghazi",
+     "Giarabub",
+     "Sollum",
+     "Tobruk"
+    ],
+    "ALLIED": [
+     "Mersa Matruh",
+     "Sidi Barrani"
+    ]
+   },
+   "sanity_absurd": [],
+   "biggest_single_repair": {
+    "toe": 2,
+    "truck": 2
+   },
+   "axis_units_alive": 185,
+   "cw_units_alive": 260
+  },
+  {
+   "seed": 99,
+   "arm": "facility_off",
+   "max_turns": null,
+   "seconds": 451.5,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 532-20 Victory Points (64.76)",
+   "events": 280623,
+   "signature": "f1f28a0a7419f347b1da0f9884dfefc3",
+   "signature8": "29eae1299aa8c327",
+   "neuter": {
+    "calls": 667,
+    "hexes_seen": 8,
+    "hexes_returned": 0
+   },
+   "major_facility_hexes": [],
+   "broken_points": {
+    "toe": {
+     "AXIS": 53,
+     "ALLIED": 265
+    },
+    "truck": {
+     "AXIS": 241,
+     "ALLIED": 207
+    }
+   },
+   "repaired_points": {
+    "truck": {
+     "ALLIED": 174,
+     "AXIS": 220
+    },
+    "toe": {
+     "AXIS": 17,
+     "ALLIED": 178
+    }
+   },
+   "repair_events": {
+    "truck/ALLIED": 132,
+    "toe/AXIS": 17,
+    "truck/AXIS": 155,
+    "toe/ALLIED": 174
+   },
+   "repair_toe_by_turn_bucket": {
+    "-19-0": {
+     "AXIS": 1
+    },
+    "1-20": {
+     "ALLIED": 12,
+     "AXIS": 4
+    },
+    "101-120": {
+     "ALLIED": 39,
+     "AXIS": 1
+    },
+    "21-40": {
+     "AXIS": 6,
+     "ALLIED": 22
+    },
+    "41-60": {
+     "ALLIED": 50,
+     "AXIS": 1
+    },
+    "61-80": {
+     "ALLIED": 28,
+     "AXIS": 2
+    },
+    "81-100": {
+     "ALLIED": 27,
+     "AXIS": 2
+    }
+   },
+   "paths": {
+    "facility/truck": {
+     "calls": 0,
+     "funded": 0,
+     "points": 0,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 0,
+     "offered_unfunded": 0,
+     "points_by_side": {},
+     "calls_by_side": {},
+     "offered_by_side": {},
+     "points_by_hex_r": {}
+    },
+    "facility/unit": {
+     "calls": 0,
+     "funded": 0,
+     "points": 0,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 0,
+     "offered_unfunded": 0,
+     "points_by_side": {},
+     "calls_by_side": {},
+     "offered_by_side": {},
+     "points_by_hex_r": {}
+    },
+    "field/truck": {
+     "calls": 788,
+     "funded": 788,
+     "points": 394,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 19412,
+     "offered_unfunded": 0,
+     "points_by_side": {
+      "ALLIED": 174,
+      "AXIS": 220
+     },
+     "calls_by_side": {
+      "ALLIED": 334,
+      "AXIS": 454
+     },
+     "offered_by_side": {
+      "ALLIED": 10912,
+      "AXIS": 8500
+     },
+     "points_by_hex_r": {
+      "19": 3,
+      "20": 132,
+      "21": 5,
+      "22": 1,
+      "24": 2,
+      "25": 50,
+      "27": 1,
+      "33": 1,
+      "36": 6,
+      "39": 1,
+      "43": 2,
+      "56": 3,
+      "57": 2,
+      "76": 2,
+      "77": 11,
+      "80": 1,
+      "86": 13,
+      "94": 4,
+      "100": 147,
+      "113": 2,
+      "122": 1,
+      "123": 2,
+      "135": 2
+     }
+    },
+    "field/unit": {
+     "calls": 5090,
+     "funded": 5090,
+     "points": 195,
+     "fuel": 793,
+     "stores": 0,
+     "offered": 13747,
+     "offered_unfunded": 0,
+     "points_by_side": {
+      "AXIS": 17,
+      "ALLIED": 178
+     },
+     "calls_by_side": {
+      "AXIS": 2772,
+      "ALLIED": 2318
+     },
+     "offered_by_side": {
+      "AXIS": 6352,
+      "ALLIED": 7395
+     },
+     "points_by_hex_r": {
+      "22": 5,
+      "23": 2,
+      "24": 2,
+      "53": 2,
+      "56": 1,
+      "61": 4,
+      "65": 10,
+      "66": 1,
+      "67": 1,
+      "68": 1,
+      "69": 2,
+      "73": 6,
+      "76": 6,
+      "78": 1,
+      "80": 1,
+      "81": 5,
+      "83": 20,
+      "86": 6,
+      "88": 6,
+      "89": 2,
+      "93": 2,
+      "94": 2,
+      "100": 7,
+      "106": 5,
+      "107": 1,
+      "108": 2,
+      "109": 5,
+      "110": 5,
+      "113": 1,
+      "114": 1,
+      "117": 5,
+      "119": 1,
+      "120": 3,
+      "121": 3,
+      "122": 3,
+      "123": 3,
+      "125": 4,
+      "127": 9,
+      "129": 1,
+      "130": 10,
+      "131": 6,
+      "132": 8,
+      "133": 5,
+      "135": 2,
+      "136": 5,
+      "139": 8,
+      "141": 1,
+      "142": 3
+     }
+    }
+   },
+   "front_reach_units": {},
+   "front_reach_trucks": {},
+   "facility_unit_rows": [],
+   "victory_total_axis": 532.0,
+   "victory_total_cw": 20.0,
+   "geographic_64_73": {
+    "AXIS": 440,
+    "ALLIED": 20
+   },
+   "nongeographic": {
+    "AXIS": 92.0,
+    "ALLIED": 0.0
+   },
+   "cities_held_at_end": {
+    "AXIS": [
+     "Bardia",
+     "Benghazi",
+     "Derna",
+     "Giarabub",
+     "Sollum",
+     "Tobruk"
+    ],
+    "ALLIED": [
+     "Mersa Matruh",
+     "Sidi Barrani"
+    ]
+   },
+   "sanity_absurd": [],
+   "biggest_single_repair": {
+    "truck": 2,
+    "toe": 2
+   },
+   "axis_units_alive": 178,
+   "cw_units_alive": 247
+  },
+  {
+   "seed": 1,
+   "arm": "facility_off",
+   "max_turns": null,
+   "seconds": 429.4,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 911-20 Victory Points (64.76)",
+   "events": 275159,
+   "signature": "6f795304676fa6fe32217023d0050f05",
+   "signature8": "cd37930b605bb881",
+   "neuter": {
+    "calls": 667,
+    "hexes_seen": 8,
+    "hexes_returned": 0
+   },
+   "major_facility_hexes": [],
+   "broken_points": {
+    "toe": {
+     "AXIS": 52,
+     "ALLIED": 267
+    },
+    "truck": {
+     "AXIS": 278,
+     "ALLIED": 238
+    }
+   },
+   "repaired_points": {
+    "toe": {
+     "AXIS": 20,
+     "ALLIED": 208
+    },
+    "truck": {
+     "ALLIED": 229,
+     "AXIS": 216
+    }
+   },
+   "repair_events": {
+    "toe/AXIS": 20,
+    "truck/ALLIED": 172,
+    "truck/AXIS": 149,
+    "toe/ALLIED": 204
+   },
+   "repair_toe_by_turn_bucket": {
+    "-19-0": {
+     "AXIS": 2
+    },
+    "1-20": {
+     "ALLIED": 11
+    },
+    "101-120": {
+     "ALLIED": 5,
+     "AXIS": 5
+    },
+    "21-40": {
+     "ALLIED": 45,
+     "AXIS": 6
+    },
+    "41-60": {
+     "ALLIED": 114,
+     "AXIS": 4
+    },
+    "61-80": {
+     "ALLIED": 19,
+     "AXIS": 1
+    },
+    "81-100": {
+     "ALLIED": 14,
+     "AXIS": 2
+    }
+   },
+   "paths": {
+    "facility/truck": {
+     "calls": 0,
+     "funded": 0,
+     "points": 0,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 0,
+     "offered_unfunded": 0,
+     "points_by_side": {},
+     "calls_by_side": {},
+     "offered_by_side": {},
+     "points_by_hex_r": {}
+    },
+    "facility/unit": {
+     "calls": 0,
+     "funded": 0,
+     "points": 0,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 0,
+     "offered_unfunded": 0,
+     "points_by_side": {},
+     "calls_by_side": {},
+     "offered_by_side": {},
+     "points_by_hex_r": {}
+    },
+    "field/truck": {
+     "calls": 910,
+     "funded": 910,
+     "points": 445,
+     "fuel": 0,
+     "stores": 0,
+     "offered": 24583,
+     "offered_unfunded": 0,
+     "points_by_side": {
+      "ALLIED": 229,
+      "AXIS": 216
+     },
+     "calls_by_side": {
+      "ALLIED": 544,
+      "AXIS": 366
+     },
+     "offered_by_side": {
+      "ALLIED": 4724,
+      "AXIS": 19859
+     },
+     "points_by_hex_r": {
+      "20": 190,
+      "21": 8,
+      "22": 1,
+      "24": 1,
+      "25": 2,
+      "26": 1,
+      "30": 2,
+      "32": 1,
+      "36": 6,
+      "53": 2,
+      "54": 2,
+      "86": 5,
+      "95": 2,
+      "100": 78,
+      "110": 1,
+      "111": 4,
+      "113": 3,
+      "114": 13,
+      "115": 17,
+      "123": 2,
+      "133": 2,
+      "137": 37,
+      "139": 65
+     }
+    },
+    "field/unit": {
+     "calls": 6376,
+     "funded": 6376,
+     "points": 228,
+     "fuel": 811,
+     "stores": 0,
+     "offered": 14527,
+     "offered_unfunded": 0,
+     "points_by_side": {
+      "AXIS": 20,
+      "ALLIED": 208
+     },
+     "calls_by_side": {
+      "AXIS": 3333,
+      "ALLIED": 3043
+     },
+     "offered_by_side": {
+      "AXIS": 6129,
+      "ALLIED": 8398
+     },
+     "points_by_hex_r": {
+      "22": 4,
+      "23": 1,
+      "24": 1,
+      "53": 6,
+      "54": 1,
+      "74": 1,
+      "76": 2,
+      "77": 8,
+      "80": 9,
+      "81": 11,
+      "84": 1,
+      "86": 1,
+      "87": 2,
+      "88": 12,
+      "89": 1,
+      "91": 1,
+      "95": 14,
+      "97": 3,
+      "101": 1,
+      "106": 2,
+      "107": 1,
+      "108": 1,
+      "109": 1,
+      "111": 2,
+      "112": 1,
+      "113": 15,
+      "114": 5,
+      "115": 3,
+      "116": 1,
+      "117": 3,
+      "118": 4,
+      "119": 7,
+      "120": 5,
+      "121": 4,
+      "123": 5,
+      "124": 2,
+      "125": 2,
+      "126": 1,
+      "127": 9,
+      "128": 3,
+      "129": 2,
+      "130": 6,
+      "131": 2,
+      "132": 14,
+      "133": 2,
+      "134": 2,
+      "135": 2,
+      "136": 10,
+      "138": 8,
+      "139": 18,
+      "140": 1,
+      "141": 2,
+      "142": 2
+     }
+    }
+   },
+   "front_reach_units": {},
+   "front_reach_trucks": {},
+   "facility_unit_rows": [],
+   "victory_total_axis": 911.0,
+   "victory_total_cw": 20.0,
+   "geographic_64_73": {
+    "AXIS": 390,
+    "ALLIED": 20
+   },
+   "nongeographic": {
+    "AXIS": 521.0,
+    "ALLIED": 0.0
+   },
+   "cities_held_at_end": {
+    "AXIS": [
+     "Bardia",
+     "Benghazi",
+     "Giarabub",
+     "Tobruk"
+    ],
+    "ALLIED": [
+     "Mersa Matruh",
+     "Sidi Barrani"
+    ]
+   },
+   "sanity_absurd": [],
+   "biggest_single_repair": {
+    "toe": 2,
+    "truck": 2
+   },
+   "axis_units_alive": 191,
+   "cw_units_alive": 277
+  }
+ ]
+}
