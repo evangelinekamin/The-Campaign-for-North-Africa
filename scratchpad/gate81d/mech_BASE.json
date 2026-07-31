@@ -1,0 +1,724 @@
+{
+ "seeds": [
+  1941,
+  7,
+  4,
+  24,
+  2026,
+  99,
+  1
+ ],
+ "max_turns": null,
+ "results": [
+  {
+   "seed": 1941,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 1079-30 Victory Points (64.76)",
+   "replacement_spend_by_pool": {
+    "ALLIED/gun": 1,
+    "ALLIED/infantry": 1645,
+    "ALLIED/tank": 2,
+    "AXIS/gun": 6,
+    "AXIS/infantry": 911,
+    "AXIS/tank": 10
+   },
+   "rebuilds_by_pool": {
+    "ALLIED/gun": 1,
+    "ALLIED/infantry": 812,
+    "ALLIED/tank": 2,
+    "AXIS/gun": 4,
+    "AXIS/infantry": 245,
+    "AXIS/tank": 6
+   },
+   "unused_replacement_vp_64_74": {
+    "AXIS": 689,
+    "ALLIED": 0
+   },
+   "steps_lost_by_side": {
+    "ALLIED": 2308,
+    "AXIS": 1814
+   },
+   "axis_combat_counters_alive": 112,
+   "cw_combat_counters_alive": 184,
+   "axis_combat_counters_at_setup": 264,
+   "cw_combat_counters_at_setup": 329,
+   "the_five_reroled_counters": [
+    {
+     "id": "IT-64---Cat-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      25,
+      67
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-204---4CCNN-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      24,
+      68
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-63-Cir-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      22,
+      75
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-62-Marm-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      24,
+      72
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-1-Libyan",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      22,
+      75
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    }
+   ],
+   "never_moved_by_role": {
+    "ALLIED/combat": 17,
+    "ALLIED/hq": 50,
+    "ALLIED/hq_engineer": 10,
+    "ALLIED/non_combat": 15,
+    "AXIS/combat": 50,
+    "AXIS/hq": 8,
+    "AXIS/non_combat": 54
+   }
+  },
+  {
+   "seed": 7,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 938-80 Victory Points (64.76)",
+   "replacement_spend_by_pool": {
+    "ALLIED/infantry": 1610,
+    "ALLIED/tank": 5,
+    "AXIS/infantry": 952,
+    "AXIS/tank": 4
+   },
+   "rebuilds_by_pool": {
+    "ALLIED/infantry": 862,
+    "ALLIED/tank": 3,
+    "AXIS/infantry": 246,
+    "AXIS/tank": 3
+   },
+   "unused_replacement_vp_64_74": {
+    "AXIS": 648,
+    "ALLIED": 0
+   },
+   "steps_lost_by_side": {
+    "ALLIED": 2221,
+    "AXIS": 1800
+   },
+   "axis_combat_counters_alive": 117,
+   "cw_combat_counters_alive": 205,
+   "axis_combat_counters_at_setup": 264,
+   "cw_combat_counters_at_setup": 329,
+   "the_five_reroled_counters": [
+    {
+     "id": "IT-64---Cat-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      25,
+      67
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-204---4CCNN-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      24,
+      68
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-63-Cir-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      22,
+      75
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-62-Marm-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      24,
+      72
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-1-Libyan",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      22,
+      75
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    }
+   ],
+   "never_moved_by_role": {
+    "ALLIED/combat": 10,
+    "ALLIED/hq": 50,
+    "ALLIED/hq_engineer": 10,
+    "ALLIED/non_combat": 15,
+    "AXIS/combat": 51,
+    "AXIS/hq": 8,
+    "AXIS/non_combat": 54
+   }
+  },
+  {
+   "seed": 4,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 955-30 Victory Points (64.76)",
+   "replacement_spend_by_pool": {
+    "ALLIED/gun": 1,
+    "ALLIED/infantry": 1667,
+    "ALLIED/tank": 5,
+    "AXIS/gun": 1,
+    "AXIS/infantry": 1035
+   },
+   "rebuilds_by_pool": {
+    "ALLIED/gun": 1,
+    "ALLIED/infantry": 1072,
+    "ALLIED/tank": 3,
+    "AXIS/gun": 1,
+    "AXIS/infantry": 257
+   },
+   "unused_replacement_vp_64_74": {
+    "AXIS": 565,
+    "ALLIED": 0
+   },
+   "steps_lost_by_side": {
+    "ALLIED": 2091,
+    "AXIS": 1930
+   },
+   "axis_combat_counters_alive": 110,
+   "cw_combat_counters_alive": 242,
+   "axis_combat_counters_at_setup": 264,
+   "cw_combat_counters_at_setup": 329,
+   "the_five_reroled_counters": [
+    {
+     "id": "IT-64---Cat-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      25,
+      67
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-204---4CCNN-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      24,
+      68
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-63-Cir-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": false,
+     "hex_at_setup": [
+      22,
+      75
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-62-Marm-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      24,
+      72
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-1-Libyan",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      22,
+      75
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    }
+   ],
+   "never_moved_by_role": {
+    "ALLIED/combat": 12,
+    "ALLIED/hq": 50,
+    "ALLIED/hq_engineer": 10,
+    "ALLIED/non_combat": 15,
+    "AXIS/combat": 48,
+    "AXIS/hq": 8,
+    "AXIS/non_combat": 54
+   }
+  },
+  {
+   "seed": 24,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 1235-30 Victory Points (64.76)",
+   "replacement_spend_by_pool": {
+    "ALLIED/infantry": 1654,
+    "ALLIED/tank": 3,
+    "AXIS/gun": 2,
+    "AXIS/infantry": 755,
+    "AXIS/tank": 40
+   },
+   "rebuilds_by_pool": {
+    "ALLIED/infantry": 931,
+    "ALLIED/tank": 2,
+    "AXIS/gun": 2,
+    "AXIS/infantry": 214,
+    "AXIS/tank": 14
+   },
+   "unused_replacement_vp_64_74": {
+    "AXIS": 845,
+    "ALLIED": 0
+   },
+   "steps_lost_by_side": {
+    "ALLIED": 2119,
+    "AXIS": 1671
+   },
+   "axis_combat_counters_alive": 112,
+   "cw_combat_counters_alive": 226,
+   "axis_combat_counters_at_setup": 264,
+   "cw_combat_counters_at_setup": 329,
+   "the_five_reroled_counters": [
+    {
+     "id": "IT-64---Cat-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      25,
+      67
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-204---4CCNN-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      24,
+      68
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-63-Cir-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      22,
+      75
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-62-Marm-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      24,
+      72
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-1-Libyan",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      22,
+      75
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    }
+   ],
+   "never_moved_by_role": {
+    "ALLIED/combat": 11,
+    "ALLIED/hq": 50,
+    "ALLIED/hq_engineer": 10,
+    "ALLIED/non_combat": 15,
+    "AXIS/combat": 53,
+    "AXIS/hq": 8,
+    "AXIS/non_combat": 54
+   }
+  },
+  {
+   "seed": 2026,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 603-20 Victory Points (64.76)",
+   "replacement_spend_by_pool": {
+    "ALLIED/infantry": 1661,
+    "ALLIED/tank": 1,
+    "AXIS/gun": 3,
+    "AXIS/infantry": 1412,
+    "AXIS/tank": 13
+   },
+   "rebuilds_by_pool": {
+    "ALLIED/infantry": 848,
+    "ALLIED/tank": 1,
+    "AXIS/gun": 2,
+    "AXIS/infantry": 344,
+    "AXIS/tank": 6
+   },
+   "unused_replacement_vp_64_74": {
+    "AXIS": 188,
+    "ALLIED": 0
+   },
+   "steps_lost_by_side": {
+    "ALLIED": 2329,
+    "AXIS": 2275
+   },
+   "axis_combat_counters_alive": 118,
+   "cw_combat_counters_alive": 180,
+   "axis_combat_counters_at_setup": 264,
+   "cw_combat_counters_at_setup": 329,
+   "the_five_reroled_counters": [
+    {
+     "id": "IT-64---Cat-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      25,
+      67
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-204---4CCNN-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      24,
+      68
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-63-Cir-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": false,
+     "hex_at_setup": [
+      22,
+      75
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-62-Marm-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      24,
+      72
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-1-Libyan",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      22,
+      75
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    }
+   ],
+   "never_moved_by_role": {
+    "ALLIED/combat": 9,
+    "ALLIED/hq": 50,
+    "ALLIED/hq_engineer": 10,
+    "ALLIED/non_combat": 15,
+    "AXIS/combat": 51,
+    "AXIS/hq": 8,
+    "AXIS/non_combat": 54
+   }
+  },
+  {
+   "seed": 99,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 772-20 Victory Points (64.76)",
+   "replacement_spend_by_pool": {
+    "ALLIED/infantry": 1626,
+    "ALLIED/tank": 2,
+    "AXIS/gun": 5,
+    "AXIS/infantry": 1118,
+    "AXIS/tank": 28
+   },
+   "rebuilds_by_pool": {
+    "ALLIED/infantry": 711,
+    "ALLIED/tank": 1,
+    "AXIS/gun": 3,
+    "AXIS/infantry": 275,
+    "AXIS/tank": 14
+   },
+   "unused_replacement_vp_64_74": {
+    "AXIS": 482,
+    "ALLIED": 0
+   },
+   "steps_lost_by_side": {
+    "ALLIED": 2370,
+    "AXIS": 2007
+   },
+   "axis_combat_counters_alive": 115,
+   "cw_combat_counters_alive": 178,
+   "axis_combat_counters_at_setup": 264,
+   "cw_combat_counters_at_setup": 329,
+   "the_five_reroled_counters": [
+    {
+     "id": "IT-64---Cat-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      25,
+      67
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-204---4CCNN-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      24,
+      68
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-63-Cir-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": false,
+     "hex_at_setup": [
+      22,
+      75
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-62-Marm-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      24,
+      72
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-1-Libyan",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      22,
+      75
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    }
+   ],
+   "never_moved_by_role": {
+    "ALLIED/combat": 18,
+    "ALLIED/hq": 50,
+    "ALLIED/hq_engineer": 10,
+    "ALLIED/non_combat": 15,
+    "AXIS/combat": 51,
+    "AXIS/hq": 8,
+    "AXIS/non_combat": 54
+   }
+  },
+  {
+   "seed": 1,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 1437-30 Victory Points (64.76)",
+   "replacement_spend_by_pool": {
+    "ALLIED/infantry": 1496,
+    "AXIS/infantry": 553,
+    "AXIS/tank": 7
+   },
+   "rebuilds_by_pool": {
+    "ALLIED/infantry": 718,
+    "AXIS/infantry": 165,
+    "AXIS/tank": 3
+   },
+   "unused_replacement_vp_64_74": {
+    "AXIS": 1047,
+    "ALLIED": 0
+   },
+   "steps_lost_by_side": {
+    "ALLIED": 2129,
+    "AXIS": 1410
+   },
+   "axis_combat_counters_alive": 117,
+   "cw_combat_counters_alive": 195,
+   "axis_combat_counters_at_setup": 264,
+   "cw_combat_counters_at_setup": 329,
+   "the_five_reroled_counters": [
+    {
+     "id": "IT-64---Cat-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      25,
+      67
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-204---4CCNN-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      24,
+      68
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-63-Cir-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": false,
+     "hex_at_setup": [
+      22,
+      75
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-62-Marm-(ENG)",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      24,
+      72
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    },
+    {
+     "id": "IT-1-Libyan",
+     "is_combat": true,
+     "engineer": "",
+     "moved_at_least_once": true,
+     "hex_at_setup": [
+      22,
+      75
+     ],
+     "hex_at_end": null,
+     "strength_at_end": 0
+    }
+   ],
+   "never_moved_by_role": {
+    "ALLIED/combat": 13,
+    "ALLIED/hq": 50,
+    "ALLIED/hq_engineer": 10,
+    "ALLIED/non_combat": 15,
+    "AXIS/combat": 54,
+    "AXIS/hq": 8,
+    "AXIS/non_combat": 54
+   }
+  }
+ ]
+}

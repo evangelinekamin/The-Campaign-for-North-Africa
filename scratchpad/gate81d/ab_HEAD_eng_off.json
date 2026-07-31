@@ -1,0 +1,9306 @@
+{
+ "seeds": [
+  1941,
+  7,
+  4,
+  24,
+  2026,
+  99,
+  1
+ ],
+ "arm": "eng_off",
+ "max_turns": null,
+ "results": [
+  {
+   "seed": 1941,
+   "arm": "eng_off",
+   "max_turns": null,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 1188-20 Victory Points (64.76)",
+   "events": 263317,
+   "signature": "a1717645f4b6e45a8b2590eac793d3c7",
+   "signature8": "8e15fcbf9c454114",
+   "neuter": {
+    "calls": 7,
+    "records_seen": 219,
+    "targets_seen": 4,
+    "targets_rewritten": 4
+   },
+   "unit_attached": {
+    "AXIS": 19
+   },
+   "unit_attached_by_parent": {
+    "AXIS/IT-115---62-Marm": 3,
+    "AXIS/IT-116---62-Marm": 3,
+    "AXIS/IT-157---63-Cir": 3,
+    "AXIS/IT-158---63-Cir": 3,
+    "AXIS/IT-270Lgn---4-CCNN": 1,
+    "AXIS/IT-4-Libyan---2-Libyan": 1,
+    "AXIS/IT-Aresca---LTC": 2,
+    "AXIS/IT-Trvli---LTC": 3
+   },
+   "unit_attached_assignment": {
+    "assigned": 19
+   },
+   "unit_detached": {
+    "AXIS": 2
+   },
+   "order_rejected": {
+    "ALLIED/attack": 24,
+    "ALLIED/move": 4440,
+    "ALLIED/truck_convoy": 1906,
+    "AXIS/attack": 26,
+    "AXIS/construction": 1,
+    "AXIS/move": 957,
+    "AXIS/truck_convoy": 553
+   },
+   "org_size_15_53": {
+    "favoured_AXIS": 7,
+    "recorded_total": 7,
+    "shifting_total": 7
+   },
+   "org_size_tiers": {
+    "atk1/def2": 2,
+    "atk2/def0": 4,
+    "atk2/def1": 1
+   },
+   "city_change_points": {
+    "Mersa Matruh": [
+     [
+      0,
+      "ALLIED"
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      5,
+      "ALLIED"
+     ]
+    ],
+    "Sidi Barrani": [
+     [
+      0,
+      "ALLIED"
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      104,
+      "ALLIED"
+     ]
+    ],
+    "Siwa": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Jalo": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Giarabub": [
+     [
+      0,
+      "AXIS"
+     ]
+    ],
+    "Bardia": [
+     [
+      0,
+      "AXIS"
+     ],
+     [
+      80,
+      null
+     ],
+     [
+      81,
+      "AXIS"
+     ]
+    ],
+    "Sollum": [
+     [
+      0,
+      null
+     ],
+     [
+      2,
+      "AXIS"
+     ],
+     [
+      86,
+      null
+     ],
+     [
+      87,
+      "AXIS"
+     ],
+     [
+      109,
+      null
+     ],
+     [
+      110,
+      "AXIS"
+     ],
+     [
+      111,
+      "ALLIED"
+     ],
+     [
+      111,
+      "AXIS"
+     ]
+    ],
+    "Tobruk": [
+     [
+      0,
+      "AXIS"
+     ]
+    ],
+    "Derna": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Benghazi": [
+     [
+      0,
+      "AXIS"
+     ]
+    ]
+   },
+   "banked": {
+    "GT30": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh"
+     ]
+    },
+    "GT60": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh"
+     ]
+    },
+    "GT90": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh"
+     ]
+    },
+    "final": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh",
+      "Sidi Barrani"
+     ]
+    }
+   },
+   "axis_ground_high_water_r": 133,
+   "axis_ground_high_water_turn": 6,
+   "axis_ground_high_water_per_turn": {
+    "0": 92,
+    "2": 99,
+    "3": 108,
+    "4": 118,
+    "5": 130,
+    "6": 133,
+    "10": 23,
+    "11": 133,
+    "12": 14,
+    "13": 21,
+    "14": 21,
+    "15": 14,
+    "16": 21,
+    "18": 8,
+    "20": 22,
+    "21": 53,
+    "22": 24,
+    "23": 24,
+    "24": 21,
+    "25": 21,
+    "26": 27,
+    "27": 39,
+    "28": 37,
+    "29": 33,
+    "30": 33,
+    "31": 33,
+    "32": 37,
+    "33": 33,
+    "34": 33,
+    "35": 33,
+    "36": 6,
+    "37": 7,
+    "39": 33,
+    "40": 6,
+    "43": 22,
+    "45": 6,
+    "49": 2,
+    "50": 76,
+    "52": 4,
+    "58": 4,
+    "59": 4,
+    "60": 3,
+    "61": 3,
+    "62": 4,
+    "66": 6,
+    "67": 3,
+    "68": 6,
+    "70": 3,
+    "71": 6,
+    "73": 77,
+    "74": 6,
+    "76": 6,
+    "79": 67,
+    "80": 77,
+    "82": 8,
+    "85": 71,
+    "86": 76,
+    "87": 40,
+    "88": 3,
+    "89": 45,
+    "90": 5,
+    "91": 20,
+    "92": 40,
+    "93": 46,
+    "94": 24,
+    "95": 77,
+    "96": 37,
+    "97": 23,
+    "98": 37,
+    "108": 56,
+    "109": 76,
+    "110": 62,
+    "111": 76
+   },
+   "combats_by_side": {
+    "ALLIED": 22,
+    "AXIS": 24
+   },
+   "surrender_combats_by_side": {
+    "ALLIED": 18,
+    "AXIS": 16
+   },
+   "axis_combat_units_alive": 97,
+   "cw_combat_units_alive": 184,
+   "axis_east_at_end": 85,
+   "cw_west_at_end": 84,
+   "units_that_never_moved": 209,
+   "units_on_map_at_setup_that_never_moved": 77,
+   "units_the_war_contains": 745,
+   "hq_fate": [
+    {
+     "id": "136-GGFF-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -3
+     ]
+    },
+    {
+     "id": "288-Son-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "Ariete-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -9
+     ]
+    },
+    {
+     "id": "Folgore-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -10
+     ]
+    },
+    {
+     "id": "HQ-1-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      139
+     ]
+    },
+    {
+     "id": "HQ-1-Free-French-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      140
+     ]
+    },
+    {
+     "id": "HQ-1-Greek-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      141
+     ]
+    },
+    {
+     "id": "HQ-1-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-1-SA-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-10-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-10-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-10-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-10-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-11-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      140
+     ]
+    },
+    {
+     "id": "HQ-131-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      138
+     ]
+    },
+    {
+     "id": "HQ-14-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-14-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-15-Panzer-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -8
+     ]
+    },
+    {
+     "id": "HQ-150-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-150-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-151-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-152-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-153-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-154-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-16-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-161-In-Motor-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      141
+     ]
+    },
+    {
+     "id": "HQ-164-Light-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      -9
+     ]
+    },
+    {
+     "id": "HQ-18-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-18-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      139
+     ]
+    },
+    {
+     "id": "HQ-19-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-2-Armd-Bde-[1]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      139
+     ]
+    },
+    {
+     "id": "HQ-2-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-2-Free-French-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      141
+     ]
+    },
+    {
+     "id": "HQ-2-NZ-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      26,
+      132
+     ]
+    },
+    {
+     "id": "HQ-2-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-2-SA-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      141
+     ]
+    },
+    {
+     "id": "HQ-20-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-20-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-21-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-22-Armd-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-22-Guards-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-23-Inf-Bde-[70]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-24-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-25-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-26-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-29-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-3-In-Motor-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-3-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      141
+     ]
+    },
+    {
+     "id": "HQ-4-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      26,
+      101
+     ]
+    },
+    {
+     "id": "HQ-4-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      137
+     ]
+    },
+    {
+     "id": "HQ-44-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      138
+     ]
+    },
+    {
+     "id": "HQ-5-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      140
+     ]
+    },
+    {
+     "id": "HQ-5-In-Div-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-5-Le-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "HQ-5-NZ-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      139
+     ]
+    },
+    {
+     "id": "HQ-5-Pz-Regt",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -6
+     ]
+    },
+    {
+     "id": "HQ-5-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-50-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-51-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-6-Aus-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      48,
+      138
+     ]
+    },
+    {
+     "id": "HQ-6-NZ-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-6-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      137
+     ]
+    },
+    {
+     "id": "HQ-69-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-7-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-7-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-7-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-70-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-8-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      138
+     ]
+    },
+    {
+     "id": "HQ-8-Pz-Regt",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -5
+     ]
+    },
+    {
+     "id": "HQ-9-Aus-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-9-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-9-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-90-Light-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -8
+     ]
+    },
+    {
+     "id": "HQ-Armd-Bde-[2-Armd]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-Polish-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-Ramcke-Bde",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "IT-1-Libyan",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "IT-2-Libyan-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "IT-30-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      19,
+      77
+     ]
+    },
+    {
+     "id": "IT-31-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      14,
+      66
+     ]
+    },
+    {
+     "id": "IT-32-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      14,
+      66
+     ]
+    },
+    {
+     "id": "Littorio-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      -2
+     ]
+    },
+    {
+     "id": "RECAM-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -9
+     ]
+    }
+   ]
+  },
+  {
+   "seed": 7,
+   "arm": "eng_off",
+   "max_turns": null,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 333-30 Victory Points (64.76)",
+   "events": 285488,
+   "signature": "485ca321aeb58b95468a3c3f50f95cf2",
+   "signature8": "d1504afaa1b2fbf0",
+   "neuter": {
+    "calls": 7,
+    "records_seen": 219,
+    "targets_seen": 4,
+    "targets_rewritten": 4
+   },
+   "unit_attached": {
+    "AXIS": 20
+   },
+   "unit_attached_by_parent": {
+    "AXIS/IT-115---62-Marm": 3,
+    "AXIS/IT-116---62-Marm": 3,
+    "AXIS/IT-142---64-Cat": 1,
+    "AXIS/IT-157---63-Cir": 3,
+    "AXIS/IT-158---63-Cir": 3,
+    "AXIS/IT-240Lgn---4-CCNN": 1,
+    "AXIS/IT-270Lgn---4-CCNN": 1,
+    "AXIS/IT-Aresca---LTC": 1,
+    "AXIS/IT-Trvli---LTC": 4
+   },
+   "unit_attached_assignment": {
+    "assigned": 20
+   },
+   "unit_detached": {
+    "AXIS": 4
+   },
+   "order_rejected": {
+    "ALLIED/attack": 51,
+    "ALLIED/move": 4468,
+    "ALLIED/retreat_before_assault": 4,
+    "ALLIED/truck_convoy": 1868,
+    "AXIS/attack": 24,
+    "AXIS/construction": 1,
+    "AXIS/move": 846,
+    "AXIS/truck_convoy": 523
+   },
+   "org_size_15_53": {
+    "favoured_AXIS": 6,
+    "recorded_total": 6,
+    "shifting_total": 6
+   },
+   "org_size_tiers": {
+    "atk1/def2": 3,
+    "atk2/def0": 1,
+    "atk2/def1": 2
+   },
+   "city_change_points": {
+    "Mersa Matruh": [
+     [
+      0,
+      "ALLIED"
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      34,
+      "ALLIED"
+     ]
+    ],
+    "Sidi Barrani": [
+     [
+      0,
+      "ALLIED"
+     ],
+     [
+      3,
+      "AXIS"
+     ],
+     [
+      59,
+      null
+     ],
+     [
+      94,
+      "ALLIED"
+     ],
+     [
+      95,
+      null
+     ],
+     [
+      104,
+      "ALLIED"
+     ],
+     [
+      105,
+      null
+     ],
+     [
+      108,
+      "ALLIED"
+     ]
+    ],
+    "Siwa": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Jalo": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Giarabub": [
+     [
+      0,
+      "AXIS"
+     ]
+    ],
+    "Bardia": [
+     [
+      0,
+      "AXIS"
+     ],
+     [
+      95,
+      null
+     ],
+     [
+      105,
+      "ALLIED"
+     ],
+     [
+      107,
+      null
+     ]
+    ],
+    "Sollum": [
+     [
+      0,
+      null
+     ],
+     [
+      2,
+      "AXIS"
+     ],
+     [
+      64,
+      null
+     ],
+     [
+      65,
+      "AXIS"
+     ],
+     [
+      73,
+      null
+     ],
+     [
+      74,
+      "AXIS"
+     ],
+     [
+      81,
+      null
+     ],
+     [
+      82,
+      "AXIS"
+     ],
+     [
+      84,
+      null
+     ],
+     [
+      95,
+      "ALLIED"
+     ],
+     [
+      96,
+      null
+     ],
+     [
+      103,
+      "ALLIED"
+     ]
+    ],
+    "Tobruk": [
+     [
+      0,
+      "AXIS"
+     ]
+    ],
+    "Derna": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Benghazi": [
+     [
+      0,
+      "AXIS"
+     ]
+    ]
+   },
+   "banked": {
+    "GT30": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sidi Barrani",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": []
+    },
+    "GT60": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh"
+     ]
+    },
+    "GT90": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh"
+     ]
+    },
+    "final": {
+     "AXIS": [
+      "Benghazi",
+      "Giarabub",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh",
+      "Sidi Barrani",
+      "Sollum"
+     ]
+    }
+   },
+   "axis_ground_high_water_r": 133,
+   "axis_ground_high_water_turn": 6,
+   "axis_ground_high_water_per_turn": {
+    "0": 92,
+    "2": 99,
+    "3": 112,
+    "4": 123,
+    "5": 130,
+    "6": 133,
+    "10": 23,
+    "11": 21,
+    "12": 14,
+    "13": 21,
+    "14": 21,
+    "15": 14,
+    "16": 21,
+    "18": 8,
+    "19": 22,
+    "21": 53,
+    "22": 24,
+    "23": 76,
+    "24": 21,
+    "25": 21,
+    "27": 20,
+    "28": 23,
+    "29": 20,
+    "30": 27,
+    "31": 17,
+    "32": 9,
+    "33": 20,
+    "34": 37,
+    "35": 33,
+    "36": 6,
+    "37": 7,
+    "39": 33,
+    "40": 6,
+    "43": 22,
+    "45": 6,
+    "48": 54,
+    "49": 2,
+    "50": 6,
+    "52": 4,
+    "58": 4,
+    "59": 4,
+    "60": 3,
+    "61": 3,
+    "62": 5,
+    "64": 76,
+    "65": 76,
+    "66": 6,
+    "67": 3,
+    "68": 6,
+    "69": 76,
+    "70": 3,
+    "71": 6,
+    "73": 76,
+    "74": 6,
+    "76": 6,
+    "80": 77,
+    "82": 8,
+    "84": 77,
+    "85": 77,
+    "86": 74,
+    "87": 74,
+    "88": 74,
+    "89": 74,
+    "90": 74,
+    "91": 74,
+    "92": 74,
+    "93": 74,
+    "94": 75,
+    "95": 8,
+    "96": 77,
+    "97": 77,
+    "98": 77,
+    "99": 77,
+    "100": 77,
+    "101": 77,
+    "102": 77,
+    "103": 77,
+    "104": 77,
+    "108": 15,
+    "109": 30,
+    "110": 37
+   },
+   "combats_by_side": {
+    "ALLIED": 39,
+    "AXIS": 32
+   },
+   "surrender_combats_by_side": {
+    "ALLIED": 16,
+    "AXIS": 23
+   },
+   "axis_combat_units_alive": 90,
+   "cw_combat_units_alive": 201,
+   "axis_east_at_end": 66,
+   "cw_west_at_end": 62,
+   "units_that_never_moved": 215,
+   "units_on_map_at_setup_that_never_moved": 83,
+   "units_the_war_contains": 745,
+   "hq_fate": [
+    {
+     "id": "136-GGFF-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -3
+     ]
+    },
+    {
+     "id": "288-Son-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "Ariete-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -9
+     ]
+    },
+    {
+     "id": "Folgore-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -10
+     ]
+    },
+    {
+     "id": "HQ-1-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      139
+     ]
+    },
+    {
+     "id": "HQ-1-Free-French-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      140
+     ]
+    },
+    {
+     "id": "HQ-1-Greek-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      141
+     ]
+    },
+    {
+     "id": "HQ-1-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-1-SA-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-10-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-10-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-10-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-10-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-11-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      140
+     ]
+    },
+    {
+     "id": "HQ-131-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      138
+     ]
+    },
+    {
+     "id": "HQ-14-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-14-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-15-Panzer-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -8
+     ]
+    },
+    {
+     "id": "HQ-150-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-150-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-151-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-152-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-153-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-154-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-16-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-161-In-Motor-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      141
+     ]
+    },
+    {
+     "id": "HQ-164-Light-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      -9
+     ]
+    },
+    {
+     "id": "HQ-18-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-18-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      139
+     ]
+    },
+    {
+     "id": "HQ-19-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-2-Armd-Bde-[1]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      139
+     ]
+    },
+    {
+     "id": "HQ-2-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-2-Free-French-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      141
+     ]
+    },
+    {
+     "id": "HQ-2-NZ-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      26,
+      132
+     ]
+    },
+    {
+     "id": "HQ-2-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-2-SA-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      141
+     ]
+    },
+    {
+     "id": "HQ-20-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-20-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-21-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-22-Armd-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-22-Guards-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-23-Inf-Bde-[70]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-24-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-25-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-26-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-29-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-3-In-Motor-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-3-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      141
+     ]
+    },
+    {
+     "id": "HQ-4-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      26,
+      101
+     ]
+    },
+    {
+     "id": "HQ-4-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      137
+     ]
+    },
+    {
+     "id": "HQ-44-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      138
+     ]
+    },
+    {
+     "id": "HQ-5-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      140
+     ]
+    },
+    {
+     "id": "HQ-5-In-Div-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-5-Le-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "HQ-5-NZ-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      139
+     ]
+    },
+    {
+     "id": "HQ-5-Pz-Regt",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -6
+     ]
+    },
+    {
+     "id": "HQ-5-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-50-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-51-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-6-Aus-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      48,
+      138
+     ]
+    },
+    {
+     "id": "HQ-6-NZ-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-6-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      137
+     ]
+    },
+    {
+     "id": "HQ-69-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-7-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-7-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-7-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-70-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-8-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      138
+     ]
+    },
+    {
+     "id": "HQ-8-Pz-Regt",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -5
+     ]
+    },
+    {
+     "id": "HQ-9-Aus-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-9-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-9-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-90-Light-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -8
+     ]
+    },
+    {
+     "id": "HQ-Armd-Bde-[2-Armd]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-Polish-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-Ramcke-Bde",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "IT-1-Libyan",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "IT-2-Libyan-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "IT-30-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "IT-31-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      14,
+      66
+     ]
+    },
+    {
+     "id": "IT-32-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      14,
+      66
+     ]
+    },
+    {
+     "id": "Littorio-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      -2
+     ]
+    },
+    {
+     "id": "RECAM-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -9
+     ]
+    }
+   ]
+  },
+  {
+   "seed": 4,
+   "arm": "eng_off",
+   "max_turns": null,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 886-30 Victory Points (64.76)",
+   "events": 278556,
+   "signature": "579bfa73601ea2f9cd01d31eb39f67dc",
+   "signature8": "5e345fb5064f79de",
+   "neuter": {
+    "calls": 7,
+    "records_seen": 219,
+    "targets_seen": 4,
+    "targets_rewritten": 4
+   },
+   "unit_attached": {
+    "AXIS": 20
+   },
+   "unit_attached_by_parent": {
+    "AXIS/IT-115---62-Marm": 3,
+    "AXIS/IT-116---62-Marm": 3,
+    "AXIS/IT-142---64-Cat": 1,
+    "AXIS/IT-157---63-Cir": 3,
+    "AXIS/IT-158---63-Cir": 3,
+    "AXIS/IT-240Lgn---4-CCNN": 1,
+    "AXIS/IT-270Lgn---4-CCNN": 1,
+    "AXIS/IT-4-Libyan---2-Libyan": 1,
+    "AXIS/IT-Aresca---LTC": 1,
+    "AXIS/IT-Trvli---LTC": 3
+   },
+   "unit_attached_assignment": {
+    "assigned": 20
+   },
+   "unit_detached": {
+    "AXIS": 5
+   },
+   "order_rejected": {
+    "ALLIED/attack": 40,
+    "ALLIED/move": 4980,
+    "ALLIED/retreat_before_assault": 2,
+    "ALLIED/truck_convoy": 1805,
+    "AXIS/attack": 55,
+    "AXIS/construction": 1,
+    "AXIS/move": 1455,
+    "AXIS/truck_convoy": 648
+   },
+   "org_size_15_53": {
+    "favoured_AXIS": 6,
+    "recorded_total": 6,
+    "shifting_total": 6
+   },
+   "org_size_tiers": {
+    "atk1/def2": 2,
+    "atk2/def0": 3,
+    "atk2/def1": 1
+   },
+   "city_change_points": {
+    "Mersa Matruh": [
+     [
+      0,
+      "ALLIED"
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      5,
+      "ALLIED"
+     ],
+     [
+      25,
+      null
+     ],
+     [
+      34,
+      "ALLIED"
+     ],
+     [
+      36,
+      null
+     ],
+     [
+      45,
+      "ALLIED"
+     ]
+    ],
+    "Sidi Barrani": [
+     [
+      0,
+      "ALLIED"
+     ]
+    ],
+    "Siwa": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Jalo": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Giarabub": [
+     [
+      0,
+      "AXIS"
+     ]
+    ],
+    "Bardia": [
+     [
+      0,
+      "AXIS"
+     ],
+     [
+      86,
+      null
+     ],
+     [
+      95,
+      "AXIS"
+     ],
+     [
+      109,
+      null
+     ]
+    ],
+    "Sollum": [
+     [
+      0,
+      null
+     ],
+     [
+      2,
+      "AXIS"
+     ],
+     [
+      61,
+      null
+     ],
+     [
+      62,
+      "ALLIED"
+     ],
+     [
+      63,
+      null
+     ],
+     [
+      68,
+      "AXIS"
+     ],
+     [
+      74,
+      null
+     ],
+     [
+      85,
+      "ALLIED"
+     ],
+     [
+      86,
+      null
+     ],
+     [
+      87,
+      "ALLIED"
+     ]
+    ],
+    "Tobruk": [
+     [
+      0,
+      "AXIS"
+     ]
+    ],
+    "Derna": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Benghazi": [
+     [
+      0,
+      "AXIS"
+     ]
+    ]
+   },
+   "banked": {
+    "GT30": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Sidi Barrani"
+     ]
+    },
+    "GT60": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh",
+      "Sidi Barrani"
+     ]
+    },
+    "GT90": {
+     "AXIS": [
+      "Benghazi",
+      "Giarabub",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh",
+      "Sidi Barrani",
+      "Sollum"
+     ]
+    },
+    "final": {
+     "AXIS": [
+      "Benghazi",
+      "Giarabub",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh",
+      "Sidi Barrani",
+      "Sollum"
+     ]
+    }
+   },
+   "axis_ground_high_water_r": 130,
+   "axis_ground_high_water_turn": 5,
+   "axis_ground_high_water_per_turn": {
+    "0": 92,
+    "2": 100,
+    "3": 104,
+    "4": 116,
+    "5": 130,
+    "10": 23,
+    "11": 21,
+    "12": 14,
+    "13": 21,
+    "14": 81,
+    "15": 96,
+    "16": 107,
+    "18": 8,
+    "21": 21,
+    "22": 24,
+    "23": 99,
+    "24": 107,
+    "25": 23,
+    "27": 20,
+    "28": 22,
+    "29": 17,
+    "30": 20,
+    "31": 27,
+    "32": 9,
+    "33": 20,
+    "34": 20,
+    "35": 20,
+    "36": 6,
+    "37": 7,
+    "38": 66,
+    "39": 77,
+    "40": 6,
+    "41": 6,
+    "43": 22,
+    "45": 6,
+    "46": 76,
+    "48": 4,
+    "49": 6,
+    "50": 6,
+    "51": 22,
+    "52": 27,
+    "58": 4,
+    "59": 4,
+    "60": 76,
+    "61": 76,
+    "62": 76,
+    "63": 76,
+    "64": 76,
+    "65": 71,
+    "66": 76,
+    "67": 76,
+    "68": 6,
+    "70": 3,
+    "71": 6,
+    "74": 40,
+    "75": 44,
+    "76": 6,
+    "82": 8,
+    "86": 52,
+    "87": 20,
+    "88": 56,
+    "89": 3,
+    "90": 5,
+    "91": 52,
+    "92": 33,
+    "93": 60,
+    "94": 77,
+    "95": 24,
+    "96": 36,
+    "97": 23,
+    "98": 33,
+    "107": 75,
+    "108": 77
+   },
+   "combats_by_side": {
+    "ALLIED": 51,
+    "AXIS": 28
+   },
+   "surrender_combats_by_side": {
+    "ALLIED": 30,
+    "AXIS": 18
+   },
+   "axis_combat_units_alive": 88,
+   "cw_combat_units_alive": 231,
+   "axis_east_at_end": 77,
+   "cw_west_at_end": 49,
+   "units_that_never_moved": 215,
+   "units_on_map_at_setup_that_never_moved": 82,
+   "units_the_war_contains": 745,
+   "hq_fate": [
+    {
+     "id": "136-GGFF-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -3
+     ]
+    },
+    {
+     "id": "288-Son-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "Ariete-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -9
+     ]
+    },
+    {
+     "id": "Folgore-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -10
+     ]
+    },
+    {
+     "id": "HQ-1-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      139
+     ]
+    },
+    {
+     "id": "HQ-1-Free-French-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      140
+     ]
+    },
+    {
+     "id": "HQ-1-Greek-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      141
+     ]
+    },
+    {
+     "id": "HQ-1-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-1-SA-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-10-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-10-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-10-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-10-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-11-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      140
+     ]
+    },
+    {
+     "id": "HQ-131-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      138
+     ]
+    },
+    {
+     "id": "HQ-14-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-14-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-15-Panzer-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -8
+     ]
+    },
+    {
+     "id": "HQ-150-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-150-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-151-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-152-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-153-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-154-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-16-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-161-In-Motor-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      141
+     ]
+    },
+    {
+     "id": "HQ-164-Light-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      -9
+     ]
+    },
+    {
+     "id": "HQ-18-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-18-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      139
+     ]
+    },
+    {
+     "id": "HQ-19-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-2-Armd-Bde-[1]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      139
+     ]
+    },
+    {
+     "id": "HQ-2-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-2-Free-French-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      141
+     ]
+    },
+    {
+     "id": "HQ-2-NZ-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      26,
+      132
+     ]
+    },
+    {
+     "id": "HQ-2-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-2-SA-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      141
+     ]
+    },
+    {
+     "id": "HQ-20-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-20-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-21-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-22-Armd-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-22-Guards-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-23-Inf-Bde-[70]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-24-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-25-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-26-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-29-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-3-In-Motor-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-3-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      141
+     ]
+    },
+    {
+     "id": "HQ-4-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      26,
+      101
+     ]
+    },
+    {
+     "id": "HQ-4-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      137
+     ]
+    },
+    {
+     "id": "HQ-44-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      138
+     ]
+    },
+    {
+     "id": "HQ-5-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      140
+     ]
+    },
+    {
+     "id": "HQ-5-In-Div-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-5-Le-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "HQ-5-NZ-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      139
+     ]
+    },
+    {
+     "id": "HQ-5-Pz-Regt",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -6
+     ]
+    },
+    {
+     "id": "HQ-5-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-50-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-51-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-6-Aus-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      48,
+      138
+     ]
+    },
+    {
+     "id": "HQ-6-NZ-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-6-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      137
+     ]
+    },
+    {
+     "id": "HQ-69-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-7-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-7-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-7-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-70-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-8-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      138
+     ]
+    },
+    {
+     "id": "HQ-8-Pz-Regt",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -5
+     ]
+    },
+    {
+     "id": "HQ-9-Aus-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-9-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-9-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-90-Light-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -8
+     ]
+    },
+    {
+     "id": "HQ-Armd-Bde-[2-Armd]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-Polish-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-Ramcke-Bde",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "IT-1-Libyan",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "IT-2-Libyan-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      23,
+      75
+     ]
+    },
+    {
+     "id": "IT-30-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      19,
+      77
+     ]
+    },
+    {
+     "id": "IT-31-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      14,
+      66
+     ]
+    },
+    {
+     "id": "IT-32-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      14,
+      66
+     ]
+    },
+    {
+     "id": "Littorio-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      -2
+     ]
+    },
+    {
+     "id": "RECAM-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -9
+     ]
+    }
+   ]
+  },
+  {
+   "seed": 24,
+   "arm": "eng_off",
+   "max_turns": null,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 390-10 Victory Points (64.76)",
+   "events": 277583,
+   "signature": "00f639679e01e43502d5f7626fadfc28",
+   "signature8": "11739f86ac3a328a",
+   "neuter": {
+    "calls": 7,
+    "records_seen": 219,
+    "targets_seen": 4,
+    "targets_rewritten": 4
+   },
+   "unit_attached": {
+    "AXIS": 20
+   },
+   "unit_attached_by_parent": {
+    "AXIS/IT-115---62-Marm": 3,
+    "AXIS/IT-116---62-Marm": 3,
+    "AXIS/IT-142---64-Cat": 1,
+    "AXIS/IT-157---63-Cir": 3,
+    "AXIS/IT-158---63-Cir": 3,
+    "AXIS/IT-240Lgn---4-CCNN": 1,
+    "AXIS/IT-270Lgn---4-CCNN": 1,
+    "AXIS/IT-Aresca---LTC": 1,
+    "AXIS/IT-LTC": 1,
+    "AXIS/IT-Trvli---LTC": 3
+   },
+   "unit_attached_assignment": {
+    "assigned": 20
+   },
+   "unit_detached": {
+    "AXIS": 7
+   },
+   "order_rejected": {
+    "ALLIED/attack": 27,
+    "ALLIED/move": 4195,
+    "ALLIED/truck_convoy": 903,
+    "AXIS/attack": 46,
+    "AXIS/construction": 1,
+    "AXIS/move": 1332,
+    "AXIS/truck_convoy": 919
+   },
+   "org_size_15_53": {
+    "favoured_AXIS": 5,
+    "recorded_total": 5,
+    "shifting_total": 5
+   },
+   "org_size_tiers": {
+    "atk1/def2": 2,
+    "atk2/def0": 1,
+    "atk2/def1": 2
+   },
+   "city_change_points": {
+    "Mersa Matruh": [
+     [
+      0,
+      "ALLIED"
+     ]
+    ],
+    "Sidi Barrani": [
+     [
+      0,
+      "ALLIED"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "AXIS"
+     ],
+     [
+      86,
+      null
+     ],
+     [
+      88,
+      "AXIS"
+     ],
+     [
+      106,
+      null
+     ]
+    ],
+    "Siwa": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Jalo": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Giarabub": [
+     [
+      0,
+      "AXIS"
+     ]
+    ],
+    "Bardia": [
+     [
+      0,
+      "AXIS"
+     ],
+     [
+      85,
+      null
+     ],
+     [
+      87,
+      "AXIS"
+     ]
+    ],
+    "Sollum": [
+     [
+      0,
+      null
+     ],
+     [
+      2,
+      "AXIS"
+     ],
+     [
+      86,
+      null
+     ],
+     [
+      93,
+      "AXIS"
+     ],
+     [
+      106,
+      null
+     ],
+     [
+      108,
+      "AXIS"
+     ],
+     [
+      109,
+      null
+     ]
+    ],
+    "Tobruk": [
+     [
+      0,
+      "AXIS"
+     ]
+    ],
+    "Derna": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Benghazi": [
+     [
+      0,
+      "AXIS"
+     ]
+    ]
+   },
+   "banked": {
+    "GT30": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sidi Barrani",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh"
+     ]
+    },
+    "GT60": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sidi Barrani",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh"
+     ]
+    },
+    "GT90": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sidi Barrani",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh"
+     ]
+    },
+    "final": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh"
+     ]
+    }
+   },
+   "axis_ground_high_water_r": 128,
+   "axis_ground_high_water_turn": 5,
+   "axis_ground_high_water_per_turn": {
+    "0": 92,
+    "2": 104,
+    "3": 108,
+    "4": 121,
+    "5": 128,
+    "8": 77,
+    "9": 84,
+    "10": 23,
+    "11": 21,
+    "12": 14,
+    "13": 21,
+    "14": 21,
+    "15": 14,
+    "16": 21,
+    "18": 22,
+    "21": 53,
+    "22": 24,
+    "23": 24,
+    "24": 76,
+    "25": 21,
+    "26": 26,
+    "27": 27,
+    "28": 23,
+    "29": 58,
+    "30": 20,
+    "31": 86,
+    "32": 9,
+    "33": 20,
+    "34": 33,
+    "35": 33,
+    "36": 6,
+    "37": 7,
+    "39": 33,
+    "40": 6,
+    "43": 22,
+    "44": -5,
+    "45": 6,
+    "49": 92,
+    "50": 6,
+    "52": 4,
+    "54": -3,
+    "58": 4,
+    "59": 4,
+    "60": 4,
+    "61": 3,
+    "62": 5,
+    "64": 90,
+    "66": 6,
+    "67": 3,
+    "68": 6,
+    "70": 3,
+    "71": -2,
+    "74": 6,
+    "76": 86,
+    "78": 86,
+    "80": 86,
+    "82": 8,
+    "85": 62,
+    "86": 81,
+    "87": 86,
+    "88": 76,
+    "89": 3,
+    "90": 96,
+    "91": 68,
+    "92": 76,
+    "93": 87,
+    "94": 40,
+    "95": 99,
+    "97": 23,
+    "98": 39,
+    "101": 8,
+    "102": 29,
+    "103": 41,
+    "104": 91,
+    "105": 91,
+    "106": 80,
+    "107": 76
+   },
+   "combats_by_side": {
+    "ALLIED": 20,
+    "AXIS": 22
+   },
+   "surrender_combats_by_side": {
+    "ALLIED": 14,
+    "AXIS": 17
+   },
+   "axis_combat_units_alive": 97,
+   "cw_combat_units_alive": 165,
+   "axis_east_at_end": 91,
+   "cw_west_at_end": 65,
+   "units_that_never_moved": 216,
+   "units_on_map_at_setup_that_never_moved": 83,
+   "units_the_war_contains": 745,
+   "hq_fate": [
+    {
+     "id": "136-GGFF-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -3
+     ]
+    },
+    {
+     "id": "288-Son-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "Ariete-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -9
+     ]
+    },
+    {
+     "id": "Folgore-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -10
+     ]
+    },
+    {
+     "id": "HQ-1-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      139
+     ]
+    },
+    {
+     "id": "HQ-1-Free-French-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      140
+     ]
+    },
+    {
+     "id": "HQ-1-Greek-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      141
+     ]
+    },
+    {
+     "id": "HQ-1-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-1-SA-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-10-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-10-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-10-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-10-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-11-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      140
+     ]
+    },
+    {
+     "id": "HQ-131-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      138
+     ]
+    },
+    {
+     "id": "HQ-14-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-14-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-15-Panzer-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -8
+     ]
+    },
+    {
+     "id": "HQ-150-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-150-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-151-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-152-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-153-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-154-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-16-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-161-In-Motor-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      141
+     ]
+    },
+    {
+     "id": "HQ-164-Light-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      -9
+     ]
+    },
+    {
+     "id": "HQ-18-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-18-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      139
+     ]
+    },
+    {
+     "id": "HQ-19-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-2-Armd-Bde-[1]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      139
+     ]
+    },
+    {
+     "id": "HQ-2-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-2-Free-French-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      141
+     ]
+    },
+    {
+     "id": "HQ-2-NZ-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      26,
+      132
+     ]
+    },
+    {
+     "id": "HQ-2-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-2-SA-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      141
+     ]
+    },
+    {
+     "id": "HQ-20-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-20-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-21-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-22-Armd-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-22-Guards-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-23-Inf-Bde-[70]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-24-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-25-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-26-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-29-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-3-In-Motor-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-3-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      141
+     ]
+    },
+    {
+     "id": "HQ-4-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      26,
+      101
+     ]
+    },
+    {
+     "id": "HQ-4-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      137
+     ]
+    },
+    {
+     "id": "HQ-44-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      138
+     ]
+    },
+    {
+     "id": "HQ-5-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      140
+     ]
+    },
+    {
+     "id": "HQ-5-In-Div-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-5-Le-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "HQ-5-NZ-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      139
+     ]
+    },
+    {
+     "id": "HQ-5-Pz-Regt",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -6
+     ]
+    },
+    {
+     "id": "HQ-5-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-50-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-51-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-6-Aus-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      48,
+      138
+     ]
+    },
+    {
+     "id": "HQ-6-NZ-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-6-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      137
+     ]
+    },
+    {
+     "id": "HQ-69-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-7-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-7-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-7-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-70-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-8-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      138
+     ]
+    },
+    {
+     "id": "HQ-8-Pz-Regt",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -5
+     ]
+    },
+    {
+     "id": "HQ-9-Aus-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-9-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-9-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-90-Light-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -8
+     ]
+    },
+    {
+     "id": "HQ-Armd-Bde-[2-Armd]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-Polish-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-Ramcke-Bde",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "IT-1-Libyan",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "IT-2-Libyan-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      23,
+      74
+     ]
+    },
+    {
+     "id": "IT-30-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      19,
+      77
+     ]
+    },
+    {
+     "id": "IT-31-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      14,
+      66
+     ]
+    },
+    {
+     "id": "IT-32-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      14,
+      66
+     ]
+    },
+    {
+     "id": "Littorio-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      -2
+     ]
+    },
+    {
+     "id": "RECAM-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -9
+     ]
+    }
+   ]
+  },
+  {
+   "seed": 2026,
+   "arm": "eng_off",
+   "max_turns": null,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 629-20 Victory Points (64.76)",
+   "events": 287154,
+   "signature": "e5208d8e04aaa0bd9d86559a61fab502",
+   "signature8": "3068f833f0680e53",
+   "neuter": {
+    "calls": 7,
+    "records_seen": 219,
+    "targets_seen": 4,
+    "targets_rewritten": 4
+   },
+   "unit_attached": {
+    "AXIS": 21
+   },
+   "unit_attached_by_parent": {
+    "AXIS/IT-115---62-Marm": 3,
+    "AXIS/IT-116---62-Marm": 3,
+    "AXIS/IT-142---64-Cat": 1,
+    "AXIS/IT-157---63-Cir": 3,
+    "AXIS/IT-158---63-Cir": 3,
+    "AXIS/IT-240Lgn---4-CCNN": 1,
+    "AXIS/IT-Aresca---LTC": 2,
+    "AXIS/IT-LTC": 1,
+    "AXIS/IT-Trvli---LTC": 4
+   },
+   "unit_attached_assignment": {
+    "assigned": 21
+   },
+   "unit_detached": {
+    "AXIS": 1
+   },
+   "order_rejected": {
+    "ALLIED/attack": 21,
+    "ALLIED/construction": 4,
+    "ALLIED/move": 5134,
+    "ALLIED/truck_convoy": 1546,
+    "AXIS/attack": 30,
+    "AXIS/move": 1250,
+    "AXIS/truck_convoy": 937
+   },
+   "org_size_15_53": {
+    "favoured_AXIS": 5,
+    "recorded_total": 5,
+    "shifting_total": 5
+   },
+   "org_size_tiers": {
+    "atk1/def2": 3,
+    "atk2/def1": 1,
+    "atk3/def0": 1
+   },
+   "city_change_points": {
+    "Mersa Matruh": [
+     [
+      0,
+      "ALLIED"
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      33,
+      "ALLIED"
+     ]
+    ],
+    "Sidi Barrani": [
+     [
+      0,
+      "ALLIED"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      9,
+      "AXIS"
+     ],
+     [
+      10,
+      null
+     ],
+     [
+      98,
+      "ALLIED"
+     ]
+    ],
+    "Siwa": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Jalo": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Giarabub": [
+     [
+      0,
+      "AXIS"
+     ]
+    ],
+    "Bardia": [
+     [
+      0,
+      "AXIS"
+     ],
+     [
+      85,
+      null
+     ],
+     [
+      86,
+      "AXIS"
+     ]
+    ],
+    "Sollum": [
+     [
+      0,
+      null
+     ],
+     [
+      2,
+      "AXIS"
+     ],
+     [
+      85,
+      null
+     ],
+     [
+      86,
+      "AXIS"
+     ]
+    ],
+    "Tobruk": [
+     [
+      0,
+      "AXIS"
+     ]
+    ],
+    "Derna": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Benghazi": [
+     [
+      0,
+      "AXIS"
+     ]
+    ]
+   },
+   "banked": {
+    "GT30": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": []
+    },
+    "GT60": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh"
+     ]
+    },
+    "GT90": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh"
+     ]
+    },
+    "final": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh",
+      "Sidi Barrani"
+     ]
+    }
+   },
+   "axis_ground_high_water_r": 135,
+   "axis_ground_high_water_turn": 20,
+   "axis_ground_high_water_per_turn": {
+    "0": 92,
+    "2": 99,
+    "3": 112,
+    "4": 123,
+    "5": 123,
+    "7": 77,
+    "8": 86,
+    "9": 86,
+    "10": 23,
+    "11": 21,
+    "12": 14,
+    "13": 21,
+    "14": 21,
+    "15": 14,
+    "16": 21,
+    "18": 130,
+    "19": 133,
+    "20": 135,
+    "21": 53,
+    "22": 24,
+    "23": 24,
+    "24": 21,
+    "25": 21,
+    "26": 27,
+    "27": 20,
+    "28": 76,
+    "29": 20,
+    "30": 20,
+    "31": 20,
+    "32": 9,
+    "33": 33,
+    "34": 33,
+    "35": 26,
+    "36": 6,
+    "37": 7,
+    "39": 33,
+    "40": 6,
+    "43": 22,
+    "45": 6,
+    "49": 2,
+    "50": 6,
+    "52": 4,
+    "58": 91,
+    "59": 4,
+    "60": 3,
+    "61": 3,
+    "62": 5,
+    "64": 77,
+    "66": 6,
+    "67": 3,
+    "68": 6,
+    "70": 3,
+    "71": 53,
+    "74": 6,
+    "75": 23,
+    "76": 6,
+    "82": 8,
+    "84": 67,
+    "85": 77,
+    "86": 33,
+    "87": 39,
+    "88": 3,
+    "89": 3,
+    "90": 5,
+    "91": 33,
+    "92": 41,
+    "93": 45,
+    "94": 24,
+    "95": 27,
+    "96": 32,
+    "97": 23,
+    "98": 33
+   },
+   "combats_by_side": {
+    "ALLIED": 12,
+    "AXIS": 18
+   },
+   "surrender_combats_by_side": {
+    "ALLIED": 8,
+    "AXIS": 11
+   },
+   "axis_combat_units_alive": 98,
+   "cw_combat_units_alive": 241,
+   "axis_east_at_end": 77,
+   "cw_west_at_end": 73,
+   "units_that_never_moved": 223,
+   "units_on_map_at_setup_that_never_moved": 91,
+   "units_the_war_contains": 745,
+   "hq_fate": [
+    {
+     "id": "136-GGFF-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -3
+     ]
+    },
+    {
+     "id": "288-Son-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "Ariete-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -9
+     ]
+    },
+    {
+     "id": "Folgore-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -10
+     ]
+    },
+    {
+     "id": "HQ-1-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      139
+     ]
+    },
+    {
+     "id": "HQ-1-Free-French-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      140
+     ]
+    },
+    {
+     "id": "HQ-1-Greek-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      141
+     ]
+    },
+    {
+     "id": "HQ-1-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-1-SA-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-10-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-10-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-10-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-10-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-11-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      140
+     ]
+    },
+    {
+     "id": "HQ-131-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      138
+     ]
+    },
+    {
+     "id": "HQ-14-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-14-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-15-Panzer-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -8
+     ]
+    },
+    {
+     "id": "HQ-150-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-150-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-151-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-152-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-153-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-154-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-16-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-161-In-Motor-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      141
+     ]
+    },
+    {
+     "id": "HQ-164-Light-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      -9
+     ]
+    },
+    {
+     "id": "HQ-18-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-18-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      139
+     ]
+    },
+    {
+     "id": "HQ-19-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-2-Armd-Bde-[1]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      139
+     ]
+    },
+    {
+     "id": "HQ-2-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-2-Free-French-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      141
+     ]
+    },
+    {
+     "id": "HQ-2-NZ-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      26,
+      132
+     ]
+    },
+    {
+     "id": "HQ-2-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-2-SA-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      141
+     ]
+    },
+    {
+     "id": "HQ-20-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-20-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-21-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-22-Armd-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-22-Guards-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-23-Inf-Bde-[70]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-24-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-25-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-26-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-29-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-3-In-Motor-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-3-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      141
+     ]
+    },
+    {
+     "id": "HQ-4-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      26,
+      101
+     ]
+    },
+    {
+     "id": "HQ-4-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      137
+     ]
+    },
+    {
+     "id": "HQ-44-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      138
+     ]
+    },
+    {
+     "id": "HQ-5-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      140
+     ]
+    },
+    {
+     "id": "HQ-5-In-Div-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-5-Le-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "HQ-5-NZ-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      139
+     ]
+    },
+    {
+     "id": "HQ-5-Pz-Regt",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -6
+     ]
+    },
+    {
+     "id": "HQ-5-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-50-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-51-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-6-Aus-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      48,
+      138
+     ]
+    },
+    {
+     "id": "HQ-6-NZ-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-6-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      137
+     ]
+    },
+    {
+     "id": "HQ-69-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-7-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-7-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-7-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-70-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-8-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      138
+     ]
+    },
+    {
+     "id": "HQ-8-Pz-Regt",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -5
+     ]
+    },
+    {
+     "id": "HQ-9-Aus-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-9-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-9-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-90-Light-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -8
+     ]
+    },
+    {
+     "id": "HQ-Armd-Bde-[2-Armd]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-Polish-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-Ramcke-Bde",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "IT-1-Libyan",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      22,
+      75
+     ]
+    },
+    {
+     "id": "IT-2-Libyan-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "IT-30-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      19,
+      77
+     ]
+    },
+    {
+     "id": "IT-31-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      14,
+      66
+     ]
+    },
+    {
+     "id": "IT-32-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      14,
+      66
+     ]
+    },
+    {
+     "id": "Littorio-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      -2
+     ]
+    },
+    {
+     "id": "RECAM-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -9
+     ]
+    }
+   ]
+  },
+  {
+   "seed": 99,
+   "arm": "eng_off",
+   "max_turns": null,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 781-30 Victory Points (64.76)",
+   "events": 279293,
+   "signature": "d1b28e78c554362f40cd46eae6ce7fa3",
+   "signature8": "8d2d18e7652fd116",
+   "neuter": {
+    "calls": 7,
+    "records_seen": 219,
+    "targets_seen": 4,
+    "targets_rewritten": 4
+   },
+   "unit_attached": {
+    "AXIS": 21
+   },
+   "unit_attached_by_parent": {
+    "AXIS/IT-115---62-Marm": 3,
+    "AXIS/IT-116---62-Marm": 3,
+    "AXIS/IT-141---64-Cat": 1,
+    "AXIS/IT-142---64-Cat": 1,
+    "AXIS/IT-157---63-Cir": 3,
+    "AXIS/IT-158---63-Cir": 3,
+    "AXIS/IT-240Lgn---4-CCNN": 1,
+    "AXIS/IT-4-Libyan---2-Libyan": 1,
+    "AXIS/IT-Aresca---LTC": 2,
+    "AXIS/IT-Trvli---LTC": 3
+   },
+   "unit_attached_assignment": {
+    "assigned": 21
+   },
+   "unit_detached": {
+    "AXIS": 5
+   },
+   "order_rejected": {
+    "ALLIED/attack": 17,
+    "ALLIED/construction": 2,
+    "ALLIED/move": 4738,
+    "ALLIED/truck_convoy": 1827,
+    "AXIS/attack": 39,
+    "AXIS/construction": 1,
+    "AXIS/move": 1247,
+    "AXIS/truck_convoy": 619
+   },
+   "org_size_15_53": {
+    "favoured_AXIS": 3,
+    "recorded_total": 3,
+    "shifting_total": 3
+   },
+   "org_size_tiers": {
+    "atk1/def2": 2,
+    "atk2/def0": 1
+   },
+   "city_change_points": {
+    "Mersa Matruh": [
+     [
+      0,
+      "ALLIED"
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      34,
+      "ALLIED"
+     ]
+    ],
+    "Sidi Barrani": [
+     [
+      0,
+      "ALLIED"
+     ]
+    ],
+    "Siwa": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Jalo": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Giarabub": [
+     [
+      0,
+      "AXIS"
+     ]
+    ],
+    "Bardia": [
+     [
+      0,
+      "AXIS"
+     ],
+     [
+      82,
+      null
+     ],
+     [
+      83,
+      "AXIS"
+     ],
+     [
+      85,
+      null
+     ],
+     [
+      94,
+      "AXIS"
+     ],
+     [
+      111,
+      null
+     ]
+    ],
+    "Sollum": [
+     [
+      0,
+      null
+     ],
+     [
+      2,
+      "AXIS"
+     ],
+     [
+      80,
+      null
+     ],
+     [
+      81,
+      "ALLIED"
+     ]
+    ],
+    "Tobruk": [
+     [
+      0,
+      "AXIS"
+     ]
+    ],
+    "Derna": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Benghazi": [
+     [
+      0,
+      "AXIS"
+     ]
+    ]
+   },
+   "banked": {
+    "GT30": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Sidi Barrani"
+     ]
+    },
+    "GT60": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh",
+      "Sidi Barrani"
+     ]
+    },
+    "GT90": {
+     "AXIS": [
+      "Benghazi",
+      "Giarabub",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh",
+      "Sidi Barrani",
+      "Sollum"
+     ]
+    },
+    "final": {
+     "AXIS": [
+      "Benghazi",
+      "Giarabub",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh",
+      "Sidi Barrani",
+      "Sollum"
+     ]
+    }
+   },
+   "axis_ground_high_water_r": 133,
+   "axis_ground_high_water_turn": 5,
+   "axis_ground_high_water_per_turn": {
+    "0": 92,
+    "2": 99,
+    "3": 112,
+    "4": 128,
+    "5": 133,
+    "6": 133,
+    "10": 23,
+    "11": 21,
+    "12": 14,
+    "13": 21,
+    "14": 21,
+    "15": 14,
+    "16": 21,
+    "18": 8,
+    "21": 53,
+    "22": 24,
+    "23": 24,
+    "24": 23,
+    "25": 76,
+    "26": 77,
+    "27": 20,
+    "28": 76,
+    "29": 20,
+    "30": 76,
+    "31": 20,
+    "32": 9,
+    "33": 20,
+    "34": 20,
+    "35": 26,
+    "36": 6,
+    "37": 7,
+    "39": 20,
+    "40": 6,
+    "43": 37,
+    "45": 6,
+    "49": 2,
+    "50": 6,
+    "52": 4,
+    "58": 4,
+    "59": 4,
+    "60": 2,
+    "61": 3,
+    "62": 4,
+    "66": 6,
+    "67": 3,
+    "68": 6,
+    "70": 3,
+    "71": 6,
+    "72": 76,
+    "74": 6,
+    "75": 77,
+    "76": 77,
+    "78": 76,
+    "79": 76,
+    "80": 31,
+    "81": 77,
+    "82": 77,
+    "86": 33,
+    "87": 33,
+    "88": 3,
+    "89": 3,
+    "90": 5,
+    "91": 39,
+    "92": 65,
+    "93": 77,
+    "94": 51,
+    "95": 25,
+    "96": 77,
+    "97": 18,
+    "98": 24
+   },
+   "combats_by_side": {
+    "ALLIED": 36,
+    "AXIS": 26
+   },
+   "surrender_combats_by_side": {
+    "ALLIED": 22,
+    "AXIS": 21
+   },
+   "axis_combat_units_alive": 96,
+   "cw_combat_units_alive": 199,
+   "axis_east_at_end": 77,
+   "cw_west_at_end": 53,
+   "units_that_never_moved": 214,
+   "units_on_map_at_setup_that_never_moved": 84,
+   "units_the_war_contains": 745,
+   "hq_fate": [
+    {
+     "id": "136-GGFF-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -3
+     ]
+    },
+    {
+     "id": "288-Son-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "Ariete-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -9
+     ]
+    },
+    {
+     "id": "Folgore-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -10
+     ]
+    },
+    {
+     "id": "HQ-1-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      139
+     ]
+    },
+    {
+     "id": "HQ-1-Free-French-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      140
+     ]
+    },
+    {
+     "id": "HQ-1-Greek-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      141
+     ]
+    },
+    {
+     "id": "HQ-1-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-1-SA-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-10-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-10-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-10-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-10-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-11-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      140
+     ]
+    },
+    {
+     "id": "HQ-131-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      138
+     ]
+    },
+    {
+     "id": "HQ-14-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-14-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-15-Panzer-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -8
+     ]
+    },
+    {
+     "id": "HQ-150-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-150-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-151-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-152-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-153-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-154-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-16-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-161-In-Motor-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      141
+     ]
+    },
+    {
+     "id": "HQ-164-Light-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      -9
+     ]
+    },
+    {
+     "id": "HQ-18-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-18-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      139
+     ]
+    },
+    {
+     "id": "HQ-19-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-2-Armd-Bde-[1]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      139
+     ]
+    },
+    {
+     "id": "HQ-2-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-2-Free-French-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      141
+     ]
+    },
+    {
+     "id": "HQ-2-NZ-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      26,
+      132
+     ]
+    },
+    {
+     "id": "HQ-2-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-2-SA-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      141
+     ]
+    },
+    {
+     "id": "HQ-20-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-20-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-21-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-22-Armd-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-22-Guards-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-23-Inf-Bde-[70]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-24-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-25-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-26-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-29-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-3-In-Motor-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-3-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      141
+     ]
+    },
+    {
+     "id": "HQ-4-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      26,
+      101
+     ]
+    },
+    {
+     "id": "HQ-4-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      137
+     ]
+    },
+    {
+     "id": "HQ-44-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      138
+     ]
+    },
+    {
+     "id": "HQ-5-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      140
+     ]
+    },
+    {
+     "id": "HQ-5-In-Div-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-5-Le-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "HQ-5-NZ-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      139
+     ]
+    },
+    {
+     "id": "HQ-5-Pz-Regt",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -6
+     ]
+    },
+    {
+     "id": "HQ-5-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-50-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-51-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-6-Aus-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      48,
+      138
+     ]
+    },
+    {
+     "id": "HQ-6-NZ-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-6-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      137
+     ]
+    },
+    {
+     "id": "HQ-69-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-7-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-7-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-7-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-70-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-8-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      138
+     ]
+    },
+    {
+     "id": "HQ-8-Pz-Regt",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -5
+     ]
+    },
+    {
+     "id": "HQ-9-Aus-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-9-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-9-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-90-Light-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -8
+     ]
+    },
+    {
+     "id": "HQ-Armd-Bde-[2-Armd]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-Polish-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-Ramcke-Bde",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "IT-1-Libyan",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "IT-2-Libyan-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "IT-30-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      19,
+      77
+     ]
+    },
+    {
+     "id": "IT-31-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      14,
+      66
+     ]
+    },
+    {
+     "id": "IT-32-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      14,
+      66
+     ]
+    },
+    {
+     "id": "Littorio-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      -2
+     ]
+    },
+    {
+     "id": "RECAM-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -9
+     ]
+    }
+   ]
+  },
+  {
+   "seed": 1,
+   "arm": "eng_off",
+   "max_turns": null,
+   "winner": "AXIS",
+   "reason": "Axis Smashing Victory: 415-20 Victory Points (64.76)",
+   "events": 288972,
+   "signature": "5c1da0a175bd05d44b21266ad842470b",
+   "signature8": "d8513db3181ee789",
+   "neuter": {
+    "calls": 7,
+    "records_seen": 219,
+    "targets_seen": 4,
+    "targets_rewritten": 4
+   },
+   "unit_attached": {
+    "AXIS": 19
+   },
+   "unit_attached_by_parent": {
+    "AXIS/IT-115---62-Marm": 3,
+    "AXIS/IT-116---62-Marm": 3,
+    "AXIS/IT-142---64-Cat": 1,
+    "AXIS/IT-157---63-Cir": 3,
+    "AXIS/IT-158---63-Cir": 3,
+    "AXIS/IT-240Lgn---4-CCNN": 1,
+    "AXIS/IT-270Lgn---4-CCNN": 1,
+    "AXIS/IT-Aresca---LTC": 1,
+    "AXIS/IT-Trvli---LTC": 3
+   },
+   "unit_attached_assignment": {
+    "assigned": 19
+   },
+   "unit_detached": {
+    "AXIS": 3
+   },
+   "order_rejected": {
+    "ALLIED/attack": 12,
+    "ALLIED/construction": 3,
+    "ALLIED/move": 6296,
+    "ALLIED/truck_convoy": 1901,
+    "AXIS/attack": 22,
+    "AXIS/construction": 1,
+    "AXIS/move": 964,
+    "AXIS/truck_convoy": 936
+   },
+   "org_size_15_53": {
+    "favoured_AXIS": 21,
+    "recorded_total": 21,
+    "shifting_total": 21
+   },
+   "org_size_tiers": {
+    "atk0/def2": 1,
+    "atk1/def2": 9,
+    "atk2/def0": 5,
+    "atk2/def1": 6
+   },
+   "city_change_points": {
+    "Mersa Matruh": [
+     [
+      0,
+      "ALLIED"
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      36,
+      "ALLIED"
+     ],
+     [
+      50,
+      null
+     ],
+     [
+      51,
+      "ALLIED"
+     ]
+    ],
+    "Sidi Barrani": [
+     [
+      0,
+      "ALLIED"
+     ]
+    ],
+    "Siwa": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Jalo": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Giarabub": [
+     [
+      0,
+      "AXIS"
+     ]
+    ],
+    "Bardia": [
+     [
+      0,
+      "AXIS"
+     ],
+     [
+      85,
+      null
+     ],
+     [
+      86,
+      "AXIS"
+     ]
+    ],
+    "Sollum": [
+     [
+      0,
+      null
+     ],
+     [
+      2,
+      "AXIS"
+     ],
+     [
+      85,
+      null
+     ],
+     [
+      86,
+      "AXIS"
+     ]
+    ],
+    "Tobruk": [
+     [
+      0,
+      "AXIS"
+     ]
+    ],
+    "Derna": [
+     [
+      0,
+      null
+     ]
+    ],
+    "Benghazi": [
+     [
+      0,
+      "AXIS"
+     ]
+    ]
+   },
+   "banked": {
+    "GT30": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Sidi Barrani"
+     ]
+    },
+    "GT60": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh",
+      "Sidi Barrani"
+     ]
+    },
+    "GT90": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh",
+      "Sidi Barrani"
+     ]
+    },
+    "final": {
+     "AXIS": [
+      "Bardia",
+      "Benghazi",
+      "Giarabub",
+      "Sollum",
+      "Tobruk"
+     ],
+     "ALLIED": [
+      "Mersa Matruh",
+      "Sidi Barrani"
+     ]
+    }
+   },
+   "axis_ground_high_water_r": 133,
+   "axis_ground_high_water_turn": 7,
+   "axis_ground_high_water_per_turn": {
+    "0": 92,
+    "2": 100,
+    "3": 107,
+    "4": 117,
+    "5": 123,
+    "6": 128,
+    "7": 133,
+    "8": 133,
+    "10": 23,
+    "11": 21,
+    "12": 14,
+    "13": 21,
+    "14": 21,
+    "15": 14,
+    "16": 21,
+    "18": 8,
+    "21": 21,
+    "22": 24,
+    "23": 24,
+    "24": 20,
+    "25": 21,
+    "27": 20,
+    "28": 22,
+    "29": 20,
+    "30": 20,
+    "31": 17,
+    "32": 9,
+    "33": 20,
+    "34": 20,
+    "35": 27,
+    "36": 6,
+    "37": 7,
+    "38": 45,
+    "39": 20,
+    "40": 6,
+    "42": 22,
+    "43": 53,
+    "45": 6,
+    "49": 2,
+    "50": 6,
+    "52": 4,
+    "58": 4,
+    "59": 4,
+    "60": 2,
+    "61": 3,
+    "62": 4,
+    "66": 6,
+    "67": 3,
+    "68": 6,
+    "70": 3,
+    "71": 6,
+    "74": 6,
+    "76": 6,
+    "78": 77,
+    "82": 8,
+    "83": 76,
+    "84": 71,
+    "85": 77,
+    "86": 20,
+    "87": 20,
+    "88": -4,
+    "89": 3,
+    "90": 5,
+    "91": 20,
+    "92": 22,
+    "93": 27,
+    "94": 24,
+    "95": 25,
+    "97": 23,
+    "98": 28
+   },
+   "combats_by_side": {
+    "ALLIED": 24,
+    "AXIS": 33
+   },
+   "surrender_combats_by_side": {
+    "ALLIED": 15,
+    "AXIS": 17
+   },
+   "axis_combat_units_alive": 98,
+   "cw_combat_units_alive": 183,
+   "axis_east_at_end": 79,
+   "cw_west_at_end": 77,
+   "units_that_never_moved": 220,
+   "units_on_map_at_setup_that_never_moved": 90,
+   "units_the_war_contains": 745,
+   "hq_fate": [
+    {
+     "id": "136-GGFF-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -3
+     ]
+    },
+    {
+     "id": "288-Son-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "Ariete-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -9
+     ]
+    },
+    {
+     "id": "Folgore-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -10
+     ]
+    },
+    {
+     "id": "HQ-1-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      139
+     ]
+    },
+    {
+     "id": "HQ-1-Free-French-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      140
+     ]
+    },
+    {
+     "id": "HQ-1-Greek-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      141
+     ]
+    },
+    {
+     "id": "HQ-1-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-1-SA-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-10-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-10-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-10-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-10-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-11-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      140
+     ]
+    },
+    {
+     "id": "HQ-131-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      138
+     ]
+    },
+    {
+     "id": "HQ-14-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-14-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-15-Panzer-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -8
+     ]
+    },
+    {
+     "id": "HQ-150-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-150-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-151-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-152-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-153-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-154-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-16-Inf-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-161-In-Motor-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      141
+     ]
+    },
+    {
+     "id": "HQ-164-Light-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      -9
+     ]
+    },
+    {
+     "id": "HQ-18-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-18-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      139
+     ]
+    },
+    {
+     "id": "HQ-19-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-2-Armd-Bde-[1]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      139
+     ]
+    },
+    {
+     "id": "HQ-2-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-2-Free-French-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      42,
+      141
+     ]
+    },
+    {
+     "id": "HQ-2-NZ-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      26,
+      132
+     ]
+    },
+    {
+     "id": "HQ-2-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-2-SA-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      141
+     ]
+    },
+    {
+     "id": "HQ-20-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-20-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-21-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      138
+     ]
+    },
+    {
+     "id": "HQ-22-Armd-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-22-Guards-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-23-Inf-Bde-[70]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-24-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-25-In-Bde-Grp",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-26-Aus-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-29-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-3-In-Motor-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-3-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      141
+     ]
+    },
+    {
+     "id": "HQ-4-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      26,
+      101
+     ]
+    },
+    {
+     "id": "HQ-4-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      137
+     ]
+    },
+    {
+     "id": "HQ-44-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      138
+     ]
+    },
+    {
+     "id": "HQ-5-In-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      140
+     ]
+    },
+    {
+     "id": "HQ-5-In-Div-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      43,
+      141
+     ]
+    },
+    {
+     "id": "HQ-5-Le-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "HQ-5-NZ-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      139
+     ]
+    },
+    {
+     "id": "HQ-5-Pz-Regt",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -6
+     ]
+    },
+    {
+     "id": "HQ-5-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      137
+     ]
+    },
+    {
+     "id": "HQ-50-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      140
+     ]
+    },
+    {
+     "id": "HQ-51-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      139
+     ]
+    },
+    {
+     "id": "HQ-6-Aus-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      48,
+      138
+     ]
+    },
+    {
+     "id": "HQ-6-NZ-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-6-SA-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      137
+     ]
+    },
+    {
+     "id": "HQ-69-Inf-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      47,
+      137
+     ]
+    },
+    {
+     "id": "HQ-7-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-7-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-7-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-70-Inf-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-8-Armd-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      138
+     ]
+    },
+    {
+     "id": "HQ-8-Pz-Regt",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -5
+     ]
+    },
+    {
+     "id": "HQ-9-Aus-Div",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-9-In-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-9-In-Bde-(Rtn)",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-90-Light-Div",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -8
+     ]
+    },
+    {
+     "id": "HQ-Armd-Bde-[2-Armd]",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      139
+     ]
+    },
+    {
+     "id": "HQ-Polish-Bde",
+     "counter": null,
+     "side": "ALLIED",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": false,
+     "on_map_at_end": false,
+     "hex_at_end": null
+    },
+    {
+     "id": "HQ-Ramcke-Bde",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      45,
+      -7
+     ]
+    },
+    {
+     "id": "IT-1-Libyan",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      22,
+      75
+     ]
+    },
+    {
+     "id": "IT-2-Libyan-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      23,
+      74
+     ]
+    },
+    {
+     "id": "IT-30-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      19,
+      77
+     ]
+    },
+    {
+     "id": "IT-31-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      14,
+      66
+     ]
+    },
+    {
+     "id": "IT-32-GaF-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      14,
+      66
+     ]
+    },
+    {
+     "id": "Littorio-Div-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "HQ_ENGINEER",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      44,
+      -2
+     ]
+    },
+    {
+     "id": "RECAM-HQ",
+     "counter": null,
+     "side": "AXIS",
+     "engineer": "",
+     "moved_at_least_once": false,
+     "alive_at_end": true,
+     "on_map_at_end": true,
+     "hex_at_end": [
+      46,
+      -9
+     ]
+    }
+   ]
+  }
+ ]
+}

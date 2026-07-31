@@ -1,0 +1,2885 @@
+{
+ "seed": 4,
+ "units_the_war_ever_contains": 745,
+ "units_by_side": {
+  "ALLIED": 410,
+  "AXIS": 335
+ },
+ "role_census": {
+  "ALLIED/combat": 328,
+  "ALLIED/hq": 50,
+  "ALLIED/hq_engineer": 15,
+  "ALLIED/non_combat": 17,
+  "AXIS/combat": 259,
+  "AXIS/hq": 9,
+  "AXIS/hq_engineer": 9,
+  "AXIS/non_combat": 58
+ },
+ "paper_parent_counters_named_by_the_4_45_tree": 91,
+ "formations_with_a_live_parent": {
+  "AXIS": 29,
+  "ALLIED": 62,
+  "total": 91
+ },
+ "formations_whose_parent_is_a_COMBAT_counter": {
+  "AXIS": 14,
+  "ALLIED": 1,
+  "total": 15
+ },
+ "formations_whose_parent_is_a_BARE_HQ": {
+  "AXIS": 15,
+  "ALLIED": 61,
+  "total": 76
+ },
+ "formations_with_a_DANGLING_parent_id": [],
+ "formations": [
+  {
+   "parent_id": "1-Army-Tank-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "combat",
+   "parent_is_combat": true,
+   "parent_org_type": "cw_armor_brigade_I",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 36,
+   "children": 1,
+   "child_ids": [
+    "4-RTR"
+   ]
+  },
+  {
+   "parent_id": "136-GGFF-Div-HQ",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "it_semi_motorized_infantry_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 97,
+   "children": 4,
+   "child_ids": [
+    "136-Arty-Regt",
+    "I/136-Bn",
+    "II/136-Bn",
+    "III/136-HW-Bn"
+   ]
+  },
+  {
+   "parent_id": "288-Son-HQ",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "ge_infantry_regiment",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 76,
+   "children": 5,
+   "child_ids": [
+    "2/288-Gebergs-Bn",
+    "288-Panzerjaeger-Bn",
+    "288-Pioneer-Coy",
+    "3/288-SchwInf-Bn",
+    "4/288-MG-Bn"
+   ]
+  },
+  {
+   "parent_id": "Ariete-Div-HQ",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "it_armor_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 18,
+   "children": 5,
+   "child_ids": [
+    "8-Bersaglieri-Regt",
+    "Ariete-Arty",
+    "I(L)-Carri-Bn",
+    "IX-Carri-Bn",
+    "VIII-Carri-Bn"
+   ]
+  },
+  {
+   "parent_id": "Folgore-Div-HQ",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "it_libyan_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 94,
+   "children": 3,
+   "child_ids": [
+    "Folgore-Arty",
+    "Folgore-Para-1",
+    "Folgore-Para-2"
+   ]
+  },
+  {
+   "parent_id": "HQ-1-Armd-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_armor_division_II",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 56,
+   "children": 5,
+   "child_ids": [
+    "1-Support-Group",
+    "10-Hussars-[1]",
+    "2-Bays-[1]",
+    "9-Lancers-[1]",
+    "HQ-2-Armd-Bde-[1]"
+   ]
+  },
+  {
+   "parent_id": "HQ-1-Free-French-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade_super",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 62,
+   "children": 8,
+   "child_ids": [
+    "1-Bn-du-Pacifique",
+    "1-Regt-d'Artillerie-[1-FF]",
+    "1st-Bn-Infanterie-de-Marine-[1-FF]",
+    "1st-Bn-de-Fusiliers-[1-FF]",
+    "2-Bn-Legion-Etranger",
+    "2nd-Bn-de-Marche-[1-FF]",
+    "2nd-NA-AT-Coy-[1-FF]",
+    "3rd-Bn-Legion-Etrangere-[1-FF]"
+   ]
+  },
+  {
+   "parent_id": "HQ-1-Greek-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_allied_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 93,
+   "children": 3,
+   "child_ids": [
+    "1-Greek-Bde-I",
+    "1-Greek-Bde-II",
+    "1-Greek-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-1-SA-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 37,
+   "children": 3,
+   "child_ids": [
+    "1-SA-Bde-I",
+    "1-SA-Bde-II",
+    "1-SA-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-1-SA-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 32,
+   "children": 8,
+   "child_ids": [
+    "1-SA-AT-Regt",
+    "3rd-SA-Fld-Arty-[1-SA]",
+    "4-SA-Fld-Arty-Regt",
+    "7-SA-Fld-Arty-[1-SA]",
+    "HQ-1-SA-Bde",
+    "HQ-2-SA-Bde",
+    "HQ-5-SA-Bde",
+    "President-Steyn-MG-[1-SA]"
+   ]
+  },
+  {
+   "parent_id": "HQ-10-Armd-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_armor_division_III",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 79,
+   "children": 2,
+   "child_ids": [
+    "8-Armd-Bde",
+    "9-Armd-Bde"
+   ]
+  },
+  {
+   "parent_id": "HQ-10-In-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 40,
+   "children": 3,
+   "child_ids": [
+    "10-In-Bde-I",
+    "10-In-Bde-II",
+    "10-In-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-10-In-Bde-(Rtn)",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 73,
+   "children": 3,
+   "child_ids": [
+    "10-In-Bde-(Rtn)-I",
+    "10-In-Bde-(Rtn)-II",
+    "10-In-Bde-(Rtn)-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-10-In-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 81,
+   "children": 3,
+   "child_ids": [
+    "HQ-20-In-Bde-Grp",
+    "HQ-21-In-Bde-Grp",
+    "HQ-25-In-Bde-Grp"
+   ]
+  },
+  {
+   "parent_id": "HQ-11-In-Bde-(Rtn)",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 30,
+   "children": 3,
+   "child_ids": [
+    "11-In-Bde-(Rtn)-I",
+    "11-In-Bde-(Rtn)-II",
+    "11-In-Bde-(Rtn)-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-131-Inf-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 90,
+   "children": 3,
+   "child_ids": [
+    "131-Inf-Bde-I",
+    "131-Inf-Bde-II",
+    "131-Inf-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-14-Inf-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 35,
+   "children": 3,
+   "child_ids": [
+    "14-Inf-Bde-I",
+    "14-Inf-Bde-II",
+    "14-Inf-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-14-Inf-Bde-(Rtn)",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 54,
+   "children": 3,
+   "child_ids": [
+    "14-Inf-Bde-(Rtn)-I",
+    "14-Inf-Bde-(Rtn)-II",
+    "14-Inf-Bde-(Rtn)-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-15-Panzer-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "ge_15_panzer_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 29,
+   "children": 9,
+   "child_ids": [
+    "115-Schutzen-Regt",
+    "15-Krad-Bn",
+    "33-Arty-Regt",
+    "33-Aufkl-Bn",
+    "33-Pioneer-Bn",
+    "33-Pzjg-Bn",
+    "HQ-8-Pz-Regt",
+    "I/104-Schutzen-Bn",
+    "II/104-Schutzen-Bn"
+   ]
+  },
+  {
+   "parent_id": "HQ-150-Inf-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 36,
+   "children": 3,
+   "child_ids": [
+    "150-Inf-Bde-I",
+    "150-Inf-Bde-II",
+    "150-Inf-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-150-Inf-Bde-(Rtn)",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 58,
+   "children": 3,
+   "child_ids": [
+    "150-Inf-Bde-(Rtn)-I",
+    "150-Inf-Bde-(Rtn)-II",
+    "150-Inf-Bde-(Rtn)-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-151-Inf-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 69,
+   "children": 3,
+   "child_ids": [
+    "151-Inf-Bde-I",
+    "151-Inf-Bde-II",
+    "151-Inf-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-152-Inf-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 92,
+   "children": 3,
+   "child_ids": [
+    "152-Inf-Bde-I",
+    "152-Inf-Bde-II",
+    "152-Inf-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-153-Inf-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 92,
+   "children": 3,
+   "child_ids": [
+    "153-Inf-Bde-I",
+    "153-Inf-Bde-II",
+    "153-Inf-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-154-Inf-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 92,
+   "children": 3,
+   "child_ids": [
+    "154-Inf-Bde-I",
+    "154-Inf-Bde-II",
+    "154-Inf-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-16-Inf-Bde-(Rtn)",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 51,
+   "children": 3,
+   "child_ids": [
+    "16-Inf-Bde-(Rtn)-I",
+    "16-Inf-Bde-(Rtn)-II",
+    "16-Inf-Bde-(Rtn)-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-161-In-Motor-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 73,
+   "children": 3,
+   "child_ids": [
+    "161-In-Motor-Bde-I",
+    "161-In-Motor-Bde-II",
+    "161-In-Motor-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-164-Light-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "ge_164_leichte_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 93,
+   "children": 7,
+   "child_ids": [
+    "125-PzGren-Regt",
+    "164-Aufkl-Bn",
+    "200-Pioneer-Bn-[164]",
+    "220-Arty-Regt",
+    "382-PzGren-Regt",
+    "433-PzGren-Regt",
+    "609-Flak-Bn"
+   ]
+  },
+  {
+   "parent_id": "HQ-18-Aus-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade_super",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 14,
+   "children": 3,
+   "child_ids": [
+    "18-Aus-Bde-I",
+    "18-Aus-Bde-II",
+    "18-Aus-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-18-In-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 86,
+   "children": 3,
+   "child_ids": [
+    "18-In-Bde-I",
+    "18-In-Bde-II",
+    "18-In-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-19-Aus-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 9,
+   "children": 3,
+   "child_ids": [
+    "19-Aus-Bde-I",
+    "19-Aus-Bde-II",
+    "19-Aus-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-2-Armd-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_armor_division_I",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 15,
+   "children": 8,
+   "child_ids": [
+    "1-Armd-Bde-[2]-(Rtn)",
+    "1-RHA",
+    "2-Armd-Div-Cruiser-Regt-I",
+    "2-Armd-Div-Cruiser-Regt-II",
+    "2-Armd-Div-Cruiser-Regt-III",
+    "2-RTR",
+    "7-RTR",
+    "HQ-Armd-Bde-[2-Armd]"
+   ]
+  },
+  {
+   "parent_id": "HQ-2-Free-French-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_allied_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 75,
+   "children": 3,
+   "child_ids": [
+    "2-Free-French-Bde-I",
+    "2-Free-French-Bde-II",
+    "2-Free-French-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-2-NZ-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_division",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 12,
+   "child_ids": [
+    "2-NZ-Div-(Rtn)-Bn-1",
+    "2-NZ-Div-(Rtn)-Bn-2",
+    "2-NZ-Div-(Rtn)-Bn-3",
+    "2-NZ-Div-(Rtn)-Bn-4",
+    "2-NZ-Div-(Rtn)-Bn-5",
+    "2-NZ-Div-(Rtn)-Bn-6",
+    "2-NZ-Div-(Rtn)-Bn-7",
+    "2-NZ-Div-core-(Rtn)",
+    "6-NZ-Fld-Arty",
+    "7-NZ-AT-Regt",
+    "HQ-5-NZ-Bde",
+    "HQ-6-NZ-Bde"
+   ]
+  },
+  {
+   "parent_id": "HQ-2-SA-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 36,
+   "children": 3,
+   "child_ids": [
+    "2-SA-Bde-I",
+    "2-SA-Bde-II",
+    "2-SA-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-2-SA-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 36,
+   "children": 10,
+   "child_ids": [
+    "1-SA-Fld-Arty-[2-SA]",
+    "2-SA-AT-Regt",
+    "2-SA-Fld-Arty-Regt",
+    "5-SA-Fld-Arty-[2-SA]",
+    "7-SA-Recce-Bn",
+    "Capetown-Highlanders-Bn-[2/1-SA]",
+    "Die-Middelandse-MG-[2-SA]",
+    "HQ-3-SA-Bde",
+    "HQ-4-SA-Bde",
+    "HQ-6-SA-Bde"
+   ]
+  },
+  {
+   "parent_id": "HQ-20-Aus-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 13,
+   "children": 3,
+   "child_ids": [
+    "20-Aus-Bde-I",
+    "20-Aus-Bde-II",
+    "20-Aus-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-20-In-Bde-Grp",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 82,
+   "children": 3,
+   "child_ids": [
+    "20-In-Bde-Grp-I",
+    "20-In-Bde-Grp-II",
+    "20-In-Bde-Grp-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-21-In-Bde-Grp",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 82,
+   "children": 3,
+   "child_ids": [
+    "21-In-Bde-Grp-I",
+    "21-In-Bde-Grp-II",
+    "21-In-Bde-Grp-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-22-Armd-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_armor_brigade_II",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 51,
+   "children": 3,
+   "child_ids": [
+    "22-Armd-Bde-Regt-I",
+    "22-Armd-Bde-Regt-II",
+    "22-Armd-Bde-Regt-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-24-Aus-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 21,
+   "children": 3,
+   "child_ids": [
+    "24-Aus-Bde-I",
+    "24-Aus-Bde-II",
+    "24-Aus-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-25-In-Bde-Grp",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 82,
+   "children": 3,
+   "child_ids": [
+    "25-In-Bde-Grp-I",
+    "25-In-Bde-Grp-II",
+    "25-In-Bde-Grp-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-26-Aus-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 20,
+   "children": 3,
+   "child_ids": [
+    "26-Aus-Bde-I",
+    "26-Aus-Bde-II",
+    "26-Aus-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-29-In-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 40,
+   "children": 3,
+   "child_ids": [
+    "29-In-Bde-I",
+    "29-In-Bde-II",
+    "29-In-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-3-In-Motor-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 23,
+   "children": 4,
+   "child_ids": [
+    "2nd-In-Fld-Arty-[3-In-Mtr-X]",
+    "3-In-Motor-Bde-I",
+    "3-In-Motor-Bde-II",
+    "3-In-Motor-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-3-SA-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 38,
+   "children": 3,
+   "child_ids": [
+    "3-SA-Bde-I",
+    "3-SA-Bde-II",
+    "3-SA-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-4-In-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_division",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 6,
+   "child_ids": [
+    "1-Fld-Arty-Regt-[4-In]",
+    "4-In-Div-core-(Rtn)",
+    "HQ-11-In-Bde-(Rtn)",
+    "HQ-7-In-Bde",
+    "HQ-7-In-Bde-(Rtn)",
+    "IN-31-Fld---4-In"
+   ]
+  },
+  {
+   "parent_id": "HQ-4-SA-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 44,
+   "children": 3,
+   "child_ids": [
+    "4-SA-Bde-I",
+    "4-SA-Bde-II",
+    "4-SA-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-44-Inf-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 90,
+   "children": 5,
+   "child_ids": [
+    "57-AT-Regt-[44]",
+    "57th-Fld-Arty-[44]",
+    "58th-Fld-Arty-[44]",
+    "65th-Fld-Arty-[44]",
+    "HQ-131-Inf-Bde"
+   ]
+  },
+  {
+   "parent_id": "HQ-5-In-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 38,
+   "children": 7,
+   "child_ids": [
+    "144-Fld-Arty-Regt-[5-In]",
+    "28-Fld-Arty-[5-In]",
+    "3/18-Royal-Garhwals-[10/5-In]",
+    "3/2-Punjab-Regt",
+    "HQ-10-In-Bde",
+    "HQ-29-In-Bde",
+    "HQ-9-In-Bde"
+   ]
+  },
+  {
+   "parent_id": "HQ-5-In-Div-(Rtn)",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 75,
+   "children": 4,
+   "child_ids": [
+    "144-Fld-Arty-[5-In]-(Rtn)",
+    "28th-Fld-Arty-[5-In]-(Rtn)",
+    "HQ-10-In-Bde-(Rtn)",
+    "HQ-9-In-Bde-(Rtn)"
+   ]
+  },
+  {
+   "parent_id": "HQ-5-Le-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "ge_5_light_panzer_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 21,
+   "children": 10,
+   "child_ids": [
+    "2-MG-Bn",
+    "200-Pioneer-Bn-[5-Le]",
+    "3-Aufkl-Bn",
+    "39-Pzjg-Bn",
+    "605-Pzjg-Bn",
+    "606-Flak-Bn",
+    "8-MG-Bn",
+    "HQ-5-Pz-Regt",
+    "I/33-Flak-Bn",
+    "I/75-Arty-Bn"
+   ]
+  },
+  {
+   "parent_id": "HQ-5-NZ-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 35,
+   "children": 3,
+   "child_ids": [
+    "5-NZ-Bde-I",
+    "5-NZ-Bde-II",
+    "5-NZ-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-5-Pz-Regt",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "ge_armored_regiment",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 22,
+   "children": 2,
+   "child_ids": [
+    "I/5-Pz-Bn",
+    "II/5-Pz-Bn"
+   ]
+  },
+  {
+   "parent_id": "HQ-5-SA-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 32,
+   "children": 3,
+   "child_ids": [
+    "5-SA-Bde-I",
+    "5-SA-Bde-II",
+    "5-SA-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-50-Inf-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 68,
+   "children": 9,
+   "child_ids": [
+    "124th-Fld-Arty-[50]",
+    "2nd-Cheshire-MG-[50]",
+    "50th-Recce-[50]",
+    "72nd-Fld-Arty-[50]",
+    "74-Fld-Arty-Regt-[50]",
+    "HQ-150-Inf-Bde",
+    "HQ-150-Inf-Bde-(Rtn)",
+    "HQ-151-Inf-Bde",
+    "HQ-69-Inf-Bde"
+   ]
+  },
+  {
+   "parent_id": "HQ-51-Inf-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 92,
+   "children": 11,
+   "child_ids": [
+    "1/7-Middlesex-MG-Bn",
+    "126th-Fld-Arty-[51]",
+    "127th-Fld-Arty-[51]",
+    "128th-Fld-Arty-[51]",
+    "13-AT-[51]",
+    "40th-LAA-[51]",
+    "51-Recce-Bn",
+    "61st-AT-[51]",
+    "HQ-152-Inf-Bde",
+    "HQ-153-Inf-Bde",
+    "HQ-154-Inf-Bde"
+   ]
+  },
+  {
+   "parent_id": "HQ-6-Aus-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_division",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 3,
+   "child_ids": [
+    "2/1-Aus-Fld-Arty-[6-Aus]",
+    "2/2-Aus-Fld-Arty",
+    "HQ-19-Aus-Bde"
+   ]
+  },
+  {
+   "parent_id": "HQ-6-NZ-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 6,
+   "children": 6,
+   "child_ids": [
+    "6-NZ-Bde-(Rtn)-I",
+    "6-NZ-Bde-(Rtn)-II",
+    "6-NZ-Bde-(Rtn)-III",
+    "6-NZ-Bde-I",
+    "6-NZ-Bde-II",
+    "6-NZ-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-6-SA-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 38,
+   "children": 3,
+   "child_ids": [
+    "6-SA-Bde-I",
+    "6-SA-Bde-II",
+    "6-SA-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-69-Inf-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 69,
+   "children": 3,
+   "child_ids": [
+    "69-Inf-Bde-I",
+    "69-Inf-Bde-II",
+    "69-Inf-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-7-Armd-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_armor_division_I",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 4,
+   "child_ids": [
+    "3rd-Hussars-[7]",
+    "BR-1-KRRC---7Spt-7",
+    "BR-3-RHA---7Spt-7",
+    "BR-4-RHA---7Spt-7"
+   ]
+  },
+  {
+   "parent_id": "HQ-7-In-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 5,
+   "children": 3,
+   "child_ids": [
+    "7-In-Bde-I",
+    "7-In-Bde-II",
+    "7-In-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-7-In-Bde-(Rtn)",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 30,
+   "children": 3,
+   "child_ids": [
+    "7-In-Bde-(Rtn)-I",
+    "7-In-Bde-(Rtn)-II",
+    "7-In-Bde-(Rtn)-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-70-Inf-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 21,
+   "children": 8,
+   "child_ids": [
+    "1st-Durham-LI-[23/70]-(Rtn)",
+    "1st-Essex-[23/70]-(Rtn)",
+    "23-Bde-AT-Coy-[23/70]",
+    "4th-Borderers-[23/70]",
+    "HQ-14-Inf-Bde",
+    "HQ-14-Inf-Bde-(Rtn)",
+    "HQ-16-Inf-Bde-(Rtn)",
+    "HQ-23-Inf-Bde-[70]"
+   ]
+  },
+  {
+   "parent_id": "HQ-8-Armd-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_armor_division_III",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 87,
+   "children": 3,
+   "child_ids": [
+    "23-Armd-Bde",
+    "24-Armd-Bde",
+    "2nd-Derbyshire-Yeomanry-[R,-8]"
+   ]
+  },
+  {
+   "parent_id": "HQ-8-Pz-Regt",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "ge_armored_regiment",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 31,
+   "children": 2,
+   "child_ids": [
+    "I/8-Pz-Bn",
+    "II/8-Pz-Bn"
+   ]
+  },
+  {
+   "parent_id": "HQ-9-Aus-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 20,
+   "children": 8,
+   "child_ids": [
+    "2/1-Aus-Pioneer-Bn",
+    "2/2-Aus-MG-Bn",
+    "2/3-Aus-AT-Bn",
+    "9-Aus-Cav-Regt",
+    "9-Aus-Div-core-(Rtn)",
+    "HQ-20-Aus-Bde",
+    "HQ-24-Aus-Bde",
+    "HQ-26-Aus-Bde"
+   ]
+  },
+  {
+   "parent_id": "HQ-9-In-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 38,
+   "children": 3,
+   "child_ids": [
+    "9-In-Bde-I",
+    "9-In-Bde-II",
+    "9-In-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-9-In-Bde-(Rtn)",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 75,
+   "children": 3,
+   "child_ids": [
+    "9-In-Bde-(Rtn)-I",
+    "9-In-Bde-(Rtn)-II",
+    "9-In-Bde-(Rtn)-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-90-Light-Div",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "ge_90_leichte_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 44,
+   "children": 9,
+   "child_ids": [
+    "155-Schutzen-Regt",
+    "190-Arty-Bn",
+    "190-Pzjg-Bn",
+    "361-Afrika-Regt",
+    "580-Aufkl-Bn",
+    "613-Flak-Bn",
+    "900-Pioneer-Bn",
+    "III/255-Schutzen-Bn",
+    "III/347-Schutzen-Bn"
+   ]
+  },
+  {
+   "parent_id": "HQ-Polish-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "ALLIED",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "cw_infantry_brigade_super",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 1,
+   "children": 3,
+   "child_ids": [
+    "Polish-Bde-I",
+    "Polish-Bde-II",
+    "Polish-Bde-III"
+   ]
+  },
+  {
+   "parent_id": "HQ-Ramcke-Bde",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "ge_ramcke_brigade",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 86,
+   "children": 5,
+   "child_ids": [
+    "I/Kroh-Bn",
+    "II/Heydte-Bn",
+    "III/Hubner-Bn",
+    "IV/Schweiger-Bn",
+    "V/Burchardt-Bn"
+   ]
+  },
+  {
+   "parent_id": "IT-115---62-Marm",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "combat",
+   "parent_is_combat": true,
+   "parent_org_type": "it_infantry_regiment",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 3,
+   "child_ids": [
+    "IT-I/115---62-Marm",
+    "IT-II/115---62-Marm",
+    "IT-III/115---62-Marm"
+   ]
+  },
+  {
+   "parent_id": "IT-116---62-Marm",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "combat",
+   "parent_is_combat": true,
+   "parent_org_type": "it_infantry_regiment",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 3,
+   "child_ids": [
+    "IT-I/116---62-Marm",
+    "IT-II/116---62-Marm",
+    "IT-III/116---62-Marm"
+   ]
+  },
+  {
+   "parent_id": "IT-141---64-Cat",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "combat",
+   "parent_is_combat": true,
+   "parent_org_type": "it_infantry_regiment",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 3,
+   "child_ids": [
+    "IT-I-141---64-Cat",
+    "IT-II-141---64-Cat",
+    "IT-III-141---64-Cat"
+   ]
+  },
+  {
+   "parent_id": "IT-142---64-Cat",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "combat",
+   "parent_is_combat": true,
+   "parent_org_type": "it_infantry_regiment",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 3,
+   "child_ids": [
+    "IT-I-142---64-Cat",
+    "IT-II-142---64-Cat",
+    "IT-III-142---64-Cat"
+   ]
+  },
+  {
+   "parent_id": "IT-157---63-Cir",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "combat",
+   "parent_is_combat": true,
+   "parent_org_type": "it_infantry_regiment",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 3,
+   "child_ids": [
+    "IT-I/157---63-Cir",
+    "IT-II/157---63-Cir",
+    "IT-III/157---63-Cir"
+   ]
+  },
+  {
+   "parent_id": "IT-158---63-Cir",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "combat",
+   "parent_is_combat": true,
+   "parent_org_type": "it_infantry_regiment",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 3,
+   "child_ids": [
+    "IT-I/158---63-Cir",
+    "IT-II/158---63-Cir",
+    "IT-III/158---63-Cir"
+   ]
+  },
+  {
+   "parent_id": "IT-2-Libyan-Div-HQ",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "it_libyan_division",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 3,
+   "child_ids": [
+    "IT-2-Libyan-(ART)",
+    "IT-3-Libyan---2-Libyan",
+    "IT-4-Libyan---2-Libyan"
+   ]
+  },
+  {
+   "parent_id": "IT-240Lgn---4-CCNN",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "combat",
+   "parent_is_combat": true,
+   "parent_org_type": "it_infantry_regiment",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 4,
+   "child_ids": [
+    "IT-119---240-4CN",
+    "IT-170---240-4CN",
+    "IT-176---240-4CN",
+    "IT-70---240-4CN"
+   ]
+  },
+  {
+   "parent_id": "IT-270Lgn---4-CCNN",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "combat",
+   "parent_is_combat": true,
+   "parent_org_type": "it_infantry_regiment",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 2,
+   "child_ids": [
+    "IT-17---270-4CN",
+    "IT-3---270-4CN"
+   ]
+  },
+  {
+   "parent_id": "IT-3-Libyan---2-Libyan",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "combat",
+   "parent_is_combat": true,
+   "parent_org_type": "it_infantry_regiment",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 3,
+   "child_ids": [
+    "IT-II-3L---2-Libyan",
+    "IT-VI-3L---2-Libyan",
+    "IT-VII-3L---2-Libyan"
+   ]
+  },
+  {
+   "parent_id": "IT-32-GaF-HQ",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "it_infantry_regiment",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 1,
+   "child_ids": [
+    "IT-III---32-GaF"
+   ]
+  },
+  {
+   "parent_id": "IT-4-CCNN---(4CN)",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "combat",
+   "parent_is_combat": true,
+   "parent_org_type": "it_semi_motorized_infantry_division",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 5,
+   "child_ids": [
+    "IT-204---4CCNN-(ART)",
+    "IT-204---4CCNN-(ENG)",
+    "IT-204---4CCNN-(MG)",
+    "IT-240Lgn---4-CCNN",
+    "IT-270Lgn---4-CCNN"
+   ]
+  },
+  {
+   "parent_id": "IT-4-Libyan---2-Libyan",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "combat",
+   "parent_is_combat": true,
+   "parent_org_type": "it_infantry_regiment",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 3,
+   "child_ids": [
+    "IT-XIV-4L---2-Libyan",
+    "IT-XV-4L---2-Libyan",
+    "IT-XVI-4L---2-Libyan"
+   ]
+  },
+  {
+   "parent_id": "IT-Aresca---LTC",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "combat",
+   "parent_is_combat": true,
+   "parent_org_type": "it_tank_regiment_super",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 4,
+   "child_ids": [
+    "IT-I(M)---LTC",
+    "IT-LXII(L)---LTC",
+    "IT-LXIII(L)---LTC",
+    "IT-XXI(L)---LTC"
+   ]
+  },
+  {
+   "parent_id": "IT-LTC",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "combat",
+   "parent_is_combat": true,
+   "parent_org_type": "it_tank_group",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 2,
+   "child_ids": [
+    "IT-Aresca---LTC",
+    "IT-Trvli---LTC"
+   ]
+  },
+  {
+   "parent_id": "IT-Trvli---LTC",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "combat",
+   "parent_is_combat": true,
+   "parent_org_type": "it_tank_regiment_super",
+   "parent_on_map_at_setup": true,
+   "parent_arrival_turn": 0,
+   "children": 5,
+   "child_ids": [
+    "IT-II(M)---LTC",
+    "IT-IX(L)---LTC",
+    "IT-LX(L)---LTC",
+    "IT-LXI(L)---LTC",
+    "IT-XX(L)---LTC"
+   ]
+  },
+  {
+   "parent_id": "Littorio-Div-HQ",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "hq_engineer",
+   "parent_is_combat": false,
+   "parent_org_type": "it_armor_division",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 62,
+   "children": 4,
+   "child_ids": [
+    "12-Bersaglieri-Regt",
+    "I-Carri-Bn",
+    "II-Carri-Bn",
+    "Littorio-Arty"
+   ]
+  },
+  {
+   "parent_id": "RECAM-HQ",
+   "parent_counter": null,
+   "parent_exists": true,
+   "parent_side": "AXIS",
+   "parent_role": "hq",
+   "parent_is_combat": false,
+   "parent_org_type": "it_recam",
+   "parent_on_map_at_setup": false,
+   "parent_arrival_turn": 45,
+   "children": 1,
+   "child_ids": [
+    "RECAM-Recon-Group"
+   ]
+  }
+ ],
+ "hq_roster": [
+  {
+   "id": "HQ-1-Armd-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_armor_division_II",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 56,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 5
+  },
+  {
+   "id": "HQ-1-Free-French-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq_engineer",
+   "org_type": "cw_infantry_brigade_super",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 62,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 8
+  },
+  {
+   "id": "HQ-1-Greek-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_allied_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 93,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-1-SA-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 37,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-1-SA-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq_engineer",
+   "org_type": "cw_infantry_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 32,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 8
+  },
+  {
+   "id": "HQ-10-Armd-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_armor_division_III",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 79,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 2
+  },
+  {
+   "id": "HQ-10-In-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 40,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-10-In-Bde-(Rtn)",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 73,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-10-In-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq_engineer",
+   "org_type": "cw_infantry_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 81,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-11-In-Bde-(Rtn)",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 30,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-131-Inf-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 90,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-14-Inf-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 35,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-14-Inf-Bde-(Rtn)",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 54,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-150-Inf-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 36,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-150-Inf-Bde-(Rtn)",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 58,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-151-Inf-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 69,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-152-Inf-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 92,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-153-Inf-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 92,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-154-Inf-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 92,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-16-Inf-Bde-(Rtn)",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 51,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-161-In-Motor-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 73,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-18-Aus-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade_super",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 14,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-18-In-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 86,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-19-Aus-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 9,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-2-Armd-Bde-[1]",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_armor_brigade_II",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 58,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 0
+  },
+  {
+   "id": "HQ-2-Armd-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_armor_division_I",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 15,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 8
+  },
+  {
+   "id": "HQ-2-Free-French-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq_engineer",
+   "org_type": "cw_allied_infantry_brigade",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 75,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-2-NZ-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq_engineer",
+   "org_type": "cw_infantry_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 0,
+   "on_map_at_setup": true,
+   "hex": [
+    26,
+    132
+   ],
+   "children_assigned": 12
+  },
+  {
+   "id": "HQ-2-SA-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 36,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-2-SA-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq_engineer",
+   "org_type": "cw_infantry_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 36,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 10
+  },
+  {
+   "id": "HQ-20-Aus-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 13,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-20-In-Bde-Grp",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 82,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-21-In-Bde-Grp",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 82,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-22-Armd-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_armor_brigade_II",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 51,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-22-Guards-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 20,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 0
+  },
+  {
+   "id": "HQ-23-Inf-Bde-[70]",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 51,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 0
+  },
+  {
+   "id": "HQ-24-Aus-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 21,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-25-In-Bde-Grp",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 82,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-26-Aus-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 20,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-29-In-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 40,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-3-In-Motor-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 23,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 4
+  },
+  {
+   "id": "HQ-3-SA-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 38,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-4-In-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq_engineer",
+   "org_type": "cw_infantry_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 0,
+   "on_map_at_setup": true,
+   "hex": [
+    26,
+    101
+   ],
+   "children_assigned": 6
+  },
+  {
+   "id": "HQ-4-SA-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 44,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-44-Inf-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq_engineer",
+   "org_type": "cw_infantry_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 90,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 5
+  },
+  {
+   "id": "HQ-5-In-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq_engineer",
+   "org_type": "cw_infantry_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 38,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 7
+  },
+  {
+   "id": "HQ-5-In-Div-(Rtn)",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq_engineer",
+   "org_type": "cw_infantry_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 75,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 4
+  },
+  {
+   "id": "HQ-5-NZ-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 35,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-5-SA-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 32,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-50-Inf-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq_engineer",
+   "org_type": "cw_infantry_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 68,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 9
+  },
+  {
+   "id": "HQ-51-Inf-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq_engineer",
+   "org_type": "cw_infantry_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 92,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 11
+  },
+  {
+   "id": "HQ-6-Aus-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq_engineer",
+   "org_type": "cw_infantry_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 0,
+   "on_map_at_setup": true,
+   "hex": [
+    48,
+    138
+   ],
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-6-NZ-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 6,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 6
+  },
+  {
+   "id": "HQ-6-SA-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 38,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-69-Inf-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 69,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-7-Armd-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq_engineer",
+   "org_type": "cw_armor_division_I",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 0,
+   "on_map_at_setup": true,
+   "hex": [
+    26,
+    98
+   ],
+   "children_assigned": 4
+  },
+  {
+   "id": "HQ-7-In-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 5,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-7-In-Bde-(Rtn)",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 30,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-70-Inf-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq_engineer",
+   "org_type": "cw_infantry_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 21,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 8
+  },
+  {
+   "id": "HQ-8-Armd-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_armor_division_III",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 87,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-9-Aus-Div",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_division",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 20,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 8
+  },
+  {
+   "id": "HQ-9-In-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 38,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-9-In-Bde-(Rtn)",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 75,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-Armd-Bde-[2-Armd]",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_armor_brigade_I",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 15,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 0
+  },
+  {
+   "id": "HQ-Polish-Bde",
+   "counter": null,
+   "side": "ALLIED",
+   "role": "hq",
+   "org_type": "cw_infantry_brigade_super",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 1,
+   "on_map_at_setup": true,
+   "hex": [
+    42,
+    140
+   ],
+   "children_assigned": 3
+  },
+  {
+   "id": "136-GGFF-Div-HQ",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq_engineer",
+   "org_type": "it_semi_motorized_infantry_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 97,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 4
+  },
+  {
+   "id": "288-Son-HQ",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq",
+   "org_type": "ge_infantry_regiment",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 76,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 5
+  },
+  {
+   "id": "Ariete-Div-HQ",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq_engineer",
+   "org_type": "it_armor_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 18,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 5
+  },
+  {
+   "id": "Folgore-Div-HQ",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq_engineer",
+   "org_type": "it_libyan_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 94,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 3
+  },
+  {
+   "id": "HQ-15-Panzer-Div",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq",
+   "org_type": "ge_15_panzer_division",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 29,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 9
+  },
+  {
+   "id": "HQ-164-Light-Div",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq",
+   "org_type": "ge_164_leichte_division",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 93,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 7
+  },
+  {
+   "id": "HQ-5-Le-Div",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq",
+   "org_type": "ge_5_light_panzer_division",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 21,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 10
+  },
+  {
+   "id": "HQ-5-Pz-Regt",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq",
+   "org_type": "ge_armored_regiment",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 22,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 2
+  },
+  {
+   "id": "HQ-8-Pz-Regt",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq",
+   "org_type": "ge_armored_regiment",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 31,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 2
+  },
+  {
+   "id": "HQ-90-Light-Div",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq",
+   "org_type": "ge_90_leichte_division",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 44,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 9
+  },
+  {
+   "id": "HQ-Ramcke-Bde",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq",
+   "org_type": "ge_ramcke_brigade",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 86,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 5
+  },
+  {
+   "id": "IT-1-Libyan",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq_engineer",
+   "org_type": "it_libyan_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 0,
+   "on_map_at_setup": true,
+   "hex": [
+    22,
+    75
+   ],
+   "children_assigned": 0
+  },
+  {
+   "id": "IT-2-Libyan-Div-HQ",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq_engineer",
+   "org_type": "it_libyan_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 0,
+   "on_map_at_setup": true,
+   "hex": [
+    23,
+    74
+   ],
+   "children_assigned": 3
+  },
+  {
+   "id": "IT-30-GaF-HQ",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq_engineer",
+   "org_type": "it_infantry_regiment",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 0,
+   "on_map_at_setup": true,
+   "hex": [
+    19,
+    77
+   ],
+   "children_assigned": 0
+  },
+  {
+   "id": "IT-31-GaF-HQ",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq_engineer",
+   "org_type": "it_infantry_regiment",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 0,
+   "on_map_at_setup": true,
+   "hex": [
+    14,
+    66
+   ],
+   "children_assigned": 0
+  },
+  {
+   "id": "IT-32-GaF-HQ",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq_engineer",
+   "org_type": "it_infantry_regiment",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 0,
+   "on_map_at_setup": true,
+   "hex": [
+    14,
+    66
+   ],
+   "children_assigned": 1
+  },
+  {
+   "id": "Littorio-Div-HQ",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq_engineer",
+   "org_type": "it_armor_division",
+   "is_combat": false,
+   "engineer": "HQ_ENGINEER",
+   "arrival_turn": 62,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 4
+  },
+  {
+   "id": "RECAM-HQ",
+   "counter": null,
+   "side": "AXIS",
+   "role": "hq",
+   "org_type": "it_recam",
+   "is_combat": false,
+   "engineer": "",
+   "arrival_turn": 45,
+   "on_map_at_setup": false,
+   "hex": null,
+   "children_assigned": 1
+  }
+ ],
+ "concentrate_formations_at_t0": {
+  "AXIS": {
+   "orders": 16,
+   "attach": 16,
+   "detach": 0,
+   "distinct_parents_attached_to": [
+    "IT-115---62-Marm",
+    "IT-116---62-Marm",
+    "IT-157---63-Cir",
+    "IT-158---63-Cir",
+    "IT-Aresca---LTC",
+    "IT-Trvli---LTC"
+   ],
+   "attach_pairs": [
+    [
+     "IT-115---62-Marm",
+     "IT-I/115---62-Marm"
+    ],
+    [
+     "IT-115---62-Marm",
+     "IT-II/115---62-Marm"
+    ],
+    [
+     "IT-115---62-Marm",
+     "IT-III/115---62-Marm"
+    ],
+    [
+     "IT-116---62-Marm",
+     "IT-I/116---62-Marm"
+    ],
+    [
+     "IT-116---62-Marm",
+     "IT-II/116---62-Marm"
+    ],
+    [
+     "IT-116---62-Marm",
+     "IT-III/116---62-Marm"
+    ],
+    [
+     "IT-157---63-Cir",
+     "IT-I/157---63-Cir"
+    ],
+    [
+     "IT-157---63-Cir",
+     "IT-II/157---63-Cir"
+    ],
+    [
+     "IT-157---63-Cir",
+     "IT-III/157---63-Cir"
+    ],
+    [
+     "IT-158---63-Cir",
+     "IT-I/158---63-Cir"
+    ],
+    [
+     "IT-158---63-Cir",
+     "IT-II/158---63-Cir"
+    ],
+    [
+     "IT-158---63-Cir",
+     "IT-III/158---63-Cir"
+    ],
+    [
+     "IT-Aresca---LTC",
+     "IT-XXI(L)---LTC"
+    ],
+    [
+     "IT-Trvli---LTC",
+     "IT-LX(L)---LTC"
+    ],
+    [
+     "IT-Trvli---LTC",
+     "IT-LXI(L)---LTC"
+    ],
+    [
+     "IT-Trvli---LTC",
+     "IT-XX(L)---LTC"
+    ]
+   ]
+  },
+  "ALLIED": {
+   "orders": 0,
+   "attach": 0,
+   "detach": 0,
+   "distinct_parents_attached_to": [],
+   "attach_pairs": []
+  }
+ },
+ "_policies_constructed": [
+  "CampaignAxisPolicy",
+  "CampaignCommonwealthPolicy"
+ ]
+}

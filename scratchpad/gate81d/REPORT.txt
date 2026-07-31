@@ -1,0 +1,371 @@
+====================================================================================================
+GATE 8.1c-OOB -- THE DIVISION HQs AND THE 23.11 (ENG) CORRECTION, MEASURED
+====================================================================================================
+BASE = a6c9700 (detached worktree)   HEAD = 607b63c   seeds = [1941, 7, 4, 24, 2026, 99, 1]
+arms present: ['BASE', 'ENGOFF', 'HEAD', 'NOOP']   errors: none
+
+----------------------------------------------------------------------------------------------------
+0. THE NEUTER-PROOF (the trap in tests/baselines.py: a patch that never reaches its caller
+   measures the un-neutered arm and reports it as a finding)
+----------------------------------------------------------------------------------------------------
+  seed 1: identity-patched signature == unpatched (045b5f7340244949 vs 045b5f7340244949)   _load calls 7, (ENG) records seen 4, rewritten 0
+  seed 4: identity-patched signature == unpatched (2815f4b222086172 vs 2815f4b222086172)   _load calls 7, (ENG) records seen 4, rewritten 0
+  seed 7: identity-patched signature == unpatched (8c4c7aa09e965439 vs 8c4c7aa09e965439)   _load calls 7, (ENG) records seen 4, rewritten 0
+  seed 24: identity-patched signature == unpatched (c7eb582385286bef vs c7eb582385286bef)   _load calls 7, (ENG) records seen 4, rewritten 0
+  seed 99: identity-patched signature == unpatched (ba39290c77d08068 vs ba39290c77d08068)   _load calls 7, (ENG) records seen 4, rewritten 0
+  seed 1941: identity-patched signature == unpatched (2338b5fe7b7c476d vs 2338b5fe7b7c476d)   _load calls 7, (ENG) records seen 4, rewritten 0
+  seed 2026: identity-patched signature == unpatched (9e4544138e317bab vs 9e4544138e317bab)   _load calls 7, (ENG) records seen 4, rewritten 0
+  eng_off arm: _load calls 7, (ENG) records seen 4, rewritten 4 (the driver raises if either is short)
+  eng_off signature differs from live on 7/7 seeds -- the patch BITES
+
+====================================================================================================
+1. FORMATIONS -- DID THE HQs GIVE ANY FORMATION A PARENT, AND CAN IT CONCENTRATE?
+====================================================================================================
+  (a) ON PAPER -- a formation 'has an HQ' when the [4.45] tree's parent counter resolves
+      to a mustered unit id (game.oob._seed_organization wrote Unit.assigned_to).
+      units_the_war_ever_contains                             732  ->   745
+      paper_parent_counters_named_by_the_4_45_tree             79  ->    91
+      formations_with_a_live_parent                        AXIS  22->29  ALLIED  57->62  total  79->91
+      formations_whose_parent_is_a_COMBAT_counter          AXIS  14->14  ALLIED   1->1   total  15->15
+      formations_whose_parent_is_a_BARE_HQ                 AXIS   8->15  ALLIED  56->61  total  64->76
+
+      FORMATIONS THAT NOW HAVE AN HQ AND HAD NONE: 12
+        + 136-GGFF-Div-HQ              AXIS     4 sub-units now parented   (parent is_combat=False)
+        + Ariete-Div-HQ                AXIS     5 sub-units now parented   (parent is_combat=False)
+        + Folgore-Div-HQ               AXIS     3 sub-units now parented   (parent is_combat=False)
+        + HQ-2-NZ-Div                  ALLIED  12 sub-units now parented   (parent is_combat=False)
+        + HQ-4-In-Div                  ALLIED   6 sub-units now parented   (parent is_combat=False)
+        + HQ-44-Inf-Div                ALLIED   5 sub-units now parented   (parent is_combat=False)
+        + HQ-6-Aus-Div                 ALLIED   3 sub-units now parented   (parent is_combat=False)
+        + HQ-7-Armd-Div                ALLIED   4 sub-units now parented   (parent is_combat=False)
+        + IT-2-Libyan-Div-HQ           AXIS     3 sub-units now parented   (parent is_combat=False)
+        + IT-32-GaF-HQ                 AXIS     1 sub-units now parented   (parent is_combat=False)
+        + Littorio-Div-HQ              AXIS     4 sub-units now parented   (parent is_combat=False)
+        + RECAM-HQ                     AXIS     1 sub-units now parented   (parent is_combat=False)
+      HQs this slice seeded that parent NOTHING: 3 ['IT-1-Libyan', 'IT-30-GaF-HQ', 'IT-31-GaF-HQ']
+
+      HQ COUNTERS IN THE ORDER OF BATTLE: 68 -> 83
+      role census (side/role -> count):
+        ALLIED/combat             329 -> 328    <-- moved
+        ALLIED/hq                  50 -> 50  
+        ALLIED/hq_engineer         10 -> 15     <-- moved
+        ALLIED/non_combat          17 -> 17  
+        AXIS/combat               264 -> 259    <-- moved
+        AXIS/hq                     8 -> 9      <-- moved
+        AXIS/hq_engineer            0 -> 9      <-- moved
+        AXIS/non_combat            54 -> 58     <-- moved
+
+  (b) ON THE MAP -- what campaign_policy.concentrate_formations proposes at t0:
+        AXIS   attach orders  16 -> 16    distinct parents 6 -> 6
+        ALLIED attach orders   0 -> 0     distinct parents 0 -> 0
+
+  (c) IN PLAY -- every UNIT_ATTACHED of the full 111-turn war:
+        seed |                BASE attach |                HEAD attach |              ENGOFF attach
+        1941 |               {'AXIS': 19} |               {'AXIS': 19} |               {'AXIS': 19}
+           7 |               {'AXIS': 19} |               {'AXIS': 24} |               {'AXIS': 20}
+           4 |               {'AXIS': 17} |               {'AXIS': 21} |               {'AXIS': 20}
+          24 |               {'AXIS': 18} |               {'AXIS': 19} |               {'AXIS': 20}
+        2026 |               {'AXIS': 17} |               {'AXIS': 22} |               {'AXIS': 21}
+          99 |               {'AXIS': 20} |               {'AXIS': 20} |               {'AXIS': 21}
+           1 |               {'AXIS': 21} |               {'AXIS': 18} |               {'AXIS': 19}
+
+      BASE: attach parents actually used across all seeds (12 distinct)
+        AXIS/IT-115---62-Marm                           21
+        AXIS/IT-116---62-Marm                           21
+        AXIS/IT-157---63-Cir                            21
+        AXIS/IT-158---63-Cir                            21
+        AXIS/IT-Trvli---LTC                             21
+        AXIS/IT-Aresca---LTC                            14
+        AXIS/IT-142---64-Cat                             3
+        AXIS/IT-270Lgn---4-CCNN                          2
+        AXIS/IT-4-Libyan---2-Libyan                      2
+        AXIS/IT-141---64-Cat                             2
+        AXIS/IT-3-Libyan---2-Libyan                      2
+        AXIS/IT-240Lgn---4-CCNN                          1
+
+      HEAD: attach parents actually used across all seeds (12 distinct)
+        AXIS/IT-Trvli---LTC                             22
+        AXIS/IT-115---62-Marm                           21
+        AXIS/IT-116---62-Marm                           21
+        AXIS/IT-157---63-Cir                            21
+        AXIS/IT-158---63-Cir                            21
+        AXIS/IT-Aresca---LTC                            14
+        AXIS/IT-142---64-Cat                             6
+        AXIS/IT-240Lgn---4-CCNN                          6
+        AXIS/IT-270Lgn---4-CCNN                          3
+        AXIS/IT-3-Libyan---2-Libyan                      3
+        AXIS/IT-4-Libyan---2-Libyan                      3
+        AXIS/IT-141---64-Cat                             2
+
+  (d) [15.53] ORGANIZATION-SIZE -- COMBAT_RESOLVED payloads carrying attacker_size
+      (engine.py:5586 records the tier only when max(size) >= 2), with the column shift
+      re-derived through combat_tables.org_size_shift:
+        seed |     arm | recorded | shifting |  favAXIS | favALLIED | tiers
+        1941 |    BASE |        6 |        6 |        6 |         0 | {'atk2/def0': 5, 'atk2/def1': 1}
+        1941 |    HEAD |        6 |        6 |        6 |         0 | {'atk1/def2': 2, 'atk2/def0': 4}
+        1941 |  ENGOFF |        7 |        7 |        7 |         0 | {'atk1/def2': 2, 'atk2/def0': 4, 'atk2/def1': 1}
+           7 |    BASE |       12 |       12 |       12 |         0 | {'atk0/def2': 1, 'atk1/def2': 6, 'atk2/def0': 2, 'atk2/def1': 3}
+           7 |    HEAD |        3 |        3 |        3 |         0 | {'atk1/def2': 2, 'atk2/def0': 1}
+           7 |  ENGOFF |        6 |        6 |        6 |         0 | {'atk1/def2': 3, 'atk2/def0': 1, 'atk2/def1': 2}
+           4 |    BASE |       11 |       11 |       11 |         0 | {'atk1/def2': 4, 'atk2/def0': 4, 'atk2/def1': 3}
+           4 |    HEAD |       12 |       12 |       12 |         0 | {'atk0/def2': 1, 'atk1/def2': 4, 'atk2/def0': 6, 'atk2/def1': 1}
+           4 |  ENGOFF |        6 |        6 |        6 |         0 | {'atk1/def2': 2, 'atk2/def0': 3, 'atk2/def1': 1}
+          24 |    BASE |        6 |        6 |        6 |         0 | {'atk1/def2': 2, 'atk2/def0': 1, 'atk2/def1': 3}
+          24 |    HEAD |        7 |        7 |        7 |         0 | {'atk1/def2': 2, 'atk2/def0': 4, 'atk2/def1': 1}
+          24 |  ENGOFF |        5 |        5 |        5 |         0 | {'atk1/def2': 2, 'atk2/def0': 1, 'atk2/def1': 2}
+        2026 |    BASE |        5 |        5 |        5 |         0 | {'atk1/def2': 1, 'atk2/def0': 3, 'atk2/def1': 1}
+        2026 |    HEAD |       16 |       16 |       16 |         0 | {'atk0/def2': 1, 'atk0/def3': 1, 'atk1/def2': 7, 'atk2/def0': 5, 'atk2/def1': 2}
+        2026 |  ENGOFF |        5 |        5 |        5 |         0 | {'atk1/def2': 3, 'atk2/def1': 1, 'atk3/def0': 1}
+          99 |    BASE |        7 |        7 |        7 |         0 | {'atk1/def2': 5, 'atk2/def0': 1, 'atk2/def1': 1}
+          99 |    HEAD |        4 |        4 |        4 |         0 | {'atk2/def0': 4}
+          99 |  ENGOFF |        3 |        3 |        3 |         0 | {'atk1/def2': 2, 'atk2/def0': 1}
+           1 |    BASE |        1 |        1 |        1 |         0 | {'atk2/def1': 1}
+           1 |    HEAD |        4 |        4 |        4 |         0 | {'atk2/def0': 4}
+           1 |  ENGOFF |       21 |       21 |       21 |         0 | {'atk0/def2': 1, 'atk1/def2': 9, 'atk2/def0': 5, 'atk2/def1': 6}
+      TOTAL    BASE: recorded    48   favouring AXIS    48   favouring ALLIED     0
+      TOTAL    HEAD: recorded    52   favouring AXIS    52   favouring ALLIED     0
+      TOTAL  ENGOFF: recorded    53   favouring AXIS    53   favouring ALLIED     0
+
+====================================================================================================
+2. THE 23.11 (ENG) CORRECTION -- THE SEPTEMBER-1940 OPENING
+====================================================================================================
+  Ownership is the victory projection's own 64.73 test (campaign_victory._occupier: a
+  SUPPLIED combat unit of >=1 TOE strength), sampled at every Game-Turn boundary.
+
+  SIDI BARRANI -- holder at Game-Turn:
+        seed |     arm | GT1   | GT5   | GT10  | GT20  | GT30  | GT50  | GT70  | GT90  | GT111
+        1941 |    BASE | ALLIE | -     | -     | -     | -     | -     | ALLIE | ALLIE | ALLIE
+        1941 |  ENGOFF | ALLIE | -     | -     | -     | -     | -     | -     | -     | ALLIE
+        1941 |    HEAD | ALLIE | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | ALLIE | ALLIE | ALLIE
+           7 |    BASE | ALLIE | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | -     | -     | ALLIE
+           7 |  ENGOFF | ALLIE | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | -     | -     | ALLIE
+           7 |    HEAD | ALLIE | -     | -     | -     | -     | -     | -     | ALLIE | ALLIE
+           4 |    BASE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE
+           4 |  ENGOFF | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE
+           4 |    HEAD | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE
+          24 |    BASE | ALLIE | -     | -     | -     | -     | -     | ALLIE | ALLIE | ALLIE
+          24 |  ENGOFF | ALLIE | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | -    
+          24 |    HEAD | ALLIE | ALLIE | -     | -     | -     | -     | -     | -     | ALLIE
+        2026 |    BASE | ALLIE | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | -     | -     | ALLIE
+        2026 |  ENGOFF | ALLIE | -     | -     | -     | -     | -     | -     | -     | ALLIE
+        2026 |    HEAD | ALLIE | ALLIE | -     | -     | -     | -     | ALLIE | ALLIE | ALLIE
+          99 |    BASE | ALLIE | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | ALLIE | ALLIE
+          99 |  ENGOFF | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE
+          99 |    HEAD | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE
+           1 |    BASE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE
+           1 |  ENGOFF | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE
+           1 |    HEAD | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE | ALLIE
+
+  SOLLUM -- holder at Game-Turn:
+        seed |     arm | GT1   | GT5   | GT10  | GT20  | GT30  | GT50  | GT70  | GT90  | GT111
+        1941 |    BASE | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | ALLIE | ALLIE
+        1941 |  ENGOFF | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS 
+        1941 |    HEAD | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | -     | ALLIE
+           7 |    BASE | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | ALLIE | -     | ALLIE
+           7 |  ENGOFF | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | -     | ALLIE
+           7 |    HEAD | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | -     | AXIS 
+           4 |    BASE | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | -     | -     | ALLIE
+           4 |  ENGOFF | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | ALLIE | ALLIE
+           4 |    HEAD | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS 
+          24 |    BASE | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | ALLIE
+          24 |  ENGOFF | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | -     | -    
+          24 |    HEAD | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | -     | -    
+        2026 |    BASE | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS 
+        2026 |  ENGOFF | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS 
+        2026 |    HEAD | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | -    
+          99 |    BASE | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | ALLIE | -     | -    
+          99 |  ENGOFF | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | ALLIE | ALLIE
+          99 |    HEAD | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | -     | ALLIE
+           1 |    BASE | -     | -     | -     | -     | -     | -     | ALLIE | ALLIE | ALLIE
+           1 |  ENGOFF | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS 
+           1 |    HEAD | -     | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS  | AXIS 
+
+  CITIES BANKED AT GT30 (the window the restated tests pin):
+        seed |     arm |  CW |  AX | Commonwealth set
+        1941 |    BASE |   1 |   5 | ['Mersa Matruh']
+        1941 |  ENGOFF |   1 |   5 | ['Mersa Matruh']
+        1941 |    HEAD |   1 |   6 | ['Mersa Matruh']
+           7 |    BASE |   0 |   6 | []
+           7 |  ENGOFF |   0 |   6 | []
+           7 |    HEAD |   0 |   5 | []
+           4 |    BASE |   1 |   5 | ['Sidi Barrani']
+           4 |  ENGOFF |   1 |   5 | ['Sidi Barrani']
+           4 |    HEAD |   1 |   6 | ['Sidi Barrani']
+          24 |    BASE |   1 |   5 | ['Mersa Matruh']
+          24 |  ENGOFF |   1 |   6 | ['Mersa Matruh']
+          24 |    HEAD |   0 |   6 | []
+        2026 |    BASE |   0 |   7 | []
+        2026 |  ENGOFF |   0 |   5 | []
+        2026 |    HEAD |   0 |   6 | []
+          99 |    BASE |   0 |   6 | []
+          99 |  ENGOFF |   1 |   5 | ['Sidi Barrani']
+          99 |    HEAD |   1 |   5 | ['Sidi Barrani']
+           1 |    BASE |   1 |   4 | ['Sidi Barrani']
+           1 |  ENGOFF |   1 |   5 | ['Sidi Barrani']
+           1 |    HEAD |   1 |   6 | ['Sidi Barrani']
+      TOTAL    BASE: Commonwealth   4 city-holdings at GT30, Axis  38
+      TOTAL  ENGOFF: Commonwealth   5 city-holdings at GT30, Axis  37
+      TOTAL    HEAD: Commonwealth   4 city-holdings at GT30, Axis  40
+
+  THE AXIS GROUND HIGH-WATER MARK (furthest-east axial r a counter ever reached;
+  El Alamein is r118, Alexandria r126):
+        seed |             BASE |           ENGOFF |             HEAD
+        1941 |       r107 (GT3) |       r133 (GT6) |       r123 (GT5)
+           7 |       r130 (GT6) |       r133 (GT6) |       r133 (GT6)
+           4 |       r133 (GT8) |       r130 (GT5) |       r133 (GT8)
+          24 |       r133 (GT7) |       r128 (GT5) |       r133 (GT6)
+        2026 |       r133 (GT6) |      r135 (GT20) |       r133 (GT5)
+          99 |       r123 (GT5) |       r133 (GT5) |       r128 (GT5)
+           1 |       r133 (GT7) |       r133 (GT7) |      r133 (GT20)
+
+====================================================================================================
+3. THE BALANCE -- winner and the 64.76 grade, per seed, per arm
+====================================================================================================
+        seed |     arm |  winner | grade
+        1941 |    BASE |    AXIS | Axis Smashing Victory: 1079-30 Victory Points (64.76)
+        1941 |  ENGOFF |    AXIS | Axis Smashing Victory: 1188-20 Victory Points (64.76)
+        1941 |    HEAD |    AXIS | Axis Smashing Victory: 419-30 Victory Points (64.76)
+           7 |    BASE |    AXIS | Axis Smashing Victory: 938-80 Victory Points (64.76)
+           7 |  ENGOFF |    AXIS | Axis Smashing Victory: 333-30 Victory Points (64.76)
+           7 |    HEAD |    AXIS | Axis Smashing Victory: 832-20 Victory Points (64.76)
+           4 |    BASE |    AXIS | Axis Smashing Victory: 955-30 Victory Points (64.76)
+           4 |  ENGOFF |    AXIS | Axis Smashing Victory: 886-30 Victory Points (64.76)
+           4 |    HEAD |    AXIS | Axis Smashing Victory: 455-20 Victory Points (64.76)
+          24 |    BASE |    AXIS | Axis Smashing Victory: 1235-30 Victory Points (64.76)
+          24 |  ENGOFF |    AXIS | Axis Smashing Victory: 390-10 Victory Points (64.76)
+          24 |    HEAD |    AXIS | Axis Smashing Victory: 628-20 Victory Points (64.76)
+        2026 |    BASE |    AXIS | Axis Smashing Victory: 603-20 Victory Points (64.76)
+        2026 |  ENGOFF |    AXIS | Axis Smashing Victory: 629-20 Victory Points (64.76)
+        2026 |    HEAD |    AXIS | Axis Smashing Victory: 407-20 Victory Points (64.76)
+          99 |    BASE |    AXIS | Axis Smashing Victory: 772-20 Victory Points (64.76)
+          99 |  ENGOFF |    AXIS | Axis Smashing Victory: 781-30 Victory Points (64.76)
+          99 |    HEAD |    AXIS | Axis Smashing Victory: 448-80 Victory Points (64.76)
+           1 |    BASE |    AXIS | Axis Smashing Victory: 1437-30 Victory Points (64.76)
+           1 |  ENGOFF |    AXIS | Axis Smashing Victory: 415-20 Victory Points (64.76)
+           1 |    HEAD |    AXIS | Axis Smashing Victory: 983-20 Victory Points (64.76)
+
+  VP DELTA vs BASE (positive = toward the Commonwealth):
+        seed |          BASE VP |          HEAD VP |   d(AX) |   d(CW) | sign
+        1941 |          1079-30 |           419-30 |    -660 |      +0 | CW
+           7 |           938-80 |           832-20 |    -106 |     -60 | CW
+           4 |           955-30 |           455-20 |    -500 |     -10 | CW
+          24 |          1235-30 |           628-20 |    -607 |     -10 | CW
+        2026 |           603-20 |           407-20 |    -196 |      +0 | CW
+          99 |           772-20 |           448-80 |    -324 |     +60 | CW
+           1 |          1437-30 |           983-20 |    -454 |     -10 | CW
+      sign tally BASE->HEAD: {'CW': 7, 'AXIS': 0, 'none': 0}  of 7 seeds
+
+  VP DELTA, the (ENG) correction ALONE (eng_off -> HEAD, same tree otherwise):
+        1941 |          1188-20 |           419-30 |    -769 |     +10 | CW
+           7 |           333-30 |           832-20 |    +499 |     -10 | AXIS
+           4 |           886-30 |           455-20 |    -431 |     -10 | CW
+          24 |           390-10 |           628-20 |    +238 |     +10 | AXIS
+        2026 |           629-20 |           407-20 |    -222 |      +0 | CW
+          99 |           781-30 |           448-80 |    -333 |     +50 | CW
+           1 |           415-20 |           983-20 |    +568 |      +0 | AXIS
+      sign tally ENGOFF->HEAD: {'CW': 4, 'AXIS': 3, 'none': 0} of 7 seeds
+
+====================================================================================================
+4. SANITY -- did any of it break something absurd?
+====================================================================================================
+        seed |     arm | axis_combat_un | cw_combat_unit | units_that_nev | units_on_map_a | units_the_war_ | combats AX/CW | surrenders AX/CW
+        1941 |    BASE |             95 |            184 |            204 |             78 |            732 |     24/13     |     13/9     
+        1941 |  ENGOFF |             97 |            184 |            209 |             77 |            745 |     24/22     |     16/18    
+        1941 |    HEAD |             94 |            163 |            226 |             94 |            745 |     38/42     |     26/26    
+           7 |    BASE |            100 |            205 |            198 |             73 |            732 |     45/44     |     28/16    
+           7 |  ENGOFF |             90 |            201 |            215 |             83 |            745 |     32/39     |     23/16    
+           7 |    HEAD |             99 |            186 |            228 |             96 |            745 |     16/33     |      8/19    
+           4 |    BASE |             93 |            242 |            197 |             73 |            732 |     37/26     |     29/12    
+           4 |  ENGOFF |             88 |            231 |            215 |             82 |            745 |     28/51     |     18/30    
+           4 |    HEAD |             96 |            179 |            230 |             97 |            745 |     30/28     |     20/17    
+          24 |    BASE |             95 |            226 |            201 |             70 |            732 |     22/13     |     15/11    
+          24 |  ENGOFF |             97 |            165 |            216 |             83 |            745 |     22/20     |     17/14    
+          24 |    HEAD |             99 |            237 |            220 |             90 |            745 |     32/18     |     22/12    
+        2026 |    BASE |            101 |            180 |            197 |             71 |            732 |     37/27     |     23/19    
+        2026 |  ENGOFF |             98 |            241 |            223 |             91 |            745 |     18/12     |     11/8     
+        2026 |    HEAD |             96 |            226 |            224 |             92 |            745 |     29/30     |     21/21    
+          99 |    BASE |             98 |            178 |            206 |             81 |            732 |     24/32     |     16/22    
+          99 |  ENGOFF |             96 |            199 |            214 |             84 |            745 |     26/36     |     21/22    
+          99 |    HEAD |             96 |            222 |            229 |             97 |            745 |     29/47     |     19/24    
+           1 |    BASE |            100 |            195 |            204 |             77 |            732 |     35/21     |     24/13    
+           1 |  ENGOFF |             98 |            183 |            220 |             90 |            745 |     33/24     |     17/15    
+           1 |    HEAD |            100 |            232 |            226 |             94 |            745 |     30/38     |     19/15    
+
+  THE FATE OF EVERY HQ THIS SLICE SEEDED (HEAD, seed 1941):
+      + 136-GGFF-Div-HQ              AXIS   eng=HQ_ENGINEER  moved=False alive=True  on_map=True  hex=[45, -3]
+      + Ariete-Div-HQ                AXIS   eng=HQ_ENGINEER  moved=False alive=True  on_map=True  hex=[46, -9]
+      + Folgore-Div-HQ               AXIS   eng=HQ_ENGINEER  moved=False alive=True  on_map=True  hex=[45, -10]
+      + HQ-2-NZ-Div                  ALLIED eng=HQ_ENGINEER  moved=False alive=True  on_map=True  hex=[26, 132]
+      + HQ-4-In-Div                  ALLIED eng=HQ_ENGINEER  moved=False alive=True  on_map=True  hex=[26, 101]
+      + HQ-44-Inf-Div                ALLIED eng=HQ_ENGINEER  moved=False alive=True  on_map=True  hex=[47, 138]
+      + HQ-6-Aus-Div                 ALLIED eng=HQ_ENGINEER  moved=False alive=True  on_map=True  hex=[48, 138]
+      + HQ-7-Armd-Div                ALLIED eng=HQ_ENGINEER  moved=False alive=False on_map=False hex=None
+      + IT-1-Libyan                  AXIS   eng=HQ_ENGINEER  moved=False alive=False on_map=False hex=None
+      + IT-2-Libyan-Div-HQ           AXIS   eng=HQ_ENGINEER  moved=False alive=True  on_map=True  hex=[23, 74]
+      + IT-30-GaF-HQ                 AXIS   eng=HQ_ENGINEER  moved=False alive=True  on_map=True  hex=[19, 77]
+      + IT-31-GaF-HQ                 AXIS   eng=HQ_ENGINEER  moved=False alive=True  on_map=True  hex=[14, 66]
+      + IT-32-GaF-HQ                 AXIS   eng=HQ_ENGINEER  moved=False alive=True  on_map=True  hex=[14, 66]
+      + Littorio-Div-HQ              AXIS   eng=HQ_ENGINEER  moved=False alive=True  on_map=True  hex=[44, -2]
+      + RECAM-HQ                     AXIS   eng=-            moved=False alive=True  on_map=True  hex=[46, -9]
+
+  ORDER_REJECTED totals, all seeds:
+         BASE: {'ALLIED/attack': 387, 'ALLIED/construction': 2, 'ALLIED/move': 39518, 'ALLIED/retreat_before_assault': 13, 'ALLIED/truck_convoy': 9567, 'AXIS/attach': 18, 'AXIS/attack': 375, 'AXIS/construction': 7, 'AXIS/move': 7866, 'AXIS/truck_convoy': 5502}
+         HEAD: {'ALLIED/attack': 183, 'ALLIED/construction': 11, 'ALLIED/move': 36690, 'ALLIED/retreat_before_assault': 3, 'ALLIED/truck_convoy': 7784, 'AXIS/attack': 309, 'AXIS/construction': 9, 'AXIS/move': 8459, 'AXIS/truck_convoy': 6222}
+       ENGOFF: {'ALLIED/attack': 192, 'ALLIED/construction': 9, 'ALLIED/move': 34251, 'ALLIED/retreat_before_assault': 6, 'ALLIED/truck_convoy': 11756, 'AXIS/attack': 242, 'AXIS/construction': 6, 'AXIS/move': 8051, 'AXIS/truck_convoy': 5135}
+
+  (game/invariants.py runs after every applied event and must never raise -- twenty-eight
+   completed 111-turn campaigns are themselves that proof.)
+
+====================================================================================================
+5. THE MECHANISM -- WHERE THE VICTORY POINTS ACTUALLY WENT
+====================================================================================================
+  The 64.76 total is 64.73 Geographic Occupation + 64.75 Withdrawal (Commonwealth only)
+  + 64.74 unused Replacement Points.  Split it.
+
+  (a) 64.73 GEOGRAPHIC -- the ground.  Axis Occupation Points from the cities its supplied
+      combat units hold at the final Game-Turn:
+        seed | BASE AXgeo | HEAD AXgeo | BASE CWgeo | HEAD CWgeo | HEAD Axis cities
+        1941 |        390 |        290 |         30 |         30 | ['Benghazi', 'Giarabub', 'Tobruk']
+           7 |        290 |        415 |         80 |         20 | ['Bardia', 'Benghazi', 'Giarabub', 'Sollum', 'Tobruk']
+           4 |        390 |        415 |         30 |         20 | ['Bardia', 'Benghazi', 'Giarabub', 'Sollum', 'Tobruk']
+          24 |        390 |        390 |         30 |         20 | ['Bardia', 'Benghazi', 'Giarabub', 'Tobruk']
+        2026 |        415 |        390 |         20 |         20 | ['Bardia', 'Benghazi', 'Giarabub', 'Tobruk']
+          99 |        290 |        290 |         20 |         80 | ['Benghazi', 'Giarabub', 'Tobruk']
+           1 |        390 |        415 |         30 |         20 | ['Bardia', 'Benghazi', 'Giarabub', 'Sollum', 'Tobruk']
+        MEAN |      365.0 |      372.1 |       34.3 |       30.0
+
+  (b) 64.74 -- the AXIS INFANTRY REPLACEMENT POOL (1,600 points; the Commonwealth scores
+      ZERO replacement VP under the 2026-07-24 owner ruling, so this term is one-sided).
+      unused = 1600 - the [20.66] rebuild spend, read off the UNIT_REBUILT log:
+        seed | BASE spend HEAD spend       d | BASE 64.74 HEAD 64.74       d | BASE AXsteps HEAD AXsteps       d
+        1941 |        911       1471    +560 |        689        129    -560 |         1814         2339    +525
+           7 |        952       1183    +231 |        648        417    -231 |         1800         2013    +213
+           4 |       1035       1560    +525 |        565         40    -525 |         1930         2399    +469
+          24 |        755       1362    +607 |        845        238    -607 |         1671         2191    +520
+        2026 |       1412       1583    +171 |        188         17    -171 |         2275         2444    +169
+          99 |       1118       1442    +324 |        482        158    -324 |         2007         2294    +287
+           1 |        553       1032    +479 |       1047        568    -479 |         1410         1851    +441
+      SIGNS: Axis rebuild spend UP on 7/7 seeds (mean +414); Axis 64.74 DOWN on 7/7 (mean -414); Axis steps lost UP on 7/7 (mean +375)
+
+  (c) THE FIVE COUNTERS THE SLICE TOOK OUT OF THE AXIS LINE -- what became of them
+      (the four [23.11] '(ENG)' Engineer Battalions and the 1st Libyan Division HQ^E),
+      seed 1941:
+        IT-64---Cat-(ENG)        BASE is_combat=True  moved=True  end_strength=0   ->   HEAD is_combat=False moved=False end_strength=1
+        IT-204---4CCNN-(ENG)     BASE is_combat=True  moved=True  end_strength=0   ->   HEAD is_combat=False moved=False end_strength=1
+        IT-63-Cir-(ENG)          BASE is_combat=True  moved=True  end_strength=0   ->   HEAD is_combat=False moved=False end_strength=0
+        IT-62-Marm-(ENG)         BASE is_combat=True  moved=True  end_strength=0   ->   HEAD is_combat=False moved=False end_strength=1
+        IT-1-Libyan              BASE is_combat=True  moved=True  end_strength=0   ->   HEAD is_combat=False moved=False end_strength=0
+
+  (d) WHO NEVER MOVED IN 111 GAME-TURNS, by role (seed 1941):
+        ALLIED/combat              17 -> 15  
+        ALLIED/hq                  50 -> 50  
+        ALLIED/hq_engineer         10 -> 15  
+        ALLIED/non_combat          15 -> 15  
+        AXIS/combat                50 -> 55  
+        AXIS/hq                     8 -> 9   
+        AXIS/hq_engineer            0 -> 9   
+        AXIS/non_combat            54 -> 58  
+
+  (e) combat counters at setup / alive at the end:
+        BASE  AXIS  264 -> 112    ALLIED  329 -> 184
+        HEAD  AXIS  259 -> 111    ALLIED  328 -> 163
