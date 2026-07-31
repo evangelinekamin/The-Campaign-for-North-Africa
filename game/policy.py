@@ -49,6 +49,27 @@ class TruckOrder:
 
 
 @dataclass(frozen=True, slots=True)
+class RailActivateOrder:
+    """[54.43] Spend one activation's worth of Rolling Stock -- 250 Stores and 100 Fuel standing in
+    the dump `supply_id`, which must sit on a rail hex the Axis controls and which is operative.
+    The points are gone for good (54.45), and each activation buys 300 tons of haul per Operations
+    Stage in one direction."""
+    supply_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class RailHaulOrder:
+    """[54.43]/[54.33]/[54.35] Move `qty` Points of ONE `commodity` from `from_dump` to `to_dump`,
+    both standing on Axis-controlled rail hexes of one connected line. 54.33 allows only one type
+    of supply per train, and 54.43 caps the whole Operations Stage's haul at 300 tons per activated
+    Rolling Stock IN ANY ONE DIRECTION -- so all of a stage's orders must run the same way."""
+    from_dump: str
+    to_dump: str
+    commodity: str
+    qty: int
+
+
+@dataclass(frozen=True, slots=True)
 class CoastalShipOrder:
     """One Axis coastal-shipping decision (rule 56.3), for a ship currently DOCKED (idle, at a
     port). Optionally LOAD `load` ({commodity: qty}, one commodity, 56.34) from the co-located port
@@ -193,6 +214,18 @@ class Policy:
 
     def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
         return []  # optional: haul supply forward with 2nd/3rd-line truck convoys (rule 48 V.J)
+
+    def rail_orders(self, state: GameState, side: Side) -> list:
+        """[54.4] THE AXIS RAILROAD DECISION: whether to burn 250 Stores + 100 Fuel on Rolling
+        Stock (RailActivateOrder, 54.43), and what to haul along the captured line this Operations
+        Stage (RailHaulOrder). Base [] buys nothing and runs no train, so a policy with no rail
+        doctrine spends nothing and every scenario without one stays byte-identical.
+
+        WHETHER ANY COMMANDER SHOULD SPEND 250 STORES ON A LOCOMOTIVE IS A DOCTRINE QUESTION THE
+        BOOK DOES NOT ANSWER -- the same open question the minefields (rule 26) and the Tobruk
+        relay staging already raise. Concrete doctrine, flagged as an opinion a commander may hold,
+        lives at game.campaign_policy.CampaignAxisPolicy.rail_orders."""
+        return []
 
     def coastal_shipping_orders(self, state: GameState, side: Side) -> list[CoastalShipOrder]:
         """[56.3] THE AXIS COASTAL-SHIPPING DECISION: which docked, idle ships load what and sail

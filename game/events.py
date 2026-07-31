@@ -391,6 +391,21 @@ class EventKind(str, Enum):
     # while HEX_CONTROL_CHANGED reports sole combat OCCUPANCY at a phase boundary. Emitted only
     # for hexes the built railway runs through, so every railway-less scenario stays silent.
     RAIL_CONTROL_CHANGED = "RAIL_CONTROL_CHANGED"
+    # [54.43] ROLLING_STOCK_ACTIVATED {hex, supply_id, cargo, stock} -- the Axis spent 250 Stores +
+    # 100 Fuel at a controlled, operative rail hex to activate one unit of Rolling Stock, worth 300
+    # tons of haul per Operations Stage. The points leave the dump and do NOT go anywhere else:
+    # 54.45 says they "are used up; they may not be recovered", so this is a CONSUMPTION event and
+    # game.invariants bills it to the ledger exactly like a unit eating its rations.
+    ROLLING_STOCK_ACTIVATED = "ROLLING_STOCK_ACTIVATED"
+    # [54.45] ROLLING_STOCK_DESTROYED {stock, reason} -- "If at any time the Axis Player loses
+    # control of enough rail hexes so that he does not have the necessary five contiguous hexes the
+    # Rolling Stock is considered to have been destroyed." Not a refund: the stock is gone and the
+    # Stores and Fuel that bought it stay spent.
+    ROLLING_STOCK_DESTROYED = "ROLLING_STOCK_DESTROYED"
+    # NOTE: the Axis's own 54.43 haul does NOT get an event of its own -- it reuses RAIL_HAULED
+    # above, which is exactly what [54.46] asks for ("All rules concerning the movement of
+    # troops/supplies and the use of the railroad that apply to the Commonwealth apply equally to
+    # the Axis"). The Event's own `side` distinguishes whose train it is.
     PHASE_ADVANCED = "PHASE_ADVANCED"
     TURN_ADVANCED = "TURN_ADVANCED"
     VICTORY_CHECKED = "VICTORY_CHECKED"

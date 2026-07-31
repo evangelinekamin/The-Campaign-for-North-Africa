@@ -29,13 +29,15 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, replace
 
-from . import campaign_claim, construction, malta, organization, stacking, supply, tactics, wells
+from . import (campaign_claim, construction, malta, organization, rail, stacking, supply, tactics,
+               wells)
 from .campaign_claim import (STAGING, garrison_units,   # the rule-64.73 standing orders, re-exported
                              hold_depots, hold_garrisons)   # (game.campaign_staff and the tests import them from here)
 from .events import Control, Side
 from .hexmap import Coord, distance
 from .policy import (AttackOrder, BuildOrder, CoastalShipOrder, DemolitionOrder, MotorizeOrder,
-                     MoveOrder, OrganizationOrder, ScriptedPolicy, SupplyMoveOrder, TruckOrder)
+                     MoveOrder, OrganizationOrder, RailActivateOrder, RailHaulOrder,
+                     ScriptedPolicy, SupplyMoveOrder, TruckOrder)
 from .state import GameState, SupplyUnit
 from .relay import (  # extracted to game.relay; re-exported so every caller and __all__ keep working
     _step_toward, _relay_source, _is_faucet, _a_link_in_the_chain, _field_dump_id,
@@ -1093,6 +1095,51 @@ def _port_stock_tons(state: GameState, side: Side, port) -> float:
     return sum(supply.points_to_tons(getattr(dump, c.lower()), c) for c in supply.CONVOY_COMMODITIES)
 
 
+def axis_rail_doctrine(state: GameState, side: Side) -> list:
+    """[54.4] What the Axis does with a captured stretch of the Commonwealth railroad.
+
+    *** FLAGGED AS AN OPINION A COMMANDER MAY HOLD, NOT A LAW OF THE WORLD. *** The book supplies no
+    doctrine here at all -- 54.43 says what Rolling Stock COSTS and what it BUYS, never when a
+    commander should want one. Same standing as convoy_plan_doctrine and coastal_shipping_doctrine,
+    and the same open question the minefields (rule 26) and the Tobruk relay staging already raise:
+    the real answer is a staff officer's, and belongs to Gate C rather than to a heuristic here.
+
+    The opinion taken: BUY ONE LOCOMOTIVE, AND ONLY ONE. 54.41's gate opens for roughly half the
+    campaign but the Axis holds the line only in the middle of it -- measured, he ends every seed
+    with zero controlled rail hexes -- and 54.45 destroys the whole stock the moment the gate shuts,
+    with no refund. A second locomotive doubles the haul and doubles what the Eighth Army burns when
+    it comes back; one is the cautious buy, and caution is what a quartermaster who has read 54.45
+    would feel. Then haul the fullest single commodity FORWARD -- from the westmost controlled rail
+    dump to the eastmost -- which is the direction the DAK's supply problem actually runs.
+
+    Nothing here tries to make 54.4 look valuable. If one locomotive's 300 tons an Operations Stage
+    turns out not to matter, that is the measurement, and it is reported rather than tuned away."""
+    if side is not Side.AXIS or not rail.usable_this_stage(state):
+        return []
+    controlled = rail.controlled_by(state, side)
+    if not controlled:
+        return []
+    dumps = [s for s in state.supplies
+             if s.side == side and s.hex in controlled and not s.is_dummy]
+    if not dumps:
+        return []
+    if state.rolling_stock <= 0:                     # 54.43: one locomotive, bought once
+        payer = next((d for d in sorted(dumps, key=lambda d: d.id)
+                      if rail.activation_affordable(d)), None)
+        return [RailActivateOrder(payer.id)] if payer is not None else []
+    # forward = eastward: the DAK's problem is always the last mile toward Egypt
+    west = min(dumps, key=lambda d: (d.hex[1], d.id))
+    east = max(dumps, key=lambda d: (d.hex[1], d.id))
+    if west.id == east.id:
+        return []
+    commodity = max(supply.CONVOY_COMMODITIES,
+                    key=lambda c: (getattr(west, c.lower()), c))
+    qty = getattr(west, commodity.lower())
+    if qty <= 0:
+        return []
+    return [RailHaulOrder(west.id, east.id, commodity, qty)]
+
+
 def coastal_shipping_doctrine(state: GameState, side: Side) -> list[CoastalShipOrder]:
     """[56.3] THE AXIS COASTAL-SHIPPING DECISION: a Benghazi<->Tobruk relief shuttle (or, in
     general, whichever two Axis harbours this campaign build carries -- nothing here names a port
@@ -1328,6 +1375,11 @@ class CampaignAxisPolicy(_CampaignAxisSupplyMixin, ScriptedPolicy):
     def coastal_shipping_orders(self, state: GameState, side: Side) -> list[CoastalShipOrder]:
         # [56.3] The Benghazi<->Tobruk relief shuttle -- see coastal_shipping_doctrine's own flag.
         return coastal_shipping_doctrine(state, side)
+
+    def rail_orders(self, state: GameState, side: Side) -> list:
+        # [54.4] Buy a locomotive when the captured line is long enough to be worth one, then run
+        # freight forward down it -- see axis_rail_doctrine's own flag.
+        return axis_rail_doctrine(state, side)
 
     def retreat_before_assault(self, state: GameState, side: Side,
                                pinned: frozenset[str]) -> list[MoveOrder]:

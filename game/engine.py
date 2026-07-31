@@ -23,7 +23,7 @@ from .dice import DiceBox
 from .events import CONTROL_OF, Control, Event, EventKind, Phase, Side
 from .hexmap import distance, is_adjacent, neighbors
 from .invariants import check_event
-from .policy import AttackOrder, MoveOrder, Policy
+from .policy import AttackOrder, MoveOrder, Policy, RailActivateOrder, RailHaulOrder
 from .staff_events import clean_staff_payload
 from .state import Coord, GameState, Minefield
 from .terrain import Hexside, Terrain, is_motorized, salt_marsh_barred
@@ -117,6 +117,11 @@ class _Run:
         # for every port-less scenario.
         self.port_tons_this_stage: dict[str, float] = {}
         self.port_tons_stamp: tuple[int, int] | None = None
+        # [54.43] tons the Axis railway has already hauled THIS Operations Stage, against the 300
+        # per activated Rolling Stock. Same self-expiring (turn, stage) discipline as the 55.3
+        # ledger above and for the same reason -- see _rail_tons().
+        self._rail_tons: float = 0.0
+        self._rail_tons_stamp: tuple[int, int] | None = None
         # [48 III / 48 V.D] each due convoy's SURVIVED manifest for the current Game-Turn:
         # convoy id -> {"dest": dump id|None, "cargo": remaining points, "rail": bool}. The
         # convoy is bombed at sea ONCE per turn (interdiction, strategic 39.13) and its 56.15
@@ -131,6 +136,24 @@ class _Run:
         # state must not share a clock -- so it lives here, with the rest of the per-run
         # bookkeeping, and dies with the run. Empty for every spec that needs no memory.
         self.victory_scratch: dict = {}
+
+    @property
+    def rail_tons_this_stage(self) -> float:
+        """[54.43] Tons the Axis railway has hauled so far this Operations Stage, expiring by itself
+        at the (turn, stage) boundary. Self-expiry rather than a reset in run()'s stage loop, for
+        the same reason the 55.3 port ledger uses it: a caller that drives the stages itself would
+        otherwise inherit a spent allowance and see a whole Game-Turn's haul collapse into one
+        stage."""
+        stamp = (self.state.turn, self.state.stage)
+        if self._rail_tons_stamp != stamp:
+            self._rail_tons_stamp = stamp
+            self._rail_tons = 0.0
+        return self._rail_tons
+
+    @rail_tons_this_stage.setter
+    def rail_tons_this_stage(self, value: float) -> None:
+        self.rail_tons_this_stage                    # normalise the stamp before writing through
+        self._rail_tons = value
 
     def emit(self, kind: EventKind, side: Side, actor: str, payload: dict,
              rng_draws: tuple[int, ...] = ()) -> None:
@@ -253,6 +276,11 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                 _continual_movement(r, policies, side)  # 8.2/8.23 + 18.13: the exploitation pulse loop
                 _capture_dumps(r)                       # 32.13: and the exploitation pulse
             for side in (first, second):
+                _axis_rail(r, policies[side], side)       # 54.43: "Rail movement occurs in the
+                                                         # Convoy Stage" -- and BEFORE the lorries,
+                                                         # so a train that moves freight up the
+                                                         # line has done so by the time the truck
+                                                         # park decides what to lift
                 _coastal_shipping(r, policies[side], side)  # 56.34: coastal shipping loads "at the
                                                          # BEGINNING of the Truck Convoy Phase" -- so it
                                                          # gets first call on the quay's dumps and on the
@@ -5284,6 +5312,119 @@ def _complete_fort(r: _Run, side: Side, actor: str, hx: Coord) -> None:
 
 
 # --- [26.2] MEETING A MINEFIELD IN MOVEMENT -------------------------------------------------------
+
+def _axis_rail(r: _Run, policy: Policy, side: Side) -> None:
+    """[54.4] Axis use of the Commonwealth railroad, in the Convoy Stage (54.43).
+
+    Three beats, in the order the rule imposes them:
+      1. [54.45] IF THE GATE HAS SHUT, THE STOCK IS GONE. "If at any time the Axis Player loses
+         control of enough rail hexes so that he does not have the necessary five contiguous hexes
+         the Rolling Stock is considered to have been destroyed." Checked FIRST and unconditionally,
+         because it is the one beat that fires without the Axis doing anything -- the Commonwealth
+         taking its line back is what triggers it.
+      2. [54.43] ACTIVATION. 250 Stores + 100 Fuel standing at a controlled, operative rail hex buy
+         one unit of stock, worth 300 tons of haul per Operations Stage.
+      3. [54.43]/[54.33]/[54.35] THE HAUL itself, one commodity, one direction, within capacity.
+
+    AXIS-ONLY by the rule's own subject: 54.4 is the Axis borrowing someone else's railway, and the
+    Commonwealth's use of its own is 54.3. Fires only when a railway exists, so every scenario
+    without one stays byte-identical."""
+    if side is not Side.AXIS or not r.state.terrain.rails:
+        return
+    if r.state.rolling_stock and not rail.gate_open(r.state, side):
+        r.go(Phase.LOGISTICS, side)
+        r.emit(EventKind.ROLLING_STOCK_DESTROYED, side, "AXIS/Rail",
+               {"stock": r.state.rolling_stock,
+                "reason": "fewer than five contiguous controlled rail hexes (54.45)"})
+        return
+    orders = policy.rail_orders(r.state, side) or []
+    if not orders:
+        return
+    r.go(Phase.LOGISTICS, side)
+    actor = "AXIS/Rail"
+    for order in orders:
+        if isinstance(order, RailActivateOrder):
+            _rail_activate(r, side, actor, order)
+        elif isinstance(order, RailHaulOrder):
+            _rail_haul(r, side, actor, order)
+
+
+def _rail_activate(r: _Run, side: Side, actor: str, order) -> None:
+    """[54.43] Buy one unit of Rolling Stock. The dump must stand on a rail hex the Axis CONTROLS
+    (54.41) and which is OPERATIVE -- read here as a built rail hex, since the only thing that can
+    make a rail hex inoperative in this engine is not having been built (24.67), 54.42's repair
+    having no Commonwealth counterpart to match (see the transcription's named debt)."""
+    # [54.41] IS THE CHAPEAU OF THE WHOLE RULE -- "At any time the Axis player controls five or more
+    # contiguous rail hexes he MAY USE such rail hexes to transport equipment and personnel" --
+    # and putting a locomotive on the line is using it. Without the gate the purchase would be
+    # legal, useless and then destroyed by 54.45 next Operations Stage, burning 250 Stores and 100
+    # Fuel for nothing; the book gates the use, so the use is gated here.
+    if not rail.gate_open(r.state, side):
+        _reject_rail(r, side, actor, "fewer than five contiguous controlled rail hexes (54.41)")
+        return
+    dump = r.state.supply(order.supply_id)
+    if dump is None or dump.side != side:
+        _reject_rail(r, side, actor, "no such friendly dump to draw Rolling Stock from (54.43)")
+        return
+    if dump.hex not in rail.rail_hexes(r.state):
+        _reject_rail(r, side, actor, "Rolling Stock must be brought to a rail hex (54.43)")
+        return
+    if r.state.rail_control_of(dump.hex) is not side:
+        _reject_rail(r, side, actor, "that rail hex is not Axis-controlled (54.41/54.43)")
+        return
+    if not rail.activation_affordable(dump):
+        _reject_rail(r, side, actor, "dump lacks the 250 Stores and 100 Fuel one activation costs (54.43)")
+        return
+    r.emit(EventKind.ROLLING_STOCK_ACTIVATED, side, actor,
+           {"hex": list(dump.hex), "supply_id": dump.id,
+            "cargo": dict(rail.ACTIVATION_COST_54_43), "stock": 1})
+
+
+def _rail_haul(r: _Run, side: Side, actor: str, order) -> None:
+    """[54.43]/[54.33]/[54.35] Run one train. Both dumps must stand on Axis-controlled rail hexes of
+    ONE connected line (supply.rail_reachable, the same gate the Commonwealth's 54.3 haul declares),
+    the load is a single commodity (54.33), and the stage's total is capped at 300 tons per
+    activated Rolling Stock (54.43). Over-capacity is TRIMMED rather than rejected -- 54.43 caps
+    "the extent of hauling", so a train that can only take part of a load still runs."""
+    if not rail.usable_this_stage(r.state):
+        _reject_rail(r, side, actor, "the railroad is not usable this Operations Stage (54.34/54.41)")
+        return
+    src, dst = r.state.supply(order.from_dump), r.state.supply(order.to_dump)
+    if src is None or dst is None or src.side != side or dst.side != side:
+        _reject_rail(r, side, actor, "both ends of a haul must be friendly dumps (54.43)")
+        return
+    if order.commodity not in supply.COMMODITIES:
+        _reject_rail(r, side, actor, "a train carries one type of supply (54.33)")
+        return
+    rails = rail.rail_hexes(r.state)
+    if src.hex not in rails or dst.hex not in rails:
+        _reject_rail(r, side, actor, "both ends of a haul must stand on the railway (54.43)")
+        return
+    if (r.state.rail_control_of(src.hex) is not side
+            or r.state.rail_control_of(dst.hex) is not side):
+        _reject_rail(r, side, actor, "both ends of a haul must be Axis-controlled (54.41)")
+        return
+    if dst.hex not in supply.rail_reachable(r.state.terrain, src.hex):
+        _reject_rail(r, side, actor, "the two dumps are not on one connected line (54.3/54.46)")
+        return
+    tons_left = rail.haul_capacity_tons(r.state) - r.rail_tons_this_stage
+    qty = min(order.qty, getattr(src, order.commodity.lower()),
+              supply.tons_to_points(max(0.0, tons_left), order.commodity))
+    cap = supply.dump_capacity_at(r.state, dst.hex)[order.commodity]
+    qty = min(qty, cap - getattr(dst, order.commodity.lower()))
+    if qty <= 0:
+        _reject_rail(r, side, actor, "no haul capacity left this Operations Stage (54.43)")
+        return
+    r.rail_tons_this_stage += qty * supply.TONS_PER_POINT[order.commodity]
+    r.emit(EventKind.RAIL_HAULED, side, actor,
+           {"from_dump": src.id, "to_dump": dst.id, "commodity": order.commodity, "qty": qty})
+
+
+def _reject_rail(r: _Run, side: Side, actor: str, reason: str) -> None:
+    """An Axis rail order the rules refuse, recorded rather than silently dropped -- the same
+    audit idiom _reject_ship and _reject_truck already use."""
+    r.emit(EventKind.ORDER_REJECTED, side, actor, {"reason": reason})
+
 
 def _traversed(r: _Run, side: Side, actor: str, u, path: list) -> None:
     """EVERYTHING that follows from `u` having walked `path`, in one place.

@@ -562,6 +562,14 @@
       "location": "game/scenario.py _tobruk_port() -- the ONE seed, shared by campaign() and rommels_arrival(); it also records why the 60.7/61.6 printed Efficiency 7 is not followed"
     }
   },
+  "axis_use_of_cw_railroad_54_4": {
+    "_comment": "[54.4] AXIS USE OF THE COMMONWEALTH RAILROAD. No chart exists anywhere in 54.4 -- every magnitude here is rulebook PROSE, read at 150dpi on PDF page 74 (book folio 23) and verbatim-identical to docs/rules/54-supply-co-ordination.md. [54.41] 'At any time the Axis player controls five or more contiguous rail hexes...'; [54.43] 'For each 250 Stores and 100 Fuel Points that the Axis Player imports to Africa and brings to any controlled and operative rail hex he may activate all such hexes under his control... to the extent of hauling 300 Tons of Supplies in any one direction during an Operations Stage'; [54.44] 'the equivalent of 900 Tons of Supplies' lifts one Stacking Point of units; [54.45] the points 'are used up; they may not be recovered' and the stock is destroyed outright if control falls below the five contiguous hexes. Compare [54.32]'s COMMONWEALTH capacity of 1500 tons per Operations Stage in either direction -- the Axis's 300 per activation is a fifth of it, and that asymmetry is the book's own point.",
+    "contiguous_hexes": 5,
+    "activation_cost": {"STORES": 250, "FUEL": 100},
+    "tons_per_activation_per_opstage": 300,
+    "tons_per_stacking_point_54_44": 900,
+    "dead_opstages_per_calendar_month_54_34": 1
+  },
   "port_supply_tonnage_55_3": {
     "_comment": "[55.3] PORT CAPACITY AND EFFICIENCY LEVEL CHART -- the MAXIMUM TONNAGE (supply) column, read directly from the scanned chart (PDF page 138/139, book-chart page 15; this column did NOT survive OCR into ports_55_3.efficiency_and_stacking, which only carried the Stacking-Point in/out schedule). Per 55.13/55.14 this is the tonnage of supplies (fuel/ammo/stores/water) a port may ship IN and/or OUT per Operations Stage AT PEAK EFFICIENCY; convert tonnage<->Points via equivalent_weights_54_5. A port reduced to Efficiency Level L of max M ships M/L -- i.e. L/M -- of this tonnage, rounded UP to the nearest ton (55.14; Benghazi example: 2500 t, max eff 3, reduced to 1 => 834 t). The rulebook stresses the stacking-point and tonnage schedules are INDEPENDENT (they do not gate each other), and that Axis-convoy replacement points off-load by the stacking-point schedule, not tonnage. All values below read cleanly; none are FLAGGED. efficiency_level is the same rating carried in ports_55_3.efficiency_and_stacking and is repeated here so the 55.14 tonnage-reduction math is self-contained.",
     "max_supply_tonnage_per_opstage": {

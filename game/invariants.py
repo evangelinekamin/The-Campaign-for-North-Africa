@@ -343,7 +343,8 @@ _DUMP_ID_KINDS = frozenset({
     EventKind.TRUCK_LOADED, EventKind.TRUCK_UNLOADED,
     EventKind.AIR_DUMP_BOMBED,      # 41.35 B-SD: bombs eliminate a percentage of the dump
     EventKind.UNIT_REFILLED,        # 48 V.C.6 dump->unit top-up drains a dump (Phase 4)
-    EventKind.COASTAL_SHIP_LOADED, EventKind.COASTAL_SHIP_UNLOADED})  # 56.34 ship <-> dump
+    EventKind.COASTAL_SHIP_LOADED, EventKind.COASTAL_SHIP_UNLOADED,   # 56.34 ship <-> dump
+    EventKind.ROLLING_STOCK_ACTIVATED})   # 54.43: 250 Stores + 100 Fuel leave a dump for good
 
 # Events that change a truck's cargo or breakdown state, resolved by p["truck_id"].
 _TRUCK_ID_KINDS = frozenset({
@@ -366,7 +367,8 @@ _CONSERVATION_KINDS = frozenset({
     EventKind.TRUCK_MOVED, EventKind.RAIL_HAULED, EventKind.SUPPLY_DUMP_ESTABLISHED,
     EventKind.AIR_DUMP_BOMBED, EventKind.TRUCK_POINTS_DESTROYED,  # 41.35/41.32 air-delivered sinks
     EventKind.UNIT_REFILLED, EventKind.UNIT_SUPPLY_CONSUMED,     # Phase 4 unit-pool moves
-    EventKind.COASTAL_SHIP_LOADED, EventKind.COASTAL_SHIP_UNLOADED})   # 56.34 ship <-> dump
+    EventKind.COASTAL_SHIP_LOADED, EventKind.COASTAL_SHIP_UNLOADED,    # 56.34 ship <-> dump
+    EventKind.ROLLING_STOCK_ACTIVATED})   # 54.43/54.45: "used up; they may not be recovered"
 
 
 def _touched_dumps(event: Event) -> tuple:

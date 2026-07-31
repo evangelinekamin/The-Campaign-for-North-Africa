@@ -270,6 +270,14 @@ def port_supply_tonnage_55_3() -> dict:
     return _data()["port_supply_tonnage_55_3"]["max_supply_tonnage_per_opstage"]
 
 
+def axis_rail_54_4() -> dict:
+    """[54.4] Axis use of the Commonwealth railroad: `contiguous_hexes` 5 (54.41), the
+    `activation_cost` of 250 Stores + 100 Fuel and `tons_per_activation_per_opstage` 300 (54.43),
+    `tons_per_stacking_point_54_44` 900, and 54.34's one dead Operations Stage per calendar month.
+    No chart -- all prose, read off PDF page 74 (book folio 23)."""
+    return _data()["axis_use_of_cw_railroad_54_4"]
+
+
 def coastal_shipping_56_3() -> dict:
     """[56.3] Axis coastal shipping's four prose magnitudes: `cpa` 50, `sea_hex_cost` 1,
     `load_cp` 5, `unload_cp` 5 (56.31/56.34). No chart -- read off PDF page 75-76."""

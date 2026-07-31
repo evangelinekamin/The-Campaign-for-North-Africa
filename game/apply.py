@@ -715,6 +715,25 @@ def apply(state: GameState, event: Event) -> GameState:
         # ever clears it, it is only overwritten by the other side doing the same.
         return state.with_rail_control(tuple(p["hex"]), Side(p["side"]))
 
+    if k == EventKind.ROLLING_STOCK_ACTIVATED:
+        # [54.43]/[54.45] the Stores and Fuel are CONSUMED -- "used up; they may not be recovered"
+        # -- so this folds exactly like SUPPLY_CONSUMED (drain the dump, credit consumed[]) and the
+        # on_hand + consumed == initial ledger still balances. The stock itself is not supply.
+        su = state.supply(p["supply_id"])
+        drained, consumed = su, dict(state.consumed)
+        for commodity, qty in sorted(p["cargo"].items()):
+            attr = commodity.lower()
+            drained = replace(drained, **{attr: getattr(drained, attr) - qty})
+            consumed[commodity] = consumed.get(commodity, 0) + qty
+        return replace(state.with_supply(drained), consumed=consumed,
+                       rolling_stock=state.rolling_stock + p["stock"])
+
+    if k == EventKind.ROLLING_STOCK_DESTROYED:
+        # [54.45] gone outright, and NOT a refund -- the points that bought it stay spent.
+        return replace(state, rolling_stock=state.rolling_stock - p["stock"])
+
+    # (the Axis's 54.43 haul reuses the Commonwealth's RAIL_HAULED fold above, per 54.46)
+
     if k == EventKind.VICTORY_CHECKED:
         return replace(state, vp=VP(axis=p["axis"], allied=p["allied"]))
 
