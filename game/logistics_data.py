@@ -270,6 +270,21 @@ def port_supply_tonnage_55_3() -> dict:
     return _data()["port_supply_tonnage_55_3"]["max_supply_tonnage_per_opstage"]
 
 
+def coastal_shipping_56_3() -> dict:
+    """[56.3] Axis coastal shipping's four prose magnitudes: `cpa` 50, `sea_hex_cost` 1,
+    `load_cp` 5, `unload_cp` 5 (56.31/56.34). No chart -- read off PDF page 75-76."""
+    return _data()["axis_naval_convoys_56"]["coastal_shipping_56_3"]
+
+
+def coastal_shipping_fleet_56_31() -> tuple[tuple[str, int], ...]:
+    """[56.31] the coastal fleet roster as (letter, tons) pairs. FLAGGED NON-SCAN: 56.31 says
+    the tonnage is "printed on" the counter and the rulebook prose never repeats it, so this is
+    vmod counter-face data -- see the `fleet._source` note in data/logistics_rates.json, which
+    carries the provenance and the "a photographed counter sheet wins over this" caveat."""
+    return tuple((s["letter"], s["tons"])
+                 for s in coastal_shipping_56_3()["fleet"]["ships"])
+
+
 def convoy_level_56_4() -> dict:
     """[56.4] Axis Naval Convoy Level letter (A-G / '-') by calendar year and month."""
     return _data()["axis_naval_convoys_56"]["convoy_level_chart_56_4"]

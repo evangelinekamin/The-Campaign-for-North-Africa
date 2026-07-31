@@ -293,8 +293,9 @@ class CampaignVictory:
         which is right for a one-off question and wasteful in a loop.
 
         64.72's "This does not include air or coastal shipping units" is honoured STRUCTURALLY, not
-        by a filter: this engine's air is a game.state.AirWing and its ships are NavalUnits, neither
-        of which is a Unit, so neither can ever reach `unit` at all. (Rule 3.23's own list of combat
+        by a filter: this engine's air is a game.state.AirWing, its warships are NavalUnits and its
+        [56.3] coastal fleet is a game.state.CoastalShip, none of which is a Unit, so none can ever
+        reach `unit` at all. (Rule 3.23's own list of combat
         units -- Infantry, Tank, Recce, Artillery, Anti-tank, Anti-aircraft -- excludes both anyway;
         what 64.72's sentence closes is the looser glossary reading of "Combat Unit: any unit capable
         of engaging other units and/or aircraft in combat", under which a fighter squadron would
@@ -383,9 +384,10 @@ class CampaignVictory:
         units -- Infantry, Tank, Recce, Artillery, Anti-tank, Anti-aircraft -- excludes anyway.
 
         "THIS DOES NOT INCLUDE AIR OR COASTAL SHIPPING UNITS" is honoured STRUCTURALLY rather than
-        by a filter, and there is nothing to filter: this engine's air is a game.state.AirWing and
-        its ships are NavalUnits, neither of which is a Unit, so neither is ever in state.units
-        (verified: the built campaign's units are all Unit, and state.naval is empty). What that
+        by a filter, and there is nothing to filter: this engine's air is a game.state.AirWing, its
+        warships are NavalUnits and its [56.3] coastal fleet is a game.state.CoastalShip -- none of
+        them a Unit, so none of them ever in state.units (verified: the built campaign's units are
+        all Unit, state.naval is empty, and state.ships is its own field). What that
         sentence closes is the looser glossary reading of "Combat Unit" -- "any unit capable of
         engaging other units and/or aircraft in combat" -- under which a fighter squadron would
         qualify and a single airborne fighter could deny the Commonwealth its win. See

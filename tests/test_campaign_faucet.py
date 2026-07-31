@@ -601,7 +601,13 @@ def test_conservation_holds_over_the_faucet():
     for c, initial in res.final.initial_supply.items():
         on_hand = (sum(getattr(s, c.lower()) for s in res.final.supplies)
                    + sum(getattr(t, c.lower()) for t in res.final.trucks)
-                   + sum(getattr(u, c.lower()) for u in res.final.units))   # 49.14 unit tanks (Phase 4)
+                   + sum(getattr(u, c.lower()) for u in res.final.units)    # 49.14 unit tanks (Phase 4)
+                   # [56.3] ...and the coastal fleet, a FOURTH on-hand surface that game.invariants
+                   # has counted since the fleet was seeded. Restated (port rule 5): by GT16 the
+                   # campaign genuinely has cargo at sea mid-shuttle, and omitting it read as
+                   # minted-then-lost supply. The gap this closes is exact -- 660 STORES aboard,
+                   # 660 missing -- so it is a missing TERM, not a leak.
+                   + sum(getattr(sh, c.lower()) for sh in res.final.ships))
         assert on_hand + res.final.consumed.get(c, 0) == initial
 
 

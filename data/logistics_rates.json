@@ -613,6 +613,22 @@
   },
   "axis_naval_convoys_56": {
     "_comment": "The Axis Naval Convoy System (chapter 56). Convoy CAPACITY is a TONNAGE that must be converted to supply Points via [54.5]. Replacement Points and Truck/Motorization Points shipped by convoy draw VARIABLE tonnage from the Axis Replacement Pool (see [54.5] and 56 -- there is NO fixed per-point tonnage for those). ENGINE PROXY: game/scenario.py _rommel_convoys ships whole Supply-Unit loads / port-loads on a static timetable; the 56.4 monthly level and 56.5 tonnage-by-die are not modelled.",
+    "coastal_shipping_56_3": {
+      "_comment": "[56.3] AXIS COASTAL SHIPPING -- the counter fleet that moves already-landed cargo port to port without spending truck capacity. Every magnitude here is rulebook PROSE, read at 250dpi on PDF page 75-76 (there is no chart in 56.0-56.3): [56.31] 'Each ship has a CPA -- for movement only -- of 50. Each sea hex costs one point.'; [56.34] load 'at a cost of 5 CPs', 'Unloading supplies costs 5 CPs'. A ship additionally ships in and out of a port only within that port's [55.3] Maximum Tonnage (see port_supply_tonnage_55_3): 55.13 'may enter and leave', 55.14 'brought into or out of', the 55.3 chart legend 'the total tonnage of supplies that may be shipped in and/or out in one Operations Stage', 56.27 'they may not receive supplies over that capacity', and 48 V.C.7's own note that coastal shipping 'is limited only by the port capacities'.",
+      "cpa": 50,
+      "sea_hex_cost": 1,
+      "load_cp": 5,
+      "unload_cp": 5,
+      "fleet": {
+        "_source": "NOT THE SCAN. [56.31] says each ship's tonnage is 'printed on it' -- counter-face data the rulebook prose never repeats (checked: 56.31, 56.35, 60.35, 62.46, 63.365 print no count and no tonnage). Transcribed instead off the VASSAL module CNAv2.1.0.vmod, whose buildFile.xml carries exactly four 'Coastal Shipping' piece slots (gpid 6471-6474, faces IT Supply Ship-1..4.svg): three 1,000-ton hulls A/B/C and one 2,000-ton hull D. Same lower-tier, non-scan provenance as the unit-characteristics stats this project already draws from that module, and FLAGGED as such: a photographed counter sheet or box insert showing a different roster wins over this. Fleet total 5,000 tons, which is the 56.0 General Rule's own 'small amounts ... limited capacity' next to the 15,000-21,000 t a single overseas convoy roll carries.",
+        "ships": [
+          {"letter": "A", "tons": 1000},
+          {"letter": "B", "tons": 1000},
+          {"letter": "C", "tons": 1000},
+          {"letter": "D", "tons": 2000}
+        ]
+      }
+    },
     "convoy_level_chart_56_4": {
       "_comment": "[56.4] AXIS NAVAL CONVOY LEVEL CHART -- the convoy Level letter (A-G) in effect each month; feeds into [56.5]. '-' = no convoys that month.",
       "1940": {

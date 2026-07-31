@@ -1109,6 +1109,11 @@ def coastal_shipping_doctrine(state: GameState, side: Side) -> list[CoastalShipO
     at the moment of departure and arrival (56.33), so a genuinely enemy-held Axis harbour (Tobruk
     recaptured) simply refuses the order/loiters rather than stranding anything.
 
+    It only ever ships the three CONVOY_COMMODITIES. That is a DOCTRINE choice, not the rule:
+    56.34 bars personnel and "Tanks, guns, etc." and nothing else, so game.engine._ship_load will
+    carry Water too -- but the Axis draws his water from wells (52.7), not off a quay, so no
+    commander here would spend a hull on it.
+
     A ship docked anywhere OTHER than the richest Axis harbour (by the same 54.5-tonnage common
     unit convoy_plan_doctrine already uses) sails there EMPTY to fetch more -- the return leg of
     the shuttle. A ship docked AT the richest harbour loads the single commodity with the largest

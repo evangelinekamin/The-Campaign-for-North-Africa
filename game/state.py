@@ -534,8 +534,12 @@ class CoastalShip:
     cargo may be carried at any one time"), in supply POINTS -- the same edge 54.5 crosses tonnage to
     Points at everywhere else in this chain -- and shaped exactly like `SupplyUnit`/`TruckFormation` so
     a ship is a THIRD on-hand conservation surface (`game.invariants`), the same way a truck's cargo
-    already is. `water` is carried only for field-shape parity with those two siblings and stays 0
-    forever (56.22/`supply.CONVOY_COMMODITIES` never names Water)."""
+    already is. ALL FOUR commodities are shippable, Water included: 56.34 bars only personnel and
+    "Tanks, guns, etc.", and water is a supply (52.0/57.0). The three-commodity
+    `supply.CONVOY_COMMODITIES` list belongs to [56.22]'s run from EUROPE, where nobody would ship
+    water, and does not govern a transfer between two African ports. (The campaign doctrine still
+    only ever ships the three -- the Axis draws his water from wells -- so the Water field stays 0
+    in practice; that is a doctrine choice, not the rule.)"""
     id: str
     side: Side
     tons: int

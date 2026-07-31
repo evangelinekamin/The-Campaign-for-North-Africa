@@ -666,9 +666,16 @@ class EventKind(str, Enum):
     #   COASTAL_SHIP_UNLOADED {ship_id, supply_id, cargo} -- the exact dual of COASTAL_SHIP_LOADED,
     #     ship -> the co-located port dump, fired automatically on (or after) arrival if the Phase's
     #     CPA has 5 points left (56.34).
+    #   COASTAL_SHIP_RECALLED {ship_id, port, dest, progress, reason} -- 56.33 closed the destination
+    #     under a ship already at sea, so the voyage is cancelled ([56.15]'s own answer to a
+    #     destination the Enemy has taken) and the ship puts about: its voyage origin becomes the
+    #     port it was bound for, its destination the port it left, and `progress` the sea hexes
+    #     already covered along that REVERSED chord (leg - progress), so the hexes still owed are
+    #     exactly the ones it had sailed. Touches no supply surface; the cargo stays aboard.
     # Emits ONLY when the Axis fields ships (GameState.ships), so every ship-less scenario (both
     # Desert Fox benchmarks) stays byte-identical.
     COASTAL_SHIP_LOADED = "COASTAL_SHIP_LOADED"
+    COASTAL_SHIP_RECALLED = "COASTAL_SHIP_RECALLED"
     COASTAL_SHIP_SAILED = "COASTAL_SHIP_SAILED"
     COASTAL_SHIP_UNLOADED = "COASTAL_SHIP_UNLOADED"
     # STAFF_* are narrative / no-op audit events: staff chatter the board is

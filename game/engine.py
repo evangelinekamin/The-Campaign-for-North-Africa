@@ -104,6 +104,19 @@ class _Run:
         # the end of the stage; one that was left alone (or only rolled a [41.5] result of 0)
         # does. Cleared at the OpStage boundary, so an unbombed stage always regenerates.
         self.ports_bombed_this_stage: set[str] = set()
+        # [55.3] THE HARBOUR THROTTLE'S LEDGER: tons already shipped through each port THIS
+        # Operations Stage, port id -> tons. The [55.3] chart legend makes this ONE number per
+        # port covering BOTH directions -- "Maximum Tonnage: The total tonnage of supplies that
+        # may be shipped in and/or out in one Operations Stage" -- which 55.13 ("may enter and
+        # leave that port"), 55.14 ("brought into or out of") and 55.16 ("applies to all
+        # shipments received") all repeat. So the overseas convoy landing (_naval_convoys, 48
+        # V.D) and Axis coastal shipping (_coastal_shipping, 56.3) draw on the SAME budget:
+        # 56.27 says outright that coastal cargo may not be shipped over a port's capacity, and
+        # 48 V.C.7 notes that coastal shipping "is limited only by the port capacities".
+        # Read ONLY through _port_tons(), which expires it at the (turn, stage) boundary; empty
+        # for every port-less scenario.
+        self.port_tons_this_stage: dict[str, float] = {}
+        self.port_tons_stamp: tuple[int, int] | None = None
         # [48 III / 48 V.D] each due convoy's SURVIVED manifest for the current Game-Turn:
         # convoy id -> {"dest": dump id|None, "cargo": remaining points, "rail": bool}. The
         # convoy is bombed at sea ONCE per turn (interdiction, strategic 39.13) and its 56.15
@@ -191,6 +204,8 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
         _stores_setup(r)                                # 48 IV: Stores Expenditure + 6% base evaporation
         for stage in (1, 2, 3):
             r.ports_bombed_this_stage = set()            # 55.18: this stage's bomb ledger starts empty
+                                                         # (55.3's per-port tonnage budget needs no reset
+                                                         # here -- _port_tons() expires it by stage)
             _rommel_arrival(r, stage)                    # 64.2: the Desert Fox lands (GT26.3) -- BEFORE the anchor
             _rommel_anchor(r)                            # 31.4: snapshot who he starts THIS stage with
             first, second = _declare_ab(r, policies, stage)   # 5.2.III.A / 7.11: the A/B activation order
@@ -238,9 +253,12 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                 _continual_movement(r, policies, side)  # 8.2/8.23 + 18.13: the exploitation pulse loop
                 _capture_dumps(r)                       # 32.13: and the exploitation pulse
             for side in (first, second):
+                _coastal_shipping(r, policies[side], side)  # 56.34: coastal shipping loads "at the
+                                                         # BEGINNING of the Truck Convoy Phase" -- so it
+                                                         # gets first call on the quay's dumps and on the
+                                                         # 55.3 tonnage budget, ahead of the lorries
                 _truck_convoys(r, policies[side], side)  # V.J: 2nd/3rd-line truck convoys (48)
                 _truck_breakdown(r, side)                # 21.24: convoys that relocated check for breakdown
-                _coastal_shipping(r, policies[side], side)  # 56.3: Axis coastal shipping, same Phase
             _port_regen(r)                               # 55.18: end of OpStage -- every port that lost
                                                          # NO Efficiency Levels to bombs this stage regains one
             r.go(Phase.RECORD, Side.SYSTEM)
@@ -1658,7 +1676,10 @@ def _unload_convoys(r: _Run, due: list) -> None:
     sail at all (a '-' month sails nothing) and the size of the total licence; the harbour is the
     binding gate on what lands, which is the faucet audit's hypothesis (f)."""
     port_landed: dict[tuple[str, str], int] = {}        # 55.14: per-commodity sub-cap, per-port-per-OpStage
-    port_tons: dict[str, float] = {}                    # 55.3: the ONE shared tonnage budget per port per OpStage
+    port_tons = _port_tons(r)                           # 55.3: the ONE shared tonnage budget per port per
+                                                        # OpStage -- run-scoped and stage-expiring, because
+                                                        # 56.3 coastal shipping draws on the SAME quay
+                                                        # later in this same stage
     for c in sorted(due, key=lambda c: c.id):           # deterministic arrival order
         m = r.convoy_manifest.get(c.id)
         if m is None or m["dest"] is None or not any(v > 0 for v in m["cargo"].values()):
@@ -4678,15 +4699,26 @@ def _reject_truck(r: _Run, side: Side, actor: str, order, reason: str) -> None:
 # See scratchpad/port/transcriptions/56.3-axis-inter-port-transport.md for the full transcription
 # and the routing notes (no Terrain.SEA layer, Tripoli off-map) this section works around.
 
-_SHIP_CPA_56_31 = 50            # [56.31]: CPA for movement only -- one point per sea hex
-_SHIP_LOAD_CP_56_34 = 5         # [56.34]: load supplies at the start of the Truck Convoy Phase
-_SHIP_UNLOAD_CP_56_34 = 5       # [56.34]: unload supplies
+_COASTAL_56_3 = logistics_data.coastal_shipping_56_3()
+_SHIP_CPA_56_31 = _COASTAL_56_3["cpa"]              # [56.31]: CPA -- for movement only -- of 50
+_SHIP_SEA_HEX_CP_56_31 = _COASTAL_56_3["sea_hex_cost"]   # [56.31]: "Each sea hex costs one point"
+_SHIP_LOAD_CP_56_34 = _COASTAL_56_3["load_cp"]      # [56.34]: load, at a cost of 5 CPs
+_SHIP_UNLOAD_CP_56_34 = _COASTAL_56_3["unload_cp"]  # [56.34]: "Unloading supplies costs 5 CPs"
 
 
 def _coastal_shipping(r: _Run, policy: Policy, side: Side) -> None:
     """Axis Coastal Shipping (rule 56.3), in the Truck Convoy Phase (56.32) -- fully deterministic,
-    no die anywhere in 56.31-56.35. Fires ONLY when the side fields ships, so every ship-less
-    scenario (both Desert Fox benchmarks) stays byte-identical, the same guard _truck_convoys uses.
+    no die anywhere in 56.31-56.35. AXIS-ONLY, as the chapter's own title and 48 V.C.7's note say:
+    "Axis coastal ships are represented in the game by counters. Allied coastal shipping is not
+    represented by counters, and is limited only by the port capacities" -- the Commonwealth's side
+    of the same idea is inside its 57.0 supply-base abstraction, not a fleet. Fires only when the
+    side fields ships, so every ship-less scenario (both Desert Fox benchmarks) stays byte-identical,
+    the same guard _truck_convoys uses.
+
+    IT RUNS AT THE HEAD OF THE PHASE, ahead of _truck_convoys: 56.34 says the Axis Player loads "at
+    the beginning of the Truck Convoy Phase", and 48 V.C.7 puts the whole Tactical Shipping Segment
+    earlier still (see the transcription's owner-ruling flag on that book-internal tension). So the
+    ships, not the lorries, get first call on a quay's dump and on its 55.3 tonnage budget.
 
     Each of the side's ships acts once, in GameState.ships order (deterministic by construction). A
     ship EN ROUTE (`dest` set) auto-continues toward its existing destination with a fresh 50-point
@@ -4696,6 +4728,8 @@ def _coastal_shipping(r: _Run, policy: Policy, side: Side) -> None:
     whose CPA ran out before the 5-CP unload leg fit last Phase, or one that just arrived this
     Phase), then -- with whatever CPA remains -- may act on one fresh policy order (load, then
     depart)."""
+    if side is not Side.AXIS:
+        return
     if not any(s.side == side for s in r.state.ships):
         return
     r.go(Phase.LOGISTICS, side)
@@ -4720,13 +4754,32 @@ def _coastal_shipping(r: _Run, policy: Policy, side: Side) -> None:
 
 def _ship_continue(r: _Run, side: Side, actor: str, ship) -> None:
     """A ship already under way: bank this Phase's 50-point CPA toward its destination, or complete
-    the leg (56.31/56.32). If the destination is currently neutralized or enemy-held (56.33), the
-    ship simply loiters -- no event, no progress lost, tried again next Phase."""
+    the leg (56.31/56.32).
+
+    IF THE DESTINATION HAS BECOME UNENTERABLE (56.33: neutralized, or the Enemy has taken it) THE
+    VOYAGE IS RECALLED -- the ship puts about and makes for the port it sailed from, paying the sea
+    hexes back at the same one-point-per-hex rate. FLAGGED as a judgement call: the book has no
+    at-sea state to rule on, because in 56.35 a voyage completes inside one Truck Convoy Phase
+    whenever the CPA covers it, and a multi-Phase passage is this engine's own artefact. The
+    closest thing the chapter prints is [56.15], which cancels an overseas convoy "scheduled to
+    arrive at a port that is captured by the Commonwealth" -- so a cancelled sailing is the
+    book's own answer to a lost destination, and the alternative (the pre-repair behaviour) was an
+    endless loiter that took a laden ship and its cargo out of the war for good. If BOTH ends are
+    unenterable there is nowhere to put about to, and the ship does loiter."""
     dest = r.state.port(ship.dest)
     origin = r.state.port(ship.port)
-    if dest is None or origin is None or not _port_enterable(r.state, side, dest):
+    if dest is None or origin is None:
         return
-    dist = distance(origin.hex, dest.hex)
+    if not _port_enterable(r.state, side, dest):
+        if not _port_enterable(r.state, side, origin):
+            return                                  # nowhere to go: hold station (56.33)
+        leg = _sea_leg_cp(origin, dest)
+        r.emit(EventKind.COASTAL_SHIP_RECALLED, side, actor,
+               {"ship_id": ship.id, "port": dest.id, "dest": origin.id,
+                "progress": max(0, leg - ship.progress), "reason": "destination closed (56.33)"})
+        ship = r.state.ship(ship.id)
+        dest, origin = r.state.port(ship.dest), r.state.port(ship.port)
+    dist = _sea_leg_cp(origin, dest)
     travel = min(_SHIP_CPA_56_31, max(0, dist - ship.progress))
     new_progress = ship.progress + travel
     arrived = new_progress >= dist
@@ -4764,6 +4817,11 @@ def _ship_order(r: _Run, side: Side, actor: str, order, budget: int) -> None:
 
 
 def _ship_load(r: _Run, side: Side, actor: str, order, ship) -> bool:
+    """[56.34] Load ONE type of cargo from the co-located port dump, within the ship's printed
+    tonnage (56.31) AND within what is left of the port's [55.3] Maximum Tonnage this Operations
+    Stage. 56.34 bars only PERSONNEL and "Tanks, guns, etc." -- every supply commodity is
+    shippable, WATER included (it is a supply, 52.0/57.0, and this is transfer between African
+    ports, not the 56.22 run from Europe where you would not ship it)."""
     port = r.state.port(ship.port)
     dump = r.state.supply(order.load_from)
     if (dump is None or dump.side != side or port is None or dump.hex != port.hex
@@ -4771,9 +4829,9 @@ def _ship_load(r: _Run, side: Side, actor: str, order, ship) -> bool:
         _reject_ship(r, side, actor, order, "no co-located friendly dump to load from")
         return False
     cargo = {c: q for c, q in order.load.items() if q > 0}
-    if len(cargo) != 1 or not set(cargo).issubset(supply.CONVOY_COMMODITIES):
+    if len(cargo) != 1 or not set(cargo).issubset(supply.COMMODITIES):
         _reject_ship(r, side, actor, order,
-                     "load must name exactly one shippable commodity (56.22/56.34)")
+                     "load must name exactly one shippable commodity (56.34)")
         return False
     commodity, qty = next(iter(cargo.items()))
     if getattr(dump, commodity.lower()) < qty:
@@ -4782,6 +4840,18 @@ def _ship_load(r: _Run, side: Side, actor: str, order, ship) -> bool:
     if supply.points_to_tons(qty, commodity) > ship.tons:
         _reject_ship(r, side, actor, order, "load exceeds the ship's tonnage capacity (56.31)")
         return False
+    # [55.3]/[56.27] THE HARBOUR THROTTLE. What leaves a quay counts against the SAME per-OpStage
+    # Maximum Tonnage as what lands on it (55.13 "enter and leave", the 55.3 legend's "in and/or
+    # out"), so a partly-spent budget trims the load rather than cancelling it -- exactly how
+    # _naval_convoys already handles this rule at the landing edge (56.27: not OVER capacity;
+    # shipping up to it is legal).
+    qty = min(qty, supply.tons_to_points(_port_tons_left(r, port), commodity))
+    if qty <= 0:
+        _reject_ship(r, side, actor, order,
+                     "port's tonnage capacity for this Operations Stage is spent (55.3/56.27)")
+        return False
+    cargo = {commodity: qty}
+    _charge_port_tons(r, port, cargo)
     r.emit(EventKind.COASTAL_SHIP_LOADED, side, actor,
            {"ship_id": ship.id, "supply_id": dump.id, "cargo": cargo})
     return True
@@ -4799,7 +4869,7 @@ def _ship_depart(r: _Run, side: Side, actor: str, order, ship, budget: int) -> N
     if budget <= 0:
         _reject_ship(r, side, actor, order, "no CPA left to sail")
         return
-    dist = distance(origin.hex, dest.hex)
+    dist = _sea_leg_cp(origin, dest)
     travel = min(budget, dist)
     arrived = travel >= dist
     r.emit(EventKind.COASTAL_SHIP_SAILED, side, actor,
@@ -4810,11 +4880,12 @@ def _ship_depart(r: _Run, side: Side, actor: str, order, ship, budget: int) -> N
 
 def _ship_unload(r: _Run, side: Side, actor: str, ship) -> bool:
     """[56.34] Unload whatever single commodity `ship` carries into the port dump at its current
-    hex, capped by the [54.12] dump ceiling like every other unload in this engine (_truck_unload's
-    idiom) -- both Axis campaign ports are Major-City hexes (unlimited, 54.12), so the cap never
-    actually binds on the one lane this engine seeds, but a smaller port elsewhere would leave the
-    remainder aboard to retry next Phase, exactly like a truck's own partial unload. Returns False
-    (no event) if the ship carries nothing, or no friendly dump stands on its hex."""
+    hex, capped by TWO ceilings: the [54.12] dump ceiling, like every other unload in this engine
+    (_truck_unload's idiom), and what is left of the port's [55.3] Maximum Tonnage this Operations
+    Stage -- 56.27 says outright that coastal cargo may not come in over a port's capacity, and the
+    55.3 legend makes that one budget covering everything shipped "in and/or out". Whatever will not
+    fit stays aboard and retries next Phase, exactly like a truck's own partial unload. Returns
+    False (no event) if the ship carries nothing, or no friendly dump stands on its hex."""
     port = r.state.port(ship.port)
     if port is None:
         return False
@@ -4823,20 +4894,67 @@ def _ship_unload(r: _Run, side: Side, actor: str, ship) -> bool:
     if dump is None:
         return False
     cap = supply.dump_capacity_at(r.state, dump.hex)
+    tons_left = _port_tons_left(r, port)
     cargo: dict = {}
-    for c in supply.CONVOY_COMMODITIES:
+    for c in supply.COMMODITIES:
         qty = getattr(ship, c.lower())
         if qty <= 0:
             continue
         onhand = getattr(dump, c.lower())
-        landed = min(qty, min(cap[c], onhand + qty) - onhand)
+        landed = min(qty, min(cap[c], onhand + qty) - onhand,
+                     supply.tons_to_points(tons_left, c))
         if landed > 0:
             cargo[c] = landed
+            tons_left -= landed * supply.TONS_PER_POINT[c]
     if not cargo:
         return False
+    _charge_port_tons(r, port, cargo)
     r.emit(EventKind.COASTAL_SHIP_UNLOADED, side, actor,
            {"ship_id": ship.id, "supply_id": dump.id, "cargo": cargo})
     return True
+
+
+def _sea_leg_cp(origin, dest) -> int:
+    """[56.31] "Each sea hex costs one point" -- the CP cost of the passage between two ports.
+
+    PROXY, FLAGGED (see the transcription): this engine has no Terrain.SEA layer and no sea-hex
+    adjacency graph, so the hex COUNT is game.hexmap.distance, the straight-line axial distance
+    between the two port hexes -- the same geographic proxy game.relay uses for truck hops and the
+    book's own [56.18] Air Distance Chart uses for bases. A real coastal route bends around the
+    Cyrenaican bulge and is LONGER than the chord (the Benghazi-Tobruk chord this campaign sails
+    runs overland across the bulge), so this under-states the true 56.31 cost."""
+    return distance(origin.hex, dest.hex) * _SHIP_SEA_HEX_CP_56_31
+
+
+def _port_tons(r: _Run) -> dict[str, float]:
+    """[55.3] the ONE per-port Maximum Tonnage ledger for the CURRENT Operations Stage.
+
+    KEYED ON (turn, stage) SO IT EXPIRES BY ITSELF. Within a stage the overseas convoy landing and
+    56.3 coastal shipping must share one budget; across a stage boundary each port's throughput
+    starts fresh ("in one Operations Stage"). Self-expiry rather than a reset in run()'s stage loop
+    is deliberate: the budget is read a long way from where the loop lives, and any caller that
+    drives the stages itself -- a test, a measurement driver -- would otherwise silently inherit a
+    spent budget and see a whole Game-Turn's landing collapse into its first stage."""
+    stamp = (r.state.turn, r.state.stage)
+    if r.port_tons_stamp != stamp:
+        r.port_tons_stamp = stamp
+        r.port_tons_this_stage = {}
+    return r.port_tons_this_stage
+
+
+def _port_tons_left(r: _Run, port) -> float:
+    """[55.3] what is left of `port`'s ONE Maximum Tonnage budget this Operations Stage, after
+    everything already shipped through it -- the overseas convoy's landings (_naval_convoys) and
+    this Phase's earlier coastal loads and unloads alike."""
+    return max(0.0, supply.port_tonnage_budget(port) - _port_tons(r).get(port.id, 0.0))
+
+
+def _charge_port_tons(r: _Run, port, cargo: dict) -> None:
+    """[55.3] bill `cargo` (points, by commodity) to `port`'s per-OpStage tonnage ledger, crossed to
+    tons by the [54.5] Equivalent Weights -- the same float accounting _naval_convoys uses."""
+    ledger = _port_tons(r)
+    ledger[port.id] = ledger.get(port.id, 0.0) + sum(
+        q * supply.TONS_PER_POINT[c] for c, q in cargo.items())
 
 
 def _port_enterable(state: GameState, side: Side, port) -> bool:

@@ -7,8 +7,8 @@ project supply forward. The base StaffPolicy truck relay is left verbatim for st
 from __future__ import annotations
 
 from .campaign_policy import (_CampaignAxisSupplyMixin, air_transfer_doctrine,
-                              convoy_plan_doctrine, hold_garrisons, malta_africa_doctrine,
-                              malta_raid_doctrine)
+                              coastal_shipping_doctrine, convoy_plan_doctrine, hold_garrisons,
+                              malta_africa_doctrine, malta_raid_doctrine)
 from .events import Side
 from .policy import MoveOrder
 from .staff_policy import StaffPolicy
@@ -44,6 +44,14 @@ class CampaignStaffPolicy(_CampaignAxisSupplyMixin, StaffPolicy):
         the most obviously LLM-shaped choice of the three: sending the bomber arm to Sicily buys a
         raid on Malta and costs the desert its air support until it is flown back."""
         return air_transfer_doctrine(state, based, available)
+
+    def coastal_shipping_orders(self, state: GameState, side: Side):
+        """[56.3] THE SAME COASTAL-SHIPPING DOCTRINE THE SCRIPTED CAMPAIGN AXIS SAILS. Another
+        Quartermaster decision on a scripted seat, and wired here for the same reason malta_raid
+        is: without it the live-staff campaign inherited Policy.coastal_shipping_orders' empty
+        list, and the project's watchable-campaign path left the whole 56.3 fleet tied up at
+        Benghazi for 111 turns while its scripted twin sailed it."""
+        return coastal_shipping_doctrine(state, side)
 
     def convoy_plan(self, state: GameState, side: Side, tons: int) -> dict:
         """[56.22] THE SAME CONVOY DOCTRINE THE SCRIPTED CAMPAIGN AXIS FLIES. This one belongs to

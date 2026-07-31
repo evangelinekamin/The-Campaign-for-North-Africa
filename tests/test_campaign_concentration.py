@@ -481,7 +481,13 @@ def test_conservation_holds_over_the_concentration(gt12):
     for c, initial in gt12.final.initial_supply.items():
         on_hand = (sum(getattr(s, c.lower()) for s in gt12.final.supplies)
                    + sum(getattr(t, c.lower()) for t in gt12.final.trucks)
-                   + sum(getattr(u, c.lower()) for u in gt12.final.units))   # 49.14 unit tanks (Phase 4)
+                   + sum(getattr(u, c.lower()) for u in gt12.final.units)    # 49.14 unit tanks (Phase 4)
+                   # [56.3] ...and the coastal fleet, a FOURTH on-hand surface that game.invariants
+                   # has counted since the fleet was seeded. Restated (port rule 5): by GT12 the
+                   # campaign genuinely has cargo at sea mid-shuttle, and omitting it read as
+                   # minted-then-lost supply. The gap this closes is exact -- 659 STORES aboard,
+                   # 659 missing -- so it is a missing TERM, not a leak.
+                   + sum(getattr(sh, c.lower()) for sh in gt12.final.ships))
         assert on_hand + gt12.final.consumed.get(c, 0) == initial
 
 

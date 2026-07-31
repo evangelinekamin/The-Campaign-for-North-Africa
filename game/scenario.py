@@ -1330,10 +1330,11 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
 
 
 # [56.3] AXIS COASTAL SHIPPING -- the fixed 4-ship fleet (56.31: three 1,000-ton hulls and one
-# 2,000-ton hull, transcribed off the vmod counter faces -- see
-# scratchpad/port/transcriptions/56.3-axis-inter-port-transport.md; the rulebook prose never
-# prints the roster, only that it is "printed on" the counters).
-_COASTAL_SHIPS_56_31 = (("A", 1000), ("B", 1000), ("C", 1000), ("D", 2000))
+# 2,000-ton hull). The roster lives in data/logistics_rates.json like every other magnitude in
+# this port, under a `fleet._source` key that records its NON-SCAN provenance (the vmod counter
+# faces; the rulebook prose never prints the roster, only that it is "printed on" the counters)
+# -- see scratchpad/port/transcriptions/56.3-axis-inter-port-transport.md.
+_COASTAL_SHIPS_56_31 = logistics_data.coastal_shipping_fleet_56_31()
 
 
 def _campaign_coastal_ships(ports: tuple[Port, ...]) -> tuple[CoastalShip, ...]:

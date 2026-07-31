@@ -696,6 +696,14 @@ def apply(state: GameState, event: Event) -> GameState:
             return state.with_ship(replace(sh, port=p["dest"], dest=None, progress=0))
         return state.with_ship(replace(sh, dest=p["dest"], progress=p["progress"]))
 
+    if k == EventKind.COASTAL_SHIP_RECALLED:
+        # 56.33/[56.15]: the destination closed under a ship at sea -- it puts about, so BOTH ends
+        # of the voyage swap and `progress` is re-expressed along the reversed chord. The only fold
+        # that writes `port` without arriving. No supply surface: the cargo stays aboard.
+        sh = state.ship(p["ship_id"])
+        return state.with_ship(replace(sh, port=p["port"], dest=p["dest"],
+                                       progress=p["progress"]))
+
     if k == EventKind.FORT_REDUCED:
         return state.with_fort_level(tuple(p["hex"]), p["level"])
 

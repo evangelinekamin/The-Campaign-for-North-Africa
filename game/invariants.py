@@ -352,7 +352,8 @@ _TRUCK_ID_KINDS = frozenset({
     EventKind.TRUCK_BROKE_DOWN, EventKind.TRUCK_REPAIRED})      # 21.44/22.23 breakdown pool
 
 # [56.3] Events that change a coastal ship's cargo, resolved by p["ship_id"]. COASTAL_SHIP_SAILED
-# is deliberately absent: it folds only `port`/`dest`/`progress`, never a commodity field.
+# and COASTAL_SHIP_RECALLED are deliberately absent: both fold only `port`/`dest`/`progress`, never
+# a commodity field (a recalled ship keeps its cargo aboard).
 _SHIP_ID_KINDS = frozenset({EventKind.COASTAL_SHIP_LOADED, EventKind.COASTAL_SHIP_UNLOADED})
 
 # Events that move supply between pools / the ledger: conservation of the change is checked.
@@ -456,5 +457,6 @@ def check_event(pre: GameState, post: GameState, event: Event) -> None:
         _check_malta_unfit(post)
     elif kind in (EventKind.FORT_REDUCED, EventKind.FORT_LEVEL_BUILT):
         _check_fort(tuple(p["hex"]), p["level"])
-    elif kind == EventKind.COASTAL_SHIP_SAILED:      # 56.31: progress never goes negative
+    elif kind in (EventKind.COASTAL_SHIP_SAILED,     # 56.31: progress never goes negative
+                  EventKind.COASTAL_SHIP_RECALLED):  # 56.33: nor across a put-about
         _check_ship_pools(post.ship(p["ship_id"]))
