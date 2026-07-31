@@ -652,6 +652,25 @@ class EventKind(str, Enum):
     # fold sets its port_cooldown=2 (ticked back down at each OpStage boundary). Emits ONLY when a
     # side fields naval (GameState.naval), so every naval-less scenario stays byte-identical.
     NAVAL_BOMBARDMENT = "NAVAL_BOMBARDMENT"
+    # Axis coastal shipping (rule 56.3): the small fixed fleet that shuttles already-landed cargo
+    # port to port without spending truck capacity, in the Truck Convoy Phase (56.32), fully
+    # deterministic (no rng_draws anywhere in 56.31-56.35). All three fold like their TRUCK_*
+    # counterparts:
+    #   COASTAL_SHIP_LOADED {ship_id, supply_id, cargo} -- a CONSERVING transfer from the co-located
+    #     port dump onto the ship (56.34, at a cost of 5 CPs charged as this Phase's CP budget, not a
+    #     GameState field). The dual of COASTAL_SHIP_UNLOADED.
+    #   COASTAL_SHIP_SAILED {ship_id, dest, progress, arrived} -- 56.31/56.32: the ship advances
+    #     `progress` sea-hex-points (CPA 50/Phase) toward `dest`; `arrived=True` completes the leg
+    #     (port <- dest, dest/progress reset to 0), `arrived=False` just banks progress -- a voyage
+    #     that outruns one Phase's CPA resumes automatically next Phase. No supply surface touched.
+    #   COASTAL_SHIP_UNLOADED {ship_id, supply_id, cargo} -- the exact dual of COASTAL_SHIP_LOADED,
+    #     ship -> the co-located port dump, fired automatically on (or after) arrival if the Phase's
+    #     CPA has 5 points left (56.34).
+    # Emits ONLY when the Axis fields ships (GameState.ships), so every ship-less scenario (both
+    # Desert Fox benchmarks) stays byte-identical.
+    COASTAL_SHIP_LOADED = "COASTAL_SHIP_LOADED"
+    COASTAL_SHIP_SAILED = "COASTAL_SHIP_SAILED"
+    COASTAL_SHIP_UNLOADED = "COASTAL_SHIP_UNLOADED"
     # STAFF_* are narrative / no-op audit events: staff chatter the board is
     # invariant to (they fold to state unchanged; see game.apply, game.staff_events).
     STAFF_INTENT = "STAFF_INTENT"

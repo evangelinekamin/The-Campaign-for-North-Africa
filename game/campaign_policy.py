@@ -34,8 +34,8 @@ from .campaign_claim import (STAGING, garrison_units,   # the rule-64.73 standin
                              hold_depots, hold_garrisons)   # (game.campaign_staff and the tests import them from here)
 from .events import Control, Side
 from .hexmap import Coord, distance
-from .policy import (AttackOrder, BuildOrder, DemolitionOrder, MotorizeOrder, MoveOrder,
-                     OrganizationOrder, ScriptedPolicy, SupplyMoveOrder, TruckOrder)
+from .policy import (AttackOrder, BuildOrder, CoastalShipOrder, DemolitionOrder, MotorizeOrder,
+                     MoveOrder, OrganizationOrder, ScriptedPolicy, SupplyMoveOrder, TruckOrder)
 from .state import GameState, SupplyUnit
 from .relay import (  # extracted to game.relay; re-exported so every caller and __all__ keep working
     _step_toward, _relay_source, _is_faucet, _a_link_in_the_chain, _field_dump_id,
@@ -1076,6 +1076,85 @@ def convoy_plan_doctrine(state: GameState, side: Side, tons: int) -> dict:
     return {c: floor + rest * w / span for c, w in weight.items()}   # then the rest by the vote
 
 
+def _friendly_dump_at(state: GameState, side: Side, hex_: Coord) -> "SupplyUnit | None":
+    """The one non-water-source friendly dump standing on `hex_` -- a port's own built-in depot
+    (56.28), read the same way engine._ship_load/_ship_unload read it."""
+    return next((s for s in state.supplies if s.side == side and s.hex == hex_
+                and not wells.is_water_source(s)), None)
+
+
+def _port_stock_tons(state: GameState, side: Side, port) -> float:
+    """A port's on-hand stock, in the ONE common unit (54.5 tonnage) convoy_plan_doctrine already
+    compares commodities in -- so "richest"/"poorest" below means the same thing that doctrine's
+    "what the army is short of" means."""
+    dump = _friendly_dump_at(state, side, port.hex)
+    if dump is None:
+        return 0.0
+    return sum(supply.points_to_tons(getattr(dump, c.lower()), c) for c in supply.CONVOY_COMMODITIES)
+
+
+def coastal_shipping_doctrine(state: GameState, side: Side) -> list[CoastalShipOrder]:
+    """[56.3] THE AXIS COASTAL-SHIPPING DECISION: a Benghazi<->Tobruk relief shuttle (or, in
+    general, whichever two Axis harbours this campaign build carries -- nothing here names a port
+    by hex) -- flagged as an opinion a commander may hold, not a law of the world, exactly like
+    convoy_plan_doctrine's own flag on the overseas convoy split.
+
+    Candidate harbours are picked by `Port.side` -- the STRUCTURAL Axis network (56.28: "Tripoli,
+    Bizerta, Tobruk" are named as a NATION's ports of arrival), not by the live, unit-presence
+    `state.control_of` signal `game.engine._record_control` flips the instant a single recon
+    counter merely TRANSITS an unoccupied hex. Using live control here stranded ships: a lone
+    Axis unit passing through the Commonwealth's Mersa Matruh railhead hex flipped it AXIS for one
+    Phase, the doctrine sent a ship there, and it arrived carrying cargo with no Axis dump on that
+    hex to unload into -- a real dead end. `game.engine._port_enterable` still checks LIVE control
+    at the moment of departure and arrival (56.33), so a genuinely enemy-held Axis harbour (Tobruk
+    recaptured) simply refuses the order/loiters rather than stranding anything.
+
+    A ship docked anywhere OTHER than the richest Axis harbour (by the same 54.5-tonnage common
+    unit convoy_plan_doctrine already uses) sails there EMPTY to fetch more -- the return leg of
+    the shuttle. A ship docked AT the richest harbour loads the single commodity with the largest
+    gap over the poorest harbour's own stock (up to its 56.31 tonnage capacity) and sails to
+    relieve it. A ship still carrying cargo needs no order (the engine unloads it automatically,
+    see game.engine._coastal_shipping); an idle ship at the richest harbour with nothing positive
+    to relieve stands by rather than shuffling cargo pointlessly."""
+    ports = [p for p in state.ports if p.side == side]
+    if len(ports) < 2:
+        return []
+    orders: list[CoastalShipOrder] = []
+    for ship in state.ships:
+        if ship.side != side or ship.dest is not None:
+            continue
+        if ship.ammo or ship.fuel or ship.stores or ship.water:
+            continue                              # still under way's cargo -- auto-unloads
+        home = state.port(ship.port)
+        if home is None or home.side != side:
+            continue                              # defensive: the ship's own dock is not ours
+        richest = max(ports, key=lambda p: _port_stock_tons(state, side, p))
+        if home.id != richest.id:
+            orders.append(CoastalShipOrder(ship.id, to=richest.id))
+            continue
+        poorest = min((p for p in ports if p.id != home.id),
+                      key=lambda p: _port_stock_tons(state, side, p))
+        home_dump = _friendly_dump_at(state, side, home.hex)
+        if home_dump is None:
+            continue
+        poorest_dump = _friendly_dump_at(state, side, poorest.hex)
+
+        def _gap(c: str) -> float:
+            here = supply.points_to_tons(getattr(home_dump, c.lower()), c)
+            there = supply.points_to_tons(getattr(poorest_dump, c.lower()), c) if poorest_dump else 0
+            return here - there
+
+        commodity = max(supply.CONVOY_COMMODITIES, key=_gap)
+        if _gap(commodity) <= 0:
+            continue
+        qty = min(getattr(home_dump, commodity.lower()), supply.tons_to_points(ship.tons, commodity))
+        if qty <= 0:
+            continue
+        orders.append(CoastalShipOrder(ship.id, load_from=home_dump.id,
+                                       load={commodity: qty}, to=poorest.id))
+    return orders
+
+
 def malta_africa_doctrine(state: GameState, available: int, level: str) -> int:
     """[44.25]/[44.27] + [39.19] How many AFRICAN bombers the Axis adds to this Game-Turn's Malta
     raid -- and, by 39.19, withdraws from the desert for the rest of it.
@@ -1240,6 +1319,10 @@ class CampaignAxisPolicy(_CampaignAxisSupplyMixin, ScriptedPolicy):
         # [56.22] The convoy split, shared with the live-staff campaign -- the Axis Player's single
         # most important recurring choice, made from the board rather than from a constant.
         return convoy_plan_doctrine(state, side, tons)
+
+    def coastal_shipping_orders(self, state: GameState, side: Side) -> list[CoastalShipOrder]:
+        # [56.3] The Benghazi<->Tobruk relief shuttle -- see coastal_shipping_doctrine's own flag.
+        return coastal_shipping_doctrine(state, side)
 
     def retreat_before_assault(self, state: GameState, side: Side,
                                pinned: frozenset[str]) -> list[MoveOrder]:

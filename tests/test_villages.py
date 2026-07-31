@@ -140,7 +140,15 @@ def test_the_benchmark_scenarios_stay_village_blind():
 def test_raising_the_ceiling_mints_no_supply():
     """A higher ceiling lets the faucet fill FURTHER UP; it never creates a Point. Over a campaign
     slice the ledger still balances (on-hand + consumed == initial, per commodity) and the event
-    log still folds byte-identically back to the final state."""
+    log still folds byte-identically back to the final state.
+
+    RESTATED (56.3 slice, port rule 5): on_hand now also sums state.ships -- Axis coastal shipping
+    (rule 56.3) is a FOURTH on-hand surface, exactly as truck cargo already is, and the campaign's
+    fleet genuinely carries Stores/Fuel/Ammo mid-shuttle. Omitting it made this test's OWN hand-rolled
+    sum disagree with game.invariants' (which already covers ships), not the engine under-conserving
+    -- game.invariants.check(res.final), called the line above, is the real conservation proof and it
+    passes; this loop is the same arithmetic spelled out for a reader, and it must sum the same
+    surfaces invariants does."""
     res = run(campaign(seed=1941, max_turns=12),
               CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     assert fold(res.initial, res.events) == res.final
@@ -148,6 +156,7 @@ def test_raising_the_ceiling_mints_no_supply():
     for commodity, initial in res.final.initial_supply.items():
         on_hand = (sum(getattr(s, commodity.lower()) for s in res.final.supplies)
                    + sum(getattr(t, commodity.lower()) for t in res.final.trucks)
+                   + sum(getattr(sh, commodity.lower()) for sh in res.final.ships)  # 56.3 coastal ships
                    + sum(getattr(u, commodity.lower()) for u in res.final.units))   # 49.14 unit tanks
         assert on_hand + res.final.consumed.get(commodity, 0) == initial
 

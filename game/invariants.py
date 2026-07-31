@@ -86,6 +86,18 @@ def _check_supply_pools(su) -> None:
             raise InvariantViolation(f"supply {su.id} has negative {commodity} pool {qty}")
 
 
+def _check_ship_pools(sh) -> None:
+    # [56.3] A coastal ship's cargo is a physical quantity too: no ship may carry a NEGATIVE
+    # amount of any commodity (the same guard _check_supply_pools/_check_truck_pools apply to a
+    # dump/truck's own pools).
+    for commodity, attr in _COMMODITY_ATTRS:
+        qty = getattr(sh, attr)
+        if qty < 0:
+            raise InvariantViolation(f"ship {sh.id} has negative {commodity} cargo {qty}")
+    if sh.progress < 0:
+        raise InvariantViolation(f"ship {sh.id} has negative voyage progress {sh.progress}")
+
+
 def _check_truck_pools(t) -> None:
     for commodity, attr in _COMMODITY_ATTRS:
         qty = getattr(t, attr)
@@ -196,24 +208,25 @@ def _check_no_dup_ids(state: GameState) -> None:
     # dump did exactly this once (engine._rail_station), and the second Supply Unit with the same
     # id double-counted its pool 299 points over initial.
     seen_ids: set[str] = set()
-    for entity in chain(state.units, state.supplies, state.trucks):
+    for entity in chain(state.units, state.supplies, state.trucks, state.ships):
         if entity.id in seen_ids:
             raise InvariantViolation(
-                f"duplicate entity id {entity.id!r} across units/supplies/trucks")
+                f"duplicate entity id {entity.id!r} across units/supplies/trucks/ships")
         seen_ids.add(entity.id)
 
 
 def _check_conservation_full(state: GameState) -> None:
     # Supply conservation (rule 32): per commodity, on-hand + consumed == initial. Nothing is
     # created except at sources; nothing vanishes except defined consumption. on-hand sums the
-    # dumps, any cargo riding on truck convoys (rules 53-54), AND the units' own supply pools (the
-    # 49.14 fuel tanks + 53.11 first-line loads, Phase 4 Option B) -- a unit carries supply exactly
-    # as a truck does, so unit pools are the third on-hand surface, credited into initial at t0
-    # (scenario._initial_supply) and never minted at runtime.
+    # dumps, any cargo riding on truck convoys (rules 53-54) or Axis coastal ships (rule 56.3), AND
+    # the units' own supply pools (the 49.14 fuel tanks + 53.11 first-line loads, Phase 4 Option B)
+    # -- a unit carries supply exactly as a truck does, so unit pools are a fourth on-hand surface,
+    # credited into initial at t0 (scenario._initial_supply) and never minted at runtime.
     for commodity, initial in state.initial_supply.items():
         attr = commodity.lower()
         on_hand = (sum(getattr(su, attr) for su in state.supplies)
                    + sum(getattr(t, attr) for t in state.trucks)
+                   + sum(getattr(sh, attr) for sh in state.ships)
                    + sum(getattr(u, attr) for u in state.units))
         if on_hand + state.consumed.get(commodity, 0) != initial:
             raise InvariantViolation(
@@ -222,14 +235,15 @@ def _check_conservation_full(state: GameState) -> None:
 
 
 def _check_conservation_delta(pre: GameState, post: GameState, event: Event,
-                              dump_ids: tuple, truck_ids: tuple, unit_ids: tuple) -> None:
+                              dump_ids: tuple, truck_ids: tuple, unit_ids: tuple,
+                              ship_ids: tuple = ()) -> None:
     """Incremental conservation: given the identity held BEFORE the event (the inductive base a
     prior check or the last boundary sweep established), it still holds AFTER iff the event's net
     change to (on_hand + consumed - initial) is zero, per commodity. on_hand's change is read from
-    the ACTUAL touched pools (post minus pre) -- dumps, truck convoys, AND units (the 49.14/53.11
-    Phase-4 pools); consumed/initial's change from the accounting dicts apply() maintains -- so a
-    fold that drains the wrong amount, or credits the wrong ledger, makes the two disagree and fails
-    loud here, no O(state) re-sum needed."""
+    the ACTUAL touched pools (post minus pre) -- dumps, truck convoys, coastal ships (56.3), AND
+    units (the 49.14/53.11 Phase-4 pools); consumed/initial's change from the accounting dicts
+    apply() maintains -- so a fold that drains the wrong amount, or credits the wrong ledger, makes
+    the two disagree and fails loud here, no O(state) re-sum needed."""
     for commodity, attr in _COMMODITY_ATTRS:
         d_on_hand = 0
         for sid in dump_ids:
@@ -238,6 +252,9 @@ def _check_conservation_delta(pre: GameState, post: GameState, event: Event,
         for tid in truck_ids:
             old = pre.truck(tid)
             d_on_hand += getattr(post.truck(tid), attr) - (getattr(old, attr) if old else 0)
+        for hid in ship_ids:
+            old = pre.ship(hid)
+            d_on_hand += getattr(post.ship(hid), attr) - (getattr(old, attr) if old else 0)
         for uid in unit_ids:
             old = pre.unit(uid)
             d_on_hand += getattr(post.unit(uid), attr) - (getattr(old, attr) if old else 0)
@@ -264,6 +281,8 @@ def check(state: GameState) -> None:
         _check_supply_pools(su)
     for t in state.trucks:
         _check_truck_pools(t)
+    for sh in state.ships:
+        _check_ship_pools(sh)
     _check_no_dup_ids(state)
     for p in state.ports:
         _check_port(p)
@@ -323,7 +342,8 @@ _DUMP_ID_KINDS = frozenset({
     EventKind.SUPPLY_DUMP_ESTABLISHED, EventKind.SUPPLY_DUMP_CONSTRUCTED, EventKind.SUPPLY_MOVED,
     EventKind.TRUCK_LOADED, EventKind.TRUCK_UNLOADED,
     EventKind.AIR_DUMP_BOMBED,      # 41.35 B-SD: bombs eliminate a percentage of the dump
-    EventKind.UNIT_REFILLED})       # 48 V.C.6 dump->unit top-up drains a dump (Phase 4)
+    EventKind.UNIT_REFILLED,        # 48 V.C.6 dump->unit top-up drains a dump (Phase 4)
+    EventKind.COASTAL_SHIP_LOADED, EventKind.COASTAL_SHIP_UNLOADED})  # 56.34 ship <-> dump
 
 # Events that change a truck's cargo or breakdown state, resolved by p["truck_id"].
 _TRUCK_ID_KINDS = frozenset({
@@ -331,14 +351,21 @@ _TRUCK_ID_KINDS = frozenset({
     EventKind.TRUCK_MOVED, EventKind.TRUCK_POINTS_DESTROYED,    # 41.32/41.35 bombed lorries
     EventKind.TRUCK_BROKE_DOWN, EventKind.TRUCK_REPAIRED})      # 21.44/22.23 breakdown pool
 
+# [56.3] Events that change a coastal ship's cargo, resolved by p["ship_id"]. COASTAL_SHIP_SAILED
+# is deliberately absent: it folds only `port`/`dest`/`progress`, never a commodity field.
+_SHIP_ID_KINDS = frozenset({EventKind.COASTAL_SHIP_LOADED, EventKind.COASTAL_SHIP_UNLOADED})
+
 # Events that move supply between pools / the ledger: conservation of the change is checked.
+# NOTE: COASTAL_SHIP_LOADED/UNLOADED are in both _DUMP_ID_KINDS (the dump side) and _SHIP_ID_KINDS
+# (the ship side) -- both slices are validated and the delta check sums both, same as TRUCK_*.
 _CONSERVATION_KINDS = frozenset({
     EventKind.SUPPLY_EVAPORATED, EventKind.TRUCK_EVAPORATED, EventKind.WELL_REFILLED,
     EventKind.SUPPLY_DUMP_BLOWN, EventKind.SUPPLY_ARRIVED, EventKind.SUPPLY_CAPTURED,
     EventKind.SUPPLY_CONSUMED, EventKind.TRUCK_LOADED, EventKind.TRUCK_UNLOADED,
     EventKind.TRUCK_MOVED, EventKind.RAIL_HAULED, EventKind.SUPPLY_DUMP_ESTABLISHED,
     EventKind.AIR_DUMP_BOMBED, EventKind.TRUCK_POINTS_DESTROYED,  # 41.35/41.32 air-delivered sinks
-    EventKind.UNIT_REFILLED, EventKind.UNIT_SUPPLY_CONSUMED})    # Phase 4 unit-pool moves
+    EventKind.UNIT_REFILLED, EventKind.UNIT_SUPPLY_CONSUMED,     # Phase 4 unit-pool moves
+    EventKind.COASTAL_SHIP_LOADED, EventKind.COASTAL_SHIP_UNLOADED})   # 56.34 ship <-> dump
 
 
 def _touched_dumps(event: Event) -> tuple:
@@ -352,6 +379,12 @@ def _touched_dumps(event: Event) -> tuple:
 def _touched_trucks(event: Event) -> tuple:
     if event.kind in _TRUCK_ID_KINDS:
         return (event.payload["truck_id"],)
+    return ()
+
+
+def _touched_ships(event: Event) -> tuple:
+    if event.kind in _SHIP_ID_KINDS:
+        return (event.payload["ship_id"],)
     return ()
 
 
@@ -387,9 +420,10 @@ def check_event(pre: GameState, post: GameState, event: Event) -> None:
         _check_stack_at(post, u.hex)
     # COMBAT_RESOLVED folds only the 15.81 Engaged marker (no guarded field), so nothing to check.
 
-    # --- supply / truck / unit-pool slice ---
+    # --- supply / truck / ship / unit-pool slice ---
     dump_ids = _touched_dumps(event)
     truck_ids = _touched_trucks(event)
+    ship_ids = _touched_ships(event)
     unit_ids = _touched_units(event)
     for sid in dump_ids:
         su = post.supply(sid)
@@ -397,8 +431,10 @@ def check_event(pre: GameState, post: GameState, event: Event) -> None:
         _check_supply_pools(su)
     for tid in truck_ids:
         _check_truck_pools(post.truck(tid))
+    for hid in ship_ids:
+        _check_ship_pools(post.ship(hid))
     if kind in _CONSERVATION_KINDS:
-        _check_conservation_delta(pre, post, event, dump_ids, truck_ids, unit_ids)
+        _check_conservation_delta(pre, post, event, dump_ids, truck_ids, unit_ids, ship_ids)
     if kind == EventKind.SUPPLY_DUMP_ESTABLISHED:  # the one fold that mints a new entity id
         _check_no_dup_ids(post)
 
@@ -420,3 +456,5 @@ def check_event(pre: GameState, post: GameState, event: Event) -> None:
         _check_malta_unfit(post)
     elif kind in (EventKind.FORT_REDUCED, EventKind.FORT_LEVEL_BUILT):
         _check_fort(tuple(p["hex"]), p["level"])
+    elif kind == EventKind.COASTAL_SHIP_SAILED:      # 56.31: progress never goes negative
+        _check_ship_pools(post.ship(p["ship_id"]))

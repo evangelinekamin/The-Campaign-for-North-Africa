@@ -668,6 +668,34 @@ def apply(state: GameState, event: Event) -> GameState:
         ship = state.naval_of(p["ship_id"])
         return state.with_naval(replace(ship, port_cooldown=2))
 
+    if k == EventKind.COASTAL_SHIP_LOADED:
+        # 56.34: conserving transfer port-dump -> ship (the exact dual of COASTAL_SHIP_UNLOADED,
+        # the same idiom as TRUCK_LOADED).
+        su = state.supply(p["supply_id"])
+        sh = state.ship(p["ship_id"])
+        for commodity, qty in p["cargo"].items():
+            attr = commodity.lower()
+            su = replace(su, **{attr: getattr(su, attr) - qty})
+            sh = replace(sh, **{attr: getattr(sh, attr) + qty})
+        return state.with_supply(su).with_ship(sh)
+
+    if k == EventKind.COASTAL_SHIP_UNLOADED:
+        # 56.34: conserving transfer ship -> port-dump (the dual of COASTAL_SHIP_LOADED).
+        su = state.supply(p["supply_id"])
+        sh = state.ship(p["ship_id"])
+        for commodity, qty in p["cargo"].items():
+            attr = commodity.lower()
+            sh = replace(sh, **{attr: getattr(sh, attr) - qty})
+            su = replace(su, **{attr: getattr(su, attr) + qty})
+        return state.with_supply(su).with_ship(sh)
+
+    if k == EventKind.COASTAL_SHIP_SAILED:
+        # 56.31/56.32: bank sea-hex progress toward `dest`, or complete the leg. No supply surface.
+        sh = state.ship(p["ship_id"])
+        if p["arrived"]:
+            return state.with_ship(replace(sh, port=p["dest"], dest=None, progress=0))
+        return state.with_ship(replace(sh, dest=p["dest"], progress=p["progress"]))
+
     if k == EventKind.FORT_REDUCED:
         return state.with_fort_level(tuple(p["hex"]), p["level"])
 

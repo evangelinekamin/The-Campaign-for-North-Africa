@@ -515,6 +515,40 @@ class NavalUnit:
 
 
 @dataclass(frozen=True, slots=True)
+class CoastalShip:
+    """One Axis coastal-shipping counter (rule 56.3) -- the Axis's only inter-port supply transport
+    that is not a truck and not the overseas convoy. `tons` is the ship's printed tonnage CAPACITY
+    (56.31, fixed for its life; the vmod counter roster -- three 1,000-ton hulls and one 2,000-ton
+    hull -- transcribed at scratchpad/port/transcriptions/56.3-axis-inter-port-transport.md, since the
+    rulebook prose never prints the fleet's numbers, only that they are "printed on" the counters).
+
+    `port` is the id of the `Port` the ship is currently AT if `dest` is None, or SAILED FROM (the
+    voyage's origin, not a live position) if `dest` is set. There is no `Terrain.SEA` hex layer in this
+    engine (see the transcription's routing note), so a ship in transit is tracked as (origin port,
+    destination port, sea-hex-points already spent) rather than a `Coord`. `progress` is the CPA worth
+    of sea hexes already sailed toward `dest` (56.31: CPA 50, one point per sea hex) -- a voyage that
+    outruns one Truck Convoy Phase's budget (56.32) resumes automatically next Phase, exactly like a
+    land unit's multi-turn move, via `game.engine._coastal_shipping`.
+
+    The four commodity fields carry the ONE cargo type currently aboard (56.34: "only one type of
+    cargo may be carried at any one time"), in supply POINTS -- the same edge 54.5 crosses tonnage to
+    Points at everywhere else in this chain -- and shaped exactly like `SupplyUnit`/`TruckFormation` so
+    a ship is a THIRD on-hand conservation surface (`game.invariants`), the same way a truck's cargo
+    already is. `water` is carried only for field-shape parity with those two siblings and stays 0
+    forever (56.22/`supply.CONVOY_COMMODITIES` never names Water)."""
+    id: str
+    side: Side
+    tons: int
+    port: str
+    dest: str | None = None
+    progress: int = 0
+    ammo: int = 0
+    fuel: int = 0
+    stores: int = 0
+    water: int = 0
+
+
+@dataclass(frozen=True, slots=True)
 class Port:
     """A port and its built-in supply dump (rule 56.28 -- every port of arrival has a
     dump 'built in, as it were'). The port THROTTLES what a convoy lands: its effective
@@ -768,6 +802,11 @@ class GameState:
     # Default () fields no ship, so every naval-less scenario stays byte-identical -- the CW
     # Fleet-Assignment beat fires only when a side carries naval (game.engine._naval_bombardment).
     naval: tuple[NavalUnit, ...] = ()
+    # Axis coastal shipping (rule 56.3): the small fixed fleet that shuttles already-landed cargo
+    # port to port without spending truck capacity. Default () fields no ship, so every
+    # coastal-shipping-less scenario (both Desert Fox benchmarks) stays byte-identical --
+    # game.engine._coastal_shipping fires only when the Axis carries ships.
+    ships: tuple["CoastalShip", ...] = ()
     # Map sections (A-E) this scenario is played on (rule 29.1 / 29.7). A Sandstorm or
     # Rainstorm from the 29.7 Foul Weather Location Table lands on 2-3 of these sections and
     # the rest read Normal (29.1); the covered ones are recorded in `storm_sections` below.
@@ -1037,6 +1076,12 @@ class GameState:
                 return n
         return None
 
+    def ship(self, sid: str) -> "CoastalShip | None":
+        for s in self.ships:
+            if s.id == sid:
+                return s
+        return None
+
     def trucks_at(self, coord: Coord) -> tuple["TruckFormation", ...]:
         return tuple(t for t in self.trucks if t.hex == coord)
 
@@ -1130,6 +1175,10 @@ class GameState:
     def with_naval(self, nu: "NavalUnit") -> "GameState":
         naval = tuple(nu if n.id == nu.id else n for n in self.naval)
         return replace(self, naval=naval)
+
+    def with_ship(self, sh: "CoastalShip") -> "GameState":
+        ships = tuple(sh if s.id == sh.id else s for s in self.ships)
+        return replace(self, ships=ships)
 
     def with_air_superiority(self, arena: str, victor: "str | None") -> "GameState":
         """Record the OpStage's air-superiority victor for an arena (mirrors with_control):

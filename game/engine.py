@@ -240,6 +240,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             for side in (first, second):
                 _truck_convoys(r, policies[side], side)  # V.J: 2nd/3rd-line truck convoys (48)
                 _truck_breakdown(r, side)                # 21.24: convoys that relocated check for breakdown
+                _coastal_shipping(r, policies[side], side)  # 56.3: Axis coastal shipping, same Phase
             _port_regen(r)                               # 55.18: end of OpStage -- every port that lost
                                                          # NO Efficiency Levels to bombs this stage regains one
             r.go(Phase.RECORD, Side.SYSTEM)
@@ -4671,6 +4672,184 @@ def _establish_dump(r: _Run, side: Side, actor: str, order, truck):
 def _reject_truck(r: _Run, side: Side, actor: str, order, reason: str) -> None:
     r.emit(EventKind.ORDER_REJECTED, side, actor,
            {"order": "truck_convoy", "truck_id": order.truck_id, "reason": reason})
+
+
+# --- [56.3] AXIS COASTAL SHIPPING ----------------------------------------------------------------
+# See scratchpad/port/transcriptions/56.3-axis-inter-port-transport.md for the full transcription
+# and the routing notes (no Terrain.SEA layer, Tripoli off-map) this section works around.
+
+_SHIP_CPA_56_31 = 50            # [56.31]: CPA for movement only -- one point per sea hex
+_SHIP_LOAD_CP_56_34 = 5         # [56.34]: load supplies at the start of the Truck Convoy Phase
+_SHIP_UNLOAD_CP_56_34 = 5       # [56.34]: unload supplies
+
+
+def _coastal_shipping(r: _Run, policy: Policy, side: Side) -> None:
+    """Axis Coastal Shipping (rule 56.3), in the Truck Convoy Phase (56.32) -- fully deterministic,
+    no die anywhere in 56.31-56.35. Fires ONLY when the side fields ships, so every ship-less
+    scenario (both Desert Fox benchmarks) stays byte-identical, the same guard _truck_convoys uses.
+
+    Each of the side's ships acts once, in GameState.ships order (deterministic by construction). A
+    ship EN ROUTE (`dest` set) auto-continues toward its existing destination with a fresh 50-point
+    CPA budget -- no order needed, 56.32 simply moves it every Phase it can, and an order naming an
+    en-route ship is rejected (56.35: a voyage's destination is the ship's own choice on arrival, not
+    a mid-passage redirect). A DOCKED ship first tries to unload any cargo still aboard (a voyage
+    whose CPA ran out before the 5-CP unload leg fit last Phase, or one that just arrived this
+    Phase), then -- with whatever CPA remains -- may act on one fresh policy order (load, then
+    depart)."""
+    if not any(s.side == side for s in r.state.ships):
+        return
+    r.go(Phase.LOGISTICS, side)
+    actor = f"{side.value}/Logistics"
+    orders = {o.ship_id: o for o in policy.coastal_shipping_orders(r.state, side)}
+    for sid in tuple(s.id for s in r.state.ships if s.side == side):
+        ship = r.state.ship(sid)
+        order = orders.get(sid)
+        if ship.dest is not None:
+            if order is not None:
+                _reject_ship(r, side, actor, order,
+                             "already under way -- may not redirect a ship at sea (56.35)")
+            _ship_continue(r, side, actor, ship)
+            continue
+        budget = _SHIP_CPA_56_31
+        if ship.ammo or ship.fuel or ship.stores or ship.water:
+            if budget >= _SHIP_UNLOAD_CP_56_34 and _ship_unload(r, side, actor, ship):
+                budget -= _SHIP_UNLOAD_CP_56_34
+        if order is not None:
+            _ship_order(r, side, actor, order, budget)
+
+
+def _ship_continue(r: _Run, side: Side, actor: str, ship) -> None:
+    """A ship already under way: bank this Phase's 50-point CPA toward its destination, or complete
+    the leg (56.31/56.32). If the destination is currently neutralized or enemy-held (56.33), the
+    ship simply loiters -- no event, no progress lost, tried again next Phase."""
+    dest = r.state.port(ship.dest)
+    origin = r.state.port(ship.port)
+    if dest is None or origin is None or not _port_enterable(r.state, side, dest):
+        return
+    dist = distance(origin.hex, dest.hex)
+    travel = min(_SHIP_CPA_56_31, max(0, dist - ship.progress))
+    new_progress = ship.progress + travel
+    arrived = new_progress >= dist
+    if travel <= 0 and not arrived:
+        return
+    r.emit(EventKind.COASTAL_SHIP_SAILED, side, actor,
+           {"ship_id": ship.id, "dest": dest.id, "progress": new_progress, "arrived": arrived})
+    if arrived and _SHIP_CPA_56_31 - travel >= _SHIP_UNLOAD_CP_56_34:
+        _ship_unload(r, side, actor, r.state.ship(ship.id))
+
+
+def _ship_order(r: _Run, side: Side, actor: str, order, budget: int) -> None:
+    """One fresh coastal-shipping decision for a DOCKED ship (the caller, _coastal_shipping,
+    already rejects and skips any order naming a ship that is still under way): an optional load
+    leg (56.34, single commodity, 5 CP) followed by an optional depart leg, against the CPA
+    `budget` left after this Phase's automatic unload attempt."""
+    ship = r.state.ship(order.ship_id)
+    if ship is None or ship.side != side:
+        _reject_ship(r, side, actor, order, "no such coastal ship under this command")
+        return
+    if order.load:
+        if ship.ammo or ship.fuel or ship.stores or ship.water:
+            _reject_ship(r, side, actor, order,
+                         "already carrying cargo -- only one type at a time (56.34)")
+            return
+        if budget < _SHIP_LOAD_CP_56_34:
+            _reject_ship(r, side, actor, order, "not enough CPA left to load (56.34)")
+            return
+        if not _ship_load(r, side, actor, order, ship):
+            return
+        budget -= _SHIP_LOAD_CP_56_34
+        ship = r.state.ship(order.ship_id)
+    if order.to is not None:
+        _ship_depart(r, side, actor, order, ship, budget)
+
+
+def _ship_load(r: _Run, side: Side, actor: str, order, ship) -> bool:
+    port = r.state.port(ship.port)
+    dump = r.state.supply(order.load_from)
+    if (dump is None or dump.side != side or port is None or dump.hex != port.hex
+            or wells.is_water_source(dump)):
+        _reject_ship(r, side, actor, order, "no co-located friendly dump to load from")
+        return False
+    cargo = {c: q for c, q in order.load.items() if q > 0}
+    if len(cargo) != 1 or not set(cargo).issubset(supply.CONVOY_COMMODITIES):
+        _reject_ship(r, side, actor, order,
+                     "load must name exactly one shippable commodity (56.22/56.34)")
+        return False
+    commodity, qty = next(iter(cargo.items()))
+    if getattr(dump, commodity.lower()) < qty:
+        _reject_ship(r, side, actor, order, "dump lacks the ordered load")
+        return False
+    if supply.points_to_tons(qty, commodity) > ship.tons:
+        _reject_ship(r, side, actor, order, "load exceeds the ship's tonnage capacity (56.31)")
+        return False
+    r.emit(EventKind.COASTAL_SHIP_LOADED, side, actor,
+           {"ship_id": ship.id, "supply_id": dump.id, "cargo": cargo})
+    return True
+
+
+def _ship_depart(r: _Run, side: Side, actor: str, order, ship, budget: int) -> None:
+    dest = r.state.port(order.to)
+    origin = r.state.port(ship.port)
+    if dest is None or origin is None or dest.id == ship.port:
+        _reject_ship(r, side, actor, order, "no such destination port")
+        return
+    if not _port_enterable(r.state, side, dest):
+        _reject_ship(r, side, actor, order, "destination neutralized or enemy-held (56.33)")
+        return
+    if budget <= 0:
+        _reject_ship(r, side, actor, order, "no CPA left to sail")
+        return
+    dist = distance(origin.hex, dest.hex)
+    travel = min(budget, dist)
+    arrived = travel >= dist
+    r.emit(EventKind.COASTAL_SHIP_SAILED, side, actor,
+           {"ship_id": ship.id, "dest": dest.id, "progress": travel, "arrived": arrived})
+    if arrived and budget - travel >= _SHIP_UNLOAD_CP_56_34:
+        _ship_unload(r, side, actor, r.state.ship(ship.id))
+
+
+def _ship_unload(r: _Run, side: Side, actor: str, ship) -> bool:
+    """[56.34] Unload whatever single commodity `ship` carries into the port dump at its current
+    hex, capped by the [54.12] dump ceiling like every other unload in this engine (_truck_unload's
+    idiom) -- both Axis campaign ports are Major-City hexes (unlimited, 54.12), so the cap never
+    actually binds on the one lane this engine seeds, but a smaller port elsewhere would leave the
+    remainder aboard to retry next Phase, exactly like a truck's own partial unload. Returns False
+    (no event) if the ship carries nothing, or no friendly dump stands on its hex."""
+    port = r.state.port(ship.port)
+    if port is None:
+        return False
+    dump = next((s for s in r.state.supplies if s.side == side and s.hex == port.hex
+                 and not wells.is_water_source(s)), None)
+    if dump is None:
+        return False
+    cap = supply.dump_capacity_at(r.state, dump.hex)
+    cargo: dict = {}
+    for c in supply.CONVOY_COMMODITIES:
+        qty = getattr(ship, c.lower())
+        if qty <= 0:
+            continue
+        onhand = getattr(dump, c.lower())
+        landed = min(qty, min(cap[c], onhand + qty) - onhand)
+        if landed > 0:
+            cargo[c] = landed
+    if not cargo:
+        return False
+    r.emit(EventKind.COASTAL_SHIP_UNLOADED, side, actor,
+           {"ship_id": ship.id, "supply_id": dump.id, "cargo": cargo})
+    return True
+
+
+def _port_enterable(state: GameState, side: Side, port) -> bool:
+    """[56.33]: a coastal ship may not enter a neutralized port (Capacity Level / Efficiency 0) or
+    an Enemy-occupied one."""
+    if port.eff <= 0:
+        return False
+    return state.control_of(port.hex) != CONTROL_OF[_other(side)]
+
+
+def _reject_ship(r: _Run, side: Side, actor: str, order, reason: str) -> None:
+    r.emit(EventKind.ORDER_REJECTED, side, actor,
+           {"order": "coastal_ship", "ship_id": order.ship_id, "reason": reason})
 
 
 # --- [24.0] THE CONSTRUCTION SEGMENT (rule 48 V.C.4) --------------------------------------------

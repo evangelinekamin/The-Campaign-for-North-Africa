@@ -24,7 +24,7 @@ from . import (air, calendar, campaign_victory, cna_map, coords, logistics_data,
 from .events import Phase, Side
 from .hexmap import Coord, distance, neighbors
 from .movement import TerrainMap, edge
-from .state import (AirMission, AirWing, Convoy, GameState, InterdictionOrder,
+from .state import (AirMission, AirWing, CoastalShip, Convoy, GameState, InterdictionOrder,
                     Port, RommelArrival, StepRecord, SupplyUnit, TruckFormation, Unit, VP)
 from .supply import (COMMODITIES, TONS_PER_POINT, _UNLIMITED, port_tonnage_budget,
                      tons_to_points)
@@ -1329,6 +1329,30 @@ def _campaign_ports(supplies, target) -> tuple[Port, ...]:
     return tuple(ports)
 
 
+# [56.3] AXIS COASTAL SHIPPING -- the fixed 4-ship fleet (56.31: three 1,000-ton hulls and one
+# 2,000-ton hull, transcribed off the vmod counter faces -- see
+# scratchpad/port/transcriptions/56.3-axis-inter-port-transport.md; the rulebook prose never
+# prints the roster, only that it is "printed on" the counters).
+_COASTAL_SHIPS_56_31 = (("A", 1000), ("B", 1000), ("C", 1000), ("D", 2000))
+
+
+def _campaign_coastal_ships(ports: tuple[Port, ...]) -> tuple[CoastalShip, ...]:
+    """[56.35]/[60.35]: "They start the game in Tripoli" -- but Tripoli has no hex anywhere in this
+    engine's map sections A-E (see `_campaign_ports`'s own Benghazi note, and the transcription's
+    routing section). `PORT-Benghazi` already plays Tripoli's ENGINE ROLE in this campaign build --
+    it is "the forward Mediterranean harbour the convoys land at" (`_campaign_ports`'s own docstring)
+    -- so the fleet is seeded there instead of at an invented on-map Tripoli hex, under the same kind
+    of proxy this file already flags elsewhere ("the scenario proxy for off-corridor
+    Tripoli/Alexandria"). Every ship starts EMPTY (59.54: "Axis coastal shipping begins all
+    scenarios unloaded"). Returns () if the campaign build seeded no Benghazi port at all (defensive
+    -- `_campaign_ports` only omits it if `_axis_rear` found no Axis dump to anchor it on)."""
+    benghazi = next((p for p in ports if p.id == "PORT-Benghazi"), None)
+    if benghazi is None:
+        return ()
+    return tuple(CoastalShip(f"AX-Ship-{letter}", Side.AXIS, tons, benghazi.id)
+                 for letter, tons in _COASTAL_SHIPS_56_31)
+
+
 # --- C4: the air war over the harbours (rules 34-46) ------------------------------------------
 # NO LONGER A PROXY. The [34.6]/[59.3] Initial Air Strengths are transcribed (game.roster,
 # data/air_establishments.json), so the campaign's two air forces are the ones the book musters:
@@ -1708,6 +1732,7 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     # Until then state.rommel is None; game.engine._rommel_arrival lifts him onto the board there,
     # and from GT27's 7.14 determination the Axis reads the [7.2] rating-6 row.
     rommel_entry = next(u.hex for u in units if u.formation == "GE DAK")
+    ports = _campaign_ports(dumps, target)               # C3: PORT-Benghazi + PORT-Matruh + PORT-Tobruk
 
     return GameState(
         turn=1, max_turns=max_turns, phase=Phase.WEATHER, active_side=Side.SYSTEM,
@@ -1759,7 +1784,8 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
         rommel_arrival=RommelArrival(turn=26, stage=3, hex=rommel_entry),   # 64.2: the Desert Fox lands
         victory=campaign_victory.CampaignVictory(),      # rule 64.7 (see game.campaign_victory)
         convoys=_campaign_convoys(dumps, target, max_turns, seed),      # C3: Axis Med + CW rail (56.4/60.7)
-        ports=_campaign_ports(dumps, target),                           # C3: PORT-Benghazi + PORT-Matruh
+        ports=ports,                                                    # C3: PORT-Benghazi + PORT-Matruh
+        ships=_campaign_coastal_ships(ports),            # 56.3: the 4-ship Axis coastal fleet
         trucks=(_campaign_axis_trucks(dumps, target, facilities, air_supply)   # C3-2: the Benghazi->front haul (53/60.33)
                 + _campaign_cw_trucks(dumps, facilities, air_supply)),  # and the CW railhead->west haul (60.33)
         interdictions=(_campaign_malta_interdiction(max_turns)             # C4: Malta throttles the Axis Med convoy (rule 44)

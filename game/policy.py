@@ -49,6 +49,29 @@ class TruckOrder:
 
 
 @dataclass(frozen=True, slots=True)
+class CoastalShipOrder:
+    """One Axis coastal-shipping decision (rule 56.3), for a ship currently DOCKED (idle, at a
+    port). Optionally LOAD `load` ({commodity: qty}, one commodity, 56.34) from the co-located port
+    dump `load_from`, then depart for the port `to`. Either leg may be omitted (a bare load that
+    stays docked, or a bare empty repositioning) so a full load-and-sail order and a return-empty
+    order both fit one shape -- the TruckOrder idiom, minus an explicit unload leg: 56.34's unload
+    is not a further decision once a ship is loaded and under way, so the engine performs it
+    automatically as soon as a ship carrying cargo is docked (whether fresh off a completed voyage
+    or left over from a Phase whose CPA ran out before the 5-CP unload fit), the same way it always
+    tries to load its intrinsic ammunition before firing rather than waiting on an order to do so.
+
+    A ship already EN ROUTE (`GameState.CoastalShip.dest` is not None) needs no order at all -- it
+    auto-continues toward its existing destination every Phase (56.32) until it arrives; an order
+    naming an en-route ship is rejected (a voyage's destination may not be changed underway, 56.35's
+    own "stop... and then continue on to another port" being the ship's OWN choice on arrival, not a
+    mid-passage redirect)."""
+    ship_id: str
+    load_from: str | None = None
+    load: dict | None = None
+    to: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class DemolitionOrder:
     """[54.14] Blow a supply dump. `unit_id` is the non-gun combat unit standing on it, paying one
     third of its basic CPA (rounded up); `extra_thirds` (0-2) buys +1 on the 54.17 die per extra
@@ -145,7 +168,7 @@ class OrganizationOrder:
 
 
 Order = (MoveOrder | AttackOrder | SupplyMoveOrder | TruckOrder | DemolitionOrder | BuildOrder
-         | MotorizeOrder | OrganizationOrder)
+         | MotorizeOrder | OrganizationOrder | CoastalShipOrder)
 
 
 class Policy:
@@ -170,6 +193,15 @@ class Policy:
 
     def truck_orders(self, state: GameState, side: Side) -> list[TruckOrder]:
         return []  # optional: haul supply forward with 2nd/3rd-line truck convoys (rule 48 V.J)
+
+    def coastal_shipping_orders(self, state: GameState, side: Side) -> list[CoastalShipOrder]:
+        """[56.3] THE AXIS COASTAL-SHIPPING DECISION: which docked, idle ships load what and sail
+        where. Base [] leaves every ship sitting at its dock -- a policy with no coastal-shipping
+        doctrine spends nothing it cannot afford, and every scenario without one stays
+        byte-identical. Concrete doctrine (a Benghazi<->Tobruk relief shuttle, flagged as an opinion
+        a commander may hold, not a law of the world) lives at
+        game.campaign_policy.CampaignAxisPolicy.coastal_shipping_orders."""
+        return []
 
     def demolition(self, state: GameState, side: Side) -> list[DemolitionOrder]:
         return []  # optional: blow your own dump rather than lose it to the enemy (rule 54.14)

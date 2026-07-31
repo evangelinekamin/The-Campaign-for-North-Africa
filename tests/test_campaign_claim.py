@@ -398,12 +398,19 @@ def test_conservation_holds_over_the_take_and_hold():
     """The take-and-hold only MOVES units and depots; it mints nothing. The recorded log folds
     byte-identically back to the final state, and game.invariants (on_hand + consumed == initial, per
     commodity) never raises -- the engine checks it after every applied event, so a clean run IS the
-    conservation proof."""
+    conservation proof.
+
+    RESTATED (56.3 slice, port rule 5): on_hand now also sums state.ships. Axis coastal shipping
+    (rule 56.3) carries cargo the same way a truck convoy does, and this campaign build (GT24) runs
+    long enough for the shuttle to be under way -- omitting the ships made this test's own hand-rolled
+    sum disagree with game.invariants' (which already covers ships, and is the actual proof this test
+    is restating in longhand), not the engine under-conserving."""
     res = _run(24)
     assert fold(res.initial, res.events) == res.final
     for c, initial in res.final.initial_supply.items():
         on_hand = (sum(getattr(s, c.lower()) for s in res.final.supplies)
                    + sum(getattr(t, c.lower()) for t in res.final.trucks)
+                   + sum(getattr(sh, c.lower()) for sh in res.final.ships)   # 56.3 coastal ships
                    + sum(getattr(u, c.lower()) for u in res.final.units))   # 49.14 unit tanks (Phase 4)
         assert on_hand + res.final.consumed.get(c, 0) == initial
 
