@@ -1116,28 +1116,42 @@ def axis_rail_doctrine(state: GameState, side: Side) -> list:
     turns out not to matter, that is the measurement, and it is reported rather than tuned away."""
     if side is not Side.AXIS or not rail.usable_this_stage(state):
         return []
-    controlled = rail.controlled_by(state, side)
-    if not controlled:
-        return []
-    dumps = [s for s in state.supplies
-             if s.side == side and s.hex in controlled and not s.is_dummy]
-    if not dumps:
-        return []
+    # ONE RUN AT A TIME (54.41/54.43). A locomotive is activated on, and a train runs inside, ONE
+    # contiguous block of five-or-more controlled rail hexes -- so the doctrine picks its dumps
+    # within a single activated run rather than off the controlled set at large, which could pair
+    # a dump in Cyrenaica with one in Egypt and have the engine reject it every Operations Stage.
+    runs = rail.activated_runs(state)
+    # THE DEPOTS THAT COUNT, read exactly as engine._dump_on reads them for the Commonwealth's own
+    # rail lane. A WELL or pipeline hex is geography and not a freight depot (52.11/52.3), and no
+    # lorry or ship may ever load out of one (engine._truck_load / _ship_load refuse it), so freight
+    # railed there is freight parked for good -- measured, seed 4 railed 2,400 Fuel and 42 Ammo into
+    # AX-Well-ElDaba and the war ended with all of it still on the platform. An AIR-facility dump
+    # (36.17) is skipped from the other end: the army may not eat from it, so a train unloading into
+    # it would be shipping its freight out of the war.
+    dumps_by_run = [[s for s in state.supplies
+                     if s.side == side and s.hex in run and not s.is_dummy
+                     and not s.air_dump and not wells.is_water_source(s)] for run in runs]
     if state.rolling_stock <= 0:                     # 54.43: one locomotive, bought once
-        payer = next((d for d in sorted(dumps, key=lambda d: d.id)
-                      if rail.activation_affordable(d)), None)
-        return [RailActivateOrder(payer.id)] if payer is not None else []
-    # forward = eastward: the DAK's problem is always the last mile toward Egypt
-    west = min(dumps, key=lambda d: (d.hex[1], d.id))
-    east = max(dumps, key=lambda d: (d.hex[1], d.id))
-    if west.id == east.id:
+        for dumps in dumps_by_run:
+            payer = next((d for d in sorted(dumps, key=lambda d: d.id)
+                          if rail.activation_affordable(d)), None)
+            if payer is not None:
+                return [RailActivateOrder(payer.id)]
         return []
-    commodity = max(supply.CONVOY_COMMODITIES,
-                    key=lambda c: (getattr(west, c.lower()), c))
-    qty = getattr(west, commodity.lower())
-    if qty <= 0:
-        return []
-    return [RailHaulOrder(west.id, east.id, commodity, qty)]
+    for dumps in dumps_by_run:
+        if len(dumps) < 2:
+            continue
+        # forward = eastward: the DAK's problem is always the last mile toward Egypt
+        west = min(dumps, key=lambda d: (d.hex[1], d.id))
+        east = max(dumps, key=lambda d: (d.hex[1], d.id))
+        if west.id == east.id:      # two counters, one id: state.supply() would resolve both ends
+            continue                # to the same dump, and a haul must have two (engine._rail_haul)
+        commodity = max(supply.RAIL_COMMODITIES_54_33,      # 54.33: fuel, ammunition or stores
+                        key=lambda c: (getattr(west, c.lower()), c))
+        qty = getattr(west, commodity.lower())
+        if qty > 0:
+            return [RailHaulOrder(west.id, east.id, commodity, qty)]
+    return []
 
 
 def coastal_shipping_doctrine(state: GameState, side: Side) -> list[CoastalShipOrder]:

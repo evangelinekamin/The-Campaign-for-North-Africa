@@ -425,6 +425,20 @@ def test_the_commonwealth_trucks_actually_run():
     # reachable hex makes net progress" dead end the docstring above names, landed one Convoy
     # Phase earlier than before. AL-Truck-Airfield-M/H are unaffected (still exactly on MATRUH,
     # their own step-toward dead end unrelated to this slice's changes).
+    #
+    # RESTATED 2026-08-01 (the [54.4] round-2 repair) -- AND THE COORDINATE LITERAL IS RETIRED.
+    # AL-Truck-Alex-L now stops at (25, 101), ONE hex short: the Axis rail doctrine stopped railing
+    # freight into a well (game.campaign_policy.axis_rail_doctrine) and the Axis's supply is laid out
+    # differently from Game-Turn 5 on, which moves this truck's trajectory the same way the 22.3
+    # slice did. That is the FOURTH hex this assertion has been re-pinned to -- (26,99), Matruh
+    # itself, (25,98), now (25,101) -- and re-typing a coordinate every time the campaign breathes is
+    # how a baseline becomes folklore (tests/baselines.py's own warning). The claim the comment above
+    # has always been making is asserted DIRECTLY instead, which is a STRONGER test, not a weaker
+    # one: the truck must still be short of the railhead AND genuinely dead-ended, i.e. not one hex
+    # of its whole 30-CP reachable frontier is strictly closer to Mersa Matruh than it already is.
+    # If it ever stops for some other reason -- a full pool, a lost load, a route it declines -- some
+    # reachable hex WILL make progress and this fails, which is exactly when a re-diagnosis is owed.
+    # MEASURED on this tree: hex (25, 101), distance 1, 829 reachable hexes, none closer than 1.
     _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK = {
         "AL-Truck-Alex-M", "AL-Truck-Alex-L", "AL-Truck-Airfield-M", "AL-Truck-Airfield-H"}
     stuck = {t.id: t for t in res.final.trucks if t.id in _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK}
@@ -433,9 +447,13 @@ def test_the_commonwealth_trucks_actually_run():
     for tid in ("AL-Truck-Airfield-M", "AL-Truck-Airfield-H"):
         assert stuck[tid].hex == MATRUH, \
             f"{tid} is no longer sitting on the Axis-held railhead ({stuck[tid].hex}) -- re-diagnose"
-    assert stuck["AL-Truck-Alex-L"].hex == (25, 98), \
-        f"AL-Truck-Alex-L is no longer stuck two hexes short of the railhead " \
-        f"({stuck['AL-Truck-Alex-L'].hex}) -- re-diagnose"
+    alex_l = stuck["AL-Truck-Alex-L"]
+    assert alex_l.hex != MATRUH, "AL-Truck-Alex-L reached the railhead -- re-diagnose"
+    _closer = [h for h in supply.reachable_truck_moves(res.final, alex_l)
+               if distance(h, MATRUH) < distance(alex_l.hex, MATRUH)]
+    assert not _closer, \
+        f"AL-Truck-Alex-L at {alex_l.hex} CAN reach {len(_closer)} hexes nearer the railhead, so " \
+        f"it is not the known game.relay._step_toward dead end any more -- re-diagnose"
     assert not is_adjacent(stuck["AL-Truck-Alex-M"].hex, MATRUH)   # the 8.1a case, a different hex
     for t in res.final.trucks:              # nobody drove back to the Delta and idled there
         if t.side == Side.ALLIED and t.line != 1 and t.id not in _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK:

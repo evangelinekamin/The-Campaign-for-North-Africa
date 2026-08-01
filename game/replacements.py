@@ -25,7 +25,7 @@ import math
 import os
 from functools import lru_cache
 
-from . import campaign_victory, coords
+from . import calendar, campaign_victory, coords
 from .events import Side
 
 _PATH = os.path.normpath(
@@ -469,7 +469,7 @@ def conversion_class_to_pool_class(conv_class: str) -> str | None:
 
 # --- [17.6]/[20.43] the TRAINING CHART: the RP-training delay (Block 7.4) -----------------
 
-OPSTAGES_PER_GAME_TURN = 3      # rule 5.1: a Game-Turn is three Operations Stages
+OPSTAGES_PER_GAME_TURN = calendar.OPSTAGES_PER_GAME_TURN   # [5.1], read from the clock's one home
 
 
 def _training() -> dict:

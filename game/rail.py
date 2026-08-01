@@ -5,11 +5,17 @@
     and he must import rolling stock. Remember, the Barce railroad east of Benghazi is not usable
     under any conditions."  -- 54.4, PDF page 74 (book folio 23), read at 150dpi.
 
-This module owns the CONTROL half of that rule -- 54.41's five-contiguous-hex gate -- and nothing
-else. The rolling stock (54.43), the 300-ton haul (54.43) and the 900-ton troop lift (54.44) are
-downstream of it and are built only once the gate is measured to be reachable: 54.41 is the
-precondition for every other case in 54.4, so it is also the honest place to find out whether the
-rest of the rule can ever fire.
+This module owns the CONTROL half of that rule -- 54.41's five-contiguous-hex gate, the runs that
+gate activates, and 54.34's dead Operations Stage. The rolling stock and the 300-ton haul (54.43)
+stand on it in game.engine._axis_rail.
+
+*** [54.44] THE 900-TON TROOP LIFT IS NAMED DEBT, NOT DEFERRED WORK. *** This docstring used to say
+the lift would be built "once the gate is measured to be reachable". THE GATE HAS NOW BEEN MEASURED
+REACHABLE (5 of 5 campaign seeds open it), so that trigger has fired and the rule is still missing:
+there is no RailMoveOrder, nothing reads TONS_PER_STACKING_POINT_54_44, and 54.41's own subject --
+"he may use such rail hexes to transport EQUIPMENT AND PERSONNEL" -- therefore only half exists. The
+Axis can rail freight and cannot rail a battalion. Declared here so the gap is a debt with a name
+rather than a promise whose condition has quietly come true.
 
 WHY THIS IS NOT `GameState.control`. 54.41 defines its own control notion:
 
@@ -28,7 +34,7 @@ one the book actually prints.
 """
 from __future__ import annotations
 
-from . import hexmap, logistics_data
+from . import calendar, hexmap, logistics_data
 from .events import Side
 from .state import Coord, GameState
 
@@ -48,6 +54,14 @@ TONS_PER_STACKING_POINT_54_44 = _RAIL_54_4["tons_per_stacking_point_54_44"]
 # [54.34] (via 54.46) "For the duration of one Operations Stage per month (calendar month), the
 # railroad may not be used for anything. It is transporting water forward for railroad use."
 DEAD_OPSTAGES_PER_MONTH_54_34 = _RAIL_54_4["dead_opstages_per_calendar_month_54_34"]
+# [5.1] A Game-Turn is three Operations Stages, so the LAST one is the third -- which is the stage
+# 54.34's dead Operations Stage is fixed at (dead_opstages_54_34's flagged judgement call). The
+# magnitude is the clock's, and is read from the clock's one home rather than re-typed here.
+LAST_OPSTAGE = calendar.OPSTAGES_PER_GAME_TURN
+# [54.43] "...in any ONE direction during an Operations Stage" -- the two directions a train may run
+# in, and the words the audit log names them by (see haul_direction_54_43).
+EASTWARD, WESTWARD = 1, -1
+DIRECTION_NAMES = {EASTWARD: "eastward", WESTWARD: "westward"}
 
 
 def rail_hexes(state: GameState) -> set:
@@ -105,13 +119,68 @@ def gate_open(state: GameState, side: Side) -> bool:
     return longest_run(state, side) >= CONTIGUOUS_HEXES_54_41
 
 
-def haul_capacity_tons(state: GameState) -> int:
-    """[54.43] The tons of supply the Axis may move along his controlled line in ONE direction this
-    Operations Stage: 300 per activated Rolling Stock. Zero the moment 54.41's gate is shut, which
-    is also when 54.45 destroys the stock outright -- so this never needs to ask twice."""
-    if not gate_open(state, Side.AXIS):
-        return 0
-    return state.rolling_stock * TONS_PER_ACTIVATION_54_43
+def stock_in_run(state: GameState, run) -> int:
+    """[54.43] The units of Rolling Stock standing inside `run` (a set of Coords).
+
+    A locomotive is bought at a hex -- "brings to any controlled and operative rail hex" -- and it
+    activates "all such hexes under his control (AS LONG AS THEY ARE CONTIGUOUS)", so the block it
+    was put down on is the block it works. It cannot be lifted onto another one: 54.42 lets the
+    Axis repair rail hexes and never lets him move stock off the rails."""
+    return 0 if run is None else sum(n for hx, n in state.rolling_stock_at.items() if hx in run)
+
+
+def haul_capacity_tons(state: GameState, run) -> int:
+    """[54.43] The tons of supply the Axis may move along `run` in ONE direction this Operations
+    Stage: 300 per unit of Rolling Stock STANDING ON THAT RUN. Zero for a run with no stock on it,
+    and zero for None (a pair of hexes that is in no activated run at all)."""
+    return stock_in_run(state, run) * TONS_PER_ACTIVATION_54_43
+
+
+def orphaned_stock(state: GameState) -> dict:
+    """[54.45] The stock the Commonwealth has just destroyed by retaking the line: activation hex ->
+    units, for every hex that no longer lies in a run of five contiguous Axis-controlled rail hexes.
+
+    "If at any time the Axis Player loses control of enough rail hexes so that he does not have the
+    necessary five contiguous hexes the Rolling Stock is considered to have been destroyed."
+
+    *** FLAGGED AS A READING. *** The sentence's subject is the Player, so read alone it would kill
+    the board's stock only when NO run of five survives anywhere. Taken with 54.43 -- which sells
+    the stock onto one contiguous block and rates it by what that block can haul -- the necessary
+    five hexes are the ones under the locomotive: a machine standing on an overrun stretch is lost
+    whatever the Axis still holds three hundred miles away, and it certainly cannot be driven there
+    across the Eighth Army. This is also the reading that keeps the engine honest, since the other
+    one strands stock that can never haul again and never dies.
+
+    *** THE OLD FLAG SAID SOMETHING FALSE HERE AND IS CORRECTED. *** It reassured a future reader
+    that "where only one run ever exists (the campaign as measured) the two readings coincide". THE
+    CAMPAIGN DOES NOT HOLD ONLY ONE RUN. Re-measured over six seeds (1941, 7, 2026, 1, 99, 4) folded
+    to GT111, recomputing activated_runs at every change of rail_control
+    (scratchpad/54.4-scan/measure_runs_and_colocation.py): every seed reaches TWO concurrent
+    activated runs, as early as Game-Turn 3-6, and holds two for 1 to 21 Operations Stages depending
+    on the seed. So the readings are not made to coincide by the board, and this choice is load-
+    bearing rather than moot.
+
+    WHAT IS TRUE, MEASURED SEPARATELY (measure_54_45_readings.py): the two readings have not yet
+    DIFFERED ON AN ACTUAL LOCOMOTIVE, because the campaign has only ever put one on the board -- one
+    activation in six seeds (seed 4, GT4), destroyed at GT13 with 54.41's gate shut board-wide, so
+    both readings kill it. That is a fact about 54.43's price keeping the rails empty (see the
+    transcription's verdict), not about the two readings agreeing, and it stops being true the first
+    time the Axis affords a second locomotive while he holds two runs."""
+    return {hx: n for hx, n in sorted(state.rolling_stock_at.items())
+            if activated_run_at(state, hx) is None}
+
+
+def haul_direction_54_43(src: Coord, dst: Coord) -> int:
+    """[54.43] Which of the line's two directions a haul from `src` to `dst` runs in: EASTWARD or
+    WESTWARD.
+
+    54.4's subject is "the coastal railline extending from Egypt to Libya", a line whose two ends
+    are east and west, and this map lays that line out along the axial r axis (the campaign's rail
+    corridor spans r100-r139), so the sign of dr IS the direction a train runs in. *** FLAGGED, the
+    tiebreak: *** two dumps in the SAME column are ordered by q, because every haul must have
+    exactly one direction or the 54.43 pin has a hole to slip through; a haul whose two ends are the
+    same dump has no direction at all and is refused before this is asked (engine._rail_haul)."""
+    return EASTWARD if (dst[1], dst[0]) > (src[1], src[0]) else WESTWARD
 
 
 def activation_affordable(dump, cost: dict | None = None) -> bool:
@@ -121,22 +190,67 @@ def activation_affordable(dump, cost: dict | None = None) -> bool:
     return all(getattr(dump, c.lower()) >= q for c, q in cost.items())
 
 
-def dead_stage_54_34(state: GameState) -> int:
-    """[54.34] via [54.46]: the ONE Operations Stage each calendar month in which the railroad "may
-    not be used for anything" because it is hauling its own water. "Players must state each month
-    which Operations Stage they are not using the railroad" -- a declaration this engine has no
-    seat to make, so it is FIXED at the month's LAST stage (3) rather than left to a policy.
+def dead_opstages_54_34(gt: int) -> frozenset:
+    """[54.34] via [54.46]: the (Game-Turn, Operations Stage) pairs of `gt`'s CALENDAR MONTH in
+    which the railroad "may not be used for anything" because it is hauling its own water.
 
-    FLAGGED as a judgement call, and deliberately the least generous reading available: taking the
-    last stage means the Axis has already had stages 1 and 2 to haul before losing one, which
-    neither hands him a lever the book withholds nor lets him dodge the cost."""
-    return 3
+    ONE PER CALENDAR MONTH, NOT ONE PER GAME-TURN. 54.34 prints the parenthetical itself -- "For
+    the duration of one Operations Stage per month (CALENDAR MONTH)" -- because the weekly reading
+    is the obvious misreading, and this engine had made it: a bare `state.stage == 3` killed the
+    railway on stage 3 of all 111 Game-Turns, ~111 dead Operations Stages against the book's ~29.
+    The month is game.calendar.month_turns (four Game-Turns, or TWO for the half-month September
+    1940 the campaign opens in, 64.2), and the COUNT is the data file's own
+    DEAD_OPSTAGES_PER_MONTH_54_34 rather than a literal here.
+
+    WHICH stage is the PLAYER'S CALL -- "Players must state each month which Operations Stage they
+    are not using the railroad" -- and this engine has no seat for that declaration. *** FLAGGED AS
+    A JUDGEMENT CALL: *** it is fixed at the LAST Operations Stage of the month's FIRST Game-Turn.
+    Two reasons, neither of them a balance argument. It is the beat the COMMONWEALTH half of the
+    same clause already stands down on (scenario._campaign_rail_cargo drops the month-start
+    Game-Turn's STORES load, the third of that turn's three stage-loads), so 54.34 is now encoded
+    ONE way on both sides of the board instead of two. And it is the least generous reading
+    available within that turn: the Axis has already had stages 1 and 2 to haul before he loses
+    one, so the choice neither hands him a lever the book withholds nor lets him dodge the cost."""
+    return frozenset((t, LAST_OPSTAGE)
+                     for t in calendar.month_turns(gt)[:DEAD_OPSTAGES_PER_MONTH_54_34])
+
+
+def is_dead_stage_54_34(state: GameState) -> bool:
+    """[54.34] Is the railway standing down THIS Operations Stage, hauling its own water?"""
+    return (state.turn, state.stage) in dead_opstages_54_34(state.turn)
+
+
+def activated_runs(state: GameState) -> list:
+    """[54.41]/[54.43] The blocks of Axis-controlled rail hexes that may actually be RUN ON --
+    every contiguous run of at least CONTIGUOUS_HEXES_54_41 hexes, largest first.
+
+    54.41 grants the use of "SUCH rail hexes" (the five-or-more contiguous ones he controls) and
+    54.43 activates "all such hexes under his control (AS LONG AS THEY ARE CONTIGUOUS)". So the
+    thing the Axis operates is a RUN, not the railway at large -- and a run of five somewhere in
+    Cyrenaica licenses nothing three hundred miles away in Egypt."""
+    return [run for run in contiguous_runs(controlled_by(state, Side.AXIS))
+            if len(run) >= CONTIGUOUS_HEXES_54_41]
+
+
+def activated_run_at(state: GameState, hx: Coord):
+    """The activated run `hx` belongs to (a set of Coords), or None if it belongs to none. Runs are
+    disjoint by construction, so "the" run is well defined."""
+    return next((run for run in activated_runs(state) if hx in run), None)
+
+
+def one_activated_run(state: GameState, a: Coord, b: Coord) -> bool:
+    """[54.41]/[54.43] Do `a` and `b` lie in the SAME activated run -- i.e. may a train run between
+    them at all? THIS IS THE CONTROL HALF of a haul's legality and it is not implied by either
+    endpoint being Axis-controlled: a run the Commonwealth breaks in the middle is two runs, and a
+    train that crosses the break would be running through the Eighth Army's own railhead."""
+    run = activated_run_at(state, a)
+    return run is not None and b in run
 
 
 def usable_this_stage(state: GameState) -> bool:
-    """[54.34]/[54.41] May the Axis run a train AT ALL right now? The gate must be open and this
-    must not be the month's dead stage."""
-    return gate_open(state, Side.AXIS) and state.stage != dead_stage_54_34(state)
+    """[54.34]/[54.41] May the Axis run a train AT ALL right now? He must hold a run long enough to
+    activate, and this must not be the calendar month's dead Operations Stage."""
+    return gate_open(state, Side.AXIS) and not is_dead_stage_54_34(state)
 
 
 def claims(state: GameState, side: Side, path: list) -> list:

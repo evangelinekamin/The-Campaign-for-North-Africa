@@ -922,14 +922,20 @@ class GameState:
     # under `control`. Coord -> Side, written only by engine._rail_control_claim, and only for
     # hexes the built railway actually runs through. Empty for every scenario with no railway.
     rail_control: dict = field(default_factory=dict)
-    # [54.43]/[54.45] How many units of Axis Rolling Stock are currently ACTIVE. Each cost 250
-    # Stores + 100 Fuel, which 54.45 says are "used up; they may not be recovered", and each buys
-    # 300 tons of haul per Operations Stage in one direction (54.43). A plain count, not a tuple of
-    # counters: 54.43 rates rolling stock purely by how much it can pull, and the book prints no
-    # locomotive counter to track individually. Zeroed outright -- not decremented -- the moment
-    # 54.41's five-contiguous-hex gate shuts, per 54.45's "the Rolling Stock is considered to have
-    # been destroyed". Always 0 for the Commonwealth, whose own railroad is rule 54.3.
-    rolling_stock: int = 0
+    # [54.43]/[54.45] WHERE THE AXIS'S ACTIVE ROLLING STOCK STANDS: the activation hex -> how many
+    # units of stock were bought there. Each cost 250 Stores + 100 Fuel, which 54.45 says are "used
+    # up; they may not be recovered", and each buys 300 tons of haul per Operations Stage in one
+    # direction (54.43). Always empty for the Commonwealth, whose own railroad is rule 54.3.
+    #
+    # A MAP AND NOT A COUNT, since 2026-08-01. 54.43 sells the stock for points "brought to any
+    # controlled and operative rail hex", and what it activates is "all such hexes under his control
+    # (AS LONG AS THEY ARE CONTIGUOUS)" -- a RUN, not the railway at large. Under the old bare count
+    # a locomotive bought on a run in Cyrenaica hauled 300 tons between two dumps on a disjoint run
+    # in Egypt (measured), because rail.haul_capacity_tons could only ask "does SOME run of five
+    # exist anywhere". The hex is the only thing that binds the stock to its block, so the hex is
+    # what is kept; game.rail.stock_in_run reads it back. No locomotive COUNTER exists in the book,
+    # so nothing finer than "how many, and where" is recorded.
+    rolling_stock_at: dict = field(default_factory=dict)
     # `construction_owner` is (item, hex) -> the Side actually laying it, for the ONE project type
     # (26.1's minefield) whose ownership outlives the Under Construction marker and cannot be
     # inferred from whichever side's Completion Step happens to fire the completion (see
@@ -1128,6 +1134,12 @@ class GameState:
         control = dict(self.control)
         control[coord] = ctrl
         return replace(self, control=control)
+
+    @property
+    def rolling_stock(self) -> int:
+        """[54.43] Units of Axis Rolling Stock active anywhere on the board. Derived, so the count
+        and the runs it stands on can never disagree -- see rolling_stock_at."""
+        return sum(self.rolling_stock_at.values())
 
     def rail_control_of(self, coord: Coord) -> "Side | None":
         """[54.41] Which Player last had a land combat unit pass through this rail hex, or None if

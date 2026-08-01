@@ -117,11 +117,26 @@ class _Run:
         # for every port-less scenario.
         self.port_tons_this_stage: dict[str, float] = {}
         self.port_tons_stamp: tuple[int, int] | None = None
-        # [54.43] tons the Axis railway has already hauled THIS Operations Stage, against the 300
-        # per activated Rolling Stock. Same self-expiring (turn, stage) discipline as the 55.3
-        # ledger above and for the same reason -- see _rail_tons().
-        self._rail_tons: float = 0.0
-        self._rail_tons_stamp: tuple[int, int] | None = None
+        # THE AXIS RAILWAY'S PER-OPERATIONS-STAGE LEDGER (54.33/54.35/54.43), all three entries
+        # expiring together at the (turn, stage) boundary under _expire_rail_stage() -- the same
+        # self-expiring discipline as the 55.3 port ledger above, and for the same reason.
+        #   [54.43] tons already hauled this stage, against the 300 per unit of Rolling Stock --
+        #   PER RUN (keyed by the run's lowest Coord), because the 300 tons belong to the block the
+        #   stock stands on and two disjoint blocks each carrying a locomotive each get their own.
+        self._rail_tons: dict = {}
+        #   [54.43] and the ONE direction that block's trains are running in this stage ("300 Tons
+        #   of Supplies in any ONE direction during an Operations Stage"), keyed the same way, None
+        #   until that run's first train fixes it.
+        self._rail_direction: dict = {}
+        #   [54.33] the ONE type of supply the railroad is carrying this stage ("it may move fuel,
+        #   ammunition, or stores -- not any combination of the three"), None until a train runs.
+        #   NOT per run: 54.33's subject is "the railroad", one system, unlike 54.43's per-block
+        #   tonnage and direction, which are what one activation bought.
+        self._rail_commodity: str | None = None
+        #   [54.35] what the trains SET DOWN this stage, dump id -> commodity -> Points: supply
+        #   that is "considered unloaded" and so "may not be moved that Operations Stage".
+        self._rail_landed: dict[str, dict[str, int]] = {}
+        self._rail_stamp: tuple[int, int] | None = None
         # [48 III / 48 V.D] each due convoy's SURVIVED manifest for the current Game-Turn:
         # convoy id -> {"dest": dump id|None, "cargo": remaining points, "rail": bool}. The
         # convoy is bombed at sea ONCE per turn (interdiction, strategic 39.13) and its 56.15
@@ -137,23 +152,68 @@ class _Run:
         # bookkeeping, and dies with the run. Empty for every spec that needs no memory.
         self.victory_scratch: dict = {}
 
-    @property
-    def rail_tons_this_stage(self) -> float:
-        """[54.43] Tons the Axis railway has hauled so far this Operations Stage, expiring by itself
-        at the (turn, stage) boundary. Self-expiry rather than a reset in run()'s stage loop, for
-        the same reason the 55.3 port ledger uses it: a caller that drives the stages itself would
-        otherwise inherit a spent allowance and see a whole Game-Turn's haul collapse into one
-        stage."""
-        stamp = (self.state.turn, self.state.stage)
-        if self._rail_tons_stamp != stamp:
-            self._rail_tons_stamp = stamp
-            self._rail_tons = 0.0
-        return self._rail_tons
+    def _expire_rail_stage(self) -> None:
+        """Roll the whole 54.33/54.35/54.43 rail ledger over at the (turn, stage) boundary.
 
-    @rail_tons_this_stage.setter
-    def rail_tons_this_stage(self, value: float) -> None:
-        self.rail_tons_this_stage                    # normalise the stamp before writing through
-        self._rail_tons = value
+        Self-expiry rather than a reset in run()'s stage loop, for the same reason the 55.3 port
+        ledger uses it: a caller that drives the stages itself would otherwise inherit a spent
+        allowance and see a whole Game-Turn's haul collapse into one stage. ONE stamp for all four
+        entries -- they are four facts about the same Operations Stage and must never disagree
+        about which stage that is."""
+        stamp = (self.state.turn, self.state.stage)
+        if self._rail_stamp != stamp:
+            self._rail_stamp = stamp
+            self._rail_tons = {}
+            self._rail_direction = {}
+            self._rail_commodity = None
+            self._rail_landed = {}
+
+    def rail_tons_this_stage(self, run_key) -> float:
+        """[54.43] Tons the Axis railway has hauled on the run keyed by `run_key` so far this
+        Operations Stage."""
+        self._expire_rail_stage()
+        return self._rail_tons.get(run_key, 0.0)
+
+    def book_rail_tons(self, run_key, tons: float) -> None:
+        """[54.43] Charge `tons` against that run's 300-per-locomotive allowance."""
+        self._expire_rail_stage()
+        self._rail_tons[run_key] = self._rail_tons.get(run_key, 0.0) + tons
+
+    def rail_direction_this_stage(self, run_key):
+        """[54.43] The one direction that run's trains are running in this Operations Stage
+        (rail.EASTWARD / rail.WESTWARD), or None until its first train fixes it."""
+        self._expire_rail_stage()
+        return self._rail_direction.get(run_key)
+
+    def set_rail_direction(self, run_key, direction: int) -> None:
+        """[54.43] Commit that run to one direction for the rest of the Operations Stage."""
+        self._expire_rail_stage()
+        self._rail_direction[run_key] = direction
+
+    @property
+    def rail_commodity_this_stage(self) -> str | None:
+        """[54.33] The one type of supply the Axis railway is carrying this Operations Stage, or
+        None if no train has run yet."""
+        self._expire_rail_stage()
+        return self._rail_commodity
+
+    @rail_commodity_this_stage.setter
+    def rail_commodity_this_stage(self, value: str) -> None:
+        self._expire_rail_stage()
+        self._rail_commodity = value
+
+    def rail_landed_this_stage(self, supply_id: str, commodity: str) -> int:
+        """[54.35] Points of `commodity` the Axis railway set down in dump `supply_id` THIS
+        Operations Stage -- supply that "may not be moved that Operations Stage"."""
+        self._expire_rail_stage()
+        return self._rail_landed.get(supply_id, {}).get(commodity, 0)
+
+    def record_rail_landing(self, supply_id: str, commodity: str, qty: int) -> None:
+        """[54.35] Book freight as set down at `supply_id`, pinning it there for the rest of the
+        Operations Stage."""
+        self._expire_rail_stage()
+        landed = self._rail_landed.setdefault(supply_id, {})
+        landed[commodity] = landed.get(commodity, 0) + qty
 
     def emit(self, kind: EventKind, side: Side, actor: str, payload: dict,
              rng_draws: tuple[int, ...] = ()) -> None:
@@ -4634,6 +4694,10 @@ def _truck_load(r: _Run, side: Side, actor: str, order, truck) -> bool:
     if any(getattr(dump, c.lower()) < q for c, q in cargo.items()):
         _reject_truck(r, side, actor, order, "dump lacks the ordered load")
         return False
+    if any(q > _rail_free_points(r, dump, c) for c, q in cargo.items()):
+        _reject_truck(r, side, actor, order,       # 54.35: the train has only just put it down
+                      "supply unloaded by rail may not be moved that Operations Stage (54.35)")
+        return False
     if not supply.truck_load_admissible(truck, cargo):
         _reject_truck(r, side, actor, order, "load exceeds truck capacity (53.12)")
         return False
@@ -4864,6 +4928,10 @@ def _ship_load(r: _Run, side: Side, actor: str, order, ship) -> bool:
     commodity, qty = next(iter(cargo.items()))
     if getattr(dump, commodity.lower()) < qty:
         _reject_ship(r, side, actor, order, "dump lacks the ordered load")
+        return False
+    if qty > _rail_free_points(r, dump, commodity):
+        _reject_ship(r, side, actor, order,        # 54.35: the train has only just put it down
+                     "supply unloaded by rail may not be moved that Operations Stage (54.35)")
         return False
     if supply.points_to_tons(qty, commodity) > ship.tons:
         _reject_ship(r, side, actor, order, "load exceeds the ship's tonnage capacity (56.31)")
@@ -5317,13 +5385,15 @@ def _axis_rail(r: _Run, policy: Policy, side: Side) -> None:
     """[54.4] Axis use of the Commonwealth railroad, in the Convoy Stage (54.43).
 
     Three beats, in the order the rule imposes them:
-      1. [54.45] IF THE GATE HAS SHUT, THE STOCK IS GONE. "If at any time the Axis Player loses
-         control of enough rail hexes so that he does not have the necessary five contiguous hexes
-         the Rolling Stock is considered to have been destroyed." Checked FIRST and unconditionally,
-         because it is the one beat that fires without the Axis doing anything -- the Commonwealth
-         taking its line back is what triggers it.
+      1. [54.45] IF THE BLOCK HAS BEEN BROKEN, THE STOCK ON IT IS GONE. "If at any time the Axis
+         Player loses control of enough rail hexes so that he does not have the necessary five
+         contiguous hexes the Rolling Stock is considered to have been destroyed." Checked FIRST and
+         unconditionally, because it is the one beat that fires without the Axis doing anything --
+         the Commonwealth taking its line back is what triggers it. Which stock dies is
+         rail.orphaned_stock's flagged reading: the stock standing on a block that no longer musters
+         five contiguous controlled hexes, not the board's stock at large.
       2. [54.43] ACTIVATION. 250 Stores + 100 Fuel standing at a controlled, operative rail hex buy
-         one unit of stock, worth 300 tons of haul per Operations Stage.
+         one unit of stock, worth 300 tons of haul per Operations Stage on THAT block.
       3. [54.43]/[54.33]/[54.35] THE HAUL itself, one commodity, one direction, within capacity.
 
     AXIS-ONLY by the rule's own subject: 54.4 is the Axis borrowing someone else's railway, and the
@@ -5331,10 +5401,11 @@ def _axis_rail(r: _Run, policy: Policy, side: Side) -> None:
     without one stays byte-identical."""
     if side is not Side.AXIS or not r.state.terrain.rails:
         return
-    if r.state.rolling_stock and not rail.gate_open(r.state, side):
+    orphaned = rail.orphaned_stock(r.state)
+    if orphaned:
         r.go(Phase.LOGISTICS, side)
         r.emit(EventKind.ROLLING_STOCK_DESTROYED, side, "AXIS/Rail",
-               {"stock": r.state.rolling_stock,
+               {"hexes": [list(h) for h in orphaned], "stock": sum(orphaned.values()),
                 "reason": "fewer than five contiguous controlled rail hexes (54.45)"})
         return
     orders = policy.rail_orders(r.state, side) or []
@@ -5362,15 +5433,53 @@ def _rail_activate(r: _Run, side: Side, actor: str, order) -> None:
     if not rail.gate_open(r.state, side):
         _reject_rail(r, side, actor, "fewer than five contiguous controlled rail hexes (54.41)")
         return
+    # ...AND [54.34] IS BROADER STILL. "For the duration of one Operations Stage per month (calendar
+    # month), the railroad MAY NOT BE USED FOR ANYTHING. It is transporting water forward for
+    # railroad use." "For anything" takes in the purchase by the identical argument that brings
+    # 54.41's chapeau to bear on it: putting a locomotive on the line is using the line, and on the
+    # dead stage the line is busy hauling its own water. Only _rail_haul asked this before, so the
+    # clause the tests quote was pinned for one of the two things the railroad does.
+    if rail.is_dead_stage_54_34(r.state):
+        _reject_rail(r, side, actor,
+                     "the railroad may not be used for anything this Operations Stage (54.34)")
+        return
     dump = r.state.supply(order.supply_id)
     if dump is None or dump.side != side:
         _reject_rail(r, side, actor, "no such friendly dump to draw Rolling Stock from (54.43)")
+        return
+    # [52.11]/[52.3] AND THE PURSE IS NOT A WELL. A well or pipeline hex is geography, never a
+    # freight depot -- _truck_load, _ship_load and BOTH ends of _rail_haul already refuse to treat
+    # one as a dump, and 54.43's 250 Stores and 100 Fuel are drawn out of a dump like any other
+    # supply. Closing it here for the same reason and under the same citation: 52.11 says what a
+    # well is, 54.11 says what a supply dump is, and a water hole no lorry may load from cannot be
+    # the depot that pays for a locomotive.
+    if wells.is_water_source(dump):
+        _reject_rail(r, side, actor,
+                     "a well or pipeline hex is not a supply dump to buy Rolling Stock at "
+                     "(52.11/54.11)")
         return
     if dump.hex not in rail.rail_hexes(r.state):
         _reject_rail(r, side, actor, "Rolling Stock must be brought to a rail hex (54.43)")
         return
     if r.state.rail_control_of(dump.hex) is not side:
         _reject_rail(r, side, actor, "that rail hex is not Axis-controlled (54.41/54.43)")
+        return
+    # ...AND THE PURCHASE IS BOUND TO ONE RUN. 54.43 activates "all such hexes under his control
+    # (AS LONG AS THEY ARE CONTIGUOUS)" -- the run the 250 Stores and 100 Fuel are physically
+    # brought TO. rail.gate_open above answers only "does SOME run of five exist anywhere", so a
+    # run held in Cyrenaica would otherwise buy a locomotive standing in Egypt.
+    #
+    # *** FLAGGED AS A READING, AND IT IS NARROWER THAN THE WORD THE BOOK PRINTS. *** 54.43 says the
+    # points may be brought to "ANY controlled and operative rail hex"; this refuses the purchase at
+    # a controlled hex that is not inside a run of five. The reading is forced by what the stock IS
+    # here -- a machine standing at a hex, whose whole worth is the block it can work (54.43 rates
+    # it only by the tonnage it hauls, and rail.stock_in_run binds it to its block) -- so a
+    # locomotive set down on an isolated hex would operate nothing, haul nothing and then be
+    # destroyed by 54.45, and the 350 points would buy a rule-shaped hole. A future port that gives
+    # 54.44's troop lift a use for stock standing outside a run should revisit this line first.
+    if rail.activated_run_at(r.state, dump.hex) is None:
+        _reject_rail(r, side, actor,
+                     "that hex is not in a run of five contiguous controlled rail hexes (54.43)")
         return
     if not rail.activation_affordable(dump):
         _reject_rail(r, side, actor, "dump lacks the 250 Stores and 100 Fuel one activation costs (54.43)")
@@ -5381,43 +5490,213 @@ def _rail_activate(r: _Run, side: Side, actor: str, order) -> None:
 
 
 def _rail_haul(r: _Run, side: Side, actor: str, order) -> None:
-    """[54.43]/[54.33]/[54.35] Run one train. Both dumps must stand on Axis-controlled rail hexes of
-    ONE connected line (supply.rail_reachable, the same gate the Commonwealth's 54.3 haul declares),
-    the load is a single commodity (54.33), and the stage's total is capped at 300 tons per
-    activated Rolling Stock (54.43). Over-capacity is TRIMMED rather than rejected -- 54.43 caps
-    "the extent of hauling", so a train that can only take part of a load still runs."""
-    if not rail.usable_this_stage(r.state):
-        _reject_rail(r, side, actor, "the railroad is not usable this Operations Stage (54.34/54.41)")
+    """[54.43]/[54.33]/[54.35] Run one train, under the constraints the book prints and this engine
+    had reduced to two.
+
+    [54.43] A HAUL HAS TWO ENDS. A train from a dump to itself is not a haul, and it is refused here
+    rather than folded: apply's RAIL_HAULED handler reads both dumps and then writes
+    with_supply(src).with_supply(dst), so with one dump the second write wins, the subtraction is
+    lost and the quantity is MINTED -- measured, a self-haul of 5 Stores raised
+    invariants.InvariantViolation ("STORES not conserved across RAIL_HAULED"), i.e. the engine
+    CRASHED where every other illegal rail order is refused. Tested on the dump ID, not on object
+    identity: _rail_station's docstring records that duplicate ids have actually occurred in this
+    engine, and state.supply() resolves an id to the first match.
+
+    ...AND ITS TWO ENDS ARE TWO HEXES. The id test alone let two DIFFERENT dumps standing on ONE hex
+    make a legal-looking haul that has no direction at all -- haul_direction_54_43 compares (r, q)
+    and falls through to WESTWARD on equal Coords -- so it burned the run's whole 300-ton allowance
+    carrying freight nowhere and then committed the run westward for the rest of the Operations
+    Stage, refusing the genuine eastbound train behind it. Measured reachable on the campaign: two
+    or more Axis dumps stand on ONE controlled rail hex inside an activated run in all six seeds
+    folded to GT111 (seed 4 puts three on (26,133)), because _establish_dump only refuses a
+    co-located FRIENDLY dump and SUPPLY_CAPTURED can flip an enemy one.
+
+    [52.11]/[52.3] AND NEITHER END IS A WELL. A well or pipeline hex is geography, not a depot: it
+    is where the supply trace DRAWS water, and _truck_load and _ship_load both refuse to load from
+    one for exactly that reason -- so freight railed into it can never be carried onward and the
+    railhead becomes a terminus. Measured on the campaign (seed 4): 2,400 Fuel and 42 Ammo Points
+    were railed into AX-Well-ElDaba on GT5-6 and were still sitting there, untouched, at GT111.
+
+    [54.41]/[54.43] BOTH DUMPS IN ONE ACTIVATED RUN. 54.43 activates "all such hexes under his
+    control (AS LONG AS THEY ARE CONTIGUOUS)", so the thing a train runs on is a single contiguous
+    block of five-or-more Axis-controlled rail hexes (rail.one_activated_run). Checking only that
+    the two END hexes were Axis-controlled let a train run straight THROUGH hexes the Commonwealth
+    held -- the Eighth Army's own railhead included -- and asking rail.gate_open alone was weaker
+    still: it answers whether SOME run of five exists anywhere on the board, so a run in Cyrenaica
+    licensed a haul between two dumps standing in an unrelated pair of hexes in Egypt.
+    supply.rail_reachable stays ON TOP of that, because it is a different fact: the control run is
+    taken over ordinary hex adjacency (rail.contiguous_runs, deliberately -- see its docstring),
+    while rail_reachable is the physical TRACK joining the two dumps (54.3 via 54.46).
+
+    [54.33] ONE TYPE OF SUPPLY PER OPERATIONS STAGE. "The railroad may transport only one type of
+    supply at a given time. It may move fuel, ammunition, or stores -- not any combination of the
+    three." The old check tested the commodity NAME against supply.COMMODITIES, which a
+    RailHaulOrder satisfies by construction and which also admits WATER -- a commodity 54.33 leaves
+    off its list on purpose ("Water need not be transported by RR -- the railroad hexes are
+    pipelines in and of themselves"). Measured on the shipped code, one Operations Stage accepted
+    STORES then AMMO then FUEL, all three on one train. The stage's FIRST train now fixes the type
+    (r.rail_commodity_this_stage) and every later one must match it.
+
+    [54.43] ONE DIRECTION PER OPERATIONS STAGE -- *** AND THAT SENTENCE IS A READING, NOT A QUOTE.
+    *** This docstring used to print it as though the book did, which is the overclaim every other
+    judgement call in this port is flagged to avoid.
+
+    WHAT THE BOOK PRINTS (PDF page 74, book folio 23, rendered at 500dpi and read with eyes):
+    "...he may activate all such hexes under his control (as long as they are contiguous) to the
+    extent of hauling 300 Tons of Supplies in any *one* direction during an Operations Stage." That
+    is the whole of it. "one" IS italicised in the scan, and 54.44 repeats the phrase for the troop
+    lift ("the equivalent of 900 Tons of Supplies in any one direction").
+
+    WHAT IS INFERRED: that the direction is a COMMITMENT the Operations Stage makes once -- the
+    stage's first train on a run fixes it (rail.haul_direction_54_43) and every later train on that
+    run must match. The book never says "one direction per Operations Stage" in those words.
+
+    THE ALTERNATIVE READING, and it is not silly: "300 Tons in any *one* direction" may be measuring
+    the ALLOWANCE rather than constraining the traffic -- 300 tons' worth of one-way haul, taken in
+    whichever direction each train likes, i.e. the undirected pool this engine actually shipped
+    (measured: 100 Points W->E and 100 Points E->W both accepted on one activation in one stage).
+    A third reading is looser still: 300 tons EACH way, which no sentence here supports.
+
+    WHY THE COMMITMENT READING WAS TAKEN. 54.32 gives the line's OWNER "1500 tons per Operations
+    Stage in either direction" and adds that "the RR may move personnel in one direction and
+    supplies in another" -- so the book HAS the words for an either-way allowance, uses them for the
+    Commonwealth, and pointedly does not use them for the Axis; the italic falls on the borrower's
+    "one" where the owner's clause reads "either". That contrast is the argument, and it is an
+    argument about emphasis rather than a printed rule. It is also the reading that cannot hand the
+    Axis a lever the book withholds, which is this port's tie-break when two readings survive.
+    IF A LATER PASS OVERTURNS THIS, the change is one guard (the `running != direction` refusal
+    below) and one ledger (_Run.set_rail_direction); nothing else depends on it.
+
+    [54.35] AND WHAT THE TRAIN SETS DOWN STAYS DOWN. "Supplies are considered unloaded when they
+    reach a specific hex. They may not be moved that Operations Stage." See _rail_free_points for
+    the reading taken and the movers it binds. An EMPTY dump is refused ahead of it, under its own
+    reason: `stock - landed` is 0 both when the freight has only just come off a train and when
+    there was never anything there, and naming 54.35 for the second case puts a rule in the audit
+    log that had no part in the refusal.
+
+    [54.43] the stage's total is capped at 300 tons per unit of Rolling Stock STANDING ON THAT RUN.
+    Over-capacity is TRIMMED rather than rejected -- 54.43 caps "the extent of hauling", so a train
+    that can only take part of a load still runs."""
+    # TWO RULES, TWO REFUSALS. rail.usable_this_stage is the AND of 54.41's five-contiguous gate and
+    # 54.34's dead Operations Stage, and one string named both for whichever bit -- so the audit log
+    # said "54.34/54.41" where only one of the two had anything to do with it. Split exactly as
+    # _rail_activate's own pair is, and in the same order.
+    if not rail.gate_open(r.state, side):
+        _reject_rail(r, side, actor, "fewer than five contiguous controlled rail hexes (54.41)")
+        return
+    if rail.is_dead_stage_54_34(r.state):
+        _reject_rail(r, side, actor,
+                     "the railroad may not be used for anything this Operations Stage (54.34)")
         return
     src, dst = r.state.supply(order.from_dump), r.state.supply(order.to_dump)
     if src is None or dst is None or src.side != side or dst.side != side:
         _reject_rail(r, side, actor, "both ends of a haul must be friendly dumps (54.43)")
         return
-    if order.commodity not in supply.COMMODITIES:
-        _reject_rail(r, side, actor, "a train carries one type of supply (54.33)")
+    if src.id == dst.id:
+        _reject_rail(r, side, actor, "a haul must have two different ends (54.43)")
+        return
+    if src.hex == dst.hex:                # two dumps, one hex: a haul with nowhere to go, and no
+        _reject_rail(r, side, actor,      # direction for 54.43's pin to fix (see the docstring)
+                     "a haul must have its two ends on different hexes (54.43)")
+        return
+    if wells.is_water_source(src) or wells.is_water_source(dst):
+        _reject_rail(r, side, actor,      # 52.11/52.3: a well is geography, never a freight depot
+                     "a well or pipeline hex is not a supply dump to haul to or from (52.11/54.11)")
+        return
+    if order.commodity not in supply.RAIL_COMMODITIES_54_33:
+        _reject_rail(r, side, actor, "the railroad moves fuel, ammunition or stores (54.33)")
+        return
+    carrying = r.rail_commodity_this_stage
+    if carrying is not None and carrying != order.commodity:
+        _reject_rail(r, side, actor,
+                     f"the railroad is already carrying {carrying} this Operations Stage (54.33)")
         return
     rails = rail.rail_hexes(r.state)
     if src.hex not in rails or dst.hex not in rails:
         _reject_rail(r, side, actor, "both ends of a haul must stand on the railway (54.43)")
         return
-    if (r.state.rail_control_of(src.hex) is not side
-            or r.state.rail_control_of(dst.hex) is not side):
-        _reject_rail(r, side, actor, "both ends of a haul must be Axis-controlled (54.41)")
+    if not rail.one_activated_run(r.state, src.hex, dst.hex):
+        _reject_rail(r, side, actor,
+                     "both ends of a haul must lie in ONE contiguous controlled run (54.41/54.43)")
         return
     if dst.hex not in supply.rail_reachable(r.state.terrain, src.hex):
         _reject_rail(r, side, actor, "the two dumps are not on one connected line (54.3/54.46)")
         return
-    tons_left = rail.haul_capacity_tons(r.state) - r.rail_tons_this_stage
-    qty = min(order.qty, getattr(src, order.commodity.lower()),
-              supply.tons_to_points(max(0.0, tons_left), order.commodity))
+    # THE RUN IS NOW A THING WITH A NAME, because the 300 tons and the one direction both belong to
+    # it and not to the board. Its lowest Coord keys the stage ledger -- runs are disjoint sets, so
+    # that name is unique and (rail.contiguous_runs' own idiom) deterministic.
+    run = rail.activated_run_at(r.state, src.hex)
+    run_key = min(run)
+    if rail.stock_in_run(r.state, run) <= 0:
+        _reject_rail(r, side, actor,          # 54.43: a locomotive works the block it stands on
+                     "no Rolling Stock is active on this run of rail hexes (54.43)")
+        return
+    direction = rail.haul_direction_54_43(src.hex, dst.hex)
+    running = r.rail_direction_this_stage(run_key)
+    if running is not None and running != direction:
+        _reject_rail(r, side, actor,
+                     f"the railroad is already running {rail.DIRECTION_NAMES[running]} on this run "
+                     f"this Operations Stage (54.43)")
+        return
+    if getattr(src, order.commodity.lower()) <= 0:        # empty is empty; it is not a 54.35 pin
+        _reject_rail(r, side, actor,
+                     f"the dump holds no {order.commodity} to haul (54.43)")
+        return
+    free = _rail_free_points(r, src, order.commodity)     # 54.35, checked before the 54.43 trim so
+    if free <= 0:                                         # the rejection names the rule that bit
+        _reject_rail(r, side, actor,
+                     "supply unloaded by rail may not be moved that Operations Stage (54.35)")
+        return
+    # [54.12] THE DESTINATION'S OWN CEILING, ASKED FIRST AND NAMED FOR ITSELF. A dump full to its
+    # Supply Dump Capacity row takes nothing whatever the railway has left to give, which is a fact
+    # about the far end of the line and not about 54.43's tonnage allowance -- and reporting it as
+    # "no haul capacity left this Operations Stage (54.43)" blamed the allowance for a ceiling, with
+    # all 300 tons unspent.
     cap = supply.dump_capacity_at(r.state, dst.hex)[order.commodity]
-    qty = min(qty, cap - getattr(dst, order.commodity.lower()))
+    room = cap - getattr(dst, order.commodity.lower())
+    if room <= 0:
+        _reject_rail(r, side, actor,
+                     f"the destination dump is at its {order.commodity} capacity (54.12)")
+        return
+    tons_left = rail.haul_capacity_tons(r.state, run) - r.rail_tons_this_stage(run_key)
+    qty = min(order.qty, free, room,
+              supply.tons_to_points(max(0.0, tons_left), order.commodity))
     if qty <= 0:
         _reject_rail(r, side, actor, "no haul capacity left this Operations Stage (54.43)")
         return
-    r.rail_tons_this_stage += qty * supply.TONS_PER_POINT[order.commodity]
+    r.book_rail_tons(run_key, qty * supply.TONS_PER_POINT[order.commodity])
+    r.set_rail_direction(run_key, direction)                 # 54.43: this run is committed one way
+    r.rail_commodity_this_stage = order.commodity            # 54.33: the stage is committed now
+    r.record_rail_landing(dst.id, order.commodity, qty)      # 54.35: and this freight is down
     r.emit(EventKind.RAIL_HAULED, side, actor,
            {"from_dump": src.id, "to_dump": dst.id, "commodity": order.commodity, "qty": qty})
+
+
+def _rail_free_points(r: _Run, dump, commodity: str) -> int:
+    """[54.35] The Points of `commodity` in `dump` that may still MOVE this Operations Stage --
+    everything on hand except what the Axis railway set down there this very stage.
+
+    THE READING, FLAGGED. "Like personnel, supplies may be moved from any one spot and dumped in
+    another spot. Supplies are considered unloaded when they reach a specific hex. THEY MAY NOT BE
+    MOVED THAT OPERATIONS STAGE." The last sentence names no mover, and the general reading is the
+    one the surrounding rules demand: 54.43 puts rail movement INSIDE the Convoy Stage, the same
+    Phase the lorries run in, so a rail-only reading would forbid the one chain nobody would build
+    (train, then train again) while permitting the one 54.35 is plainly aimed at (train, then
+    lorry, in the same stage) -- and engine.run deliberately orders _axis_rail AHEAD of
+    _coastal_shipping and _truck_convoys, which is precisely the window. So this binds every mover
+    that can lift supply out of a dump after the train has been: a further rail haul, a truck
+    convoy load, and a coastal ship load.
+
+    IT PINS ONLY THE FREIGHT, NOT THE DUMP. Stock that was already standing there is not "supply
+    that reached a specific hex" this stage and moves normally -- so a station keeps working the
+    day a train calls at it.
+
+    NAMED BOUNDARY, not an oversight: the COMMONWEALTH railway's own freight (engine._rail_deliver,
+    the 54.32 lane that lands a whole Game-Turn's haul at Stage 1) is not ledgered here. 54.35
+    governs it too via its own section, but that lane is a different slice with its own transcription
+    and its own tests, and correcting it is a change to the Commonwealth's campaign logistics rather
+    than a repair to 54.4. Declared as debt."""
+    return getattr(dump, commodity.lower()) - r.rail_landed_this_stage(dump.id, commodity)
 
 
 def _reject_rail(r: _Run, side: Side, actor: str, reason: str) -> None:

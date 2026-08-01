@@ -33,6 +33,12 @@ from __future__ import annotations
 CAMPAIGN_START: tuple[int, int] = (1940, 9)   # (year, month) of Game-Turn 1 (64.2)
 GT_PER_MONTH: int = 4                          # 1 Game-Turn ~ 1 week; 4 to a month
 FINAL_GT: int = 111                            # the campaign ends on GT111.3 (64.2)
+# [5.1] A Game-Turn is three Operations Stages. THE ONE HOME for that magnitude: it is a fact about
+# the clock, so it lives with the rest of the clock rather than being re-typed wherever a rule needs
+# "the last Operations Stage" (game.rail's 54.34 dead stage), "a Game-Turn's worth of stages"
+# (game.scenario's convoy budget) or "stages to Game-Turns" (game.replacements' training delay) --
+# three modules that each carried their own literal 3 before.
+OPSTAGES_PER_GAME_TURN: int = 3
 
 # 64.2: Game-Turn 1 is the THIRD week of September 1940, so September holds Game-Turns 1-2 and the
 # first Game-Turn of the first whole month (October 1940) is Game-Turn 3. The [34.86] schedule's

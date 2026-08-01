@@ -725,12 +725,20 @@ def apply(state: GameState, event: Event) -> GameState:
             attr = commodity.lower()
             drained = replace(drained, **{attr: getattr(drained, attr) - qty})
             consumed[commodity] = consumed.get(commodity, 0) + qty
-        return replace(state.with_supply(drained), consumed=consumed,
-                       rolling_stock=state.rolling_stock + p["stock"])
+        # ...and it stands on the hex the points were brought to (54.43's "any controlled and
+        # operative rail hex"), which is what binds it to one contiguous run.
+        at = dict(state.rolling_stock_at)
+        hx = tuple(p["hex"])
+        at[hx] = at.get(hx, 0) + p["stock"]
+        return replace(state.with_supply(drained), consumed=consumed, rolling_stock_at=at)
 
     if k == EventKind.ROLLING_STOCK_DESTROYED:
-        # [54.45] gone outright, and NOT a refund -- the points that bought it stay spent.
-        return replace(state, rolling_stock=state.rolling_stock - p["stock"])
+        # [54.45] gone outright, and NOT a refund -- the points that bought it stay spent. The
+        # payload names the hexes whose stock died, because 54.45 kills the stock standing on a
+        # block that has fallen below five contiguous hexes, not the board's stock at large.
+        at = {h: n for h, n in state.rolling_stock_at.items()
+              if h not in {tuple(x) for x in p["hexes"]}}
+        return replace(state, rolling_stock_at=at)
 
     # (the Axis's 54.43 haul reuses the Commonwealth's RAIL_HAULED fold above, per 54.46)
 

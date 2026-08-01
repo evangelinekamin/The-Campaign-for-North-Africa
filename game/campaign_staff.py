@@ -7,8 +7,8 @@ project supply forward. The base StaffPolicy truck relay is left verbatim for st
 from __future__ import annotations
 
 from .campaign_policy import (_CampaignAxisSupplyMixin, air_transfer_doctrine,
-                              coastal_shipping_doctrine, convoy_plan_doctrine, hold_garrisons,
-                              malta_africa_doctrine, malta_raid_doctrine)
+                              axis_rail_doctrine, coastal_shipping_doctrine, convoy_plan_doctrine,
+                              hold_garrisons, malta_africa_doctrine, malta_raid_doctrine)
 from .events import Side
 from .policy import MoveOrder
 from .staff_policy import StaffPolicy
@@ -52,6 +52,19 @@ class CampaignStaffPolicy(_CampaignAxisSupplyMixin, StaffPolicy):
         list, and the project's watchable-campaign path left the whole 56.3 fleet tied up at
         Benghazi for 111 turns while its scripted twin sailed it."""
         return coastal_shipping_doctrine(state, side)
+
+    def rail_orders(self, state: GameState, side: Side) -> list:
+        """[54.4] THE SAME RAILROAD DOCTRINE THE SCRIPTED CAMPAIGN AXIS RUNS -- see
+        axis_rail_doctrine's own flag on it as an opinion a commander may hold.
+
+        Wired here for the EXACT reason coastal_shipping_orders above is: without it the MRO
+        reaches Policy.rail_orders, which returns [], so the watchable-campaign path could never
+        buy a locomotive or run a single train while its scripted twin did both. Buying Rolling
+        Stock is a Quartermaster decision and the Quartermaster seat of this staff is scripted
+        (game.staff_policy), like the strategic-air and naval seats around it -- and it is a good
+        candidate for promotion to a live seat, because 54.45 makes it a genuine gamble: the whole
+        stock is destroyed with no refund the moment the Eighth Army breaks the line."""
+        return axis_rail_doctrine(state, side)
 
     def convoy_plan(self, state: GameState, side: Side, tons: int) -> dict:
         """[56.22] THE SAME CONVOY DOCTRINE THE SCRIPTED CAMPAIGN AXIS FLIES. This one belongs to

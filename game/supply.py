@@ -895,6 +895,12 @@ def _blocked_start_traces(tmap: movement.TerrainMap, h: Coord, fed: frozenset,
 
 # --- Commonwealth railroad (rule 54.3) ----------------------------------------
 RAIL_TONNAGE_54_3 = 1500          # 54.3: tons of ONE commodity hauled per Operations Stage
+# [54.33] "The railroad may transport only one type of supply at a given time. It may move fuel,
+# ammunition, or stores -- not any combination of the three." WATER IS DELIBERATELY ABSENT, and the
+# same clause says why in its own parenthetical: "(Water need not be transported by RR -- the
+# railroad hexes are pipelines in and of themselves.)" So this is a SHORTER list than COMMODITIES,
+# and a guard written against COMMODITIES is not this rule. Reaches the Axis through 54.46.
+RAIL_COMMODITIES_54_33 = (AMMO, FUEL, STORES)
 
 
 def rail_haul_cap(commodity: str) -> int:

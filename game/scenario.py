@@ -1178,7 +1178,8 @@ def _campaign_axis_trucks(supplies, target, facilities, larders=()) -> tuple[Tru
 # [48 VI/VII] A Game-Turn is three Operations Stages (engine.run repeats all facets of the First
 # Operations Stage in the Second and Third), so a harbour's per-OpStage 55.3 tonnage budget lands
 # three times a Game-Turn. The Commonwealth railway already reads this fact (_campaign_rail_cargo).
-_OPSTAGES_PER_GAME_TURN = 3
+# The magnitude itself is [5.1]'s and lives once, on the clock (game.calendar).
+_OPSTAGES_PER_GAME_TURN = calendar.OPSTAGES_PER_GAME_TURN
 
 
 def _benghazi_port(rear) -> Port:
@@ -1675,10 +1676,16 @@ def campaign(seed: int = 1941, *, max_turns: int | None = None) -> GameState:
     #     four hundred miles of line at ZERO, so the Eighth Army could not eat on its own railway.
     #   * as the water pipeline (52.22/52.23), which needs no train at all -- an RR hex simply IS
     #     "a source of water similar to a major city", unlimited and undepletable.
-    # Commonwealth-only: the Axis may not use the defunct Barce-Benghazi railroad (52.22), and its
-    # 54.4 right to run rolling stock over CAPTURED Commonwealth rail (five contiguous controlled
-    # hexes + 250 Stores/100 Fuel imported as locomotives) is DEFERRED and flagged -- the Axis
-    # hauls by lorry from Benghazi, which is the historical asymmetry, not a thumb on the scale.
+    # Commonwealth-BUILT, not Commonwealth-only: the Axis may not use the defunct Barce-Benghazi
+    # railroad (52.22), but his 54.4 right to run rolling stock over CAPTURED Commonwealth rail
+    # (five contiguous controlled hexes + 250 Stores/100 Fuel imported as locomotives) IS BUILT AND
+    # FIRES -- game.rail plus engine._axis_rail, driven by campaign_policy.axis_rail_doctrine and by
+    # CampaignStaffPolicy. (This comment said "DEFERRED and flagged" until 2026-08-01, one commit
+    # after the rule shipped; it is now measured on seed 4 to buy one locomotive at El Daba and run
+    # trains on it.) What is still missing is 54.44's 900-ton troop lift, named as debt in game.rail.
+    # The Axis still hauls the bulk of his tonnage by lorry from Benghazi, which is the historical
+    # asymmetry and not a thumb on the scale: he holds the line only in the middle of the war, and
+    # 54.45 takes the locomotive back with it when the Eighth Army returns.
     rail_corridor = wells.corridor(tmap.terrain)
     tmap = replace(tmap, rails=frozenset(edge(a, b) for a, b
                                          in zip(rail_corridor, rail_corridor[1:])))
