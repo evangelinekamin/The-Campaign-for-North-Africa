@@ -34,11 +34,20 @@ Infantry CW-only): owner ruling 7 (2026-07-24, Eve) reverted the interim Axis-in
 SPENDABLE-classes gate -- not an exclusion -- now withholds an unbuilt-spend class from scoring
 (_unused_replacement_points_64_74).
 
+64.73's OCCUPATION QUALITY-TEST IS NOW WHOLE AND IN-HEX (CampaignVictory._supplied). It was the
+last abstract-game rule left standing in this module: it tested two of the rule's four commodities
+and tested them through supply.plan_draw, the section-32.16 half-CPA trace that rule 3 of this port
+says DOES NOT APPLY. It now asks 64.73's own question -- a Week of Stores and Water, three firings
+of Ammunition and 20 CP of Fuel, HELD IN THE HEX. The in-hex form is TRANSCRIBED for three of the
+four (49.15 Fuel / 50.15 Ammunition / 51.15 Stores) and INFERRED for Water, which section 52 gives
+no in-hex clause of its own; the inference and its cost are argued at the method. TWO things inside
+it are flagged rather than settled, both at the method: whether "fire its weapons three times" is
+charged at the close-assault rate (as here), at the unit's dearest weapon's rate, or -- on [63.92]'s
+gloss of the same construction -- at three firings of EACH function, which is 4.5x this bill; and
+the FUEL clause, which is measured NON-DECISIVE on five campaign boards for a structural reason
+that is written down there and pinned in tests/test_campaign_victory.py.
+
 DEFERRED, documented so nothing is silently missing:
-  - 64.73's Stores/Water week-test and the in-hex "do you HAVE it" form of the occupation
-    quality-test. The Fuel-for-20-CP and Ammunition-for-three-fires MAGNITUDES are faithful
-    (CampaignVictory._supplied); the Stores/Water week and the in-hex form need the per-unit
-    basic-load model (49.14 + 53.11, T1-1), so a holder is still tested by a reach-a-dump trace.
   - 64.74's used-subtraction bites only for AXIS infantry today (the [20.66] coupling + Block B flow-in
     + spend -- a real used>0). ALLIED tank/gun were scored by Block A's [20.78C] flow-in and REVERTED in
     its review-repair: the CW equipment spend is near-zero (gun is never even produced), so its ~865
@@ -148,6 +157,13 @@ _STAGES_PER_TURN = 3
 # -- turn >= 35, at any stage. No end: it is asked again every stage for the rest of the war.
 _AUTO_WIN_TURN_64_72 = 35
 
+# [64.73]'s occupation quality-test, in the rule's own units: a holder must have "enough Fuel and
+# Ammunition to fire its weapons three times and move 20 CP's" (and a Week of Stores and Water --
+# see _supplied, where the Week is converted). Both numbers are the book's, printed in that
+# sentence; neither is a proxy.
+_FIRINGS_64_73 = 3
+_CP_64_73 = 20
+
 # 64.75-A Commonwealth Withdrawal Points: "1/2 point for each week that unit is gone, to a maximum
 # of three points per unit." WEEK = one Game-Turn (owner ruling 4, scratchpad/port/PHASE-7-OWNER-
 # RULINGS.md), so a battalion gone six-or-more Game-Turns caps at three points.
@@ -200,8 +216,9 @@ class CampaignVictory:
         """The side holding a hex for victory purposes: a SUPPLIED combat unit of at least 1
         TOE Strength there (rule 64.73). Non-combat units (truck convoys, bare HQs) and supply
         dumps do not occupy; nor does a unit that has OUTRUN its supply -- 64.73's occupation
-        quality-test is that a holder can trace Fuel and Ammunition, so a stranded spearhead on
-        a city scores nothing. This is what makes the campaign a logistical contest and not a
+        quality-test is that a holder HAS, in the hex, a Week of Stores and Water and the Fuel and
+        Ammunition to fire three times and move 20 CP (_supplied), so a stranded spearhead on a city
+        scores nothing. This is what makes the campaign a logistical contest and not a
         foot-race: the Axis must keep its advance supplied to bank the ground it takes."""
         for u in state.units_at(ax):
             if u.is_combat and u.strength >= 1 and self._supplied(state, u):
@@ -210,25 +227,176 @@ class CampaignVictory:
 
     @staticmethod
     def _supplied(state, u) -> bool:
-        """Rule 64.73 quality-test, FAITHFUL MAGNITUDES. At the end of the game a holder must have the
-        Fuel to MOVE 20 CP (supply.fuel_cost applies the 49.13 rate x ceil(CP/5) x TOE-strength law;
-        foot units need none) and the Ammunition to FIRE ITS WEAPONS THREE TIMES (3 x supply.ammo_cost,
-        50.14). Both are traced to a reachable dump over the cpa/2 trace (32.16). A unit that cannot
-        has outrun its logistics.
+        """[64.73]'s occupation quality-test, WHOLE and asked the way the rule asks it. Verbatim off
+        the scan (PDF p.88 = book folio 37; the misspelt "conditons" is the book's own):
 
-        The magnitudes were wrong before this port: Fuel was tested at one turn's bare rate (not 20 CP
-        of movement) and Ammunition at a SINGLE fire (not three). STILL DEFERRED to T1-1 (the in-hex
-        supply model, 49.14 + 53.11): 64.73 also names a WEEK of Stores and Water first, which needs
-        the per-unit basic-load model to test; and the rule asks 'do you HAVE it in the hex?' where
-        this still asks 'can you REACH a dump that holds it?'.
+            "Occupation for these purposes means having a combat unit of at least 1 TOE Strength in
+             the hex. That combat unit, at the end of the game, must have enough Stores and Water for
+             one Week, and enough Fuel and Ammunition to fire its weapons three times and move
+             20 CP's. Any units failing these "tests" do not occupy for victory conditons."
+
+        FOUR commodities, and the verb is HAVE. Both halves of that sentence had been read short:
+
+          * IT NAMED FOUR AND THIS TESTED TWO. Stores and Water -- the two the rule puts FIRST --
+            were not asked at all, so a garrison with no rations and no water banked its city.
+          * IT ASKS THE HEX AND THIS ASKED A TRACE. Every draw ran through supply.plan_draw, which
+            is the SECTION 32.16 half-CPA supply range -- the ABSTRACT game, which 64.6 hands to the
+            Players who are NOT running the Air and/or Logistics Games (it names 32.0, 47.0 and 58.0
+            in as many words). We run the full game, in which there is no supply RANGE at all:
+            supply is in the hex or it is not (49.15 / 50.15 / 51.15, transcribed at
+            supply.in_hex_draw). Rule 3 of this port calls an abstract-game rule in force a BUG
+            CLASS, not a shortcut, and this was one more of them.
+
+            THAT CITATION COVERS THREE OF THE FOUR COMMODITIES, AND THE FOURTH IS AN INFERENCE --
+            flagged here per rule 1 of this port rather than left to look like a transcription.
+            49.15, 50.15 and 51.15 are the in-hex clauses for Fuel, Ammunition and Stores. Section
+            52 has no counterpart: read whole on the scan (folio 21, 52.0 through 52.52, and 52.53
+            on folio 22) it prints no "in the same hex" clause for Water at all. Its nearest support
+            is [52.13], "To obtain water, a unit moves into a hex with a well" -- a MOVEMENT
+            instruction, from which the in-hex FORM follows only by analogy with the other three.
+            The analogy is a strong one (water is the least portable of the four and the book gives
+            it no trace of its own), but it is an inference, and the WATER note below measures what
+            it costs today: nothing.
+
+        Each magnitude comes off its own rule, and the WEEK is converted at the two different rates
+        the book prints, which is the one arithmetic judgement here:
+
+          FUEL    supply.fuel_cost(u, 20) -- 49.13's rate x ceil(CP/5) x TOE Strength; a foot unit
+                  walks and burns none (49.12), so "move 20 CP's" costs it nothing.
+          AMMO    three firings x supply.ammo_cost (50.14).
+          STORES  supply.stores_cost, which is ALREADY a per-Game-Turn rate (51.11's 4 per TOE),
+                  taken once -- because 5.1 says "In CNA each Game-Turn covers a period of
+                  approximately one week", so 64.73's Week IS a Game-Turn.
+          WATER   supply.water_cost, a per-OPERATIONS-STAGE rate (52.4), taken _STAGES_PER_TURN
+                  times -- the same Week, counted in the units 5.1 divides it into. [29.35] doubles
+                  the requirement in hot weather, and engine._draw_stage_water reads the same
+                  supply.water_cost(hot=...), so the doubling is the war's own. IT IS NOT A PARITY
+                  WITH THE WAR'S BILL, and this line used to say it was ("the holder is tested on
+                  the water the war actually charged it"). For INFANTRY the two do agree stage for
+                  stage: [52.41] carries no condition and engine._water_distribution draws its flat
+                  Point at the top of every Operations Stage. For a VEHICLE they diverge, because
+                  [52.42] bills only "if it uses any of its CPA" (the clause corrected at HEAD
+                  49b00f2) -- so a stationary vehicle garrison is charged NOTHING for the week and
+                  this predicate still asks it for three stages' worth. THE DIVERGENCE IS THE
+                  FAITHFUL SIDE: 64.73 says the holder "must have" the Week, which is a test of
+                  STOCK, not of consumption, and a garrison that sat still all week is exactly the
+                  one the rule means to ask. Inert today either way (every 64.73 city carries a
+                  well, see the WATER note below), so stating it correctly costs nothing.
+
+        FLAGGED, A READING NOT CHANGED HERE: "fire its weapons three times" is charged at
+        supply.ammo_cost's default close-assault rate. A unit whose real weapon is a barrage fires at
+        a DEARER rate (50.2: barrage 4, anti-armor 3, close-assault 2), and supply.ammo_capacity
+        already computes "one firing of this unit's most demanding function" for exactly that reason.
+
+        AND THE CEILING IS DEARER THAN THAT, on evidence printed on the same scanned page. [63.92]
+        (PDF p.88 col. 1, the "Long Retreat" scenario) glosses the identical construction. Verbatim,
+        off a 300-dpi render of that column, the emphasis below being this comment's and not the
+        book's:
+
+            "Occupying means that all combat units in that City/Village must have at least one
+             Game-Turn's worth of Stores, be able to fire all weapons twice, and have enough fuel
+             for all units to move 20 CP's."
+
+        ALL WEAPONS, TWICE. Read 64.73's sentence the way its own author reads it two columns away
+        and "fire its weapons three
+        times" means three firings of EACH combat function the unit has -- so a battalion with a
+        barrage, an anti-armor and a close-assault function owes 3 x (4 + 3 + 2) x TOE where this
+        code charges 3 x 2 x TOE: FOUR AND A HALF times the shipped bill, not the two times the
+        dearest-weapon reading gives. (63.92 also independently corroborates the STORES conversion
+        above: "one Game-Turn's worth" is 64.73's "one Week" in the units 5.1 divides it into.)
+        Left as it stands because it is a MAGNITUDE question and this was a FORM slice, and moving
+        both at once makes the A/B unreadable. UNMEASURED, deliberately; when the magnitude slice is
+        taken, 63.92 is the citation it turns on and the range it must A/B is 1x to 4.5x.
+
+        WATER, AND WHY THIS DOES NOT RE-OPEN THE S8 FINDING -- read this before touching either.
+        THIS IS THE VICTORY-SCORING PREDICATE, NOT THE SUPPLY LAYER. game.engine's per-stage water
+        draw (_water_distribution) deliberately stays on the 32.16 trace: measured, the naive in-hex
+        form gave 60% thirst against the campaign's faithful 12%, because the [52.45] water-truck
+        reservoir is unbuilt (nothing ever fills Unit.water) and 52.0's General Rule says in
+        substance that thirst is a nuisance rather than a killer -- verbatim, off a 300-dpi render of
+        folio 21: "Players should find that they rarely run out of water, but that it is a nuisance
+        as it is absolutely necessary." (This line used to print water "rarely runs out" INSIDE
+        quotation marks, which is not a string the book contains -- the verb is "run" and the subject
+        is the Players. The correct form was already in the tree at engine.py:3544; the wrong one was
+        copied from its twin at engine.py:2273 and both are now the book's.)
+        That trace is the honest proxy for a tier this engine has not built, and it is UNCHANGED.
+        This predicate can ask the in-hex question anyway, and the reason is a measured fact about
+        64.73's own geography rather than an opinion: every one of the ten cities in
+        data/victory_cities.json carries a game.wells water source for BOTH sides, so the Week of
+        Water is satisfiable in the hex at every hex this rule is ever asked about. MEASURED over six
+        campaign boards (seeds 3/4/7/30/1941/2026 at max_turns=12): of the 103 combat units standing
+        on a 64.73 city, the in-hex and trace readings of the Water clause agreed on ALL 103 -- zero
+        disagreements. Away from the cities they differ on 24-44 units a board, which is what
+        observation.can_hold sees when it asks this predicate of a unit in open desert; there the
+        in-hex answer is the rule's ("no water here, no holding ground here") and the unbuilt 52.45
+        is the reason it is stricter than the book would be. When 52.45 lands, this line does not
+        change -- the supply layer's does.
+
+        FUEL IS NON-DECISIVE TOO, AND FOR A DIFFERENT AND STRUCTURAL REASON -- recorded because an
+        untested clause in a scoring predicate is how a scoreboard drifts without anyone noticing,
+        and because leaving only the Water clause's inertness written down read as if Water were the
+        one unmeasured commodity. NEUTERED AT ITS OWN CALL SITE (this tuple's FUEL row rewritten to
+        `(supply.FUEL, 0)`), all four campaign signatures and all four 64.73 geography tallies are
+        BYTE-IDENTICAL: 1941 d4fa0bd90ffc ax375/cw0, 7 d107a13ab6de ax375/cw0, 4 9d1ce03d1b95
+        ax375/cw0, 2026 5b5e5c38bc6a ax275/cw10 (scenario.campaign's own max_turns=12 kwarg, the
+        recipe in tests/baselines.py). MEASURED per clause on five boards -- CAMPAIGN_SEED=23 at
+        GT30 plus those four -- of every combat unit of >=1 TOE standing on a 64.73 city, TWO fail
+        Fuel on each board and NOT ONE fails Fuel and nothing else. Both are the same pair, the
+        Giarabub oasis garrison's artillery and AA battalions, and both fail Ammunition as well.
+
+        THE REASON IS ARITHMETIC, NOT LUCK, WHICH IS WHY IT IS SAFE TO LEAVE UNGUARDED-BY-CHANCE AND
+        WHY IT IS NOW PINNED ANYWAY (tests/test_campaign_victory.py: the Fuel magnitude and the
+        49.14 ceiling each have their own case, and the four-commodity loop asks a MOTORISED holder
+        as well as a foot one -- every holder in that file used to be FOOT, which is why neutering
+        this row left the whole suite green). Three facts compose:
+
+          * 49.12 gives a FOOT unit no Fuel Consumption Rate, so its 20-CP bill is ZERO and the
+            clause is vacuous. Sixteen city-slots are banked across these five boards, by twenty-two
+            qualifying garrisons, and exactly ONE of the twenty-two is not foot: seed 4's Mersa
+            Matruh, the Italian II(M) medium tank battalion, which stands on the railhead depot and
+            draws 2,273 Fuel Points against a bill of 32.
+          * [49.14]'s Note gives a unit "a fuel capacity rating exactly sufficient to allow all its
+            CPA to be expended on movement" -- supply.fuel_capacity(u) == fuel_cost(u, u.cpa). 64.73
+            asks for a FIXED 20 CP, so a BRIM-FULL tank covers the clause only from cpa 16 up
+            (49.13 charges ceil(CP/5) five-CP blocks). The two Giarabub failures are cpa-15
+            battalions holding full tanks: 18 of 24 Points and 12 of 16.
+          * Off a co-located dump, STORES and AMMUNITION fail FIRST. Neither has an organic pool of
+            the kind [49.14] gives Fuel: what Stores a counter holds is its [53.11] first-line truck
+            buffer, which the war spends, and [50.0]'s basic load is ONE firing against 64.73's
+            three. MEASURED at CAMPAIGN_SEED/GT30 -- counters holding a WEEK of Stores: 20 of 67
+            Commonwealth, 0 of 57 Italian, 0 of 17 German; counters holding THREE firings: 24 / 10 /
+            1. So Fuel can be the SOLE failure only where a dump holds a Week of Stores, three
+            firings and a Week of Water but less than 20 CP of Fuel -- a fuel-specific shortfall in a
+            dump that is otherwise stocked. Nothing on these five boards is in that state.
+
+        It will bite the day a dump runs dry of Fuel alone under a motorised garrison, and the
+        clause is charged, tested and left in force against that day. (Away from the cities it
+        already bites: exactly one unit fails Fuel alone at seed 23 and one at seed 4, none on the
+        other three -- 2-Armd-Div-Cruiser-Regt-I on Alexandria's well with 45 Points of an 80-Point
+        tank against a 64-Point bill, and BR-8-Fld on Dekheila's with 18 of 24. That is what
+        observation.can_hold reports to the staff layer, and nothing the scoreboard reads.)
 
         THIS IS 64.73's TEST AND ONLY 64.73's. It used to stand in for 64.71's <=90 truck-MP line as
         well, because that line was deferred; it no longer does (see check / _delta_held). 64.73
         writes its quality-test "for these purposes" -- the purposes being its own Geographic
         Occupation Point table -- and 64.71 asks a different question, in different units, over a
-        different range."""
-        return (supply.plan_draw(state, u, supply.FUEL, supply.fuel_cost(u, 20)) is not None
-                and supply.plan_draw(state, u, supply.AMMO, 3 * supply.ammo_cost(u, phasing=True)) is not None)
+        different range.
+
+        ONE POLICY SITE STILL READS IT AND ONE STOPPED. game.campaign_claim._banking asks it of the
+        live board to know which city each side already banks -- that IS this question, it stays, and
+        it is the reason a scoring rule moves the campaign's determinism signature at all (measured:
+        reverting _banking alone reproduces the pre-change log byte for byte, tests/baselines.py).
+        campaign_claim's take-and-hold GATE used to ask it too, of a unit as if it already stood on
+        an empty city, and that is a question about a board the plan has not built yet: it now has
+        its own predicate (campaign_claim.could_be_fed), because the faithful in-hex form answers
+        "no" to every city the plan was going to open and takes the army off the board along with the
+        points. The rule is not softened anywhere; the planner is named for what it is."""
+        need = ((supply.FUEL, supply.fuel_cost(u, _CP_64_73)),
+                (supply.AMMO, _FIRINGS_64_73 * supply.ammo_cost(u, phasing=True)),
+                (supply.STORES, supply.stores_cost(u)),
+                (supply.WATER, _STAGES_PER_TURN * supply.water_cost(
+                    u, hot=state.weather == "hot")))
+        return all(supply.in_hex_draw(state, u, c, qty) is not None for c, qty in need)
 
     # --- [64.71]/[64.72] THE TRUCK-MOVEMENT-POINT LINE OF SUPPLY -------------------------------
 

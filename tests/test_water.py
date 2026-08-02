@@ -175,9 +175,15 @@ def test_the_axis_army_is_not_destroyed_by_thirst():
     # NAMED GAP (not a wells defect, and deliberately not fixed here): campaign_claim.claim_moves
     # marches a claim's garrison straight at its city, while campaign_policy._march walks the
     # Commonwealth's columns SPRING TO SPRING (52.11 -- water is found in wells and only wells)
-    # precisely to avoid this. The 64.73 feasibility test a claim is gated on (can_be_fed) asks for
-    # Fuel and Ammunition, which is what rule 64.73 itself asks for -- not Water. Routing a claim
-    # column by the wells is the follow-up; it is what the +66 steps of attrition above are.
+    # precisely to avoid this. The feasibility test a claim is gated on (can_be_fed) asks for Fuel
+    # and Ammunition only -- not Water. THIS LINE USED TO JUSTIFY THAT BY CALLING IT "the 64.73
+    # feasibility test... which is what rule 64.73 itself asks for", and both halves were false by
+    # 2026-08-02: 64.73 names FOUR commodities INCLUDING Water, and can_be_fed is not 64.73's test at
+    # all (it is campaign_claim.could_be_fed, the planner's own 32.16 reach heuristic, split off the
+    # scoring rule when campaign_victory._supplied went in-hex). So the gap stands and its excuse
+    # does not: the claim gate is silent about Water because the PLANNER never asked about it.
+    # Routing a claim column by the wells is the follow-up; it is what the +66 steps of attrition
+    # above are.
     res = run(campaign(seed=1941, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
 
     drawn = sum(e.payload["qty"] for e in res.events

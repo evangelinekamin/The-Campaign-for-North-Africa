@@ -147,12 +147,29 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
         if u.is_combat:
             v["defensible"] = supply.in_hex_draw(
                 state, u, supply.AMMO, supply.ammo_cost(u, phasing=False)) is not None
-            # Campaign hold-ground test (rule 64.73): can this unit trace BOTH fuel and
-            # ammo, so it can HOLD a victory city for points? This is the exact predicate
-            # CampaignVictory scores on (CampaignVictory._supplied), so the agent sees the
-            # very test it will be graded by -- distinct from the ammo-only `defensible`
-            # (fights at full strength) and the movement-only fuel-gate `supplied` below
-            # (can pay this move). A unit with can_hold false has outrun its logistics.
+            # Campaign hold-ground test (rule 64.73): does this unit HAVE, in the hex it is
+            # standing in, a Week of Stores and Water and the Fuel and Ammunition to fire
+            # three times and move 20 CP -- so that it could HOLD a victory city for points?
+            # This is the exact predicate CampaignVictory scores on (CampaignVictory._supplied),
+            # so the agent sees the very test it will be graded by -- distinct from the ammo-only
+            # `defensible` (fights at full strength) and the movement-only fuel-gate `supplied`
+            # below (can pay this move). A unit with can_hold false has outrun its logistics.
+            #
+            # IT READS FALSE FAR MORE OFTEN since that predicate stopped asking the 32.16 abstract
+            # trace, and the claim is MEASURED rather than asserted (2026-08-02, every living combat
+            # unit of >=1 TOE asked where it stands, on CAMPAIGN_SEED at GT30 and on the four A/B
+            # seeds of tests/baselines.py at max_turns=12). TRUE on 68/49/54/67/63 units of
+            # 141/92/98/109/106 under the old trace, and on 41/25/22/17/22 under this one; 24 to 50
+            # counters a board flip TRUE -> FALSE and at most ONE a board flips the other way.
+            # STORES CARRIES THE GREAT MAJORITY OF THE FLIP -- it is a failing clause for 22/23/29/
+            # 45/40 of them -- with Ammunition next (9/21/24/31/26), Water (8/10/13/21/23) and Fuel
+            # last (9/9/5/9/7); most flipped counters fail several at once, and Stores is the SOLE
+            # cause for 10/3/7/7/4. THE REASON IS THE RULE, NOT AN OOB HOLE: [51.0] gives a counter
+            # no organic Stores pool at all -- what it carries is a [53.11] first-line buffer the war
+            # spends -- so a unit standing off a stocked dump has no rations in its hex to show, and
+            # 64.73 asks for a Week of them. (This comment used to attribute the same effect to
+            # units having "no first-line trucks to carry its ration", which is the [4.43b] OOB debt;
+            # measured, that is not what decides it. See tests/baselines.py, the 64.73 entry.)
             if campaign_cities is not None:
                 v["can_hold"] = state.victory._supplied(state, u)
         if moving and u.is_combat:
@@ -280,8 +297,14 @@ def observe(state: GameState, side: Side, reveal_all: bool = False) -> dict:
     if campaign_cities is not None:
         vic = state.victory
         # supply_on_hex: a friendly dump holding BOTH fuel and ammunition stands ON this city, so a
-        # combat unit garrisoning it traces at distance 0 and is SUPPLIED by definition -- it banks
-        # the city's points. These are the cities you can hold for free: the supply is already there.
+        # combat unit garrisoning it draws at distance 0 -- these are the cities whose supply is
+        # ALREADY THERE, and the ones to garrison first.
+        # IT IS A HINT, NOT THE SCORING TEST, and the wording here used to overstate it ("SUPPLIED
+        # by definition -- it banks the city's points"). 64.73 asks for QUANTITIES of four
+        # commodities (campaign_victory._supplied); this field asks only whether a dump with some
+        # fuel and some ammunition is standing there. A dump with no Stores under a garrison with no
+        # lorry ration satisfies this and fails the rule. `held_supplied` is the rule; this is the
+        # signpost to it.
         # NOT an air-facility dump (36.17): a garrison standing on an airfield may not draw a Point
         # from it, so "the supply is already there" would be false where it most matters -- this
         # field is the staff's reason to garrison a city at all.

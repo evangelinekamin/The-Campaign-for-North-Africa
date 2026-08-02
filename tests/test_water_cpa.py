@@ -212,9 +212,10 @@ def test_52_42_the_stage_ledger_expires_at_the_operations_stage_boundary():
     # one _Run, exactly as every other test in this file drives one, and never enters engine.run():
     # a ledger cleared by a line inside run()'s stage loop is still holding stage 1's ids here, and
     # the tank makes its second stage's move for free. (The engine rejects that shape by name in
-    # two places already -- engine._port_tons for [55.3] and _Run._expire_rail_stage for [54.43] --
-    # each because "any caller that drives the stages itself -- a test, a measurement driver --
-    # would otherwise silently inherit a spent budget".)
+    # two places already -- engine._port_tons for [55.3] and _Run.rail_stage for [54.43] -- each
+    # because "any caller that drives the stages itself -- a test, a measurement driver -- would
+    # otherwise silently inherit a spent budget". All three share engine._OpStageLedger since the
+    # ledger refactor; the per-ledger _expire_rail_stage this comment used to name is gone.)
     tank = _veh("TANK", Side.AXIS, (0, 0), strength=3)
     r = _Run(_state([tank], [_well("AX-Well", Side.AXIS, (0, 0), water=1000)]))
     _movement(r, _policies(axis=_Mover([MoveOrder("TANK", (1, 0))])), Side.AXIS)

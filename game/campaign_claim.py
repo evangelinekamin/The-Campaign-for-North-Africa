@@ -17,22 +17,26 @@ itself dictates:
     assaults whatever it finds itself adjacent to. Nothing here knows that Bardia and Tobruk are
     fortresses: rule 15.82 grants them NO EVICTION and no assault will ever move those garrisons, so
     a siege takes them only by 15.15 -- dry-ammunition SURRENDER -- or not at all.
-  * FEED (claim_supply) -- a garrison that cannot trace Fuel and Ammunition banks NOTHING (64.73's
-    occupation quality-test), and out at Siwa or Jalo there is no depot within forty hexes: the wells
-    hold water and nothing else. A depot may only relocate onto a hex a friendly COMBAT unit already
-    holds (32.33), so the depot cannot go first. The garrison and its depot therefore march as a
-    PAIR, AT THE DEPOT'S PACE, and only to where the lorries can keep it fed -- a column that walks
-    into the desert ahead of its supply arrives unsupplied and scores nothing, which is the standing
-    failure mode of every policy in this repo.
+  * FEED (claim_supply) -- a garrison that has not got, in the hex it stands in, a Week of Stores and
+    Water and the Fuel and Ammunition to fire three times and move 20 CP banks NOTHING (64.73's
+    occupation quality-test, campaign_victory._supplied), and out at Siwa or Jalo there is no depot
+    within forty hexes: the wells hold water and nothing else. A depot may only relocate onto a hex
+    a friendly COMBAT unit already holds (32.33), so the depot cannot go first. The garrison and its
+    depot therefore march as a PAIR, AT THE DEPOT'S PACE, and only to where the lorries can keep it
+    fed -- a column that walks into the desert ahead of its supply arrives unsupplied and scores
+    nothing, which is the standing failure mode of every policy in this repo.
   * HOLD (garrison_units/hold_garrisons + garrison_depots/hold_depots) -- the unit banking a city
     never marches away, and neither does the depot feeding it. Two halves of one standing order: a
     depot walked off a city un-banks it just as surely as marching the garrison off does.
 
-THE ONE CLAUSE THAT DOES ALL THE SORTING is 'could be FED there' (can_be_fed -- the 64.73 trace test
-asked of a unit as if it already stood on the city). It sends the army to Sollum, and through Sollum
-to Bardia; it declines Siwa and Jalo, which are reachable but not suppliable; and it decides, with no
-fortress special-case anywhere, that Bardia is worth besieging and Tobruk -- for most of the war --
-is not. You do not besiege a city you could not hold, and you do not garrison one you cannot feed.
+THE ONE CLAUSE THAT DOES ALL THE SORTING is 'could be FED there' (could_be_fed -- can supply REACH
+that hex for a unit of this class, asked as if the unit already stood on the city). It sends the army
+to Sollum, and through Sollum to Bardia; it declines Siwa and Jalo, which are reachable but not
+suppliable; and it decides, with no fortress special-case anywhere, that Bardia is worth besieging
+and Tobruk -- for most of the war -- is not. You do not besiege a city you could not hold, and you do
+not garrison one you cannot feed. It is a PLANNING heuristic and NOT the scoring rule -- read its
+docstring before touching it; the two were one function until 2026-08-02 and separating them is what
+kept the 64.73 repair from emptying the board of armies as well as of points.
 
 Campaign-ONLY: every helper needs the 64.73 city table, which rommels_arrival / siege_of_tobruk do
 not carry (_cities returns () for them), so the two benchmark scenarios stay byte-identical.
@@ -50,6 +54,11 @@ from .state import GameState
 STAGING = ("AX-Stage", "AL-Stage")     # the seeded supply SPINES of both sides (60.34 / 54.3)
 COLUMN = "Column"                      # the Claim.name of a [32.33] desert column (column_claims)
 
+# The magnitudes could_be_fed plans against. They are 64.73's Fuel and Ammunition numbers, kept
+# here because the planner inherited them -- NOT a claim that this is 64.73's test. See could_be_fed.
+_PLANNER_CP = 20
+_PLANNER_FIRINGS = 3
+
 
 def _cities(state: GameState) -> tuple:
     """The rule-64.73 city table, or () for a scenario that carries none -- which is every scenario
@@ -59,12 +68,55 @@ def _cities(state: GameState) -> tuple:
 
 def _banking(state: GameState, side: Side, ax: Coord) -> list:
     """The combat units of `side` BANKING the city at `ax` right now -- standing on it, alive, at
-    Strength, and able to trace Fuel AND Ammunition. The exact rule-64.73 occupier test, asked of
-    the live state, so every helper here scores the city the way the game itself will."""
+    Strength, and HOLDING IN THE HEX the Week of Stores and Water and the Fuel and Ammunition 64.73
+    asks for. The exact rule-64.73 occupier test, asked of the live state, so every helper here
+    scores the city the way the game itself will."""
     vic = state.victory
     return [u for u in state.units_at(ax)
             if u.side == side and u.alive and u.is_combat and u.strength >= 1
             and vic._supplied(state, u)]
+
+
+def could_be_fed(state: GameState, u, ax: Coord) -> bool:
+    """THE PLANNER'S question, and it is NOT the scoring rule: if this side sent `u` to the city at
+    `ax` -- bringing a depot behind it, which is the other half of every claim this module makes --
+    could that garrison be fed there? Answered as "can supply REACH that hex for a unit of this
+    class": Fuel for 20 CP and three firings of Ammunition, over the cpa/2 line.
+
+    IT USED TO BE campaign_victory._supplied ITSELF, and this function exists because that predicate
+    became 64.73's real one -- a Week of Stores and Water and three firings and 20 CP of Fuel, all of
+    it HELD IN THE HEX (49.15/50.15/51.15). Asking THAT of a unit "as if it already stood on the
+    city" asks the wrong question in two distinct ways, and both are the planner's fault rather than
+    the rule's:
+
+      * IT ASKS ABOUT A BOARD THAT DOES NOT EXIST YET. A claim is a plan to BRING supply: the unit
+        marches, and `sustainable`/`can_follow` below march a depot to meet it. The in-hex test asks
+        whether the supplies are ALREADY standing on an empty city -- which they are not, because
+        nobody has been there. So it declines every city the plan was going to open.
+      * ITS ANSWER STOPPED DEPENDING ONLY ON THE UNIT'S CLASS, and the cache above is keyed on the
+        class alone (cpa / mobility / fuel rate / ammo cost). In-hex supply counts the unit's OWN
+        lorry-borne load, so two battalions of one class with different loads must answer
+        differently and the cache would hand the second the first's answer.
+
+    MEASURED, and this is why the split is not a softening (full table in tests/baselines.py): with
+    the planner sharing 64.73's in-hex predicate, the Commonwealth banks NO victory city at all in
+    the windows the suite pins, the railhead falls, and ten behaviour tests covering the take-and-
+    hold, the [15.53] concentration tier, the Axis railway and the Commonwealth truck relay all go
+    inert together -- one upstream cause, this gate answering "no" everywhere. The SCORING rule is
+    untouched and stays faithful (campaign_victory._supplied); what is kept here is a policy
+    heuristic, and it is flagged as one.
+
+    STILL A PROXY, AND THE BETTER FORM IS KNOWN: the honest planning question is 64.73's own test
+    asked of the board the plan CREATES -- the unit on the city with the depot this module is about
+    to walk there. That needs a hypothetical board and it changes what the policy proposes, so it is
+    a measured slice of its own, not a line to slip in behind a rule fix. Until then this keeps the
+    reach question the planner has always asked, unchanged, so that the 64.73 repair moves the
+    SCOREBOARD and not the army."""
+    moved = replace(u, hex=ax)
+    return (supply.plan_draw(state, moved, supply.FUEL,
+                             supply.fuel_cost(moved, _PLANNER_CP)) is not None
+            and supply.plan_draw(state, moved, supply.AMMO,
+                                 _PLANNER_FIRINGS * supply.ammo_cost(moved, phasing=True)) is not None)
 
 
 def within_a_lorry_hop(state: GameState, side: Side, frm: Coord, to: Coord, cache: dict) -> bool:
@@ -346,8 +398,14 @@ def claims(state: GameState, side: Side, *, escort: bool = True) -> tuple[Claim,
 
     A city is a target when it is worth points to this side and this side is not already BANKING it.
     Its garrison is the NEAREST unit that could be FED there -- and everything else follows from that
-    one question, asked of the unit as if it ALREADY STOOD on the city (can_be_fed: rule 64.73's own
-    trace test). A city that can feed nobody is not claimed at all. We do not send men to starve on a
+    one question, asked of the unit as if it ALREADY STOOD on the city (can_be_fed, which wraps
+    could_be_fed below). THAT IS THE PLANNER'S QUESTION AND NOT THE SCORING RULE, and this line said
+    it was ("rule 64.73's own trace test") until 2026-08-02. It never quite was -- 64.73 asks for a
+    Week of Stores and Water as well -- and since the scoring predicate moved in-hex
+    (campaign_victory._supplied) the two are not even the same SHAPE: 64.73 has no trace at all now,
+    so "64.73's own trace test" names something the book does not contain. What could_be_fed asks is
+    a REACH question over the 32.16 line, flagged as the policy heuristic it is at its own docstring.
+    A city that can feed nobody is not claimed at all. We do not send men to starve on a
     hex that scores nothing, which is the standing failure mode of every policy in this repo.
 
     The four answers:
@@ -402,7 +460,7 @@ def claims(state: GameState, side: Side, *, escort: bool = True) -> tuple[Claim,
     def can_be_fed(u, ax: Coord) -> bool:
         key = (ax, u.cpa, u.mobility, supply.fuel_rate(u), supply.ammo_cost(u, phasing=True))
         if key not in fed:
-            fed[key] = state.victory._supplied(state, replace(u, hex=ax))
+            fed[key] = could_be_fed(state, u, ax)
         return fed[key]
 
     reach: dict = {}                                # a depot's CPA-15 relocation reach, once each

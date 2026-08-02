@@ -60,18 +60,37 @@ def _unit(uid: str, side: Side, where, *, combat: bool = True, strength: int = 5
                 is_combat=combat, arrival_turn=arrival_turn)
 
 
+def _motor(uid: str, side: Side, where, *, strength: int = 5, cpa: int = 20,
+           rate: int = 1) -> Unit:
+    """A MOTORIZED battalion carrying a transcribed [49.19] Fuel Consumption Rate -- the ONLY kind
+    of counter 64.73's Fuel clause can ever bite, because 49.12 makes a foot unit's Fuel bill zero
+    and `_unit` above is FOOT. It is neither a gun nor armour nor a first-line truck, so
+    supply._is_vehicle_type still classes it INFANTRY for water (52.41's flat Point, not 52.42's
+    per-TOE one) and its Week of Water is `_unit`'s three Points: the only magnitude that moves
+    between the two holders is the one under test."""
+    return replace(_unit(uid, side, where, strength=strength),
+                   mobility=Mobility.MOTORIZED, cpa=cpa, fuel_rate=rate)
+
+
 def _state(units, *, supplied: bool = True, turn: int = 111, stage: int = 1,
            terrain: "dict | None" = None, supplies=None, control=None,
            replacement_production: bool = False) -> GameState:
-    # C3-3: a holder must trace supply (rule 64.73). By default co-locate a dump with each
-    # combat unit so the tally / auto-win tests exercise OCCUPATION; supplied=False strands the
-    # units (no dump) to test the supply gate itself. Terrain carries the unit hexes so the
-    # cpa/2 trace (game.supply.reachable_supplies) can reach a co-located dump.
+    # C3-3: a holder must HAVE its supplies in the hex (rule 64.73). By default co-locate a dump
+    # with each combat unit so the tally / auto-win tests exercise OCCUPATION; supplied=False
+    # strands the units (no dump) to test the supply gate itself. Terrain carries the unit hexes.
+    #
+    # THE DEFAULT DUMP STOCKS ALL FOUR COMMODITIES, restated when 64.73's quality-test stopped
+    # asking the 32.16 abstract trace for Fuel and Ammunition alone and started asking the rule's
+    # own question of all four (CampaignVictory._supplied). It used to hold ammo and fuel only,
+    # which under the rule as printed is not a supplied garrison at all -- it is one that will
+    # starve and go thirsty inside the week. Not a weakening: "supplied" here means what 64.73
+    # means by it, and every case that turns on a SHORTFALL names the shortfall explicitly.
     terrain = dict(terrain or {})
     for u in units:
         terrain.setdefault(u.hex, Terrain.CLEAR)
     if supplies is None:
-        supplies = (tuple(SupplyUnit(f"D-{u.id}", u.side, u.hex, ammo=999, fuel=999)
+        supplies = (tuple(SupplyUnit(f"D-{u.id}", u.side, u.hex,
+                                     ammo=999, fuel=999, stores=999, water=999)
                           for u in units if u.is_combat) if supplied else ())
     return GameState(turn=turn, max_turns=111, phase=Phase.RECORD, active_side=Side.SYSTEM,
                      seed=1, weather="normal", vp=VP(), terrain=TerrainMap(terrain=terrain),
@@ -151,11 +170,191 @@ def test_noncombat_and_empty_do_not_occupy():
 
 
 def test_stranded_unit_does_not_occupy():
-    # C3-3 (rule 64.73 quality-test): a combat unit on a city that cannot trace supply has
+    # C3-3 (rule 64.73 quality-test): a combat unit on a city with no supply in the hex has
     # outrun its logistics and scores nothing -- the same unit, supplied, holds Tobruk.
     cv = CampaignVictory()
     assert cv.decide(_R(_state([_unit("A1", Side.AXIS, "C4807")], supplied=False)))[0] is None
     assert cv.decide(_R(_state([_unit("A1", Side.AXIS, "C4807")], supplied=True)))[0] is Side.AXIS
+
+
+# --- 64.73's occupation quality-test: FOUR commodities, IN THE HEX -------------
+#
+# "That combat unit, at the end of the game, must have enough Stores and Water for one Week, and
+# enough Fuel and Ammunition to fire its weapons three times and move 20 CP's. Any units failing
+# these 'tests' do not occupy for victory conditons." -- 64.73 off the scan (PDF p.88 = book folio
+# 37), word for word, with ONE typographic substitution: the book sets double quotes around "tests"
+# and they are single here so the outer quotation reads. The misspelt "conditons" is the book's own.
+#
+# What that comes to for the 5-TOE FOOT battalion `_unit` builds, each magnitude off its own rule:
+#   Fuel      0  -- 49.12, a foot unit walks and burns none, so "move 20 CP's" costs it nothing
+#   Ammo     30  -- 3 firings x 50.14's close-assault rate 2 x 5 TOE Strength Points
+#   Stores   20  -- 51.11's 4 per TOE, ONE Game-Turn's worth, because 5.1 makes a Game-Turn a week
+#   Water     3  -- 52.41's flat 1 per Operations Stage x the 3 Operations Stages of that week
+NEED_64_73 = {"fuel": 0, "ammo": 30, "stores": 20, "water": 3}
+
+# And for the 5-TOE cpa-20 MOTORIZED battalion `_motor` builds, where the ONE magnitude that moves
+# is the Fuel: 49.13's rate 1 x ceil(20 CP / 5) x 5 TOE Strength Points. Ammunition, Stores and
+# Water are `_unit`'s to the Point, which is what makes a shortfall case comparable across the two.
+NEED_64_73_MOTOR = {"fuel": 20, "ammo": 30, "stores": 20, "water": 3}
+
+
+def _stocked(where, *, need: "dict | None" = None, **short):
+    """An Axis dump on `where` holding exactly what 64.73 asks of a `_unit`, less any named
+    shortfall (a NEGATIVE shortfall stocks a surplus -- the hot-weather case wants twice the week).
+    `need=NEED_64_73_MOTOR` stocks it for a `_motor` holder instead."""
+    return SupplyUnit("D", Side.AXIS, _ax(where),
+                      **{c: q - short.get(c, 0) for c, q in (need or NEED_64_73).items()})
+
+
+def test_64_73_names_four_commodities_and_all_four_are_tested():
+    # The test used to ask for Fuel and Ammunition only. 64.73 names FOUR, and a holder short of
+    # ANY ONE of them "does not occupy for victory conditons". One dump per case, one Point short
+    # of the rule in each -- and the same dump, whole, banks Tobruk's 200.
+    #
+    # BOTH HOLDERS ARE ASKED, and that is the repair of 2026-08-02: the four clauses are not all
+    # LIVE for one counter. `_unit` is FOOT, so 49.12 makes its Fuel bill zero and its Fuel clause
+    # cannot be starved by any dump -- looping the foot battalion alone (which is what this test
+    # did) left the FUEL clause of the scoring predicate pinned by nothing at all. `_motor` pays
+    # all four. Which clauses are live is derived from the rule's own arithmetic, not listed by
+    # hand, so a holder whose Fuel bill is zero can never quietly drop out of the loop again.
+    cv = CampaignVictory()
+    for holder, need in ((_unit("A1", Side.AXIS, "C4807"), NEED_64_73),
+                         (_motor("A1", Side.AXIS, "C4807"), NEED_64_73_MOTOR)):
+        live = [c for c in ("fuel", "ammo", "stores", "water") if need[c] > 0]
+        assert ("fuel" in live) == (supply.fuel_rate(holder) > 0)      # 49.12 is why, not a choice
+        for commodity in live:
+            one_short = _stocked("C4807", need=need, **{commodity: 1})
+            assert cv.decide(_R(_state([holder], supplies=(one_short,))))[0] is None, commodity
+        assert cv.decide(_R(_state([holder],
+                                   supplies=(_stocked("C4807", need=need),))))[0] is Side.AXIS
+
+
+def test_64_73_asks_the_hex_not_a_trace():
+    # THE RULE-3 CASE, and the reason this predicate moved: 64.73 asks whether the holder HAS the
+    # supplies, and 49.15/50.15/51.15 say "in the hex". The predicate used to ask supply.plan_draw
+    # -- the ABSTRACT game's 32.16 half-CPA trace, which section 32 reserves for players NOT running
+    # the Logistics Game. A fully stocked dump one hex away is exactly the case the two readings
+    # disagree about: on the trace it feeds the holder, in the hex it does not.
+    #
+    # C4907 is Tobruk's neighbour and the terrain carries both hexes, so the trace really could walk
+    # it -- which the plan_draw assertions below pin, because a board where the trace simply FAILED
+    # would pass this test for the wrong reason and prove nothing about the form.
+    cv = CampaignVictory()
+    u = _unit("A1", Side.AXIS, "C4807")
+    next_door = _stocked("C4907")
+    board = _state([u], supplies=(next_door,),
+                   terrain={_ax("C4807"): Terrain.CLEAR, _ax("C4907"): Terrain.CLEAR})
+    for commodity, need in ((supply.AMMO, NEED_64_73["ammo"]),
+                            (supply.STORES, NEED_64_73["stores"])):
+        assert supply.plan_draw(board, u, commodity, need) is not None      # the trace DOES reach
+    assert cv.decide(_R(board))[0] is None                                  # ...and it is not asked
+    assert cv.decide(_R(_state([u], supplies=(_stocked("C4807"),))))[0] is Side.AXIS
+
+
+def test_64_73_a_units_own_lorry_borne_load_is_in_hex_supply():
+    # 49.16's own priority order: the unit's OWN pool first, then a co-located dump. A battalion
+    # carrying its week of Stores and three firings on its first-line trucks holds the city with no
+    # dump under it at all -- which is what makes the in-hex form a test of LOGISTICS rather than of
+    # where the depots happen to sit. (Water is the exception and it is the map's, not the rule's:
+    # nothing fills unit.water, so the well on the city is what waters this garrison. See
+    # CampaignVictory._supplied.)
+    cv = CampaignVictory()
+    laden = replace(_unit("A1", Side.AXIS, "C4807"),
+                    ammo=NEED_64_73["ammo"], stores=NEED_64_73["stores"])
+    well = SupplyUnit("W", Side.AXIS, _ax("C4807"), ammo=0, fuel=0, water=NEED_64_73["water"])
+    assert cv.decide(_R(_state([laden], supplies=(well,))))[0] is Side.AXIS
+    thirsty = SupplyUnit("W", Side.AXIS, _ax("C4807"), ammo=0, fuel=0, water=0)
+    assert cv.decide(_R(_state([laden], supplies=(thirsty,))))[0] is None
+
+
+def test_64_73_the_week_is_a_game_turn_for_stores_and_three_stages_for_water():
+    # "enough Stores and Water for one Week" -- ONE unit of time, TWO rates. 5.1: "In CNA each
+    # Game-Turn covers a period of approximately one week... each Game-Turn is divided into three
+    # Operations Stages." So the week is a Game-Turn, and supply.stores_cost -- already a
+    # per-Game-Turn rate (51.11) -- is taken as it stands, while supply.water_cost, a
+    # per-Operations-Stage rate (52.4), is taken three times. Getting either conversion wrong is
+    # invisible in a pass/fail assertion, so both are pinned at the exact Point.
+    u = _unit("A1", Side.AXIS, "C4807")
+    assert NEED_64_73["stores"] == supply.stores_cost(u)
+    assert NEED_64_73["water"] == 3 * supply.water_cost(u)
+    cv = CampaignVictory()
+    for commodity in ("stores", "water"):
+        assert cv.decide(_R(_state([u], supplies=(_stocked("C4807", **{commodity: 1}),))))[0] is None
+    assert cv.decide(_R(_state([u], supplies=(_stocked("C4807"),))))[0] is Side.AXIS
+
+
+def test_64_73_hot_weather_doubles_the_water_week():
+    # [29.35] doubles every unit's water requirement in hot weather, and 64.73 asks for a WEEK of
+    # it -- so the same dump that waters a garrison through a normal week leaves it dry through a
+    # hot one. The engine bills the same doubling (engine._draw_stage_water reads the same
+    # supply.water_cost(hot=...)), and for THIS holder -- infantry -- the two agree stage for stage,
+    # because [52.41] carries no condition and is drawn every Operations Stage whatever the unit
+    # does. THE PARITY IS NOT GENERAL, and the comment here used to claim it was: [52.42] bills a
+    # VEHICLE only "if it uses any of its CPA", so a stationary vehicle garrison is charged NOTHING
+    # for the week while this predicate still charges it the full three stages. That divergence is
+    # deliberate and is argued at CampaignVictory._supplied -- 64.73 says the holder "must HAVE" the
+    # Week, which is a test of STOCK and not of consumption.
+    cv, u = CampaignVictory(), _unit("A1", Side.AXIS, "C4807")
+    normal = _state([u], supplies=(_stocked("C4807"),))
+    assert cv.decide(_R(normal))[0] is Side.AXIS
+    assert cv.decide(_R(replace(normal, weather="hot")))[0] is None
+    doubled = _stocked("C4807", water=-NEED_64_73["water"])          # twice the week
+    assert cv.decide(_R(replace(_state([u], supplies=(doubled,)), weather="hot")))[0] is Side.AXIS
+
+
+def test_64_73_the_fuel_clause_is_twenty_cp_and_a_motorised_holder_pays_it():
+    # "...and enough Fuel and Ammunition to fire its weapons three times and MOVE 20 CP's."
+    #
+    # THE CLAUSE THIS FILE HAD NEVER PINNED. Every holder these tests built was FOOT, and 49.12
+    # gives a foot unit no Fuel Consumption Rate at all, so its 20-CP bill is zero and the clause
+    # was vacuously satisfied on every board in the file -- neuter the whole Fuel term at its call
+    # site in campaign_victory._supplied, or rewrite _CP_64_73 from 20 to 1, and nothing here (and
+    # nothing in the whole suite) went red. Both magnitudes are the book's, printed in that one
+    # sentence, and both are asserted here at the Point.
+    cv = CampaignVictory()
+    foot, motor = _unit("A1", Side.AXIS, "C4807"), _motor("A1", Side.AXIS, "C4807")
+    assert NEED_64_73["fuel"] == supply.fuel_cost(foot, 20) == 0            # 49.12: it walks
+    assert NEED_64_73_MOTOR["fuel"] == supply.fuel_cost(motor, 20) == 20    # 49.13: 1 x 4 x 5 TOE
+    # ...and the 20 is load-bearing, not decoration: the bill for ONE CP is a quarter of it, and
+    # for 15 CP three quarters, so a dump stocked for either leaves the city unoccupied.
+    assert supply.fuel_cost(motor, 1) == 5 and supply.fuel_cost(motor, 15) == 15
+    #
+    # WHAT THIS PIN CAN AND CANNOT RESOLVE, stated rather than left to be discovered. Sweeping the
+    # dump from empty to whole fixes the threshold at exactly 20 Points, which fixes _CP_64_73 to
+    # the closed band 16..20 -- rewriting it to 15 or to 21 turns this test red, and 16..20 cannot
+    # be told apart by ANY test because 49.13 charges rate x CEIL(CP/5) x TOE and all five sit in
+    # one five-CP block. That is a property of the rule's arithmetic, not a gap in the pin.
+    for held in range(0, NEED_64_73_MOTOR["fuel"]):
+        short = _stocked("C4807", need=NEED_64_73_MOTOR, fuel=NEED_64_73_MOTOR["fuel"] - held)
+        assert cv.decide(_R(_state([motor], supplies=(short,))))[0] is None, held
+    assert cv.decide(_R(_state([motor],
+                               supplies=(_stocked("C4807", need=NEED_64_73_MOTOR),))))[0] is Side.AXIS
+
+
+def test_64_73_a_brim_full_49_14_tank_pays_the_twenty_cp_only_from_cpa_16_up():
+    # WHY THE FUEL CLAUSE IS ALL BUT INERT ON THE BUILT BOARD, as an identity rather than an
+    # anecdote -- the same duty of record the WATER clause discharges at CampaignVictory._supplied.
+    #
+    # [49.14]'s Note: "a TOE Strength Point always has a fuel capacity rating exactly sufficient to
+    # allow all its CPA to be expended on movement", i.e. supply.fuel_capacity(u) is precisely
+    # fuel_cost(u, u.cpa). 64.73 asks for a FIXED 20 CP. Since 49.13 charges rate x ceil(CP/5) x TOE,
+    # a BRIM-FULL tank covers the clause exactly when ceil(cpa/5) >= ceil(20/5), i.e. from cpa 16 up
+    # -- and a shorter-legged battalion CANNOT satisfy 64.73's Fuel out of its own tank however full
+    # it is. So the clause only ever turns on a co-located DUMP; and a unit standing off a dump has
+    # already failed Stores (51.0 gives it no organic pool at all) and Ammunition (50.0's organic
+    # load is ONE firing against 64.73's three) before Fuel is ever reached. That is the measured
+    # reason no unit on a 64.73 city fails Fuel ALONE on any board this project has run.
+    cv = CampaignVictory()
+    for cpa, tank_covers in ((15, False), (16, True), (20, True)):
+        u = _motor("A1", Side.AXIS, "C4807", cpa=cpa)
+        full = replace(u, fuel=supply.fuel_capacity(u))               # 49.14, brim-full
+        assert supply.fuel_capacity(u) == supply.fuel_cost(u, cpa)    # the Note, as an identity
+        assert (supply.fuel_capacity(u) >= supply.fuel_cost(u, 20)) is tank_covers, cpa
+        # a dump holding the other three commodities and NO fuel: the tank is the only source
+        dry = SupplyUnit("D", Side.AXIS, _ax("C4807"), fuel=0, ammo=NEED_64_73_MOTOR["ammo"],
+                         stores=NEED_64_73_MOTOR["stores"], water=NEED_64_73_MOTOR["water"])
+        won = cv.decide(_R(_state([full], supplies=(dry,))))[0]
+        assert won is (Side.AXIS if tank_covers else None), cpa
 
 
 # --- 64.71 auto-win: the whole Delta, held for one full Game-Turn --------------

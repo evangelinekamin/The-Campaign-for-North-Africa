@@ -10,6 +10,309 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-08-02 -- CAUSE: [64.73], THE OCCUPATION QUALITY-TEST. The last abstract-game rule
+standing in the victory module: it asked TWO of the rule's FOUR commodities, and asked them through
+the section-32.16 half-CPA supply trace that CLAUDE.md rule 3 says does not apply here.
+
+    campaign signatures  1941 8e5ca52dca17 -> d4fa0bd90ffc    7    312512305717 -> d107a13ab6de
+                         4    f1c874bfbe7f -> 9d1ce03d1b95    2026 68be27e28f3f -> 5b5e5c38bc6a
+    BENCHMARKS UNMOVED   rommel ca0eec96abbd   siege 76371e5939a0   (read live, twice)
+
+The two benchmarks do not move because the rule is campaign-only by CONSTRUCTION, not by a gate:
+rommels_arrival and siege_of_tobruk carry no 64.73 city table and their own VictorySpec, so
+CampaignVictory._supplied is never called on either board.
+
+THE BOOK, re-rendered at 300 dpi and read character by character (PDF p.88 = book folio 37, col. 3;
+the misspelt "conditons" is the book's own):
+
+    [64.73] "...Occupation for these purposes means having a combat unit of at least 1 TOE Strength
+            in the hex. That combat unit, at the end of the game, must have enough Stores and Water
+            for one Week, and enough Fuel and Ammunition to fire its weapons three times and move
+            20 CP's. Any units failing these "tests" do not occupy for victory conditons."
+
+    [5.1]   "In CNA each Game-Turn covers a period of approximately one week. However, to better
+            handle combat operations, each Game-Turn is divided into three Operations Stages."
+            (folio 11) -- which is how the WEEK is converted: supply.stores_cost is already a
+            per-Game-Turn rate (51.11) and is taken once; supply.water_cost is a per-Operations-Stage
+            rate (52.4) and is taken three times.
+
+THE DEFECT, both halves in one sentence. campaign_victory._supplied tested Fuel and Ammunition only
+-- the Stores and Water the rule puts FIRST were not asked at all -- and it tested them with
+supply.plan_draw, the ABSTRACT game's supply range. It now asks all four through supply.in_hex_draw,
+the full-game draw the S5/S6/S7 slices already switched Fuel, Ammunition and Stores onto.
+
+WATER DID NOT RE-OPEN THE S8 FINDING, and the reason is measured rather than argued. The supply
+layer's water draw stays on the trace (S8: the naive in-hex form gave 60% thirst against a faithful
+12%, because [52.45]'s water-truck reservoir is unbuilt) and is UNTOUCHED by this slice. The victory
+predicate can ask in-hex anyway because every one of the ten 64.73 cities carries a game.wells water
+source for BOTH sides: over six campaign boards (seeds 3/4/7/30/1941/2026 at max_turns=12), of the
+103 combat units standing on a 64.73 city the in-hex and trace readings of the Water clause agreed on
+ALL 103. Away from the cities they differ on 24-44 units a board, which only observation.can_hold
+sees.
+
+THE A/B, four seeds, max_turns=12 through scenario.campaign's OWN kwarg, both arms LIVE RE-RUNS
+(the predicate is shared with game.campaign_claim, so it moves the policy and not merely the score;
+the BEFORE arm reproduces all four pinned signatures above exactly, which is what makes it a control):
+
+    seed   64.73 geography AXIS   CW    winner + 64.76 grade        cities that CHANGE HANDS in the tally
+    1941        465 ->  375        0->0  Axis Smashing, both arms    -SidiBarrani -Giarabub -Bardia
+                                                                    -Sollum, +MersaMatruh(AXIS)
+    7           415 ->  375        0->0  Axis Smashing, both arms    -Giarabub -Bardia -Sollum,
+                                                                    +MersaMatruh(AXIS)
+    4           565 ->  375        0->0  Axis Smashing, both arms    -SidiBarrani -Giarabub -Bardia
+                                                                    -Sollum
+    2026        415 ->  275       10->10 Axis Smashing, both arms    -Giarabub -Bardia -Sollum
+
+("-" stops scoring, "+" starts. It is not purely subtractive: on two seeds the Axis GAINS Mersa
+Matruh, because the trajectory itself moved -- the war is re-run in both arms, not re-scored.)
+
+THE NEUTER / ATTRIBUTION TABLE -- which clause moved it, and which CALL SITE. Every arm is a live
+campaign re-run at max_turns=12, each in a FRESH interpreter (max_tasks_per_child=1, because this
+project has had a table of byte-identical arms out of ProcessPoolExecutor reusing a worker and
+composing one arm's patch on the next). Cells are signature / Axis 64.73 geography / Commonwealth.
+
+    arm  what it tests                    seed 1941       seed 7          seed 4          seed 2026
+    A0   trace  FUEL(20CP)+AMMO(3)        8e5ca52dca17    312512305717    f1c874bfbe7f    68be27e28f3f
+         (the predicate as it shipped)    ax465 cw0       ax415 cw0       ax565 cw0       ax415 cw10
+    A1   A0 + STORES(one Game-Turn)       3ed3490f6024    9010601753b3    9099f0dc719d    609ac6991551
+                                          ax290 cw10      ax290 cw0       ax390 cw0       ax290 cw10
+    A2   A1 + WATER(3 OpStages)           3ed3490f6024    9010601753b3    9099f0dc719d    609ac6991551
+                                          ax290 cw10      ax290 cw0       ax390 cw0       ax290 cw10
+    A3   in-hex FUEL+AMMO (form only)     df2d6810edbb    65fcb22b27fc    05d9b767522c    ee4dad6ea4a9
+                                          ax425 cw0       ax375 cw0       ax425 cw0       ax375 cw20
+    A4   in-hex all four  (LIVE)          d4fa0bd90ffc    d107a13ab6de    9d1ce03d1b95    5b5e5c38bc6a
+                                          ax375 cw0       ax375 cw0       ax375 cw0       ax275 cw10
+    C1   A4, but campaign_claim._banking  8e5ca52dca17    312512305717    f1c874bfbe7f    68be27e28f3f
+         reverted to A0                   ax275 cw0       ax275 cw0       ax375 cw0       ax275 cw10
+
+TWO THINGS FALL OUT OF IT, and the second is the attribution this slice needed.
+
+    * THE WATER CLAUSE IS MEASURABLY INERT TODAY. A1 and A2 are BYTE-IDENTICAL on all four seeds --
+      adding 64.73's Week of Water changes not one event and not one Victory Point. It is added
+      anyway, because the rule names it and because inert is a fact about today's map (every 64.73
+      city carries a well for both sides), not about the rule. It will bite the day a scoring city
+      has no water source under it. Both the STORES clause (A0 -> A1) and the FORM switch (A0 -> A3)
+      move every seed on their own, so neither is carrying the other.
+    * AND SO IS THE FUEL CLAUSE, which this table did not say and should have -- naming only Water's
+      inertness read as if Water were the one unmeasured commodity of the four. ADDED 2026-08-02,
+      neutered at its own call site in campaign_victory._supplied (that tuple's FUEL row rewritten to
+      `(supply.FUEL, 0)`, game/__pycache__ deleted, PYTHONDONTWRITEBYTECODE=1):
+
+        arm  what it tests                    seed 1941       seed 7          seed 4          seed 2026
+        A5   A4 with the FUEL clause inert    d4fa0bd90ffc    d107a13ab6de    9d1ce03d1b95    5b5e5c38bc6a
+                                              ax375 cw0       ax375 cw0       ax375 cw0       ax275 cw10
+
+      Byte-identical to A4 on all four, geography included. THE REASON IS STRUCTURAL, NOT LUCK, and
+      it is written down at the predicate and pinned in tests/test_campaign_victory.py (the Fuel
+      magnitude and the [49.14] tank ceiling each have their own case now; every holder in that file
+      used to be FOOT, so 49.12 made the clause vacuous and neutering it left the whole suite green).
+      In short: 49.12 exempts foot units and 21 of the 22 garrisons that bank a city across five
+      boards are foot; [49.14] sizes a unit's tank to its OWN CPA, so below cpa 16 a brim-full tank
+      cannot pay 64.73's fixed 20 CP; and off a co-located dump [51.0]'s absent Stores pool and
+      [50.0]'s single firing fail FIRST. MEASURED per clause on those five boards (the four above
+      plus CAMPAIGN_SEED=23 at GT30): of every combat unit of >=1 TOE standing on a 64.73 city, TWO
+      fail Fuel per board -- the same pair each time, Giarabub's artillery and AA battalions, both
+      cpa 15 with full tanks at 18/24 and 12/16 Points -- and NOT ONE fails Fuel and nothing else.
+
+      PER-CALL-SITE NEUTER TABLE for the predicate, every row rewriting ONE expression in
+      game/campaign_victory.py (never a shared helper), game/__pycache__ deleted and
+      PYTHONDONTWRITEBYTECODE=1 per row. Run against tests/test_campaign_victory.py:
+
+        row  neuter                                          verdict   tests that go red
+        A    the FUEL row -> `(supply.FUEL, 0)`               RED       3   <- new 2026-08-02
+        B    _CP_64_73 20 -> 1                                RED       3   <- new
+        C1   _CP_64_73 20 -> 15                               RED       3   <- new
+        C2   _CP_64_73 20 -> 16                               GREEN     0   -- see below
+        C3   _CP_64_73 20 -> 21                               RED       3   <- new
+        D    _FIRINGS_64_73 3 -> 1                            RED       1
+        E    the STORES row -> `(supply.STORES, 0)`           RED       2
+        F    the WATER row -> 0 Operations Stages             RED       4
+        G    supply.in_hex_draw -> supply.plan_draw           RED       3
+
+      ROW C2 IS AN HONEST GREEN AND IT IS NOT A HOLE IN THE PIN. The sweep in
+      test_64_73_the_fuel_clause_is_twenty_cp_and_a_motorised_holder_pays_it fixes the threshold at
+      exactly 20 Fuel Points, which fixes _CP_64_73 to the closed band 16..20 -- and 16 through 20
+      cannot be told apart by ANY test, because [49.13] charges rate x CEIL(CP/5) x TOE and all five
+      values sit in one five-CP block. That is the rule's arithmetic, not a gap. Rows A, B, C1 and C3
+      were all GREEN before this slice.
+    * C1 REPRODUCES A0's SIGNATURE EXACTLY ON ALL FOUR SEEDS. With the faithful predicate live
+      everywhere and only campaign_claim._banking reverted, the event log is byte-identical to the
+      pre-change tree -- so _banking is the ONLY in-run reader of this predicate in a scripted
+      campaign, and the whole signature movement is attributable to it and to nothing else.
+      CampaignVictory._occupier moves the SCORE and emits nothing: C1's own geography column
+      (ax275/275/375/275) is the faithful test scored on the unchanged board.
+
+THE TRAP FIRED, AND IT IS REPORTED RATHER THAN SOFTENED. A stricter test makes the board emptier,
+exactly as it might: the Axis loses 40-190 Geographic Occupation Points on every seed and the
+Commonwealth gains none. The winner and the 64.76 grade are unchanged on all four (64.74's ~1,580
+Axis replacement points dominate the tally). WHAT IT IS NOT is an army that moved: measured at
+CAMPAIGN_SEED, GT30, the Axis OCCUPIES Giarabub, Bardia, Sollum, Tobruk and Benghazi -- EXACTLY the
+five it BANKED before this change (the 2026-08-01 record in test_campaign_claim.py) -- and now BANKS
+only Tobruk and Benghazi.
+
+*** WHY, RE-DERIVED CLAUSE BY CLAUSE 2026-08-02. THE FIRST ANSWER PRINTED HERE NAMED THE WRONG
+CLAUSE AND THE WRONG ARMY, AND IT IS STRUCK RATHER THAN SOFTENED. *** It read: "The three that stop
+scoring are held by garrisons that cannot show a Week of Stores where they stand, and the reason it
+bites the Axis and not the Commonwealth is an OOB debt this port already flags: German combat units
+carry no first-line trucks ([4.43b]) ... This number is therefore a MEASUREMENT OF THE UNPAID OOB
+DEBT". The tally it explained is right; the mechanism under it is not. MEASURED on five boards --
+CAMPAIGN_SEED=23 at GT30 and the four A/B seeds above at max_turns=12 -- asking every combat unit of
+>=1 TOE standing on a 64.73 city which of the four clauses it fails, keyed on the counter's own
+Unit.nationality. Every board agrees, city for city:
+
+    city          holder                     clause that FAILS      what stands under it
+    Giarabub      6 x IT-Grbub (Italian)     AMMUNITION only        AX-Well-Giarabub ONLY: the oasis,
+                                             (2 of the 6 also Fuel) holding 124,996,400 Stores -- so
+                                                                    the STORES clause is SATISFIED here
+    Bardia        Italian, 1-2 battalions    STORES only            AX-Stage-Bardia, holding 146-188
+                                                                    Ammunition and 0-15 Stores
+    Sollum        Italian, 1-8 battalions    AMMUNITION and STORES  AX-Well-Sollum ONLY: water, no
+                                                                    Stores, no Ammunition
+    Sidi Barrani  BR-2SctGds (Commonwealth)  STORES only            AL-Stage-Barrani, dry of Stores;
+                  -- on all four A/B seeds                          its own ration 5/2/6/13 of a
+                                                                    24-Point week
+
+THREE CORRECTIONS. (1) THE CLAUSE IS NOT UNIFORMLY STORES: one city fails on Ammunition alone, one on
+Stores alone, one on both. At GIARABUB the struck sentence is not merely unmeasured, it is refuted by
+a printed rule -- [52.3] OASES, verbatim off a 300-dpi render of folio 21: "Units sitting in Oases
+have all the stores and water they need to last them the entire game." Giarabub is an oasis, so its
+Stores clause CANNOT fail; game.wells models that as the 124,996,400-Point figure above. (2) THE ARMY IS ITALIAN, NOT GERMAN, and not one German counter stands on
+a 64.73 city on any of the five boards -- 17 German combat units are alive at CAMPAIGN_SEED/GT30 and
+all 17 are elsewhere, so [4.43b] could not flip Giarabub, Bardia or Sollum whatever it landed. (The
+other four boards stop at Game-Turn 12, before the DAK arrives: nationality GE does not appear on
+them at all.) (3) IT DOES NOT SPARE THE COMMONWEALTH. Sidi Barrani fails the same STORES clause for
+the Commonwealth on all four A/B seeds. "The Commonwealth gains none" stays true; "it bites the Axis
+and not the Commonwealth" was false. The Axis loses more POINTS because its three failing cities are
+worth 140 Axis V.P. on 64.73's own table against Sidi Barrani's 10 Commonwealth V.P. -- an asymmetry
+of the victory TABLE, not of the lorries.
+
+WHAT THE NUMBER ACTUALLY MEASURES IS THE LAST MILE. 64.73 asks for a WEEK, and no organic pool the
+book gives a counter is a week deep: [51.0] gives no organic Stores at all (what a counter holds is
+a [53.11] first-line buffer the war spends) and [50.0]'s load is ONE firing against 64.73's three.
+So the clause that fails is decided by WHAT DUMP STANDS UNDER THE GARRISON -- a stocked dump banks
+(Tobruk, Benghazi, Mersa Matruh), a bare well fails whatever the well does not hold (Giarabub's oasis
+covers Stores, so Ammunition fails; Sollum's covers neither), a dump dry of one commodity fails that
+one (Bardia). That is this project's FAUCET debt, not its OOB debt. A carriage asymmetry does exist
+and is recorded here as a fact WITHOUT a cause attached to it -- at CAMPAIGN_SEED/GT30 the counters
+holding any first-line Stores at all are 0 of 17 German, 1 of 57 Italian and 25 of 67 Commonwealth --
+but it is not what decides these three hexes, and it must not be re-attributed to [4.43b] without
+measuring: the reinforcement half of that schedule is WIRED (data/reinforcement_first_line.json,
+437 German + 885 Italian Truck Points, tests/test_first_line.py), only the GT1 muster half withholds
+the Axis line from German counters, and a first-line truck is CAPACITY rather than loaded rations in
+any case. Two tests pin the tally so it fails loudly when the last mile reaches the border
+(test_campaign_claim.py, Sollum and Bardia: "INVERT THIS"), and their messages now name the clause
+each hex actually fails.
+
+THE PLANNER WAS SPLIT OFF THE SCORING RULE, and it is the one design decision here.
+game.campaign_claim asked this same predicate of a unit AS IF it already stood on a city, to decide
+where to send it. With the faithful in-hex form that question is unanswerable-by-construction -- a
+claim is a plan to BRING supply and the in-hex test asks whether the supplies are ALREADY standing on
+an empty city nobody has reached -- and the module's `fed` cache is keyed on the unit's supply CLASS
+alone, which in-hex supply (it counts the unit's own lorry load) no longer determines. MEASURED with
+the planner left sharing the faithful predicate: the Commonwealth banks NO victory city at all in the
+windows the suite pins, the railhead falls, and TEN behaviour tests covering the take-and-hold, the
+[15.53] concentration tier, the Axis railway and the Commonwealth truck relay go inert together off
+that one gate. Splitting it (campaign_claim.could_be_fed, which keeps the reach question the planner
+has always asked, unchanged and flagged as the policy heuristic it is) takes that to FOUR: one is an
+INSTRUMENT that was reading the scoring rule as if it were a can-I-fight-here test, two are WITNESS
+SEEDS/FOLDS moved by the trajectory, and one is a city that is still occupied and no longer banked.
+All four are restated below, and the SCORING rule is not softened anywhere.
+
+FOUR TESTS RESTATED, none weakened, each onto the thing it is named for:
+  * test_campaign_claim.py::test_both_sides_take_the_cities_they_used_to_sprint_past -- Sollum and
+    Bardia split into OCCUPIED (asserted, and still exactly true: the take-and-hold thesis) and
+    BANKED (asserted false, with an INVERT-ME note). It asserts strictly more than it did.
+  * test_campaign_concentration.py::test_the_commonwealth_can_mount_a_supplied_offensive -- the
+    INSTRUMENT moved, the thesis did not. It counted "supplied" with the 64.73 predicate, which is
+    now the end-of-game HOLD-GROUND test, not the can-I-fight-here one. At CAMPAIGN_SEED over the
+    same eleven Compass turn-closes: old _supplied 11/11, new _supplied 0/11, can-move-and-fire
+    in-hex 11/11 (asserted), can-move-and-fire on the trace 11/11. The offensive is supplied where
+    it is fought at every turn-close; it simply could not BANK ground sixty hexes up the coast.
+  * test_organization_campaign.py -- the [15.53] fold widens 6 -> 8 Game-Turns and the SHOPPED SEED
+    GOES AWAY: the canonical seed now carries both the attacker and the rarer defender leg on one
+    campaign. Measured at CAMPAIGN_SEED by fold length: 6 -> 1 tier row, 7 -> 4, 8 -> 10 (defender
+    tier at GT7/8), 9 -> 15, flat after. Threshold unchanged, seed unchanged.
+  * test_rail_control.py -- the Axis-railway witness re-pinned 11 -> 34. Re-swept seeds 1-40 to
+    Game-Turn 6: eighteen activate, five haul cleanly ({14, 15, 20, 34, 38}), and NONE of the
+    previous tree's clean set {4, 11, 17, 26, 33} so much as activates, so no seed is a witness under
+    both instruments this time and that is stated rather than glossed. Seed 34 is chosen on the
+    property the 9 -> 11 re-pin ranked first -- its activation is paid by AX-Dump#4, the Axis's own
+    dump, not by Commonwealth stores overrun at El Daba -- and it hauls the most of the Axis-paid
+    candidates.
+
+STILL OPEN, FLAGGED AT THE LINE, NOT DONE HERE:
+  * "fire its weapons three times" is charged at the close-assault rate. A barrage unit's own weapon
+    costs more (50.2: barrage 4, anti-armor 3, assault 2) and supply.ammo_capacity already computes
+    "one firing of this unit's dearest function". A MAGNITUDE question; this slice was a FORM
+    question; moving both at once makes the A/B unreadable. UNMEASURED, deliberately.
+    (RANGE CORRECTED 2026-08-02: this entry and the flag at the code both put the ceiling at 2x the
+    shipped bill, the dearest-weapon reading. The decisive evidence is on the SAME scanned page and
+    was not cited -- [63.92], PDF p.88 col. 1, glosses the identical construction. Verbatim off a
+    300-dpi render of that column: "Occupying means that all combat units in that City/Village must
+    have at least one Game-Turn's worth of Stores, be able to fire all weapons twice, and have enough
+    fuel for all units to move 20 CP's." ALL WEAPONS, TWICE -- the emphasis is this entry's, not the
+    book's. Read 64.73 the way its own author reads it two columns away and
+    "three times" means three firings of EACH function: a barrage + anti-armor + assault battalion
+    owes 3 x (4+3+2) x TOE where the code charges 3 x 2 x TOE, i.e. 4.5x, not 2x. The magnitude
+    slice must A/B 1x to 4.5x and cite 63.92. En passant, 63.92's "one Game-Turn's worth of Stores"
+    independently corroborates the 5.1 Week -> Game-Turn conversion this entry makes above.)
+  * THE IN-HEX FORM IS TRANSCRIBED FOR THREE COMMODITIES AND INFERRED FOR THE FOURTH, which the
+    "(49.15/50.15/51.15)" citation at the code did not say. Those three clauses are Fuel, Ammunition
+    and Stores. Section 52 read whole on the scan (folio 21, 52.0 through 52.52, and 52.53 on folio
+    22) prints no in-hex clause for Water at all; the nearest support is [52.13], "To obtain water, a
+    unit moves into a hex with a well", which is a MOVEMENT instruction. Applying supply.in_hex_draw
+    to WATER is therefore an inference by analogy with the other three -- flagged per rule 1 of this
+    port, and measured to cost nothing today (arms A1 and A2 above are byte-identical).
+  * campaign_claim.could_be_fed is a proxy. The honest planning question is 64.73's own test asked of
+    the board the plan CREATES -- the unit on the city with the depot the module is about to walk
+    there. That changes what the policy proposes, so it is a measured slice of its own.
+  * game.campaign_policy._can_trace still walks the 32.16 trace and its docstring used to claim it
+    was this predicate. The claim is corrected; the heuristic is left, flagged as debt.
+--------------------------------------------------------------------------------------------------
+NOT RE-BASELINED 2026-08-02 (A PURE REFACTOR) -- THE THREE PER-OPERATIONS-STAGE LEDGERS NOW SHARE ONE
+IMPLEMENTATION, engine._OpStageLedger. Nothing changes; the entry exists to record that nothing did,
+and to keep the deleted symbols greppable from the entries below that still name them.
+
+    ca0eec96abbd / 76371e5939a0   (UNCHANGED, read live twice on this tree)
+
+WHY. The same defect had shipped TWICE from the same shape -- a per-Operations-Stage ledger cleared
+by a line inside run()'s `for stage in (1, 2, 3)` loop, which any caller that drives the stages
+itself reads as stale or spent. It was found and fixed in the [55.3] harbour tonnage ledger
+(024d042) and then shipped again in the [52.42] water ledger (49b00f2), whose round-2 entry below
+records that the correct pattern was named in this very file at the time. A pattern that lives in
+each author's memory keeps recurring; this one now lives in a class, with both incidents in its
+docstring and a DO-NOT-ADD-A-RESET-HERE note on the line in run() where the mistake gets made.
+
+WHAT MOVED, all in game/engine.py. _Run.port_tons_this_stage/_stamp, water_billed_this_stage/_stamp
+and the five _rail_* fields with _Run._expire_rail_stage (all now deleted, so a grep for them lands
+here) become three _OpStageLedger instances -- r.port_tons, r.water_billed, r.rail_stage -- each
+owning a private (turn, stage) stamp and exposing ONE door, `current`, so reads and writes expire
+alike and there is no reset to call from outside. The railway's four facts are one _RailStage value
+under one stamp, which is what the old comment "must never disagree about which stage that is" was
+asking for. engine._port_tons() and engine._water_billed() keep their names and signatures, so every
+call site and the tests that seed them are untouched.
+
+PROVEN UNCHANGED, both benchmarks and four campaigns at max_turns=12 through scenario.campaign's own
+kwarg (the recipe below), read on the pre-refactor tree and twice on this one, all six byte-identical:
+
+    rommel ca0eec96abbd   siege 76371e5939a0
+    campaign  1941 8e5ca52dca17   7 312512305717   4 f1c874bfbe7f   2026 68be27e28f3f
+
+TWO TESTS RESTATED, neither weakened. tests/test_coastal_shipping.py read r.port_tons_this_stage
+directly (now through engine._port_tons, the ledger's one accessor) and, in the partial-unload case,
+wiped that dict from outside to stand in for a new Operations Stage -- which asserted only that the
+remainder lands given an empty budget and said nothing about what empties it. It now emits
+STAGE_ADVANCED and lets the stamp do the emptying, which is the mechanism the case is named for.
+
+NOT CONVERTED, DELIBERATELY, AND FLAGGED AT THE LINE: r.ports_bombed_this_stage ([55.18]),
+r.forts_bombed_this_stage ([41.37]) and r.building ([24.12]) are still cleared inside run() -- the
+same shape, and the same latent leak. They are left because converting them is a BEHAVIOUR change
+and this slice is a refactor. Under run() as it stands the conversion looks inert (_port_regen reads
+the bomb ledger before STAGE_ADVANCED is emitted, and r.building.clear() lands after it), but that
+is a fact about today's beat order, not a proof -- and for the callers the class exists to protect,
+the ones that drive the Operations Stages themselves, converting them changes what they see, which
+is exactly the fix they need and exactly what must be measured rather than assumed. Their own slice.
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-08-02 -- CAUSE: [52.42], THE CPA CONDITION ON THE VEHICLE'S WATER POINT. A single
 printed conditional clause that the engine did not carry, billed at the one beat in the Operations
 Stage where it cannot be evaluated.

@@ -3,9 +3,10 @@ feeds -- reframe the seats from RUSHING the single far objective to HOLDING the 
 SUPPLIED. The whole reframing is gated on the observation carrying `victory_cities` (present only
 under CampaignVictory), so Rommel's Arrival keeps its byte-locked single-objective framing.
 
-The per-unit hold-ground flag is `can_hold` (= CampaignVictory._supplied, traces BOTH fuel and
-ammo). It is named distinctly from the movement-phase fuel-gate `supplied` (can this unit pay to
-MOVE this stage -- byte-locked on rommel) and the ammo-only `defensible` (defends at full strength).
+The per-unit hold-ground flag is `can_hold` (= CampaignVictory._supplied: does the unit HAVE, in
+its own hex, the Week of Stores and Water and the Fuel and Ammunition 64.73 demands of a holder?).
+It is named distinctly from the movement-phase fuel-gate `supplied` (can this unit pay to MOVE this
+stage -- byte-locked on rommel) and the ammo-only `defensible` (defends at full strength).
 """
 from __future__ import annotations
 
@@ -49,7 +50,7 @@ def test_campaign_observation_carries_victory_cities_and_can_hold():
     combat_views = [u for u in obs["your_units"] if "can_hold" in u]
     assert combat_views
     # can_hold is EXACTLY the predicate the campaign scores on (CampaignVictory._supplied): the
-    # agent sees the very test it will be graded by (traces both fuel AND ammo).
+    # agent sees the very test it will be graded by (all four commodities, in the hex).
     for u in st.living(Side.AXIS):
         if u.is_combat:
             view = next(v for v in obs["your_units"] if v["id"] == u.id)

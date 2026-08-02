@@ -790,10 +790,18 @@ def _without_staging(state: GameState) -> GameState:
 
 
 def _can_trace(state: GameState, u) -> bool:
-    """The rule-64.73 occupation quality-test, asked of a unit anywhere: can it draw both Fuel (its
+    """A POLICY's cheap supply sanity-check, asked of a unit anywhere: can it draw both Fuel (its
     per-model rate -- FOOT infantry burns none at all, 49.12) and Ammunition off a dump inside the
-    32.16 cpa/2 trace? This is the same question game.campaign_victory._supplied asks, written
-    without the victory object so the movement layer can ask it too."""
+    32.16 cpa/2 trace?
+
+    IT IS NOT THE RULE-64.73 TEST AND THIS DOCSTRING USED TO SAY IT WAS ("the same question
+    game.campaign_victory._supplied asks"). It never was: 64.73 asks for 20 CP of Fuel and THREE
+    firings where this asks one turn's bare rate and ONE firing. Since 64.73's test moved in-hex and
+    grew its Stores/Water week (campaign_victory._supplied), the two are not even the same SHAPE --
+    this one still walks the abstract 32.16 trace, which rule 3 of this port says does not apply.
+    Left as it stands rather than quietly re-pointed: it is a heuristic inside a scripted policy, its
+    magnitudes are its own, and changing what a policy proposes is a behaviour change that belongs in
+    a measured slice of its own. FLAGGED as debt here so the next reader is not misled twice."""
     return (supply.plan_draw(state, u, supply.FUEL, supply.fuel_rate(u)) is not None
             and supply.plan_draw(state, u, supply.AMMO, supply.ammo_cost(u, phasing=True)) is not None)
 
@@ -860,7 +868,10 @@ def keep_in_trace(orders: list, state: GameState, side: Side) -> list:
     IT IS LAID OVER THE GENERAL ADVANCE ALONE (take_and_hold_moves), and that is the whole design.
     The standing orders' DETACHMENTS are not filtered by it, because each of them has already
     answered the same question in a better-informed way: a city claim is only made where the unit
-    could be FED (campaign_claim.can_be_fed -- rule 64.73's own trace test, asked of the destination),
+    could be FED (campaign_claim.can_be_fed -- the PLANNER's reach question over the 32.16 line,
+    asked of the destination; this line called it "rule 64.73's own trace test" until 2026-08-02 and
+    that is false twice over, because 64.73 asks for a Week of Stores and Water too and because since
+    campaign_victory._supplied moved in-hex the rule has no trace at all -- see _can_trace below),
     and a 32.33 DESERT COLUMN is in supply BY CONSTRUCTION -- its depot ends the Movement Phase in its
     own hex (engine._supply_movement runs after engine._movement), which satisfies not merely the
     32.16 trace at distance zero but the stricter thing the full logistics game asks: 49.15, "for fuel

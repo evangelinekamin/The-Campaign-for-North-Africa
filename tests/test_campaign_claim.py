@@ -198,14 +198,83 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
 
     The take-and-hold thesis this test guards is untouched in every particular -- an army keeps what
     it banks, goes and gets the rest, and never double-banks a city. What moved is which side stands
-    on the one contested forward city, for the fifth time, and this time it moved back."""
+    on the one contested forward city, for the fifth time, and this time it moved back.
+
+    *** RESTATED 2026-08-02, CAUSE [64.73]: THE OCCUPATION QUALITY-TEST STOPPED ASKING THE ABSTRACT
+    GAME. *** campaign_victory._supplied now asks the rule's own question -- a Week of Stores and
+    Water and three firings and 20 CP of Fuel, HELD IN THE HEX -- where it used to trace Fuel and
+    Ammunition over the section-32.16 half-CPA line. That is a rule-3 repair, and it separates two
+    things this test had always been able to treat as one:
+
+        AXIS, CAMPAIGN_SEED, GT30    OCCUPIED  Giarabub, Bardia, Sollum, Tobruk, Benghazi
+                                     BANKED    Tobruk, Benghazi
+        COMMONWEALTH                 OCCUPIED  Mersa Matruh, Sidi Barrani
+                                     BANKED    Mersa Matruh, Sidi Barrani
+
+    THE ARMY DID NOT MOVE. The Axis stands on exactly the cities it stood on; three of them simply
+    stop scoring. So the assertion below splits: OCCUPIED is the take-and-hold, BANKED is the
+    scoreboard, and the gap between them is a measurement of the supply chain rather than of the
+    policy.
+
+    *** WHY THEY STOP SCORING, RE-DERIVED 2026-08-02 -- AND THE FIRST ANSWER NAMED THE WRONG CLAUSE
+    AND THE WRONG ARMY. *** This paragraph said all three garrisons "cannot show a Week of Stores
+    where they stand", caused by GERMAN units carrying no [4.43b] first-line trucks against a
+    Commonwealth battalion carrying its [53.11] ration. MEASURED clause by clause on this very board
+    (CAMPAIGN_SEED, GT30), and on the four A/B seeds of tests/baselines.py, every board agreeing:
+
+        city          holder                          clause that FAILS   what stands under it
+        Giarabub      6 x IT-Grbub (Italian)          AMMUNITION only     AX-Well-Giarabub ONLY --
+                                                      (2 of the 6 also    the oasis, which holds
+                                                      Fuel)               124,996,400 Stores, so the
+                                                                          STORES clause is SATISFIED
+        Bardia        IT-Barka (Italian)              STORES only         AX-Stage-Bardia, holding
+                                                                          146 Ammunition and NO Stores
+        Sollum        IT-1-CCNN (Italian)             AMMUNITION+STORES   AX-Well-Sollum ONLY -- water,
+                                                                          no Stores, no Ammunition
+
+    THREE CORRECTIONS FALL OUT OF THAT TABLE. (1) The clause is not uniformly Stores: one city fails
+    on Ammunition alone, one on Stores alone, one on both -- and at Giarabub the old sentence is not
+    merely unmeasured but refuted by a printed rule, [52.3] OASES: "Units sitting in Oases have all
+    the stores and water they need to last them the entire game" (verbatim, folio 21). (2) Every
+    failing garrison is ITALIAN, and NOT ONE German counter stands on a 64.73 city on any of the five
+    boards -- at GT30 there are 17 German combat units alive here and all 17 are elsewhere, so
+    [4.43b] could not flip Giarabub, Bardia or Sollum whatever it landed. (The other four boards stop
+    at Game-Turn 12, before the DAK arrives, so no German counter is on them at all.)
+    (3) It does NOT spare the Commonwealth: on all four A/B
+    seeds BR-2SctGds fails the same STORES clause at Sidi Barrani (own ration 5 / 2 / 6 / 13 Points
+    against a 24-Point week), and banks it here only because at GT30 it carries exactly 20 of 20.
+    The Axis loses more POINTS because its three failing cities are worth 140 Axis V.P. on 64.73's
+    own table against Sidi Barrani's 10 Commonwealth V.P. -- an asymmetry of the table, not of the
+    lorries.
+
+    WHAT IT ACTUALLY MEASURES IS THE LAST MILE. 64.73 asks for a WEEK, and no organic pool the book
+    gives a counter is a week deep: [51.0] gives no organic Stores at all (what a counter holds is a
+    [53.11] first-line buffer the war spends -- 1 of 57 Italian and 0 of 17 German combat units hold
+    any Stores at GT30, against 25 of 67 Commonwealth), and [50.0]'s ammunition load is ONE firing
+    against 64.73's three. So the clause that fails is decided by WHAT DUMP STANDS UNDER THE
+    GARRISON, which is this project's faucet debt and not its OOB debt. That carriage asymmetry is
+    recorded as a fact with no cause attached to it: the reinforcement half of [4.43b] is already
+    WIRED (tests/test_first_line.py), a first-line truck is CAPACITY rather than loaded rations, and
+    these three cities turn on the forward dumps either way."""
     fin = _run(30).final
     cw, ax = _banked(fin, Side.ALLIED), _banked(fin, Side.AXIS)
     # The Commonwealth holds Sidi Barrani (see the RESTATED notes above, measured seed 4, GT30).
     assert "Sidi Barrani" in cw
     # Sollum stays Axis -- the (ENG) correction's own measured gain, which the 1st Libyan repair
-    # did NOT give back at this seed.
-    assert "Sollum" in ax, f"the Axis lost Sollum: {sorted(ax)}"
+    # did NOT give back at this seed. SPLIT IN TWO 2026-08-02 (the 64.73 repair, see the note above):
+    # the Axis still OCCUPIES Sollum and has never been driven off it, and it no longer BANKS it,
+    # because 64.73 as printed wants three firings of Ammunition and a Week of Stores IN THE HEX and
+    # the Italian battalion standing there has a well under it and nothing else. Asserting both is
+    # strictly MORE than the old `"Sollum" in ax`: the take-and-hold thesis (an army goes and gets a
+    # city and then keeps it) is pinned on the OCCUPATION, and the scoreboard tells the separate
+    # truth about what that occupation is worth.
+    assert campaign_claim._occupied(fin, Side.AXIS, SOLLUM), \
+        "the Axis lost Sollum -- the take-and-hold itself has regressed, not merely its score"
+    assert "Sollum" not in ax, (
+        "Sollum is banked again -- 64.73's Ammunition and Stores are now reaching the border "
+        "cities. INVERT THIS: measured, this hex fails on AMMUNITION AND STORES because only "
+        "AX-Well-Sollum stands on it, so what gives it back is a stocked forward dump (the last "
+        "mile), not [4.43b] -- no German counter stands on a 64.73 city on any measured board")
     # Mersa Matruh is COMMONWEALTH-OCCUPIED and BANKED at GT30 (see the 2026-08-01 note above) --
     # Selby Force stands on the terminus and has never been driven off it.
     assert campaign_claim._occupied(fin, Side.ALLIED, MATRUH), \
@@ -219,13 +288,29 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
     # NOT re-pinned here: the depot's own residual Ammunition. The 2026-07-25 note above withdrew
     # `matruh[0].ammo > 0` for a reason that still stands whatever the number reads today -- it is a
     # transit node's leftovers, not the banking this test is about -- and the capability it stood
-    # for is pinned where it cannot silently flip, on the garrison's 64.73 trace in
-    # tests/test_campaign_concentration.py. (It measures 1,416 Ammunition / 7,842 Fuel now, up from
-    # dry, which is the 54.32 schedule's doing and is recorded rather than asserted.)
+    # for is pinned where it cannot silently flip, on the Commonwealth garrison's own supply in
+    # tests/test_campaign_concentration.py (whose instrument is now the can-move-and-fire draw, not
+    # the 64.73 hold-ground test; see its 2026-08-02 note). (It measures 1,416 Ammunition /
+    # 7,842 Fuel now, up from dry, which is the 54.32 schedule's doing and is recorded not asserted.)
     # The AXIS -- which used to bank whatever the garrison order happened to pin and throw the rest
     # away -- now holds its own rear: BENGHAZI (its port of arrival, never once garrisoned in 111
-    # Game-Turns) and SOLLUM, on top of the Tobruk and Bardia it opens the war standing on.
-    assert {"Tobruk", "Bardia"} <= ax, f"the Axis threw away what it opened holding: {sorted(ax)}"
+    # Game-Turns) and SOLLUM, on top of the Tobruk and Bardia it opens the war standing on. (Holds,
+    # not banks: since 2026-08-02 Sollum and Bardia are occupied and unbanked -- see just below.)
+    # SPLIT THE SAME WAY AS SOLLUM, 2026-08-02 (the 64.73 repair -- see the note above). "Threw away
+    # what it opened holding" is a claim about the ARMY, so it is asserted on OCCUPATION, where it is
+    # still exactly true; BARDIA is occupied and unbanked, though NOT for quite the same reason as
+    # Sollum (measured: Bardia has AX-Stage-Bardia under it holding 146 Ammunition and ZERO Stores,
+    # so it fails STORES ALONE, where Sollum has only a well and fails Ammunition AND Stores); and
+    # TOBRUK is banked because its 500-point staging dump is standing under the garrison, which is
+    # the same fact told the other way round.
+    for name, ax_hex in (("Tobruk", TOBRUK), ("Bardia", BARDIA)):
+        assert campaign_claim._occupied(fin, Side.AXIS, ax_hex), \
+            f"the Axis threw away {name}, which it opened the war holding"
+    assert "Tobruk" in ax, f"the Axis no longer banks its own fortress: {sorted(ax)}"
+    assert "Bardia" not in ax, (
+        "Bardia is banked again -- measured, this hex fails on STORES ALONE, its own staging dump "
+        "standing under it stocked with Ammunition and dry of rations. INVERT IT WITH SOLLUM: both "
+        "come back when the last mile carries Stores forward, and neither turns on [4.43b]")
     assert "Benghazi" in ax, f"the Axis still does not garrison its own port: {sorted(ax)}"
     assert not (cw & ax)                                    # a city is banked by at most one side
 
@@ -315,18 +400,35 @@ def test_you_do_not_besiege_a_city_you_could_not_hold():
     """The ONE clause that sorts the two fortresses, with no fortress special-case anywhere. Rule
     15.82 grants Bardia and Tobruk NO EVICTION, so an assault will never move those garrisons and a
     policy that throws men at them forever is just bleeding. The take-and-hold does not know they are
-    fortresses -- it only asks whether it could FEED a garrison there (the 64.73 trace test), and
-    that answer, by itself, sends the army to Bardia and leaves Tobruk alone.
+    fortresses -- it only asks whether it could FEED a garrison there, and that answer, by itself,
+    sends the army to Bardia and leaves Tobruk alone.
 
     Bardia is three hexes from the Sollum depot the take-and-hold has just filled; Tobruk is not near
-    anything the Commonwealth owns."""
+    anything the Commonwealth owns.
+
+    *** THE ATTRIBUTION WAS FALSE AND THE TEST HAD GONE VACUOUS BEHIND IT. Both repaired 2026-08-02.
+    *** This docstring called the gate "the 64.73 trace test". It is not one, and after the in-hex
+    repair rule 64.73 has no trace at all: the gate is campaign_claim.could_be_fed, the planner's own
+    32.16 REACH heuristic, which was split off campaign_victory._supplied when that predicate became
+    the rule's real one. THE WITNESS BELOW WENT WITH THE NAME AND NOT WITH THE GATE. It read
+    victory._supplied -- which, before the split, WAS could_be_fed to the Point (_PLANNER_CP 20 /
+    _PLANNER_FIRINGS 3 are the very magnitudes it inherited) and afterwards is a different question
+    entirely. The two are NOT ordered: MEASURED at CAMPAIGN_SEED over 67 Commonwealth combat units x
+    the 10 cities, they agree on 87 pairs and disagree on 171 (124 _supplied-only, 47
+    could_be_fed-only). At Bardia and at Tobruk _supplied answered YES for 14 units apiece where
+    could_be_fed answers NO for all 67 -- so `feedable` read True at both, the `if` guard was False
+    at both, and THIS TEST EXECUTED NO ASSERTION AT ALL. It is pointed back at the gate it is named
+    for, which is the predicate that stood here before the split; the assertion fires again at both
+    cities, and it fires on the thing the docstring above describes."""
     fin = _run(30).final
     cw = [u for u in fin.living(Side.ALLIED) if u.is_combat and u.strength >= 1]
     plan = {c.city: c for c in campaign_claim.claims(fin, Side.ALLIED, escort=True)}
 
-    from dataclasses import replace
-    feedable = {ax: any(fin.victory._supplied(fin, replace(u, hex=ax)) for u in cw)
+    feedable = {ax: any(campaign_claim.could_be_fed(fin, u, ax) for u in cw)
                 for ax in (BARDIA, TOBRUK)}
+    assert not any(feedable.values()), (
+        "a Commonwealth unit could now be fed at Bardia or Tobruk -- the `if` below has stopped "
+        "guarding anything and this test is inert; re-derive the witness, do not delete it")
     for ax, name in ((BARDIA, "Bardia"), (TOBRUK, "Tobruk")):
         if not feedable[ax] and fin.victory._occupier(fin, ax) != Side.ALLIED:
             assert ax not in plan, f"{name} is besieged but no unit could be supplied there"

@@ -325,7 +325,7 @@ def test_load_is_trimmed_to_the_ports_remaining_tonnage():
     loaded = [e for e in r.events if e.kind == EventKind.COASTAL_SHIP_LOADED]
     assert len(loaded) == 1 and loaded[0].payload["cargo"] == {"FUEL": 800}
     assert r.state.ship(ship.id).fuel == 800
-    assert r.port_tons_this_stage["PORT-A"] == 100.0
+    assert engine._port_tons(r)["PORT-A"] == 100.0     # read through the ledger's one accessor
 
 
 def test_second_ship_finds_the_ports_tonnage_spent_this_operations_stage():
@@ -374,7 +374,11 @@ def test_unload_is_partial_when_the_receiving_port_is_nearly_full_and_finishes_n
     _coastal_shipping(r, _StubPolicy(), Side.AXIS)
     assert r.state.supply("D-B").fuel == 400
     assert r.state.ship(ship.id).fuel == 400           # the rest is still aboard
-    r.port_tons_this_stage = {}                        # the next Operations Stage opens a fresh budget
+    # The next Operations Stage opens a fresh budget -- and it opens it BY ITSELF. This line used
+    # to wipe the ledger dict from outside, which asserted the remainder lands given an empty
+    # budget and said nothing about what empties it; the stage boundary is the thing under test, so
+    # move the clock and let engine._OpStageLedger's (turn, stage) stamp do the emptying.
+    r.emit(EventKind.STAGE_ADVANCED, Side.SYSTEM, "SYSTEM", {"stage": 2})
     _coastal_shipping(r, _StubPolicy(), Side.AXIS)
     assert r.state.supply("D-B").fuel == 800
     assert r.state.ship(ship.id).fuel == 0

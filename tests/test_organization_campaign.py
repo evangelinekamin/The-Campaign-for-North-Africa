@@ -180,11 +180,28 @@ def test_15_53_organization_size_tier_fires_in_a_full_campaign():
     size AGAINST him.
 
     (History: this fixture was seed 1941 @ 6 turns until the 6.21/15.88 movement-discipline fix made
-    the early concentration a beat more conservative; scratchpad/port/movement-discipline-spec.md.)"""
-    core = _campaign_org_size_tiers(CAMPAIGN_SEED, max_turns=6)
+    the early concentration a beat more conservative; scratchpad/port/movement-discipline-spec.md.)
+
+    *** RESTATED 2026-08-02, CAUSE [64.73], AND THE SHOPPED SEED IS GONE WITH IT. *** The occupation
+    quality-test stopped asking the section-32.16 abstract trace and started asking the rule's own
+    in-hex question (campaign_victory._supplied); game.campaign_claim scores the live board with that
+    same predicate, so it moves what the campaign policy garrisons and with it every trajectory from
+    Game-Turn 1. Both legs moved: at six Game-Turns the canonical seed now yields ONE tier row, and
+    seed 7 no longer produces the rarer defender-side one at all.
+
+    THE THRESHOLD IS NOT LOWERED AND NO SEED IS SHOPPED -- both were available and both would have
+    weakened this. What is widened is the FOLD, by two Game-Turns, and the reward is that the
+    canonical seed now carries BOTH legs on ONE campaign. Measured on this tree at CAMPAIGN_SEED, by
+    fold length: 6 -> 1 tier row, 7 -> 4 (3 attacker-side), 8 -> 10 (6 attacker-side, and the
+    defender-side tier fires at Game-Turns 7 and 8), 9 -> 15, flat at 15 thereafter. So the rarer leg
+    is no longer pinned to a second, chosen campaign; it is pinned where the docstring above says the
+    core proof belongs, on the project's own canonical seed. (NB the fold length is part of the
+    fixture, not a window on a fixed war: scenario.campaign builds its convoy, air and Malta
+    schedules over the horizon it is given, so max_turns=6 and max_turns=8 are two different wars and
+    a witness measured at one says nothing about the other. Both numbers above were measured at the
+    fold they are quoted for.)"""
+    core = _campaign_org_size_tiers(CAMPAIGN_SEED, max_turns=8)
     assert len(core) >= 2, "the [15.53] Organization-Size tier is inert -- the setup tree does not fire"
     assert any(p["attacker_size"] >= 2 for p in core), "a formation on the attack must carry its size"
-
-    defended = _campaign_org_size_tiers(7, max_turns=6)
-    assert any(p["defender_size"] >= 2 for p in defended), \
+    assert any(p["defender_size"] >= 2 for p in core), \
         "a formation standing on the defence must also register its Organization Size against the attacker"

@@ -12,8 +12,8 @@ still a placeholder CRT (the real land combat — rule 11 — is the next slice)
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, replace
-from typing import Protocol
+from dataclasses import dataclass, field, replace
+from typing import Callable, Protocol
 
 from . import (air, basing, calendar, combat, combat_tables, construction, cp_costs, fortifications,
                initiative, logistics_data, malta, minefields, movement, organization, rail, repair,
@@ -81,6 +81,79 @@ class RunResult:
     reason: str
 
 
+class _OpStageLedger:
+    """A run-scoped value that is REBORN EMPTY at every Operations Stage boundary, on its own
+    (turn, stage) stamp. THE ONE IMPLEMENTATION OF A PER-OPERATIONS-STAGE LEDGER: build one of
+    these, do not hand-roll a fourth.
+
+    WHY, IN TWO INCIDENTS. The [55.3] harbour tonnage ledger first shipped as a reset inside
+    engine.run()'s `for stage in (1, 2, 3)` loop, so any caller that drove the stages itself saw a
+    whole Game-Turn's landing collapse into one stage (fixed 024d042). The [52.42] water ledger then
+    shipped the very same way despite that fix standing in this file, and leaked twice over -- worst
+    of all inside run() itself, where _replacement_spend charges [19.68]'s rebuild BEFORE the stage
+    loop and so read the previous Game-Turn's Operations Stage 3 ledger (fixed 49b00f2).
+
+    WHY SELF-EXPIRY BEATS A RESET. A reset is read a long way from where the loop lives, so every
+    caller that drives the Operations Stages itself -- a test, a measurement driver, or one of
+    run()'s own Game-Turn-level beats -- silently inherits a stale or spent ledger, and silence is
+    the whole defect: nothing raises, the numbers are merely wrong. A stamp cannot be forgotten,
+    because the ledger is the thing that checks it.
+
+    ONE DOOR, `current`, and it is the reason both incidents are structurally closed: every read and
+    every write reaches the value through it, so reads and writes expire alike. There is no reset(),
+    no clear() and no setter to call from outside, and the stamp is private -- and an outsider who
+    rebinds the attribute holding this object destroys the `current` it then has to call, which is a
+    loud failure where the old shape was a quiet one.
+
+    A LEDGER WHOSE FACTS MUST AGREE ABOUT WHICH STAGE THEY DESCRIBE HOLDS THEM IN ONE VALUE (see
+    _RailStage, which is four such facts): two ledgers are two stamps, and two stamps can disagree.
+    """
+
+    def __init__(self, run: "_Run", empty: Callable[[], object]):
+        self._run = run
+        self._empty = empty
+        self._value = empty()
+        self._stamp: tuple[int, int] | None = None
+
+    @property
+    def current(self):
+        """This Operations Stage's ledger, emptied first if the stage has turned over since the
+        last touch. The stamp is (turn, stage), which is exactly Unit.cp_used's own [6.16] window --
+        apply._reset_opstage clears cp_used at TURN_ADVANCED and at STAGE_ADVANCED, the two events
+        that move this stamp -- so a ledger of what a counter has spent this stage and the CPA
+        budget it spent it out of can never disagree about when the stage began."""
+        stamp = (self._run.state.turn, self._run.state.stage)
+        if self._stamp != stamp:
+            self._stamp = stamp
+            self._value = self._empty()
+        return self._value
+
+
+@dataclass
+class _RailStage:
+    """THE AXIS RAILWAY'S FOUR FACTS ABOUT ONE OPERATIONS STAGE, in one _OpStageLedger value so
+    they expire together and can never disagree about which stage that is.
+
+      [54.43] `tons` -- tons already hauled this stage against the 300 per unit of Rolling Stock,
+        PER RUN (keyed by the run's lowest Coord), because the 300 tons belong to the block the
+        stock stands on and two disjoint blocks each carrying a locomotive each get their own.
+      [54.43] `direction` -- the ONE direction that block's trains are running in this stage ("300
+        Tons of Supplies in any ONE direction during an Operations Stage"), keyed the same way,
+        absent until that run's first train fixes it.
+      [54.33] `commodity` -- the ONE type of supply the railroad is carrying this stage ("it may
+        move fuel, ammunition, or stores -- not any combination of the three"), None until a train
+        runs. NOT per run: 54.33's subject is "the railroad", one system, unlike 54.43's per-block
+        tonnage and direction, which are what one activation bought.
+      [54.35] `landed` -- what the trains SET DOWN this stage, dump id -> commodity -> Points:
+        supply that is "considered unloaded" and so "may not be moved that Operations Stage".
+    """
+
+    tons: dict = field(default_factory=dict)
+    direction: dict = field(default_factory=dict)
+    commodity: str | None = None
+    landed: dict[str, dict[str, int]] = field(default_factory=dict)
+
+
 class _Run:
     """Mutable driver wrapping immutable state — every change flows through apply()
     so live state equals fold(initial, events) by construction."""
@@ -120,11 +193,11 @@ class _Run:
         # sites that can trigger it (see _draw_stage_water). It records the ATTEMPT and not the
         # payment, because a second attempt in the same stage would raise a second WATER_SHORTFALL
         # and advance 52.53's "consecutive Operations Stage" counter twice inside one stage.
-        # Read ONLY through _water_billed(), which expires it at the (turn, stage) boundary -- the
-        # 55.3 port ledger's discipline, and for the reason spelled out there; empty for every
-        # scenario that models no Water at all, which is what keeps those byte-identical.
-        self.water_billed_this_stage: set[str] = set()
-        self.water_billed_stamp: tuple[int, int] | None = None
+        # Read ONLY through _water_billed(), i.e. through _OpStageLedger, which expires it at the
+        # (turn, stage) boundary -- see that class for why a reset in run()'s stage loop is not an
+        # option here; empty for every scenario that models no Water at all, which is what keeps
+        # those byte-identical.
+        self.water_billed = _OpStageLedger(self, set)
         # [55.18] the ports that lost one or more Efficiency Levels to Enemy bombs THIS
         # Operations Stage (populated by _air_port). A port in this set does not regenerate at
         # the end of the stage; one that was left alone (or only rolled a [41.5] result of 0)
@@ -139,30 +212,13 @@ class _Run:
         # V.D) and Axis coastal shipping (_coastal_shipping, 56.3) draw on the SAME budget:
         # 56.27 says outright that coastal cargo may not be shipped over a port's capacity, and
         # 48 V.C.7 notes that coastal shipping "is limited only by the port capacities".
-        # Read ONLY through _port_tons(), which expires it at the (turn, stage) boundary; empty
-        # for every port-less scenario.
-        self.port_tons_this_stage: dict[str, float] = {}
-        self.port_tons_stamp: tuple[int, int] | None = None
-        # THE AXIS RAILWAY'S PER-OPERATIONS-STAGE LEDGER (54.33/54.35/54.43), all three entries
-        # expiring together at the (turn, stage) boundary under _expire_rail_stage() -- the same
-        # self-expiring discipline as the 55.3 port ledger above, and for the same reason.
-        #   [54.43] tons already hauled this stage, against the 300 per unit of Rolling Stock --
-        #   PER RUN (keyed by the run's lowest Coord), because the 300 tons belong to the block the
-        #   stock stands on and two disjoint blocks each carrying a locomotive each get their own.
-        self._rail_tons: dict = {}
-        #   [54.43] and the ONE direction that block's trains are running in this stage ("300 Tons
-        #   of Supplies in any ONE direction during an Operations Stage"), keyed the same way, None
-        #   until that run's first train fixes it.
-        self._rail_direction: dict = {}
-        #   [54.33] the ONE type of supply the railroad is carrying this stage ("it may move fuel,
-        #   ammunition, or stores -- not any combination of the three"), None until a train runs.
-        #   NOT per run: 54.33's subject is "the railroad", one system, unlike 54.43's per-block
-        #   tonnage and direction, which are what one activation bought.
-        self._rail_commodity: str | None = None
-        #   [54.35] what the trains SET DOWN this stage, dump id -> commodity -> Points: supply
-        #   that is "considered unloaded" and so "may not be moved that Operations Stage".
-        self._rail_landed: dict[str, dict[str, int]] = {}
-        self._rail_stamp: tuple[int, int] | None = None
+        # Read ONLY through _port_tons(), i.e. through _OpStageLedger, which expires it at the
+        # (turn, stage) boundary; empty for every port-less scenario.
+        self.port_tons = _OpStageLedger(self, dict)
+        # THE AXIS RAILWAY'S PER-OPERATIONS-STAGE LEDGER (54.33/54.35/54.43) -- four facts about
+        # one Operations Stage, held in ONE _RailStage under ONE stamp so they expire together and
+        # cannot disagree about which stage that is. Read through the eight accessors below.
+        self.rail_stage = _OpStageLedger(self, _RailStage)
         # [48 III / 48 V.D] each due convoy's SURVIVED manifest for the current Game-Turn:
         # convoy id -> {"dest": dump id|None, "cargo": remaining points, "rail": bool}. The
         # convoy is bombed at sea ONCE per turn (interdiction, strategic 39.13) and its 56.15
@@ -178,67 +234,44 @@ class _Run:
         # bookkeeping, and dies with the run. Empty for every spec that needs no memory.
         self.victory_scratch: dict = {}
 
-    def _expire_rail_stage(self) -> None:
-        """Roll the whole 54.33/54.35/54.43 rail ledger over at the (turn, stage) boundary.
-
-        Self-expiry rather than a reset in run()'s stage loop, for the same reason the 55.3 port
-        ledger uses it: a caller that drives the stages itself would otherwise inherit a spent
-        allowance and see a whole Game-Turn's haul collapse into one stage. ONE stamp for all four
-        entries -- they are four facts about the same Operations Stage and must never disagree
-        about which stage that is."""
-        stamp = (self.state.turn, self.state.stage)
-        if self._rail_stamp != stamp:
-            self._rail_stamp = stamp
-            self._rail_tons = {}
-            self._rail_direction = {}
-            self._rail_commodity = None
-            self._rail_landed = {}
-
     def rail_tons_this_stage(self, run_key) -> float:
         """[54.43] Tons the Axis railway has hauled on the run keyed by `run_key` so far this
         Operations Stage."""
-        self._expire_rail_stage()
-        return self._rail_tons.get(run_key, 0.0)
+        return self.rail_stage.current.tons.get(run_key, 0.0)
 
     def book_rail_tons(self, run_key, tons: float) -> None:
         """[54.43] Charge `tons` against that run's 300-per-locomotive allowance."""
-        self._expire_rail_stage()
-        self._rail_tons[run_key] = self._rail_tons.get(run_key, 0.0) + tons
+        hauled = self.rail_stage.current.tons
+        hauled[run_key] = hauled.get(run_key, 0.0) + tons
 
     def rail_direction_this_stage(self, run_key):
         """[54.43] The one direction that run's trains are running in this Operations Stage
         (rail.EASTWARD / rail.WESTWARD), or None until its first train fixes it."""
-        self._expire_rail_stage()
-        return self._rail_direction.get(run_key)
+        return self.rail_stage.current.direction.get(run_key)
 
     def set_rail_direction(self, run_key, direction: int) -> None:
         """[54.43] Commit that run to one direction for the rest of the Operations Stage."""
-        self._expire_rail_stage()
-        self._rail_direction[run_key] = direction
+        self.rail_stage.current.direction[run_key] = direction
 
     @property
     def rail_commodity_this_stage(self) -> str | None:
         """[54.33] The one type of supply the Axis railway is carrying this Operations Stage, or
         None if no train has run yet."""
-        self._expire_rail_stage()
-        return self._rail_commodity
+        return self.rail_stage.current.commodity
 
     @rail_commodity_this_stage.setter
     def rail_commodity_this_stage(self, value: str) -> None:
-        self._expire_rail_stage()
-        self._rail_commodity = value
+        self.rail_stage.current.commodity = value
 
     def rail_landed_this_stage(self, supply_id: str, commodity: str) -> int:
         """[54.35] Points of `commodity` the Axis railway set down in dump `supply_id` THIS
         Operations Stage -- supply that "may not be moved that Operations Stage"."""
-        self._expire_rail_stage()
-        return self._rail_landed.get(supply_id, {}).get(commodity, 0)
+        return self.rail_stage.current.landed.get(supply_id, {}).get(commodity, 0)
 
     def record_rail_landing(self, supply_id: str, commodity: str, qty: int) -> None:
         """[54.35] Book freight as set down at `supply_id`, pinning it there for the rest of the
         Operations Stage."""
-        self._expire_rail_stage()
-        landed = self._rail_landed.setdefault(supply_id, {})
+        landed = self.rail_stage.current.landed.setdefault(supply_id, {})
         landed[commodity] = landed.get(commodity, 0) + qty
 
     def emit(self, kind: EventKind, side: Side, actor: str, payload: dict,
@@ -313,10 +346,19 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
         _stores_setup(r)                                # 48 IV: Stores Expenditure + 6% base evaporation
         for stage in (1, 2, 3):
             r.ports_bombed_this_stage = set()            # 55.18: this stage's bomb ledger starts empty
-                                                         # (55.3's per-port tonnage budget needs no reset
-                                                         # here -- _port_tons() expires it by stage, and
-                                                         # 52.42's per-stage Water ledger likewise, under
-                                                         # _water_billed())
+                                                         # DO NOT ADD A RESET HERE. A per-Operations-Stage
+                                                         # ledger belongs in an _OpStageLedger, which
+                                                         # expires on its own (turn, stage) stamp -- the
+                                                         # 55.3 port tonnage budget (_port_tons), the
+                                                         # 52.42 Water bill (_water_billed) and the
+                                                         # 54.33/54.35/54.43 rail ledger (_Run.rail_stage)
+                                                         # all do, two of them only after a reset on this
+                                                         # line had handed a stale or spent ledger to a
+                                                         # caller that drove the stages itself. See
+                                                         # _OpStageLedger for both incidents. The two
+                                                         # bomb ledgers here are the shape that class
+                                                         # replaces, left alone only because moving them
+                                                         # is a behaviour change and not a refactor.
             r.forts_bombed_this_stage = set()            # 41.37: one level of fortification per stage
             _rommel_arrival(r, stage)                    # 64.2: the Desert Fox lands (GT26.3) -- BEFORE the anchor
             _rommel_anchor(r)                            # 31.4: snapshot who he starts THIS stage with
@@ -2228,8 +2270,10 @@ def _sgsu_upkeep(r: _Run, side: Side) -> None:
 
     WATER RIDES THE SAME ABSTRACT TRACE AS THE WHOLE ARMY'S, AND THAT IS DELIBERATE (FLAGGED). Every
     land unit's rule-52 water is drawn with supply.plan_draw -- the abstract half-CPA trace -- because
-    the S8 investigation measured the naive in-hex water draw UNFAITHFUL: 52.0 says water "rarely runs
-    out", and until 52.45's water trucks are built the trace is the faithful proxy for their reach (in
+    the S8 investigation measured the naive in-hex water draw UNFAITHFUL: 52.0 says players "rarely
+    run out of water" (verbatim, folio 21; this line printed "rarely runs out" inside quotation marks
+    until 2026-08-02 and the book contains no such string -- the verb is "run" and the subject is the
+    Players), and until 52.45's water trucks are built the trace is the faithful proxy for their reach (in
     hex, campaign thirst went 12% -> 60% and the Eighth Army melted). An SGSU held to a stricter
     standard than the infantry it services would be that same unfaithfulness, and worse: [60.44]
     charts the Commonwealth air facilities NO WATER AT ALL, so an in-hex draw denied every RAF
@@ -3462,25 +3506,21 @@ WATERLESS_MOVE = "out of water this Operations Stage: vehicles may not move (52.
 def _water_billed(r: _Run) -> set[str]:
     """[52.42] the counters whose Water Point is already SETTLED in the CURRENT Operations Stage.
 
-    KEYED ON (turn, stage) SO IT EXPIRES BY ITSELF, the 55.3 port ledger's discipline (_port_tons)
-    and the 54.43 rail ledger's (_Run._expire_rail_stage). Self-expiry rather than a reset in run()'s
-    stage loop is deliberate, and here it is load-bearing twice over. It is read a long way from
-    where the loop lives, so any caller that drives the stages itself -- a test, a measurement
-    driver -- would otherwise silently inherit a spent ledger and see a whole Game-Turn's water
-    collapse into one stage. AND run() ITSELF DRIVES ONE BEAT OUTSIDE THE LOOP: _replacement_spend
-    charges [19.68]'s rebuild Capability Points at the GAME-TURN level, before `for stage in
-    (1, 2, 3)`, so a loop reset would hand that beat the PREVIOUS Game-Turn's Operations Stage 3
-    ledger and then wipe whatever it did bill while apply._reset_opstage has already re-opened
-    cp_used -- the same counter billable twice inside one 6.16 CPA window.
+    AN _OpStageLedger, SO IT EXPIRES BY ITSELF on (turn, stage) -- the 55.3 port ledger's discipline
+    and the 54.43 rail ledger's, all three now one implementation; read its docstring for why a
+    reset in run()'s stage loop is not an option. Here that self-expiry is load-bearing twice over.
+    It is read a long way from where the loop lives, so any caller that drives the stages itself --
+    a test, a measurement driver -- would otherwise silently inherit a spent ledger and see a whole
+    Game-Turn's water collapse into one stage. AND run() ITSELF DRIVES ONE BEAT OUTSIDE THE LOOP:
+    _replacement_spend charges [19.68]'s rebuild Capability Points at the GAME-TURN level, before
+    `for stage in (1, 2, 3)`, so a loop reset would hand that beat the PREVIOUS Game-Turn's
+    Operations Stage 3 ledger and then wipe whatever it did bill while apply._reset_opstage has
+    already re-opened cp_used -- the same counter billable twice inside one 6.16 CPA window.
 
     The stamp is exactly cp_used's own window, which is what makes the two agree: TURN_ADVANCED
     folds turn=N+1, stage=1 AND clears cp_used, so the turn-level rebuild and Operations Stage 1
     share one CPA window and must share one Water bill."""
-    stamp = (r.state.turn, r.state.stage)
-    if r.water_billed_stamp != stamp:
-        r.water_billed_stamp = stamp
-        r.water_billed_this_stage = set()
-    return r.water_billed_this_stage
+    return r.water_billed.current
 
 
 def _draw_stage_water(r: _Run, u, order: "MoveOrder | None" = None, *,
@@ -5360,17 +5400,14 @@ def _sea_leg_cp(origin, dest) -> int:
 def _port_tons(r: _Run) -> dict[str, float]:
     """[55.3] the ONE per-port Maximum Tonnage ledger for the CURRENT Operations Stage.
 
-    KEYED ON (turn, stage) SO IT EXPIRES BY ITSELF. Within a stage the overseas convoy landing and
-    56.3 coastal shipping must share one budget; across a stage boundary each port's throughput
-    starts fresh ("in one Operations Stage"). Self-expiry rather than a reset in run()'s stage loop
-    is deliberate: the budget is read a long way from where the loop lives, and any caller that
-    drives the stages itself -- a test, a measurement driver -- would otherwise silently inherit a
-    spent budget and see a whole Game-Turn's landing collapse into its first stage."""
-    stamp = (r.state.turn, r.state.stage)
-    if r.port_tons_stamp != stamp:
-        r.port_tons_stamp = stamp
-        r.port_tons_this_stage = {}
-    return r.port_tons_this_stage
+    AN _OpStageLedger, SO IT EXPIRES BY ITSELF on (turn, stage). Within a stage the overseas convoy
+    landing and 56.3 coastal shipping must share one budget; across a stage boundary each port's
+    throughput starts fresh ("in one Operations Stage"). Self-expiry rather than a reset in run()'s
+    stage loop is deliberate -- this ledger is where that lesson was first paid for, and the class
+    docstring records it: the budget is read a long way from where the loop lives, and any caller
+    that drives the stages itself -- a test, a measurement driver -- would otherwise silently
+    inherit a spent budget and see a whole Game-Turn's landing collapse into its first stage."""
+    return r.port_tons.current
 
 
 def _port_tons_left(r: _Run, port) -> float:

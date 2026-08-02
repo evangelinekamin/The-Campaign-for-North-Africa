@@ -1239,10 +1239,28 @@ def test_the_axis_railway_actually_runs_in_a_real_campaign():
     his own lorries, not by Commonwealth stores overrun at El Daba -- and because it was already in
     the PRE-change tree's activate-and-run set ({3, 9, 11, 12, 14, 17, 21, 24}), so it is a witness
     under both instruments and not one shopped for the new dice. Same window (activation on
-    Game-Turn 4, six hauls by Game-Turn 6) and every assertion below is unchanged."""
+    Game-Turn 4, six hauls by Game-Turn 6) and every assertion below is unchanged.
+
+    *** RE-PINNED 11 -> 34, 2026-08-02, CAUSE [64.73] *** -- the occupation quality-test, which
+    stopped asking the section-32.16 abstract trace and now asks the rule's own in-hex question
+    (campaign_victory._supplied). It is a VICTORY-SCORING rule, but game.campaign_claim scores the
+    live board with the same predicate to decide which city each side already banks, so it moves what
+    the campaign policy garrisons, and with it every trajectory from Game-Turn 1 -- the Axis railway
+    included. Re-swept seeds 1-40 to Game-Turn 6 on this tree, same recipe as the line below:
+    EIGHTEEN activate ({6, 9, 10, 12, 14, 15, 16, 18, 20, 23, 28, 30, 31, 33, 34, 38, 39, 40}) and
+    FIVE of those haul with no AXIS/Rail rejection ({14, 15, 20, 34, 38}).
+
+    THE DUAL-WITNESS PROPERTY IS NOT AVAILABLE THIS TIME AND THAT IS STATED RATHER THAN GLOSSED: the
+    previous tree's clean set was {4, 11, 17, 26, 33} and NONE of those five so much as activates a
+    locomotive here, so no seed is a witness under both instruments. Seed 34 is chosen on the other
+    property the 9 -> 11 re-pin named and ranked first: its activation is paid for by AX-DUMP#4, the
+    Axis's OWN dump brought forward by his own lorries, not by Commonwealth stores overrun at El Daba
+    (which is what pays seeds 14, 20 and 33) -- and of the two remaining Axis-paid candidates it
+    hauls the most (four hauls against seed 15's two and seed 38's one). Same window, same recipe,
+    and every assertion below is unchanged."""
     from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy
     from game.scenario import campaign
-    res = run(replace(campaign(11), max_turns=6), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    res = run(replace(campaign(34), max_turns=6), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     hauls = [e for e in res.events if e.kind is EventKind.RAIL_HAULED and e.side is Side.AXIS]
     assert [e for e in res.events if e.kind is EventKind.ROLLING_STOCK_ACTIVATED]
     assert hauls, "the Axis railway bought a locomotive and never ran a train"

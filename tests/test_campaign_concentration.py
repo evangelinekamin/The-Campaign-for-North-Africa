@@ -263,6 +263,22 @@ def test_the_concentration_never_marches_the_army_backwards():
                 f"{u.id} was marched back east out of the front line"
 
 
+def _can_fight_here(state, u) -> bool:
+    """Can this unit MOVE and FIRE where it stands? The OFFENSIVE supply question, asked the way the
+    engine itself charges it in the full Logistics Game: Fuel in the hex for the move it begins
+    (49.16, engine._draw_move_fuel) and Ammunition in the hex for one firing (50.15).
+
+    It is deliberately NOT campaign_victory._supplied, which since 2026-08-02 asks 64.73's
+    end-of-game occupation quality-test -- a WEEK of Stores and Water on top of these two. A
+    battalion that can fight all week where it stands and could not bank the hex for victory points
+    is a real and ordinary state of affairs, and conflating the two is what made this file's headline
+    test read the offensive as unsupplied. See test_the_commonwealth_can_mount_a_supplied_offensive."""
+    from game import supply
+    return (supply.in_hex_draw(state, u, supply.FUEL, supply.fuel_cost(u, 1)) is not None
+            and supply.in_hex_draw(state, u, supply.AMMO,
+                                   supply.ammo_cost(u, phasing=True)) is not None)
+
+
 def _matruh_supplied_turns(res):
     """(supplied, garrisoned): across the whole run, how many turn-closes a Commonwealth combat unit
     stands on the Mersa Matruh railhead, and on how many of those it can trace supply (64.73). Measures
@@ -477,15 +493,36 @@ def test_the_commonwealth_can_mount_a_supplied_offensive():
     seed's tail. (Neuter note: the first run of that A/B came back with all three arms byte-
     identical because ProcessPoolExecutor REUSES a worker and the patch composed arm on arm --
     a new instance of the neuter trap tests/baselines.py records, on process reuse rather than
-    import binding.)"""
+    import binding.)
+
+    *** THE INSTRUMENT IS RESTATED 2026-08-02, CAUSE [64.73], AND THE THESIS IS NOT. *** This
+    counted a turn-close as supplied when campaign_victory._supplied said so. That predicate has
+    stopped being "can this unit fight where it stands" and become 64.73's OCCUPATION QUALITY-TEST as
+    printed -- a Week of Stores and Water, three firings and 20 CP of Fuel, all HELD IN THE HEX --
+    which is the test for BANKING A VICTORY CITY at the end of the game, not for mounting an
+    offensive. Measured at CAMPAIGN_SEED over the same eleven Compass turn-closes, with a
+    Commonwealth combat unit forward of Mersa Matruh at every one of them:
+
+        old _supplied      (32.16 trace, 20 CP + 3 firings)        11 of 11
+        new _supplied      (in-hex, all four commodities)           0 of 11
+        can MOVE and FIRE  (in-hex, 1 CP + 1 firing)               11 of 11   <- asserted below
+        can move and fire  (32.16 trace, bare rate + 1 firing)     11 of 11
+
+    So the capability this test is NAMED for is intact and unchanged: the offensive is supplied where
+    it is fought, at every turn-close of Compass. What the new predicate reports is a different and
+    also-true fact -- a spearhead sixty hexes up the coast could not HOLD ground for victory points
+    there, having no week's rations in the hex. Reading that as "the offensive is unsupplied" would
+    be the instrument's error, not the army's, so the instrument moved to the question being asked
+    (_can_fight_here) and the 64.73 number is recorded here rather than asserted, because it is a
+    fact about a rule this test does not guard."""
     from game.apply import apply
     res = run(campaign(seed=CAMPAIGN_SEED, max_turns=COMPASS.stop - 1),
               CampaignAxisPolicy(), CampaignCommonwealthPolicy())
-    vic, st, forward_supplied_turns = CampaignVictory(), res.initial, 0
+    st, forward_supplied_turns = res.initial, 0
     for e, nxt in zip(res.events, res.events[1:] + [None]):
         st = apply(st, e)
         if (nxt is None or nxt.turn != e.turn) and st.turn in COMPASS:
-            if any(distance(u.hex, ALEX) > distance(MATRUH, ALEX) and vic._supplied(st, u)
+            if any(distance(u.hex, ALEX) > distance(MATRUH, ALEX) and _can_fight_here(st, u)
                    for u in _combat(st, Side.ALLIED)):
                 forward_supplied_turns += 1
     assert forward_supplied_turns >= 1, (
