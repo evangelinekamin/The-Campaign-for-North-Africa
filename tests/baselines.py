@@ -10,6 +10,261 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-08-02 -- CAUSE: [52.42], THE CPA CONDITION ON THE VEHICLE'S WATER POINT. A single
+printed conditional clause that the engine did not carry, billed at the one beat in the Operations
+Stage where it cannot be evaluated.
+
+    d889e5b21c4e / 1f826374a883  ->  ca0eec96abbd / 76371e5939a0
+
+THE BOOK, re-rendered at 400 dpi and read character by character (PDF p.68 = book folio 21, col. 3;
+the crop is scratchpad-only, the transcription is here and in game/engine._draw_stage_water):
+
+    [52.41] "Each infantry battalion or company regardless of its TOE Strength, requires one Water
+            Point per Operations Stage. See also 52.6."
+    [52.42] "Each TOE Strength Point of Vehicle (Tank, Recce, Artillery, etc.) or Truck Point
+            requires one Water Point each Operations Stage, if it uses any of its CPA."
+
+The asymmetry is the book's own, printed one line apart. [53.0]'s General Rule glosses it for the
+lorries: "Trucks consume fuel and water when they move, and they suffer breakdown." Nothing in
+[52.43]-[52.45] or [52.5] qualifies it -- 52.45 sends water to the [40.2] Truck Capacity Tables,
+which is the CARRY and not the billing.
+
+THE DEFECT. engine._water_distribution charged supply.water_cost to EVERY counter at the top of
+every Operations Stage, vehicles included, and supply.water_cost's own docstring flagged it ("true
+per-stage gating waits for CHUNK 5"). It cannot be evaluated there: engine._water_body runs from the
+head of the stage loop and apply._reset_opstage has just cleared cp_used on every counter, so
+52.42's condition is FALSE for the whole board at the moment the bill was drawn.
+
+MEASURED on the pre-change tree, full 12-Game-Turn campaigns (CampaignAxisPolicy vs
+CampaignCommonwealthPolicy), attributing each Water Point to the total CPA its counter spent
+anywhere in that whole Operations Stage:
+
+    seed   vehicle Water Points   of which the counter spent ZERO CPA   vehicle WATER_SHORTFALL rows
+                                                                        (of which zero-CPA)
+    1941        6,999                    6,219   88.9%                   271   (266, 98.2%)
+    7           7,175                    6,377   88.9%                   448   (443, 98.9%)
+    4           6,965                    6,149   88.3%                   311   (309, 99.4%)
+    2026        6,901                    5,796   84.0%                   365   (362, 99.2%)
+
+The shortfall column is the load-bearing half: a WATER_SHORTFALL sets stages_without_water, which
+engine._waterless reads and [52.51]/[52.52] spend -- immobilised vehicle, no offensive close
+assault, and _def_raw HALVING a defender's raw strength. Ninety-nine per cent of those were being
+paid by a counter that had not moved a hex.
+
+THE FIX, and its shape is the engine's own. engine._draw_move_fuel is [49.13]'s per-act draw that
+returns a bool and refuses the order on failure; [52.42] gets its sibling, engine._draw_stage_water,
+which draws ONCE per Operations Stage (the ledger read through engine._water_billed, self-expiring
+on (turn, stage) like the 55.3 port ledger and the 54.43 rail one) at every site that raises
+Unit.cp_used -- because cp_used IS this engine's encoding of "uses any of its CPA".
+_water_distribution now bills 52.41's infantry Point only, and RESTORES a vehicle at the stage
+boundary, without which 52.51 would be permanent by construction (a dry vehicle may not move, so it
+could never take the act that clears it).
+
+WIRED AT NINE SITES, found by enumerating the fold rather than by grepping the engine: exactly three
+event kinds raise cp_used (apply.py UNIT_MOVED, REACTION_MOVED, CP_EXPENDED), and every emitter of
+those three was wired or explicitly excluded. Movement (8.1 + the 8.2 pulse -- one function),
+reaction (8.51), retreat before assault (13.21) REFUSE on failure, because 52.51 says "may not
+move"; the offensive close assault drops the attacker, because 52.51 says "may not close assault
+offensively"; _spend_cp (every [6.3] combat charge -- barrage, facility barrage, anti-armor, the
+phasing Assault and the non-phasing DEFENCE -- plus 10.36's forced retreat), the [6.3] organization
+rows, [19.68]'s rebuild, [54.14]'s demolition and [24.9]'s dump construction BILL ONLY, because
+[52.5] forbids a dry vehicle to move and to assault offensively and nothing else. Deliberately NOT
+wired: the two cp_spent=0 emitters (19.12's carried subsidiary, 18.22's CP-free Reserve I shuffle --
+neither uses CPA) and adjudication.py's dry-run. _draw_stage_water's own first guard also carries an
+`or supply.is_sgsu(u)` arm for 35.14 (an SGSU's 1 Water/Operations Stage is its own charge, drawn
+whether its aeroplanes flew or not) -- BUT THAT ARM IS UNREACHABLE TODAY and this record used to
+overstate it as a live exclusion: of the 53 SGSUs in campaign(1941) not one satisfies
+supply._is_vehicle_type (all Mobility.MOTORIZED, is_gun/is_armor/is_first_line_truck all False), so
+the first arm returns for every one of them. It is kept as belt and braces against a [53.11]
+first-line truck being attached to a squadron, and the comment at the guard now says so.
+
+ONE ORDERING DEFECT WAS FOUND BY THE MEASUREMENT ITSELF and is fixed in the same pass
+(engine._can_fuel_move). With the water drawn before [49.13]'s fuel, a move the FUEL then refused
+had already paid its water: 270 of campaign/1941's 1,179 vehicle Points, 23% of the whole bill, for
+moves that never happened. The two draws are one affordability question -- a move that cannot be
+fuelled uses no CPA and owes no water, and a vehicle that cannot water itself may not move and so
+must not burn the fuel -- so the fuel is now TESTED (supply.in_hex_available, in_hex_draw's own
+documented monotone oracle) before the water is DRAWN, and drawn after.
+
+THE RECIPE FOR EVERY CAMPAIGN NUMBER IN THIS ENTRY, written down because leaving it out once made
+the whole table unreproducible -- a reviewer swept max_turns 1-16, 18, 20, 24, 26, 30 and 111 across
+three policy pairings and never hit a single one of these hashes:
+
+    from game.scenario import campaign
+    from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy
+    res = engine.run(campaign(seed, max_turns=12), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    sig = hashlib.sha256(engine.determinism_signature(res.events).encode()).hexdigest()[:12]
+
+THE TRAP IS scenario.campaign's OWN max_turns KWARG. `campaign(seed, max_turns=12)` is NOT
+`replace(campaign(seed), max_turns=12)`: the kwarg is passed on to _campaign_convoys,
+_campaign_air_missions, _campaign_malta_interdiction and both halves of the Tobruk sea duel, each of
+which builds its schedule over the horizon it is given (and the convoy schedule is seeded), so the
+truncated build and the truncated clock are two different wars. On seed 1941 the two recipes give
+DIFFERENT signatures on the very same tree -- which is exactly why an earlier gate exhausted a large
+search space (max_turns 1-16, 18, 20, 24, 26, 30, 111, three policy pairings) and never hit. With
+the kwarg, every row below -- the pre-change column included -- reproduces exactly, first try.
+
+(Two hashes that stood here until 2026-08-02 were ROUND-ONE values this table then superseded, and
+one of them was quoted as being "what this table says" when the table said no such thing. They are
+struck rather than corrected: a worked example is not worth carrying if it has to be re-derived
+every time the values below move. The RECIPE above is the durable part.)
+
+Each Water Point is charged to the TOTAL CPA its counter raised anywhere in that whole Operations
+Stage, i.e. the three cp_used raisers in apply.py: UNIT_MOVED, REACTION_MOVED, CP_EXPENDED.
+
+MEASURED on this tree, the same four campaigns, every row reproduced twice byte-for-byte
+(the numbers below are ROUND 2's -- see the round-2 entry beneath this one, which moved them):
+
+    seed   vehicle Water Points   of which zero-CPA        vehicle WATER_SHORTFALL   52.51 refusals
+    1941      6,999 ->   942         6,219 -> 30 (3.2%)        271 ->  60              132 ->  88
+    7         7,175 ->   839         6,377 -> 29 (3.5%)        448 ->  80              245 ->  88
+    4         6,965 -> 1,164         6,149 -> 39 (3.4%)        311 -> 110              162 -> 189
+    2026      6,901 -> 1,208         5,796 -> 25 (2.1%)        365 ->  66               96 ->  87
+
+    campaign signatures  1941 0716c0d9e327 -> 8e5ca52dca17    7    e76fa2c57be1 -> 312512305717
+                         4    d12f8ddb0f0f -> f1c874bfbe7f    2026 bb9b353ecf79 -> 68be27e28f3f
+    winner AXIS on all four seeds, before and after. This slice is not a balance change: the
+    Commonwealth's surviving COMBAT units at Game-Turn 12 move 37/37/39/36 -> 34/37/36/41 -- down on
+    two seeds, up on one, flat on one, which is chaos under a moved trajectory and not a bias.
+    (That row previously read 312/312/314/311 -> 309/312/311/316 with no metric recorded beside it,
+    and no reading of "surviving Commonwealth counters" reproduces it: measured on THIS tree the
+    three candidates are 34/37/36/41 living combat units, 48/58/52/64 all living units, and
+    380/390/384/396 counting every alive counter including the unarrived. So it is replaced by the
+    one metric printed here with its expression:
+    sum(1 for u in res.final.living(Side.ALLIED) if u.is_combat).)
+
+THE RESIDUE IS NOT 52.42 AT ALL, and it was chased down rather than rounded off: all 30 of
+campaign/1941's remaining zero-CPA vehicle Water Points are emitted in Phase.LOGISTICS, which is the
+[52.6] ITALIAN PASTA RULE (engine._pasta_point, 1 Water Point per Italian battalion when Stores are
+distributed) landing on Italian tank and gun counters. 52.6 carries no CPA condition and is not
+touched here. Of the 52.42 leg proper, ZERO Points now go to a counter that spent no CPA.
+
+A SMALLER RESIDUE IS DECLARED RATHER THAN FIXED: in _resolve_combat the water is drawn before
+_charge_ammo, so an attacker that pays its water and is then found to have no ammunition has paid
+for an assault it did not make. That ORDER is deliberate and pre-existing -- the `not _waterless(u)`
+gate has always stood ahead of the ammo charge, and tests/test_water.py pins "a dry unit does not
+even spend its load" -- so the alternative protects the nuisance commodity by spending the scarce
+one. Measured at 36 Points on campaign/1941 to GT12 on the tree this entry was first written
+against, 3% of that seed's vehicle bill; not re-measured in round 2, which does not touch the order.
+The declaration now lives AT THE CODE as well as here -- _draw_stage_water's docstring carries it
+under "A SECOND ORDERING NOTE, ON THE ATTACKER" -- because a reader of the call site would never
+have found it in a baselines file.
+
+A SECOND DEFECT WAS FOUND BY INSTRUMENTING THE CAMPAIGN, and it was one this slice introduced.
+[19.68]'s rebuild and the [6.3] organization rows charge their Capability Points to the PARENT
+FORMATION as well as to the unit, and a Parent may be a counter that has already been eliminated --
+so on campaign/1941 to GT12 the first cut made four water draws for units that were not on the map,
+one of which took real Water Points out of a dump for a DEAD Italian tank regiment. _draw_stage_water
+now returns at once for any counter state.on_map rejects, which is exactly what state.living -- and
+so the stage-start beat -- has always filtered on. It never fires on either benchmark (measured: 832
+calls each, none off-map), which is why both signatures are unmoved by it.
+
+NEUTER TABLE, per site, each neutered AT ITS OWN CALL SITE by rewriting that one call in
+game/engine.py (never by patching _draw_stage_water, which would neuter every row at once and prove
+nothing about any one of them -- the shared-helper mistake that shipped two untested guards in the
+54.4 slice). RE-RUN IN FULL IN ROUND 2, every row RED: the listed tests in tests/test_water_cpa.py
+fail with that one site inert and pass with it live, and the whole file is run per row so the
+covering counts are measured rather than asserted.
+
+    site                                                          covering tests   verdict
+    _movement (8.1 + the 8.2 continual pulse)                            7          RED
+    _react (8.51)                                                        2          RED
+    _retreat_before_assault (13.21)                                      2          RED
+    _resolve_combat armed_atk (the offensive Close Assault)              1          RED
+    _spend_cp (every [6.3] combat CP + 10.36's forced retreat)           2          RED
+    _reorganize.cp (the [6.3] organization rows)                         1          RED
+    _rebuild [19.68]: the rebuilt unit's own draw                        1          RED  <- round 2
+    _rebuild [19.68]: the PARENT Formation's draw                        1          RED  <- round 2
+    _rebuild [19.68]: its LIVE-TOE re-read (bill the stale snapshot)     1          RED  <- round 2
+    _blow_dumps ([54.14])                                                1          RED
+    _build_dump ([24.9])                                                 1          RED
+    _water_distribution: the vehicle no longer billed at stage start     1          RED
+    _water_distribution: the vehicle RESTORED at stage start             1          RED
+    _draw_stage_water's on_map guard (a destroyed Parent drinks nothing) 1          RED
+    _draw_stage_water's _models_full_logistics scenario gate             1          RED
+    _can_fuel_move at its _movement call site ([49.15] before [52.42])   1          RED  <- round 2
+    _water_billed's (turn, stage) self-expiry                            2          RED  <- round 2
+
+ONE TRAP IN RUNNING THIS TABLE, recorded because it produced a wrong table once. Python's
+source-mtime .pyc check is (whole seconds, byte size), so two rows whose neuters change engine.py by
+the SAME number of bytes inside the same second reuse the previous row's bytecode -- which is how
+the _retreat_before_assault row first reported the _react row's failures. The harness now deletes
+game/__pycache__ and runs each row under PYTHONDONTWRITEBYTECODE=1.
+
+THE SCENARIO GATE IS NOT A CAMPAIGN GATE, and the distinction matters because CLAUDE.md rule 6
+forbids the other kind. _models_full_logistics is the gate that ALREADY governs the whole of rule 52
+-- engine._water_body returns at once for a scenario that seeds no Stores and no Water, so no
+counter in one is ever dry -- and the new draw honours the same one. Without it a board that models
+no water would immobilise every vehicle on it out of a commodity it does not have. Both benchmark
+scenarios DO seed water (3,700 Points) and are fully in force here; that is why they moved.
+
+FULL-REVERT PROOF: git-stashing game/engine.py and game/supply.py (the only two files changed)
+reproduces d889e5b21c4e / 1f826374a883 EXACTLY, and reproduces all four pre-change campaign
+signatures above, so this change and nothing else explains the move. Determinism holds: both new
+benchmark signatures were read live twice, byte-for-byte. RE-CHECKED IN ROUND 2 from a clean
+worktree at HEAD: the pre-change column (0716c0d9e327 / e76fa2c57be1 / d12f8ddb0f0f / bb9b353ecf79,
+and 6,999 / 7,175 / 6,965 / 6,901 vehicle Points at 88.9% / 88.9% / 88.3% / 84.0% zero-CPA, 271 /
+448 / 311 / 365 shortfalls, 132 / 245 / 162 / 96 refusals) reproduces to the digit under the recipe
+above.
+
+NAMED DEBT, PRE-EXISTING AND UNTOUCHED: 52.42 bills "or Truck Point", and the 2nd/3rd-line convoys
+are TruckFormations rather than Units, so they lie outside every rule-52 draw this engine makes --
+as they did before, when the stage beat also walked state.living(side). A unit's OWN first-line
+lorries are billed (is_first_line_truck is on the counter, and supply._is_vehicle_type reads it).
+
+--------------------------------------------------------------------------------------------------
+NOT RE-BASELINED 2026-08-02 (ROUND 2 OF [52.42]) -- THE PER-STAGE LEDGER LEAKED, AND TWO GUARDS AND
+A STALE STRENGTH ARE NOW PINNED. The two benchmark signatures do NOT move and are NOT re-baselined:
+ca0eec96abbd / 76371e5939a0 were read live on this tree and on the round-1 tree with the recipe at
+the head of this file (seed 42, axis=allied=ScriptedPolicy(AXIS)) and are byte-identical. The FOUR
+CAMPAIGN signatures above DO move, and the entry above carries the round-2 values.
+
+THE LEAK. The [52.42] ledger was cleared by a line inside run()'s `for stage in (1, 2, 3)` loop --
+the exact shape this engine rejects BY NAME twice, in _port_tons ([55.3]) and _Run._expire_rail_stage
+([54.43]), each saying "any caller that drives the stages itself -- a test, a measurement driver --
+would otherwise silently inherit a spent budget". It leaked two ways, both measured:
+
+  * OUTSIDE THE LOOP, INSIDE run(). _replacement_spend -> _rebuild -> _draw_stage_water is a
+    GAME-TURN-level beat, before the stage loop, so it read the PREVIOUS Game-Turn's Operations
+    Stage 3 ledger: on campaign seed 4 to GT12 one vehicle's bill was suppressed outright
+    (IT-Trvli---LTC, turn 7), on seed 7 another (IT-II(M)---LTC, turn 9). Conversely a bill TAKEN
+    there was wiped by the stage-1 reset while cp_used was NOT (apply._reset_opstage fires at
+    TURN_ADVANCED, before it), so one counter could be billed twice inside one 6.16 CPA window.
+  * IN ANY CALLER THAT DRIVES THE STAGES ITSELF, which is every test in tests/test_water_cpa.py:
+    drive two Operations Stages by hand and the tank pays 3 Water Points in stage 1 and moves in
+    stage 2 for free.
+
+THE FIX is the _port_tons pattern exactly: engine._water_billed(r) stamps on (r.state.turn,
+r.state.stage) and expires on read and on write; the reset is deleted from the stage loop. The
+stamp is cp_used's OWN window, which is what makes the two agree -- TURN_ADVANCED folds
+turn=N+1, stage=1 and clears cp_used together, so the turn-level rebuild and Operations Stage 1
+share one CPA window and now share one Water bill. Pinned by two tests that never enter run().
+
+THREE GUARDS THAT SURVIVED THEIR OWN NEUTER ARE NOW PINNED, each proved at its own call site (the
+last four rows of the neuter table above): _rebuild's two [19.68] draws -- deleting BOTH left the
+whole suite green and both signatures unmoved -- and _can_fuel_move, the helper added to fix a
+measured 23%-of-bill defect, which had no test at all and was watched only by a chaos-sensitive
+campaign witness in tests/test_rail_control.py.
+
+AND ONE MORE UNDER-BILL, found by the same pass: _rebuild drew the water on the CALLER'S pre-rebuild
+snapshot, though UNIT_REBUILT had already folded and 52.42 bills "Each TOE Strength Point". Seven
+settlements on campaign/1941 to GT12 were billed on a stale TOE, every one an under-bill (e.g.
+IT-LXIII(L)---LTC billed 4 at a live 6). It re-reads live now, as the sibling parent draw always did.
+
+MEASURED CONSEQUENCE, the four campaigns of the entry above, round 1 -> round 2: vehicle Water
+Points 932 -> 942 / 818 -> 839 / 1,150 -> 1,164 / 1,201 -> 1,208 -- the suppressed bills coming back
+plus the stale-TOE shortfall. Zero-CPA Points unchanged at 30/29/39/25 (the [52.6] Pasta residue,
+untouched). Winner AXIS on all four, and the surviving Commonwealth combat units are IDENTICAL
+before and after at 34/37/36/41: this repair costs the balance exactly nothing. Determinism holds --
+all four campaign signatures and both benchmark signatures were read live twice, byte-for-byte.
+
+NOT FIXED HERE, NAMED AS DEBT (CLAUDE.md rule 4). [19.68]'s CP_EXPENDED for the parent formation is
+emitted unconditionally, so a dead Parent has cp_used folded onto a destroyed counter -- seen live
+at campaign(seed=4) GT7 stage 1, IT-LTC with alive=False and on_map=False. The 52.42 leg is right
+(the draw returns at once for a counter state.on_map rejects); the CHARGE predates this slice and is
+flagged at the site in engine._rebuild.
+
+--------------------------------------------------------------------------------------------------
 NOT RE-BASELINED 2026-08-01 (THIRD ENTRY OF THE DAY) -- CAUSE: [25.14] FORTIFICATIONS, the campaign
 gate removed and the invented magnitude replaced by the [41.5] chart. The two benchmarks do not
 move. The CAMPAIGN does, on one of three measured seeds, and this is where that is written down.
@@ -1685,8 +1940,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "d889e5b21c4e"
-SIEGE_OF_TOBRUK = "1f826374a883"
+ROMMELS_ARRIVAL = "ca0eec96abbd"     # re-baselined 2026-08-02, [52.42] (top of this file)
+SIEGE_OF_TOBRUK = "76371e5939a0"     # re-baselined 2026-08-02, [52.42] (top of this file)
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 
@@ -1749,8 +2004,33 @@ BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 # separately at seed 99; the chart moved its 30-turn slice too, and its one broken assertion was a
 # fragile 'the FIRST founded dump is filled' -- restated in place to the thesis it always meant, that
 # SOME founded dump is filled, true on 29 of 31 seeds. See that file.)
+#
+# RE-PINNED 4 -> 23 (2026-08-02, [52.42] -- the CPA condition on the vehicle's Water Point). Same
+# mechanism as every re-pin above and the same discipline, but this time the DISTRIBUTION MOVED TOO
+# and that is recorded rather than absorbed. Swept over ONE HUNDRED seeds, campaign to GT12,
+# CampaignAxisPolicy vs CampaignCommonwealthPolicy, on both trees:
+#
+#     the Commonwealth still holds Mersa Matruh at GT12 on   87 of 100 seeds BEFORE
+#                                                            72 of 100 seeds AFTER
+#     it flips BOTH ways -- 23 held->lost, 8 lost->held -- so it is not a re-shuffle, it is a real
+#     modest adverse lean of about fifteen points, roughly four standard errors.
+#
+# AND THE CAUSE IS THE CORRECTION DOING ITS JOB, measured on the same 100 seeds: the AXIS army at
+# GT12 is 60.57 -> 65.96 combat units (+5.4) while the Commonwealth is 37.81 -> 37.31 (flat). The
+# old stage-start bill was a tax on whoever owned the most vehicles, and that is the Axis: 1,616 of
+# the order of battle's 2,057 Water Points a stage. Stop charging a rule the book does not print and
+# the Italian 10th Army stops dying of thirst it never owed -- so it survives, and the Eighth Army
+# faces more of it. This makes the KNOWN Axis lean slightly worse and it is NOT tuned away here
+# (CLAUDE.md rule 1); it is the faithful consequence of the printed condition, and Gate C's balance
+# work is where it belongs.
+#
+# Seed 23 is chosen the way seed 4 was: it holds the railhead under BOTH instruments (pre- and
+# post-52.42), it passes every narrative assertion AS WRITTEN with no floor lowered, and of the four
+# candidates that do (1, 8, 21, 23) it is the only one that also carries a Commonwealth unit within
+# 15 hexes of the railhead on the PRE-change tree, and it fields the largest surviving Commonwealth
+# force at GT12 (44 combat units). It is not a seed shopped for the new dice.
 # --------------------------------------------------------------------------------------------------
-CAMPAIGN_SEED = 4
+CAMPAIGN_SEED = 23
 
 
 def signature(res) -> str:

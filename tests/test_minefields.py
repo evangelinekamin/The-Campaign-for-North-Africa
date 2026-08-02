@@ -55,19 +55,42 @@ H = ((0, 0), (0, 1), (0, 2))
 
 def _unit(uid, side, hx, *, mobility=Mobility.MOTORIZED, cpa=20, engineer='', is_combat=True,
          is_tank=False, dca=4, steps=1, fuel=999, water=999) -> Unit:
-    # fuel=999/water=999: every unit in these tests carries its own 49.14 tank and 52.4 water --
-    # so a MoveOrder never trips the (unrelated) 49.15 fuel gate, and a multi-turn construction
-    # test never trips 52.53's water-shortfall attrition mid-build. These tests are about rule
-    # 26/24.3/24.4, not rules 49/52.
+    # fuel=999: every unit in these tests carries its own 49.14 tank, so a MoveOrder never trips
+    # the (unrelated) 49.15 fuel gate. water=999 was meant to do the same for rule 52 and never
+    # could: no rule-52 draw has ever read Unit.water -- the whole army's water rides the abstract
+    # trace over DUMPS (the S8 finding, engine._draw_stage_water), and the 52.45 first-line water
+    # reservoir that would fill this pool is the deferred tier. It is kept only so the counter's
+    # own field is non-zero; what actually keeps rule 52 out of the way is the well _state now
+    # stands each counter on. These tests are about rule 26/24.3/24.4, not rules 49/52.
     return Unit(uid, side, hx, (StepRecord("x", steps),), mobility, cpa, 1, 4, dca,
                 engineer=engineer, is_combat=is_combat, is_tank=is_tank, fuel=fuel, water=water)
+
+
+def _wells(units) -> tuple:
+    """[52.11] A well under every counter, one per (side, hex) -- so no unit in this file is ever
+    refused an act by [52.42]'s Water Point.
+
+    It became necessary when 52.42's CPA condition landed: a VEHICLE-class counter now draws its
+    Water Point at the moment it moves and MAY NOT MOVE if the draw fails (52.51), and on a board
+    with no water source at all that is every tank on it. Three of this file's rule-26 tests went
+    red on that and TWO WENT SILENTLY GREEN FOR THE WRONG REASON -- they assert the ABSENCE of a
+    MINEFIELD_TRIGGERED event, which is also true of a tank that never moved -- which is why the
+    fix is a fixture that removes the interaction rather than five patched assertions."""
+    seen, out = set(), []
+    for u in units:
+        if (u.side, u.hex) in seen:
+            continue
+        seen.add((u.side, u.hex))
+        out.append(SupplyUnit(f"{u.side.value}-Well-{u.id}", u.side, u.hex,
+                              ammo=0, fuel=0, stores=0, water=9999, base=True))
+    return tuple(out)
 
 
 def _state(units=(), supplies=(), *, terrain=None, control=None, minefields_=None,
           construction_=None, max_turns=1) -> GameState:
     tmap = TerrainMap(terrain=terrain or {h: Terrain.CLEAR for h in H})
-    supplies = tuple(supplies)
     units = tuple(units)
+    supplies = tuple(supplies) + _wells(units)
     initial = {c: sum(getattr(s, c.lower()) for s in supplies)
                     + sum(getattr(u, c.lower()) for u in units)
               for c in supply.COMMODITIES}
@@ -565,6 +588,7 @@ def test_escorted_vehicle_rolls_no_destruction_die_at_all():
     _pin_die(r, "minefield", 5)               # would hit every time if rolled at all
     policy = _Build(moves=[MoveOrder("TK", H[1])])
     _movement(r, {Side.ALLIED: policy, Side.AXIS: policy}, Side.ALLIED)
+    assert r.state.unit("TK").hex == H[1], "the tank never entered the belt at all"
     assert not [e for e in r.events if e.kind == EventKind.MINEFIELD_TRIGGERED]
 
 
@@ -579,6 +603,7 @@ def test_a_dummy_belt_destroys_nothing():
     _pin_die(r, "minefield", 6)                # would destroy every time if the die were rolled
     policy = _Build(moves=[MoveOrder("TK", H[1])])
     _movement(r, {Side.ALLIED: policy, Side.AXIS: policy}, Side.ALLIED)
+    assert r.state.unit("TK").hex == H[1], "the tank never entered the belt at all"
     assert not [e for e in r.events if e.kind == EventKind.MINEFIELD_TRIGGERED]
     assert r.state.unit("TK").strength == 1, "a dummy minefield took a real TOE Strength Point"
 

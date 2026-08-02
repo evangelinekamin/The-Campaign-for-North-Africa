@@ -205,7 +205,19 @@ def test_no_gun_reaches_a_wall_inside_the_twelve_turn_clock():
     only to 31 when the clock runs out, so no battery is ever adjacent to a fortification to
     designate one. The gate had been hiding behind a distance the whole time -- which is why removing
     it moved neither benchmark by a byte, and why a benchmark signature is a determinism check and
-    never evidence that a rule is inert."""
+    never evidence that a rule is inert.
+
+    RE-MEASURED 2026-08-02, [52.42] (the CPA condition on the vehicle's Water Point): the closing
+    distance moves 31 -> 52, and this docstring's own warning -- "if the guns now close, this test
+    is measuring something else" -- is answered the RIGHT way round. The guns do not close; they
+    stall FURTHER OUT, so the thesis holds with more room than it had, and the pinned pair is
+    re-measured rather than the claim re-read. THE CAUSE IS THE RULE ITSELF and it is worth
+    recording: [52.42] names Artillery outright ("Each TOE Strength Point of Vehicle (Tank, Recce,
+    Artillery, etc.)... requires one Water Point each Operations Stage, if it uses any of its CPA"),
+    so a battery that moves now draws its water where it stands, and [52.51] refuses the move when
+    it cannot. Measured on this very run: 199 of the Axis batteries' move orders are refused for
+    want of water. The guns are the thing that outruns the wells -- which is why they are still 52
+    hexes from Tobruk's wall when the twelve-turn clock runs out."""
     for build in (rommels_arrival, siege_of_tobruk):
         assert not hasattr(build(), "siege_rules")
     a = run(rommels_arrival(seed=1941), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
@@ -220,7 +232,7 @@ def test_no_gun_reaches_a_wall_inside_the_twelve_turn_clock():
         return min(distance(u.hex, tobruk) for u in st.living(Side.AXIS)
                    if u.barrage > 0 and u.is_combat)
 
-    assert (nearest_gun(a.initial), nearest_gun(a.final)) == (69, 31), (
+    assert (nearest_gun(a.initial), nearest_gun(a.final)) == (69, 52), (
         "the benchmark is silent on 25.14 because no gun gets near a wall; if the guns now close, "
         "this test is measuring something else and must be re-read, not re-pinned")
 

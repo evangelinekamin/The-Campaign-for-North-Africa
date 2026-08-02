@@ -271,8 +271,14 @@ def water_cost(unit: Unit, *, hot: bool = False) -> int:
     DOUBLES the requirement (rule 29.35: "During hot weather, water requirements for all
     units are doubled") -- so a 6-TOE panzer battalion pays 12, not 7; infantry's flat 1
     becomes 2 (unchanged from the old +1 proxy, which was only ever right for base 1).
-    52.42's 'if it used any CPA' condition is charged for every on-map mobile unit under
-    the one-Operations-Stage cadence; true per-stage gating waits for CHUNK 5."""
+
+    THIS IS THE RATE, NOT THE TRIGGER, and the two are billed at different beats because the book
+    conditions them differently. 52.41 carries no condition, so engine._water_distribution draws the
+    infantry Point at the top of every Operations Stage. 52.42 carries one -- "if it uses any of its
+    CPA" -- which cannot be evaluated there (cp_used is 0 for every counter at the stage boundary),
+    so engine._draw_stage_water asks this function at the moment the vehicle acts instead. The
+    docstring here used to flag that condition as unbilled ("true per-stage gating waits for CHUNK
+    5"); it is billed now."""
     base = max(1, unit.strength) if _is_vehicle_type(unit) else 1
     return base * 2 if hot else base
 

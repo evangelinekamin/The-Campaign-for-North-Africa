@@ -113,6 +113,18 @@ class _Run:
         # boundary, like the 15.81 Engaged marker -- and empty for every scenario that never builds,
         # which is what keeps them byte-identical.
         self.building: set[str] = set()
+        # [52.42] The vehicle/truck counters whose Water Point has been SETTLED this Operations
+        # Stage -- paid, or attempted and refused. "Each TOE Strength Point of Vehicle... requires
+        # one Water Point each Operations Stage, if it uses any of its CPA": one bill per stage,
+        # falling due at the counter's first act, so the ledger has to remember across the nine
+        # sites that can trigger it (see _draw_stage_water). It records the ATTEMPT and not the
+        # payment, because a second attempt in the same stage would raise a second WATER_SHORTFALL
+        # and advance 52.53's "consecutive Operations Stage" counter twice inside one stage.
+        # Read ONLY through _water_billed(), which expires it at the (turn, stage) boundary -- the
+        # 55.3 port ledger's discipline, and for the reason spelled out there; empty for every
+        # scenario that models no Water at all, which is what keeps those byte-identical.
+        self.water_billed_this_stage: set[str] = set()
+        self.water_billed_stamp: tuple[int, int] | None = None
         # [55.18] the ports that lost one or more Efficiency Levels to Enemy bombs THIS
         # Operations Stage (populated by _air_port). A port in this set does not regenerate at
         # the end of the stage; one that was left alone (or only rolled a [41.5] result of 0)
@@ -302,7 +314,9 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
         for stage in (1, 2, 3):
             r.ports_bombed_this_stage = set()            # 55.18: this stage's bomb ledger starts empty
                                                          # (55.3's per-port tonnage budget needs no reset
-                                                         # here -- _port_tons() expires it by stage)
+                                                         # here -- _port_tons() expires it by stage, and
+                                                         # 52.42's per-stage Water ledger likewise, under
+                                                         # _water_billed())
             r.forts_bombed_this_stage = set()            # 41.37: one level of fortification per stage
             _rommel_arrival(r, stage)                    # 64.2: the Desert Fox lands (GT26.3) -- BEFORE the anchor
             _rommel_anchor(r)                            # 31.4: snapshot who he starts THIS stage with
@@ -2130,10 +2144,43 @@ def _pasta_point(r: _Run, side: Side, actor: str, u) -> None:
 
 
 def _water_distribution(r: _Run, side: Side, hot: bool) -> None:
+    """[52.41] THE INFANTRY LEG OF THE WATER BILL, and only that leg.
+
+        [52.41] "Each infantry battalion or company regardless of its TOE Strength, requires one
+                Water Point per Operations Stage. See also 52.6."
+        [52.42] "Each TOE Strength Point of Vehicle (Tank, Recce, Artillery, etc.) or Truck Point
+                requires one Water Point each Operations Stage, if it uses any of its CPA."
+
+    Both read off the scan at 400 dpi and re-verified at 600 (PDF p.68 = book folio 21, col. 3).
+    The asymmetry is the
+    book's own and it is what splits this beat in two: 52.41 carries no condition, so it is billed
+    here, at the top of the Operations Stage, for every foot counter on the board. 52.42 carries
+    one, and this is the ONE moment in the stage at which it cannot be evaluated -- cp_used is 0
+    for every counter here, because apply._reset_opstage has just cleared it. So a vehicle draws
+    NOTHING here and its Point falls due at the act instead (_draw_stage_water).
+
+    MEASURED, before the split, over full 12-Game-Turn campaigns on seeds 1941/7/4/2026: 88.9% /
+    88.9% / 88.3% / 84.0% of all vehicle-class Water Points billed went to a counter that spent zero
+    CPA that whole Operations Stage, and 98.2% / 98.9% / 99.4% / 99.2% of vehicle WATER_SHORTFALL
+    rows -- the rows that set stages_without_water, immobilise under 52.51 and halve a defender's
+    raw strength -- were on a counter that, under 52.42 as printed, owed nothing at all. The whole
+    order of battle's vehicle-class demand is 1,616 Water Points a stage against an infantry-class
+    441 (212 against 104 among the counters actually in play at Game-Turn 1), so the mis-billed leg
+    was roughly three quarters of the army's total water demand.
+
+    A VEHICLE IS ALSO RELEASED HERE. Thirst does not cross the stage boundary for a counter whose
+    bill has not yet fallen due, so a vehicle carrying last stage's shortfall is restored to
+    not-dry. Without that the 52.51 immobilisation would be permanent by construction: a dry
+    vehicle may not move, so it could never take the act that would trigger the draw that would
+    clear it."""
     actor = f"{side.value}/Logistics"
     for u in sorted(r.state.living(side), key=lambda u: u.id):
         if supply.is_sgsu(u):
             continue                                    # 35.14: an SGSU's upkeep is its own (_sgsu_upkeep)
+        if supply._is_vehicle_type(u):                  # 52.42: conditional -- billed at the act
+            if u.stages_without_water > 0:              # ...and it starts the stage not-dry
+                r.emit(EventKind.WATER_RESTORED, side, actor, {"unit_id": u.id})
+            continue
         draws = supply.plan_draw(r.state, u, supply.WATER, supply.water_cost(u, hot=hot))
         if draws is None:
             _water_shortfall(r, side, actor, u)         # 52.53
@@ -2147,9 +2194,12 @@ def _water_distribution(r: _Run, side: Side, hot: bool) -> None:
 
 def _water_shortfall(r: _Run, side: Side, actor: str, u) -> None:
     """A unit deprived of Water this Operations Stage (52.5). For every consecutive stage
-    AFTER the first, an INFANTRY unit loses one TOE Strength Point (52.53), via the
-    existing STEP_LOST role='attrition'. (Vehicles-can't-move / defend-at-half, 52.51-52,
-    are deferred; the attrition is the load-bearing degradation.)"""
+    AFTER the first, an INFANTRY unit loses one TOE Strength Point (52.53, which names only
+    infantry), via the existing STEP_LOST role='attrition'. 52.51/52.52's immobilisation,
+    assault bar and half-strength defence key off the same counter through _waterless.
+
+    Raised from BOTH water beats: the stage-start 52.41 draw for infantry, and
+    _draw_stage_water's 52.42 draw for a vehicle that acted and could not pay."""
     r.emit(EventKind.WATER_SHORTFALL, side, actor, {"unit_id": u.id})
     cur = r.state.unit(u.id)
     if supply.is_infantry(cur) and cur.stages_without_water >= 2:    # after the first stage
@@ -2249,11 +2299,19 @@ def _sgsu_upkeep(r: _Run, side: Side) -> None:
 
 
 def _waterless(u) -> bool:
-    """A unit deprived of Water this Operations Stage (rule 52.5). The stage-start Water Distribution
-    (52.4, _water_body) increments stages_without_water on a shortfall and resets it on resupply, so a
-    positive count at movement/combat time -- both run AFTER the water beat -- means 'dry this stage',
-    the trigger for the 52.51/52.52 effects (immobilised vehicle / no offensive assault / half defence).
-    Zero for every ammo/fuel-only scenario (no water beat runs), so those stay byte-identical."""
+    """A unit deprived of Water this Operations Stage (rule 52.5) -- the trigger for the 52.51/52.52
+    effects (immobilised vehicle / no offensive assault / half defence).
+
+    TWO BEATS SET IT, because the book conditions the two classes differently. For INFANTRY (52.41,
+    unconditional) the stage-start Water Distribution (_water_distribution, run from _water_body
+    before movement and combat) increments stages_without_water on a shortfall and resets it on
+    resupply, so a positive count at movement/combat time means 'dry this stage'. For a VEHICLE
+    (52.42, "if it uses any of its CPA") the stage beat RESTORES it and draws nothing, and the count
+    is raised by _draw_stage_water at the moment the counter acts and cannot pay -- so a vehicle is
+    dry only from its own failed act onward, never before it.
+
+    Zero for every ammo/fuel-only scenario (no water beat runs and _draw_stage_water's own
+    _models_full_logistics gate returns at once), so those stay byte-identical."""
     return u.stages_without_water > 0
 
 
@@ -3389,6 +3447,174 @@ MAX_CONTINUAL_SEGMENTS: int = 20
 REACTION_CPA_GAP: int = 6
 
 
+# [52.51] "Vehicles without water may not move or close assault offensively." THE STRING BELOW
+# CARRIES ONLY THE FIRST LIMB of that sentence; the close-assault limb is enforced in
+# _resolve_combat's armed_atk comprehension, which drops the dry attacker from the assault rather
+# than rejecting an order in its name (the assault as a whole is refused only if that empties
+# armed_atk, under its own combined reason). ONE string, because two guards reject on it -- the
+# 52.42 draw below when the counter cannot pay, and the pre-existing _waterless check in _movement /
+# _react when it has already failed to pay earlier this Operations Stage. It is single-sourced
+# because ORDER_REJECTED payloads are hashed into both benchmark signatures, so editing this text is
+# a signature move in its own right and must not happen by accident in one of two copies.
+WATERLESS_MOVE = "out of water this Operations Stage: vehicles may not move (52.51)"
+
+
+def _water_billed(r: _Run) -> set[str]:
+    """[52.42] the counters whose Water Point is already SETTLED in the CURRENT Operations Stage.
+
+    KEYED ON (turn, stage) SO IT EXPIRES BY ITSELF, the 55.3 port ledger's discipline (_port_tons)
+    and the 54.43 rail ledger's (_Run._expire_rail_stage). Self-expiry rather than a reset in run()'s
+    stage loop is deliberate, and here it is load-bearing twice over. It is read a long way from
+    where the loop lives, so any caller that drives the stages itself -- a test, a measurement
+    driver -- would otherwise silently inherit a spent ledger and see a whole Game-Turn's water
+    collapse into one stage. AND run() ITSELF DRIVES ONE BEAT OUTSIDE THE LOOP: _replacement_spend
+    charges [19.68]'s rebuild Capability Points at the GAME-TURN level, before `for stage in
+    (1, 2, 3)`, so a loop reset would hand that beat the PREVIOUS Game-Turn's Operations Stage 3
+    ledger and then wipe whatever it did bill while apply._reset_opstage has already re-opened
+    cp_used -- the same counter billable twice inside one 6.16 CPA window.
+
+    The stamp is exactly cp_used's own window, which is what makes the two agree: TURN_ADVANCED
+    folds turn=N+1, stage=1 AND clears cp_used, so the turn-level rebuild and Operations Stage 1
+    share one CPA window and must share one Water bill."""
+    stamp = (r.state.turn, r.state.stage)
+    if r.water_billed_stamp != stamp:
+        r.water_billed_stamp = stamp
+        r.water_billed_this_stage = set()
+    return r.water_billed_this_stage
+
+
+def _draw_stage_water(r: _Run, u, order: "MoveOrder | None" = None, *,
+                      side: Side | None = None, actor: str = "",
+                      order_kind: str = "move", reason: str = WATERLESS_MOVE) -> bool:
+    """[52.42] THE VEHICLE'S WATER POINT, drawn where its condition can actually be evaluated.
+
+        [52.42] "Each TOE Strength Point of Vehicle (Tank, Recce, Artillery, etc.) or Truck Point
+                requires one Water Point each Operations Stage, if it uses any of its CPA."
+
+    The sibling of _draw_move_fuel above, and deliberately shaped like it: a per-ACT draw that
+    returns True when the supply is there and False when it is not, so the caller can refuse the
+    act. Three things differ, and all three are the rules' own:
+
+      * IT IS ONCE PER OPERATIONS STAGE, not once per act. 49.16 charges fuel for EVERY move;
+        52.42 charges "one Water Point each Operations Stage", conditioned on there being at least
+        one act. _water_billed(r) is that ledger -- self-expiring on (turn, stage), see there -- and
+        it records the ATTEMPT: a counter that could not pay is settled too, or a second act would
+        raise a second WATER_SHORTFALL and advance 52.53's consecutive-stage counter twice inside
+        one stage.
+      * IT IS THE ABSTRACT TRACE, NOT AN IN-HEX DRAW (supply.plan_draw), unchanged from the
+        stage-start beat this leg was moved out of. That is the S8 finding and it is deliberate:
+        52.0 says players "rarely run out of water", and until [52.45]'s water trucks are built the
+        half-CPA trace is the faithful proxy for their reach. Measured, the naive in-hex draw took
+        campaign thirst from 12% to 60% and melted the Eighth Army. [52.45] itself bears on the
+        CARRY, not on this billing -- it sends water to the [40.2] Truck Capacity Tables, i.e. how
+        many Points a lorry may lift, not who owes one.
+      * A NON-VEHICLE RETURNS TRUE AT ONCE. 52.41's infantry Point carries no CPA condition and is
+        billed at the stage-start beat (_water_distribution); charging it again here would be
+        double billing.
+
+    THE SCENARIO GATE IS _models_full_logistics, the SAME gate that already governs the whole of
+    rule 52: an ammo/fuel-only scenario runs no water beat at all, so no counter in one is ever dry
+    (see _waterless). It must govern this leg too, or a board that models no Water would immobilise
+    every vehicle on it out of a commodity it does not have. That is a "this scenario does not model
+    this commodity" gate, not a campaign gate.
+
+    ON FAILURE the counter is marked dry through the ordinary _water_shortfall channel and stays
+    dry for the rest of the Operations Stage, which is where [52.51]/[52.52]'s printed consequences
+    live: it may not move (_movement, _react, _retreat_before_assault), it may not close assault
+    offensively (_resolve_combat), and it defends at half raw strength (_def_raw). An ORDER_REJECTED
+    is emitted only when the caller passes an `order` -- the movement-class sites, where 52.51
+    names a prohibition. The other CPA sites bill and let 52.5 supply the consequence, because 52.5
+    does not forbid a dry vehicle to defend, to barrage or to be reorganized; it only makes it
+    weaker and immobile.
+
+    ONE TIMING NOTE ON THE DEFENDER, so the half-strength claim is not read wider than it is:
+    _resolve_combat resolves against the phase-start SNAPSHOT of its `defenders`, so a defender that
+    goes dry on the 6.3 defence charge of THIS assault is halved from its next act onward, not
+    retroactively inside the resolution that billed it. That is the resolver's pre-existing snapshot
+    semantic -- the `not _waterless(u)` attacker gate above reads the same snapshot -- not something
+    this leg introduces.
+
+    A SECOND ORDERING NOTE, ON THE ATTACKER, and this one is a leak DECLARED rather than fixed. In
+    _resolve_combat's armed_atk comprehension this draw short-circuits AHEAD of _charge_ammo, so an
+    attacker that pays its Water Point and is then found to have no ammunition has paid for an
+    assault it never makes: it is dropped from armed_atk, never reaches _charge_combat_cp, uses no
+    CPA, and under 52.42 as printed owes nothing. The order is deliberate and pre-existing -- the
+    `not _waterless(u)` gate has always stood ahead of the ammo charge, and tests/test_water.py pins
+    "a dry unit does not even spend its load" -- so reversing it would protect the nuisance
+    commodity by spending the scarce one. Measured at 36 Points on campaign/1941 to Game-Turn 12, 3%
+    of that seed's vehicle bill. The MOVEMENT path has no such leak because a cheap oracle exists
+    there (_can_fuel_move, over supply.in_hex_available); _charge_ammo has no such oracle -- it
+    decides and draws in one pass -- so the assault path gets the declaration instead.
+
+    NAMED DEBT, PRE-EXISTING AND UNTOUCHED BY THIS SLICE: 52.42 bills "or Truck Point", and the
+    2nd/3rd-line convoys are TruckFormations rather than Units, so they are outside every rule-52
+    draw this engine makes -- as they were before, when the stage beat walked state.living(side)
+    too. A unit's own first-line lorries ARE billed, because is_first_line_truck is on the counter
+    and supply._is_vehicle_type reads it.
+
+    FLAGGED, A READING RATHER THAN A TRANSCRIPTION: what counts as "uses any of its CPA" is taken
+    to be exactly what raises Unit.cp_used, which is the engine's own encoding of the 6.14/6.16 CPA
+    budget -- movement (8.1/8.2), reaction (8.51), retreat before assault (13.21), the 10.36 forced
+    retreat, every [6.3] combat charge (barrage, anti-armor, assault, and the non-phasing DEFENCE
+    charge), the [6.3] organization rows (19), [54.14]'s demolition third and [24.9]'s three
+    construction Points. The defence charge is the least obvious of these -- a defender does not
+    choose to spend -- but [6.3] bills it 3 CP and 6.21 will disorganize it for the overage, so by
+    this engine's own accounting it has used its CPA. Named here so the reading is visible and
+    reversible rather than buried in nine call sites."""
+    # 52.41: the foot counter's flat Point is the stage beat's. The is_sgsu arm is BELT AND BRACES
+    # and currently unreachable, which is recorded here rather than claimed as a live exclusion:
+    # 35.14's 1 Water per Operations Stage is an SGSU's OWN charge (_sgsu_upkeep, drawn whether its
+    # aeroplanes flew or not), but of the 53 SGSUs in campaign(1941) not one satisfies
+    # supply._is_vehicle_type -- every one is Mobility.MOTORIZED with is_gun/is_armor/
+    # is_first_line_truck all False -- so the first arm already returns for all of them. It is kept
+    # because the classifier, not this line, is what makes that true: attach a [53.11] first-line
+    # truck to a squadron and the second arm is what stops 35.14 being billed twice.
+    if not supply._is_vehicle_type(u) or supply.is_sgsu(u):
+        return True
+    # A DESTROYED OR NOT-YET-ARRIVED COUNTER DRINKS NOTHING, and this is not a defensive check --
+    # it is a real path, found by instrumenting the campaign. [19.68]'s rebuild and the [6.3]
+    # organization rows charge their Capability Points to the PARENT FORMATION as well as to the
+    # unit ("Parent Formation and detaching unit"), and a Parent may be a counter that has already
+    # been eliminated; state.living/on_map is what the stage-start beat has always filtered on.
+    # Measured on campaign/1941 to GT12: four such calls, one of which drew real Water Points out
+    # of a dump for a dead Italian tank regiment.
+    if not r.state.on_map(u):
+        return True
+    if not _models_full_logistics(r.state):
+        return True                                     # this board models no Water at all
+    billed = _water_billed(r)                           # expires itself at the (turn, stage) boundary
+    if u.id in billed:                                  # 52.42: one bill per Operations Stage
+        return not _waterless(r.state.unit(u.id))
+    billed.add(u.id)
+    own = f"{u.side.value}/Logistics"                   # the water is the COUNTER'S side's, always
+    need = supply.water_cost(u, hot=r.state.weather == "hot")     # 29.35 doubles it, as ever
+    draws = supply.plan_draw(r.state, u, supply.WATER, need)
+    if draws is None:
+        _water_shortfall(r, u.side, own, u)             # 52.5: dry for the rest of the stage
+        if order is not None:
+            _reject(r, side or u.side, actor or own, order, reason, order_kind=order_kind)
+        return False
+    for sid, qty in draws:
+        r.emit(EventKind.SUPPLY_CONSUMED, u.side, own,
+               {"supply_id": sid, "commodity": supply.WATER, "qty": qty, "unit_id": u.id})
+    return True
+
+
+def _can_fuel_move(r: _Run, u, cp_spent: float) -> bool:
+    """[49.15] Could this unit draw the fuel for a move of `cp_spent` Capability Points -- asked
+    WITHOUT drawing it. supply.in_hex_available is in_hex_draw's own documented oracle ("in_hex_draw
+    is MONOTONE in need: it succeeds iff need <= this"), so this is exactly _draw_move_fuel's verdict
+    with no side effect.
+
+    It exists so the [52.42] water bill is never spent on a move the fuel refuses. The two draws are
+    one affordability question, because each is due only if the move actually happens: a move that
+    cannot be fuelled never happens, so the vehicle "uses none of its CPA" and owes no Water Point;
+    and a vehicle that cannot water itself may not move at all (52.51), so it must not burn the fuel
+    either. Measured on campaign/1941 to GT12 before this test was added: 270 of 1,179 vehicle Water
+    Points -- 23% of the whole vehicle bill -- were drawn for moves the fuel then refused."""
+    return supply.fuel_cost(u, cp_spent) <= supply.in_hex_available(r.state, u, supply.FUEL)
+
+
 def _draw_move_fuel(r: _Run, side: Side, actor: str, u, cp_spent: float,
                     order: MoveOrder, *, order_kind: str = "move",
                     reason: str = "out of supply: no fuel for this move") -> bool:
@@ -3549,9 +3775,8 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
             _reject(r, side, actor, order, "all vehicles broken down, may not move (21.44)")
             continue
         if supply._is_vehicle_type(u) and _waterless(u):   # 52.51: a vehicle out of water may not move
-            _reject(r, side, actor, order,
-                    "out of water this Operations Stage: vehicles may not move (52.51)")
-            continue
+            _reject(r, side, actor, order, WATERLESS_MOVE)  # (already dry -- its 52.42 bill failed
+            continue                                       #  earlier this stage, or an earlier order did)
         if u.reserve == 1:                              # 18.22: Reserve I -- one hex, CP-free
             _reserve_shuffle(r, side, actor, order, u, enemy_zoc, enemy_occupied)
             continue
@@ -3574,6 +3799,9 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
             _reject(r, side, actor, order,              # into this hex AFTER the phase-start snapshot
                     "destination now occupied by an enemy unit (reaction 8.5)")
             continue
+        if _can_fuel_move(r, u, reach[order.to]) and not _draw_stage_water(
+                r, u, order, side=side, actor=actor):
+            continue                                # 52.42: this move USES CPA -> the stage's water
         if not _draw_move_fuel(r, side, actor, u, reach[order.to], order):
             continue                                # 49.13/49.16: this move draws its own fuel
         payload = {"unit_id": u.id, "from": list(u.hex), "to": list(order.to),
@@ -3690,9 +3918,7 @@ def _react(r: _Run, policies: dict, phasing: Side, mover_id: str) -> None:
                     order_kind="reaction")
             continue
         if supply._is_vehicle_type(u) and _waterless(u):    # 52.51: a dry vehicle may not move (8.5 too)
-            _reject(r, reacting, actor, order,
-                    "out of water this Operations Stage: vehicles may not move (52.51)",
-                    order_kind="reaction")
+            _reject(r, reacting, actor, order, WATERLESS_MOVE, order_kind="reaction")
             continue
         reach, prev = tactics.reachable_for_prev(r.state, u, enemy_zoc, enemy_occupied, roster)
         if order.to == u.hex or order.to not in reach:  # 8.55: plain reach, NO 13.24 cap
@@ -3705,6 +3931,9 @@ def _react(r: _Run, policies: dict, phasing: Side, mover_id: str) -> None:
             _reject(r, reacting, actor, order, "reaction destination over stacking limit",
                     order_kind="reaction")
             continue
+        if _can_fuel_move(r, u, reach[order.to]) and not _draw_stage_water(
+                r, u, order, side=reacting, actor=actor, order_kind="reaction"):
+            continue                                # 52.42: 8.51 reaction IS movement, and USES CPA
         if not _draw_move_fuel(r, reacting, actor, u, reach[order.to], order,     # 49.13/49.16
                                order_kind="reaction", reason="out of supply: no fuel to react"):
             continue
@@ -4190,9 +4419,24 @@ def _rebuild(r: _Run, side: Side, unit, points: int) -> str:
             "pool_key": pool_key, "cost": cost})
     price = organization.rebuild_cp(points)                 # 19.68: one CP per two points, to both
     if price:
+        # 52.42: the 19.68 CP is a use of CPA -- billed on the LIVE counter, not on the caller's
+        # pre-rebuild snapshot. UNIT_REBUILT has already folded above, and 52.42 bills "Each TOE
+        # Strength Point", so `unit` is stale by exactly the points just absorbed. (Measured on
+        # campaign/1941 to GT12 before this re-read: seven settlements billed on a stale TOE, every
+        # one of them an under-bill.) The parent draw below has always re-read live.
+        _draw_stage_water(r, r.state.unit(unit.id))
         r.emit(EventKind.CP_EXPENDED, side, actor,
                {"unit_id": unit.id, "activity": "rebuild", "cp": price})
         if unit.assigned_to:                               # 19.68: "and its parent, if such"
+            # NAMED DEBT, PRE-EXISTING AND NOT FIXED HERE: this CP_EXPENDED is charged to
+            # `assigned_to` unconditionally, so when the Parent Formation has already been
+            # eliminated the fold lands cp_used on a destroyed counter (seen live: campaign(seed=4)
+            # GT7 stage 1, IT-LTC, alive=False and on_map=False). The 52.42 leg is right -- the
+            # draw below returns at once for a counter state.on_map rejects -- but the CHARGE
+            # itself predates this slice and belongs to whoever fixes [19.68]'s parent handling.
+            parent = r.state.unit(unit.assigned_to)
+            if parent is not None:
+                _draw_stage_water(r, parent)               # 52.42: charged, so it too uses CPA
             r.emit(EventKind.CP_EXPENDED, side, actor,
                    {"unit_id": unit.assigned_to, "activity": "rebuild", "cp": price})
     return ""
@@ -4216,6 +4460,9 @@ def _reorganize(r: _Run, side: Side, order) -> None:
 
     def cp(uid: str, activity: str, points: int) -> None:
         if points:
+            charged = r.state.unit(uid)
+            if charged is not None:
+                _draw_stage_water(r, charged)      # 52.42: a [6.3] organization CP is a use of CPA
             r.emit(EventKind.CP_EXPENDED, side, actor,
                    {"unit_id": uid, "activity": activity, "cp": points})
 
@@ -4623,6 +4870,7 @@ def _blow_dumps(r: _Run, policy: Policy, side: Side) -> None:
                {"supply_id": dump.id, "unit_id": u.id, "cp": cp, "die": die, "modifier": mod,
                 "pct": pct, "destroyed": destroyed}, rng_draws=(die,))
         if cp > 0:                                     # 54.14: the CPA bill, whatever the die said
+            _draw_stage_water(r, u)                    # 52.42: 54.14's third of CPA is a use of CPA
             r.emit(EventKind.CP_EXPENDED, side, f"{side.value}/Engineers",
                    {"unit_id": u.id, "activity": "blow_dump", "cp": cp})
 
@@ -5298,6 +5546,7 @@ def _build_dump(r: _Run, side: Side, actor: str, order) -> None:
     for sid, qty in construction.stores_draw(r.state, side, hx, construction.DUMP_STORES):
         r.emit(EventKind.SUPPLY_CONSUMED, side, actor,
                {"supply_id": sid, "commodity": supply.STORES, "qty": qty, "unit_id": u.id})
+    _draw_stage_water(r, u)                        # 52.42: 24.9's three CP are a use of CPA
     r.emit(EventKind.CP_EXPENDED, side, actor,
            {"unit_id": u.id, "activity": "construct_dump", "cp": construction.DUMP_CP})
     r.emit(EventKind.SUPPLY_DUMP_CONSTRUCTED, side, actor,
@@ -5926,7 +6175,26 @@ def _spend_cp(r: _Run, side: Side, actor: str, unit, activity: str, cp: int) -> 
     """Charge a unit `cp` Capability Points for `activity` (rule 6.3): emit CP_EXPENDED,
     which folds cp_used += cp into the same per-Operations-Stage accumulator movement
     feeds (6.14); then apply the 6.21 overage -> Disorganization consequence at once. The
-    live cp_used is re-read so a second charge this stage stacks on the first."""
+    live cp_used is re-read so a second charge this stage stacks on the first.
+
+    [52.42] rides here because this IS the seam where a unit uses its CPA without choosing to move:
+    every [6.3] combat charge (barrage, facility barrage, anti-armor, the phasing Assault and the
+    non-phasing Defence, all through _charge_combat_cp) and the [10.36] forced retreat's
+    "playing all CP's for such movement". A vehicle that cannot pay is marked dry and 52.5 supplies
+    the consequence (half raw defence, immobile for the rest of the stage); the charge itself is
+    NOT refused.
+
+    FOR THE COMBAT CHARGES that is exactly what [52.5] says: it forbids a dry vehicle to move and to
+    close assault offensively and nothing else, so it may still barrage, defend and be reorganized.
+    THE [10.36] FORCED RETREAT IS THE ONE CASE THAT SENTENCE DOES NOT COVER, and it is flagged here
+    rather than glossed over: 10.36 IS movement ("playing all CP's for such movement") and 52.51
+    does forbid a dry vehicle to move, so this site bills a prohibition it does not enforce.
+    Refusing it would need a consequence the book does not supply -- a mandatory retreat that may
+    not be taken is neither a stand nor a surrender, and 10.36e's surrender is reserved for the
+    different case where no legal destination exists at all -- so the retreat is carried out and the
+    counter is left dry, which is the only outcome the printed rules do describe. A live rule
+    interaction, named so the next reader meets it as a question and not as an omission."""
+    _draw_stage_water(r, unit)                      # 52.42: spending CP is using CPA
     old = r.state.unit(unit.id).cp_used
     r.emit(EventKind.CP_EXPENDED, side, actor,
            {"unit_id": unit.id, "activity": activity, "cp": cp})
@@ -6162,6 +6430,9 @@ def _retreat_before_assault(r: _Run, policy: Policy, side: Side, phasing: Side,
             _reject(r, side, actor, order, "destination over stacking limit",
                     order_kind="retreat_before_assault")
             continue
+        if _can_fuel_move(r, u, reach[order.to]) and not _draw_stage_water(
+                r, u, order, side=side, actor=actor, order_kind="retreat_before_assault"):
+            continue                     # 52.42: 13.21's RBA "is Voluntary Movement", so it USES CPA
         if not _draw_move_fuel(r, side, actor, u, reach[order.to], order,       # 49.13/49.16
                                order_kind="retreat_before_assault"):
             continue
@@ -6566,6 +6837,7 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
                  and not _salt_marsh_barred_assault(r.state, u, target)   # 8.44
                  and not _escarpment_barred_assault(r.state, u, target)   # 8.42/15.34
                  and u.id not in fired_anti_armor                    # 14.26/15.21: not if it fired anti-armor
+                 and _draw_stage_water(r, u)                         # 52.42: the 5-CP Assault USES CPA
                  and _charge_ammo(r, side, actor, u, phasing=True)]
     if not armed_atk:
         r.emit(EventKind.ORDER_REJECTED, side, actor,

@@ -1227,10 +1227,22 @@ def test_the_axis_railway_actually_runs_in_a_real_campaign():
 
     Also corrected by that sweep: game.rail.orphaned_stock's docstring said "the campaign has only
     ever put ONE locomotive on the board -- one activation in six seeds". That was six seeds, not a
-    census; it is thirteen in twenty-four."""
+    census; it is thirteen in twenty-four.
+
+    *** RE-PINNED 9 -> 11, 2026-08-02, CAUSE [52.42] *** -- the CPA condition on the vehicle's Water
+    Point, which moves every campaign trajectory from Game-Turn 1. Seed 9 still ACTIVATES a
+    locomotive on this tree and no longer runs a train with it inside the six-turn window, so the
+    witness is re-measured rather than the window widened. Re-swept over seeds 1-40 to Game-Turn 6
+    on this tree: eighteen activate, and five of those haul with no AXIS/Rail rejection at all
+    ({4, 11, 17, 26, 33}). Seed 11 is chosen because it KEEPS THE PROPERTY seed 9 was chosen for and
+    seed 4 lacked -- its activation is paid for by AX-Dump#3, the Axis's OWN dump brought forward by
+    his own lorries, not by Commonwealth stores overrun at El Daba -- and because it was already in
+    the PRE-change tree's activate-and-run set ({3, 9, 11, 12, 14, 17, 21, 24}), so it is a witness
+    under both instruments and not one shopped for the new dice. Same window (activation on
+    Game-Turn 4, six hauls by Game-Turn 6) and every assertion below is unchanged."""
     from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy
     from game.scenario import campaign
-    res = run(replace(campaign(9), max_turns=6), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    res = run(replace(campaign(11), max_turns=6), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     hauls = [e for e in res.events if e.kind is EventKind.RAIL_HAULED and e.side is Side.AXIS]
     assert [e for e in res.events if e.kind is EventKind.ROLLING_STOCK_ACTIVATED]
     assert hauls, "the Axis railway bought a locomotive and never ran a train"
