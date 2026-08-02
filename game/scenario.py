@@ -20,14 +20,14 @@ from collections import deque
 from dataclasses import replace
 
 from . import (air, calendar, campaign_victory, cna_map, coords, logistics_data, malta, oob,
-               roster, villages, wells)
+               rail, roster, villages, wells)
 from .events import Phase, Side
 from .hexmap import Coord, distance, neighbors
 from .movement import TerrainMap, edge
 from .state import (AirMission, AirWing, CoastalShip, Convoy, GameState, InterdictionOrder,
                     Port, RommelArrival, StepRecord, SupplyUnit, TruckFormation, Unit, VP)
 from .supply import (COMMODITIES, TONS_PER_POINT, _UNLIMITED, port_tonnage_budget,
-                     tons_to_points)
+                     rail_stage_load)
 from .terrain import Hexside, Mobility, Terrain
 
 LENGTH = 8
@@ -958,44 +958,46 @@ def _campaign_cw_rail_line(supplies) -> tuple[str, ...]:
     return (railhead.id, *(sid for sid in rear if sid in have and sid != railhead.id))
 
 
-# [54.32] "The Commonwealth supply capacity of the railroad is 1500 tons per Operations Stage in
-# either direction." The charted capacity of the Western Desert Railway -- the exact twin of the
-# Axis's [56.5] convoy tonnage, and the number the campaign was missing. Transcribed from the rule
-# text (docs/rules/54-supply-co-ordination.md); it is not in the 90-charts play-aid, so it lives
-# here beside _PORT_TONS rather than in data/logistics_rates.json.
-_RAIL_TONS_PER_OPSTAGE = 1500
-_RAIL_STAGE_COMMODITIES = ("AMMO", "FUEL", "STORES")   # 54.33: one type per stage. Water is piped.
-
-
 def _campaign_rail_cargo(gt: int) -> dict:
-    """One Game-Turn of Western Desert Railway freight (rules 54.32 / 54.33 / 54.34).
+    """One Game-Turn of Western Desert Railway freight (rules 54.32 / 54.33 / 54.34) -- the SUM of
+    the turn's live per-Operations-Stage loads, which engine._unload_convoys then lands ONE STAGE
+    AT A TIME. The manifest is a week's worth; the train is a stage's worth.
 
     54.32 rates the railroad at 1,500 TONS PER OPERATIONS STAGE, and a Game-Turn is three
     Operations Stages (engine.run), so a week of trains is three stage-loads. 54.33 lets the
     railroad carry only ONE type of supply at a time -- "it may move fuel, ammunition, or stores,
-    not any combination of the three" -- so each stage is a single commodity, and its tonnage
-    crosses to Points through the 54.5 Equivalent Weights (a ton of ammunition is a quarter of a
-    Point; a ton of fuel is eight, which is why the same train is worth 375 Ammunition or 12,000
-    Fuel). Water is NOT hauled: 54.33 says it need not be -- "the railroad hexes are pipelines in
-    and of themselves" -- and game.wells.pipeline already seeds that corridor, Alexandria to Mersa
-    Matruh, as an unlimited 52.23 water source.
+    not any combination of the three" -- so each stage is a single commodity. Both facts now live
+    ONCE, in game.supply (RAIL_TONNAGE_54_3 / rail_haul_cap / rail_stage_load), which is also where
+    the Axis borrower reads them through 54.46; this module used to re-type the 1,500 and the
+    three-type list beside them, and a transcription written down twice is a transcription that can
+    disagree with itself.
 
-    54.34 stands the railway down for ONE Operations Stage a calendar month, hauling water for its
-    own use. WHICH stage is the player's call -- "Players must state each month which Operations
-    Stage they are not using the railroad" -- and this schedule gives up the STORES stage in the
-    month's first week, the load a fighting army misses least. That choice is a flagged SCHEDULING
-    proxy; the 1,500-ton magnitude behind it is the rulebook's own.
+    54.34 stands the railway down for ONE Operations Stage a CALENDAR MONTH, hauling water for its
+    own use -- and the pair it stands down on is game.rail.dead_opstages_54_34's, the same function
+    the Axis half of the same railway obeys (54.46 makes 54.33/54.34/54.35 shared). What stood here
+    before was `if calendar.is_month_start(gt): stages.remove("STORES")` -- an independent second
+    encoding of 54.34 that happened to pick the same beat, and one that could not be seen to agree
+    with the Axis one because the two were never asked the same question.
+
+    *** THIS FUNCTION IS WHERE TWO SEPARATE PROXIES COMPOSE, AND THE COMPOSITION IS A THIRD FACT. ***
+    54.33's running order is fixed (AMMO, FUEL, STORES) and 54.34's dead beat is fixed at the LAST
+    Operations Stage, so the load this loop drops is the STORES load, EVERY calendar month, and
+    never Ammunition or Fuel -- 43,500 Stores Points over GT1-111, a quarter of that lane's whole
+    war-long lift, while the other two lanes lose nothing. The book leaves BOTH choices to the
+    Player. game.rail.dead_opstages_54_34 carries the full disclosure, the alternative and its cost;
+    tests/test_rail.py::test_the_month_s_dead_stage_always_costs_the_stores_load pins it.
 
     What this REPLACES is the bug: the lane used to ship one _load_cargo() Supply Unit a week --
     a placeholder borrowed from Tobruk's 61.36 built-in dump -- which put 500 Fuel a turn on the
     trains against the Axis convoy's charted thousands. Measured over the full campaign, the
     Commonwealth landed 55,500 Fuel to the Axis's 1,770,000."""
-    stages = list(_RAIL_STAGE_COMMODITIES)
-    if calendar.is_month_start(gt):                     # 54.34: one OpStage a month carries water
-        stages.remove("STORES")
+    dead = {stage for turn, stage in rail.dead_opstages_54_34(gt) if turn == gt}
     cargo = {c: 0 for c in COMMODITIES}
-    for c in stages:
-        cargo[c] += tons_to_points(_RAIL_TONS_PER_OPSTAGE, c)
+    for stage in range(1, calendar.OPSTAGES_PER_GAME_TURN + 1):
+        if stage in dead:                               # 54.34: this stage hauls the railway's water
+            continue
+        for c, qty in rail_stage_load(stage).items():
+            cargo[c] += qty
     return cargo
 
 
@@ -1213,7 +1215,8 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
     if railhead is not None:
         line = _campaign_cw_rail_line(supplies)        # 54.3/60.7: the railhead RETRACTS, it never dies
         # rail=True: a train is not a ship. It carries the railroad's OWN charted capacity
-        # (54.32, _campaign_rail_cargo) and never crosses a quay, so the 55.14 harbour throttle
+        # (54.32, _campaign_rail_cargo -- a week's manifest, unloaded one 1,500-ton single-commodity
+        # stage-load per Operations Stage) and never crosses a quay, so the 55.14 harbour throttle
         # does not apply to it -- see state.Convoy. Mersa Matruh is BOTH a 250-ton harbour and the
         # railway terminus, and putting the Western Desert Railway through the harbour's cranes
         # clipped it to a twenty-fourth of its rated capacity (measured: 62 of 1,500 Ammunition

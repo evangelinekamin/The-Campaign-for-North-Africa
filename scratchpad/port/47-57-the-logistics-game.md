@@ -206,6 +206,57 @@ alternative ruleset. Campaign-critical: NO, except as the leak list above.**
 | **54.41–54.46** | **Axis use of the CW railroad** — 5 contiguous controlled rail hexes + 250 Stores/100 Fuel imported as rolling stock buys 300 t/OpStage; 900 t per stacking point of troops; stock destroyed if the 5-hex chain breaks | **MISSING** | Explicitly deferred and flagged (`construction.py:25`, `scenario.py:1224`). The Axis has **no** railway at all — it hauls from Benghazi by lorry for 111 turns | **YES** — it is the Axis's only lever against the CW's rail asymmetry, and the reason his 1942 advance historically stalled |
 | **54.5** | Equivalent Weights Chart | **DONE — verified** | `supply.py:77` holds Fuel and Water as **exact fractions** (⅛, ⅙), which is better than the JSON's rounded 0.1667. see §4.6 | YES |
 
+> ### ⚠ CORRECTION, 2026-08-01 — THE FIVE 54.3x ROWS ABOVE WERE READ OFF THE MANIFEST AND NOT OFF THE DELIVERY, AND THREE OF THEM WERE WRONG
+>
+> **This audit rated 54.32, 54.33 and 54.35 `DONE` and never inspected the code that actually
+> lands the freight.** Every citation in those three rows points at the *manifest builder*
+> (`scenario._campaign_rail_cargo`, then `_RAIL_TONS_PER_OPSTAGE` / `_RAIL_STAGE_COMMODITIES`), and
+> that builder was — and is — correct: a Game-Turn's worth of freight, three single-commodity
+> stage-loads, water excluded, the month's dead stage subtracted. The row for 54.32 even reads
+> *"Three stage-loads are packed into one GT convoy"* and passes on without asking what unpacked
+> them. **Nothing did.** `engine._unload_convoys` delivered a rail convoy `if r.state.stage == 1`
+> and landed the whole week at once, so:
+>
+> * **[54.32] was violated 3× at the beat the rule prints.** 1,500 tons per *Operations Stage*
+>   became ~4,500 tons in Stage 1 and **nothing at all in Stages 2 and 3, in 111 Game-Turns of
+>   every campaign measured.** The row's own "456,123 tons over 111 GT = 4,110 t/GT" is a
+>   *Game-Turn* average, which is exactly the aggregate that cannot see this defect.
+> * **[54.33] was violated outright.** The stage-loads arrived mixed — ammunition *and* fuel *and*
+>   stores together, on one train, in one Operations Stage. The parenthetical *"(Which stage
+>   carries what is a flagged doctrine choice, not a magnitude.)"* was describing a schedule that
+>   never ran.
+> * **[54.35] was half built.** The row cites `_rail_stops`/`_rail_deliver` for "may be dumped at
+>   any hex", which is the clause they implement, and says nothing about the clause the rule ends
+>   on — *"They may not be moved that Operations Stage."* The Commonwealth lane never ledgered a
+>   landing, so an Eighth Army lorry could lift, in the same Operations Stage, freight the train
+>   had only just set down. (The **Axis** borrower has honoured it since the 54.4 slice, which is
+>   the asymmetry [54.46] forbids.)
+>
+> All three are fixed and re-rated **DONE** as of the 54.3 cadence slice + this repair
+> (`game/supply.py` `rail_stage_commodity`/`rail_stage_load`, `engine._unload_convoys`,
+> `engine._rail_deliver`'s `record_rail_landing`, pinned in `tests/test_rail.py`). **The
+> methodological lesson is the point of writing this down: a rule that spans a producer and a
+> consumer cannot be audited at the producer.** Row 54.34's `NO` in the Critical column and its
+> citation of `scenario.py:775-776` are the same shape and survived only because the manifest
+> happened to be the binding gate there.
+>
+> **STILL OPEN after the repair, as named debt rather than silence:**
+>
+> * **[54.32] "in either direction", and "The RR may move personnel in one direction and supplies
+>   in another".** The engine models **one lane**, not two, and has **no rail personnel movement at
+>   all** — that half is `[54.31]`/`[8.7]`, a Sequence-of-Play phase of its own (`[5.0 J]`
+>   Commonwealth Rail Movement Phase) rated in **Stacking Points**, not tons (the `[54.5]` chart's
+>   own "In Stacking Points" panel; its tonnage column reads `n/a`). Row 54.31's `PARTIAL` is
+>   right and is the same debt seen from the other end.
+> * **The Commonwealth 54.3 dump-to-dump `RAIL_HAULED`.** Genuinely missing: the owner of the line
+>   can be fed *by* it and cannot shift a dump *along* it, while the Axis borrower can. Not a
+>   missing magnitude — a missing **doctrine** (which dump into which, and when), which the book
+>   does not supply. **Gate C.**
+> * **`game/relay.py`'s [36.17] bootstrap hole.** Its docstring says the shuttle's source is the
+>   air larder; the code takes *any* friendly dump under the lorry's own wheels that holds Fuel.
+>   Reached for the first time on this tree (`tests/test_campaign_faucet.py` records the
+>   measurement) and left unfixed — it is `game.relay`'s, not 54.3's.
+
 ### Chapter 55 — PORTS AND SUPPLY
 
 | Rule | What it says | Status | Evidence | Critical? |

@@ -161,11 +161,34 @@ def orphaned_stock(state: GameState) -> dict:
     bearing rather than moot.
 
     WHAT IS TRUE, MEASURED SEPARATELY (measure_54_45_readings.py): the two readings have not yet
-    DIFFERED ON AN ACTUAL LOCOMOTIVE, because the campaign has only ever put one on the board -- one
-    activation in six seeds (seed 4, GT4), destroyed at GT13 with 54.41's gate shut board-wide, so
-    both readings kill it. That is a fact about 54.43's price keeping the rails empty (see the
-    transcription's verdict), not about the two readings agreeing, and it stops being true the first
-    time the Axis affords a second locomotive while he holds two runs."""
+    DIFFERED ON AN ACTUAL LOCOMOTIVE, because no measured campaign has yet held two runs AND two
+    locomotives at once.
+
+    *** THE SUPPORTING CENSUS WAS TOO SMALL AND IS CORRECTED, 2026-08-01. *** This paragraph used to
+    read "the campaign has only ever put ONE on the board -- one activation in six seeds (seed 4,
+    GT4)", and inferred from it that "54.43's price keeps the rails empty". Six seeds is not a
+    census. THE CENSUS, swept over seeds 1-24 to Game-Turn 16 and re-measured on BOTH trees for this
+    docstring rather than carried over from the sweep that first corrected it:
+
+        ACTIVATE a locomotive   13 of 24: {3, 5, 6, 9, 10, 11, 12, 14, 15, 17, 21, 22, 24}
+        and RUN TRAINS with it   8 of 13: {3, 9, 11, 12, 14, 17, 21, 24}
+
+    So the price does NOT keep the rails empty, and the reason seed 4 looked lonely is that it was
+    the sample. (Seed 4 itself has since stopped activating at all: it was paying for its locomotive
+    with Commonwealth Stores captured at AL-Stage-ElDaba, and 54.33's single-commodity train no
+    longer leaves a week's Stores standing in a station to be overrun -- see
+    tests/test_rail_control.py::test_the_axis_railway_actually_runs_in_a_real_campaign.)
+
+    THE COUNT WAS FIRST WRITTEN DOWN AS "12 of 24 ... and 7 of those", AND THE FIRST HALF WAS SIMPLY
+    WRONG -- an off-by-one in the one sentence whose whole job was to correct an earlier undercount,
+    inside a paragraph that reads "Six seeds is not a census". Re-swept twice on the pre-repair tree:
+    thirteen, the set above, not twelve. The "7 run trains" half WAS exact on that tree ({3, 9, 11,
+    14, 17, 21, 24}); the eighth is seed 12, which the 54.35 Commonwealth pin added -- pinning the
+    Eighth Army's freight to the platform for the Operations Stage it lands in moves the whole board
+    from Game-Turn 1, the Axis's forward Stores with it. The activation set did not move at all.
+
+    The READING above is unchanged and still load-bearing; what is withdrawn is the false comfort
+    that it would rarely be exercised."""
     return {hx: n for hx, n in sorted(state.rolling_stock_at.items())
             if activated_run_at(state, hx) is None}
 
@@ -205,12 +228,53 @@ def dead_opstages_54_34(gt: int) -> frozenset:
     WHICH stage is the PLAYER'S CALL -- "Players must state each month which Operations Stage they
     are not using the railroad" -- and this engine has no seat for that declaration. *** FLAGGED AS
     A JUDGEMENT CALL: *** it is fixed at the LAST Operations Stage of the month's FIRST Game-Turn.
-    Two reasons, neither of them a balance argument. It is the beat the COMMONWEALTH half of the
-    same clause already stands down on (scenario._campaign_rail_cargo drops the month-start
-    Game-Turn's STORES load, the third of that turn's three stage-loads), so 54.34 is now encoded
-    ONE way on both sides of the board instead of two. And it is the least generous reading
-    available within that turn: the Axis has already had stages 1 and 2 to haul before he loses
-    one, so the choice neither hands him a lever the book withholds nor lets him dodge the cost."""
+    Two reasons, neither of them a balance argument. THE COMMONWEALTH HALF OF THE SAME CLAUSE NOW
+    CALLS THIS FUNCTION (scenario._campaign_rail_cargo omits the dead stage's load from the week's
+    manifest, and engine._unload_convoys refuses to run a train on it), so 54.34 is encoded ONE way
+    on both sides of the board -- literally one function, not two encodings that happen to agree.
+    And it is the least generous reading available within that turn: the Axis has already had
+    stages 1 and 2 to haul before he loses one, so the choice neither hands him a lever the book
+    withholds nor lets him dodge the cost.
+
+    *** AND HERE IS WHAT THAT JUDGEMENT CALL COMPOSES WITH, WHICH NEITHER FLAG SAID ALONE. ***
+    Two proxies meet on the Commonwealth lane and produce a third fact that was disclosed nowhere:
+
+        this function fixes the dead beat at the LAST Operations Stage (above), and
+        supply.rail_stage_commodity runs RAIL_COMMODITIES_54_33 in the FIXED order AMMO, FUEL,
+        STORES -- so the LAST Operations Stage is always the STORES stage, and therefore
+
+            THE COMMONWEALTH GIVES UP THE STORES LOAD EVERY CALENDAR MONTH, AND NEVER ONCE
+            GIVES UP AMMUNITION OR FUEL.
+
+    THE BOOK LEAVES BOTH CHOICES TO THE PLAYER. 54.34 says "Players must state each month which
+    Operations Stage they are not using the railroad" and 54.33 fixes no running order at all --
+    it does not even print the three types in ours ("it may move fuel, ammunition, or stores").
+    Each proxy is individually defensible and the composition is a systematic outcome neither of
+    them was reasoned about.
+
+    MEASURED (GT1-111, off the schedule arithmetic, no campaign needed): 29 dead Operations Stages,
+    one per calendar month, each costing exactly one 1,500-ton load. Since every load is 1,500 tons
+    the SHARE is the same whichever type is dropped -- 26.1% of that one commodity's whole war-long
+    rail lift -- but the POINTS are not, because the [54.5] Equivalent Weights are not: 29 loads is
+    43,500 Stores Points (of 166,500 offered), or would have been 10,875 Ammunition Points (of
+    41,625) or 348,000 Fuel Points (of 1,332,000). So this choice does not cost the Commonwealth
+    "less"; it costs him a quarter of ONE commodity, and the engine always picks which.
+
+    THE ALTERNATIVE, AND WHAT IT WOULD COST. The faithful one is not a different constant -- it is
+    A SEAT: 54.34's own sentence is a DECLARATION the Player makes each month, so the honest build
+    is a Policy hook the Commonwealth staff answers monthly (and the Axis separately -- 54.34 says
+    "Players", plural, and each declares his own), with the declaration entering the event log so a
+    replay stays deterministic. That is Gate-C work of exactly the kind the Commonwealth 54.3
+    dump-to-dump haul and the Devil's Gardens minefields are already waiting on: the book supplies
+    the question and no doctrine to answer it. THE CHEAP ALTERNATIVE -- rotating the dropped load
+    month to month -- IS REJECTED, and not for effort: 54.46 makes this ONE function serve both
+    sides, so rotating the Commonwealth's beat would rotate the Axis borrower's dead stage too,
+    where commodity has nothing to do with it, and it would move the campaign for no rulebook
+    reason at all. Disclosed and left alone is the correct treatment of a proxy; quietly swapping
+    it for a different invention is not.
+
+    Pinned by tests/test_rail.py::test_the_month_s_dead_stage_always_costs_the_stores_load, so the
+    composition cannot drift out from under this paragraph."""
     return frozenset((t, LAST_OPSTAGE)
                      for t in calendar.month_turns(gt)[:DEAD_OPSTAGES_PER_MONTH_54_34])
 

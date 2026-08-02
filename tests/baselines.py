@@ -10,6 +10,136 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+NOT RE-BASELINED 2026-08-01 (SECOND ENTRY OF THE DAY) -- CAUSE: [54.35] ON THE COMMONWEALTH RAIL
+LANE, the named debt the 54.3 slice below did not pay. The two benchmarks do not move; the CAMPAIGN
+does, on all four measured seeds, and this is where that is written down.
+
+    d889e5b21c4e / 1f826374a883   (UNCHANGED, and for the structural reason the entry below gives:
+                                   neither benchmark scenario seeds a railway at all)
+
+THE DEFECT. engine._rail_deliver emitted its SUPPLY_ARRIVED and never called
+_Run.record_rail_landing, so engine._rail_free_points -- the [54.35] ledger -- read a Commonwealth
+station as holding its freight FREE the instant the train set it down.
+
+    [54.35] "Like personnel, supplies may be moved from any one spot and dumped in another spot.
+            Supplies are considered unloaded when they reach a specific hex. THEY MAY NOT BE MOVED
+            THAT OPERATIONS STAGE."
+
+engine.run puts _naval_convoys (which lands the train) at the HEAD of an Operations Stage and
+_truck_convoys at the FOOT of it, so the window was open in every Operations Stage of every campaign.
+The AXIS borrower has honoured the same rule since the 54.4 slice, at three call sites (a second rail
+haul, a coastal ship's load, a lorry's load) -- so 54.35 bound the borrower of the railway and not
+its owner, which is exactly what [54.46] forbids ("All rules concerning the movement of
+troops/supplies and the use of the railroad that apply to the Commonwealth apply equally to the
+Axis"). _rail_free_points' own docstring named the Commonwealth lane as declared debt.
+
+THE FIX is one line beside the emit -- r.record_rail_landing(dump.id, commodity, qty) -- into the
+ledger that already existed. NEUTERED AT ITS OWN CALL SITE (not through a shared helper, which is
+the mistake that shipped two untested guards in the 54.4 slice), it kills exactly two tests and
+nothing else: tests/test_rail.py::test_a_lorry_may_not_lift_what_the_commonwealth_train_has_only_
+just_set_down and ::test_54_35_on_the_commonwealth_lane_pins_the_freight_and_not_the_station, both
+hand-built one-station convoys rather than campaigns.
+
+MEASURED, full 111-turn campaigns, four seeds, the pre-repair tree against this one. Every row was
+run TWICE on each tree and reproduced byte-for-byte, and the four "before" signatures are exactly the
+four the entry below recorded, which is the cross-check that this table is measuring what it says:
+
+    seed   signature                 lorry lifts REFUSED (54.35)   CW rail Points LANDED
+     4     0da89e99e965 -> 21870cb7d03f        0 ->  64            1,496,625 -> 1,496,625
+     1941  30faefcceb35 -> dc90c6d39a3d        0 -> 112            1,496,625 -> 1,496,625
+     7     31edc8e88669 -> 8bbf644def83        0 ->  53            1,496,625 -> 1,496,625
+     2026  35cf55b02acf -> 48354c800ca6        0 ->  89            1,496,625 -> 1,496,625
+
+THE REFUSALS WERE ZERO BEFORE, on every seed, which is the defect stated as a number. THE TONNAGE IS
+UNTOUCHED, to the Point, on every seed -- 1,496,625 is exactly the schedule's own arithmetic
+(111 x 375 Ammunition + 111 x 12,000 Fuel + 82 x 1,500 Stores), so the railway still lands every
+Point it ever landed. What changed is only WHEN it may be picked up again. The Commonwealth lorry
+pool's activity moves in BOTH directions across the four seeds (TRUCK_MOVED 412->615, 316->261,
+1062->752, 813->422), which is chaos under a moved trajectory, not a bias.
+
+Also re-measured on both trees, because the [54.43] census below was written on the pre-repair one:
+seeds 1-24 to Game-Turn 16 activate a locomotive on 13 (unchanged, {3, 5, 6, 9, 10, 11, 12, 14, 15,
+17, 21, 22, 24}) and run trains on 7 -> 8, seed 12 joining {3, 9, 11, 14, 17, 21, 24}.
+
+--------------------------------------------------------------------------------------------------
+NOT RE-BASELINED 2026-08-01 -- CAUSE: [54.32]/[54.33]/[54.34], THE COMMONWEALTH RAILWAY'S
+PER-OPERATIONS-STAGE SCHEDULE. Recorded here because a NON-move of the two benchmarks alongside a
+large, measured move of the CAMPAIGN is exactly what this file exists to write down.
+
+    d889e5b21c4e / 1f826374a883   (UNCHANGED, verified live after the change, each twice)
+
+THE DEFECT. game.scenario._campaign_rail_cargo built ONE manifest per Game-Turn carrying AMMUNITION
+AND FUEL AND STORES TOGETHER -- 4,500 tons, 3,000 on month-start turns -- and engine._unload_convoys
+landed the whole of it in Operations Stage 1. Measured over full 111-turn campaigns on seeds 1941, 7
+and 2026: Operations Stages 2 and 3 received NOTHING, ever, on any turn, in any campaign. Against a
+book that prints two things and this engine obeyed neither:
+
+    [54.32] "The Commonwealth supply capacity of the railroad is 1500 tons per Operations Stage in
+            either direction."
+    [54.33] "The railroad may transport only one type of supply at a given time. It may move fuel,
+            ammunition, or stores -- not any combination of the three."
+
+It is the SAME defect already found and fixed on the Axis side of the same railway (54.43).
+
+THE FIX, and it moves the BEAT and not the TONNAGE. game.supply now owns the whole schedule
+(RAIL_TONNAGE_54_3 / rail_haul_cap / RAIL_COMMODITIES_54_33 / rail_stage_commodity / rail_stage_load
+-- the single source 54.46 already shares with the Axis borrower); _campaign_rail_cargo is the SUM of
+the turn's live stage-loads; engine._unload_convoys lands ONE of them per Operations Stage; and
+scenario's `if calendar.is_month_start(gt): stages.remove("STORES")` -- an independent second
+encoding of 54.34 -- is deleted in favour of game.rail.dead_opstages_54_34, so both sides of the
+board now stand the railway down through one function instead of two that happened to agree.
+
+MEASURED, per Game-Turn OFFERED (before -> after): UNCHANGED, exactly. 4,500 t on an ordinary week
+(375 Ammunition + 12,000 Fuel + 1,500 Stores), 3,000 t on the calendar month's first Game-Turn.
+MEASURED, per OPERATIONS STAGE LANDED (seeds 1941 / 7 / 2026, GT1-111):
+
+    before   stage 1: 111 of 111 turns, ~4,100 t/turn   stages 2 and 3: ZERO, all 111 turns
+    after    stage 1: 111, stage 2: 111, stage 3: 82 (111 - 29 dead stages, one per calendar month)
+             every landing exactly 1,500 t of exactly ONE commodity
+
+Total LANDED rises 455,158-455,176 t -> 456,000 t over the war (+0.2%), and that is not new supply:
+it is the same offered tonnage no longer being clipped by the 54.12 dump ceilings it used to hit
+when a week's freight arrived at one stroke.
+
+THE CAMPAIGN LOG MOVES UNDER IT, and the campaign is not signature-pinned (see CAMPAIGN_SEED below):
+
+    campaign/4     1aaf0a218044 -> 0da89e99e965      (reproduced twice, byte-for-byte)
+    campaign/1941  760a2fe14961 -> 30faefcceb35
+    campaign/7     789f4281fc3b -> 31edc8e88669
+    campaign/2026  82cd21d91529 -> 35cf55b02acf
+
+NO ATTRIBUTION TABLE, because there is nothing separable to attribute: the manifest and the unloader
+are two ends of one wire. Neutering either alone does not restore the old behaviour, it produces a
+state this repository has never been in -- a week's manifest dribbled out one third at a time, or a
+stage-load landed three times over. The neuter that means anything is the whole change, which is the
+diff.
+
+WHY THE TWO BENCHMARKS DO NOT MOVE, measured rather than assumed: neither rommels_arrival nor
+siege_of_tobruk seeds the Commonwealth rail line at all. Convoy.rail is False on every convoy either
+scenario carries and state.terrain.rails is empty in both, so engine._unload_convoys never enters the
+branch this change rewrites (tests/test_rail.py::test_railless_scenario_byte_identical pins the
+property directly). Both signatures were re-read live after the change and are the values above.
+
+TWO CONSEQUENCES ELSEWHERE, both real, both recorded where they live rather than here:
+
+  * THE EIGHTH ARMY HOLDS MERSA MATRUH. Fed three times a week instead of once, the Commonwealth
+    keeps its own railhead at CAMPAIGN_SEED where it used to lose it on Game-Turn 3 -- the exact
+    cascading failure the CAMPAIGN_SEED note below calls "THE FINDING". MEASURED at GT12/GT30:
+    control AXIS -> ALLIED, no railhead retraction at all, AL-Stage-Matruh 0 -> 7,824 Fuel, the
+    lorry pool 42 -> 100 moves and 14 -> 64 unloads. Three campaign-narrative tests carried
+    tripwires reading "update this restatement, the finding reversed"; all three fired and are
+    restated in place (test_campaign_concentration.py x2, test_campaign_claim.py).
+  * THE AXIS LOSES HIS ONE MEASURED LOCOMOTIVE AT SEED 4, and the reason is 54.33 itself. He was
+    buying it with COMMONWEALTH STORES CAPTURED AT AL-STAGE-ELDABA (32.13); a station only stood
+    stocked in all three commodities at once because the mixed train put them there. Swept over
+    seeds 1-24 to Game-Turn 16, THIRTEEN campaigns still activate ({3, 5, 6, 9, 10, 11, 12, 14, 15,
+    17, 21, 22, 24}) and seven still run trains ({3, 9, 11, 14, 17, 21, 24}), so 54.4 is better
+    measured, not less reachable -- tests/test_rail_control.py's campaign witness is re-pinned 4 -> 9,
+    where the payer is the Axis's OWN forward dump. (CORRECTED 2026-08-01 by the review repair below,
+    which re-swept the same window twice on this very tree: the count written here was "12 campaigns",
+    and thirteen is what the sweep returns. The seven is exact for this tree. The repair's own tree
+    reads 13 and 8 -- see its entry above.)
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-07-31 -- CAUSE: the 22.3 REVIEW REPAIR. The adversarial review of the slice below
 found four real rule defects in it; three move both benchmarks, the fourth is measurably inert, and
 all four are attributed separately below.

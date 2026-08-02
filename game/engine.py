@@ -1144,7 +1144,9 @@ def _dump_on(state: GameState, side: Side, hex_):
 
 
 def _rail_deliver(r: _Run, convoy, terminus, cargo: dict) -> None:
-    """Land one game-turn of railway freight (54.32) across the line's stops (_rail_stops).
+    """Land ONE OPERATIONS STAGE of railway freight (54.32) across the line's stops (_rail_stops)
+    -- one train, one type of supply, 1,500 tons of it. The caller (_unload_convoys) cuts the
+    stage's load off the Game-Turn manifest and picks the type (54.33); this only sets it down.
 
     EQUAL SHARES, THEN CASCADE FORWARD. Each stop takes an even cut of the haul -- capped by its
     54.12 Supply Dump Capacity -- and whatever will not fit (or the integer remainder) cascades to
@@ -1152,7 +1154,21 @@ def _rail_deliver(r: _Run, convoy, terminus, cargo: dict) -> None:
     eat; the surplus still runs up to the front, which is where a staff sends it.
 
     The total landed is UNCHANGED -- it is the 54.32 haul, to the point. Nothing is minted here that
-    was not minted before; it merely gets off the train at more than one station."""
+    was not minted before; it merely gets off the train at more than one station.
+
+    [54.35] AND WHAT THIS TRAIN SETS DOWN STAYS DOWN. "Supplies are considered unloaded when they
+    reach a specific hex. They may not be moved that Operations Stage." Every landing is booked into
+    _Run.record_rail_landing, which is the ledger _rail_free_points reads, so the three movers that
+    could otherwise lift this freight before the stage is out -- a further rail haul, a coastal
+    ship's load, a lorry's load -- see the station as holding only what was already standing on the
+    platform when the train arrived.
+
+    THIS WAS THE SLICE'S NAMED DEBT AND IT IS PAID HERE. _rail_free_points' docstring used to end
+    "the COMMONWEALTH railway's own freight is not ledgered here... Declared as debt", so 54.35 bound
+    the borrower of the line and not its owner: the Eighth Army's lorries could lift, in the very
+    Operations Stage the train called, freight the train had only just set down. engine.run puts
+    _naval_convoys (this) at the head of the Operations Stage and _truck_convoys at the foot of it,
+    so that window was open in every stage of every campaign."""
     stops = [d for d in (_rail_station(r, convoy, s) for s in _rail_stops(r, convoy, terminus))
              if d is not None]
     if not stops:
@@ -1174,6 +1190,7 @@ def _rail_deliver(r: _Run, convoy, terminus, cargo: dict) -> None:
                     r.emit(EventKind.SUPPLY_ARRIVED, convoy.side, "SYSTEM",
                            {"supply_id": dump.id, "cargo": {commodity: qty},
                             "lane": convoy.lane, "convoy_id": convoy.id})
+                    r.record_rail_landing(dump.id, commodity, qty)   # 54.35: and it stays down
 
 
 def _rail_station(r: _Run, convoy, stop):
@@ -1718,8 +1735,9 @@ def _schedule_convoys(r: _Run, due: list, policies: dict | None) -> None:
         if itd_order is not None and itd_order.source == "malta":
             malta_flew = True                           # 39.13: ONE strategic sortie, however many
                                                         # convoys it engages -- billed once, below
-        # [54.3] a RAILWAY delivery is not a ship: it lands its whole 54.32 haul along the line at
-        # once (_rail_deliver / _rail_stops), so it is flagged to unload only in the turn's 1st stage.
+        # [54.3] a RAILWAY delivery is not a ship: it crosses no quay, so the 55.14 harbour
+        # throttle does not apply to it, and it lands one 54.32 stage-load per Operations Stage
+        # along its own line (_unload_convoys / _rail_deliver / _rail_stops).
         rail = bool(c.rail and r.state.terrain.rails)
         r.convoy_manifest[c.id] = {"dest": dump.id, "cargo": dict(cargo), "rail": rail}
         if itd_order is not None:                       # 41.6/32.66: the bombing marker beside arrival
@@ -1740,8 +1758,9 @@ def _schedule_convoys(r: _Run, due: list, policies: dict | None) -> None:
 
 def _unload_convoys(r: _Run, due: list) -> None:
     """[48 V.D] The Naval Convoy Arrival Phase, run each Operations Stage: unload each due convoy's
-    REMAINING manifest into its destination dump. A railway (54.3) lands its whole 54.32 haul along
-    the line at once, in the turn's first stage. A SEA convoy unloads over the harbour quay, capped
+    REMAINING manifest into its destination dump. A railway (54.3) runs ONE train each Operations
+    Stage, carrying ONE type of supply up to 54.32's 1,500 tons, and stands down entirely on the
+    calendar month's 54.34 stage. A SEA convoy unloads over the harbour quay, capped
     by the port's per-OpStage tonnage budget (55.16, ceil(cap_tons * eff/max_eff)); whatever will
     not fit this stage stays on the manifest for the next one, at the Efficiency Level the port
     then has -- bombed down or regenerated -- which is the whole siege duel.
@@ -1775,9 +1794,33 @@ def _unload_convoys(r: _Run, due: list) -> None:
         cargo = m["cargo"]
         dump = r.state.supply(m["dest"])
         if m["rail"]:
-            if r.state.stage == 1:                      # the railway lands its whole haul at once (54.3)
-                _rail_deliver(r, c, dump, cargo)
-                m["cargo"] = {k: 0 for k in cargo}      # delivered -- nothing carries to later stages
+            # [54.32]/[54.33]/[54.34] ONE TRAIN PER OPERATIONS STAGE, CARRYING ONE TYPE OF SUPPLY.
+            # 54.32 rates the line "1500 tons per Operations Stage", 54.33 forbids the mixed train,
+            # and the manifest above is a whole Game-Turn of that -- three single-commodity
+            # stage-loads (scenario._campaign_rail_cargo). So each stage takes its OWN load off it
+            # and leaves the rest for the stages still to come, instead of landing the week's
+            # freight in one afternoon. What the stops cannot hold does NOT roll forward: a stage's
+            # train is a stage's train, and its overflow expires with it, exactly as the whole
+            # manifest's used to.
+            #
+            # THE THREE GUARDS BELOW ARE A DELIBERATE DOUBLE GATE, NOT AN ACCIDENT, and the decision
+            # is recorded because a review found all three byte-inert in a campaign. They are, and
+            # the reason is that scenario._campaign_rail_cargo already leaves the dead stage's load
+            # off the week's manifest, so on a month-start Game-Turn the manifest is exhausted by
+            # Stage 2 and the "nothing left to land" continue above fires before 54.34 is reached.
+            # THE MANIFEST IS THE REAL ONE: 54.34's own sentence is a DECLARATION made in advance
+            # ("Players must state each month which Operations Stage they are not using the
+            # railroad"), so the seat that plans the week is where the declaration belongs. What the
+            # ENGINE owes is that the declaration is honoured whoever built the manifest -- and a
+            # rule that is only true because one caller happens to be careful is not encoded at all.
+            # Neither half is deleted, and all three guards are now pinned DIRECTLY, with hand-built
+            # convoys rather than through a campaign, in tests/test_rail.py (a guard no test can
+            # reach is a guard that will rot).
+            if not rail.is_dead_stage_54_34(r.state):   # 54.34 via 54.46: the water stage hauls nothing
+                commodity = supply.rail_stage_commodity(r.state.stage)
+                if cargo.get(commodity, 0) > 0:
+                    _rail_deliver(r, c, dump, {commodity: cargo[commodity]})
+                cargo[commodity] = 0
             continue
         cap = supply.dump_capacity_at(r.state, dump.hex)   # 54.12, by dump terrain + village overlay
         port = r.state.port_at(dump.hex)               # 56.28: the built-in harbour dump throttles a ship
@@ -5691,11 +5734,15 @@ def _rail_free_points(r: _Run, dump, commodity: str) -> int:
     that reached a specific hex" this stage and moves normally -- so a station keeps working the
     day a train calls at it.
 
-    NAMED BOUNDARY, not an oversight: the COMMONWEALTH railway's own freight (engine._rail_deliver,
-    the 54.32 lane that lands a whole Game-Turn's haul at Stage 1) is not ledgered here. 54.35
-    governs it too via its own section, but that lane is a different slice with its own transcription
-    and its own tests, and correcting it is a change to the Commonwealth's campaign logistics rather
-    than a repair to 54.4. Declared as debt."""
+    BOTH RAILWAYS ARE LEDGERED HERE SINCE 2026-08-01. This docstring used to end "the COMMONWEALTH
+    railway's own freight (engine._rail_deliver...) is not ledgered here... Declared as debt" -- 54.35
+    binding the borrower of the line and not its owner, which is not a reading of anything, and which
+    54.46 ("all rules concerning the movement of troops/supplies and the use of the railroad that
+    apply to the Commonwealth apply equally to the Axis") makes plainly backwards. _rail_deliver now
+    books every landing through _Run.record_rail_landing, so a Commonwealth lorry sees the same
+    refusal an Axis one does. The ledger is keyed by DUMP ID and not by side, which is what makes one
+    ledger serve two railways -- and is also right on its own terms: 54.35 pins the freight to the
+    hex it reached, and a dump that changes hands mid-stage (32.13) does not un-unload it."""
     return getattr(dump, commodity.lower()) - r.rail_landed_this_stage(dump.id, commodity)
 
 

@@ -26,7 +26,7 @@ import math
 from collections import OrderedDict
 from dataclasses import dataclass
 
-from . import air, logistics_data, movement, tactics
+from . import air, calendar, logistics_data, movement, tactics
 from .events import CONTROL_OF
 from .hexmap import Coord, neighbors
 from .state import GameState, Port, Side, SupplyUnit, TruckFormation, Unit
@@ -894,12 +894,40 @@ def _blocked_start_traces(tmap: movement.TerrainMap, h: Coord, fed: frozenset,
 
 
 # --- Commonwealth railroad (rule 54.3) ----------------------------------------
-RAIL_TONNAGE_54_3 = 1500          # 54.3: tons of ONE commodity hauled per Operations Stage
+#
+# *** WHAT 54.3 STILL DOES NOT DO HERE, AS NAMED DEBT RATHER THAN SILENCE. ***
+#
+#   * THE DUMP-TO-DUMP HAUL. RAIL_HAULED exists as an event and rail_reachable gates it, and the
+#     AXIS borrower drives it (54.43, engine._rail_haul, campaign_policy.rail_doctrine); on the
+#     COMMONWEALTH side nothing ever proposes one, so the owner of the line can be fed BY it and
+#     cannot shift a dump ALONG it. That is not a missing magnitude -- every number it needs is
+#     already on this page -- it is a missing DOCTRINE: which of his dumps the Eighth Army would
+#     empty into which, and when. The book supplies none, exactly as it supplies none for the
+#     Devil's Gardens minefields or the Tobruk relay. A Gate-C question, not a port question.
+#   * [54.31]/[8.7] RAIL MOVEMENT OF PERSONNEL ("it may move either supplies or personnel -- it
+#     cannot move both at the same time"), which is a Sequence-of-Play phase of its own ([5.0 J]
+#     Commonwealth Rail Movement Phase) and is rated in STACKING POINTS, not tons -- see the
+#     [54.5] chart's own "In Stacking Points" panel. A separate slice with a separate unit.
+#
+# [54.32] "The Commonwealth supply capacity of the railroad is 1500 tons per Operations Stage in
+# either direction" -- tons of ONE commodity per Operations Stage, off the chart data like every
+# sibling 54.3x/54.4x magnitude (54.41's five hexes, 54.43's 250/100 and 300 tons, 54.44's 900,
+# 54.34's one dead stage all come out of the same file). It was the last literal in the pair of
+# rules, and "code reads magnitudes from data, never from literals" is not a rule with an exception
+# for the small ones: a number typed here is a number that can drift from the transcription beside
+# it, which is exactly what the retired scenario._RAIL_TONS_PER_OPSTAGE was doing.
+RAIL_TONNAGE_54_3 = logistics_data.cw_railroad_54_3()["tons_per_opstage"]
 # [54.33] "The railroad may transport only one type of supply at a given time. It may move fuel,
 # ammunition, or stores -- not any combination of the three." WATER IS DELIBERATELY ABSENT, and the
 # same clause says why in its own parenthetical: "(Water need not be transported by RR -- the
 # railroad hexes are pipelines in and of themselves.)" So this is a SHORTER list than COMMODITIES,
 # and a guard written against COMMODITIES is not this rule. Reaches the Axis through 54.46.
+#
+# THE SET IS THE BOOK'S; THE ORDER IS OURS, and that is why this tuple is not in the data file with
+# the tonnage above. rail_stage_commodity runs the types in THIS order, one per Operations Stage,
+# and 54.33 fixes no order at all -- the book does not even print them in it ("fuel, ammunition, or
+# stores"). See rail_stage_commodity's flag, and rail.dead_opstages_54_34 for what the order
+# composes with.
 RAIL_COMMODITIES_54_33 = (AMMO, FUEL, STORES)
 
 
@@ -907,6 +935,52 @@ def rail_haul_cap(commodity: str) -> int:
     """54.3 / 54.33: the Points of `commodity` the Commonwealth rail may haul in one
     Operations Stage -- 1500 tons crossed to Points at the 54.5 Equivalent Weights."""
     return tons_to_points(RAIL_TONNAGE_54_3, commodity)
+
+
+def rail_stage_commodity(stage: int) -> str:
+    """[54.33] WHICH single type of supply the Commonwealth railroad runs in Operations Stage
+    `stage` (1-based). "The railroad may transport only one type of supply at a given time. It may
+    move fuel, ammunition, or stores -- NOT ANY COMBINATION OF THE THREE."
+
+    A Game-Turn is three Operations Stages ([48 VI/VII] repeats every facet of the First in the
+    Second and Third) and 54.32 rates the line PER OPERATIONS STAGE, so a week of trains is three
+    single-commodity stage-loads -- not one mixed train three times the size.
+
+    *** FLAGGED AS A SCHEDULING PROXY, and it is the only invented thing here. *** WHICH type runs
+    in WHICH stage is the Commonwealth Player's free choice and the book never fixes it; this
+    engine has no seat for that declaration, so the stages run in RAIL_COMMODITIES_54_33's own
+    order. The MAGNITUDE is the rulebook's (54.32 through rail_haul_cap) and the ONE-TYPE-PER-TRAIN
+    restriction is the rulebook's; only the running order is ours. Note this schedule is what makes
+    54.33 hold BY CONSTRUCTION -- a single commodity is chosen before any freight is sized -- so
+    nothing anywhere needs to remember what the last train carried.
+
+    *** WHAT THIS PROXY COMPOSES WITH, WHICH NEITHER FLAG SAID ON ITS OWN. *** This order is fixed
+    (AMMO, FUEL, STORES) and game.rail.dead_opstages_54_34's proxy fixes 54.34's dead beat at the
+    LAST Operations Stage. Compose the two and a THIRD fact falls out that the book never decides:
+    THE COMMONWEALTH GIVES UP THE STORES LOAD EVERY CALENDAR MONTH AND NEVER AMMUNITION OR FUEL.
+    See rail.dead_opstages_54_34 for the whole disclosure, the alternative, and its cost; it is
+    pinned by tests/test_rail.py::test_the_month_s_dead_stage_always_costs_the_stores_load.
+
+    A stage off [5.1]'s three-Operations-Stage clock RAISES rather than answering: `[stage - 1]`
+    would turn stage 0 into Python's -1 (STORES) and stage -1 into -2 (FUEL), and a silent wrong
+    answer out of the one function that decides what a train carries is worse than a crash."""
+    if not 1 <= stage <= calendar.OPSTAGES_PER_GAME_TURN:
+        raise ValueError(f"[5.1] a Game-Turn has Operations Stages 1.."
+                         f"{calendar.OPSTAGES_PER_GAME_TURN}, not {stage}")
+    return RAIL_COMMODITIES_54_33[stage - 1]
+
+
+def rail_stage_load(stage: int) -> dict:
+    """[54.32]/[54.33] ONE Operations Stage of Commonwealth railway freight: the stage's single
+    commodity at the line's whole 1,500-ton capacity, crossed to Points at the [54.5] Equivalent
+    Weights (a ton of ammunition is a quarter of a Point, a ton of fuel is eight -- which is why
+    the same train is worth 375 Ammunition or 12,000 Fuel).
+
+    Every other commodity is zero. WATER is zero by 54.33's own parenthetical rather than by
+    omission: "(Water need not be transported by RR -- the railroad hexes are pipelines in and of
+    themselves.)" game.wells.pipeline already seeds that corridor as an unlimited 52.23 source."""
+    carried = rail_stage_commodity(stage)
+    return {c: (rail_haul_cap(c) if c == carried else 0) for c in COMMODITIES}
 
 
 def rail_reachable(tmap: movement.TerrainMap, start: Coord) -> frozenset:

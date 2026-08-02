@@ -42,17 +42,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from game import coords, supply                                          # noqa: E402
+from game import coords, relay, supply                                   # noqa: E402
 from game.apply import apply, fold                                       # noqa: E402
 from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy  # noqa: E402
 from game.campaign_victory import CampaignVictory                        # noqa: E402
 from game.engine import _convoy_dest, determinism_signature, run         # noqa: E402
 from game.events import Control, Side                                    # noqa: E402
-from game.hexmap import distance, is_adjacent                            # noqa: E402
+from game.hexmap import distance                                         # noqa: E402
 from game.policy import ScriptedPolicy                                   # noqa: E402
 from game.scenario import (_campaign_cw_rail_line, _campaign_rail_cargo,  # noqa: E402
-                           _RAIL_TONS_PER_OPSTAGE, campaign, rommels_arrival,
-                           siege_of_tobruk)
+                           campaign, rommels_arrival, siege_of_tobruk)
 from game.state import Convoy                                            # noqa: E402
 from game.terrain import Terrain                                         # noqa: E402
 from baselines import BENCHMARKS, CAMPAIGN_SEED                                    # noqa: E402
@@ -203,10 +202,22 @@ def test_the_railway_carries_its_charted_tonnage_not_a_placeholder_supply_unit()
     move fuel, ammunition, or stores -- not any combination of the three"), crossed to Points by the
     54.5 Equivalent Weights. And 54.34 stands the line down for one stage a month to haul its own
     water -- which is also why no Water rides the train (54.33: "the railroad hexes are pipelines in
-    and of themselves"; game.wells.pipeline already seeds that corridor)."""
-    ammo = supply.tons_to_points(_RAIL_TONS_PER_OPSTAGE, supply.AMMO)      # 1500 t / 4 t = 375
-    fuel = supply.tons_to_points(_RAIL_TONS_PER_OPSTAGE, supply.FUEL)      # 1500 t x 8 = 12,000
-    stores = supply.tons_to_points(_RAIL_TONS_PER_OPSTAGE, supply.STORES)  # 1500 t x 1 = 1,500
+    and of themselves"; game.wells.pipeline already seeds that corridor).
+
+    *** REWRITTEN AGAINST THE SINGLE SOURCE 2026-08-01, ASSERTIONS UNCHANGED. *** This test used to
+    re-derive the week's cargo from scenario._RAIL_TONS_PER_OPSTAGE -- a SECOND transcription of
+    54.32's 1,500 tons, living beside game.supply.RAIL_TONNAGE_54_3, which is the one the Axis
+    borrower reads through 54.46. That name is retired and the whole schedule now hangs off
+    game.supply (RAIL_TONNAGE_54_3 / rail_haul_cap / rail_stage_load), so this reads the same chart
+    the engine does. Every figure below is the same figure it always was. What is genuinely NEW is
+    the beat: the week's manifest is now UNLOADED one single-commodity stage-load at a time
+    (tests/test_rail.py pins that end to end); this file's claim is about its SIZE, which is a
+    week's worth either way."""
+    ammo = supply.rail_haul_cap(supply.AMMO)        # 1500 t / 4 t per Point       = 375
+    fuel = supply.rail_haul_cap(supply.FUEL)        # 1500 t / (1/8) t per Point   = 12,000
+    stores = supply.rail_haul_cap(supply.STORES)    # 1500 t / 1 t per Point       = 1,500
+    assert (ammo, fuel, stores) == tuple(
+        supply.tons_to_points(supply.RAIL_TONNAGE_54_3, c) for c in ("AMMO", "FUEL", "STORES"))
 
     full = _campaign_rail_cargo(2)                       # an ordinary week: all three stages run
     assert full == {"AMMO": ammo, "FUEL": fuel, "STORES": stores, "WATER": 0}
@@ -362,25 +373,68 @@ def test_the_commonwealth_trucks_actually_run():
     fixed here (game.relay is out of this slice's scope: Phase 8.1a is the map, not the router).
     Flagged for the backlog. Every OTHER Commonwealth freight truck still cycles correctly (the
     exception below is exactly one formation), so the assertion now excludes it by name rather than
-    weaken the check for the whole pool -- carving around a named, understood bug, not hiding one."""
+    weaken the check for the whole pool -- carving around a named, understood bug, not hiding one.
+
+    *** RESTATED 2026-08-01 (the [54.32]/[54.33]/[54.34] per-Operations-Stage railway), AND THE
+    EXCUSE LIST IS RETIRED WITH ITS DIAGNOSIS ASSERTED INSTEAD. *** With the railway feeding the
+    Commonwealth in all THREE Operations Stages rather than dumping the week's freight in Stage 1,
+    the Eighth Army HOLDS Mersa Matruh at this seed, and every fact the old scaffolding pinned is
+    now false in the good direction (MEASURED at CAMPAIGN_SEED over 24 Game-Turns, before -> after):
+
+        Mersa Matruh at GT24        AXIS -> ALLIED
+        Commonwealth truck moves      42 -> 100, spread over 19 of 24 Game-Turns (was 6)
+        Commonwealth truck unloads    14 -> 64
+        AL-Stage-Matruh Fuel at GT24   0 -> 7,824
+
+    So the four named "known livelock" lorries are no longer the four that stop, and re-typing a
+    fresh set of names and hexes every time the campaign breathes is precisely how a baseline
+    becomes folklore (tests/baselines.py's own warning; this list had already been re-pinned four
+    times). The DIAGNOSIS is asserted directly instead, off the router and the audit log, so a
+    lorry stopping for a NEW reason fails instead of being waved through.
+
+    *** RE-MEASURED 2026-08-01 (the 54.3 review repair), WHICH PAID [54.35] ON THIS LANE AND MOVED
+    THE POOL AGAIN -- and which found that this test's own restatement had been left FALSE. *** The
+    edit above claimed "8 of 10 stop at GT3-4 and the router offers all 8 nothing". With
+    engine._rail_deliver now booking its landings into the 54.35 ledger, the trajectory is different
+    and so is the diagnosis. MEASURED at CAMPAIGN_SEED over 24 Game-Turns:
+
+        Mersa Matruh at GT24            ALLIED (unchanged by this repair)
+        freight lorries ON the railhead  3 of 7, at Cairo-distance 59 = d(MERSA MATRUH, CAIRO)
+        freight lorries behind it        4 of 7, at 3 / 8 / 21 / 30 from Cairo, ALL unrouted
+        air lorries still cycling        2 of 3, to GT24, one on the faucet and one on a larder
+        54.35 lorry-lift refusals        5, none after GT5
+        53.12 "load exceeds truck capacity"  174, across exactly those 3 railhead lorries
+
+    AND THE SECOND STALL MODE IS A SECOND, PRE-EXISTING game.relay BUG, named here for the first
+    time. The relay sizes its 56.22 load off what the DUMP holds rather than what the LORRY holds,
+    so a well-stocked railhead yields an order no lorry in the park can execute; _truck_convoys
+    drops the whole order when its load leg is refused, so the lorry does not move either, and
+    because the relay is stateless it proposes the identical order next stage. It already fired 54
+    times on the pre-repair tree (all on AL-Truck-Alex-L, the one lorry that then stood on the
+    railhead) -- so this repair did not cause it, it moved which lorries meet it. Out of scope and
+    unfixed, exactly like _step_toward; both are asserted as the only two permitted stalls."""
     res = run(campaign(seed=CAMPAIGN_SEED, max_turns=24), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     moves = [e for e in res.events if e.kind.name == "TRUCK_MOVED" and e.side == Side.ALLIED]
     unloads = [e for e in res.events if e.kind.name == "TRUCK_UNLOADED" and e.side == Side.ALLIED]
     assert len(moves) >= 24, f"the Commonwealth pool barely ran: {len(moves)} moves in 24 game-turns"
     assert unloads, "the Commonwealth trucks never delivered anything"
 
-    # RESTATED 2026-07-26 (Phase 8.1b, the A/B/D/E section-seam correction): at this seed the pool now
-    # DOES freeze after GT3 (41 of 42 GT1-24 moves land in GT1-3, one straggler at GT24) -- but not for
-    # the reason this assertion used to guard against (a broken lorry pool). Mersa Matruh falls to the
-    # Axis at GT3 (test_campaign_concentration.py's own RESTATED note traces the mechanism) and stays
-    # Axis-held through this window, so there is no live railhead for the pool to service forward of --
-    # exactly the cascading failure tests/baselines.py's CAMPAIGN_SEED note already names as
-    # "THE FINDING... a balance/robustness finding for the owner, not something to tune away here": one
-    # lost combat at the railhead and the whole logistics spine goes idle behind it. So the honest claim
-    # left standing is that the pool ran WHILE it had a railhead to serve, not that it never stops --
-    # the mechanism (len(moves), unloads, above) is intact; the campaign's forward reach is what moved.
-    early = [e for e in moves if e.turn <= 3]
-    assert early, "the Commonwealth pool never ran even while it still held a live railhead"
+    # RESTATED 2026-07-26 (Phase 8.1b, the A/B/D/E section-seam correction): at this seed the pool
+    # froze after GT3 (41 of 42 GT1-24 moves landed in GT1-3), because Mersa Matruh fell to the Axis
+    # at GT3 and there was no live railhead left to service forward of -- exactly the cascading
+    # failure tests/baselines.py's CAMPAIGN_SEED note names as "THE FINDING... one lost combat at
+    # the railhead and the whole logistics spine goes idle behind it". So all that was asserted was
+    # that the pool ran WHILE it had a railhead.
+    #
+    # RESTORED TO THE FULL CLAIM 2026-08-01: with the railway running all three Operations Stages
+    # the Eighth Army holds the railhead, and the pool runs THROUGH the war (moves on 19 of 24
+    # Game-Turns, the last on GT24). This test's own docstring asks for exactly that -- "the lorry
+    # pool must CYCLE... for the whole span, not drive to Cairo once and idle there" -- so the
+    # weakened form is dropped and the thesis is asserted: the pool runs in the LAST quarter of the
+    # window as well as the first. It is the same claim tests/test_rail.py makes of the trains.
+    assert [e for e in moves if e.turn <= 3], "the pool never ran at all in the opening weeks"
+    late = [e for e in moves if e.turn > 3 * res.final.max_turns // 4]
+    assert late, "the Commonwealth pool drove out once and idled: no truck moved after GT18"
 
     # RESTATED 2026-07-22 (rules of this port, 5): asked of the FREIGHT pool, which is what this
     # test has always been about. [35.15]'s First Line Transport is a second pool with a second job
@@ -439,34 +493,103 @@ def test_the_commonwealth_trucks_actually_run():
     # If it ever stops for some other reason -- a full pool, a lost load, a route it declines -- some
     # reachable hex WILL make progress and this fails, which is exactly when a re-diagnosis is owed.
     # MEASURED on this tree: hex (25, 101), distance 1, 829 reachable hexes, none closer than 1.
-    _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK = {
-        "AL-Truck-Alex-M", "AL-Truck-Alex-L", "AL-Truck-Airfield-M", "AL-Truck-Airfield-H"}
-    stuck = {t.id: t for t in res.final.trucks if t.id in _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK}
-    assert set(stuck) == _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK, "the excused set moved"
-    assert res.final.control_of(MATRUH) is Control.AXIS, "the railhead is friendly -- re-diagnose"
-    for tid in ("AL-Truck-Airfield-M", "AL-Truck-Airfield-H"):
-        assert stuck[tid].hex == MATRUH, \
-            f"{tid} is no longer sitting on the Axis-held railhead ({stuck[tid].hex}) -- re-diagnose"
-    alex_l = stuck["AL-Truck-Alex-L"]
-    assert alex_l.hex != MATRUH, "AL-Truck-Alex-L reached the railhead -- re-diagnose"
-    _closer = [h for h in supply.reachable_truck_moves(res.final, alex_l)
-               if distance(h, MATRUH) < distance(alex_l.hex, MATRUH)]
-    assert not _closer, \
-        f"AL-Truck-Alex-L at {alex_l.hex} CAN reach {len(_closer)} hexes nearer the railhead, so " \
-        f"it is not the known game.relay._step_toward dead end any more -- re-diagnose"
-    assert not is_adjacent(stuck["AL-Truck-Alex-M"].hex, MATRUH)   # the 8.1a case, a different hex
-    for t in res.final.trucks:              # nobody drove back to the Delta and idled there
-        if t.side == Side.ALLIED and t.line != 1 and t.id not in _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK:
-            assert distance(t.hex, CAIRO) >= distance(MATRUH, CAIRO), \
-                f"{t.id} idled back at the base ({t.hex})"
+    #
+    # THE NAME LIST IS RETIRED 2026-08-01 (see the docstring) AND THE ROUTER IS ASKED DIRECTLY.
+    # A lorry that has stopped moving has stopped for a DIAGNOSED reason or for something NEW. Only
+    # the second is a regression, and only the second is worth a test -- so instead of naming the
+    # lorries and re-typing their hexes, every lorry that fell silent must be silent for one of the
+    # two stalls this file has diagnosed, both of them read off the run rather than off a list:
+    #
+    #   (i)  THE RELAY PROPOSES IT NOTHING -- the game.relay._step_toward single-step dead end
+    #        diagnosed at length above. Unfixed, out of this slice's scope.
+    #   (ii) THE RELAY PROPOSES IT A LOAD IT CANNOT LEGALLY CARRY, and the engine says so in the
+    #        audit log: ORDER_REJECTED "load exceeds truck capacity (53.12)". _truck_convoys drops
+    #        the WHOLE order when its load leg is refused, so such a lorry never moves either.
+    #
+    # (ii) IS A SECOND, PRE-EXISTING game.relay BUG AND IT IS NAMED HERE RATHER THAN EXCUSED. The
+    # relay sizes its 56.22 split off what the DUMP holds and not off what the LORRY holds, so a
+    # well-stocked railhead produces an order no lorry in the park can execute -- every Operations
+    # Stage, forever, because the relay is stateless and proposes the identical order again.
+    # MEASURED on the pre-repair tree it already fired 54 times at CAMPAIGN_SEED (all of them
+    # AL-Truck-Alex-L, GT1-GT24); on this tree the 54.35 rail pin has moved which lorries stand on
+    # the railhead, so it fires 174 times across three of them. IT IS NOT 54.35 DOING THIS: the
+    # 54.35 refusals in the same 24-turn window number FIVE, and none after GT5. Not fixed here --
+    # game.relay is out of this slice's scope, exactly as _step_toward is.
+    #
+    # MEASURED at CAMPAIGN_SEED: 3 freight lorries stand ON the railhead stalled by (ii), 4 more sit
+    # back along the Delta road stalled by (i), 2 air lorries run to GT24 and the third is (i).
+    last_move = {}
+    for e in moves:
+        last_move[e.payload["truck_id"]] = max(last_move.get(e.payload["truck_id"], 0), e.turn)
+    refused = {}
+    for e in res.events:
+        if (e.kind.name == "ORDER_REJECTED" and e.side == Side.ALLIED
+                and e.payload.get("truck_id")):
+            refused.setdefault(e.payload["truck_id"], set()).add(e.payload["reason"])
+    ordered = {o.truck_id for o in relay.campaign_truck_orders(res.final, Side.ALLIED)}
+    ordered |= {o.truck_id for o in relay.air_supply_orders(res.final, Side.ALLIED)}
+    quiet = int(res.final.max_turns * 0.75)          # "fell silent": no move in the last quarter
+    _OVER_ASK = "load exceeds truck capacity (53.12)"
+    for t in res.final.trucks:
+        if t.side != Side.ALLIED:
+            continue
+        assert t.id in last_move, f"{t.id} never moved at all -- the pool did not start"
+        if last_move[t.id] <= quiet:
+            assert t.id not in ordered or _OVER_ASK in refused.get(t.id, ()), \
+                f"{t.id} stopped at GT{last_move[t.id]} at {t.hex}, the relay HAS an order for it " \
+                f"and the engine never refused that order as uncarriable -- it is neither the known " \
+                f"_step_toward dead end nor the known 53.12 over-ask: re-diagnose"
+    assert ordered, "the relay has no work for any Commonwealth lorry -- the whole pool is dead"
+
+    # *** THE TWO POSITIONAL CLAIMS, RESTORED 2026-08-01 (port rule 5). *** The 2026-08-01 cadence
+    # edit DELETED both of these outright rather than restating them, which is precisely what rule 5
+    # forbids -- "if a corrected rule makes an assertion false, restate it to assert the correct
+    # thing and write the reason into the file". They are back, in the form the retirement of the
+    # name list demands, and each is STRICTLY STRONGER than what it replaces: where the old pair
+    # excused four lorries BY NAME whatever they did, these excuse a lorry only on the RELAY'S OWN
+    # VERDICT that it has no work for it. A named lorry that falls behind while still under orders
+    # now fails; under the name list it was waved through.
+    #
+    #   (A) "nobody drove back to the Delta and idled there" -- the FREIGHT pool, and this test's
+    #       own thesis ("not drive to Cairo once and idle there"). Was:
+    #           for t in trucks: if ALLIED and t.line != 1 and t.id not in <the four names>:
+    #               assert distance(t.hex, CAIRO) >= distance(MATRUH, CAIRO)
+    #       MEASURED at CAMPAIGN_SEED, GT24: 3 of 7 freight lorries stand ON Mersa Matruh
+    #       (distance 59 from Cairo, which is exactly d(MATRUH, CAIRO)); the other 4 are strung
+    #       along the Delta road at 3, 8, 21 and 30 hexes from Cairo -- and the relay proposes all
+    #       four of them nothing whatever. So the claim holds of every lorry the relay still has
+    #       work for, and that is what is asserted.
+    #   (B) "the air pool is on ITS cycle, not parked at home" -- identical treatment. MEASURED:
+    #       AL-Truck-Airfield-H stands on the Mersa Matruh faucet and -L on the D3516 larder, both
+    #       still running at GT24; -M stopped at GT3 and is unrouted.
+    #
+    # THE RESIDUAL EXPOSURE, stated rather than hidden: a lorry that drove home AND then dead-ended
+    # there would satisfy both. That hole is not new -- the name list had it too, for four named
+    # lorries unconditionally -- and it is now bounded by a verdict instead of by a list.
+    # (A third assertion went with the name list and is NOT restored, because its subject was the
+    # list: `not is_adjacent(stuck["AL-Truck-Alex-M"].hex, MATRUH)`, which said only that Alex-M's
+    # dead end was a different hex from the other three's. Whichever hex any of them stops at, the
+    # partition above now requires the relay to have abandoned it, which is the same claim without
+    # the coordinates.)
+    freight = [t for t in res.final.trucks if t.side == Side.ALLIED and t.line != 1]
+    forward = [t for t in freight if distance(t.hex, CAIRO) >= distance(MATRUH, CAIRO)]
+    assert forward, "the whole freight pool idled back at the base -- not one lorry is at the railhead"
+    for t in freight:
+        if t not in forward:
+            assert t.id not in ordered, \
+                f"{t.id} idled back at the base ({t.hex}, {distance(t.hex, CAIRO)} from Cairo " \
+                f"against the railhead's {distance(MATRUH, CAIRO)}) and the relay still has work " \
+                f"for it -- that is not the known _step_toward dead end: re-diagnose"
+
     air_pool = [t for t in res.final.trucks if t.side == Side.ALLIED and t.line == 1]
     larders = {s.hex for s in res.final.supplies if s.air_dump and s.side == Side.ALLIED}
     faucet_hexes = {p.hex for p in res.final.ports if p.side == Side.ALLIED}
     assert air_pool, "the [60.43] Any-Air-Facility row is not on the board"
     for t in air_pool:                     # ...and the air pool is on ITS cycle, not parked at home
-        if t.id in _STUCK_ON_A_KNOWN_STEP_TOWARD_LIVELOCK:
-            continue
-        assert t.hex in larders | faucet_hexes, f"{t.id} is neither at a field nor at the faucet"
+        if t.id in ordered:
+            assert t.hex in larders | faucet_hexes, \
+                f"{t.id} is neither at a field nor at the faucet ({t.hex}) and the relay is still " \
+                f"cycling it -- re-diagnose"
     assert any(e.payload["supply_id"] in {s.id for s in res.final.supplies if s.air_dump}
                for e in unloads), "the air-supply shuttle never filled a 36.17 larder"
 
@@ -539,11 +662,56 @@ def test_the_relay_never_siphons_the_army_s_own_field_dumps():
         if e.kind.name == "TRUCK_LOADED" and e.payload["truck_id"] not in air_pool:
             assert e.payload["supply_id"] in spine | faucets, \
                 f"the relay lifted out of a field dump: {e.payload['supply_id']}"
-    for e in res.events:                   # and the air shuttle lifts only from the line or its own field
+
+    # RESTATED 2026-08-01 (the [54.32]/[54.33]/[54.34] per-Operations-Stage railway) -- THE AIR
+    # SHUTTLE'S HALF, AND IT WAS ASSERTING A PROPERTY OF THE TRAJECTORY RATHER THAN OF THE CODE.
+    # It read `sid in spine | faucets or sid is an air dump`, on the strength of the paragraph above
+    # ("it lifts from exactly one thing this set does not contain -- the 36.17 larder UNDER ITS OWN
+    # WHEELS"). game.relay's 36.17 BOOTSTRAP has never actually been narrowed to air larders: its
+    # source is `any friendly non-dummy dump on the lorry's own hex holding Fuel`. Nothing had ever
+    # parked an air lorry on an ordinary field dump, so the difference had never shown.
+    #
+    # MEASURED, on the tree that first reached it: the railway now feeds the Commonwealth in all
+    # THREE Operations Stages instead of dumping the week's freight in Stage 1, the Eighth Army
+    # holds Mersa Matruh, the whole lorry pool moves differently -- and at CAMPAIGN_SEED, GT3 stage
+    # 2, AL-Truck-Airfield-L and -M draw 64 and 40 Fuel Points out of AL-Dump, the field dump they
+    # are standing on at (25, 101). On the pre-change tree that never happens on ANY of seeds 4,
+    # 1941, 7, 2026, 99.
+    #
+    # AND THE CODE IS RIGHT WHERE THE ASSERTION WAS WRONG. What 36.17 protects is the AIRFIELD dump
+    # ("LAND UNITS MAY NOT USE AIRFIELD SUPPLY DUMPS UNLESS IT IS AN EMERGENCY") -- an ordinary army
+    # dump needs no exception at all, and a lorry filling its own tank from the pile it is parked on
+    # is the in-hex draw this engine makes everywhere else. What this test exists to forbid is
+    # FREIGHT: stock carried back OFF a division's field dump, which is what froze the dumps and
+    # lost Benghazi. So the claim is restated to the two things that are genuinely guaranteed and
+    # that do forbid exactly that, and it is STRONGER than the id-list it replaces:
+    #
+    #   (1) UNDER ITS OWN WHEELS. Both sources are hex-local by construction -- relay._air_source
+    #       filters `s.hex == hx`, the bootstrap `s.hex == t.hex` -- so the shuttle can never reach
+    #       across the map into a depot, whatever the trajectory does.
+    #   (2) MOVEMENT FUEL ONLY. relay's own rule for the bootstrap is "taken ONLY as movement fuel
+    #       (never as cargo)", so a field dump may give up Fuel and nothing else. A Stores lift, or
+    #       a freight-sized run off a field dump, still fails here.
+    #
+    # The freight relay's guarantee above is untouched, and so is the closing check that the field
+    # dumps keep their fuel.
+    larder_ids = {s.id for s in res.final.supplies if s.air_dump}
+    lifted_from_field = 0
+    st = res.initial                       # folded BEHIND the event, so it is the state at load time
+    for e in res.events:
         if e.kind.name == "TRUCK_LOADED" and e.payload["truck_id"] in air_pool:
             sid = e.payload["supply_id"]
-            assert sid in spine | faucets or sid in {s.id for s in res.final.supplies if s.air_dump}, \
-                f"the air shuttle lifted out of a field dump: {sid}"
+            assert st.supply(sid).hex == st.truck(e.payload["truck_id"]).hex, \
+                f"the air shuttle lifted from {sid}, which is not under its own wheels"
+            if sid not in spine | faucets | larder_ids:      # an army field dump: fuel, and only fuel
+                cargo = {c: q for c, q in e.payload["cargo"].items() if q > 0}
+                assert set(cargo) <= {"FUEL"}, \
+                    f"the air shuttle lifted {sorted(cargo)} as FREIGHT out of the field dump {sid}"
+                lifted_from_field += cargo.get("FUEL", 0)
+        st = apply(st, e)
+    assert lifted_from_field <= 200, \
+        f"the shuttle took {lifted_from_field} Fuel Points of 'movement fuel' out of field dumps -- " \
+        "that is no longer a tank being filled, it is the siphon this test forbids (measured: 104)"
 
     # the field dumps keep their fuel, so they can still follow the army (32.3 / 32.24)
     mobile = [s for s in res.final.supplies

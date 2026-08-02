@@ -178,7 +178,27 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
     seven seeds the (ENG) correction alone is adverse on 3, neutral on 3 and favourable on 1, and
     the pair together move the seven-seed Commonwealth total from 8 banked cities to 6 (the full
     per-seed table is in test_campaign_concentration.py::test_the_commonwealth_can_mount_a_supplied
-    _offensive's docstring). A real, modest, faithful lean -- not a rout."""
+    _offensive's docstring). A real, modest, faithful lean -- not a rout.
+
+    *** INVERTED 2026-08-01, EXACTLY AS THE 2026-07-26 NOTE ABOVE INSTRUCTED. *** That note ended
+    "WHEN the take-and-hold's routing is retuned (or this check is moved to a later Game-Turn), THIS
+    MUST BE INVERTED back to 'the Commonwealth stands on Mersa Matruh and banks it'". The condition
+    has come true, by a different road: [54.32]/[54.33]/[54.34], the railway's per-Operations-Stage
+    schedule. The lane used to land a whole Game-Turn's mixed freight in Operations Stage 1 and
+    nothing in Stages 2 and 3; it now runs the book's train -- one type of supply, 1,500 tons, EVERY
+    Operations Stage. The week's tonnage is unchanged; the beat is not, and an army fed three times
+    a week reaches and holds its own railhead.
+
+    MEASURED at CAMPAIGN_SEED, GT30 (before -> after):
+
+        Commonwealth banked   {Sidi Barrani}  ->  {Mersa Matruh, Sidi Barrani}
+        Axis banked           {Bardia, Benghazi, Derna, Giarabub, Mersa Matruh, Sollum, Tobruk}
+                              ->  {Bardia, Benghazi, Giarabub, Sollum, Tobruk}
+        AL-Stage-Matruh        dry  ->  1,416 Ammunition / 7,842 Fuel, garrisoned by Selby Force
+
+    The take-and-hold thesis this test guards is untouched in every particular -- an army keeps what
+    it banks, goes and gets the rest, and never double-banks a city. What moved is which side stands
+    on the one contested forward city, for the fifth time, and this time it moved back."""
     fin = _run(30).final
     cw, ax = _banked(fin, Side.ALLIED), _banked(fin, Side.AXIS)
     # The Commonwealth holds Sidi Barrani (see the RESTATED notes above, measured seed 4, GT30).
@@ -186,18 +206,22 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
     # Sollum stays Axis -- the (ENG) correction's own measured gain, which the 1st Libyan repair
     # did NOT give back at this seed.
     assert "Sollum" in ax, f"the Axis lost Sollum: {sorted(ax)}"
-    # Mersa Matruh is AXIS-OCCUPIED at GT30, not merely un-arrived-at (see the 2026-07-26 RESTATED
-    # note above) -- an Axis unit walked over the empty terminus by GT3 and nothing has retaken it.
-    assert not campaign_claim._occupied(fin, Side.ALLIED, MATRUH), \
-        "the Commonwealth holds the railhead city -- update this restatement, the finding reversed"
-    assert campaign_claim._occupied(fin, Side.AXIS, MATRUH), \
-        "the Axis no longer holds the railhead city -- update this restatement, the finding reversed"
-    # Mersa Matruh is BANKED outright by the Axis (not merely occupied-but-unbanked) under the two
-    # corrections above -- re-measured after the 8.1c review repair and unchanged by it.
-    assert "Mersa Matruh" in ax, "Mersa Matruh is no longer banked -- update this restatement"
+    # Mersa Matruh is COMMONWEALTH-OCCUPIED and BANKED at GT30 (see the 2026-08-01 note above) --
+    # Selby Force stands on the terminus and has never been driven off it.
+    assert campaign_claim._occupied(fin, Side.ALLIED, MATRUH), \
+        "the Commonwealth has lost the railhead city -- update this restatement, the finding reversed"
+    assert not campaign_claim._occupied(fin, Side.AXIS, MATRUH), \
+        "the Axis holds the railhead city -- update this restatement, the finding reversed"
+    assert "Mersa Matruh" in cw, "Mersa Matruh is no longer banked -- update this restatement"
     matruh = [s for s in fin.supplies if s.id == "AL-Stage-Matruh"]
     assert len(matruh) == 1 and matruh[0].hex == MATRUH, \
-        "the railhead depot must still be staged and waiting for the (delayed) garrison"
+        "the railhead depot must still be staged under its garrison"
+    # NOT re-pinned here: the depot's own residual Ammunition. The 2026-07-25 note above withdrew
+    # `matruh[0].ammo > 0` for a reason that still stands whatever the number reads today -- it is a
+    # transit node's leftovers, not the banking this test is about -- and the capability it stood
+    # for is pinned where it cannot silently flip, on the garrison's 64.73 trace in
+    # tests/test_campaign_concentration.py. (It measures 1,416 Ammunition / 7,842 Fuel now, up from
+    # dry, which is the 54.32 schedule's doing and is recorded rather than asserted.)
     # The AXIS -- which used to bank whatever the garrison order happened to pin and throw the rest
     # away -- now holds its own rear: BENGHAZI (its port of arrival, never once garrisoned in 111
     # Game-Turns) and SOLLUM, on top of the Tobruk and Bardia it opens the war standing on.

@@ -328,12 +328,30 @@ def test_the_railhead_is_held_and_the_faucet_keeps_running(gt12):
     none' has the three-source proof). Correcting it takes a phantom infantry counter OUT of the
     September-1940 Axis border screen, which is most of what the (ENG) correction had put in, and
     the retraction goes back to El Hamman. So this line is the pre-8.1c one again, and the finding
-    it pins is the 2026-07-26 one above, not a third station."""
+    it pins is the 2026-07-26 one above, not a third station.
+
+    *** 🔴 THE FLAG IS WITHDRAWN, 2026-08-01: THE FINDING REVERSED, AND THIS TEST GOES BACK TO ITS
+    OWN NAME. *** The cause is [54.32]/[54.33]/[54.34], the railway's per-Operations-Stage schedule.
+    The lane used to build ONE mixed manifest a Game-Turn and land the whole of it in Operations
+    Stage 1 -- ~4,500 tons at a stroke, into dumps whose 54.12 ceilings clipped what would not fit,
+    with Stages 2 and 3 receiving nothing, ever. It now runs the book's train: ONE type of supply,
+    1,500 tons, EVERY Operations Stage. Nothing about the week's tonnage changed; the BEAT did, and
+    the Eighth Army is fed three times a week instead of once.
+
+    MEASURED at CAMPAIGN_SEED, GT12 (before -> after): Mersa Matruh AXIS -> ALLIED, railhead
+    AL-Stage-ElHamman -> AL-Stage-Matruh (no retraction at all), Fuel landed at the terminus
+    3,343 -> 26,577, and the garrison is supplied on 11 of 11 garrisoned turn-closes. Selby Force
+    is standing on the terminus at GT12 and has never been driven off it.
+
+    So the three assertions below are RESTORED to the claim the test is named for, which is a
+    strictly stronger thing to assert than the graceful retraction it had been reduced to. The
+    exposure the 2026-07-25 note flagged -- an EMPTY terminus is taken by the first vehicle that
+    drives through -- is unchanged and still real; what has changed is that this seed no longer
+    leaves it empty, because the army it feeds can now afford to stand there."""
     fin = gt12.final
-    # The terminus is LOST by GT12 at this seed (see the 2026-07-26 RESTATED note above) -- what is
-    # asserted is that the mechanism reacts correctly, not that the Commonwealth kept the hex.
-    assert fin.control_of(MATRUH) == Control.AXIS
-    assert railhead(fin).id == "AL-Stage-ElHamman"          # the line retracted two stations back
+    # THE TERMINUS IS HELD, and the railway runs to it (see the 2026-08-01 note above).
+    assert fin.control_of(MATRUH) == Control.ALLIED
+    assert railhead(fin).id == "AL-Stage-Matruh"            # no retraction: the line reaches the end
 
     cancelled = [e for e in gt12.events if e.kind.name == "CONVOY_CANCELLED"
                  and e.payload.get("lane") == "CW-RAILHEAD"]
@@ -398,14 +416,17 @@ def test_the_standing_garrison_order_still_holds(gt12):
     # MEASURED at CAMPAIGN_SEED, garrison_units(fin) is {'BR-2SctGds'} on the real GT12 board, so
     # the courier fallback above does not fire either and this one had nothing left to do.
     assert keep, "the Commonwealth banks no victory city even after placing one on the railhead"
-    # RESTATED 2026-07-26 (Phase 8.1b, the A/B/D/E seam correction): Matruh is Axis-controlled at this
-    # GT12 snapshot (see test_the_railhead_is_held_and_the_faucet_keeps_running's own RESTATED note --
-    # the same measured fact, not a second regression). Placing a courier on the hex (above) does not
-    # itself flip `control` back, so the honest read here is AXIS, and it is incidental to this test's
-    # actual thesis: whether the garrison order below withholds a move from a unit standing on a
-    # (uncaptured, unfought) city -- which the constructed precondition still exercises regardless of
-    # who currently controls the ground under it.
-    assert fin.control_of(MATRUH) == Control.AXIS
+    # RESTATED 2026-07-26 (Phase 8.1b, the A/B/D/E seam correction): Matruh was Axis-controlled at
+    # this GT12 snapshot, and the honest read was AXIS.
+    #
+    # RESTATED AGAIN 2026-08-01 ([54.32]/[54.33]/[54.34], the per-Operations-Stage railway -- see
+    # test_the_railhead_is_held_and_the_faucet_keeps_running's own note for the measurement): the
+    # Commonwealth HOLDS the terminus again, with Selby Force standing on it, so the constructed
+    # precondition above no longer fires either -- garrison_units(fin) is {'BR-2SctGds',
+    # 'BR-Selby---Matruh'} on the real board. Which is incidental to this test's thesis in exactly
+    # the way the withdrawn note said it was: what is being exercised is whether the garrison order
+    # withholds a move from a unit banking an uncaptured city, and that runs the same either way.
+    assert fin.control_of(MATRUH) == Control.ALLIED
     supplied, garrisoned = _matruh_supplied_turns(gt12)     # the WHOLE-RUN record, unaffected by the
     assert supplied >= garrisoned * 2 // 3                  # placement above (it only touches `fin`)
 

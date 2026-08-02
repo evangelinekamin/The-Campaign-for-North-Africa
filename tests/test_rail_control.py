@@ -1186,11 +1186,51 @@ def test_the_axis_railway_actually_runs_in_a_real_campaign():
     a synthetic line on the Rommel's-Arrival map, so a regression in which no activated run ever
     holds two haulable dumps would make the doctrine emit nothing for 111 Game-Turns with the suite
     fully green -- and until this test the only evidence 54.4 fires at all was a scratchpad smoke
-    run. Seed 4 takes El Daba early: the Axis buys his locomotive on Game-Turn 4 and runs trains on
-    Game-Turns 5 and 6, which is why six Game-Turns is enough board to prove the wiring."""
+    run. Seed 4 took El Daba early: the Axis bought his locomotive on Game-Turn 4 and ran trains on
+    Game-Turns 5 and 6, which is why six Game-Turns is enough board to prove the wiring.
+
+    *** RE-PINNED 4 -> 9, 2026-08-01, AND THE REASON IS A FINDING WORTH KEEPING. *** The cause is
+    [54.32]/[54.33]/[54.34], the Commonwealth railway's per-Operations-Stage schedule -- the OTHER
+    half of the same railway, which 54.46 shares with this one. Seed 4's Axis never bought that
+    locomotive out of his own logistics: he OVERRAN AL-STAGE-ELDABA and paid for it with CAPTURED
+    COMMONWEALTH STORES (32.13). MEASURED on the old tree, the activation payload names the dump:
+    {'supply_id': 'AL-Stage-ElDaba', 'cargo': {'STORES': 250, 'FUEL': 100}}, off a station holding
+    250 Stores and 4,000 Fuel. Those Stores were there because the lane built ONE mixed manifest a
+    Game-Turn and landed ammunition AND fuel AND stores together in Operations Stage 1, so every
+    station on the line stood stocked in all three at every hour of the week. 54.33 forbids exactly
+    that -- "it may move fuel, ammunition, or stores, NOT ANY COMBINATION OF THE THREE" -- and with
+    the book's single-commodity train a station overrun mid-week is very often not holding Stores at
+    all. Seed 4's Axis now peaks at 196 Stores on the rails against the 250 [54.43] charges, and
+    goes without.
+
+    54.4 IS NOT LESS REACHABLE FOR IT -- IT IS BETTER MEASURED. Swept over seeds 1-24 to Game-Turn
+    16 (scratchpad driver, re-run on this tree rather than quoted):
+
+        ACTIVATE a locomotive   13 of 24: {3, 5, 6, 9, 10, 11, 12, 14, 15, 17, 21, 22, 24}
+        and RUN TRAINS with it   8 of 13: {3, 9, 11, 12, 14, 17, 21, 24}
+
+    Seed 9 is one of them and is a STRICTLY BETTER witness than seed 4 was, because its payer is
+    AX-Dump#2 -- the Axis's OWN dump, brought forward by his own lorries -- so what this test now
+    drives is 54.43's purchase out of Axis logistics rather than out of plunder. Same window (the
+    activation lands on Game-Turn 4, four hauls follow by Game-Turn 6) and every assertion below is
+    unchanged.
+
+    *** THE COUNT ABOVE IS CORRECTED FROM "12 of 24 ... and 7 of those", 2026-08-01 (the 54.3 review
+    repair), AND IT IS WORTH MORE THAN ONE DIGIT. *** That sentence sat inside a paragraph whose
+    entire job was to correct an earlier undercount, three lines above another that reads "Six seeds
+    is not a census" -- so a miscount there is the failure mode the paragraph is warning about,
+    committed in the act of warning. Re-swept twice, byte-reproducible, on BOTH trees: the pre-repair
+    tree activates on THIRTEEN seeds (the set above, unchanged) and runs trains on SEVEN
+    ({3, 9, 11, 14, 17, 21, 24}); this tree adds seed 12, because the 54.35 Commonwealth pin
+    (engine._rail_deliver, the same repair) moves every board from Game-Turn 1 and the Axis's forward
+    Stores with it. So "7" was exact for its tree and "12" was never right for any.
+
+    Also corrected by that sweep: game.rail.orphaned_stock's docstring said "the campaign has only
+    ever put ONE locomotive on the board -- one activation in six seeds". That was six seeds, not a
+    census; it is thirteen in twenty-four."""
     from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy
     from game.scenario import campaign
-    res = run(replace(campaign(4), max_turns=6), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    res = run(replace(campaign(9), max_turns=6), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     hauls = [e for e in res.events if e.kind is EventKind.RAIL_HAULED and e.side is Side.AXIS]
     assert [e for e in res.events if e.kind is EventKind.ROLLING_STOCK_ACTIVATED]
     assert hauls, "the Axis railway bought a locomotive and never ran a train"

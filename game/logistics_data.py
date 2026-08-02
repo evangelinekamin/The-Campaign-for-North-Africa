@@ -270,6 +270,18 @@ def port_supply_tonnage_55_3() -> dict:
     return _data()["port_supply_tonnage_55_3"]["max_supply_tonnage_per_opstage"]
 
 
+def cw_railroad_54_3() -> dict:
+    """[54.3] The Commonwealth railroad's one magnitude: `tons_per_opstage` 1500 (54.32, "1500 tons
+    per Operations Stage in either direction"). No chart -- prose, read off PDF page 74 (book folio
+    23), the same page as 54.4; it crosses to Points through equivalent_weights_54_5.
+
+    TWO THINGS ARE DELIBERATELY NOT IN THE BLOCK. 54.34's dead Operations Stage, because 54.46 makes
+    it one rule for both sides and it is read once, from axis_rail_54_4(). And 54.33's three
+    commodities, because the SET is the book's but the ORDER this engine runs them in is a flagged
+    proxy, which stays in code beside its flag (game.supply.RAIL_COMMODITIES_54_33)."""
+    return _data()["commonwealth_railroad_54_3"]
+
+
 def axis_rail_54_4() -> dict:
     """[54.4] Axis use of the Commonwealth railroad: `contiguous_hexes` 5 (54.41), the
     `activation_cost` of 250 Stores + 100 Fuel and `tons_per_activation_per_opstage` 300 (54.43),
