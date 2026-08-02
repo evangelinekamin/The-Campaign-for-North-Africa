@@ -3,8 +3,8 @@
 
     python3 scripts/gate_c.py --seeds 3                     # smoke: seeds 1-3, ~1 campaign of wall
     python3 scripts/gate_c.py                               # the gate: seeds 1-30, 14 workers
-    python3 scripts/gate_c.py --seed 4 1941 7 --arm probe   # an explicit panel
-    python3 scripts/gate_c.py --arm staff --out out.json    # label an arm (see THE ARM LABEL below)
+    python3 scripts/gate_c.py --seed 4 1941 7               # an explicit panel
+    python3 scripts/gate_c.py --arm cw-max-aggression       # the control arm (see THE ARM below)
 
 WHY THIS EXISTS. Every campaign claim this project has made was a SINGLE SEED, and tests/baselines.py
 (CAMPAIGN_SEED) already wrote down what that costs: "one lost combat on one hex, in roughly one
@@ -29,11 +29,28 @@ above measured its own claims over "seeds 1..24" and "seeds 1..40" for exactly t
 gives the prefix property: `--seeds 3` is the first three ROWS of `--seeds 30`, so a smoke run's
 numbers are literally a subset of the gate's, and it contains CAMPAIGN_SEED=4 and the canonical 1/7.
 
-THE ARM LABEL IS A LABEL AND CANNOT SELECT A POLICY, deliberately. scripts/measure_malta.py records
-what a driver that announces a posture it does not apply costs (the deleted `--discretionary-pct`
-knob: it printed a ruling, patched a key nothing read, and changed not one die). So `--arm` names the
-run for a later reader and NOTHING else, and every output carries the `policies` block naming the
-classes actually measured -- a mislabelled arm is caught by reading the file it wrote.
+THE ARM SELECTS THE POLICIES. `--arm` names a row of the ARMS registry below, and that row supplies
+the two policy factories the campaign is actually fought with: 'scripted' is the shipped pair,
+'cw-max-aggression' is the same pair with ONE knob turned (the Commonwealth's own OffensiveSchedule,
+opened from its three historical windows to every Game-Turn). It was a bare LABEL until 2026-08-01,
+and what ended that is the question the arms exist to ask: the scripted sweep found the Commonwealth
+forfeiting ~330 Victory Points BY ABSENCE -- no CW combat unit stands on Siwa, Jalo, Bardia, Tobruk,
+Derna or Benghazi at GT111 on any of 30 seeds -- while ending every war with 2.0x the Axis combat
+units. Is it absent because the ENGINE will not let it take ground, or because the POLICY never
+tries? A label cannot ask that; a policy factory can.
+
+WHAT THE OLD LABEL WAS GUARDING AGAINST STILL HOLDS, and is now guarded by the output rather than by
+impotence. scripts/measure_malta.py records what a driver that announces a posture it does not apply
+costs (the deleted `--discretionary-pct` knob: it printed a ruling, patched a key nothing read, and
+changed not one die). So an unknown arm is an ERROR and not a label, and every output carries the
+`policies` block naming the classes ACTUALLY constructed beside the arm's own one-line statement of
+what it changes -- a mislabelled arm is still caught by reading the file it wrote.
+
+AND AN ARM IS A CONTROL, NOT A TUNING. Nothing here edits a rule, a chart or a number; an arm may
+only reach for a seam the policy already exposes to its own constructor. cw-max-aggression turns
+CampaignCommonwealthPolicy's `schedule` argument, whose docstring already says what an empty window
+list means -- so the arm is the same code the campaign ships, asked to attack on 111 Game-Turns
+instead of 28.
 
 DETERMINISM. Each seed is a pure function of its seed: same seeds in, same numbers out. The process
 pool only distributes independent runs. `--verify K` (default 2) re-runs the first K seeds a SECOND
@@ -64,6 +81,7 @@ import sys
 import time
 import traceback
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -72,7 +90,7 @@ sys.path.insert(0, str(_ROOT))
 
 from game import supply                                            # noqa: E402
 from game.campaign_policy import (CampaignAxisPolicy,              # noqa: E402
-                                  CampaignCommonwealthPolicy)
+                                  CampaignCommonwealthPolicy, OffensiveSchedule)
 from game.campaign_victory import grade                            # noqa: E402
 from game.engine import determinism_signature, run                 # noqa: E402
 from game.events import EventKind, Side                            # noqa: E402
@@ -81,6 +99,37 @@ from game.scenario import campaign                                 # noqa: E402
 DEFAULT_SEEDS = 30            # the plan's own floor for a campaign claim (00-THE-PORT-PLAN.md:1573)
 DEFAULT_WORKERS = 14          # 16-thread box, shared: leave two threads for everything else
 DEFAULT_VERIFY = 2            # re-run the first K seeds and prove the sweep reproduces itself
+
+# [64.73] EVERY GAME-TURN IS AN OFFENSIVE ONE. OffensiveSchedule's windows are inclusive on
+# state.turn and its own docstring makes the empty tuple "never offensive", so this is the far end of
+# the same dial: the Commonwealth is on the offensive for the whole war, which is the posture
+# CampaignAxisPolicy already holds ("It is on the offensive at all times"). Bounded far past
+# max_turns rather than at 111 so the arm does not quietly depend on the scenario's length.
+ALWAYS_OFFENSIVE = OffensiveSchedule(((1, 10 ** 9),))
+
+
+@dataclass(frozen=True)
+class Arm:
+    """One measurable ARM of the gate: what it changes, in one line a later reader can check, and
+    the two factories the campaign is actually fought with. The factories are called INSIDE the
+    worker (only the arm's name crosses the process boundary), so no Policy is ever pickled."""
+    what: str
+    axis: object
+    allied: object
+
+
+ARMS = {
+    "scripted": Arm(
+        "the shipped campaign policies, unchanged -- the baseline every other arm is diffed against",
+        CampaignAxisPolicy, CampaignCommonwealthPolicy),
+    "cw-max-aggression": Arm(
+        "IDENTICAL to 'scripted' but for one argument: the Commonwealth's OffensiveSchedule is "
+        "opened from its three historical windows (Compass GT13-22, Crusader GT57-64, Alamein "
+        "GT102-111 -- 28 of 111 Game-Turns) to EVERY Game-Turn. The Eighth Army therefore runs its "
+        "attacker branch, drives on objective_for(ALLIED)=Benghazi, escorts its 32.33 desert columns "
+        "and plans its supply against the objective instead of the railhead, for the whole war.",
+        CampaignAxisPolicy, lambda: CampaignCommonwealthPolicy(ALWAYS_OFFENSIVE)),
+}
 
 SIDES = (Side.AXIS, Side.ALLIED)
 AX, CW = Side.AXIS.value, Side.ALLIED.value
@@ -119,7 +168,15 @@ def _harvest(initial, result) -> dict:
 
     ATTRIBUTION. Event.side is the ACTING side, which is what supply/haul events want -- but a
     STEP_LOST is emitted by the side running the combat, so a surrender is attributed by the
-    SURRENDERING UNIT's own side (initial.units), never by the emitter."""
+    SURRENDERING UNIT's own side (initial.units), never by the emitter.
+
+    THE ORDER_REJECTED CENSUS is what tells an army that DIED trying apart from one that never
+    tried: every order the rules refused, counted per side by '<order kind>: <reason>'. Both halves
+    of that key are static strings written at the emit site in game/engine.py (there are ~30 of them
+    and none interpolates a unit, a hex or a quantity), so the catalogue is bounded and two arms'
+    censuses are directly comparable. game/engine.py:6437 records the one known blind spot: the
+    close-assault refusal is a single string standing for six distinct causes (ammo, Pin, water,
+    marsh, anti-armor, Cohesion) and cannot say which fired."""
     side_of = {u.id: u.side.value for u in initial.units}
     axis_combat = {u.id for u in initial.units if u.side == Side.AXIS and u.is_combat}
 
@@ -140,6 +197,7 @@ def _harvest(initial, result) -> dict:
     # plenty; it just does not land it through a harbour counter.
     arrived = {AX: {}, CW: {}}
     surrenders = {AX: {"events": 0, "steps": 0}, CW: {"events": 0, "steps": 0}}
+    rejected = {AX: {}, CW: {}}           # ORDER_REJECTED: what the rules refused, by reason
     # Anything this attribution could not place on a side, counted rather than dropped: a
     # SYSTEM-emitted supply beat, or a step lost by a unit absent from the initial roster.
     unattributed: dict = {}
@@ -167,6 +225,16 @@ def _harvest(initial, result) -> dict:
         elif k is EventKind.SUPPLY_ARRIVED:
             for commodity, qty in p["cargo"].items():
                 _add(arrived, e.side.value, commodity, qty, k.value)
+        elif k is EventKind.ORDER_REJECTED:
+            # engine._reject_rail is the one emit site with no "order" key (it refuses a rail order
+            # before it has one to name), so it is labelled here rather than counted as an anomaly.
+            key = f"{p.get('order', 'rail')}: {p.get('reason', '(no reason recorded)')}"
+            book = rejected.get(e.side.value)
+            if book is None:
+                unattributed[f"{e.side.value}:{k.value}"] = (
+                    unattributed.get(f"{e.side.value}:{k.value}", 0) + 1)
+            else:
+                book[key] = book.get(key, 0) + 1
         elif k is EventKind.STEP_LOST and p.get("role") == "surrender":
             side = side_of.get(p["unit_id"])
             if side in surrenders:
@@ -190,6 +258,10 @@ def _harvest(initial, result) -> dict:
         "axis_east_at_end": axis_east_end,
         "army_at_end": army,
         "surrenders": surrenders,
+        # sorted by count so the file reads as a census, and so two arms' books line up by eye
+        "order_rejected": {s: dict(sorted(rejected[s].items(), key=lambda kv: (-kv[1], kv[0])))
+                           for s in rejected},
+        "order_rejected_total": {s: sum(rejected[s].values()) for s in rejected},
         "supply_consumed": consumed,
         "truck_unloaded_points": hauled,
         "truck_unloaded_tons": {s: _tons(hauled[s]) for s in hauled},
@@ -215,18 +287,18 @@ def _grade_label(reason: str) -> str:
     return "Draw" if reason.startswith("Draw") else reason.split(":")[0]
 
 
-def _measure(job: tuple[int, int]) -> dict:
-    """Run ONE campaign seed and return its record. `job` is (seed, repeat) -- repeat is the
+def _measure(job: tuple[str, int, int]) -> dict:
+    """Run ONE campaign seed and return its record. `job` is (arm, seed, repeat) -- repeat is the
     --verify index and changes NOTHING about the run, which is the whole point of it.
 
-    The scenario and the policies are constructed HERE, inside the worker, so only the (seed,
+    The scenario and the policies are constructed HERE, inside the worker, so only the (arm, seed,
     repeat) tuple and the plain-dict record cross the process boundary (parity_harness.py's idiom):
     no GameState, Policy or Event is ever pickled."""
-    seed, repeat = job
+    arm, seed, repeat = job
     t0 = time.perf_counter()
     try:
         initial = campaign(seed=seed)
-        result = run(initial, CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+        result = run(initial, ARMS[arm].axis(), ARMS[arm].allied())
         victory = result.final.victory
         view = SimpleNamespace(state=result.final, events=result.events)
         breakdown = victory.breakdown(view)
@@ -259,10 +331,10 @@ def _measure(job: tuple[int, int]) -> dict:
                 determinism_signature(result.events).encode()).hexdigest()[:12],
             **_harvest(initial, result),
         }
-        return {"seed": seed, "repeat": repeat, "wall_s": time.perf_counter() - t0,
+        return {"arm": arm, "seed": seed, "repeat": repeat, "wall_s": time.perf_counter() - t0,
                 "record": record}
     except Exception as exc:                       # a seed that raises is a RESULT, never a drop
-        return {"seed": seed, "repeat": repeat, "wall_s": time.perf_counter() - t0,
+        return {"arm": arm, "seed": seed, "repeat": repeat, "wall_s": time.perf_counter() - t0,
                 "record": {"seed": seed, "repeat": repeat, "ok": False,
                            "error": f"{type(exc).__name__}: {exc}",
                            "traceback": traceback.format_exc()}}
@@ -270,11 +342,11 @@ def _measure(job: tuple[int, int]) -> dict:
 
 # --- the sweep ------------------------------------------------------------------------------------
 
-def _sweep(jobs: list[tuple[int, int]], workers: int) -> list[dict]:
+def _sweep(jobs: list[tuple[str, int, int]], workers: int) -> list[dict]:
     """Run every job, printing each as it lands (a 30-seed sweep is ~15 minutes of silence
     otherwise). Results are returned in JOB order, not completion order, so the output file is
     independent of how the pool happened to schedule."""
-    out: dict[tuple[int, int], dict] = {}
+    out: dict[tuple[str, int, int], dict] = {}
     if workers == 1:
         for job in jobs:
             res = _measure(job)
@@ -285,7 +357,7 @@ def _sweep(jobs: list[tuple[int, int]], workers: int) -> list[dict]:
             futures = [pool.submit(_measure, job) for job in jobs]
             for fut in as_completed(futures):
                 res = fut.result()
-                out[(res["seed"], res["repeat"])] = res
+                out[(res["arm"], res["seed"], res["repeat"])] = res
                 _print_progress(res, len(out), len(jobs))
     return [out[job] for job in jobs]
 
@@ -383,6 +455,15 @@ def _aggregate(records: list[dict]) -> dict:
                              for s in (AX, CW)},
         "surrender_steps": {s: _stats(col(lambda r, s=s: r["surrenders"][s]["steps"]))
                             for s in (AX, CW)},
+        "order_rejected_total": {s: _stats(col(lambda r, s=s: r["order_rejected_total"][s]))
+                                 for s in (AX, CW)},
+        # Over the UNION of reasons seen on any seed, a seed that never emitted one counting 0 --
+        # the seed ran, that refusal simply never fired, and dropping it would make the mean of a
+        # rare rejection read as though it were common.
+        "order_rejected_by_reason": {
+            s: {reason: _stats([r["order_rejected"][s].get(reason, 0) for r in ok])
+                for reason in sorted({k for r in ok for k in r["order_rejected"][s]})}
+            for s in (AX, CW)},
         "truck_unloaded_tons": {s: _stats(col(lambda r, s=s: r["truck_unloaded_tons"][s]))
                                 for s in (AX, CW)},
         "port_landed_tons": {s: _stats(col(lambda r, s=s: r["port_landed_tons"][s]))
@@ -423,7 +504,8 @@ def _report(records: list[dict], agg: dict, verify: dict, arm: str, workers: int
     bad = [r for r in records if not r["ok"]]
 
     print(f"\n=== GATE C -- arm '{arm}': {len(ok)} campaign(s) of GT1-111, "
-          f"CampaignAxisPolicy vs CampaignCommonwealthPolicy ===\n")
+          f"{type(ARMS[arm].axis()).__name__} vs {type(ARMS[arm].allied()).__name__} ===")
+    print(f"    {ARMS[arm].what}\n")
     hdr = (f"{'seed':>5} {'winner':>7} {'grade':<28} {'AxVP':>7} {'CwVP':>7} "
            f"{'rule':>6} {'GT':>4} {'east':>9} {'cities':>7} {'surr':>9} {'signature':>13}")
     print(hdr)
@@ -506,6 +588,15 @@ def _report(records: list[dict], agg: dict, verify: dict, arm: str, workers: int
     print("       consumed = SUPPLY_CONSUMED off a dump + UNIT_SUPPLY_CONSUMED off the unit's own")
     print("       in-hex pool, which is where fuel/ammo/stores now live. EVAPORATION is not")
     print("       consumption and is not counted here.)")
+    print("\n  WHAT THE RULES REFUSED (ORDER_REJECTED, per campaign, by reason)")
+    for s in (AX, CW):
+        print(_stat_row(f"orders rejected {s}", agg["order_rejected_total"][s]))
+    for s in (AX, CW):
+        book = agg["order_rejected_by_reason"][s]
+        print(f"    -- {s}, {len(book)} distinct reason(s) --")
+        for reason, st in sorted(book.items(), key=lambda kv: -kv[1]["mean"]):
+            print(f"      {_n(st['mean']):>12} mean  [{_n(st['min'])} .. {_n(st['max'])}]  {reason}")
+
     odd = [r["seed"] for r in ok if r["unattributed"]]
     if odd:
         print(f"      !! supply/surrender events attributed to neither side on seeds {odd} "
@@ -548,9 +639,9 @@ def main() -> int:
     ap.add_argument("--verify", type=int, default=DEFAULT_VERIFY,
                     help=f"re-run the first K seeds and prove the records are identical "
                          f"(default {DEFAULT_VERIFY}; 0 disables the proof)")
-    ap.add_argument("--arm", default="scripted",
-                    help="a LABEL for this sweep (scripted / staff / an A/B variant). It selects "
-                         "no policy -- see THE ARM LABEL in the module docstring.")
+    ap.add_argument("--arm", default="scripted", choices=sorted(ARMS),
+                    help="which arm to fight -- it SELECTS THE POLICIES (see ARMS in the module "
+                         "docstring); the run prints what the arm changes before it starts")
     ap.add_argument("--out", default=None,
                     help="output JSON (default scratchpad/gate_c/gate_c.<arm>.json)")
     args = ap.parse_args()
@@ -559,8 +650,9 @@ def main() -> int:
     # one campaign, not two identical rows silently inflating n in the distribution.
     seeds = (list(dict.fromkeys(args.seed)) if args.seed
              else list(range(1, max(1, args.seeds) + 1)))
+    arm = ARMS[args.arm]
     verify_seeds = seeds[:max(0, args.verify)]
-    jobs = [(s, 0) for s in seeds] + [(s, 1) for s in verify_seeds]
+    jobs = [(args.arm, s, 0) for s in seeds] + [(args.arm, s, 1) for s in verify_seeds]
     workers = max(1, min(args.workers, len(jobs)))
     out_path = Path(args.out) if args.out else _ROOT / "scratchpad" / "gate_c" / f"gate_c.{args.arm}.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -568,6 +660,7 @@ def main() -> int:
     print(f"GATE C -- arm '{args.arm}': {len(seeds)} seed(s) x GT1-111, {workers} worker(s), "
           f"{len(verify_seeds)} verify re-run(s).\n  One campaign is ~6 min (measured: ~365 CPU-s); "
           f"{len(jobs)} job(s) over {workers} worker(s) on 8 physical cores.\n"
+          f"  ARM: {arm.what}\n"
           f"  seeds: {seeds}", flush=True)
     t0 = time.perf_counter()
     results = _sweep(jobs, workers)
@@ -579,10 +672,12 @@ def main() -> int:
     verify = _verify(results)
     payload = {
         "arm": args.arm,
+        "arm_changes": arm.what,
         "generated_by": "scripts/gate_c.py",
         "scenario": "game.scenario.campaign(seed) -- GT1-111",
-        "policies": {AX: type(CampaignAxisPolicy()).__name__,
-                     CW: type(CampaignCommonwealthPolicy()).__name__},
+        # The classes ACTUALLY constructed by this arm's factories, so a mislabelled arm is caught
+        # by reading the file it wrote (see THE ARM in the module docstring).
+        "policies": {AX: type(arm.axis()).__name__, CW: type(arm.allied()).__name__},
         "seeds": [r for r in records if r["ok"]],
         "failures": [r for r in records if not r["ok"]],
         "aggregate": agg,
