@@ -22,8 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from game import coords, supply
-from game.apply import apply
-from game.engine import (_naval_convoys, _port_regen, _Run,
+from game.engine import (_barrage_step, _naval_convoys, _port_regen, _Run,
                          determinism_signature, run)
 from game.events import Control, EventKind, Phase, Side
 from game.invariants import check
@@ -32,6 +31,7 @@ from game.policy import ScriptedPolicy
 from game.scenario import coastal_corridor, rommels_arrival, siege_of_tobruk
 from game.state import Convoy, GameState, Port, SupplyUnit, VP
 from game.terrain import Terrain
+from tests.siege_fixtures import stand_the_siege_train_beside_tobruk
 
 TOBRUK = coords.to_axial(coords.parse("C4807"))
 
@@ -412,21 +412,34 @@ def test_siege_still_crackable_through_the_throttle():
     # batters Tobruk within the full 12-turn fold "through the throttle". Under faithful in-hex fuel the
     # supply-throttled artillery cannot mass on the perimeter in time, so Tobruk holds on the base
     # benchmark (historically exact; the 25.14 batter MECHANISM is verified directly in test_siege.py).
-    # What this still guards is that the Benghazi-rear throttle does not silently GATE OFF 25.14: with
-    # siege_rules on and the hit dial at 1, every EFFECTIVE barrage (pin or loss) on Tobruk's STANDING
-    # wall must batter it. Seed-independent -- vacuous when the fold lands no effective barrage on the
-    # wall, loud if the throttle ever kills the mechanism itself.
+    # What this still guards is that the Benghazi-rear throttle does not silently GATE OFF 25.14.
+    #
+    # RESTATED TWICE ON 2026-08-01. The first restatement (the 25.14 slice) swapped the counter from
+    # BARRAGE_RESOLVED to FORT_BARRAGED and asserted `reductions == scored` where `scored` counted
+    # FORT_BARRAGED events whose payload["reduced"] > 0 against a standing wall. THAT ASSERTION
+    # COULD NOT FAIL: it is exactly the conjunction engine._batter_fort uses to decide whether to
+    # emit FORT_REDUCED, evaluated on the same fold, so `reductions == scored` held by construction.
+    # PROVEN by neutering fortifications.barrage_target to `return None` -- the entire facility
+    # barrage path dead -- under which it still passed. A test that cannot fail is worse than no
+    # test: it reports a safety it does not provide.
+    #
+    # SECOND RESTATEMENT -- ASSERT THE BEHAVIOUR INSTEAD. The thesis is unchanged (the Benghazi-rear
+    # throttle must not gate 25.14 off), and it is now stated as something the engine has to DO:
+    # stand the Axis siege train beside Tobruk's wall in the state the throttled war actually
+    # produced, fire one Barrage Step, and the wall comes down. Nothing here is seeded (the guns are
+    # massed to the [41.5] 21+ column, where all 36 codes read "Reduced") and nothing is asserted
+    # about WHEN the scripted policy gets there -- it never does, which is the honest finding the
+    # first arm records rather than hides.
     res = run(siege_of_tobruk(seed=8), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
-    assert res.initial.siege_rules is True
-    st = res.initial
-    effective = reductions = 0
-    for e in res.events:
-        if e.kind == EventKind.FORT_REDUCED and tuple(e.payload["hex"]) == TOBRUK:
-            reductions += 1
-        if (e.kind == EventKind.BARRAGE_RESOLVED and tuple(e.payload["target"]) == TOBRUK
-                and (e.payload.get("pinned") or e.payload.get("loss", 0) > 0)
-                and st.fort_level(TOBRUK) > 0):
-            effective += 1
-        st = apply(st, e)
-    assert reductions == effective, (
-        f"25.14 gated by the throttle? {effective} effective barrages on the standing wall, {reductions} reductions")
+    assert res.final.fort_level(TOBRUK) == 2, (
+        "seed 8 is pinned because nothing reaches Tobruk's wall in twelve turns; if that ever "
+        "changes, re-read this test rather than re-pinning the seed")
+    for label, st in (("the throttled siege's own end state", res.final),
+                      ("the un-throttled twin", rommels_arrival(seed=8))):
+        r = _Run(stand_the_siege_train_beside_tobruk(st))
+        _barrage_step(r, Side.AXIS, Side.ALLIED, set(), set())
+        fired = [e for e in r.events if e.kind == EventKind.FORT_BARRAGED
+                 and tuple(e.payload["target"]) == TOBRUK]
+        assert len(fired) == 1 and fired[0].payload["reduced"] == 1, \
+            f"25.14 gated by the throttle? no scoring facility barrage on Tobruk in {label}"
+        assert r.state.fort_level(TOBRUK) == 1, f"the wall did not fall in {label}"

@@ -368,6 +368,55 @@ def air_truck_bombing_crt_41_32() -> list:
     return _data()["air_bombardment_41_5"]["trucks"]["columns"]
 
 
+def fortification_bombardment_crt_41_5() -> list:
+    """[25.14]'s chart: the FORTIFICATION row of the [41.5] table -- the row this port had replaced
+    with `BARRAGE_HITS_PER_FORT_LEVEL = 1`, an invented certainty whose own comment described itself
+    as a knob tuned against the benchmark harness.
+
+    THE ONE ROW WITH TWO INDEX SCALES WIRED, because [25.14] names two channels into it and
+    forecloses every other ("No other type of combat affects fortifications"). Each column therefore
+    carries BOTH brackets: `barrage_points` for the artillery channel ([12.53] "they refer to the
+    Artillery Barrage Points column"), `bomb_points` for the air one ([41.3]/[41.37]). hi=None is the
+    open 21+ / 471+ bracket. `results` is a list of {die: [lo, hi], reduced} where `reduced` is 0 or
+    1 and never more -- the Key prints exactly two outcomes, "Fortification: Reduced one Level or not
+    affected". Read 2d6 SEQUENTIALLY (41.22), NOT larger-die-first: that is [12.42]'s convention for
+    the [12.6] Artillery Barrage Table and this is a different table.
+
+    The Barrage-Points scale is misprinted in the 1979 book and is corrected here under a named
+    errata key (fortification_bombardment_errata_41_5)."""
+    return _data()["air_bombardment_41_5"]["fortification"]["columns"]
+
+
+def fortification_bombardment_errata_41_5() -> dict:
+    """The named override on the [41.5] Barrage-Points index scale, so that nothing about it is
+    silent. The 1979 printing runs two cells together ("7,89,10") and drops the "2" off the last
+    band ("1+", impossible when band 1 already reads "1,2"), leaving ten cells over an eleven-column
+    table. Carries the printed row, the corrected row, which cells moved, and why -- the shape
+    supply_dump_demolition_54_17._errata established."""
+    return _data()["air_bombardment_41_5"]["fortification"]["_errata"]
+
+
+def crt_result(columns: list, points: int, d1: int, d2: int, key: str,
+               scale: str = "bomb_points") -> int:
+    """The [41.5] lookup every row of that table shares, and the one place it is written down: pick
+    the column whose `scale` bracket contains `points`, read the two dice SEQUENTIALLY as a two-digit
+    code (tens=d1, units=d2, rule 41.22), return the cell under `key`.
+
+    `scale` exists because the chart prints three parallel index scales over ONE set of result
+    columns. Every wired row but the fortification's is entered on Bomb Points, which is the default;
+    an ARTILLERY barrage against a facility is entered on Barrage Points ([12.53]) and passes
+    scale="barrage_points". Points below the table's floor find no column and score nothing."""
+    code = d1 * 10 + d2
+    for col in columns:
+        lo, hi = col[scale]
+        if points >= lo and (hi is None or points <= hi):
+            for entry in col["results"]:
+                dlo, dhi = entry["die"]
+                if dlo <= code <= dhi:
+                    return entry[key]
+    return 0
+
+
 def aircraft_characteristics_4_44() -> dict:
     """[4.44A/b/c] AIRCRAFT CHARACTERISTICS CHARTS, by aircraft name: the charted `tacair`
     (34.13), `bombload` (34.14), `fuel` Consumption Rating (34.17/38.21 -- "the number of Fuel

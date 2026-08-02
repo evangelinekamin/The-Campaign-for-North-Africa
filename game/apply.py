@@ -156,6 +156,12 @@ def apply(state: GameState, event: Event) -> GameState:
         # produces (if any) is applied by the TRUCK_POINTS_DESTROYED that follows. Pure record.
         return state
 
+    if k == EventKind.FORT_BARRAGED:
+        # 12.5/12.53: the FACILITY barrage's dice-certifying record, resolved on the [41.5]
+        # Fortification row. The level it takes off (if any) is applied by the FORT_REDUCED that
+        # follows, exactly as TRUCK_BARRAGED defers to TRUCK_POINTS_DESTROYED above. Pure record.
+        return state
+
     if k == EventKind.TRUCK_BROKE_DOWN:
         # 21.44: move `amount` Truck Points from the haulage pool into broken_down (immobile
         # until repaired). Not a loss -- points and cargo are unchanged, so conservation holds.

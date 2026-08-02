@@ -510,6 +510,15 @@ class EventKind(str, Enum):
     # loss itself rides the existing TRUCK_POINTS_DESTROYED sink (rule "12.46"). This is the full
     # game correcting the abstract-32.56 deferral -- barrage kills real Truck Points.
     TRUCK_BARRAGED = "TRUCK_BARRAGED"
+    # FORT_BARRAGED {target, firers, actual, reduced} with rng_draws=(d1,d2) certifies the [12.5]
+    # FACILITY barrage -- the declared, exclusive mission [12.51] describes ("Artillery may be used
+    # to Barrage facilities, RATHER THAN actual units"), resolved on the [41.5] Fortification row at
+    # the Artillery-Barrage-Points column ([12.53]) rather than on the [12.6] unit table. It is the
+    # twin of TRUCK_BARRAGED and folds the same way -- to IDENTITY, a dice-certifying record --
+    # because the level itself comes off via the FORT_REDUCED that follows a `reduced` of 1. Emitted
+    # even on a miss: the whole point of wiring the chart is that a barrage against a wall can fail,
+    # and a roll that failed belongs in the log as much as one that did not.
+    FORT_BARRAGED = "FORT_BARRAGED"
     # [34.17]/[38.21]/[38.24] AIRCRAFT BURN FUEL. "This is the number of Fuel Points a plane requires
     # to perform any mission... all Fuel Points are consumed during a mission, regardless of the type
     # or distance" (34.17); "the fuel is subtracted from the total supply in the air facility"

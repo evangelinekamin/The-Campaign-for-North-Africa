@@ -688,11 +688,29 @@ class GameState:
     # WEST on the Axis rear (Benghazi). Default None -> objective_for falls back to
     # target_hex, so every scenario that seeds no Commonwealth objective is byte-identical.
     allied_objective: "Coord | None" = None
-    # Siege of Tobruk (rule 25.14 / 25.16): when siege_rules is on, artillery barrage
-    # batters fortifications down. fort_levels is the dynamic overlay of reduced
-    # levels (hex -> current level); an absent hex reads its static base from
-    # terrain.fortifications. Default OFF / empty keeps the canonical benchmark exact.
-    siege_rules: bool = False
+    # [25.14]/[25.16] the DYNAMIC fortification overlay: hex -> current level, folded from
+    # FORT_REDUCED (barrage/bombing batter it down) and FORT_LEVEL_BUILT (24.42 builds it back up).
+    # An absent hex reads its static base from terrain.fortifications, which is the printed 1979 map
+    # and is never written.
+    #
+    # A `siege_rules: bool = False` USED TO SIT HERE, gating both of 25.14's channels, with the
+    # comment "Default OFF / empty keeps the canonical benchmark exact". It was set by exactly one
+    # scenario (siege_of_tobruk) and never by campaign(), so across 60 measured full campaigns the
+    # fortification level of Tobruk, Bardia and Benghazi was a constant 2 for 111 turns and the
+    # [8.37] shift it confers was irreducible by anything either player could do. Section 25 was then
+    # read off the scan in full (PDF p.38) and carries NO scenario, campaign or optional-rule
+    # condition of any kind -- so the flag was the exact debt CLAUDE.md rule 6 names ("Never
+    # campaign-gate a faithful rule to dodge a benchmark hash. Existing gates are debt to remove")
+    # and it is gone.
+    #
+    # NEITHER BENCHMARK SIGNATURE MOVED, and that is the finding rather than a re-baseline: no gun
+    # in either scenario ever stands adjacent to an enemy wall. MEASURED on seed 1941: the nearest
+    # Axis battery opens 69 hexes from Tobruk and has closed only to 31 under ScriptedPolicy(AXIS)+
+    # ScriptedPolicy(ALLIED) -- 63 under the axis=allied=ScriptedPolicy(AXIS) pair the SIGNATURES are
+    # hashed with -- in rommels_arrival and siege_of_tobruk alike; no gun is adjacent at either. The gate had been hiding behind a distance
+    # the whole time. Written down in tests/baselines.py under "NOT RE-BASELINED 2026-08-01"; this
+    # comment said "Both benchmark signatures were re-baselined" and contradicted the one file
+    # rule 4 makes the single home of those hashes.
     fort_levels: dict = field(default_factory=dict)
     # [26.1] MINEFIELDS: hex -> Minefield, the dynamic belt overlay -- nothing on the static
     # TerrainMap, exactly like fort_levels above (a belt is laid or lifted in play, 24.3/26.13, not
@@ -852,7 +870,7 @@ class GameState:
     # scenario that seeds him on the board from t0 (the Desert Fox benchmarks) or fields no Rommel.
     rommel_arrival: "RommelArrival | None" = None
     # General Rommel (rule 31): the Axis leader carried as a conservation-invisible ENTITY
-    # (NOT a Unit), the exact idiom of siege_rules/convoys/ports/trucks. Default None keeps
+    # (NOT a Unit), the exact idiom of convoys/ports/trucks. Default None keeps
     # every non-Rommel scenario byte-identical -- no morale +1 (17.28), no +5 CPA (31.4), no
     # Berlin-recall roll, and zero Rommel events.
     rommel: "Rommel | None" = None

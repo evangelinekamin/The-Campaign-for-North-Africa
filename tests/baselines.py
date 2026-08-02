@@ -10,6 +10,74 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+NOT RE-BASELINED 2026-08-01 (THIRD ENTRY OF THE DAY) -- CAUSE: [25.14] FORTIFICATIONS, the campaign
+gate removed and the invented magnitude replaced by the [41.5] chart. The two benchmarks do not
+move. The CAMPAIGN does, on one of three measured seeds, and this is where that is written down.
+
+    d889e5b21c4e / 1f826374a883   (UNCHANGED -- and the REASON is the finding, see below)
+
+WHAT CHANGED IN THE ENGINE. Three things, all named by [25.14] and none of them a magnitude anyone
+chose:
+
+  1. THE GATE IS GONE. `GameState.siege_rules` gated both of 25.14's channels (engine._batter_fort
+     and engine._air_fort). It was set by exactly ONE scenario (siege_of_tobruk) and never by
+     campaign(), so across the 60 full campaigns Gate C measured, the fortification level of Tobruk,
+     Bardia and Benghazi was a CONSTANT 2 for 111 turns and the [8.37] -3 close-assault shift it
+     confers was irreducible by any action either player could take. Section 25 was then read off the
+     scan in full (PDF p.38) and carries no scenario, campaign or optional-rule condition of any
+     kind. Its own default comment said the quiet part -- "Default OFF / empty keeps the canonical
+     benchmark exact" -- which is the exact debt CLAUDE.md rule 6 names. The field is deleted, not
+     defaulted True: a flag whose only true value is True is not a flag.
+
+  2. THE MAGNITUDE IS A PRINTED CHART. `BARRAGE_HITS_PER_FORT_LEVEL = 1` made every effective barrage
+     flatten a level with certainty, and its own comment described itself as a knob "the lead tunes
+     with the benchmark harness". [12.53] sends a facility barrage to the [41.5] Air Bombardment and
+     Secondary Barrage Targets Table on the Artillery-Barrage-Points scale; [41.37] sends the B-F/C
+     bombing mission to the same row on the Bomb-Points scale ("IF THE PLAYER OBTAINS A RESULT..."),
+     and engine._air_fort had been taking a level with no die at all. That row is transcribed off a
+     300-dpi render of chart folio 12 (PDF p.107) into data/logistics_rates.json and read by
+     game.fortifications. A 9-Actual-point concentration now takes a level on 15 of 36 codes; it used
+     to take one on 36 of 36. The Barrage-Points index scale is misprinted in the 1979 book (two
+     cells run together, the last band's "2" dropped) and is corrected under a NAMED ERRATA KEY, the
+     supply_dump_demolition_54_17 precedent -- never silently.
+
+  3. THE TARGET IS DESIGNATED. [12.51] "Artillery may be used to Barrage facilities, RATHER THAN
+     actual units"; [12.52] "the Target designated is the specific facility". The engine battered the
+     wall as a SIDE EFFECT of a barrage aimed at a unit, which also meant [12.31]'s own exception
+     could never fire -- an EMPTY enemy fortress was unbarrageable. A battery now declares one or the
+     other, and which it declares is FLAGGED DOCTRINE (game.fortifications.barrage_target), because
+     no Policy in this engine can order a barrage of any kind at any target.
+
+WHY THE SIGNATURES DID NOT MOVE, AND WHY THAT IS THE FINDING RATHER THAN A DISAPPOINTMENT. Neither
+benchmark scenario ever puts a gun beside a wall. MEASURED (seed 1941, re-measured 2026-08-02 and
+CORRECTED -- this entry said 63): the nearest Axis battery opens 69 hexes from Tobruk and has closed only to 31 under
+ScriptedPolicy(AXIS)+ScriptedPolicy(ALLIED), and to 63 under the axis=allied=ScriptedPolicy(AXIS)
+pair the benchmark SIGNATURES are hashed with -- in rommels_arrival and siege_of_tobruk alike. The
+conclusion is the same at either distance: no gun is ever adjacent to a wall, and both benchmarks
+fire zero FORT_BARRAGED and zero FORT_REDUCED. So
+siege_of_tobruk -- the scenario NAMED for this rule -- had never battered a fortification in this
+repo's history either, gate or no gate. The gate
+had been hiding behind a distance the whole time. A benchmark signature proves determinism and
+nothing else, and this entry is the clearest case of it the project has: a rule can be dead for 111
+turns of every campaign while both fingerprints stay byte-identical.
+
+THE CAMPAIGN, MEASURED ON THREE FULL 111-TURN WARS (scripted policies, the Gate C arms):
+
+    seed 1941   6 facility barrages, ALL Commonwealth: 3 on Tobruk, 3 on Bardia.
+                Bardia 2 -> 1 (one reduction). 288,267 -> 288,402 events.
+    seed 7      0 facility barrages.   284,545 events, unchanged.
+    seed 4      0 facility barrages.   283,299 events.
+
+    Air B-F/C missions across all three: ZERO. No Policy method in this engine ever constructs an
+    AirMission -- kind="fort" is built only in tests and in two static scenario schedules, both
+    kind="port" -- so the air half of 25.14 is correct, tested, and driverless. Declared debt.
+
+    NO VICTORY CITY CHANGED HANDS, and the Axis still wins all three. This slice does NOT solve what
+    Gate C found. It removes the gate and the invented number that were masking the real constraint,
+    and the real constraint is PROXIMITY: on two of three seeds the Commonwealth never once stands a
+    gun next to a fortification in 111 turns. That is reported, not tuned away.
+
+--------------------------------------------------------------------------------------------------
 NOT RE-BASELINED 2026-08-01 (SECOND ENTRY OF THE DAY) -- CAUSE: [54.35] ON THE COMMONWEALTH RAIL
 LANE, the named debt the 54.3 slice below did not pay. The two benchmarks do not move; the CAMPAIGN
 does, on all four measured seeds, and this is where that is written down.

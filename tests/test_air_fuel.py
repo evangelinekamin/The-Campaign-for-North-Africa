@@ -354,7 +354,7 @@ def test_39_11_a_blind_sortie_is_billed_whether_or_not_the_target_was_there():
     fuel draw while _air_strike billed its empty hex, which made identical blindness free in one
     resolver and paid in the other.) What stays free is refusing to ORDER it: your own works."""
     from game.engine import _air_fort
-    st = replace(_state(facilities=[_field()], supplies=[_dump(fuel=9)]), siege_rules=True)
+    st = _state(facilities=[_field()], supplies=[_dump(fuel=9)])
     r = _Run(st)
     _air_fort(r, Side.AXIS, (1, 0), lambda p: _air_fuel(r, Side.AXIS, "strike", p,
                                                         {"arena": "LAND", "kind": "fort"}))
@@ -364,8 +364,8 @@ def test_39_11_a_blind_sortie_is_billed_whether_or_not_the_target_was_there():
             for e in r.events if e.kind == EventKind.SUPPLY_CONSUMED] == [("AF-Sup", 9)]
 
     # the structural refusal is still free: never batter works your OWN side holds
-    own = replace(_state(facilities=[_field()], supplies=[_dump(fuel=9)],
-                         control={(1, 0): Control.AXIS}), siege_rules=True)
+    own = _state(facilities=[_field()], supplies=[_dump(fuel=9)],
+                 control={(1, 0): Control.AXIS})
     r2 = _Run(own)
     _air_fort(r2, Side.AXIS, (1, 0), lambda p: _air_fuel(r2, Side.AXIS, "strike", p, {}))
     assert r2.events == []

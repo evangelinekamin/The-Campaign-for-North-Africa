@@ -1134,7 +1134,7 @@
     }
   },
   "air_bombardment_41_5": {
-    "_comment": "[41.5] AIR BOMBARDMENT AND SECONDARY BARRAGE TARGETS TABLE, the PORTS row (shared with Airfields / Air Landing Strips), transcribed and eyes-verified cell-by-cell from the scanned foldout chart page 12 (PDF page 107) -- the dense grid that did NOT OCR into docs/rules/90 (only the row labels came through, lines ~1005/1025). Procedure (41.22 / 41.39B): the bombing Player totals his Bomb Points, selects the matching bomb_points column, rolls two dice reading them SEQUENTIALLY as a two-digit code (tens=first die, units=second die: 11,12..16,21..66), and reads the cross-indexed result. WHAT THAT NUMBER MEANS DEPENDS ON THE TARGET and is the Key's business, transcribed verbatim at ports._key_41_5: Efficiency Levels for a port (55.1), elimination for an Air Landing Strip, Capacity Levels for an Airfield (41.36). A result of 0 is No Effect: the port lost no levels this OpStage, so 55.18 lets it regenerate. Each column's die entries partition all 36 sequential codes exactly (guarded by tests/test_air.py). hi=null on the final column is the open 471+ bracket. The Axis Naval Convoy row of this SAME chart lives in axis_naval_convoys_56.air_convoy_bombing_crt_41_66 (already transcribed and tested). SINCE PHASE 5.5 the SUPPLY DUMP row (41.35) and the TRUCKS/Flak-Suppression/Combat-Units/CW-Fleet row (41.32) are transcribed here too, from the same 300-dpi render of the same page, each column self-checked against the 36 sequential 2d6 codes. STILL NOT TRANSCRIBED, and each is named where it lands: the FORTIFICATION row (No Effect / Reduced -- 41.37 currently rides engine._batter_fort's flat one-level-per-stage), the RAILROAD and ROAD rows (41.38, no mission kind exists), and the TORPEDO-POINTS and BARRAGE-POINTS index scales printed over these same eleven result columns (41.7 torpedoes and 12.54's barrage against a secondary target).",
+    "_comment": "[41.5] AIR BOMBARDMENT AND SECONDARY BARRAGE TARGETS TABLE, the PORTS row (shared with Airfields / Air Landing Strips), transcribed and eyes-verified cell-by-cell from the scanned foldout chart page 12 (PDF page 107) -- the dense grid that did NOT OCR into docs/rules/90 (only the row labels came through, lines ~1005/1025). Procedure (41.22 / 41.39B): the bombing Player totals his Bomb Points, selects the matching bomb_points column, rolls two dice reading them SEQUENTIALLY as a two-digit code (tens=first die, units=second die: 11,12..16,21..66), and reads the cross-indexed result. WHAT THAT NUMBER MEANS DEPENDS ON THE TARGET and is the Key's business, transcribed verbatim at ports._key_41_5: Efficiency Levels for a port (55.1), elimination for an Air Landing Strip, Capacity Levels for an Airfield (41.36). A result of 0 is No Effect: the port lost no levels this OpStage, so 55.18 lets it regenerate. Each column's die entries partition all 36 sequential codes exactly (guarded by tests/test_air.py). hi=null on the final column is the open 471+ bracket. The Axis Naval Convoy row of this SAME chart lives in axis_naval_convoys_56.air_convoy_bombing_crt_41_66 (already transcribed and tested). SINCE PHASE 5.5 the SUPPLY DUMP row (41.35) and the TRUCKS/Flak-Suppression/Combat-Units/CW-Fleet row (41.32) are transcribed here too, from the same 300-dpi render of the same page, each column self-checked against the 36 sequential 2d6 codes. SINCE THE 25.14 SLICE the FORTIFICATION row (No Effect / Reduced) is transcribed here too, with the BARRAGE-POINTS index scale beside the Bomb-Points one -- [12.53] enters that row on Actual Barrage Points and [41.37] on Bomb Points, which is why its columns carry both. Its one printing defect is recorded under fortification._errata rather than applied silently. STILL NOT TRANSCRIBED: the RAILROAD and ROAD rows (41.38, no mission kind exists) and the TORPEDO-POINTS index scale (41.7, restricted by footnote (a) to ships of the Commonwealth Fleet).",
     "ports": {
       "_row": "Airfields / Air Landing Strips / Ports -- ONE shared block of result columns, and the Key gives its number three different meanings (see _key_41_5)",
       "_key_41_5": "Key to the Air Bombardment and Secondary Barrage Targets Table, PDF page 108, rendered at 300 dpi and read with eyes, VERBATIM: \"Results: An Airlanding Strip receiving a result of 1 or greater is eliminated. Airfield: That number of Squadron GroundSupport Units may no longer use the Airfield's Readying Capacity. Ports: Reduce the Porft [Port] by that nujber [number] of Efficiency Levels.\" (The two bracketed words are the 1979 printing's own typos, left as printed.) SO ONE ROW IS NOT ONE RESULT: the Ports reading is 55.1 Efficiency Levels (engine._air_port), and the two AIR readings are game.air.levels_lost -- a strip is ELIMINATED by any result at all (36.2 removes it from the map), an airfield loses that many CAPACITY LEVELS (41.36), which is the same fact as the Key's SGSU sentence because 37.24 says so outright: \"if there are five SGSU's on an airfield, but the capacity level of that airfield has been reduced to two, only two of those SGSU's may refit and ready their planes.\" Until 2026-07-21 the engine read the PORTS meaning off all three.",
@@ -2109,6 +2109,326 @@
                 66
               ],
               "points": 7
+            }
+          ]
+        }
+      ]
+    },
+    "fortification": {
+      "_row": "[41.5] AIR BOMBARDMENT AND SECONDARY BARRAGE TARGETS TABLE, the FORTIFICATION row -- the row this port replaced with an invented constant. engine.BARRAGE_HITS_PER_FORT_LEVEL = 1 flattened a level on EVERY effective barrage, with certainty, and its own comment called itself a knob \"the lead tunes with the benchmark harness\". [25.14] names two channels into this row and forecloses the rest (\"No other type of combat affects fortifications\"): [12.53] sends an ARTILLERY facility barrage here on the Artillery-Barrage-Points scale, [41.3]/[41.37] send the B-F/C BOMBING mission here on the Bomb-Points scale. Transcribed and eyes-verified cell by cell from the scanned foldout, chart folio 12 = PDF page 107, rendered at 300 dpi and rotated -- the dense grid docs/rules/90-charts-tables-and-play-aids.md gives up on at line 1461. Procedure (41.22/41.31): total the points, select the matching column, roll two dice reading them SEQUENTIALLY as a two-digit code (tens = first die: 11,12..16,21..66), cross-index. THE READ IS SEQUENTIAL AND NOT THE LARGER-DIE-FIRST READ [12.42] IMPOSES ON THE [12.6] ARTILLERY BARRAGE TABLE -- cells such as 11-12, 11-13 and 25-66 are impossible larger-first, and each column partitions all 36 sequential codes EXACTLY (35+1, 33+3, 30+6, 26+10, 21+15, 15+21, 10+26, 6+30, 3+33, 1+35, 0+36), which only closes under this reading. hi=null on the final column is the open 471+ / 21+ bracket. Guarded by tests/test_fort_barrage.py.",
+      "_key_41_5": "Key to the Air Bombardment and Secondary Barrage Targets Table, PDF page 108 (chart folio 13), rendered and read with eyes, VERBATIM: \"Fortification: Reduced one Level or not affected.\" TWO OUTCOMES ONLY -- no cell of this row ever takes two levels, which is why `reduced` below is 0 or 1 and never more. [25.16] floors it, VERBATIM (PDF p.38): \"Major cities and fortifications may be reduced to a Fortification Level of zero. (Note: The 'zero' level has no effect in the Land Game, except to mean that the fortification can be more easily rebuilt. However, see the Strafing Table, Case 40.8).\" ZERO IS THE FLOOR AND THE LEVEL NEVER GOES NEGATIVE. Note both printed qualifications, which an earlier draft of this key dropped: the zero level is NOT inert (40.8 strafing still reads it, unimplemented here) and it is what makes 24.42 rebuilding easier -- so 'no effect in the Land Game' is the book's own qualified note and not a blanket rule.",
+      "_scales": "[41.5] prints THREE parallel index scales (Torpedo Points, Barrage Points, Bomb Points) over ONE set of eleven result columns, so both of 25.14's channels read the same row and differ only in which scale picks the column. ARTILLERY uses barrage_points: [12.53] \"In barrages directed against any Facility other than a Supply Dump or Air Facility the Players use Air Bombardment Table (41.5), with the exception that they refer to the Artillery Barrage Points column in determining the effect of the Barrage. See Case 41.3.\" Those are ACTUAL points -- [12.54] switches to RAW for Supply Dumps and Air Facilities ALONE, and footnote (b) on the scale itself reads \"Calculated in the same manner as for the Master Barrage Against Units CRT\" ([11.32], Actual = round(Raw/10), which game.combat.actual_points already computes). AIR uses bomb_points: [41.3] \"All Land Support bombing missions except 'mining harbors' are resolved using the Air Bombardment and Secondary Barrage Target Combat Results Table (41.5).\" The Torpedo scale is not transcribed here: footnote (a) restricts it to \"attacking ships of the Commonwealth Fleet\", which is not a fortification.",
+      "_errata": {
+        "_ruling": "ERRATA APPLIED, and recorded here rather than applied silently -- the supply_dump_demolition_54_17 precedent, and the 56.3 Case 00.00 counter-example this port has already had to correct in itself. `barrage_points` in the columns below is the CORRECTED scale, NOT the 1979 printing. THE COLUMN CELLS THEMSELVES ARE THE BOOK'S -- nothing in the No Effect / Reduced grid is overridden. Only the index scale that names which column an artillery barrage enters on is.",
+        "printed_1979": [
+          "1,2",
+          "3,4",
+          "5,6",
+          "7,89,10",
+          "11,12",
+          "13,14",
+          "15,16",
+          "17,18",
+          "19,20",
+          "1+"
+        ],
+        "corrected": [
+          "1,2",
+          "3,4",
+          "5,6",
+          "7,8",
+          "9,10",
+          "11,12",
+          "13,14",
+          "15,16",
+          "17,18",
+          "19,20",
+          "21+"
+        ],
+        "cells_changed": {
+          "column 4": "the printed cell reads '7,89,10' -- two of the book's own N,N cells run together with no boundary, which is why the row prints TEN cells over an ELEVEN-column table and everything from column 5 rightward sits one column left of the Bomb-Points scale above it",
+          "column 11": "the printed final cell reads '1+' and sits under the 391-470 bomb column, leaving 471+ blank; restored to '21+' under 471+"
+        },
+        "reason": "THE PRINTING IS SELF-CONTRADICTORY AND THE CORRECTION IS FORCED. A band literally reading \"1+\" is impossible when band 1 of the same scale already reads \"1,2\" -- \"1 or more\" would swallow the entire scale. '7,89,10' is not the format of any other cell in the row. Verified at 300 dpi for this slice and independently at 600 dpi by the transcription pass (scratchpad/25.14-scope/): clean white space to the left of the '1+', no residual ink of a dropped '2'. The corrected scale is the exact regular extension of the [12.6] Master Barrage Table's own banding (1,2 | 3,4 | ... | 17+), which footnote (b) ties this scale to by name. CORROBORATION, not the arbiter: the VASSAL module CNAv2.1.0.vmod's redraw of this chart -- which preserves the book's own typos verbatim (\"Porft\", \"nujber\", \"Batrtalion\", \"Modiciations\") and is therefore a faithful re-set rather than a corrected edition -- prints eleven regular pairs, and its Fortification row is cell-for-cell identical to this one. THE COST OF BEING WRONG is exactly one column of severity for any barrage of 9 or more Actual Barrage Points (27.8% against 41.7% at 9 points); it can never change a No Effect into two levels, because this row has no such result.",
+        "still_not_transcribed": "the RAILROAD and ROAD rows of this same chart ([41.38]; no mission kind exists in the engine) and the TORPEDO-POINTS index scale ([41.7], Commonwealth Fleet only)."
+      },
+      "columns": [
+        {
+          "bomb_points": [
+            1,
+            20
+          ],
+          "barrage_points": [
+            1,
+            2
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                65
+              ],
+              "reduced": 0
+            },
+            {
+              "die": [
+                66,
+                66
+              ],
+              "reduced": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            21,
+            40
+          ],
+          "barrage_points": [
+            3,
+            4
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                63
+              ],
+              "reduced": 0
+            },
+            {
+              "die": [
+                64,
+                66
+              ],
+              "reduced": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            41,
+            80
+          ],
+          "barrage_points": [
+            5,
+            6
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                56
+              ],
+              "reduced": 0
+            },
+            {
+              "die": [
+                61,
+                66
+              ],
+              "reduced": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            81,
+            120
+          ],
+          "barrage_points": [
+            7,
+            8
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                52
+              ],
+              "reduced": 0
+            },
+            {
+              "die": [
+                53,
+                66
+              ],
+              "reduced": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            121,
+            160
+          ],
+          "barrage_points": [
+            9,
+            10
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                43
+              ],
+              "reduced": 0
+            },
+            {
+              "die": [
+                44,
+                66
+              ],
+              "reduced": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            161,
+            200
+          ],
+          "barrage_points": [
+            11,
+            12
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                33
+              ],
+              "reduced": 0
+            },
+            {
+              "die": [
+                34,
+                66
+              ],
+              "reduced": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            201,
+            260
+          ],
+          "barrage_points": [
+            13,
+            14
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                24
+              ],
+              "reduced": 0
+            },
+            {
+              "die": [
+                25,
+                66
+              ],
+              "reduced": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            261,
+            320
+          ],
+          "barrage_points": [
+            15,
+            16
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                16
+              ],
+              "reduced": 0
+            },
+            {
+              "die": [
+                21,
+                66
+              ],
+              "reduced": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            321,
+            390
+          ],
+          "barrage_points": [
+            17,
+            18
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                13
+              ],
+              "reduced": 0
+            },
+            {
+              "die": [
+                14,
+                66
+              ],
+              "reduced": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            391,
+            470
+          ],
+          "barrage_points": [
+            19,
+            20
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                11
+              ],
+              "reduced": 0
+            },
+            {
+              "die": [
+                12,
+                66
+              ],
+              "reduced": 1
+            }
+          ]
+        },
+        {
+          "bomb_points": [
+            471,
+            null
+          ],
+          "barrage_points": [
+            21,
+            null
+          ],
+          "results": [
+            {
+              "die": [
+                11,
+                66
+              ],
+              "reduced": 1
             }
           ]
         }

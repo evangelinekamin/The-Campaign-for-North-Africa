@@ -15,8 +15,8 @@ import math
 from dataclasses import dataclass, replace
 from typing import Protocol
 
-from . import (air, basing, calendar, combat, combat_tables, construction, cp_costs, initiative,
-               logistics_data, malta, minefields, movement, organization, rail, repair,
+from . import (air, basing, calendar, combat, combat_tables, construction, cp_costs, fortifications,
+               initiative, logistics_data, malta, minefields, movement, organization, rail, repair,
                replacements, stacking, supply, tactics, weather, wells, zoc)
 from .apply import apply
 from .dice import DiceBox
@@ -28,25 +28,32 @@ from .staff_events import clean_staff_payload
 from .state import Coord, GameState, Minefield
 from .terrain import Hexside, Terrain, is_motorized, salt_marsh_barred
 
-# Siege of Tobruk tuning knob (rule 25.14): how many effective barrages (a Pin or a
-# step loss) it takes to batter a fortification down one level. 1 = each effective
-# barrage drops a level. Raise it to make cracking Tobruk harder; the lead tunes
-# this (and the Axis ammo/dump schedule) with the benchmark harness.
-BARRAGE_HITS_PER_FORT_LEVEL: int = 1
+# BARRAGE_HITS_PER_FORT_LEVEL used to stand here: "how many effective barrages it takes to batter a
+# fortification down one level. 1 = each effective barrage drops a level. Raise it to make cracking
+# Tobruk harder; the lead tunes this with the benchmark harness." IT IS GONE. [25.14]'s two channels
+# both resolve on a printed chart -- the [41.5] Fortification row, now transcribed in
+# data/logistics_rates.json and read by game.fortifications -- where a 9-Actual-point concentration
+# takes a level on 15 of 36 codes, not on 36 of 36. A knob tuned against the benchmark harness is
+# precisely what CLAUDE.md's first rule forbids, and the chart it was standing in for was on the
+# foldout the whole time.
 
 # Abstract air-superiority contest (rules 40/45 air-to-air + 40.27 interception + 46 flak,
 # collapsed into ONE roll per arena). Each side commits its fighter Air Points in an arena
 # and adds one die (7.14 idiom); the higher total holds the sky, the difference is the margin.
 # AIR_SUPERIORITY_LOSER_SCALE is the fraction of its strike/recon Air Points the loser can
-# still put over that arena this OpStage (the winner suppresses the rest); a FLAGGED PROXY dial
-# like BARRAGE_HITS_PER_FORT_LEVEL, tuned with the benchmark harness. A tie leaves the sky
-# contested (victor None) and neither side is scaled.
+# still put over that arena this OpStage (the winner suppresses the rest). A FLAGGED PROXY dial,
+# and it USED TO CITE BARRAGE_HITS_PER_FORT_LEVEL as its precedent -- which is worth recording as a
+# warning rather than quietly dropping: that "precedent" turned out to be an invented constant
+# standing on a printed chart nobody had transcribed ([41.5]), so citing it legitimised nothing. This
+# dial has no chart behind it that anyone has found; if one is ever found, it replaces this. A tie
+# leaves the sky contested (victor None) and neither side is scaled.
 AIR_SUPERIORITY_LOSER_SCALE: float = 0.5
 
 # Air-strike lethality (rule 41.31). Faithful 41.31 is PIN-ONLY -- the dive bomber suppresses a
 # stack (12.44) so it cannot barrage / anti-armor / close-assault the segment, leaving step-losses
-# to the artillery. This knob is the owner-tuned severity dial (the BARRAGE_HITS_PER_FORT_LEVEL
-# analog): 0 = pin-only (default); >0 = that many TOE Strength Points also lost, riding the
+# to the artillery. This knob is the owner-tuned severity dial (it used to call itself "the
+# BARRAGE_HITS_PER_FORT_LEVEL analog"; that analog is deleted, see the note above): 0 = pin-only
+# (default, and the faithful reading); >0 = that many TOE Strength Points also lost, riding the
 # existing STEP_LOST(role='air_strike').
 AIR_STRIKE_STEP_SEVERITY: int = 0
 
@@ -90,7 +97,14 @@ class _Run:
         self.dice = DiceBox(initial.seed)
         self.events: list[Event] = []
         self._seq = 0
-        self.fort_hits: dict[Coord, int] = {}   # accumulated barrage hits per hex (25.14)
+        # [41.37] "Only one level of fortification may be destroyed in any Operations Stage." The
+        # cap is printed inside the BOMBING rule, so it binds the air channel: the hexes an air
+        # B-F/C mission has already opened this Operations Stage, which a second bombing mission
+        # against the same works may not open again. [12.5] carries no such sentence, so the
+        # artillery channel is deliberately NOT capped here -- flagged, because the alternative
+        # reading (one level per fortification per stage from all causes) is available and the book
+        # does not settle it. Cleared at the OpStage boundary beside ports_bombed_this_stage.
+        self.forts_bombed_this_stage: set[Coord] = set()
         # [24.12] The units BOOKED on a construction project this Operations Stage. "Units involved
         # in construction may not expend any Capability Points during an Operations Stage; otherwise
         # that construction is halted" (24.12), and 48 V.C.4.b: they "may not be moved (voluntarily)
@@ -289,6 +303,7 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             r.ports_bombed_this_stage = set()            # 55.18: this stage's bomb ledger starts empty
                                                          # (55.3's per-port tonnage budget needs no reset
                                                          # here -- _port_tons() expires it by stage)
+            r.forts_bombed_this_stage = set()            # 41.37: one level of fortification per stage
             _rommel_arrival(r, stage)                    # 64.2: the Desert Fox lands (GT26.3) -- BEFORE the anchor
             _rommel_anchor(r)                            # 31.4: snapshot who he starts THIS stage with
             first, second = _declare_ab(r, policies, stage)   # 5.2.III.A / 7.11: the A/B activation order
@@ -873,19 +888,11 @@ def _interdiction_for(state: GameState, convoy):
 
 
 def _crt_result(columns, bomb_points: int, d1: int, d2: int, key: str) -> int:
-    """The [41.5] lookup every row of that table shares: pick the Bomb-Point column, read the two
-    dice SEQUENTIALLY as a two-digit code (tens=d1, units=d2, rule 41.22), return the cell. Bomb
-    Points below the table's floor find no column and score nothing -- the same answer
-    _bombardment_result and _convoy_loss_pct already give, now written once."""
-    code = d1 * 10 + d2
-    for col in columns:
-        lo, hi = col["bomb_points"]
-        if bomb_points >= lo and (hi is None or bomb_points <= hi):
-            for entry in col["results"]:
-                dlo, dhi = entry["die"]
-                if dlo <= code <= dhi:
-                    return entry[key]
-    return 0
+    """The [41.5] lookup every row of that table shares, on the Bomb-Point scale. It MOVED to
+    game.logistics_data.crt_result when the 25.14 slice wired the FORTIFICATION row, because that row
+    is entered on the Artillery-Barrage-Points scale as well ([12.53]) and game.fortifications needs
+    the same lookup without importing the engine. This stays as the engine's spelling of it."""
+    return logistics_data.crt_result(columns, bomb_points, d1, d2, key)
 
 
 def _convoy_loss_pct(points: int, d1: int, d2: int) -> int:
@@ -2953,33 +2960,57 @@ def _air_strike(r: _Run, side: Side, tgt: Coord, pinned: set[str], fuel) -> None
 
 
 def _air_fort(r: _Run, side: Side, tgt: Coord, fuel) -> None:
-    """41.37 B-F/C: air batters a fortification one level per Operations Stage -- the air twin of
-    engine._batter_fort, gated behind siege_rules (inert in the canonical benchmark). Reuses
-    FORT_REDUCED, so no new fold; air + barrage together open the works faster. Like _air_strike,
-    it needs committed LAND strike Air Points (scaled by the superiority gate): a side that fields
-    no strike or has lost the sky to a scale of 0 cannot batter the works -- winning the LAND sky
-    is the precondition. The committed strength rides the payload for legibility.
+    """[41.37] B-F/C Bombing Major Cities/Fortifications, verbatim off PDF p.58: "Any major city or
+    hex with fortifications may be bombed... Only one level of fortification may be destroyed in any
+    Operations Stage... IF THE PLAYER OBTAINS A RESULT that would reduce the fortification level by
+    one, the temporary facility is neturalized [sic]..."
 
-    THE EMPTY TARGET IS BILLED, and the line is drawn where 39.11 draws it. Bombing your own works,
-    or bombing at all in a scenario with no siege rules, are refusals to ORDER the mission and cost
-    nothing. Arriving over a hex that turns out to hold no fortification is the SAME blind sortie
-    39.0 describes ("only find out what target are present when the planes arrive") as arriving
-    over a hex that turns out to hold no enemy unit, which _air_strike bills -- so the fort check
-    sits AFTER the fuel draw, and the two resolvers now draw the line in the same place."""
+    IT ROLLS NOW. This used to emit FORT_REDUCED unconditionally -- no die at all -- which made it
+    the only [41.5] land-bombing resolver in the engine that did not consult the chart, while its own
+    sibling _air_port two functions below rolled the Ports row of that same table correctly.
+    "Obtains a result" is a die, and the Fortification row it is read on is the one that had never
+    been transcribed. The roll rides AIR_STRIKE_RESOLVED (arena='FORT'), exactly as the harbour's and
+    the airfield's do, so a MISS is on the record with its dice; only a `reduced` of 1 emits
+    FORT_REDUCED. Air and artillery now share one chart and one meaning of a level.
+
+    [41.37]'s per-stage cap is real and is enforced here (r.forts_bombed_this_stage): a second B-F/C
+    mission against works this side has already opened this Operations Stage is refused. The Key
+    allows only one level per result anyway, so the cap binds only across multiple missions.
+
+    Like _air_strike, it needs committed LAND strike Air Points (scaled by the superiority gate): a
+    side that fields no strike or has lost the sky to a scale of 0 cannot batter the works -- winning
+    the LAND sky is the precondition. The committed strength picks the Bomb-Points column and rides
+    the payload.
+
+    THE EMPTY TARGET IS BILLED, and the line is drawn where 39.11 draws it. Bombing your own works is
+    a refusal to ORDER the mission and costs nothing. Arriving over a hex that turns out to hold no
+    fortification is the SAME blind sortie 39.0 describes ("only find out what target are present
+    when the planes arrive") as arriving over a hex that turns out to hold no enemy unit, which
+    _air_strike bills -- so the fort check sits AFTER the fuel draw, and the two resolvers draw the
+    line in the same place."""
     strength = _air_points(r.state, side, "LAND", "strike")
     if strength <= 0:                                    # no committed strike / lost the sky
-        return
-    if not r.state.siege_rules:
         return
     if r.state.control_of(tgt) == CONTROL_OF[side]:      # never batter your OWN works
         return
     strength = fuel(strength)                            # 38.24: however many planes were fuelled
-    if strength <= 0:                                    # 38.21: no fuel, no flight
+    if strength <= 0:                                    # 38.21: no fuel, no flight -- and no die
         return
     if r.state.fort_level(tgt) <= 0:                     # 39.11: flown blind, and nothing there
         return
-    r.emit(EventKind.FORT_REDUCED, side, f"{side.value}/Air",
-           {"hex": list(tgt), "level": r.state.fort_level(tgt) - 1, "strength": strength})
+    if tgt in r.forts_bombed_this_stage:                 # 41.37: one level per Operations Stage
+        return
+    d1, d2 = r.d6("air_bombard"), r.d6("air_bombard")    # 41.22: two dice, read sequentially
+    reduced = fortifications.reduced_by_bombing(strength, d1, d2)
+    actor = f"{side.value}/Air"
+    r.emit(EventKind.AIR_STRIKE_RESOLVED, side, actor,   # certify the [41.5] CRT dice
+           {"arena": "FORT", "target": list(tgt), "strength": strength, "levels": reduced},
+           rng_draws=(d1, d2))
+    if reduced <= 0:                                     # No Effect: the works stood
+        return
+    r.forts_bombed_this_stage.add(tgt)
+    r.emit(EventKind.FORT_REDUCED, side, actor,
+           {"hex": list(tgt), "level": r.state.fort_level(tgt) - reduced, "strength": strength})
 
 
 def _air_port(r: _Run, side: Side, port_id: str, fuel) -> None:
@@ -3296,8 +3327,16 @@ def _naval_bombardment(r: _Run, side: Side, pinned: set[str]) -> None:
     reaches one hex further at half Gun Rating (30.21). A ship that fires then owes two Operations
     Stages refitting in Alexandria (30.25, the port_cooldown counter). Fires ONLY when `side`
     fields naval (GameState.naval=() -> byte-identical); ship damage/repair (30.3) and the Chariot
-    raid (30.4) are deferred. As the mirror-completeness camera it is off the crackability path --
-    it never batters a fort, so no siege lever rides here."""
+    raid (30.4) are deferred.
+
+    IT NEVER BATTERS A FORT, AND THAT IS NOW DECLARED DEBT RATHER THAN A VIRTUE. This used to end
+    "As the mirror-completeness camera it is off the crackability path -- it never batters a fort,
+    so no siege lever rides here", which was only true while [12.5] was unimplemented. [12.55] (PDF
+    p.21) reads: "Off-Shore Bombardment may be used to Barrage facilities; see Case 30.12." -- a
+    THIRD channel into the same [41.5] Fortification row the 25.14 slice wired for artillery and
+    air. _naval_target still picks a unit and only a unit, so a battleship cannot shell a wall here;
+    that is a gap, it is named in game.fortifications' declared-debt list, and the negative claim
+    that stood in its place is withdrawn."""
     if not r.state.naval:
         return
     state0 = r.state
@@ -6182,15 +6221,36 @@ def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
     `held_off` (10.34): when supplied, the PHASING side's Actual Barrage Points on each
     enemy hex are accumulated into it -- a Holding-Off Barrage satisfies the 10.31
     mandatory-attack obligation once those points meet the enemy hex's threshold, read by
-    _mandatory_attack. Pure bookkeeping (no event, no die), so it never perturbs replay."""
+    _mandatory_attack. Pure bookkeeping (no event, no die), so it never perturbs replay.
+
+    [12.5] BARRAGE AGAINST FACILITIES rides this same step, because [12.52] says it must: "Barrage
+    against Facilities follows all the rules of normal Barrage, WITH THE EXCEPTION THAT THE TARGET
+    DESIGNATED IS THE SPECIFIC FACILITY." So a battery declares EITHER a hex's units or its works,
+    never both ([12.51] "rather than actual units"), pays the same ammunition and the same combat CP
+    either way, and the two differ only in which chart resolves them -- [12.6] for units, the [41.5]
+    Fortification row at the Artillery-Barrage-Points column for works ([12.53]). game.fortifications
+    .barrage_target makes that declaration and is FLAGGED DOCTRINE: the book gives the Barraging
+    Player the choice and never says when to prefer the wall.
+
+    Two things fall out of the designation that the old side-effect model could not do. [12.31]'s own
+    exception fires -- "Artillery units may not Barrage non-occupied hexes (however, see Case 12.5)"
+    -- so an EMPTY enemy fortress is a legal target. And the [12.33] terrain/fortification column
+    shift does not apply: that shift is a feature of the [12.6] table, and a facility barrage is not
+    resolved on it. Nothing shelters a wall from being shot at."""
     state0 = r.state
     plan: list[tuple] = []
+    fort_plan: list[tuple] = []
     for firing in (phasing, enemy):
         actor = f"{firing.value}/Front"
         is_phasing = firing is phasing
         by_target: dict[Coord, list] = {}
+        by_works: dict[Coord, list] = {}
         for u in state0.living(firing):
             if u.barrage <= 0 or not u.is_combat:
+                continue
+            works = fortifications.barrage_target(state0, u, firing)   # 12.51: declare the facility
+            if works is not None:
+                by_works.setdefault(works, []).append(u)
                 continue
             for nb in neighbors(u.hex):
                 if state0.enemies_at(nb, firing):
@@ -6228,6 +6288,31 @@ def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
                 truck = (truck_owner, (t1, t2), tloss)
             plan.append((firing, actor, tgt, [u.id for u in armed],
                          actual, cls, target_unit.id, (d1, d2), pin, loss, truck))
+        for tgt, firers in by_works.items():             # [12.5] the declared FACILITY barrages
+            armed = [u for u in firers
+                     if _charge_ammo(r, firing, actor, u, phasing=is_phasing, activity="barrage")]
+            for u in armed:                              # 6.3: exactly as a unit barrage is billed
+                _charge_combat_cp(r, phasing, u, charged)
+            raw = sum(u.raw_barrage for u in armed)
+            if raw <= 0:                                 # 50.12: nobody could pay for the shoot
+                continue
+            actual = combat.actual_points(raw, False)    # 12.53/11.32: ACTUAL points pick the column
+            if held_off is not None and is_phasing:
+                # 10.34 accrual, and a FLAGGED JUDGEMENT CALL. The points really were fired at that
+                # hex, and the Note at the end of [12.0]'s own PROCEDURE (PDF p.20, immediately
+                # above [12.1]) says: "Holding-off" Barrages are resolved in the same fashion as
+                # normal Barrage (see Case 10.3). -- so they are credited exactly as a unit
+                # barrage's are, which also keeps a battery that switched targets from silently
+                # dropping its 10.31 obligation. (That sentence was cited here as "10.3's own note";
+                # it is section 12's note CROSS-REFERRING to 10.3, and the page it sends a checker
+                # to matters for a judgement call this file itself flags as unsettled.) The book
+                # does not say whether shelling the works holds off the men, and this is the reading
+                # that changes nothing else. What it does NOT do is give the gun's OTHER neighbours
+                # any points: see fortifications.barrage_target on what the doctrine costs [10.31].
+                held_off[tgt] = held_off.get(tgt, 0) + actual
+            d1, d2 = r.d6("fort_barrage"), r.d6("fort_barrage")   # 41.22: two dice, SEQUENTIAL
+            reduced = fortifications.reduced_by_barrage(actual, d1, d2)
+            fort_plan.append((firing, actor, tgt, [u.id for u in armed], actual, (d1, d2), reduced))
     for firing, actor, tgt, firer_ids, actual, cls, tgt_id, dice, pin, loss, truck in plan:
         r.emit(EventKind.BARRAGE_RESOLVED, firing, actor,
                {"target": list(tgt), "firers": firer_ids, "actual": actual,
@@ -6240,7 +6325,6 @@ def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
                        {"unit_id": tgt_id, "amount": min(loss, tu.strength), "role": "barrage"})
         if pin:
             pinned.add(tgt_id)
-        _batter_fort(r, firing, actor, tgt, effective=pin or loss > 0)
         if truck is not None:                            # 12.46: certify the dice, then destroy
             truck_owner, tdice, tloss = truck
             r.emit(EventKind.TRUCK_BARRAGED, firing, actor,
@@ -6250,22 +6334,40 @@ def _barrage_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],
                 live = [t for t in r.state.trucks_at(tgt)
                         if t.side == truck_owner and t.points > 0]
                 _kill_truck_points(r, firing, live, tloss, "12.46", actor=actor)
+    for firing, actor, tgt, firer_ids, actual, dice, reduced in fort_plan:
+        _batter_fort(r, firing, actor, tgt, firer_ids, actual, dice, reduced)
 
 
-def _batter_fort(r: _Run, firing: Side, actor: str, tgt: Coord, *, effective: bool) -> None:
-    """Siege of Tobruk (rule 25.14): an EFFECTIVE artillery barrage (a Pin or a step
-    loss) on a fortified hex batters its wall. After BARRAGE_HITS_PER_FORT_LEVEL such
-    hits the fortification drops one level (floored at 0), emitted as FORT_REDUCED so
-    the reduction folds into GameState.fort_levels and close assault reads the lower
-    wall. Gated behind siege_rules -- inert (and silent) in the canonical benchmark.
-    Barrage NEVER evicts and NEVER touches the static base map: only the level falls."""
-    if not r.state.siege_rules or not effective or r.state.fort_level(tgt) <= 0:
+def _batter_fort(r: _Run, firing: Side, actor: str, tgt: Coord,
+                 firer_ids: list, actual: int, dice: tuple, reduced: int) -> None:
+    """[25.14]/[12.5] Put one resolved FACILITY barrage on the record, and take the level off if the
+    [41.5] Fortification row said so.
+
+    THE ROLL IS ALWAYS CERTIFIED, hit or miss, which is the whole reason the chart replaced a
+    constant: this used to be `if not r.state.siege_rules or not effective` -- a scenario flag, and a
+    free ride on whether some UNIT in the hex had been pinned or stepped -- and it reduced a level
+    with certainty whenever both were true. Now the dice ride FORT_BARRAGED (the TRUCK_BARRAGED
+    idiom) and only a `reduced` of 1 emits FORT_REDUCED.
+
+    [25.16] floors the level at zero and the Key allows exactly one level per result, so this can
+    never take a wall negative or take two levels at once. [15.82] IS UNTOUCHED AND MUST STAY SO:
+    barrage brings the wall down, never the garrison out, and the static printed map
+    (terrain.fortifications) is never written -- only the dynamic fort_levels overlay falls.
+
+    THE FLOOR IS AN ARGUMENT, NOT A GUARD, and the argument is the reason there is no second test
+    here. A `level <= 0` arm stood beside `reduced <= 0` and could never fire: fortifications
+    .barrage_target refuses any hex whose level is already 0, and a given works hex can appear in
+    fort_plan AT MOST ONCE, because its control record cannot be "not mine and enemy-held" for both
+    sides at once (tests/test_fort_barrage.py pins exactly that). So `level` is >= 1 whenever
+    `reduced` is 1, and level - reduced is >= 0. The arm read as a live guard, was unreachable and
+    untested, and is deleted; invariants._check_fort is the real backstop and is meant to be loud."""
+    r.emit(EventKind.FORT_BARRAGED, firing, actor,
+           {"target": list(tgt), "firers": firer_ids, "actual": actual, "reduced": reduced},
+           rng_draws=dice)
+    if reduced <= 0:                                     # No Effect: the works stood
         return
-    r.fort_hits[tgt] = r.fort_hits.get(tgt, 0) + 1
-    if r.fort_hits[tgt] >= BARRAGE_HITS_PER_FORT_LEVEL:
-        r.fort_hits[tgt] = 0
-        r.emit(EventKind.FORT_REDUCED, firing, actor,
-               {"hex": list(tgt), "level": r.state.fort_level(tgt) - 1})
+    r.emit(EventKind.FORT_REDUCED, firing, actor,
+           {"hex": list(tgt), "level": r.state.fort_level(tgt) - reduced})
 
 
 def _anti_armor_step(r: _Run, phasing: Side, enemy: Side, pinned: set[str],

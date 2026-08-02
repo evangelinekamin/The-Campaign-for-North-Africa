@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from game import coords
 from game.apply import apply
-from game.engine import _naval_convoys, _Run, determinism_signature, run
+from game.engine import _barrage_step, _naval_convoys, _Run, determinism_signature, run
 from game.events import Control, Event, EventKind, Phase, Side
 from game.invariants import check
 from game.movement import TerrainMap
@@ -24,6 +24,7 @@ from game.policy import ScriptedPolicy
 from game.scenario import coastal_corridor, rommels_arrival, siege_of_tobruk
 from game.state import Convoy, GameState, SupplyUnit, VP
 from game.terrain import Terrain
+from tests.siege_fixtures import stand_the_siege_train_beside_tobruk
 
 TOBRUK = coords.to_axial(coords.parse("C4807"))
 
@@ -240,9 +241,10 @@ def test_siege_of_tobruk_machinery_intact():
     faithful: Tobruk held the 1941 siege and was not stormed until June 1942 under
     different conditions (see memory: cna-tobruk-crackability; the genuine siege-
     storm capture path is deferred, not a CHUNK-1 regression). What CHUNK 1 must
-    preserve is that the 25.14 artillery path stays LIVE: with siege_rules ON the
-    wall is still battered down (FORT_REDUCED fires at the objective across seeds),
-    which never happens with siege OFF.
+    preserve is that the 25.14 artillery path stays LIVE: a battery that declares
+    Tobruk's works still batters them down. It used to say "with siege_rules ON ...
+    which never happens with siege OFF"; there is no OFF any more, and it is asserted
+    as a thing the engine DOES rather than as a count -- see the note in the body.
 
     SEED NOTE. These seeds were re-pinned three times under the old shared rng -- once for the
     two-level clock, once for Rommel's 31.4 +5 CPA, once for the SEA-TOBRUK interdiction schedule
@@ -260,8 +262,9 @@ def test_siege_of_tobruk_machinery_intact():
     per broken TOE) moved the cascade again: MEASURED on the corrected engine, siege_of_tobruk fires
     FORT_REDUCED on 4 of seeds 1..500 (197, 220, 232, 405) -- still the rare event it was (6/500
     before, 2/220 under T0-0), with 214 dropped out. Re-pinned (197, 214) -> (197, 220), both of
-    which fire. The crack RATE is the owner's siege knob (BARRAGE_HITS_PER_FORT_LEVEL / the Axis ammo
-    schedule), not a magnitude to bend here. This guards only that the 25.14 path SURVIVES.
+    which fire. The crack RATE was called "the owner's siege knob (BARRAGE_HITS_PER_FORT_LEVEL / the
+    Axis ammo schedule)" -- it is not a knob at all any more, it is the [41.5] Fortification row's
+    answer and there is nothing to bend. This guards only that the 25.14 path SURVIVES.
 
     T0-11 (weather localisation, 29.7, and truck-cargo evaporation, 29.34) moved the cascade once more,
     the same inherent single-seed chaos: a storm now falls on only some of sections A/B/C instead of all
@@ -282,21 +285,33 @@ def test_siege_of_tobruk_machinery_intact():
     # the base benchmark -- the massed artillery is supply-throttled and cannot mass on the perimeter in
     # time, so Tobruk holds (historically exact; the 25.14 crack MECHANISM is verified directly in
     # test_siege.py, L1+L2, not via a brittle seed hunt). What this now guards is the SAME thing without
-    # the seed luck: the faucet does not silently GATE OFF the 25.14 mechanism -- with siege_rules on and
-    # BARRAGE_HITS_PER_FORT_LEVEL == 1, every EFFECTIVE barrage (pin or loss) on Tobruk's STANDING wall
-    # must batter it. Seed-independent: vacuously true when the fold lands no effective barrage on the
-    # wall (Tobruk holds), loud the moment the mechanism goes dead.
+    # the seed luck: the faucet does not silently GATE OFF the 25.14 mechanism.
+    #
+    # RESTATED TWICE ON 2026-08-01. The first restatement (the 25.14 slice) moved the counter from
+    # BARRAGE_RESOLVED to FORT_BARRAGED and asserted `reductions == scored`, where `scored` counted
+    # FORT_BARRAGED events with payload["reduced"] > 0 against a standing wall. THAT ASSERTION COULD
+    # NOT FAIL -- it is precisely the conjunction engine._batter_fort uses to decide whether to emit
+    # FORT_REDUCED, read off the same fold, so it held by construction. PROVEN by neutering
+    # fortifications.barrage_target to `return None`: with the whole facility-barrage path dead, this
+    # test and its twin in tests/test_ports.py both still passed. Its docstring promised it would go
+    # "loud the moment the mechanism goes dead", and it could not.
+    #
+    # SECOND RESTATEMENT -- ASSERT THE BEHAVIOUR. Same thesis (the convoy faucet must not gate 25.14
+    # off), stated as something the engine has to DO rather than as a count of its own decisions:
+    # stand the Axis siege train beside Tobruk's wall in the state the fed war actually produced,
+    # fire one Barrage Step, and the wall comes down. The guns are massed to the [41.5] 21+ column,
+    # where all 36 sequential codes read "Reduced", so no seed is involved in the outcome; the seed
+    # note above survives only as the history of a pin this test no longer depends on.
     res = run(siege_of_tobruk(seed=8), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
-    assert res.initial.siege_rules is True
-    st = res.initial
-    effective = reductions = 0
-    for e in res.events:
-        if e.kind == EventKind.FORT_REDUCED and tuple(e.payload["hex"]) == TOBRUK:
-            reductions += 1
-        if (e.kind == EventKind.BARRAGE_RESOLVED and tuple(e.payload["target"]) == TOBRUK
-                and (e.payload.get("pinned") or e.payload.get("loss", 0) > 0)
-                and st.fort_level(TOBRUK) > 0):
-            effective += 1
-        st = apply(st, e)
-    assert reductions == effective, (
-        f"25.14 gated? {effective} effective barrages on Tobruk's standing wall but {reductions} reductions")
+    assert res.final.fort_level(TOBRUK) == 2, (
+        "seed 8 is pinned because nothing reaches Tobruk's wall in twelve turns; if that ever "
+        "changes, re-read this test rather than re-pinning the seed")
+    for label, st in (("the fed siege's own end state", res.final),
+                      ("the un-fed twin", rommels_arrival(seed=8))):
+        r = _Run(stand_the_siege_train_beside_tobruk(st))
+        _barrage_step(r, Side.AXIS, Side.ALLIED, set(), set())
+        fired = [e for e in r.events if e.kind == EventKind.FORT_BARRAGED
+                 and tuple(e.payload["target"]) == TOBRUK]
+        assert len(fired) == 1 and fired[0].payload["reduced"] == 1, \
+            f"25.14 gated? no scoring facility barrage on Tobruk's standing wall in {label}"
+        assert r.state.fort_level(TOBRUK) == 1, f"the wall did not fall in {label}"

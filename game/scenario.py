@@ -711,13 +711,21 @@ def siege_of_tobruk(seed: int = 1941, *, port_bomb: bool = False, raf: bool = Fa
                     portbomb_start: int = _TOBRUK_PORTBOMB_START,
                     portbomb_cadence: int = _TOBRUK_PORTBOMB_CADENCE,
                     raf_fighters: int = _TOBRUK_DAF_FIGHTERS) -> GameState:
-    """The Siege of Tobruk (rule 25.14 / 25.16): Rommel's Arrival with the siege-
-    artillery rule LIVE and a sustained Axis air-interdiction of the Tobruk ferry. It is
-    the SAME battle -- identical OOB, placement, base supply, the 12-turn clock, the
-    garrison morale and the base fort level are all reused from rommels_arrival untouched --
-    but siege_rules is on (so a sustained Axis barrage batters Tobruk's works down one level
-    at a time, 25.14) and the SEA-TOBRUK ferry now runs a gauntlet of CRT convoy bombing
-    (41.6), throttling the fuel/stores/water the garrison lands each turn.
+    """The Siege of Tobruk: Rommel's Arrival with a sustained Axis air-interdiction of the Tobruk
+    ferry. It is the SAME battle -- identical OOB, placement, base supply, the 12-turn clock, the
+    garrison morale and the base fort level are all reused from rommels_arrival untouched -- and the
+    SEA-TOBRUK ferry runs a gauntlet of CRT convoy bombing (41.6), throttling the fuel/stores/water
+    the garrison lands each turn.
+
+    IT NO LONGER TURNS 25.14 ON, BECAUSE 25.14 IS NEVER OFF. This scenario used to set
+    `siege_rules=True` and was the only thing in the repo that did; the campaign never set it, so
+    both of [25.14]'s channels were dead for 111 turns of every war. Section 25 carries no scenario
+    condition (scan-verified, PDF p.38), the flag is deleted, and battering a wall is now ordinary
+    engine behaviour everywhere. Note the honest measurement that came with that: this scenario was
+    never an existence proof for the rule it was named after -- MEASURED on seed 1941, the nearest
+    Axis battery starts 69 hexes from Tobruk and has closed only to 31 when the 12-turn clock runs
+    out (63 under the axis=allied=ScriptedPolicy(AXIS) pair the signatures are hashed with), so
+    it battered nothing here before the change either.
 
     MEASURED (see the task report): the interdiction faithfully chokes the lifeline (a
     strong cut removes thousands of supply points over the campaign), but Tobruk capture
@@ -731,9 +739,10 @@ def siege_of_tobruk(seed: int = 1941, *, port_bomb: bool = False, raf: bool = Fa
     crack needs the deferred storming AI, out of this step's faithful scope.
 
     The no-eviction rule (15.82), the clock, the garrison and the base level stay faithful
-    and load-bearing. The crack rate is tuned -- deliberately NOT here -- with
-    engine.BARRAGE_HITS_PER_FORT_LEVEL and the Axis ammo/dump schedule via the benchmark
-    harness (design target ~15-35% under strong play).
+    and load-bearing. THE CRACK RATE IS NOT TUNED ANYWHERE: it used to be nominated to
+    engine.BARRAGE_HITS_PER_FORT_LEVEL "via the benchmark harness (design target ~15-35% under
+    strong play)", and that constant is gone -- how fast a wall comes down is the [41.5]
+    Fortification row's answer and nobody else's.
 
     The keyword knobs seed the SECOND throat of the lifeline -- the harbour, not just the
     ferry -- so the crack the ferry-cut only made latent can actually fire. `port_bomb` fields
@@ -749,7 +758,7 @@ def siege_of_tobruk(seed: int = 1941, *, port_bomb: bool = False, raf: bool = Fa
     air = _axis_land_air(raf, raf_fighters) if port_bomb else ()
     air_missions = (_tobruk_port_bomb(base.max_turns, portbomb_start, portbomb_cadence)
                     if port_bomb else ())
-    return replace(base, siege_rules=True, air=air, air_missions=air_missions,
+    return replace(base, air=air, air_missions=air_missions,
                    interdictions=_tobruk_ferry_interdiction(base.max_turns, ferry_bomb))
 
 

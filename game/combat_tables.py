@@ -354,8 +354,16 @@ def org_size_shift(attacker_sp: int, defender_sp: int) -> int:
 # Static fortification defense (rule 15.82): the Close Assault column shift toward the
 # defender by fortification level. Chart 8.37 grades the close-assault fortification
 # benefit L2 / L3 / L4 for Levels 1 / 2 / 3 (RE-READ off PDF page 70) -- NOT level*(-2),
-# which over-shifts Level 2 by one column and Level 3 by two (T0-8). Dynamic fort-
-# reduction by successive assault (rule 25.14) is DEFERRED.
+# which over-shifts Level 2 by one column and Level 3 by two (T0-8).
+#
+# THIS USED TO SAY "Dynamic fort-reduction by successive assault (rule 25.14) is DEFERRED", AND
+# THAT WAS BACKWARDS -- it invited someone to build a rule the book forbids. [25.14], verbatim off
+# PDF p.38: "Fortifications may be reduced in Level strength by air bombardment... or artillery
+# barrage (Case 12.5). NO OTHER TYPE OF COMBAT AFFECTS FORTIFICATIONS." Close assault never reduces
+# a wall, however many times it is pressed home; nothing about that is deferred. What IS dynamic is
+# the level this dict is keyed on -- game.fortifications batters it down (barrage and bombing) and
+# game.construction builds it back up (24.42), and `level` reaching 0 falls through to no shift at
+# all, which is [25.16].
 FORT_CA_SHIFT_BY_LEVEL: dict[int, int] = {1: -2, 2: -3, 3: -4}
 
 # Defensive minefield belt: a flat column shift toward the defender when the

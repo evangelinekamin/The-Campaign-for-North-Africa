@@ -158,7 +158,7 @@ def test_air_mission_state_defaults_empty():
         assert s.air_missions == () and s.air_sighted == frozenset()
 
 
-def _strike_state(*, fort: int = 0, air_strike: int = 6, siege: bool = False,
+def _strike_state(*, fort: int = 0, air_strike: int = 6,
                   weather: str = "clear", superiority=None, missions=(), ports=()) -> GameState:
     """An Axis LAND air wing over an Allied stack at (1,0); (1,0) may be a fortified Major City."""
     terr = {(0, 0): Terrain.CLEAR, (1, 0): Terrain.MAJOR_CITY if fort else Terrain.CLEAR}
@@ -170,7 +170,7 @@ def _strike_state(*, fort: int = 0, air_strike: int = 6, siege: bool = False,
         weather=weather, vp=VP(),
         terrain=TerrainMap(terrain=terr, fortifications={(1, 0): fort} if fort else {}),
         control={}, units=(foe,), target_hex=(1, 0), supplies=(), consumed={}, initial_supply={},
-        siege_rules=siege, air=(wing,), air_missions=tuple(missions), ports=tuple(ports))
+        air=(wing,), air_missions=tuple(missions), ports=tuple(ports))
     if superiority is not None:
         s = s.with_air_superiority("LAND", superiority)
     return s
@@ -231,26 +231,42 @@ def test_strike_severity_dial_sheds_a_step():
     assert loss[0].payload["amount"] == 2 and r.state.unit("GAR").strength == 4
 
 
-# --- FORT bombing (41.37): reuse FORT_REDUCED, capped, gated by siege --------
+# --- FORT bombing (41.37): reuse FORT_REDUCED, capped, ROLLED on [41.5] ------
 
-def test_fort_bombing_reduces_one_level_only_under_siege():
-    fort_mission = (AirMission(Side.AXIS, "fort", (1, 0), 1),)
-    r = _Run(_strike_state(fort=3, siege=True, missions=fort_mission))
+def test_fort_bombing_reduces_at_most_one_level_per_operations_stage():
+    """RESTATED FROM test_fort_bombing_reduces_one_level_only_under_siege (2026-08-01, the 25.14
+    slice). TWO THINGS IT ASSERTED ARE NOW WRONG AND ONE IS STILL RIGHT.
+
+    Wrong: the "siege OFF -> no fort bombing" half. [25.14] carries no scenario condition anywhere
+    (PDF p.38, read off the scan), so the siege_rules flag it depended on was CLAUDE.md-rule-6 debt
+    and is deleted -- there is no posture in which a bomber may not batter a wall.
+
+    Wrong: that six Bomb Points take a level with certainty. [41.37] says "IF THE PLAYER OBTAINS A
+    RESULT that would reduce the fortification level by one" -- a die, read on the [41.5]
+    Fortification row, where six Bomb Points is the 1..20 column and reduces on 1 of 36 codes. The
+    resolver used to emit FORT_REDUCED unconditionally with no die at all. So the mission is flown at
+    a strength that clears the top of the chart, and the assertion is that a level came off.
+
+    Still right, and it is the half worth keeping: "Only one level of fortification may be destroyed
+    in any Operations Stage" (41.37). TWO missions against the same works in one stage take ONE level
+    between them -- which the old flat resolver got right by accident, having no way to take two."""
+    twice = (AirMission(Side.AXIS, "fort", (1, 0), 1), AirMission(Side.AXIS, "fort", (1, 0), 1))
+    r = _Run(_strike_state(fort=3, air_strike=500, missions=twice))
     _air_support(r, Side.AXIS, set())
     fr = [e for e in r.events if e.kind == EventKind.FORT_REDUCED]
     assert len(fr) == 1 and fr[0].payload["level"] == 2          # one level/OpStage (41.37)
     assert r.state.fort_level((1, 0)) == 2
-    # siege OFF -> no fort bombing (inert like _batter_fort)
-    r2 = _Run(_strike_state(fort=3, siege=False, missions=fort_mission))
-    _air_support(r2, Side.AXIS, set())
-    assert not any(e.kind == EventKind.FORT_REDUCED for e in r2.events)
+    # the [41.5] roll is certified in the log even for the mission that the cap refused nothing on
+    rolls = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED
+             and e.payload.get("arena") == "FORT"]
+    assert len(rolls) == 1 and len(rolls[0].rng_draws) == 2
 
 
 def test_fort_bombing_never_batters_your_own_works():
     # A mis-seeded mission over a FRIENDLY-controlled fort must not batter it (ownership guard).
     from game.events import Control
     fort_mission = (AirMission(Side.AXIS, "fort", (1, 0), 1),)
-    s = replace(_strike_state(fort=3, siege=True, missions=fort_mission),
+    s = replace(_strike_state(fort=3, missions=fort_mission),
                 control={(1, 0): Control.AXIS})
     r = _Run(s)
     _air_support(r, Side.AXIS, set())
@@ -317,7 +333,7 @@ def test_fort_and_port_bombing_need_committed_strike_points():
                 cap_ammo=400, cap_fuel=400, cap_stores=400, cap_water=400, cap_tons=1000)
     # A strike=0 wing fields no strike Air Points -> neither the works nor the harbour is battered.
     fort_mission = (AirMission(Side.AXIS, "fort", (1, 0), 1),)
-    r = _Run(_strike_state(fort=3, siege=True, air_strike=0, missions=fort_mission))
+    r = _Run(_strike_state(fort=3, air_strike=0, missions=fort_mission))
     _air_support(r, Side.AXIS, set())
     assert not any(e.kind == EventKind.FORT_REDUCED for e in r.events)
     assert r.state.fort_level((1, 0)) == 3
@@ -334,7 +350,7 @@ def test_losing_the_land_sky_below_a_point_grounds_fort_and_port_bombing():
     port = Port("PORT-X", Side.ALLIED, (2, 0), kind="major", max_eff=5, eff=4,
                 cap_ammo=400, cap_fuel=400, cap_stores=400, cap_water=400, cap_tons=1000)
     fort_mission = (AirMission(Side.AXIS, "fort", (1, 0), 1),)
-    r = _Run(_strike_state(fort=3, siege=True, air_strike=1,
+    r = _Run(_strike_state(fort=3, air_strike=1,
                            superiority=Side.ALLIED.value, missions=fort_mission))
     _air_support(r, Side.AXIS, set())
     assert not any(e.kind == EventKind.FORT_REDUCED for e in r.events)
@@ -353,11 +369,21 @@ def test_fort_and_port_bombing_carry_committed_strength():
     from game.state import Port
     port = Port("PORT-X", Side.ALLIED, (2, 0), kind="major", max_eff=5, eff=4,
                 cap_ammo=400, cap_fuel=400, cap_stores=400, cap_water=400, cap_tons=1000)
-    r = _Run(_strike_state(fort=3, siege=True, air_strike=6,
+    # RESTATED 2026-08-01 (the 25.14 slice): the FORT half used to read the strength off FORT_REDUCED,
+    # which it could only do because _air_fort emitted one with certainty and no die. It now rolls the
+    # [41.5] Fortification row like every other land-bombing resolver, and six Bomb Points is the
+    # 1..20 column (1 of 36) -- so the strength is read off the AIR_STRIKE_RESOLVED marker that always
+    # fires, which is EXACTLY how the PORT half below has always read it. Same thesis, one mechanism
+    # instead of two.
+    r = _Run(_strike_state(fort=3, air_strike=6,
                            missions=(AirMission(Side.AXIS, "fort", (1, 0), 1),)))
     _air_support(r, Side.AXIS, set())
-    fr = [e for e in r.events if e.kind == EventKind.FORT_REDUCED]
-    assert len(fr) == 1 and fr[0].payload["strength"] == 6
+    fm = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED
+          and e.payload.get("arena") == "FORT"]
+    assert len(fm) == 1 and fm[0].payload["strength"] == 6
+    for fr in r.events:                                              # and a level that DID come off
+        if fr.kind == EventKind.FORT_REDUCED:
+            assert fr.payload["strength"] == 6
     r2 = _Run(_strike_state(air_strike=6, ports=(port,),
                             missions=(AirMission(Side.AXIS, "port", "PORT-X", 1),)))
     _air_support(r2, Side.AXIS, set())

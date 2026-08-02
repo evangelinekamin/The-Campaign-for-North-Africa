@@ -1,11 +1,22 @@
 """Siege of Tobruk (rule 25.14 / 25.16): a sustained artillery BARRAGE batters a
-fortification's level down one step at a time, gated behind GameState.siege_rules.
+fortification's level down one step at a time.
 
 Verifies the faithful crackable siege -- the wall reduces and emits FORT_REDUCED
 (folding into a dynamic per-hex fort level), close assault reads the CURRENT
-(possibly reduced) level, barrage never evicts, close assault never reduces the
-wall, and the canonical rommels_arrival benchmark is byte-identical with the rule
-OFF (the default)."""
+(possibly reduced) level, barrage never evicts, and close assault never reduces the
+wall.
+
+RESTATED 2026-08-01 (the 25.14 slice). This file used to end its docstring "...and the canonical
+rommels_arrival benchmark is byte-identical with the rule OFF (the default)", and three of its tests
+asserted the OFF posture: that `GameState.siege_rules` defaulted False, that a barrage under it
+reduced nothing, and that `BARRAGE_HITS_PER_FORT_LEVEL` could be monkeypatched to make the wall take
+two hits. ALL THREE ENSHRINED THE BUG. Section 25 was read off the scan in full (PDF p.38) and
+carries no scenario condition of any kind, so the flag was CLAUDE.md-rule-6 debt and is deleted; the
+hits-per-level constant was an invented certainty standing in for the printed [41.5] Fortification
+row and is deleted too. The three are restated below to assert what is actually true -- there is no
+posture in which 25.14 is inert, and how fast a wall falls is a chart's answer. The mechanism itself
+is unchanged and every other assertion here stands as written. tests/test_fort_barrage.py owns the
+new chart, doctrine and air-channel coverage."""
 from __future__ import annotations
 
 import sys
@@ -14,10 +25,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from game import coords
 from game.apply import apply, fold
-from game.engine import (BARRAGE_HITS_PER_FORT_LEVEL, _barrage_step, _resolve_combat,
-                         _Run, determinism_signature, run)
+from game.engine import _barrage_step, _resolve_combat, _Run, determinism_signature, run
 from game.events import Event, EventKind, Phase, Side
+from game.hexmap import distance
 from game.movement import TerrainMap
 from game.policy import ScriptedPolicy, StormPolicy
 from game.scenario import rommels_arrival, siege_of_tobruk
@@ -25,11 +37,19 @@ from game.state import GameState, StepRecord, SupplyUnit, Unit, VP
 from game.terrain import Mobility, Terrain
 
 
-def _siege_state(*, siege: bool, fort: int = 2, atk_barrage: int = 25,
+def _siege_state(*, fort: int = 2, atk_barrage: int = 26,
                  fort_levels: dict | None = None) -> GameState:
     """Axis artillery in (0,0) adjacent to a fortified Allied garrison in (1,0).
-    atk_barrage=25 x TOE 8 -> 20 Actual Barrage Points -> CRT column 8, where EVERY
-    d66 roll yields a Pin or a loss, so the barrage's effect is seed-independent."""
+
+    atk_barrage RAISED 25 -> 26 (2026-08-01) TO PRESERVE THIS HELPER'S OWN STATED INTENT, which is
+    seed-independence. It used to read "25 x TOE 8 -> 20 Actual Barrage Points -> CRT column 8, where
+    EVERY d66 roll yields a Pin or a loss" -- true of the [12.6] table, which is where a barrage
+    against the GARRISON is resolved. A barrage against the WORKS is resolved on the [41.5]
+    Fortification row instead ([12.53]), and 20 Actual points sits in its 19,20 column, which reduces
+    on 35 of 36 codes -- nearly always, but not always. 26 x TOE 8 = 208 Raw = 21 Actual is the 21+
+    column, where all 36 codes read "Reduced", so the wall comes down on any die exactly as this
+    helper has always promised. The magnitude is not a balance choice: it is the smallest input that
+    makes the chart deterministic, and no assertion below was relaxed to meet it."""
     terr = {(0, 0): Terrain.CLEAR, (1, 0): Terrain.MAJOR_CITY}
     arty = Unit("AR", Side.AXIS, (0, 0), (StepRecord("ar", 8),), mobility=Mobility.MOTORIZED,
                 cpa=20, stacking_points=1, oca=0, dca=1, barrage=atk_barrage, vulnerability=5)
@@ -43,20 +63,20 @@ def _siege_state(*, siege: bool, fort: int = 2, atk_barrage: int = 25,
         terrain=TerrainMap(terrain=terr, fortifications={(1, 0): fort}),
         control={}, units=(arty, gar), target_hex=(1, 0), supplies=(dump,),
         consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 200, "FUEL": 60},
-        siege_rules=siege, fort_levels=dict(fort_levels or {}))
+        fort_levels=dict(fort_levels or {}))
 
 
 # --- the dynamic fort level (state layer) ------------------------------------
 
 def test_fort_level_falls_back_to_static():
     # with no dynamic overlay, the current level IS the static terrain fortification.
-    s = _siege_state(siege=True, fort=2)
+    s = _siege_state(fort=2)
     assert s.fort_level((1, 0)) == 2
     assert s.fort_level((0, 0)) == 0            # unfortified hex
 
 
 def test_fort_reduced_event_folds():
-    s = _siege_state(siege=True, fort=2)
+    s = _siege_state(fort=2)
     e = Event(0, 1, Phase.COMBAT, Side.AXIS, "AXIS/Front",
               EventKind.FORT_REDUCED, {"hex": [1, 0], "level": 1})
     s2 = apply(s, e)
@@ -65,10 +85,10 @@ def test_fort_reduced_event_folds():
     assert fold(s, [e]).fort_level((1, 0)) == 1
 
 
-# --- barrage batters the wall (gated) ----------------------------------------
+# --- barrage batters the wall (ungated: section 25 carries no scenario condition) -------------
 
 def test_barrage_reduces_fort_and_emits_event():
-    r = _Run(_siege_state(siege=True, fort=2))
+    r = _Run(_siege_state(fort=2))
     _barrage_step(r, Side.AXIS, Side.ALLIED, set(), set())
     reduced = [e for e in r.events if e.kind == EventKind.FORT_REDUCED]
     assert reduced, "a successful barrage on a fortified hex must emit FORT_REDUCED"
@@ -76,18 +96,26 @@ def test_barrage_reduces_fort_and_emits_event():
     assert r.state.fort_level((1, 0)) == 1
 
 
-def test_barrage_never_reduces_when_siege_off():
-    # default (benchmark) posture: the wall-reduction mechanic is inert.
-    r = _Run(_siege_state(siege=False, fort=2))
+def test_there_is_no_posture_in_which_the_wall_is_safe():
+    """RESTATED FROM test_barrage_never_reduces_when_siege_off, which asserted the opposite and was
+    the tripwire holding the bug in place: "default (benchmark) posture: the wall-reduction mechanic
+    is inert". There is no such posture. [25.14] carries no scenario, campaign or optional-rule
+    condition (PDF p.38, read off the scan), so the SAME battery on the SAME wall batters it in the
+    small benchmark scenario, in the siege scenario and in the 111-turn campaign alike. What can
+    still leave a wall standing is the [41.5] chart -- a low-point barrage mostly misses -- and that
+    is asserted in tests/test_fort_barrage.py, where the chart lives."""
+    for build in (rommels_arrival, siege_of_tobruk):
+        assert not hasattr(build(seed=1941), "siege_rules")
+    r = _Run(_siege_state(fort=2))
     _barrage_step(r, Side.AXIS, Side.ALLIED, set(), set())
-    assert not any(e.kind == EventKind.FORT_REDUCED for e in r.events)
-    assert r.state.fort_level((1, 0)) == 2      # wall intact
+    assert any(e.kind == EventKind.FORT_REDUCED for e in r.events)
+    assert r.state.fort_level((1, 0)) == 1
 
 
 def test_barrage_never_evicts_the_garrison():
     # rule 25.14 is sacred: barrage brings the wall down but never moves the garrison
     # nor its base fort in the static map -- only the dynamic overlay drops.
-    r = _Run(_siege_state(siege=True, fort=2))
+    r = _Run(_siege_state(fort=2))
     _barrage_step(r, Side.AXIS, Side.ALLIED, set(), set())
     gar = r.state.unit("GAR")
     assert gar.hex == (1, 0)                                   # not evicted
@@ -97,22 +125,31 @@ def test_barrage_never_evicts_the_garrison():
 
 def test_barrage_floors_fort_at_zero():
     # a barrage on an already-open (level 0) fortified hex emits nothing.
-    r = _Run(_siege_state(siege=True, fort=0))
+    r = _Run(_siege_state(fort=0))
     _barrage_step(r, Side.AXIS, Side.ALLIED, set(), set())
     assert not any(e.kind == EventKind.FORT_REDUCED for e in r.events)
 
 
-def test_hits_per_level_knob(monkeypatch):
-    # the tuning knob: N successful barrages per fort level. At 2, one barrage does
-    # NOT yet drop the wall; the second one does.
-    monkeypatch.setattr("game.engine.BARRAGE_HITS_PER_FORT_LEVEL", 2)
-    r = _Run(_siege_state(siege=True, fort=2))
+def test_how_many_barrages_a_wall_takes_is_the_charts_answer_and_not_a_knobs():
+    """RESTATED FROM test_hits_per_level_knob, which monkeypatched engine.BARRAGE_HITS_PER_FORT_LEVEL
+    to 2 and asserted the wall then needed two barrages. That constant was an INVENTED MAGNITUDE
+    ("the lead tunes this with the benchmark harness", by its own comment) sitting where the [41.5]
+    Fortification row belonged, and a test that exercised the knob was a test that certified the
+    invention. It is deleted; nothing in the engine now decides how hard a wall is.
+
+    The chart decides, and it decides by WEIGHT OF FIRE rather than by a count of hits: the same wall
+    facing 21 Actual Barrage Points falls to the first shoot (36 of 36 codes), facing 2 falls only to
+    a 66 (1 of 36). Asserted as a distribution over all 36 sequential codes, so no seed is involved."""
+    from game import fortifications
+    codes = [d1 * 10 + d2 for d1 in range(1, 7) for d2 in range(1, 7)]
+    heavy = sum(fortifications.reduced_by_barrage(21, c // 10, c % 10) for c in codes)
+    light = sum(fortifications.reduced_by_barrage(2, c // 10, c % 10) for c in codes)
+    assert (heavy, light) == (36, 1)
+    # and the engine really reads it: the light battery's shoot is on the record, hit or miss.
+    r = _Run(_siege_state(fort=2, atk_barrage=2))
     _barrage_step(r, Side.AXIS, Side.ALLIED, set(), set())
-    assert not any(e.kind == EventKind.FORT_REDUCED for e in r.events)   # 1 hit: no drop yet
-    assert r.state.fort_level((1, 0)) == 2
-    _barrage_step(r, Side.AXIS, Side.ALLIED, set(), set())
-    assert any(e.kind == EventKind.FORT_REDUCED for e in r.events)        # 2nd hit drops it
-    assert r.state.fort_level((1, 0)) == 1
+    fired = [e for e in r.events if e.kind == EventKind.FORT_BARRAGED]
+    assert len(fired) == 1 and fired[0].payload["actual"] == 2
 
 
 # --- close assault reads the CURRENT (reduced) level -------------------------
@@ -131,7 +168,7 @@ def _assault_state(fort_levels: dict) -> GameState:
         terrain=TerrainMap(terrain=terr, fortifications={(1, 0): 2}),
         control={}, units=(atk, dfd), target_hex=(1, 0), supplies=sup,
         consumed={"AMMO": 0, "FUEL": 0}, initial_supply={"AMMO": 80, "FUEL": 120},
-        siege_rules=True, fort_levels=dict(fort_levels))
+        fort_levels=dict(fort_levels))
 
 
 def _assault_column(fort_levels: dict) -> int:
@@ -153,25 +190,47 @@ def test_close_assault_tracks_reduced_fort_level():
     assert breached > intact
 
 
-# --- the benchmark is untouched (siege OFF is the default) -------------------
+# --- the benchmark: nothing reaches a wall inside twelve turns ----------------
 
-def test_rommels_arrival_defaults_to_siege_off():
-    assert rommels_arrival().siege_rules is False
+def test_no_gun_reaches_a_wall_inside_the_twelve_turn_clock():
+    """RESTATED FROM test_rommels_arrival_defaults_to_siege_off + test_benchmark_byte_identical_and_
+    emits_no_fort_reduction. The assertions are unchanged and still pass; THEIR REASON IS NOT, and
+    that is the whole point of restating them rather than deleting them.
 
-
-def test_benchmark_byte_identical_and_emits_no_fort_reduction():
+    They used to hold because a scenario flag switched 25.14 off. The flag is gone and both channels
+    are live in every scenario, and these two benchmarks STILL emit no FORT_REDUCED and still hash to
+    the same signatures they did before the slice. The cause is PROXIMITY, and it is MEASURED HERE
+    rather than asserted in prose, because prose is what got it wrong the first time (this docstring
+    said "63 hexes"): on seed 1941 the nearest Axis battery opens 69 hexes from Tobruk and has closed
+    only to 31 when the clock runs out, so no battery is ever adjacent to a fortification to
+    designate one. The gate had been hiding behind a distance the whole time -- which is why removing
+    it moved neither benchmark by a byte, and why a benchmark signature is a determinism check and
+    never evidence that a rule is inert."""
+    for build in (rommels_arrival, siege_of_tobruk):
+        assert not hasattr(build(), "siege_rules")
     a = run(rommels_arrival(seed=1941), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
     b = run(rommels_arrival(seed=1941), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
     assert determinism_signature(a.events) == determinism_signature(b.events)
+    assert not any(e.kind == EventKind.FORT_BARRAGED for e in a.events)
     assert not any(e.kind == EventKind.FORT_REDUCED for e in a.events)
+    # ...and THIS is why, stated as a measurement so it cannot quietly stop being true.
+    tobruk = coords.to_axial(coords.parse("C4807"))
+
+    def nearest_gun(st):
+        return min(distance(u.hex, tobruk) for u in st.living(Side.AXIS)
+                   if u.barrage > 0 and u.is_combat)
+
+    assert (nearest_gun(a.initial), nearest_gun(a.final)) == (69, 31), (
+        "the benchmark is silent on 25.14 because no gun gets near a wall; if the guns now close, "
+        "this test is measuring something else and must be re-read, not re-pinned")
 
 
 # --- the new scenario --------------------------------------------------------
 
 def test_siege_of_tobruk_constructible():
     s = siege_of_tobruk(seed=1941)
-    assert s.siege_rules is True
-    # same battle: identical OOB / placement to rommels_arrival, only the flag differs.
+    # same battle: identical OOB / placement to rommels_arrival. It used to differ from it by the
+    # siege_rules flag and NOTHING ELSE ON THIS AXIS; now it differs only by the ferry interdiction.
     base = rommels_arrival(seed=1941)
     assert [u.id for u in s.units] == [u.id for u in base.units]
     assert {u.id: u.hex for u in s.units} == {u.id: u.hex for u in base.units}
@@ -257,8 +316,7 @@ def _dry_tobruk_storm(seed: int = 1941):
     from game.scenario import battle_for_tobruk, _initial_supply
     base = battle_for_tobruk(seed=seed)
     sup = tuple(replace(s, ammo=0) if s.id == "UK-Dump" else s for s in base.supplies)
-    return replace(base, supplies=sup, initial_supply=_initial_supply(sup),
-                   max_turns=4, siege_rules=True)
+    return replace(base, supplies=sup, initial_supply=_initial_supply(sup), max_turns=4)
 
 
 def _timid_storm_client(prompt: str) -> str:

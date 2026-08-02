@@ -64,6 +64,12 @@ SUBSYSTEMS: tuple[str, ...] = (
     "repair",             # [22.8] the field- AND facility-repair columns (22.2/22.3)
     "demolition",         # [54.17] blowing a supply dump
     "barrage",            # [12.6] the Barrage CRT
+    "fort_barrage",       # [12.53]/[41.5] an ARTILLERY barrage against a FORTIFICATION -- its own
+                          #   stream because it is a different CHART read by a different PROCEDURE:
+                          #   the [41.5] Fortification row on 36 sequential codes, where [12.6] above
+                          #   is 21 larger-die-first codes ([12.42]). It also draws CONDITIONALLY (a
+                          #   battery is beside an enemy wall or it is not), which is exactly the
+                          #   shape this module exists to keep from re-indexing its neighbours.
     "anti_armor",         # [14.6] the Anti-Armor CRT
     "close_assault",      # [15.79] the Close Assault CRT
     "morale",             # [17.4] the Morale Table
