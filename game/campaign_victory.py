@@ -571,6 +571,47 @@ class CampaignVictory:
         axis_74, cwlth_74 = self._unused_replacement_points_64_74(r)  # 64.74 (both sides)
         return grade(axis_vp + axis_74, cwlth_vp + cwlth_74)
 
+    def breakdown(self, r: "_Run") -> dict:
+        """READ-ONLY: decide()'s tally, ITEMISED -- the same three 64.7 point categories per side,
+        plus which side holds each 64.73 city. Added for the Gate-C measurement harness
+        (scripts/gate_c.py), which needs to know WHICH condition moved a campaign's score and not
+        merely the total. It is a projection, like a 64.73 tally read off the final board: the engine
+        never calls it, it emits no event, it decides nothing, and it moves no determinism signature.
+
+        `r` is the run decide() is handed -- or any read-only VIEW of one exposing `.state` and
+        `.events`, e.g. SimpleNamespace(state=result.final, events=result.events). That view is
+        exactly what decide() saw: engine.run calls decide() in the final Record Phase and emits
+        nothing afterwards, so r.state there IS RunResult.final.
+
+        IT DUPLICATES decide()'s 64.73 CITY LOOP, WHICH IS A DRIFT RISK, and the caller is required
+        to close it: grade(b["total"]["AXIS"], b["total"]["ALLIED"]) must reproduce the run's own
+        reason string VERBATIM whenever the campaign was settled by 64.76. scripts/gate_c.py asserts
+        that per seed and records `breakdown_agrees`; a disagreement means this accessor is wrong --
+        decide() is the scoreboard, never this. (On a board settled by the 64.71 or 64.72 auto-win
+        the tally is still computed and still reportable, but it did not decide the war, so no
+        agreement is asserted there.)"""
+        s = r.state
+        cities = []
+        geo = {Side.AXIS.value: 0, Side.ALLIED.value: 0}
+        for ax, avp, cvp, name in self.cities:                         # 64.73
+            side = self._occupier(s, ax)
+            if side == Side.AXIS:
+                geo[Side.AXIS.value] += avp
+            elif side == Side.ALLIED:
+                geo[Side.ALLIED.value] += cvp
+            cities.append({"name": name, "hex": list(ax), "axis_vp": avp, "cwlth_vp": cvp,
+                           "holder": None if side is None else side.value})
+        withdrawal = self._withdrawal_points_64_75(r)                  # 64.75 (Commonwealth only)
+        axis_74, cwlth_74 = self._unused_replacement_points_64_74(r)   # 64.74 (both sides)
+        return {
+            "cities": cities,
+            "geographic_64_73": dict(geo),
+            "withdrawal_64_75": {Side.AXIS.value: 0, Side.ALLIED.value: withdrawal},
+            "replacement_64_74": {Side.AXIS.value: axis_74, Side.ALLIED.value: cwlth_74},
+            "total": {Side.AXIS.value: geo[Side.AXIS.value] + axis_74,
+                      Side.ALLIED.value: geo[Side.ALLIED.value] + withdrawal + cwlth_74},
+        }
+
     def _withdrawal_points_64_75(self, r: "_Run") -> float:
         """[64.75] Commonwealth WITHDRAWAL POINTS -- the Commonwealth's only non-geographic Victory
         Point source, and the counterweight to 64.74. 64.75-A pays HALF a point for each WEEK (owner
