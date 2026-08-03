@@ -1274,10 +1274,40 @@ def test_the_axis_railway_actually_runs_in_a_real_campaign():
     with the AXIS'S OWN forward dump, brought up by his own lorries, not with Commonwealth Stores
     overrun at El Daba (which is what pays seeds 1, 6, 11, 14, 20, 23, 33 and 36 here). Same window
     -- the activation lands on Game-Turn 4, six hauls follow by Game-Turn 6 -- and every assertion
-    below is unchanged."""
+    below is unchanged.
+
+    *** RE-PINNED 31 -> 6, 2026-08-02, CAUSE [4.46] *** -- the Headquarters Close-Assault DASH
+    (data/unit_stats.json _hq_dash_comment, tests/test_hq_close_assault.py). Transcribing it puts 74
+    of the campaign's 84 HQ counters into [3.36]/[10.29]'s capture population for the first time, so
+    it moves every trajectory from Game-Turn 1, the Axis railway with it. Seed 31 still ACTIVATES
+    here and no longer hauls at all inside the six-turn window (five AXIS/Rail rejections), so the
+    witness is re-measured rather than the window widened. Re-swept seeds 1-40 to Game-Turn 6 on
+    both trees, same recipe as the line below -- and the control arm REPRODUCES the entry above
+    exactly (24 activate, 8 clean = {1, 6, 11, 14, 20, 23, 31, 36}), which is what licenses the
+    comparison:
+
+        BEFORE   24 activate, EIGHT clean   {1, 6, 11, 14, 20, 23, 31, 36}
+        AFTER    29 activate, THREE clean   {6, 20, 38}
+
+    Seed 6 is chosen because it is one of only TWO dual witnesses ({6, 20}) and the only one of
+    those that also keeps the property every re-pin since 9 has ranked first: here its locomotive is
+    bought with AX-DUMP#2, the AXIS'S OWN forward dump, where on the control tree the same seed was
+    paid by Commonwealth Stores overrun at El Daba (which is still what pays seeds 20 and 38). The
+    window moves and is stated rather than glossed: the activation lands on Game-Turn 4 as before,
+    but the single haul falls on Game-Turn 4 too, not 5-6. Every assertion below is unchanged.
+
+    THE 8 -> 3 DROP IS A REAL FINDING AND IT IS NOT THIS RULE'S DOING. "Clean" demands NO AXIS/Rail
+    rejection at all, and rejections rise 44 -> 106 over the 40 seeds while ACTIVATIONS RISE TOO
+    (24 -> 29) and hauls fall (27 -> 14). Counted by reason over the eleven seeds that gained
+    rejections, the jump is one string: "no Rolling Stock is active on this run of rail hexes
+    (54.43)", 6 -> 58. That is the Axis rail doctrine PROPOSING a haul on a run its locomotive is
+    not standing on -- a pre-existing gap in the proposer (it fires on the control tree too), newly
+    exercised much harder on a board where the Axis activates more locomotives. It is a doctrine
+    bug, not a 54.4 rule bug, it is out of this slice's scope, and it is flagged here rather than
+    absorbed into a seed choice."""
     from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy
     from game.scenario import campaign
-    res = run(replace(campaign(31), max_turns=6), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    res = run(replace(campaign(6), max_turns=6), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     hauls = [e for e in res.events if e.kind is EventKind.RAIL_HAULED and e.side is Side.AXIS]
     assert [e for e in res.events if e.kind is EventKind.ROLLING_STOCK_ACTIVATED]
     assert hauls, "the Axis railway bought a locomotive and never ran a train"

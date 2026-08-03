@@ -44,15 +44,23 @@ judgement calls and asserted below so they cannot drift:
     where _capture_dumps already sweeps, and for the same reason: a unit arrives through five
     different doors and the rule does not care which.
 
-NOT BUILT, AND WHY. [3.36] captures an HQ that "has no combat values, either with or without
-parentheses" -- and this engine has no such HQ to capture: data/unit_stats.json prints "dca": 1 on
-every hq / hq_engineer row while calling them chart row 'a', and that row prints a DASH in the Close
-Assault column on all three national charts, each re-rendered at 300 dpi and read for this file:
-German [4.46c] PDF p.137, Commonwealth [4.46a] p.133, Italian [4.46b] p.136 (printed a* there).
-That 1 is not on the chart.
-Until it is transcribed, 3.36's population is empty and 10.29 (whose condition is strictly wider --
-"no strength of ANY type") covers every counter 3.36 would reach. THE TWO CHANGES ARE COUPLED: fix
-that dca without landing this rule and every bare HQ becomes as unkillable as the SGSU was.
+[3.36]'S POPULATION WAS EMPTY WHEN THIS FILE WAS WRITTEN, AND IS NOT ANY MORE (updated 2026-08-02).
+This paragraph used to read "NOT BUILT, AND WHY": [3.36] captures an HQ that "has no combat values,
+either with or without parentheses", and no HQ in this engine had none, because
+data/unit_stats.json printed "dca": 1 on every hq / hq_engineer row while calling them chart row
+'a' -- a row that prints a DASH in the Close Assault column on all three national charts (German
+[4.46c] PDF p.137, Commonwealth [4.46a] p.133, Italian [4.46b] p.136, printed a* there). It closed
+"THE TWO CHANGES ARE COUPLED: fix that dca without landing this rule and every bare HQ becomes as
+unkillable as the SGSU was."
+
+The dash is now transcribed -- GE.hq, CW.hq and CW.hq_engineer are 0/0 (data/unit_stats.json
+_hq_dash_comment, pinned in tests/test_hq_close_assault.py) -- so _capture_noncombat below IS 3.36
+for every German and Commonwealth bare HQ, reached at 10.29's own strictly wider "no strength of
+ANY type". Measured over four full 111-turn campaigns, the clause that had never fired on an HQ
+fires 1/2/0/2 times (seeds 1941/7/4/2026). The ITALIAN hq rows deliberately keep their 1 and stay
+outside this population -- the engine writes their CPA as 30, which is Italian row b, and row b
+prints "0/(1)", not a dash -- which is what test_a_counter_that_prints_a_rating_has_strength_of_a_
+type_and_is_not_captured below still exercises.
 """
 from __future__ import annotations
 

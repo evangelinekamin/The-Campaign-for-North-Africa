@@ -51,7 +51,8 @@ from game.hexmap import distance                                    # noqa: E402
 from game.policy import ScriptedPolicy                              # noqa: E402
 from game.scenario import campaign, rommels_arrival, siege_of_tobruk  # noqa: E402
 from game.state import SupplyUnit                                   # noqa: E402
-from baselines import BENCHMARKS, CAMPAIGN_SEED                                    # noqa: E402
+from baselines import (BENCHMARKS, CAMPAIGN_FLOOR,                       # noqa: E402
+                       CAMPAIGN_PANEL, CAMPAIGN_SEED)
 
 MATRUH = coords.to_axial(coords.parse("D3714"))       # the railhead (60.7) -- and the line
 ELDABA = coords.to_axial(coords.parse("D3329"))       # the next station east (54.3)
@@ -528,77 +529,146 @@ def test_the_standing_garrison_order_still_holds(gt12):
                 & {o.unit_id for o in pol.movement(on_compass, Side.ALLIED)})
 
 
+def _compass_reading(seed: int) -> dict:
+    """ONE ROW OF THE PANEL for test_the_commonwealth_can_mount_a_supplied_offensive: walk every
+    turn-close of Operation Compass and count, of the ones with a Commonwealth combat unit forward
+    of Mersa Matruh, how many have one that can MOVE AND FIRE where it stands.
+
+    Two counts, not one, because they answer two different questions and the single-seed form could
+    not tell them apart: `forward` is whether the army is on the ground the offensive is fought on,
+    and `supplied` is whether it can fight there."""
+    from game.apply import apply
+    res = run(campaign(seed=seed, max_turns=COMPASS.stop - 1),
+              CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    st, closes, forward, supplied = res.initial, 0, 0, 0
+    for e, nxt in zip(res.events, res.events[1:] + [None]):
+        st = apply(st, e)
+        if (nxt is None or nxt.turn != e.turn) and st.turn in COMPASS:
+            closes += 1
+            ahead = [u for u in _combat(st, Side.ALLIED)
+                     if distance(u.hex, ALEX) > distance(MATRUH, ALEX)]
+            forward += bool(ahead)
+            supplied += any(_can_fight_here(st, u) for u in ahead)
+    return {"seed": seed, "closes": closes, "forward": forward, "supplied": supplied}
+
+
 def test_the_commonwealth_can_mount_a_supplied_offensive():
     """THE HEADLINE. Not one Commonwealth combat unit used to be SUPPLIED forward of Mersa Matruh at
     any point in Operation Compass -- the faucet and the lorry relay were healthy and the depot at
     Sidi Barrani was full, but the army was sixty hexes away and there was nobody to drink it. With
     the army on the line it launches from, the offensive is supplied where it is fought.
 
-    RESTATED 2026-07-25 (the close-assault-ammo last mile): a single END-OF-COMPASS snapshot is
-    exactly the fragile transit-node reading test_the_railhead_is_held_and_the_faucet_keeps_running
-    already had to correct for -- asked of the DELIVERIES/whole run rather than one end-of-turn
-    integer, per rule 24.6, the same restatement that test's own comment forced. Reworked the same
-    way: across every turn-close of Operation Compass, was ANY Commonwealth combat unit forward of
-    Matruh and supplied at that moment? MEASURED at the pinned seed: 1 of 11 turn-closes -- thin (the
-    detour traced in test_the_army_does_not_sit_out_the_war_in_the_delta costs the offensive its one
-    forward spearhead for most of the window), but not the ORIGINAL defect this test guards
-    (zero, ever, at any point, on any turn) -- the offensive still supplies a unit forward of the
-    railhead at least once, which was never true before the concentration fix landed.
+    *** RESTATED ONTO A SEED PANEL 2026-08-03. *** The [4.46] Headquarters close-assault dash costs
+    CAMPAIGN_SEED=23 the railhead at Game-Turn 3, and with it every forward draw of Compass: eleven
+    of eleven turn-closes still put a Commonwealth combat unit FORWARD of Mersa Matruh, and none of
+    them can fight there. Re-pinning to a seed where it still holds is refused as choosing the
+    evidence (tests/baselines.py's CAMPAIGN_SEED note carries the argument: the constant is
+    OVER-SUBSCRIBED and no seed satisfies all of its consumers). So the whole of
+    baselines.CAMPAIGN_PANEL is folded -- seeds 1..24, unshopped, the prefix of scripts/gate_c.py's
+    own 1..N -- and the two halves of the finding are separated instead of conflated.
 
-    RESTATED 2026-07-27 (Phase 8.1c, the 23.11 (ENG) correction) TO `== 0`, AND WITHDRAWN THE SAME
-    DAY by the 8.1c review repair. That restatement turned a test named "can mount a supplied
-    offensive" into an assertion that it cannot -- honest about what it had measured, but pinning an
-    outcome on a tree that carried two defects of the same pass (the 1st Libyan Division HQ seeded
-    twice, its real counter left fighting as infantry in the Sidi Barrani line; see
-    data/oob_italian.json's _role_comment). With those repaired the count is not 1 and not 0 but
-    ELEVEN turn-closes, so the original assertion stands again and is asserted again.
+    MEASURED, panel 1..24, the whole Compass window, this tree against a `git archive 80b1de1`
+    control tree built OUTSIDE the repo (control -> current):
 
-    WHAT THE (ENG) CORRECTION ACTUALLY COSTS THE COMMONWEALTH, MEASURED PROPERLY -- because the
-    8.1c commit claimed a large adverse balance finding off ONE seed, and one seed cannot tell a
-    lean from a coin. Seven seeds (1-7), GT30, banked victory cities, three arms neutered at
-    game.oob._load: (A) both corrections reverted, (B) the (ENG) correction only, (C) live.
-    Commonwealth cities banked, A -> B -> C: seed 1  1->1->1, seed 2  0->0->2, seed 3  1->1->1,
-    seed 4  2->0->1, seed 5  2->0->1, seed 6  2->0->0, seed 7  0->1->0. So (ENG) alone is ADVERSE
-    on 3 of 7 seeds (-2 each), NEUTRAL on 3 and FAVOURABLE on 1; the 1st Libyan repair gives back
-    about half of it; and the two together move the seven-seed Commonwealth total from 8 cities to
-    6. A real, modest, faithful lean -- not "the Commonwealth banks zero cities", which was one
-    seed's tail. (Neuter note: the first run of that A/B came back with all three arms byte-
-    identical because ProcessPoolExecutor REUSES a worker and the patch composed arm on arm --
-    a new instance of the neuter trap tests/baselines.py records, on process reuse rather than
-    import binding.)
+        a Commonwealth combat unit stands FORWARD
+        of the railhead at every Compass turn-close    24/24 -> 24/24     asserted PER SEED
+        --- and can MOVE AND FIRE there at least once  19/24 -> 18/24     floor 12
+        --- turn-closes supplied, panel total        209/264 -> 198/264   floor 132
 
-    *** THE INSTRUMENT IS RESTATED 2026-08-02, CAUSE [64.73], AND THE THESIS IS NOT. *** This
-    counted a turn-close as supplied when campaign_victory._supplied said so. That predicate has
-    stopped being "can this unit fight where it stands" and become 64.73's OCCUPATION QUALITY-TEST as
-    printed -- a Week of Stores and Water, three firings and 20 CP of Fuel, all HELD IN THE HEX --
-    which is the test for BANKING A VICTORY CITY at the end of the game, not for mounting an
-    offensive. Measured at CAMPAIGN_SEED over the same eleven Compass turn-closes, with a
-    Commonwealth combat unit forward of Mersa Matruh at every one of them:
+    THE PER-SEED HALF IS NEW, AND IT IS A FLOOR RATHER THAN A PIN ON THE CONCENTRATION -- WHICH IS
+    STATED HERE BECAUSE MEASURING IT SAID SO. The single-seed form asserted only that somebody was
+    supplied forward at least once; it could not distinguish an unsupplied offensive from an ABSENT
+    one, which is the original defect this file exists for ("the count near the railhead was zero,
+    while the rail-fed depot filled to its cap with nobody to drink it"). Separating them is worth
+    it -- a zero in the supply count now means "there and unfed", never "not there". But the
+    presence claim is NOT evidence that the forward concentration works: it reads 11 of 11 on every
+    seed of every tree measured for this restatement, INCLUDING one with the concentration removed
+    (see the tripwire below), because the September-1940 frontier screen already stands west of the
+    railhead at Game-Turn 1 and the Commonwealth does not have to march anywhere to satisfy it. It
+    is asserted as what it is: the floor that makes the second count readable. The concentration
+    proper is pinned by this file's own test_the_army_does_not_sit_out_the_war_in_the_delta.
+
+    THE SECOND COUNT IS NOT DECORATION. Per seed the supplied figure is ALL-OR-NOTHING -- 0 or 11,
+    on every seed of both trees -- so a seed's offensive is either fed for the whole window or not
+    at all, and the panel total is a second, finer floor. It is not hypothetical: the neutered tree
+    below produces a seed reading 2 of 11, exactly the flicker the seed-count alone would wave
+    through.
+
+    THE HORIZON IS THE RULE'S OWN. Compass is campaign_policy.COMPASS = Game-Turns 13-22, so the
+    fold runs to 22 and no further; there is nothing to truncate. Cost is ~13 minutes of one worker,
+    stated rather than hidden.
+
+    THE TRIPWIRE, DEMONSTRATED -- AND IT TOOK THREE ATTEMPTS, WHICH IS ITSELF THE FINDING. In a
+    scratch copy of this tree (outside the repo) CampaignCommonwealthPolicy.movement was made to
+    propose no orders at all: the Eighth Army never concentrates, never advances, never mounts
+    anything, which is the state this file was written against. MEASURED on the same panel:
+
+        forward at every Compass turn-close       24/24 -> 24/24   (the 1940 screen, as above)
+        supplied forward at least once            18/24 -> 11/24   against a floor of 12  -- RED
+        turn-closes supplied, panel total       198/264 -> 112/264  against a floor of 132 -- RED
+
+    Both counts fail. TWO WEAKER NEUTERS DID NOT, and they are recorded rather than quietly
+    discarded, because each is a fact about what this test can and cannot see: restoring the old
+    `_rear_view` (blank allied_objective, so the Commonwealth's 'forward' is its own base again)
+    left the counts at 17/24 and 186/264 -- it governs the between-offensive posture, and Compass is
+    an OFFENSIVE window -- and silencing the Commonwealth relay entirely left them at 20/24 and
+    220/264, better than the live tree, because a unit forward of the railhead fights out of its own
+    [49.14] tank and [50.0] load long before it needs a lorry. What this test measures is therefore
+    an ARMY that is forward AND still has something in hand, and the only neuter that removes it is
+    the one that removes the army.
+
+    ------------------------------------------------------------------------------------------------
+    THE INSTRUMENT IS _can_fight_here AND THAT IS A RULE-3 DISTINCTION, NOT A CONVENIENCE
+    (2026-08-02, cause [64.73]). This test used to count a turn-close as supplied when
+    campaign_victory._supplied said so. That predicate has stopped being "can this unit fight where
+    it stands" and become 64.73's OCCUPATION QUALITY-TEST as printed -- a Week of Stores and Water,
+    three firings and 20 CP of Fuel, all HELD IN THE HEX -- which is the test for BANKING A VICTORY
+    CITY at the end of the game, not for mounting an offensive. Measured at the old pinned seed over
+    the same eleven Compass turn-closes, with a Commonwealth combat unit forward at every one:
 
         old _supplied      (32.16 trace, 20 CP + 3 firings)        11 of 11
         new _supplied      (in-hex, all four commodities)           0 of 11
-        can MOVE and FIRE  (in-hex, 1 CP + 1 firing)               11 of 11   <- asserted below
+        can MOVE and FIRE  (in-hex, 1 CP + 1 firing)               11 of 11   <- what is asserted
         can move and fire  (32.16 trace, bare rate + 1 firing)     11 of 11
 
-    So the capability this test is NAMED for is intact and unchanged: the offensive is supplied where
-    it is fought, at every turn-close of Compass. What the new predicate reports is a different and
-    also-true fact -- a spearhead sixty hexes up the coast could not HOLD ground for victory points
-    there, having no week's rations in the hex. Reading that as "the offensive is unsupplied" would
-    be the instrument's error, not the army's, so the instrument moved to the question being asked
-    (_can_fight_here) and the 64.73 number is recorded here rather than asserted, because it is a
-    fact about a rule this test does not guard."""
-    from game.apply import apply
-    res = run(campaign(seed=CAMPAIGN_SEED, max_turns=COMPASS.stop - 1),
-              CampaignAxisPolicy(), CampaignCommonwealthPolicy())
-    st, forward_supplied_turns = res.initial, 0
-    for e, nxt in zip(res.events, res.events[1:] + [None]):
-        st = apply(st, e)
-        if (nxt is None or nxt.turn != e.turn) and st.turn in COMPASS:
-            if any(distance(u.hex, ALEX) > distance(MATRUH, ALEX) and _can_fight_here(st, u)
-                   for u in _combat(st, Side.ALLIED)):
-                forward_supplied_turns += 1
-    assert forward_supplied_turns >= 1, (
-        "no Commonwealth unit was EVER supplied forward of the railhead during Compass")
+    A spearhead sixty hexes up the coast that could not HOLD ground for victory points, having no
+    week's rations in the hex, is a real and ordinary state of affairs; reading it as "the offensive
+    is unsupplied" would be the instrument's error, not the army's. So the instrument moved to the
+    question being asked and the 64.73 number is recorded rather than asserted, because it is a fact
+    about a rule this test does not guard.
+
+    THE OTHER RESTATEMENT WORTH KEEPING (2026-07-27, Phase 8.1c): this test was once restated to
+    `== 0` -- turning a test named "can mount a supplied offensive" into an assertion that it cannot
+    -- and withdrawn the same day, because the tree it measured carried two defects of its own pass
+    (the 1st Libyan Division HQ seeded twice, its real counter left fighting as infantry in the Sidi
+    Barrani line; see data/oob_italian.json's _role_comment). The lesson is the one this panel
+    generalises: a single seed cannot tell a lean from a coin. The (ENG) correction's own seven-seed
+    A/B measured it properly -- adverse on 3, neutral on 3, favourable on 1 -- and a real, modest,
+    faithful lean is what it was."""
+    panel = [_compass_reading(seed) for seed in CAMPAIGN_PANEL]
+
+    # --- the concentration itself: the army is ON the ground, at every close, on every seed ------
+    for r in panel:
+        assert r["closes"], f"seed {r['seed']}: the fold never reached Operation Compass"
+        assert r["forward"] == r["closes"], (
+            f"seed {r['seed']}: the Eighth Army is back in the Delta -- a Commonwealth combat unit "
+            f"stands forward of Mersa Matruh at only {r['forward']} of {r['closes']} Compass "
+            f"turn-closes, against 11 of 11 on every seed of both measured trees")
+
+    # --- and it can FIGHT there, asserted of the distribution ------------------------------------
+    fed = [r["seed"] for r in panel if r["supplied"]]
+    assert len(fed) >= CAMPAIGN_FLOOR, (
+        f"no Commonwealth unit was EVER supplied forward of the railhead during Compass on "
+        f"{len(CAMPAIGN_PANEL) - len(fed)} of {len(CAMPAIGN_PANEL)} panel seeds; it is supplied on "
+        f"{sorted(fed)}, against a floor of {CAMPAIGN_FLOOR} and a measurement of 19 (control) / 18 "
+        f"(this tree)")
+    closes = sum(r["closes"] for r in panel)
+    supplied = sum(r["supplied"] for r in panel)
+    floor = CAMPAIGN_FLOOR * (closes // len(CAMPAIGN_PANEL))
+    assert supplied >= floor, (
+        f"the offensive is fed in flickers rather than for the window: {supplied} of {closes} "
+        f"Compass turn-closes across the panel, against a floor of {floor} and a measurement of "
+        f"209 (control) / 198 (this tree)")
 
 
 # --- conservation + byte identity -----------------------------------------------------------

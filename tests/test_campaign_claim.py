@@ -25,7 +25,8 @@ from game.engine import determinism_signature, run                       # noqa:
 from game.events import Control, Side                                    # noqa: E402
 from game.policy import ScriptedPolicy, SupplyMoveOrder                  # noqa: E402
 from game.scenario import campaign, rommels_arrival, siege_of_tobruk     # noqa: E402
-from baselines import BENCHMARKS, CAMPAIGN_SEED                                    # noqa: E402
+from baselines import (BENCHMARKS, CAMPAIGN_FLOOR,                       # noqa: E402
+                       CAMPAIGN_PANEL, CAMPAIGN_SEED)
 
 
 def _ax(label: str):
@@ -50,313 +51,250 @@ def _banked(state, side: Side) -> set:
 
 # --- TAKE ----------------------------------------------------------------------------------------
 
+_PANEL_TURNS = 30          # THE HORIZON: see the panel test's docstring.
+
+
+def _claim_reading(seed: int) -> dict:
+    """ONE ROW OF THE PANEL for test_both_sides_take_the_cities_they_used_to_sprint_past: the
+    GT30 board at `seed`, read for OCCUPATION (who stands on the city -- the take-and-hold) and for
+    BANKING (whose scoreboard it is on -- 64.73's supply quality-test). Kept apart deliberately;
+    the gap between them is a measurement of the supply chain, not of the policy."""
+    fin = run(campaign(seed=seed, max_turns=_PANEL_TURNS),
+              CampaignAxisPolicy(), CampaignCommonwealthPolicy()).final
+    matruh = [s for s in fin.supplies if s.id == "AL-Stage-Matruh"]
+    return {
+        "seed": seed,
+        "cw_banked": _banked(fin, Side.ALLIED),
+        "ax_banked": _banked(fin, Side.AXIS),
+        "cw_barrani": campaign_claim._occupied(fin, Side.ALLIED, BARRANI),
+        "ax_sollum": campaign_claim._occupied(fin, Side.AXIS, SOLLUM),
+        "ax_tobruk": campaign_claim._occupied(fin, Side.AXIS, TOBRUK),
+        "ax_bardia": campaign_claim._occupied(fin, Side.AXIS, BARDIA),
+        "ax_matruh": campaign_claim._occupied(fin, Side.AXIS, MATRUH),
+        "cw_matruh": campaign_claim._occupied(fin, Side.ALLIED, MATRUH),
+        "matruh_depot": len(matruh) == 1 and matruh[0].hex == MATRUH,
+    }
+
+
 def test_both_sides_take_the_cities_they_used_to_sprint_past():
-    """THE ACCEPTANCE, now asked of BOTH armies -- because both of them have the take-and-hold, and
-    it is the same side-generic code (campaign_policy.take_and_hold_moves).
+    """THE ACCEPTANCE, asked of BOTH armies -- because both of them have the take-and-hold, and it
+    is the same side-generic code (campaign_policy.take_and_hold_moves). What it pins is the thing
+    that must stay true on both sides: AN ARMY KEEPS THE CITIES IT BANKS, AND GOES AND GETS THE ONES
+    IT DOES NOT.
 
-    *** AND THE ANSWER CHANGED WHEN THE AXIS GOT IT. *** With the Commonwealth alone playing the
-    64.73 points, this test asserted the CW banked SOLLUM and DERNA by Game-Turn 30 -- and it did.
-    It was WALKING INTO EMPTY CITIES. The Axis had marched off them and garrisoned nothing, so
-    Operation Compass never had to fight for a hex. Give the Axis the same standing orders and it
-    puts IT-1-Libyan on Sollum before Compass even opens; a garrisoned hex cannot be walked onto; and
-    the Commonwealth -- measured across the full campaign, seed 1941 -- now takes exactly ONE city in
-    the entire war: BARDIA, on Game-Turn 57, Operation Crusader.
+    *** RESTATED ONTO A SEED PANEL 2026-08-03, AND THE DOCSTRING THAT USED TO LIVE HERE IS THE
+    ARGUMENT FOR DOING IT. *** This test was re-pinned SIX times to whichever side currently stood
+    on the one contested forward city, each re-pin honest, each measured, each obsolete within a
+    slice. The [4.46] Headquarters close-assault dash finally broke it at CAMPAIGN_SEED=23, where
+    the Commonwealth loses Sidi Barrani outright. Re-pinning a seventh time was available and is
+    refused: it is choosing the evidence, and tests/baselines.py's CAMPAIGN_SEED note carries the
+    whole argument -- the constant is OVER-SUBSCRIBED, and no single seed makes all of its consumers
+    green, so pinning a CAPABILITY to one is the defect rather than the fixture.
 
-    That is not a regression in the mechanism. It is the mechanism telling the truth: the
-    Commonwealth's offensive could only ever take ground the enemy had abandoned. What it reveals --
-    that the Western Desert Force cannot break a defended city -- is a BALANCE finding, and it is
-    recorded in the commit that made both sides competent, not papered over here.
+    So the whole of baselines.CAMPAIGN_PANEL is folded -- seeds 1..24, unshopped, the prefix of
+    scripts/gate_c.py's own 1..N -- and the claims are split by what they actually are:
 
-    So what this test now pins is the thing that must stay true on both sides: an army keeps the
-    cities it banks, and goes and gets the ones it does not.
+      * SEVEN HOLD ON EVERY SEED OF BOTH TREES and are asserted PER SEED, twenty-four times each.
+      * SEVEN ARE SEED-LUCK and are asserted as a COUNT against baselines.CAMPAIGN_FLOOR (half the
+        panel), with BOTH trees' measurements written beside each so the headroom is visible.
 
-    *** RESTATED AGAIN AT THE [60.5] AIR MAP, AND ON MERSA MATRUH ONLY. *** This asserted the
-    Commonwealth banked BOTH Mersa Matruh and Sidi Barrani by Game-Turn 30. On the book's air map it
-    banks Sidi Barrani, and at Mersa Matruh it GARRISONS the city (a full-strength Polish brigade
-    stands on D3714 at GT30) without BANKING it -- 64.73 counts only a garrison that can trace Fuel
-    and Ammunition, and the Matruh depot under it is dry of both. The depot is dry in BOTH arms
-    (measured at GT30: 0 Fuel / 0 Ammo either way); what changed is which battalion the take-and-hold
-    sent and how far it can trace from there. The take-and-hold mechanism is what this test guards
-    and it is intact -- the city is claimed, a unit is sent, and it stays. So the assertion is split:
-    Sidi Barrani is still BANKED, and Mersa Matruh must still be GARRISONED. Weakening it to "banks
-    Sidi Barrani" alone would have quietly stopped testing the half that used to fail.
+    Nothing was dropped: every assertion the single-seed form made is still made, and the seven that
+    are universal got twenty-four times stronger.
 
-    *** AND THE REASON IT IS NOT BANKED IS PINNED HERE TOO, BECAUSE NOTHING ELSE PINS IT. *** The
-    restatement above is factually true and it still let a capability out of the suite: after it,
-    NO test asserts anything about the Commonwealth being able to trace Fuel and Ammunition at its
-    own railhead city. So the deficiency itself is the assertion -- AL-Stage-Matruh dry of both at
-    GT30, with a live garrison standing on it. This is a characterisation pin on a KNOWN GAP (the
-    unbuilt supply faucet the Phase 5 audit names: 36.3, 35.15, 36.5(a) and the [60.33]/[60.43]
-    lorry rows), not an assertion that the gap is correct. WHEN THE FAUCET LANDS THIS TEST MUST FAIL
-    AND MUST BE INVERTED to "the railhead is wet and Mersa Matruh is banked" -- which is the whole
-    point of pinning it: it fails loudly on the day the engine gets better.
+    MEASURED, panel 1..24, Game-Turn 30, this tree against a `git archive 80b1de1` control tree
+    built OUTSIDE the repo (control -> current):
 
-    *** IT FAILED, EXACTLY AS IT PROMISED TO, AND IT WAS INVERTED (2026-07-22, the faucet corrected to
-    the charts): AL-Stage-Matruh held 2 Ammunition Points at GT30 and MERSA MATRUH WAS BANKED. ***
+        the Axis OCCUPIES Tobruk                      24/24 -> 24/24
+        the Axis OCCUPIES Bardia                      24/24 -> 24/24
+        the Axis BANKS Tobruk                         24/24 -> 24/24
+        the Axis BANKS Benghazi                       24/24 -> 24/24
+        Bardia is NOT banked                          24/24 -> 24/24
+        the Matruh depot is staged on the city        24/24 -> 24/24
+        no city is banked by both sides               24/24 -> 24/24
+        --- the Commonwealth OCCUPIES Sidi Barrani    19/24 -> 18/24   floor 12
+        --- the Axis OCCUPIES Sollum                  24/24 -> 23/24   floor 12
+        --- the Axis OCCUPIES Mersa Matruh            20/24 -> 18/24   floor 12
+        --- the Commonwealth does NOT occupy Matruh   23/24 -> 21/24   floor 12
+        --- Sidi Barrani is NOT banked                23/24 -> 22/24   floor 12
+        --- Sollum is NOT banked                      23/24 -> 24/24   floor 12
+        --- Mersa Matruh is NOT banked by the CW      23/24 -> 21/24   floor 12
 
-    *** THEN THE [53.11] FIRST-LINE STORES BUFFER LANDED (2026-07-23, THE LAST MILE), AND THE PIN
-    MOVED AGAIN -- so it is RESTATED onto the robust thing it was always reaching for. *** 64.73's
-    supply quality-test (campaign_victory._supplied) traces Fuel and Ammunition over the cpa/2 line
-    (supply.plan_draw), NOT strictly in-hex, so the garrison banks the city by tracing Ammunition to a
-    dump WITHIN REACH -- the co-located railhead depot is only ONE candidate source. The faithful
-    first-line stores buffer draws Stores off the co-located dumps and perturbs the Commonwealth
-    relay's routing (stores changes shift CW supply chaotically, RANDOM IN SIGN -- see the S7 stores
-    memory), leaving AL-Stage-Matruh's OWN residual Ammunition at 0 at GT30 (measured seed 4: 2 Points
-    with the buffer suppressed, 0 with it live) -- while Commonwealth Ammunition DELIVERED forward is
-    unchanged (0 in both arms in this window) and MERSA MATRUH STAYS BANKED either way. So pinning
-    matruh[0].ammo > 0 was pinning a 2-point chaotic residual, not the banking; the capability it meant
-    to guard -- the Commonwealth can trace Fuel and Ammunition at its own railhead city -- is pinned
-    directly below, on the garrison's 64.73 trace, where the knife-edge cannot silently flip it.
+    THE HORIZON STAYS AT GAME-TURN 30, which is where every measurement in this file's history was
+    taken, so the panel's rows are directly comparable with the single-seed record below them. Cost
+    is stated rather than hidden: 24 folds to GT30 is ~17 minutes of one worker, and Game-Turn 24 --
+    two turns past the close of Operation Compass, the earliest horizon that contains everything
+    this test is about -- would have saved three of them, which is not worth losing the
+    comparability.
 
-    *** RESTATED 2026-07-25 (Block 7.C, rule 15.53 Organization Size). *** The Axis now fights its
-    Italian regiments CONCENTRATED (campaign_policy.concentrate_formations), and the [15.53] column-
-    shift edge -- historically the DAK's, a faithful counterweight to the Phase-7 Commonwealth
-    replacement flow -- takes SIDI BARRANI, the forward city the enemy used to bank while its
-    battalions sat scattered. So the Commonwealth banks Mersa Matruh (still garrisoned, still tracing
-    its supply, below) and the AXIS banks Sidi Barrani. The take-and-hold thesis is unchanged: an army
-    keeps what it banks and goes and gets the rest -- and now the Axis goes and gets this one.
+    THE GT24 ARM WAS MEASURED TOO, AND THE ONE PLACE THE HORIZON MATTERS IS DISCLOSED RATHER THAN
+    LEFT FOR A READER TO FIND. Six of the seven per-seed claims are 24/24 at both horizons and all
+    seven counts agree within ONE seed, never moving toward the floor. The exception is BARDIA IS
+    NOT BANKED: 24/24 on both trees at GT30, but 24 (control) / 23 (this tree) at GT24, where seed 2
+    banks it. So at the shorter horizon that row would be a count rather than an invariant. The
+    horizon was not chosen for that -- it is the horizon this file has always used, and both arms
+    were measured before either was chosen -- but a choice with a consequence is worth writing down.
 
-    *** RESTATED AGAIN 2026-07-25, LATER THE SAME DAY (the [8.37] per-terrain stacking limit). ***
-    game/stacking.py's DEFAULT_HEX_LIMIT=5 placeholder is replaced by the real chart value -- 6 for
-    every terrain reachable today, 8 for a Major City -- and that alone reshapes GT1-30 enough to flip
-    Sidi Barrani BACK to the Commonwealth (measured seed 4, GT30: cw = {Mersa Matruh, Sidi Barrani},
-    ax = {Bardia, Benghazi, Derna, Giarabub, Tobruk} -- the Axis holding is not merely unchanged, it is
-    WIDER than before, Derna and Giarabub joining Tobruk/Bardia/Benghazi). The take-and-hold thesis this
-    test actually guards -- an army keeps what it banks, goes and gets the rest, and never double-banks
-    a city -- is untouched; only which SIDE currently reaches the one contested forward city moved, a
-    third time, on a rule that has nothing to do with 64.73 or 15.53 and everything to do with how many
-    Stacking Points a hex may hold while the campaign plays out its opening moves. Restated back onto
-    the Commonwealth, where 60.5/15.53 restatement before it also once had it.
+    THE TRIPWIRE, DEMONSTRATED. In a scratch copy of this tree (outside the repo)
+    game.campaign_policy.take_and_hold_moves was made to return the army's own march untransformed
+    -- no take, no hold, the capability removed outright, which is the state this test was written
+    against, when the Commonwealth "sprinted past Sollum, Bardia and Derna to Benghazi, garrisoned
+    none of them, and finished 200-120 down with 250 Victory Points of EMPTY CITY lying behind its
+    own front line". The run goes red on seed 1, "the Axis threw away Tobruk, which it opened the
+    war holding", and the collapse is total on the same panel:
 
-    *** RESTATED AGAIN 2026-07-26 (Phase 8.1a, the [8.37] TERRAIN FILL RECLASSIFICATION). *** The Nile
-    Delta -- the ground every Commonwealth reinforcement marches out of, from Alexandria/Cairo toward
-    the railhead -- was previously mis-sampled as plain clear/rough (Motorized entry 2/4 CP); it is now
-    genuine Delta terrain (2/4 CP too where it was already rough, but a straight DOUBLING, 2 CP -> 4 CP,
-    on the 276 hexes that used to read clear), and the coastal corridor further west now carries real
-    Gravel/Salt Marsh/Mountain in place of the old 4-class coarsening. MEASURED, seed 4, GT30: the
-    Commonwealth's Matruh-bound spearhead is markedly SLOWER leaving the Delta -- Polish-Bde-I/II sit 33
-    hexes from Mersa Matruh (were 16), 107th-RHA (the old GT30 garrison) sits 34 hexes out (was ON the
-    hex) -- so NO Allied combat unit has yet reached the railhead by Game-Turn 30. This is a DELAY, not
-    a lost capability: measured out to GT40/50/60 on the same seed, the Commonwealth DOES arrive and
-    hold Mersa Matruh (9-Aus-Cav-Regt garrisons it by GT40, 7-SA-Recce-Bn by GT50/60) -- the march simply
-    now takes the real chart's longer road, exactly as the correction intends. So the assertion moves
-    from "has arrived" to "is still marching, and the depot that will feed it is correctly waiting" --
-    the thing a still-early check CAN honestly pin. WHEN the take-and-hold's routing is retuned for the
-    now-faithful Delta cost (or this check is moved to a later Game-Turn), THIS MUST BE INVERTED back to
-    "the Commonwealth stands on Mersa Matruh and banks it" -- which is what the GT40+ measurement above
-    already shows is coming, not a capability this port has lost.
+        the Axis OCCUPIES Tobruk / Bardia             24/24 -> 0/24    (per seed)
+        the Axis BANKS Tobruk / Benghazi              24/24 -> 0/24    (per seed)
+        the Commonwealth OCCUPIES Sidi Barrani        18/24 -> 0/24    against a floor of 12
+        the Axis OCCUPIES Sollum                      23/24 -> 0/24    against a floor of 12
+        the Axis OCCUPIES Mersa Matruh                18/24 -> 0/24    against a floor of 12
 
-    *** RESTATED AGAIN 2026-07-26 (Phase 8.1b, the A/B/D/E section-seam correction). *** An Axis unit
-    now walks over the empty terminus as early as GT3 and nobody dislodges it by GT30 (see
-    test_campaign_concentration.py::test_the_railhead_is_held_and_the_faucet_keeps_running's RESTATED
-    note for the mechanism -- the retraction is graceful, the faucet does not hard-cancel, and this is
-    the SAME measured fact carried forward to GT30, not a second regression). So Mersa Matruh is no
-    longer merely un-arrived-at (the 2026-07-26 Delta-terrain note above); it is AXIS-OCCUPIED. The
-    "Commonwealth hasn't reached it yet" reading this test used to assert is no longer the honest one;
-    "the Axis got there first and nobody has retaken it" is.
+    Both arms fail, so neither the per-seed invariants nor the counts are along for the ride. (Three
+    rows do NOT move: the depot stays staged, no city is double-banked, and Bardia stays unbanked --
+    which is correct and is the point of keeping them separate. An army that banks nothing trivially
+    banks nothing twice.)
 
-    *** RESTATED AGAIN 2026-07-27 (Phase 8.1c), AND CORRECTED THE SAME DAY BY ITS OWN REVIEW. ***
-    Two separate OOB corrections landed on this window and they pull against each other; the 8.1c
-    commit measured only the first and called it "the Commonwealth banks NO city at all by GT30".
+    ------------------------------------------------------------------------------------------------
+    OCCUPATION AND BANKING ARE TWO DIFFERENT MEASUREMENTS AND THE SPLIT IS LOAD-BEARING (2026-08-02,
+    cause [64.73]). campaign_victory._supplied now asks the rule's own question -- a Week of Stores
+    and Water, three firings, and 20 CP of Fuel, HELD IN THE HEX -- where it used to trace Fuel and
+    Ammunition over the section-32.16 half-CPA line of the ABSTRACT game. THE ARMY DID NOT MOVE when
+    that landed; three cities simply stopped scoring. So OCCUPIED is the take-and-hold (this test's
+    subject) and BANKED is the scoreboard, and asserting both is strictly more than the old
+    `"Sollum" in ax` was.
 
-    (1) THE 23.11 (ENG) CORRECTION. Four Italian counters were fighting this whole campaign as
-    combat infantry, because each record's own `role` field said so explicitly and short-circuited
-    the classifier; they are Engineer Battalions (is_combat False, per data/unit_stats.json), which
-    is what they always should have been. PROVENANCE, PER COUNTER, because the 8.1c commit claimed
-    chart authority for all four and the chart gives it to two: the 64th Catanzaro (scan p.153) and
-    the 204th/4th CCNN (p.161) are transcribed [4.44b] rows, ID 'bbb'; the 62nd Marmarica and 63rd
-    Cirene divisions have NO sheet anywhere in [4.44b] and their records are RECONSTRUCTED
-    (data/oob_organization_4_45.json's _flags says so itself) -- their "(ENG)" tag comes from the
-    COUNTER, whose module art is "IT 62 - 62 Mrm (ENG)" / "IT 63 - 63 Cir (ENG)". Two chart rows and
-    two counter-sheet counters; the correction is right either way, the blanket claim was not.
-    (2) THE 1st LIBYAN DIVISION HQ. 8.1c seeded that HQ twice and left the counter that IS it,
-    'IT 1 Libyan - none' at C4020, fighting as a 6-step CPA-10 infantry battalion one hex off Sidi
-    Barrani (data/oob_italian.json's _role_comment has the three-source proof). Correcting it takes
-    a phantom infantry counter back OUT of the same border screen.
+    WHY THE BORDER CITIES STOP SCORING, measured clause by clause at GT30 on five boards, every
+    board agreeing -- and the FIRST answer named the wrong clause and the wrong army, so the table
+    is kept:
 
-    NET, MEASURED at CAMPAIGN_SEED, GT30: the Commonwealth holds Sidi Barrani after all -- the same
-    city the [8.37] note above already pinned -- while Sollum and Mersa Matruh stay Axis. Across
-    seven seeds the (ENG) correction alone is adverse on 3, neutral on 3 and favourable on 1, and
-    the pair together move the seven-seed Commonwealth total from 8 banked cities to 6 (the full
-    per-seed table is in test_campaign_concentration.py::test_the_commonwealth_can_mount_a_supplied
-    _offensive's docstring). A real, modest, faithful lean -- not a rout.
+        city          holder                     clause that FAILS      what stands under it
+        Giarabub      6 x IT-Grbub (Italian)     AMMUNITION only        AX-Well-Giarabub ONLY -- the
+                                                 (2 of the 6 also Fuel) oasis, holding 124,996,400
+                                                                        Stores, so STORES is SATISFIED
+        Bardia        IT-Barka (Italian)         STORES only            AX-Stage-Bardia: 146
+                                                                        Ammunition and NO Stores
+        Sollum        IT-1-CCNN (Italian)        AMMUNITION + STORES    AX-Well-Sollum ONLY -- water,
+                                                                        no Stores, no Ammunition
 
-    *** INVERTED 2026-08-01, EXACTLY AS THE 2026-07-26 NOTE ABOVE INSTRUCTED. *** That note ended
-    "WHEN the take-and-hold's routing is retuned (or this check is moved to a later Game-Turn), THIS
-    MUST BE INVERTED back to 'the Commonwealth stands on Mersa Matruh and banks it'". The condition
-    has come true, by a different road: [54.32]/[54.33]/[54.34], the railway's per-Operations-Stage
-    schedule. The lane used to land a whole Game-Turn's mixed freight in Operations Stage 1 and
-    nothing in Stages 2 and 3; it now runs the book's train -- one type of supply, 1,500 tons, EVERY
-    Operations Stage. The week's tonnage is unchanged; the beat is not, and an army fed three times
-    a week reaches and holds its own railhead.
-
-    MEASURED at CAMPAIGN_SEED, GT30 (before -> after):
-
-        Commonwealth banked   {Sidi Barrani}  ->  {Mersa Matruh, Sidi Barrani}
-        Axis banked           {Bardia, Benghazi, Derna, Giarabub, Mersa Matruh, Sollum, Tobruk}
-                              ->  {Bardia, Benghazi, Giarabub, Sollum, Tobruk}
-        AL-Stage-Matruh        dry  ->  1,416 Ammunition / 7,842 Fuel, garrisoned by Selby Force
-
-    The take-and-hold thesis this test guards is untouched in every particular -- an army keeps what
-    it banks, goes and gets the rest, and never double-banks a city. What moved is which side stands
-    on the one contested forward city, for the fifth time, and this time it moved back.
-
-    *** RESTATED 2026-08-02, CAUSE [64.73]: THE OCCUPATION QUALITY-TEST STOPPED ASKING THE ABSTRACT
-    GAME. *** campaign_victory._supplied now asks the rule's own question -- a Week of Stores and
-    Water and three firings and 20 CP of Fuel, HELD IN THE HEX -- where it used to trace Fuel and
-    Ammunition over the section-32.16 half-CPA line. That is a rule-3 repair, and it separates two
-    things this test had always been able to treat as one:
-
-        AXIS, CAMPAIGN_SEED, GT30    OCCUPIED  Giarabub, Bardia, Sollum, Tobruk, Benghazi
-                                     BANKED    Tobruk, Benghazi
-        COMMONWEALTH                 OCCUPIED  Mersa Matruh, Sidi Barrani
-                                     BANKED    Mersa Matruh, Sidi Barrani
-
-    THE ARMY DID NOT MOVE. The Axis stands on exactly the cities it stood on; three of them simply
-    stop scoring. So the assertion below splits: OCCUPIED is the take-and-hold, BANKED is the
-    scoreboard, and the gap between them is a measurement of the supply chain rather than of the
-    policy.
-
-    *** WHY THEY STOP SCORING, RE-DERIVED 2026-08-02 -- AND THE FIRST ANSWER NAMED THE WRONG CLAUSE
-    AND THE WRONG ARMY. *** This paragraph said all three garrisons "cannot show a Week of Stores
-    where they stand", caused by GERMAN units carrying no [4.43b] first-line trucks against a
-    Commonwealth battalion carrying its [53.11] ration. MEASURED clause by clause on this very board
-    (CAMPAIGN_SEED, GT30), and on the four A/B seeds of tests/baselines.py, every board agreeing:
-
-        city          holder                          clause that FAILS   what stands under it
-        Giarabub      6 x IT-Grbub (Italian)          AMMUNITION only     AX-Well-Giarabub ONLY --
-                                                      (2 of the 6 also    the oasis, which holds
-                                                      Fuel)               124,996,400 Stores, so the
-                                                                          STORES clause is SATISFIED
-        Bardia        IT-Barka (Italian)              STORES only         AX-Stage-Bardia, holding
-                                                                          146 Ammunition and NO Stores
-        Sollum        IT-1-CCNN (Italian)             AMMUNITION+STORES   AX-Well-Sollum ONLY -- water,
-                                                                          no Stores, no Ammunition
-
-    THREE CORRECTIONS FALL OUT OF THAT TABLE. (1) The clause is not uniformly Stores: one city fails
-    on Ammunition alone, one on Stores alone, one on both -- and at Giarabub the old sentence is not
-    merely unmeasured but refuted by a printed rule, [52.3] OASES: "Units sitting in Oases have all
-    the stores and water they need to last them the entire game" (verbatim, folio 21). (2) Every
-    failing garrison is ITALIAN, and NOT ONE German counter stands on a 64.73 city on any of the five
-    boards -- at GT30 there are 17 German combat units alive here and all 17 are elsewhere, so
-    [4.43b] could not flip Giarabub, Bardia or Sollum whatever it landed. (The other four boards stop
-    at Game-Turn 12, before the DAK arrives, so no German counter is on them at all.)
-    (3) It does NOT spare the Commonwealth: on all four A/B
-    seeds BR-2SctGds fails the same STORES clause at Sidi Barrani (own ration 5 / 2 / 6 / 13 Points
-    against a 24-Point week), and banks it here only because at GT30 it carries exactly 20 of 20.
-    The Axis loses more POINTS because its three failing cities are worth 140 Axis V.P. on 64.73's
-    own table against Sidi Barrani's 10 Commonwealth V.P. -- an asymmetry of the table, not of the
-    lorries.
+    Three corrections fall out of that table and each still stands. (1) The failing clause is not
+    uniformly Stores -- one city fails on Ammunition alone, one on Stores alone, one on both -- and
+    at Giarabub the old "cannot show a Week of Stores" sentence is refuted by a printed rule, [52.3]
+    OASES: "Units sitting in Oases have all the stores and water they need to last them the entire
+    game" (verbatim, folio 21). (2) Every failing garrison is ITALIAN, and not one German counter
+    stands on a 64.73 city on any measured board, so [4.43b] first-line trucks could not flip any of
+    them whatever they landed. (3) It does not spare the Commonwealth: BR-2SctGds fails the same
+    STORES clause at Sidi Barrani on every A/B seed, and banks it at all only on a knife-edge -- 20
+    of the 20 Points its five steps need before [4.46], 3 of the 24 its SIX steps need after. A step
+    stronger and one ration short.
 
     WHAT IT ACTUALLY MEASURES IS THE LAST MILE. 64.73 asks for a WEEK, and no organic pool the book
-    gives a counter is a week deep: [51.0] gives no organic Stores at all (what a counter holds is a
-    [53.11] first-line buffer the war spends -- 1 of 57 Italian and 0 of 17 German combat units hold
-    any Stores at GT30, against 25 of 67 Commonwealth), and [50.0]'s ammunition load is ONE firing
-    against 64.73's three. So the clause that fails is decided by WHAT DUMP STANDS UNDER THE
-    GARRISON, which is this project's faucet debt and not its OOB debt. That carriage asymmetry is
-    recorded as a fact with no cause attached to it: the reinforcement half of [4.43b] is already
-    WIRED (tests/test_first_line.py), a first-line truck is CAPACITY rather than loaded rations, and
-    these three cities turn on the forward dumps either way.
+    gives a counter is a week deep: [51.0] grants no organic Stores at all (what a counter holds is
+    a [53.11] first-line buffer the war spends -- 1 of 57 Italian and 0 of 17 German combat units
+    hold any Stores at GT30, against 25 of 67 Commonwealth), and [50.0]'s ammunition load is ONE
+    firing against 64.73's three. So the failing clause is decided by WHAT DUMP STANDS UNDER THE
+    GARRISON, which is this project's faucet debt and not its OOB debt.
 
-    *** RESTATED 2026-08-02, CAUSE [10.29] -- AND THE ARMY DID NOT MOVE AT SIDI BARRANI EITHER. ***
-    engine._capture_noncombat takes a non-combat counter with no strength of any type when it is
-    left alone in an enemy ZOC during the enemy's Movement/Combat Phase. MEASURED at CAMPAIGN_SEED,
-    GT30 (before -> after):
+    INVERT-THIS, AND THE PANEL IS WHY THEY CAN NOW BE STATED HONESTLY. The four "NOT banked" counts
+    below are characterisation pins on a KNOWN GAP, not assertions that the gap is correct. WHEN THE
+    LAST MILE CARRIES STORES FORWARD they will rise past the floor and the counts will fail --
+    loudly, and on the distribution rather than on one board's Point-by-Point luck. Sollum and
+    Bardia invert together (both fail on a dry forward dump); Sidi Barrani inverts with them; none
+    of the three turns on [4.43b].
 
-        COMMONWEALTH   OCCUPIED  Mersa Matruh, Sidi Barrani  ->  Sidi Barrani
-                       BANKED    Mersa Matruh, Sidi Barrani  ->  (nothing)
-        AXIS           OCCUPIED  Giarabub, Bardia, Sollum, Tobruk, Benghazi  -> the same five,
-                                 PLUS Mersa Matruh
-                       BANKED    Tobruk, Benghazi  ->  Tobruk, Benghazi   (unchanged)
+    MERSA MATRUH IS A DIFFERENT FINDING AND MUST NOT BE FOLDED INTO THEM (2026-08-02, cause
+    [10.29]). engine._capture_noncombat takes a non-combat counter with no strength of any type when
+    it is left alone in an enemy ZOC during the enemy's Movement/Combat Phase. [60.5] seeds THREE
+    Commonwealth Squadron Ground Support Units on the railhead; the moment the garrison is retreated
+    off the hex they stand alone, and where the old engine froze the hex behind them -- unenterable
+    under [8.13], unflippable under [10.11]/[64.73] -- this one captures them and an Italian
+    battalion walks in. The terminus is GENUINELY LOST on most panel boards, and that is asserted as
+    OCCUPATION, where the take-and-hold lives. tests/test_campaign_concentration.py::test_the_
+    railhead_is_held_and_the_faucet_keeps_running carries the full trace and the hundred-seed
+    measurement.
 
-    TWO SEPARATE THINGS, and they must not be told as one.
+    ------------------------------------------------------------------------------------------------
+    THE SINGLE-SEED HISTORY THIS PANEL REPLACES, kept because the chain is the record of a rule
+    moving an army and a reader will want it. The contested forward city changed hands six times and
+    every one of them was a real measurement: the Commonwealth banked Sidi Barrani and garrisoned
+    Mersa Matruh unbanked at the [60.5] air map; [15.53] Organization Size gave Sidi Barrani to a
+    concentrated Axis (2026-07-25); the [8.37] per-terrain stacking limit gave it straight back the
+    same day; Phase 8.1a's Delta terrain fills slowed the Commonwealth's march so far that NO Allied
+    unit reached the railhead by GT30 (2026-07-26); Phase 8.1b's section-seam correction put an Axis
+    unit on the empty terminus by GT3; Phase 8.1c's 23.11 (ENG) correction took four Italian counters
+    out of the Sidi Barrani screen and its own review repair gave half of it back; and the
+    [54.32]/[54.33]/[54.34] per-Operations-Stage railway (2026-08-01) fed the Eighth Army three times
+    a week and INVERTED the whole thing back -- "the Commonwealth stands on Mersa Matruh and banks
+    it", exactly as the 2026-07-26 note had instructed its successor to do. Six honest re-pins, and
+    the seventh is a panel."""
+    panel = [_claim_reading(seed) for seed in CAMPAIGN_PANEL]
 
-    (1) MERSA MATRUH IS GENUINELY LOST, and it is this rule's own doing. Three Commonwealth
-    Squadron Ground Support Units live on the railhead ([60.5] seeds them there); the moment Selby
-    Force is retreated off the hex at Game-Turn 3 they stand alone, and where the old engine froze
-    the hex behind them -- unenterable under [8.13], unflippable under [10.11]/[64.73] -- this one
-    captures them, and IT-141/64-Cat walks in at GT4 and is still there at GT30. The full trace, and
-    the nine-seed measurement showing the terminus ends Commonwealth on 6 of 9 boards before and 1
-    of 9 after, is in test_campaign_concentration.py::test_the_railhead_is_held_and_the_faucet_
-    keeps_running's 2026-08-02 note. Asserted as OCCUPATION, which is where the take-and-hold lives.
+    # --- the seven claims that hold on every seed of both trees, asserted on every seed ----------
+    for r in panel:
+        s = r["seed"]
+        # The AXIS -- which used to bank whatever the garrison order happened to pin and throw the
+        # rest away, losing Bardia in every seed, a hundred Victory Points it starts the war
+        # standing on -- now holds its own rear. Asserted on OCCUPATION, because "threw away what it
+        # opened holding" is a claim about the ARMY.
+        assert r["ax_tobruk"], f"seed {s}: the Axis threw away Tobruk, which it opened the war holding"
+        assert r["ax_bardia"], f"seed {s}: the Axis threw away Bardia, which it opened the war holding"
+        # ...and Tobruk BANKS because its 500-point staging dump stands under the garrison, which is
+        # the clause table above told the other way round.
+        assert "Tobruk" in r["ax_banked"], \
+            f"seed {s}: the Axis no longer banks its own fortress: {sorted(r['ax_banked'])}"
+        assert "Benghazi" in r["ax_banked"], \
+            f"seed {s}: the Axis still does not garrison its own port: {sorted(r['ax_banked'])}"
+        assert "Bardia" not in r["ax_banked"], (
+            f"seed {s}: Bardia is banked again -- measured, this hex fails on STORES ALONE, its own "
+            f"staging dump standing under it stocked with Ammunition and dry of rations. INVERT IT "
+            f"WITH SOLLUM: both come back when the last mile carries Stores forward, and neither "
+            f"turns on [4.43b]")
+        assert r["matruh_depot"], \
+            f"seed {s}: the railhead depot must still be staged under its garrison"
+        assert not (r["cw_banked"] & r["ax_banked"]), \
+            f"seed {s}: a city is banked by both sides: {sorted(r['cw_banked'] & r['ax_banked'])}"
 
-    (2) SIDI BARRANI IS NOT LOST AT ALL -- IT STOPPED SCORING BY ONE STORE POINT. BR-2SctGds stands
-    on the city in BOTH arms, at the same hex, and has never been driven off it. What flips is the
-    knife-edge this docstring's own 2026-08-02 paragraph already named: it "banks it here only
-    because at GT30 it carries exactly 20 of 20". Measured now, arm by arm: AL-Stage-Barrani holds
-    ZERO Stores under it in BOTH arms, so the whole clause rests on the counter's own [53.11]
-    first-line buffer -- 20 Points against the 20 its five steps need before, 3 Points against the
-    24 its SIX steps need after. It is a step stronger and one ration short. That is the last-mile
-    characterisation this test already carries, moving by a Point, not the take-and-hold failing;
-    so the assertion SPLITS the way Sollum's did, occupation from scoreboard, rather than being
-    deleted or re-pinned to the other side."""
-    fin = _run(30).final
-    cw, ax = _banked(fin, Side.ALLIED), _banked(fin, Side.AXIS)
-    # The Commonwealth OCCUPIES Sidi Barrani and has never been driven off it (see the 2026-08-02
-    # note above) -- the take-and-hold thesis, unchanged since this line was first written.
-    assert campaign_claim._occupied(fin, Side.ALLIED, BARRANI), \
-        "the Commonwealth lost Sidi Barrani -- the take-and-hold itself has regressed, not its score"
-    assert "Sidi Barrani" not in cw, (
-        "Sidi Barrani is banked again -- measured, it fails on STORES ALONE and by ONE ration: the "
-        "depot under it is dry of Stores in every arm, so the clause rests on the garrison's own "
-        "[53.11] buffer. INVERT THIS when the last mile carries Stores forward; do not re-pin it "
-        "to a counter that happens to be one step lighter")
-    # Sollum stays Axis -- the (ENG) correction's own measured gain, which the 1st Libyan repair
-    # did NOT give back at this seed. SPLIT IN TWO 2026-08-02 (the 64.73 repair, see the note above):
-    # the Axis still OCCUPIES Sollum and has never been driven off it, and it no longer BANKS it,
-    # because 64.73 as printed wants three firings of Ammunition and a Week of Stores IN THE HEX and
-    # the Italian battalion standing there has a well under it and nothing else. Asserting both is
-    # strictly MORE than the old `"Sollum" in ax`: the take-and-hold thesis (an army goes and gets a
-    # city and then keeps it) is pinned on the OCCUPATION, and the scoreboard tells the separate
-    # truth about what that occupation is worth.
-    assert campaign_claim._occupied(fin, Side.AXIS, SOLLUM), \
-        "the Axis lost Sollum -- the take-and-hold itself has regressed, not merely its score"
-    assert "Sollum" not in ax, (
-        "Sollum is banked again -- 64.73's Ammunition and Stores are now reaching the border "
-        "cities. INVERT THIS: measured, this hex fails on AMMUNITION AND STORES because only "
-        "AX-Well-Sollum stands on it, so what gives it back is a stocked forward dump (the last "
-        "mile), not [4.43b] -- no German counter stands on a 64.73 city on any measured board")
-    # Mersa Matruh is AXIS-OCCUPIED at GT30 (RESTATED 2026-08-02, cause [10.29] -- see the note
-    # above): the terminus falls at Game-Turn 3, once the three Squadron Ground Support Units left
-    # standing on it are captured, and no Commonwealth counter retakes it in the next twenty-seven.
-    # This is the SIXTH time the one contested forward city has changed hands in this docstring, and
-    # the first time a rule of the port rather than a datum of the map has moved it.
-    assert campaign_claim._occupied(fin, Side.AXIS, MATRUH), \
-        "the Axis lost the railhead city -- update this restatement, the finding reversed"
-    assert not campaign_claim._occupied(fin, Side.ALLIED, MATRUH), \
-        "the Commonwealth holds the railhead city -- INVERT this restatement, the finding reversed"
-    assert "Mersa Matruh" not in cw, "Mersa Matruh is banked again -- update this restatement"
-    matruh = [s for s in fin.supplies if s.id == "AL-Stage-Matruh"]
-    assert len(matruh) == 1 and matruh[0].hex == MATRUH, \
-        "the railhead depot must still be staged under its garrison"
-    # NOT re-pinned here: the depot's own residual Ammunition. The 2026-07-25 note above withdrew
-    # `matruh[0].ammo > 0` for a reason that still stands whatever the number reads today -- it is a
-    # transit node's leftovers, not the banking this test is about -- and the capability it stood
-    # for is pinned where it cannot silently flip, on the Commonwealth garrison's own supply in
-    # tests/test_campaign_concentration.py (whose instrument is now the can-move-and-fire draw, not
-    # the 64.73 hold-ground test; see its 2026-08-02 note). (It measures 1,416 Ammunition /
-    # 7,842 Fuel now, up from dry, which is the 54.32 schedule's doing and is recorded not asserted.)
-    # The AXIS -- which used to bank whatever the garrison order happened to pin and throw the rest
-    # away -- now holds its own rear: BENGHAZI (its port of arrival, never once garrisoned in 111
-    # Game-Turns) and SOLLUM, on top of the Tobruk and Bardia it opens the war standing on. (Holds,
-    # not banks: since 2026-08-02 Sollum and Bardia are occupied and unbanked -- see just below.)
-    # SPLIT THE SAME WAY AS SOLLUM, 2026-08-02 (the 64.73 repair -- see the note above). "Threw away
-    # what it opened holding" is a claim about the ARMY, so it is asserted on OCCUPATION, where it is
-    # still exactly true; BARDIA is occupied and unbanked, though NOT for quite the same reason as
-    # Sollum (measured: Bardia has AX-Stage-Bardia under it holding 146 Ammunition and ZERO Stores,
-    # so it fails STORES ALONE, where Sollum has only a well and fails Ammunition AND Stores); and
-    # TOBRUK is banked because its 500-point staging dump is standing under the garrison, which is
-    # the same fact told the other way round.
-    for name, ax_hex in (("Tobruk", TOBRUK), ("Bardia", BARDIA)):
-        assert campaign_claim._occupied(fin, Side.AXIS, ax_hex), \
-            f"the Axis threw away {name}, which it opened the war holding"
-    assert "Tobruk" in ax, f"the Axis no longer banks its own fortress: {sorted(ax)}"
-    assert "Bardia" not in ax, (
-        "Bardia is banked again -- measured, this hex fails on STORES ALONE, its own staging dump "
-        "standing under it stocked with Ammunition and dry of rations. INVERT IT WITH SOLLUM: both "
-        "come back when the last mile carries Stores forward, and neither turns on [4.43b]")
-    assert "Benghazi" in ax, f"the Axis still does not garrison its own port: {sorted(ax)}"
-    assert not (cw & ax)                                    # a city is banked by at most one side
+    def _count(label, keep, control, current, note=""):
+        """Assert one seed-luck claim of the DISTRIBUTION. `control`/`current` are what the two
+        measured trees read, carried into the message so a failure reports its own headroom."""
+        hits = [r["seed"] for r in panel if keep(r)]
+        assert len(hits) >= CAMPAIGN_FLOOR, (
+            f"{label} -- it holds on only {len(hits)} of {len(CAMPAIGN_PANEL)} panel seeds, failing "
+            f"on {[r['seed'] for r in panel if not keep(r)]}, against a floor of {CAMPAIGN_FLOOR} "
+            f"and a measurement of {control} (control) / {current} (this tree). {note}")
+
+    # --- the seven seed-luck claims, asserted of the DISTRIBUTION --------------------------------
+    # THE TAKE-AND-HOLD ITSELF, on the two cities the two armies actually contest. Sidi Barrani is
+    # the Commonwealth's -- the forward city Operation Compass goes and gets -- and Sollum is the
+    # Axis's, which it holds against Compass. These are claims about the ARMY, so they are asked of
+    # occupation and not of the scoreboard.
+    _count("the Commonwealth lost Sidi Barrani -- the take-and-hold itself has regressed, not its "
+           "score", lambda r: r["cw_barrani"], 19, 18)
+    _count("the Axis lost Sollum -- the take-and-hold itself has regressed, not merely its score",
+           lambda r: r["ax_sollum"], 24, 23)
+    # THE RAILHEAD CITY, the [10.29] finding above. It is asserted in BOTH directions, as the
+    # single-seed form did: the Axis stands on it, and the Commonwealth does not. If the
+    # Commonwealth starts retaking its own terminus, the second of these fails and the [10.29]
+    # restatement is the thing to update -- which is the point of pinning it.
+    _count("the Axis lost the railhead city on most of the panel -- update this restatement, the "
+           "[10.29] finding reversed", lambda r: r["ax_matruh"], 20, 18)
+    _count("the Commonwealth holds the railhead city on most of the panel -- INVERT this "
+           "restatement, the [10.29] finding reversed", lambda r: not r["cw_matruh"], 23, 21)
+    # THE SCOREBOARD, and every one of these is an INVERT-ME on the last mile (see the docstring).
+    _count("Sidi Barrani is banked again", lambda r: "Sidi Barrani" not in r["cw_banked"], 23, 22,
+           "measured, it fails on STORES ALONE and by ONE ration: the depot under it is dry of "
+           "Stores in every arm, so the clause rests on the garrison's own [53.11] buffer. INVERT "
+           "THIS when the last mile carries Stores forward; do not re-pin it to a counter that "
+           "happens to be one step lighter")
+    _count("Sollum is banked again", lambda r: "Sollum" not in r["ax_banked"], 23, 24,
+           "64.73's Ammunition and Stores are reaching the border cities. INVERT THIS: measured, "
+           "this hex fails on AMMUNITION AND STORES because only AX-Well-Sollum stands on it, so "
+           "what gives it back is a stocked forward dump (the last mile), not [4.43b] -- no German "
+           "counter stands on a 64.73 city on any measured board")
+    _count("Mersa Matruh is banked by the Commonwealth again",
+           lambda r: "Mersa Matruh" not in r["cw_banked"], 23, 21,
+           "update the [10.29] restatement above; the depot's own residual Ammunition is NOT "
+           "re-pinned with it -- that is a transit node's leftovers, not the banking, and the "
+           "capability it stood for is pinned in tests/test_campaign_concentration.py on the "
+           "can-move-and-fire draw")
 
 
 def test_occupying_sollum_brings_the_supply_chain_up_to_it():

@@ -5030,13 +5030,19 @@ def _capture_noncombat(r: _Run, side: Side) -> None:
     computes exactly. [3.36] captures a bare HQ "in a hex without any combat units" the instant an
     "Enemy combat unit places the HQ in its Zone of Control"; [35.12] eliminates an SGSU on mere
     ADJACENCY when it cannot react; [22.63] eliminates a lone Tank Delivery Squadron placed in a
-    ZOC. All three are narrower populations or wider triggers than this one. 3.36's population is
-    EMPTY in this engine besides -- data/unit_stats.json prints "dca": 1 on every hq row while
-    citing chart row 'a', and that row prints a DASH in the Close Assault column on all three
-    national charts (German [4.46c] PDF p.137, Commonwealth [4.46a] p.133, Italian [4.46b] p.136,
-    where it is printed a*), all three re-rendered at 300 dpi and read here. So no HQ in this
-    engine "has no combat values". Transcribing that dash and landing 3.36 are ONE slice, and until it
-    happens 10.29's strictly wider "no strength of ANY type" reaches every counter 3.36 would.
+    ZOC. All three are narrower populations or wider triggers than this one.
+
+    3.36'S POPULATION USED TO BE EMPTY HERE AND NO LONGER IS (2026-08-02). This docstring recorded
+    that data/unit_stats.json printed "dca": 1 on every hq row while citing chart row 'a', that the
+    row prints a DASH there on all three national charts, and that "transcribing that dash and
+    landing 3.36 are ONE slice". The dash is now transcribed for the two nations whose row could be
+    identified -- GE.hq, CW.hq and CW.hq_engineer are 0/0 (see data/unit_stats.json
+    _hq_dash_comment and tests/test_hq_close_assault.py) -- so _has_no_strength is True for them and
+    this sweep IS 3.36 for the German and Commonwealth bare HQs, at 10.29's own strictly wider
+    trigger. THE ITALIAN HQ ROWS STILL CARRY A 1 and are deliberately outside this population: the
+    engine writes their CPA as 30, which is Italian [4.46b] row b, and row b prints Close Assault
+    "0/(1)" rather than a dash -- so on the numbers this repo has actually transcribed, an Italian
+    bare HQ still "has strength of a type". That asymmetry is flagged, not silent.
 
     TWO READINGS, both flagged, both pinned in tests/test_noncombat_capture.py:
       * "alone" is read as "with no FRIENDLY COMBAT UNIT in the hex". 10.29's own previous sentence

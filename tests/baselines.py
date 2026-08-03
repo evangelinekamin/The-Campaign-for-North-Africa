@@ -10,6 +10,42 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+NOT RE-BASELINED 2026-08-02 -- [4.46], THE HEADQUARTERS CLOSE-ASSAULT DASH. Recorded here anyway,
+because the entry below says in as many words that 3.36's population is empty and that "THOSE TWO
+CHANGES ARE COUPLED", and this is the other half landing. BOTH BENCHMARK SIGNATURES ARE BYTE-
+IDENTICAL across it: rommel e1d1fa771ce3, siege 19693b23b988, unchanged. Neither benchmark ever
+puts an HQ in a defender list or leaves one alone in an enemy ZOC, so no event moved.
+
+    THE CAMPAIGN SIGNATURES DID MOVE (recipe: scenario.campaign(seed, max_turns=12) via its OWN
+    kwarg, CampaignAxisPolicy vs CampaignCommonwealthPolicy, sha256(determinism_signature)[:12]):
+
+        1941 dd3ddecd056f -> e0d87db9c4e8        7    250b13e94052 -> 5398e7b611a6
+        4    fbf8cf16a7ca -> 620d28a58be8        2026 77d929598c0b -> 8e1b9c5e17f9
+
+THE CHANGE IS ONE DATA CELL x3, NO ENGINE CODE. data/unit_stats.json gave GE.hq, CW.hq and
+CW.hq_engineer a Close Assault Defence of 1 while citing chart row 'a'. Row 'a' prints a DASH --
+German [4.46c] PDF p.137 and Commonwealth [4.46a] p.133, both re-rendered at 300 dpi and read cell
+by cell for this entry, and the dash runs across all seven rating columns INCLUDING Maximum TOE,
+which is what makes it a rating that cannot exist rather than a placeholder. The chart key on the
+same page: "- = Not applicable (e.g., an infantry unit has no Vulnerability and may therefore not
+be harmed by Anti-Armor fire)." The Italian rows are deliberately NOT touched (their CPA is row b's
+30, and row b prints "0/(1)", not a dash) -- data/unit_stats.json IT._hq_dash_comment says why.
+
+MEASURED, four full 111-turn campaigns, CampaignAxisPolicy vs CampaignCommonwealthPolicy,
+seeds 1941 / 7 / 4 / 2026:
+
+    bare HQs in a defender stack       6 / 4 / 8 / 10  ->  2 / 5 / 6 / 9
+    raw defensive points they added    6 / 4 / 8 / 10  ->  1 / 0 / 5 /  4   (all of it now ITALIAN)
+    HQs captured by 3.36 / 10.29       0 / 0 / 0 /  0  ->  1 / 2 / 0 /  2   (the clause was inert)
+    winner + 64.76 grade               Axis Smashing Victory on all four seeds, BEFORE and AFTER
+    64.76 Victory Points               666-0 -> 772-20   815-0 -> 475-0
+                                       861-10 -> 1187-20  419-20 -> 412-20
+
+The grade does not move on any seed and the VP shift is RANDOM IN SIGN (+106, -340, +326, -7) --
+single-seed chaos of the kind this file documents below, not a balance lever. 74 of the 84 HQ
+counters in a campaign change (CW hq 50, CW hq_engineer 15, GE hq 9); the 10 Italian ones do not.
+
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-08-02 -- CAUSE: [10.29], THE CAPTURE OF A STRENGTHLESS NON-COMBAT COUNTER. A hex
 that could be neither entered nor flipped, because the one rule that resolves it was not built.
 
@@ -50,11 +86,15 @@ WHAT IS BUILT IS [10.29] AND NOTHING ELSE. The book legislates this situation fo
 bare HQs, [10.29] any strengthless non-combat unit, [35.12] SGSUs on MERE ADJACENCY, [22.63] Tank
 Delivery Squadrons -- and this is the one clause whose trigger the engine already computes exactly,
 off the same ZOC map movement is gated on. 35.12's adjacency trigger and 22.63 are deliberately NOT
-built. 3.36's population is EMPTY here: data/unit_stats.json prints "dca": 1 on every hq /
-hq_engineer row while citing chart row 'a', and that row prints a DASH in the Close Assault column
-on all three national charts, each re-rendered at 300 dpi and read for this entry: German [4.46c]
-PDF p.137, Commonwealth [4.46a] p.133, Italian [4.46b] p.136 (printed a* there). THOSE TWO CHANGES ARE COUPLED -- fix
-that dca faithfully without landing 3.36 and every bare HQ becomes as unkillable as the SGSU was.
+built. 3.36's population was EMPTY here WHEN THIS ENTRY WAS WRITTEN and is not any more -- see the
+[4.46] entry above, which is the coupled half this paragraph asked for. It read: data/unit_stats.json
+prints "dca": 1 on every hq / hq_engineer row while citing chart row 'a', and that row prints a DASH
+in the Close Assault column on all three national charts, each re-rendered at 300 dpi and read for
+this entry: German [4.46c] PDF p.137, Commonwealth [4.46a] p.133, Italian [4.46b] p.136 (printed a*
+there). THOSE TWO CHANGES ARE COUPLED -- fix that dca faithfully without landing 3.36 and every bare
+HQ becomes as unkillable as the SGSU was. They landed in that order, and 3.36 now fires on German
+and Commonwealth bare HQs (1/2/0/2 times per campaign on seeds 1941/7/4/2026); the Italian rows are
+still outside the population and still flagged.
 
 TWO READINGS FLAGGED AS JUDGEMENT CALLS, both pinned in tests/test_noncombat_capture.py:
   * "alone" = with no FRIENDLY COMBAT UNIT in the hex. 10.29's own previous sentence opposes an
@@ -2499,8 +2539,106 @@ BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 #     test_campaign_claim.py::test_both_sides_take_the_cities_they_used_to_sprint_past
 # Whoever re-pins CAMPAIGN_SEED next should read those five first: three of them now assert the
 # LOSS, and a seed that holds the railhead will fail them in the good direction.
+#
+# *** AGAIN DELIBERATELY NOT RE-PINNED 2026-08-02, CAUSE [4.46] -- AND THIS TIME BECAUSE THE
+# DISTRIBUTION DID NOT MOVE. *** The Headquarters Close-Assault dash (data/unit_stats.json
+# _hq_dash_comment, tests/test_hq_close_assault.py) puts 74 of the campaign's 84 HQ counters into
+# [3.36]/[10.29]'s capture population, which moves every trajectory from Game-Turn 1. THREE tests
+# pinned to this seed go red on it, and all three were measured against a `git archive HEAD` control
+# tree before anything was concluded:
+#
+#     the faucet test's OWN four assertions pass on   18 of 24 seeds BEFORE
+#                                                     18 of 24 seeds AFTER
+#     3 pass->fail ({10, 11, 23}) against 3 fail->pass ({15, 18, 21}); mean Commonwealth truck
+#     moves 107.88 -> 108.33, late moves 14.71 -> 16.46, last move Game-Turn 18.79 -> 18.92.
+#
+#     the Commonwealth still holds Mersa Matruh at GT12 on   8 of 100 seeds BEFORE
+#                                                           17 of 100 seeds AFTER
+#     13 lost->held against 4 held->lost -- the CW distribution moves UP, not down. Mean combat
+#     units at GT12: Commonwealth 311.35 -> 311.24, Axis 215.76 -> 214.50. Seed 23 does NOT hold
+#     the railhead on EITHER tree.
+#
+# THAT IS SINGLE-SEED CHAOS EXACTLY AS THIS FILE DEFINES IT, and 23 has simply stopped being a lucky
+# seed the way 1941 did. Decomposed at seed 23, both trees, so the three reds are diagnosed and not
+# merely dismissed: eleven of eleven Compass turn-closes still put a Commonwealth combat unit
+# FORWARD of Mersa Matruh (unchanged) but none of them can fight there (11 -> 0); the lorry pool
+# runs 179 -> 51 moves and stops at Game-Turn 5 instead of 24; Sidi Barrani goes from BR-2SctGds to
+# the Italian Mechili garrison. One lost combat at the railhead and the spine goes idle behind it --
+# the cascade this note already names.
+#
+# NO RE-PIN IS ATTEMPTED AND THAT IS A DELIBERATE HANDOVER, NOT AN OVERSIGHT. The paragraph above
+# says a seed that HOLDS the railhead fails three of this constant's consumers "in the good
+# direction", so no single seed makes every CAMPAIGN_SEED test green -- the constant is
+# over-subscribed, which is a pre-existing structural fact about the fixture and not something this
+# three-cell data correction created or should silently settle. Weakening the three assertions was
+# the other option and is refused (rules of this port, 5): the capabilities they name are intact on
+# 18 of 24 seeds, so asserting less would enshrine one seed's luck. The three are:
+#     test_campaign_faucet.py::test_the_commonwealth_trucks_actually_run
+#     test_campaign_claim.py::test_both_sides_take_the_cities_they_used_to_sprint_past
+#     test_campaign_concentration.py::test_the_commonwealth_can_mount_a_supplied_offensive
+#
+# *** AND THE HANDOVER WAS TAKEN, 2026-08-03: THE THREE MOVED OFF THE CONSTANT ENTIRELY. *** They
+# are restated onto CAMPAIGN_PANEL below -- seeds 1..24, run whole -- so each asserts the CAPABILITY
+# IT IS NAMED FOR over a distribution instead of pinning it to one board. Nothing was re-pinned and
+# nothing was weakened:
+#
+#   * RE-PINNING WAS CONSIDERED AND REFUSED AS SHOPPING. The candidate list this note used to end
+#     with ({1, 2, 3, 4, 6, 7, 8, 12, 13, 14, 16, 17, 20, 22, 24}) is a list of seeds on which the
+#     evidence comes out the way the tests want, and choosing one is choosing the evidence: the very
+#     next rule change flips whichever is chosen, exactly as it flipped 1941, then 4, then 23. The
+#     defect this note has been naming for three re-pins is not the seed. It is that ONE constant
+#     serves consumers with contradictory requirements, and the fix for an over-subscribed fixture
+#     is to stop subscribing to it.
+#   * EVERY ASSERTION SURVIVED. Each claim that holds on all 24 seeds of BOTH trees is now asserted
+#     PER SEED -- checked twenty-four times where it used to be checked once. Each claim that is
+#     seed-luck (the ones that flip) is asserted as a COUNT over the panel against CAMPAIGN_FLOOR,
+#     with both trees' measurements written beside it in the test file so the headroom is visible.
+#     Not one check was dropped, and the two arms of every count are recorded, control first.
+#   * EACH IS TRIPWIRED. A panel test that only fails when a capability COLLAPSES is worth nothing
+#     unless that has been demonstrated, so each of the three was run against a scratch tree with
+#     its own capability neutered (the relay silenced after Game-Turn 3; the take-and-hold's moves
+#     suppressed; the forward concentration pointed back at the rear base) and shown to go red. The
+#     neuter and the resulting count are named in each test's docstring.
+#
+# CAMPAIGN_SEED IS NOT RETIRED. Twenty-nine other tests across five files still ride it, and for a
+# test that reads a POSITION rather than an OUTCOME -- what the railhead resolves to, where a depot
+# is staged, whether a policy constructs -- one deterministic board is the right and cheap
+# instrument. What is retired is using it to certify that an ARMY CAN DO SOMETHING.
 # --------------------------------------------------------------------------------------------------
 CAMPAIGN_SEED = 23
+
+# --------------------------------------------------------------------------------------------------
+# THE CAMPAIGN PANEL -- seeds 1..24, UNSHOPPED, and the unshoppedness is the whole point.
+#
+# A capability claim ("the Commonwealth lorry pool runs", "both armies take and hold cities", "the
+# offensive is supplied where it is fought") is a claim about what the campaign DOES, and the note
+# above is this project's own record of what happens when such a claim is pinned to one seed: it
+# survives until the next faithful rule lands, then it is re-pinned to a seed on which it still
+# holds -- 1941, then 4, then 23 -- and the re-pin is indistinguishable from choosing the evidence.
+#
+# 1..N, not a curated list, for the reason scripts/gate_c.py already gives at length: "a distribution
+# taken over a curated list of 'canonical' seeds is a distribution over seeds somebody once found
+# interesting". 1..24 is also a PREFIX of that driver's own 1..30 panel, so any row measured here is
+# literally one of its rows, and it is the panel the [4.46] entry above already swept -- which is why
+# the numbers in the three test files can be checked against it line for line.
+#
+# N = 24 IS A COST CHOICE AND IT IS STATED AS ONE. A panel test folds 24 campaigns; at the horizons
+# the three consumers use that is 4 + 14 + 17 minutes measured (faucet to GT12, concentration to
+# GT22, claim to GT30), three workers busy while the rest of the suite runs -- the whole suite
+# measures 41 minutes at `-n 8` with them in it. It was NOT chosen to make a number come out: the
+# panel was fixed before anything was measured, and no threshold below is derived from where the
+# panel's own count happened to land.
+#
+# CAMPAIGN_FLOOR IS HALF THE PANEL AND IS NOT DERIVED FROM THE MEASUREMENT. Deriving a threshold from
+# the number you just measured is re-pinning at panel scale -- it makes today's tree the definition
+# of correct and leaves no room for the next faithful rule to move anything. So the floor comes from
+# the CLAIM instead: "this is what the campaign normally does" means it must hold on more boards than
+# not. Every count assertion in the three consumers is written against this constant, every one of
+# them records what the control tree and this tree actually measure, and the headroom is therefore
+# on the page rather than in the threshold.
+# --------------------------------------------------------------------------------------------------
+CAMPAIGN_PANEL = tuple(range(1, 25))
+CAMPAIGN_FLOOR = len(CAMPAIGN_PANEL) // 2
 
 
 def signature(res) -> str:
