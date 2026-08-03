@@ -1302,20 +1302,29 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
     # them is sailing into a city the enemy now controls. They hand off automatically, in both
     # directions, for as many times as the fortress changes hands.
     #
-    # ⚠ FLAGGED (faucet-audit culprit 5): the AXIS half of this lane carries a FIXED MANIFEST, so its
-    # ~680 t a Game-Turn sails OUTSIDE the [56.5] allowance the other lane is billed against -- about
-    # 75,000 tons over the war, landing at the front rather than at the rear. [56.25] says the tonnage
-    # is one allowance the Axis Player apportions across the lanes he sails, so the faithful shape is
-    # to draw this lane's tonnage from the same [56.21] allowance and let him plan its manifest too.
-    # Left as it stands, and flagged rather than silently corrected, because it is implementation
-    # shape and not a contradiction: it is a lane the book gives him (56.11 lane 6, Italy -> Tobruk)
-    # sailing a tonnage his own harbour caps at 680 t/OpStage anyway.
+    # THE FLAG THAT STOOD HERE (faucet-audit culprit 5) IS NOW PAID IN BOTH HALVES. The AXIS half of
+    # this lane carries a FIXED MANIFEST, which took it around BOTH of chapter 56's gates on a
+    # sailing, because engine._convoy_planning only ever sees a convoy carrying a tonnage allowance
+    # (Convoy.tons > 0):
     #
-    # ONE HALF OF THAT FLAG IS NOW PAID. Sailing outside the [56.5] ALLOWANCE is implementation
-    # shape; sailing a commodity [56.22] does not license is a rule in the wrong -- and the fixed
-    # manifest was carrying Water out of EUROPE, because engine._convoy_planning's filter only ever
-    # sees convoys with tons > 0. _from_europe applies the same gate to the Axis manifest here. The
-    # tonnage half of the flag above stands unpaid, deliberately and separately.
+    #   * THE COMMODITY GATE. The manifest was carrying Water out of EUROPE -- ~9,300 Points over
+    #     the war -- which [56.22] does not license. _from_europe applies that gate to this manifest
+    #     too; the rule is the rule whichever door the manifest comes through.
+    #   * THE TONNAGE GATE, paid below in the Benghazi lane's loop. This lane's ~664 t a Game-Turn
+    #     (~73,700 t over GT1-111) sailed OUTSIDE the [56.5] allowance the Benghazi lane is billed
+    #     against. The old flag called that "implementation shape and not a contradiction"
+    #     and THAT WAS TOO GENEROUS: [56.0] says "Each convoy is given in tonnage", [56.12] defines
+    #     an Axis convoy AS "the total tonnage assigned to a Shipping Lane during a Game-Turn", and
+    #     [56.22] confines what is shipped to "within the limits of allowable tonnage". A lane-6
+    #     sailing with tons == 0 is not a convoy the book recognises; it is the absence of one with
+    #     cargo attached. Nothing in chapter 56 lets a supply lane sail outside the allowance --
+    #     [56.24], the only candidate exemption, is about Replacement Points and reinforcements
+    #     (people and units), and even it SUBTRACTS rather than exempts: 10 Infantry Points planned
+    #     into the Game-Turn 55 convoys "would subtract 300 tons from the available tonnage for
+    #     that Game-Turn".
+    #
+    # It is BILLED, not re-planned: the lane keeps the fixed manifest its own harbour sized for it
+    # (56.27), and the charge comes out of the Benghazi lane's share of the same allowance.
     convoys += [Convoy(f"tobruk-ferry-t{gt}", Side.ALLIED, gt, "SEA-TOBRUK", "AL-Tobruk",
                        _campaign_tobruk_cargo())     # T0-17: sized to the 55.3 harbour, not 3.5x it
                 for gt in range(1, max_turns + 1)]   # ...and UNFILTERED: 57.0 waters Cairo for free
@@ -1329,6 +1338,17 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
         # each at full Efficiency). The lane carries at most this; the balance of the allowance is
         # allocated to other lanes and ports (56.25), which this engine does not model.
         gt_capacity = _OPSTAGES_PER_GAME_TURN * port_tonnage_budget(_benghazi_port(rear))
+        # [56.12] THE OTHER LANE'S BILL. The fixed-manifest lane 6 above is "the total tonnage
+        # assigned to a Shipping Lane during a Game-Turn" just as much as this one is, so its
+        # manifest is crossed to tons at the [54.5] equivalencies -- the SAME filtered cargo it
+        # actually sails, not the unfiltered ferry's -- and charged to the Game-Turn's licence.
+        # Rounded UP, the direction the [56.5] table's own note rounds ("Round fractions upwards to
+        # the nearest 1,000 tons"): a part-ton of allowance is not a part-ton the Axis may ship.
+        # 141 Ammunition + 47 Fuel + 94 Stores = 564 + 5.875 + 94 = 663.875 t -> 664 t a Game-Turn,
+        # an order of magnitude under the [56.5] floor (row A on a die of 1 is 7,000 t), so what is
+        # left for Benghazi below is never negative.
+        lane_6_tons = math.ceil(sum(qty * TONS_PER_POINT[c]
+                                    for c, qty in _from_europe(_campaign_tobruk_cargo()).items()))
         for gt in range(1, max_turns + 1):
             # [56.21] THE ALLOWANCE IS PER GAME-TURN (the RANK-3 fix), and the engine used to quarter
             # it across a month -- shipping 507,000 tons of a licensed 1,550,000-2,544,000 (24.9%;
@@ -1343,14 +1363,16 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
             # [56.25] "The Axis Player then, at the same time, allocates his available tonnage to the
             # lanes -- and ports -- he wants them to use." The allowance is the licence for ALL six
             # [56.11] lanes together, not a manifest for this one. No player sails a harbour more
-            # than it can land in a Game-Turn, so Benghazi's lane carries min(allowance, its
-            # Game-Turn throughput) and the balance goes to the Tripoli/Bizerta lanes this engine
-            # does not model -- it is PLANNED AROUND, not sailed into a quay to be annihilated. This
-            # is why 41.6/44 convoy interdiction can once again reduce Axis LANDED supply: with the
-            # manifest sized to the quay rather than several times it, tonnage skimmed at sea is
-            # tonnage that never lands (before this, Malta's cut came off a surplus the quay would
-            # have expired anyway). See the repair note in scratchpad/port/faucet-audit.md.
-            tons = min(allowance, gt_capacity)
+            # than it can land in a Game-Turn, so Benghazi's lane carries min(what is left of the
+            # allowance once lane 6 is billed, its Game-Turn throughput) and the balance goes to the
+            # Tripoli/Bizerta lanes this engine does not model -- it is PLANNED AROUND, not sailed
+            # into a quay to be annihilated. This is why 41.6/44 convoy interdiction can once again
+            # reduce Axis LANDED supply: with the manifest sized to the quay rather than several
+            # times it, tonnage skimmed at sea is tonnage that never lands (before this, Malta's cut
+            # came off a surplus the quay would have expired anyway). See the repair note in
+            # scratchpad/port/faucet-audit.md.
+            remaining = allowance - lane_6_tons      # [56.25]: what is left to allocate, lane 6 paid
+            tons = min(remaining, gt_capacity)
             convoys.append(Convoy(f"axis-conv-t{gt}", Side.AXIS, gt, "3", rear.id, {},
                                   tons=tons))       # [56.11] lane 3, Italy -> Benghazi
     return tuple(convoys)

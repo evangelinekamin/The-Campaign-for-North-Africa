@@ -338,6 +338,11 @@ def test_every_game_turn_gets_its_own_56_5_allowance_and_benghazi_takes_its_shar
     lane = {c.arrival_turn: c for c in st.convoys if c.id.startswith("axis-conv-")}
     beng = next(p for p in st.ports if p.id == "PORT-Benghazi")
     gt_capacity = scenario._OPSTAGES_PER_GAME_TURN * supply.port_tonnage_budget(beng)   # 3 x 2,500
+    # ...and lane 6 is the OTHER convoy of the same Game-Turn (56.12), billed against the same
+    # licence at its manifest's own weight before Benghazi takes its share; see the test below.
+    lane_6 = math.ceil(sum(q * supply.TONS_PER_POINT[k] for k, q in
+                           next(c for c in st.convoys
+                                if c.lane == scenario._AXIS_TOBRUK_LANE).cargo.items()))
 
     def level(gt: int) -> str:
         year, month = calendar.gt_to_month(gt)
@@ -360,7 +365,12 @@ def test_every_game_turn_gets_its_own_56_5_allowance_and_benghazi_takes_its_shar
         lo = math.ceil((fixed + var * 1) / 1000) * 1000       # the die envelope of THIS Game-Turn's
         hi = math.ceil((fixed + var * 6) / 1000) * 1000       # 56.5 row -- a whole roll, not a quarter
         assert lo <= licence[gt] <= hi, (gt, level(gt), licence[gt])   # rank-3: the full licence
-        assert c.tons == min(licence[gt], gt_capacity)        # 56.25: Benghazi's share of it
+        # 56.25: Benghazi's share of what is LEFT of the licence. RESTATED, not weakened: this read
+        # `min(licence[gt], gt_capacity)` while lane 6 sailed 664 t a Game-Turn outside the
+        # allowance entirely, so it was the arithmetic of an unbilled convoy -- and 56.12 makes that
+        # sailing a convoy too. On the Game-Turns where the quay is the smaller number (the vast
+        # majority) the two readings are identical; where the licence is, the charge now shows.
+        assert c.tons == min(licence[gt] - lane_6, gt_capacity)
         assert c.tons <= gt_capacity                          # never more than the quay can land
     assert sum(licence.values()) >= 1_550_000                 # the licence's own die minimum
     # the clip BINDS -- the licence overruns one harbour's Game-Turn throughput in the vast majority
@@ -368,6 +378,54 @@ def test_every_game_turn_gets_its_own_56_5_allowance_and_benghazi_takes_its_shar
     # landed tonnage (flagged in engine._unload_convoys), and why the surplus goes to other ports
     assert any(c.tons == gt_capacity for c in lane.values())
     assert sum(c.tons for c in lane.values()) < sum(licence.values())
+
+
+def test_56_12_the_fixed_manifest_axis_lane_is_billed_against_the_same_allowance():
+    """THE TONNAGE HALF OF THE FIXED-MANIFEST FLAG -- the twin of the 56.22 test above, and the
+    other thing wrong with a convoy the Convoy Planning Phase never sees.
+
+        [56.0]  "Each convoy is given in tonnage, and the Axis allowable tonnage depends on the
+                 month, year, and roll of the die."
+        [56.12] "An Axis convoy is defined as the total tonnage assigned to a Shipping Lane during
+                 a Game-Turn."
+
+    (both read off the scan, PDF p.75 = book folio 24, cols. 1 and 2). A lane-6 sailing carrying
+    tons == 0 is therefore not a convoy the rulebook recognises -- it is the absence of one with
+    cargo attached. [56.25] gives the Axis Player ONE allowance to allocate "to the lanes -- and
+    ports -- he wants them to use", and [56.22] confines what he ships to "within the limits of
+    allowable tonnage". [56.24] prints the book's own arithmetic for a load decided outside the
+    planning beat: 10 Infantry Points planned into the Game-Turn 55 convoys "would subtract 300
+    tons from the available tonnage for that Game-Turn". Nothing in chapter 56 lets a SUPPLY lane
+    sail outside the allowance -- 56.24, the only candidate exemption, is about Replacement Points
+    and reinforcements, and even it subtracts rather than exempts.
+
+    Lane 6 sailed outside it for the whole war: 141 Ammunition + 47 Fuel + 94 Stores Points a
+    Game-Turn = 564 + 5.875 + 94 = 663.875 tons at the [54.5] equivalencies, ~73,700 tons over
+    GT1-111, none of it ever charged. It is billed here at its own manifest's weight -- BILLED, not
+    re-planned: the lane still sails the manifest the harbour sized for it (56.27), and what the
+    charge moves is the Benghazi lane, which now gets what is LEFT of the Game-Turn's licence."""
+    st = campaign(seed=1941)
+    lane3 = {c.arrival_turn: c for c in st.convoys if c.id.startswith("axis-conv-")}
+    lane6 = [c for c in st.convoys if c.lane == scenario._AXIS_TOBRUK_LANE]
+    assert len({tuple(sorted(c.cargo.items())) for c in lane6}) == 1, "one fixed manifest, all war"
+    charge = math.ceil(sum(q * supply.TONS_PER_POINT[k] for k, q in lane6[0].cargo.items()))
+    assert charge == 664                                  # 663.875 t, rounded toward the limit
+
+    rng = random.Random(1941)                             # replay the scenario's own convoy rng
+    licence = {gt: t for gt in range(1, st.max_turns + 1)
+               if (t := scenario._campaign_axis_tonnage(gt, rng)) is not None}
+    beng = next(p for p in st.ports if p.id == "PORT-Benghazi")
+    gt_capacity = scenario._OPSTAGES_PER_GAME_TURN * supply.port_tonnage_budget(beng)
+
+    for gt, c in lane3.items():                           # 56.12: BOTH lanes are assigned tonnage,
+        assert c.tons + charge <= licence[gt]             # and one Game-Turn's licence covers both
+
+    # AND IT BINDS, on exactly the Game-Turns where the licence -- not the quay -- is the wall: the
+    # [56.4] level-A months (6,000 + 1,000 x die) on a die of 1 or 2. Everywhere else Benghazi's own
+    # 3 x 2,500 t throughput is the smaller number and the charge costs the Axis nothing at all.
+    squeezed = {gt: (licence[gt], c.tons) for gt, c in lane3.items()
+                if c.tons < min(licence[gt], gt_capacity)}
+    assert squeezed == {61: (7000, 6336), 62: (8000, 7336), 99: (8000, 7336)}
 
 
 # --- end to end ------------------------------------------------------------------------------------
