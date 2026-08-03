@@ -173,6 +173,58 @@ def test_56_22_water_is_not_a_convoy_commodity():
     assert supply.WATER not in p["tons_by"]
 
 
+def test_56_22_binds_the_FIXED_MANIFEST_axis_lane_too():
+    """THE OTHER DOOR INTO 56.22, and the one the rule was walking straight past.
+
+    _convoy_planning applies the CONVOY_COMMODITIES filter (engine.py, "56.22: the three, and no
+    other") only to convoys with tons > 0. Convoy.tons defaults to 0, so the campaign's
+    fixed-manifest Axis lane 6 (Italy -> Tobruk, scenario._campaign_tobruk_cargo) never entered the
+    planning beat at all -- and sailed 94 Water Points a Game-Turn out of EUROPE, ~9,300 over the
+    war. The gate is the rule, not the code path it happens to be written in: 56.22 licenses the
+    Axis Player to ship "fuel, ammunition, and stores" and names no fourth thing, whatever shape
+    the manifest arrives in.
+
+    MEASURED, THE REPAIR IS INERT (and is recorded as inert rather than credited with a swing):
+    Axis water drunk, per-class thirst, 52.53 losses and the 64.76 verdict are identical on seeds
+    1/4/7/1941, because 77% of that water evaporated unused and the rest was drawn at Tobruk, on
+    whose hex an unlimited [52.7] Major-City well already stood. See scenario._from_europe.
+
+    The other three are UNTOUCHED -- not renormalised back up to the harbour budget. 56.27 caps a
+    lane OVER capacity, never floors one under it, so the lane simply sails 2.3% lighter."""
+    st = campaign(max_turns=6)
+    axis = [c for c in st.convoys if c.lane == scenario._AXIS_TOBRUK_LANE]
+    assert len(axis) == 6
+    manifest = scenario._campaign_tobruk_cargo()          # the shared, unfiltered helper
+    assert manifest[supply.WATER] > 0                     # ...which still carries water, for the ferry
+    for c in axis:
+        assert supply.WATER not in c.cargo                # 56.22: no water sails from Europe
+        assert set(c.cargo) == set(supply.CONVOY_COMMODITIES)
+        for k in supply.CONVOY_COMMODITIES:               # ...and the three are not renormalised up
+            assert c.cargo[k] == manifest[k]
+
+
+def test_the_commonwealth_tobruk_ferry_still_carries_water():
+    """THE ASYMMETRY IS THE BOOK'S, and it must survive the fix above.
+
+    56.22 is an AXIS rule about the run from EUROPE. The Commonwealth ferry is neither: it is
+    coastal shipping between two African ports it already holds, out of a base the book fills with
+    water for free --
+
+        [57.0] "The Commonwealth Player has an unlimited amount of supplies of all types -- fuel,
+               ammunition, water, and stores -- in Cairo at all times during the game. His problem
+               is solely to get it to where he wants it."  (PDF p.76 = folio 25, read off the scan)
+
+    -- so Alexandria -> Tobruk may carry all four. Filtering the ferry would invent a shortage the
+    rulebook explicitly denies."""
+    st = campaign(max_turns=6)
+    ferry = [c for c in st.convoys if c.lane == "SEA-TOBRUK"]
+    assert len(ferry) == 6
+    manifest = scenario._campaign_tobruk_cargo()
+    for c in ferry:
+        assert c.cargo == manifest                        # all four, exactly the shared manifest
+        assert c.cargo[supply.WATER] > 0
+
+
 def test_a_nonsensical_plan_is_refused_rather_than_trusted():
     """Negative tonnages, unknown commodities and zeroes are all dropped at the boundary. This is
     the same order-rejection surface game.llm's adversarial MockClient exercises everywhere else."""

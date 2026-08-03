@@ -1519,9 +1519,9 @@ Die = The die roll; modified as listed below. % Supplies = Percentage of all sup
 
 MAXIMUM TRANSPORT CAPACITY
 
-| Truck Type | CPA |  |  | TOE Strength Points |  |  | Supply Points |  |  | Fuel Capacity | Fuel Consumption Factor |  | BAR |
+| Truck Type | CPA |  |  | TOE Strength Points |  |  | Supply Points |  |  |  | Fuel Capacity | Fuel Consumption Factor | BAR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Truck Type | Inf | Guns | Supplies* | Inf | Arty | AA | Ammo | Fuel | Stores | Fuel Capacity | Water |  | BAR |
+| Truck Type | Inf | Guns | Supplies* | Inf | Arty | AA | Ammo | Fuel | Stores | Water |  |  |  |
 | Light | 25 | na | 40 | 1/2 † | na | 1 | 2 | 50 | 6 | 40 | 8 | 1 | 2L‡ |
 | Medium | 20 | 15 | 30 | 1 | 1 | 2 | 4 | 120 | 15 | 100 | 6 | 1 | 2L |
 | Heavy | 20 | 15 | 30 | 2 | 1 | 4 | 8 | 250 | 30 | 200 | 6 | 1 | 2L |

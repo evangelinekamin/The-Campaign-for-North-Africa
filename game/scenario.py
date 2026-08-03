@@ -26,8 +26,8 @@ from .hexmap import Coord, distance, neighbors
 from .movement import TerrainMap, edge
 from .state import (AirMission, AirWing, CoastalShip, Convoy, GameState, InterdictionOrder,
                     Port, RommelArrival, StepRecord, SupplyUnit, TruckFormation, Unit, VP)
-from .supply import (COMMODITIES, TONS_PER_POINT, _UNLIMITED, port_tonnage_budget,
-                     rail_stage_load)
+from .supply import (COMMODITIES, CONVOY_COMMODITIES, TONS_PER_POINT, _UNLIMITED,
+                     port_tonnage_budget, rail_stage_load)
 from .terrain import Hexside, Mobility, Terrain
 
 LENGTH = 8
@@ -390,6 +390,51 @@ def _campaign_tobruk_cargo() -> dict:
     budget = port_tonnage_budget(_tobruk_port(Side.AXIS, coords.to_axial(coords.parse(_TOBRUK))))
     frac = budget / base_tons
     return {c: max(1, math.floor(base[c] * frac)) for c in base}
+
+
+def _from_europe(cargo: dict) -> dict:
+    """[56.22] THE MANIFEST GATE ON THE RUN FROM EUROPE -- fuel, ammunition and stores, and no
+    fourth thing. Verbatim off the scan (PDF p.75 = book folio 24, col. 3):
+
+        "[56.22] Having determined the allowable tonnage for a given Game-Turn, the Axis Player may
+         now plan to ship any amounts (within the limits of allowable tonnage) of fuel, ammunition,
+         and stores that he wishes. They are available (for game purposes) in unlimited quantities
+         in Europe."
+
+    engine._convoy_planning re-validates a PLANNED manifest against supply.CONVOY_COMMODITIES, but
+    it only plans convoys carrying a tonnage allowance (Convoy.tons > 0). A convoy built with a
+    FIXED manifest has tons == 0, sails around that beat entirely, and so shipped Water out of
+    Europe unchallenged: 9,310 / 8,570 / 9,379 / 9,302 Water Points over the war on seeds
+    1/4/7/1941 -- a volume equal to about a quarter of everything the Axis drank, and the only
+    Water that ever reached an Axis dump by sea. The rule is the rule whichever door the manifest
+    comes through, so the gate is applied here too.
+
+    AND IT WAS INERT, WHICH IS WHY IT SURVIVED SO LONG. Removing it moves NOTHING: Axis Water
+    consumed, per-class thirst, the 52.53 step losses and the 64.76 verdict are identical to the
+    Point on all four seeds; only the event log changes. The ledger closes exactly and says why --
+    of seed 1's 9,310 Points, 7,139 EVAPORATED unused (49.3/29.34, from which a dump is not exempt),
+    801 were still standing at the fall of the curtain, and the 1,370 actually drunk were drawn at
+    Tobruk, where AX-Well-Tobruk stands on the very same hex holding an inexhaustible [52.7] supply:
+    "Note that a Player may draw an unlimited number of Water Points from an Oasis or Major City,
+    which never deplete." With the convoy Water gone the same units drink the same Points from the
+    well instead (its draw goes 11 -> 1,380). So this is a faithfulness repair with no balance
+    consequence, and it should be recorded as one rather than credited with a swing it did not make.
+
+    THE THREE ARE LEFT EXACTLY AS THEY WERE. Water is 15.67 t of this lane's 679.54 t (2.3%); the
+    lane simply sails 663.9 t. [56.27] caps a lane shipping OVER a harbour's capacity and says
+    nothing about one sailing under it, so renormalising the remainder back up to the budget would
+    be inventing tonnage to replace tonnage the book never granted.
+
+    NOT APPLIED TO THE COMMONWEALTH. 56.22 is an Axis rule about the run from EUROPE, and the
+    Commonwealth ferry is neither Axis nor from Europe -- it is coastal shipping between two African
+    ports, out of a base the book fills with water for free:
+
+        "[57.0] The Commonwealth Player has an unlimited amount of supplies of all types -- fuel,
+         ammunition, water, and stores -- in Cairo at all times during the game. His problem is
+         solely to get it to where he wants it."   (PDF p.76 = folio 25, col. 1)
+
+    The asymmetry is the book's own. Filtering the ferry would invent a shortage 57.0 denies."""
+    return {c: q for c, q in cargo.items() if c in CONVOY_COMMODITIES}
 
 
 def _caps_tonnage(tons: int) -> dict:
@@ -1265,11 +1310,17 @@ def _campaign_convoys(supplies, target, max_turns: int, seed: int) -> tuple[Conv
     # Left as it stands, and flagged rather than silently corrected, because it is implementation
     # shape and not a contradiction: it is a lane the book gives him (56.11 lane 6, Italy -> Tobruk)
     # sailing a tonnage his own harbour caps at 680 t/OpStage anyway.
+    #
+    # ONE HALF OF THAT FLAG IS NOW PAID. Sailing outside the [56.5] ALLOWANCE is implementation
+    # shape; sailing a commodity [56.22] does not license is a rule in the wrong -- and the fixed
+    # manifest was carrying Water out of EUROPE, because engine._convoy_planning's filter only ever
+    # sees convoys with tons > 0. _from_europe applies the same gate to the Axis manifest here. The
+    # tonnage half of the flag above stands unpaid, deliberately and separately.
     convoys += [Convoy(f"tobruk-ferry-t{gt}", Side.ALLIED, gt, "SEA-TOBRUK", "AL-Tobruk",
                        _campaign_tobruk_cargo())     # T0-17: sized to the 55.3 harbour, not 3.5x it
-                for gt in range(1, max_turns + 1)]
+                for gt in range(1, max_turns + 1)]   # ...and UNFILTERED: 57.0 waters Cairo for free
     convoys += [Convoy(f"tobruk-axis-t{gt}", Side.AXIS, gt, _AXIS_TOBRUK_LANE, "AX-Stage-Tobruk",
-                       _campaign_tobruk_cargo())     # T0-17: sized to the 55.3 harbour, not 3.5x it
+                       _from_europe(_campaign_tobruk_cargo()))       # [56.22]: no Water from Europe
                 for gt in range(1, max_turns + 1)]
     rear = _axis_rear(supplies, target)
     if rear is not None:

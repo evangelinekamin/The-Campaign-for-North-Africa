@@ -53,6 +53,7 @@ from game.policy import ScriptedPolicy                                   # noqa:
 from game.scenario import (_AXIS_TOBRUK_LANE, campaign,                  # noqa: E402
                            rommels_arrival, siege_of_tobruk)
 from game.state import AirMission                                        # noqa: E402
+import game.supply as supply                                            # noqa: E402
 from game.supply import port_tonnage_budget                             # noqa: E402
 from baselines import ROMMELS_ARRIVAL, SIEGE_OF_TOBRUK              # noqa: E402
 
@@ -106,7 +107,16 @@ def test_both_sides_have_a_tobruk_sea_lane():
     assert {c.side for c in ferry} == {Side.ALLIED} and {c.dest for c in ferry} == {AL_DUMP}
     assert {c.side for c in axis} == {Side.AXIS} and {c.dest for c in axis} == {AX_DUMP}
     assert st.supply(AX_DUMP).hex == st.supply(AL_DUMP).hex == TOBRUK   # both dumps ON the city
-    assert [c.cargo for c in ferry][0] == [c.cargo for c in axis][0]    # the same Supply-Unit load
+    # RESTATED (WAS: the two manifests are byte-equal). They are the same Supply-Unit load in the
+    # three commodities BOTH lanes may carry, and they differ in the fourth, because the rulebook
+    # makes them different runs. The Axis half is [56.22]'s run from EUROPE -- "fuel, ammunition,
+    # and stores", no fourth thing -- while the ferry is coastal shipping out of a Cairo that [57.0]
+    # keeps stocked with "fuel, ammunition, water, and stores" for nothing. Equality here was the
+    # assertion that let 94 Water Points a Game-Turn sail from Italy; see scenario._from_europe.
+    for c in supply.CONVOY_COMMODITIES:
+        assert ferry[0].cargo[c] == axis[0].cargo[c]      # the same load in the shippable three
+    assert ferry[0].cargo[supply.WATER] > 0               # 57.0: Cairo waters the ferry for free
+    assert supply.WATER not in axis[0].cargo              # 56.22: Europe ships the Axis none
 
 
 def test_5615_hands_the_harbour_over_in_both_directions():
