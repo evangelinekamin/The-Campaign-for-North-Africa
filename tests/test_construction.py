@@ -258,6 +258,41 @@ def test_a_unit_involved_in_construction_may_not_move_that_opstage():
     assert res.final.unit("NZ10").hex == LINE[0]
 
 
+def test_24_12_the_pin_expires_by_itself_at_the_operations_stage_boundary():
+    """[48 V.C.4.b] pins the worker "during the remainder of the CURRENT Operations Stage" -- and
+    the stage ends. The ledger holding that pin must therefore be reborn empty at the boundary BY
+    ITSELF, on its own (turn, stage) stamp, not by a line inside engine.run()'s
+    `for stage in (1, 2, 3)` loop: every OTHER caller -- a test, a measurement driver, one of
+    run()'s own Game-Turn-level beats -- reads a loop-cleared ledger as stale, which is how the
+    identical shape shipped a live bug twice (the [55.3] harbour ledger 024d042, the [52.42] water
+    ledger 49b00f2) before engine._OpStageLedger existed.
+
+    So: ONE _Run, the Construction Segment run by hand in Stage 1, STAGE_ADVANCED, and then a
+    Movement Phase in Stage 2 with NO construction ordered. Against the loop-cleared shape the
+    engineer is still booked on a project it is no longer working and is pinned to that hex for
+    the rest of the game."""
+    from game.engine import _construction, _movement, _Run
+    # Fuel in the railhead dump, unlike the test above: there the 24.12 gate is the FIRST thing the
+    # move meets and nothing behind it is ever reached, so an unfuelled march would be refused in
+    # Stage 2 for the wrong reason and this test would pass on a broken ledger.
+    dump = SupplyUnit("AL-D", Side.ALLIED, LINE[0], ammo=0, fuel=500, stores=50, constructed=True)
+    pair = [_unit("NZ10", Side.ALLIED, LINE[0], engineer=construction.RAIL),
+            _unit("NZ13", Side.ALLIED, LINE[0], engineer=construction.RAIL)]
+    build = _Build([BuildOrder(construction.RAIL, LINE[1], ("NZ10", "NZ13"))],
+                   moves=[MoveOrder("NZ10", OFF)])
+    march = _Build(moves=[MoveOrder("NZ10", OFF)])         # Stage 2: marching orders and nothing else
+    r = _Run(_state(pair, [dump]))
+    _construction(r, build, Side.ALLIED)                   # Stage 1: booked on the railhead
+    _movement(r, {Side.ALLIED: build, Side.AXIS: build}, Side.ALLIED)
+    assert r.state.unit("NZ10").hex == LINE[0]             # 24.12 pinned it, as the test above pins
+    r.emit(EventKind.STAGE_ADVANCED, Side.SYSTEM, "SYSTEM", {"stage": 2})
+    _movement(r, {Side.ALLIED: march, Side.AXIS: march}, Side.ALLIED)
+    assert r.state.unit("NZ10").hex == OFF, \
+        "the pin lasts one Operations Stage; a new stage frees a unit that is building nothing"
+    assert not [e for e in r.events if e.kind == EventKind.ORDER_REJECTED
+                and "24.12" in e.payload.get("reason", "") and e.stage == 2]
+
+
 def test_an_engineer_never_enters_an_enemy_controlled_hex():
     """[23.11] "Engineer units may NEVER enter Enemy-controlled hexes voluntarily." They are not
     combat units "in any way, shape, or form" -- no combat value, no Zone of Control."""

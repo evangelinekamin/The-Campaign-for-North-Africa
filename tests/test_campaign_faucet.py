@@ -44,7 +44,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from game import coords, relay, supply                                   # noqa: E402
 from game.apply import apply, fold                                       # noqa: E402
-from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy  # noqa: E402
+from game.campaign_policy import (CampaignAxisPolicy,                    # noqa: E402
+                                  CampaignCommonwealthPolicy, railhead)
 from game.campaign_victory import CampaignVictory                        # noqa: E402
 from game.engine import _convoy_dest, determinism_signature, run         # noqa: E402
 from game.events import Control, Side                                    # noqa: E402
@@ -571,15 +572,42 @@ def test_the_commonwealth_trucks_actually_run():
     # dead end was a different hex from the other three's. Whichever hex any of them stops at, the
     # partition above now requires the relay to have abandoned it, which is the same claim without
     # the coordinates.)
+    # *** RESTATED 2026-08-02, CAUSE [10.29], AND THE SNAPSHOT IS RETIRED FOR A SPAN. *** Both
+    # halves of (A) were read off the GT24 SNAPSHOT -- where each lorry happens to be standing when
+    # the clock stops -- which is the same fragile single-reading this file has already had to
+    # abandon twice ("asked of the DELIVERIES, not of the counter's end-of-turn integer"). It only
+    # ever looked robust because the pre-10.29 board parked its lorries ON the railhead and left
+    # them there. engine._capture_noncombat costs this seed Mersa Matruh at Game-Turn 3 (the trace
+    # is in test_campaign_concentration.py::test_the_railhead_is_held_and_the_faucet_keeps_running's
+    # own 2026-08-02 note), the line RETRACTS to AL-Alexandria, and the pool -- which is running
+    # HARDER than before, 179 moves to GT24 against the old 237 spread over fewer lorries, with
+    # three still moving in the last quarter against the old zero -- is caught MID-CYCLE at 0, 3, 9,
+    # 14, 19, 36 and 45 hexes from Cairo instead of parked at 59.
+    #
+    # A lorry on its way home to load is not a lorry that "drove to Cairo once and idled there", so
+    # the claim is asked of the RUN: every lorry the relay still has work for must have REACHED THE
+    # LINE at some point -- its own furthest hop, against the station the trains actually run to
+    # (campaign_policy.railhead, this project's one definition of the railhead, which retracts with
+    # the line instead of staying pinned to a hex the enemy has taken). MEASURED, and this is what
+    # makes it a restatement rather than a retreat: SIX of the seven freight lorries reach Mersa
+    # Matruh's own distance or beyond on BOTH trees, identically, and the seventh (AL-Truck-Alex-M,
+    # peak 27) is the 2026-07-26 _step_toward livelock, abandoned by the relay on both. The old
+    # snapshot form could not see any of that. It is strictly stronger besides: a lorry that drove
+    # out once and idled at the base never reaches the line at all, and now fails.
+    peak = {}
+    for e in moves:
+        tid = e.payload["truck_id"]
+        peak[tid] = max(peak.get(tid, 0), distance(tuple(e.payload["to"]), CAIRO))
+    line_d = distance(railhead(res.final).hex, CAIRO)       # 54.3: where the trains actually reach
     freight = [t for t in res.final.trucks if t.side == Side.ALLIED and t.line != 1]
-    forward = [t for t in freight if distance(t.hex, CAIRO) >= distance(MATRUH, CAIRO)]
-    assert forward, "the whole freight pool idled back at the base -- not one lorry is at the railhead"
+    forward = [t for t in freight if peak.get(t.id, 0) >= line_d]
+    assert forward, "the whole freight pool idled back at the base -- not one lorry ever reached the line"
     for t in freight:
         if t not in forward:
             assert t.id not in ordered, \
-                f"{t.id} idled back at the base ({t.hex}, {distance(t.hex, CAIRO)} from Cairo " \
-                f"against the railhead's {distance(MATRUH, CAIRO)}) and the relay still has work " \
-                f"for it -- that is not the known _step_toward dead end: re-diagnose"
+                f"{t.id} never got further than {peak.get(t.id, 0)} hexes from Cairo against the " \
+                f"line's {line_d}, and the relay still has work for it -- that is not the known " \
+                f"_step_toward dead end: re-diagnose"
 
     air_pool = [t for t in res.final.trucks if t.side == Side.ALLIED and t.line == 1]
     larders = {s.hex for s in res.final.supplies if s.air_dump and s.side == Side.ALLIED}

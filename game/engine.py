@@ -93,6 +93,16 @@ class _OpStageLedger:
     of all inside run() itself, where _replacement_spend charges [19.68]'s rebuild BEFORE the stage
     loop and so read the previous Game-Turn's Operations Stage 3 ledger (fixed 49b00f2).
 
+    DO NOT PUT A PER-OPERATIONS-STAGE RESET IN run()'s STAGE LOOP. Three more ledgers were built
+    that way and each carried the same latent bug for every caller that drives the stages itself:
+    a harbour bombed in one stage NEVER REGENERATED ([55.18] ports_bombed_this_stage), a
+    fortification could be battered once per WAR rather than once per stage ([41.37]
+    forts_bombed_this_stage), and an engineer booked on a project stayed pinned to its hex forever
+    ([24.12] building). All three are _OpStageLedgers now, all three had that failure pinned by a
+    test first, and converting them moved no signature on any of eight measured boards -- the six
+    pinned in tests/baselines.py plus two purpose-built ones that write the fort and building
+    ledgers. There is no reset line left in run() to copy.
+
     WHY SELF-EXPIRY BEATS A RESET. A reset is read a long way from where the loop lives, so every
     caller that drives the Operations Stages itself -- a test, a measurement driver, or one of
     run()'s own Game-Turn-level beats -- silently inherits a stale or spent ledger, and silence is
@@ -176,16 +186,17 @@ class _Run:
         # against the same works may not open again. [12.5] carries no such sentence, so the
         # artillery channel is deliberately NOT capped here -- flagged, because the alternative
         # reading (one level per fortification per stage from all causes) is available and the book
-        # does not settle it. Cleared at the OpStage boundary beside ports_bombed_this_stage.
-        self.forts_bombed_this_stage: set[Coord] = set()
+        # does not settle it. An _OpStageLedger, so a caller that drives the stages itself does not
+        # inherit a spent cap and find the works unbatterable for the rest of the war.
+        self.forts_bombed_this_stage = _OpStageLedger(self, set)
         # [24.12] The units BOOKED on a construction project this Operations Stage. "Units involved
         # in construction may not expend any Capability Points during an Operations Stage; otherwise
         # that construction is halted" (24.12), and 48 V.C.4.b: they "may not be moved (voluntarily)
         # during the remainder of the current Operations Stage". _movement drops their orders, so the
-        # pin is structural rather than a penalty applied after the fact. Cleared at the OpStage
-        # boundary, like the 15.81 Engaged marker -- and empty for every scenario that never builds,
+        # pin is structural rather than a penalty applied after the fact. An _OpStageLedger, so the
+        # pin expires with the stage it was taken in -- empty for every scenario that never builds,
         # which is what keeps them byte-identical.
-        self.building: set[str] = set()
+        self.building = _OpStageLedger(self, set)
         # [52.42] The vehicle/truck counters whose Water Point has been SETTLED this Operations
         # Stage -- paid, or attempted and refused. "Each TOE Strength Point of Vehicle... requires
         # one Water Point each Operations Stage, if it uses any of its CPA": one bill per stage,
@@ -201,8 +212,9 @@ class _Run:
         # [55.18] the ports that lost one or more Efficiency Levels to Enemy bombs THIS
         # Operations Stage (populated by _air_port). A port in this set does not regenerate at
         # the end of the stage; one that was left alone (or only rolled a [41.5] result of 0)
-        # does. Cleared at the OpStage boundary, so an unbombed stage always regenerates.
-        self.ports_bombed_this_stage: set[str] = set()
+        # does. An _OpStageLedger, so an unbombed stage always regenerates -- for run() and for
+        # every caller that drives the Operations Stages itself alike.
+        self.ports_bombed_this_stage = _OpStageLedger(self, set)
         # [55.3] THE HARBOUR THROTTLE'S LEDGER: tons already shipped through each port THIS
         # Operations Stage, port id -> tons. The [55.3] chart legend makes this ONE number per
         # port covering BOTH directions -- "Maximum Tonnage: The total tonnage of supplies that
@@ -345,21 +357,9 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                                                         # the CW QM rebuilds depleted infantry from it
         _stores_setup(r)                                # 48 IV: Stores Expenditure + 6% base evaporation
         for stage in (1, 2, 3):
-            r.ports_bombed_this_stage = set()            # 55.18: this stage's bomb ledger starts empty
-                                                         # DO NOT ADD A RESET HERE. A per-Operations-Stage
-                                                         # ledger belongs in an _OpStageLedger, which
-                                                         # expires on its own (turn, stage) stamp -- the
-                                                         # 55.3 port tonnage budget (_port_tons), the
-                                                         # 52.42 Water bill (_water_billed) and the
-                                                         # 54.33/54.35/54.43 rail ledger (_Run.rail_stage)
-                                                         # all do, two of them only after a reset on this
-                                                         # line had handed a stale or spent ledger to a
-                                                         # caller that drove the stages itself. See
-                                                         # _OpStageLedger for both incidents. The two
-                                                         # bomb ledgers here are the shape that class
-                                                         # replaces, left alone only because moving them
-                                                         # is a behaviour change and not a refactor.
-            r.forts_bombed_this_stage = set()            # 41.37: one level of fortification per stage
+            # DO NOT ADD A PER-OPERATIONS-STAGE RESET HERE. Every such ledger is an
+            # _OpStageLedger and expires on its own (turn, stage) stamp; see that class for the
+            # three incidents this line caused. There is nothing left on it to reset.
             _rommel_arrival(r, stage)                    # 64.2: the Desert Fox lands (GT26.3) -- BEFORE the anchor
             _rommel_anchor(r)                            # 31.4: snapshot who he starts THIS stage with
             first, second = _declare_ab(r, policies, stage)   # 5.2.III.A / 7.11: the A/B activation order
@@ -395,6 +395,8 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                                                         # them ("blown in any segment of an OpStage")
                 _movement(r, policies, side)            # segment 0 (ungated); Reaction (8.5) rides inside
                 _capture_dumps(r)                       # 32.13: a dump entered by the enemy changes hands
+                _capture_noncombat(r, side)             # 10.29: and a strengthless non-combat counter
+                                                        # left alone in his ZOC changes hands too
                 _rommel_move(r, policies[side], side)   # 31.1: the leader repositions (Axis only, self-guarded)
                 _breakdown(r, side)                     # 21.24: check vehicles that ceased moving
                 _supply_movement(r, policies[side], side)   # supply follows the army (32.3)
@@ -402,10 +404,13 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
                 r.go(Phase.COMBAT, side)
                 _combat(r, policies, side)
                 _capture_dumps(r)                       # 32.13: retreats and advances-after-combat too
+                _capture_noncombat(r, side)             # 10.29: "at any time during the Enemy
+                                                        # Movement/Combat Phase" -- retreats included
                 _breakdown(r, _other(side))             # 21.22: the enemy's retreats accrued BP too
                 _repair(r, side)                        # 22.12: the phasing side's Repair Phase
                 _continual_movement(r, policies, side)  # 8.2/8.23 + 18.13: the exploitation pulse loop
                 _capture_dumps(r)                       # 32.13: and the exploitation pulse
+                _capture_noncombat(r, side)             # 10.29: and the exploitation pulse
             for side in (first, second):
                 _axis_rail(r, policies[side], side)       # 54.43: "Rail movement occurs in the
                                                          # Convoy Stage" -- and BEFORE the lorries,
@@ -437,7 +442,6 @@ def run(initial: GameState, axis: Policy, allied: Policy) -> RunResult:
             else:                                       # a new game-turn re-opens at Operations Stage 1
                 _defer_crowded_reinforcements(r, r.state.turn + 1)   # rule 20: wait for stacking room
                 r.emit(EventKind.TURN_ADVANCED, Side.SYSTEM, "SYSTEM", {"turn": r.state.turn + 1})
-            r.building.clear()                          # 24.12: the pin lasts one Operations Stage
 
     return RunResult(r.initial, r.events, r.state, winner, reason)
 
@@ -1941,7 +1945,7 @@ def _port_regen(r: _Run) -> None:
     event for a port at its ceiling or bombed this stage, so a port-less or unbombed-at-ceiling
     scenario stays byte-identical."""
     for p in sorted(r.state.ports, key=lambda p: p.id):
-        if p.id in r.ports_bombed_this_stage:           # 55.18: lost levels to bombs this stage -- no regen
+        if p.id in r.ports_bombed_this_stage.current:   # 55.18: lost levels to bombs this stage -- no regen
             continue
         level = supply.regen_eff(p)
         if level is not None:
@@ -3100,7 +3104,7 @@ def _air_fort(r: _Run, side: Side, tgt: Coord, fuel) -> None:
         return
     if r.state.fort_level(tgt) <= 0:                     # 39.11: flown blind, and nothing there
         return
-    if tgt in r.forts_bombed_this_stage:                 # 41.37: one level per Operations Stage
+    if tgt in r.forts_bombed_this_stage.current:         # 41.37: one level per Operations Stage
         return
     d1, d2 = r.d6("air_bombard"), r.d6("air_bombard")    # 41.22: two dice, read sequentially
     reduced = fortifications.reduced_by_bombing(strength, d1, d2)
@@ -3110,7 +3114,7 @@ def _air_fort(r: _Run, side: Side, tgt: Coord, fuel) -> None:
            rng_draws=(d1, d2))
     if reduced <= 0:                                     # No Effect: the works stood
         return
-    r.forts_bombed_this_stage.add(tgt)
+    r.forts_bombed_this_stage.current.add(tgt)
     r.emit(EventKind.FORT_REDUCED, side, actor,
            {"hex": list(tgt), "level": r.state.fort_level(tgt) - reduced, "strength": strength})
 
@@ -3152,7 +3156,7 @@ def _air_port(r: _Run, side: Side, port_id: str, fuel) -> None:
            {"arena": "PORT", "target": port.id, "strength": strength,
             "levels": levels, "eff": new_eff}, rng_draws=(d1, d2))
     if levels > 0:                                        # a No-Effect (0) leaves the port free to regen
-        r.ports_bombed_this_stage.add(port.id)           # 55.18: lost levels to bombs this stage
+        r.ports_bombed_this_stage.current.add(port.id)   # 55.18: lost levels to bombs this stage
         r.emit(EventKind.PORT_EFFICIENCY_CHANGED, side, f"{side.value}/Air",
                {"port_id": port.id, "level": new_eff, "strength": strength})
 
@@ -3796,7 +3800,7 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
         if u.reserve == 2:                              # 18.22: Reserve II never moves
             _reject(r, side, actor, order, "Reserve II units may not move (18.22)")
             continue
-        if u.id in r.building:                          # 24.12 / 48 V.C.4.b: a unit booked on a
+        if u.id in r.building.current:                  # 24.12 / 48 V.C.4.b: a unit booked on a
             _reject(r, side, actor, order,              # construction project this Operations Stage
                     "involved in construction: may not move or spend CP this OpStage (24.12)")
             continue
@@ -4997,6 +5001,85 @@ def _capture_dumps(r: _Run) -> None:
                 "lost": lost})
 
 
+def _has_no_strength(u) -> bool:
+    """[10.29] "it has no strength of any type" -- every one of the counter's four printed Land
+    combat ratings ([11.1]: Close Assault offensive and defensive, Barrage, Anti-Armor) is zero.
+    Read literally, which is also the narrowest reading: a counter printing any rating at all,
+    even a parenthesized one, keeps its hex and must be Close Assaulted out of it."""
+    return not (u.oca or u.dca or u.barrage or u.anti_armor)
+
+
+def _capture_noncombat(r: _Run, side: Side) -> None:
+    """[10.29] "...no non-combat unit (i.e., bare HQ's, Engineers, Air Squadron Ground Support
+    Units, etc.) may ever enter an unoccupied hex in an enemy ZOC voluntarily. If such a unit is
+    alone in an Enemy ZOC at any time during the Enemy Movement/Combat Phase and it has no strength
+    of any type, such Friendly non-combat unit is Captured." (PDF p.18 = folio 18, read off the
+    scan.) `side` is the PHASING player -- the enemy whose Movement/Combat Phase this is -- so what
+    is at risk here is the OTHER side's counters.
+
+    THE HOLE THIS CLOSES was a hex that could be neither entered nor flipped. [8.13] bars entry into
+    a hex containing ANY enemy unit ("A unit may never enter a hex containing an enemy unit"), with
+    no exception for non-combat ones; [10.11]/[10.15]/[64.73] rightly refuse a bare HQ or an SGSU
+    any ZOC, any ground and any city. Both are correct, and together they stranded a valueless
+    counter forever: _absorb_losses cannot take a step off a unit with no rating, so no Close
+    Assault could remove it, and _has_ammo is True off its [50.0] basic load, so [15.15] could not
+    either. Measured over 32 campaigns: 281 such stalemates, 2,830 stage-closes, the longest 319
+    stages of a 332-stage war. What was missing was never a combat rule -- it was this one.
+
+    THE BOOK SAYS IT FOUR TIMES, and this builds the one clause whose trigger the engine already
+    computes exactly. [3.36] captures a bare HQ "in a hex without any combat units" the instant an
+    "Enemy combat unit places the HQ in its Zone of Control"; [35.12] eliminates an SGSU on mere
+    ADJACENCY when it cannot react; [22.63] eliminates a lone Tank Delivery Squadron placed in a
+    ZOC. All three are narrower populations or wider triggers than this one. 3.36's population is
+    EMPTY in this engine besides -- data/unit_stats.json prints "dca": 1 on every hq row while
+    citing chart row 'a', and that row prints a DASH in the Close Assault column on all three
+    national charts (German [4.46c] PDF p.137, Commonwealth [4.46a] p.133, Italian [4.46b] p.136,
+    where it is printed a*), all three re-rendered at 300 dpi and read here. So no HQ in this
+    engine "has no combat values". Transcribing that dash and landing 3.36 are ONE slice, and until it
+    happens 10.29's strictly wider "no strength of ANY type" reaches every counter 3.36 would.
+
+    TWO READINGS, both flagged, both pinned in tests/test_noncombat_capture.py:
+      * "alone" is read as "with no FRIENDLY COMBAT UNIT in the hex". 10.29's own previous sentence
+        opposes an "unoccupied hex" to one "already occupied by a Friendly combat unit", and the
+        three sibling clauses say combat unit outright. It is [10.26]'s negation condition exactly:
+        a guarded counter stands in no un-negated Enemy ZOC to be alone in.
+      * "at any time during the Enemy Movement/Combat Phase" is sampled where the phasing player's
+        board can have moved -- the three beats where _capture_dumps already sweeps, and for its
+        reason: a unit arrives through five different doors (movement, Reaction 8.5, Retreat Before
+        Assault, combat retreat, the 8.2 pulse) and the rule does not care which.
+
+    NO ESCAPE IS OFFERED, AND THAT IS FLAGGED. [35.12] lets an SGSU "react (if possible)" before it
+    is eliminated; 10.29 prints no such clause and none is invented here. It costs the SGSU nothing
+    it had: measured over a full campaign, exactly ONE of the 53 non-combat counters on the board
+    ever moves at all (no Policy in this repo proposes an order for one), so the reaction 35.12
+    offers is unreachable in this engine whether it is modelled or not. It becomes real the day a
+    policy learns to withdraw its ground crews -- which is also the day this rule stops firing.
+
+    Recorded as STEP_LOST(role='captured'), the channel _resolve_surrender uses, so replay and
+    conservation hold. No Capability Point is charged: [3.36] says outright that "there is no
+    Capability Point expenditure required for such a capture". The Prisoner Point 3.36 also
+    mentions has no ledger in this engine and is not invented here.
+
+    Idempotent, deterministic (unit id order), and it emits nothing at all in a scenario with no
+    valueless non-combat counter on the board."""
+    victim = _other(side)
+    # `not u.is_combat` is 10.29's subject and the cheap filter that keeps this sweep off every
+    # combat counter on the board -- but it is NOT what makes a combat unit uncapturable, and the
+    # neuter table says so: a combat unit is always its own 10.26 negator, so `guarded` below
+    # already covers it and dropping this clause alone changes nothing.
+    lone = [u for u in r.state.living(victim) if not u.is_combat and _has_no_strength(u)]
+    if not lone:
+        return
+    guarded = {u.hex for u in r.state.living(victim) if u.is_combat}   # 10.26 negates the ZOC
+    enemy_zoc, _ = tactics.enemy_zoc_and_occupied(r.state, victim)     # the phasing side's ZOC
+    actor = f"{side.value}/Land"
+    for u in sorted(lone, key=lambda x: x.id):
+        if u.hex in guarded or u.hex not in enemy_zoc:
+            continue
+        r.emit(EventKind.STEP_LOST, side, actor,
+               {"unit_id": u.id, "amount": u.strength, "role": "captured"})
+
+
 def _reject_supply(r: _Run, side: Side, actor: str, order, reason: str) -> None:
     r.emit(EventKind.ORDER_REJECTED, side, actor,
            {"order": "supply_move", "supply_id": order.supply_id,
@@ -5495,7 +5578,7 @@ def _construction(r: _Run, policy: Policy, side: Side) -> None:
             _build_fort(r, side, actor, order, booked)
         elif order.item == construction.CLEAR_MINEFIELD:
             _build_clear_minefield(r, side, actor, order, booked)
-    r.building |= booked                                 # 24.12: they may not move this stage
+    r.building.current.update(booked)                    # 24.12: they may not move this stage
 
 
 def _complete_rail(r: _Run, side: Side, actor: str, hx: Coord) -> None:

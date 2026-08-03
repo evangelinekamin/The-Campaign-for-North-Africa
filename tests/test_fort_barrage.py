@@ -524,6 +524,28 @@ def test_41_37_the_per_stage_cap_is_cleared_at_the_operations_stage_boundary():
     assert [e.stage for e in rolls] == [1, 2]
 
 
+def test_41_37_the_per_stage_cap_expires_by_itself_for_a_caller_that_drives_the_stages():
+    """The test above proves the cap lifts inside engine.run(). This one proves it lifts for
+    EVERYBODY -- because a per-Operations-Stage ledger cleared by a line inside run()'s
+    `for stage in (1, 2, 3)` loop is stale for every other caller there is: a test, a measurement
+    driver, or one of run()'s own Game-Turn-level beats. That shape has already shipped the same
+    live bug twice (the [55.3] harbour ledger, 024d042; the [52.42] water ledger, 49b00f2), and the
+    fix both times was engine._OpStageLedger, which expires on its own (turn, stage) stamp.
+
+    So: ONE _Run, two Operations Stages driven by hand, STAGE_ADVANCED between them and nothing
+    else. Against the reset-in-the-loop shape the second mission is refused by a cap that was set
+    in Stage 1 and never lifted, and Tobruk's wall can be battered ONCE PER WAR."""
+    from game.engine import _air_support
+    r = _Run(_bomb_state(fort=2))
+    _air_support(r, Side.AXIS, set())                     # Operations Stage 1: one level (41.37)
+    assert r.state.fort_level((1, 0)) == 1
+    r.emit(EventKind.STAGE_ADVANCED, Side.SYSTEM, "SYSTEM", {"stage": 2})
+    _air_support(r, Side.AXIS, set())                     # Operations Stage 2: the NEXT level
+    assert r.state.fort_level((1, 0)) == 0, \
+        "the cap is one level per Operations Stage, not one level per run"
+    assert [e.stage for e in _kinds(r, EventKind.FORT_REDUCED)] == [1, 2]
+
+
 def test_air_and_artillery_read_the_same_row_and_mean_the_same_level():
     # [25.14] names two channels into one chart. A wall opened by bombs is as open as one opened by
     # guns -- both emit FORT_REDUCED, both fold into fort_levels, and neither can take two at once.

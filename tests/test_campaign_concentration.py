@@ -50,6 +50,7 @@ from game.events import Control, Side                               # noqa: E402
 from game.hexmap import distance                                    # noqa: E402
 from game.policy import ScriptedPolicy                              # noqa: E402
 from game.scenario import campaign, rommels_arrival, siege_of_tobruk  # noqa: E402
+from game.state import SupplyUnit                                   # noqa: E402
 from baselines import BENCHMARKS, CAMPAIGN_SEED                                    # noqa: E402
 
 MATRUH = coords.to_axial(coords.parse("D3714"))       # the railhead (60.7) -- and the line
@@ -363,11 +364,55 @@ def test_the_railhead_is_held_and_the_faucet_keeps_running(gt12):
     strictly stronger thing to assert than the graceful retraction it had been reduced to. The
     exposure the 2026-07-25 note flagged -- an EMPTY terminus is taken by the first vehicle that
     drives through -- is unchanged and still real; what has changed is that this seed no longer
-    leaves it empty, because the army it feeds can now afford to stand there."""
+    leaves it empty, because the army it feeds can now afford to stand there.
+
+    *** 🔴 THE FLAG FIRES AGAIN, 2026-08-02, CAUSE [10.29] -- AND THIS TIME THE MEASUREMENT SAYS
+    THE GRIP WAS PARTLY THE BUG. *** engine._capture_noncombat takes a non-combat counter with no
+    strength of any type when it is left alone in an enemy ZOC during the enemy's Movement/Combat
+    Phase. The Commonwealth's Squadron Ground Support Units are exactly that population, and THREE
+    OF THEM LIVE ON THE MERSA MATRUH RAILHEAD (CW-SGSU#12/#13/#14, seeded there by [60.5]).
+
+    THE GENERAL FINDING FIRST, because it is bigger than this seed. Under the old engine those
+    three counters could hold the terminus against the whole Panzerarmee and bank nothing with it:
+    [8.13] bars entry into a hex containing ANY enemy unit, and [10.11]/[64.73] give a bare SGSU no
+    ZOC, no ground and no city -- so the hex was unenterable AND unflippable, the exact stalemate
+    engine._capture_noncombat's docstring measures 281 of. MEASURED at GT12 over seeds 1-8 and 23:
+    Mersa Matruh ends ALLIED on 6 of 9 boards before, 1 of 9 after -- and on four of the five that
+    flip, the pre-fix railhead spends 7, 27, 5 and 7 of its 35 Operations Stage closes in that
+    frozen state, i.e. occupied ONLY by non-combat counters with an Axis combat unit adjacent. The
+    Eighth Army's grip on its own railhead was, on those boards, an invisible garrison the book
+    says is captured.
+
+    AT CAMPAIGN_SEED IT IS NOT THAT, AND SAYING SO IS THE POINT: this seed's frozen count is ZERO.
+    Selby Force genuinely held the hex here. What happens is the trajectory divergence that starts
+    at Operations Stage 1 of Game-Turn 1 (two SGSUs are collected out near Sidi Barrani and Bardia):
+    at GT3.1 Selby is RETREATED off the terminus by combat, returns at GT3.2 and is retreated again,
+    marches away at GT3.3 and is dead by GT7. THE MOMENT IT LEAVES, the three SGSUs on the hex are
+    alone -- and this is where the two engines part company. The old one froze the hex behind them;
+    this one captures them at GT3.2, and IT-141/64-Cat walks in at GT4.1 and is still there at GT12.
+
+    MEASURED at CAMPAIGN_SEED, GT12 (before -> after): Mersa Matruh ALLIED -> AXIS, railhead
+    AL-Stage-Matruh -> AL-Alexandria (every station overrun -- the deepest retraction this test has
+    recorded), Fuel landed at the terminus 24,503 -> 14,000, Ammunition 1,322 -> 596, and the
+    garrison is supplied on 2 of 2 garrisoned turn-closes (was 12 of 12).
+
+    So the assertions go back to the 2026-07-26 form: what is pinned is the mechanism's correct
+    REACTION to losing the hex -- the line RETRACTS (54.3) rather than dying, and the lane
+    re-targets rather than cancelling -- not that the hex is kept. The name of this test is left
+    alone deliberately: it names the thing that must eventually be true, and a FAITHFUL forward
+    Commonwealth garrison policy that does not leave the terminus to its ground crews is the actual
+    fix, exactly as the 2026-07-26 note said. It is still not this slice's to make."""
     fin = gt12.final
-    # THE TERMINUS IS HELD, and the railway runs to it (see the 2026-08-01 note above).
-    assert fin.control_of(MATRUH) == Control.ALLIED
-    assert railhead(fin).id == "AL-Stage-Matruh"            # no retraction: the line reaches the end
+    # THE TERMINUS IS LOST AND THE LINE RETRACTS GRACEFULLY (see the 2026-08-02 note above).
+    # Asserted as the MECHANISM, not as a station id: the railway must fall back to a real station
+    # of its own lane, which is what distinguishes 54.3's retraction from the faucet dying.
+    assert fin.control_of(MATRUH) == Control.AXIS
+    line = next(c.retarget for c in fin.convoys
+                if c.side == Side.ALLIED and c.lane == "CW-RAILHEAD" and c.retarget)
+    head = railhead(fin)
+    assert head is not None and head.id in line, "the rail lane lost its line entirely"
+    assert head.id != "AL-Stage-Matruh", \
+        "the Commonwealth holds the terminus again -- INVERT this restatement, the finding reversed"
 
     cancelled = [e for e in gt12.events if e.kind.name == "CONVOY_CANCELLED"
                  and e.payload.get("lane") == "CW-RAILHEAD"]
@@ -418,12 +463,32 @@ def test_the_standing_garrison_order_still_holds(gt12):
     unit and place it on the railhead -- the real board in every other respect, with ONE deterministic
     fact (a unit banks Matruh) restored so the order-logic actually has something to protect. This is
     the identical technique test_campaign.py::test_campaign_commonwealth_can_attack now uses for the
-    same reason."""
+    same reason.
+
+    *** THE SECOND FALLBACK IS REINSTATED 2026-08-02, CAUSE [10.29], AND IT IS NOW LOAD-BEARING. ***
+    engine._capture_noncombat costs this seed the railhead at Game-Turn 3 (the full trace is in
+    test_the_railhead_is_held_and_the_faucet_keeps_running's own 2026-08-02 note), so at GT12 the
+    depot under Mersa Matruh is AXIS-owned and holds 122 Ammunition / 1,868 Fuel / 137 Stores for
+    the wrong army. A courier placed on the terminus therefore stands on a city it cannot be fed
+    at, and [64.73]'s quality-test -- which campaign_claim._banking asks of the LIVE board -- refuses
+    it, so the FIRST fallback no longer restores the precondition on its own and `keep` comes back
+    empty. That is the withdrawal note below firing in reverse.
+
+    It comes back in a cleaner form than the ammo=9999/fuel=9999 patch of a live Axis dump that was
+    withdrawn in 2026-07-27: a Commonwealth field depot is STOOD UNDER the courier, which is the
+    board this test is about (a garrison banking a SUPPLIED victory city) constructed rather than
+    hoped for. Nothing else on the board is touched, and the composition being checked below --
+    hold_garrisons over the concentration's own orders -- is a pure function of the state."""
     fin = gt12.final
     keep = garrison_units(fin, Side.ALLIED)
     if not keep:
         courier = next(u for u in fin.living(Side.ALLIED) if u.is_combat and u.strength >= 1)
         fin = fin.with_unit(replace(courier, hex=MATRUH))
+        keep = garrison_units(fin, Side.ALLIED)
+    if not keep:                                   # ...and stand a depot under him (2026-08-02)
+        fin = replace(fin, supplies=fin.supplies + (
+            SupplyUnit("AL-Constructed-Matruh", Side.ALLIED, MATRUH, ammo=9999, fuel=9999,
+                       stores=9999, water=9999, constructed=True),))
         keep = garrison_units(fin, Side.ALLIED)
     # WITHDRAWN 2026-07-27 (the 8.1c review repair) -- the same second fallback, withdrawn for the
     # same reason as its twin in tests/test_campaign.py::test_campaign_commonwealth_can_attack. It
@@ -442,7 +507,14 @@ def test_the_standing_garrison_order_still_holds(gt12):
     # 'BR-Selby---Matruh'} on the real board. Which is incidental to this test's thesis in exactly
     # the way the withdrawn note said it was: what is being exercised is whether the garrison order
     # withholds a move from a unit banking an uncaptured city, and that runs the same either way.
-    assert fin.control_of(MATRUH) == Control.ALLIED
+    #
+    # RESTATED A THIRD TIME 2026-08-02, CAUSE [10.29] -- back to the 2026-07-26 read, and for the
+    # reason traced in test_the_railhead_is_held_and_the_faucet_keeps_running's own 2026-08-02 note:
+    # the Axis takes the terminus at Game-Turn 3 once the three Squadron Ground Support Units left
+    # standing on it are captured, and holds it at GT12. That is not incidental to this test either
+    # -- it is why both fallbacks above now fire -- but it is still not what this test asserts, and
+    # the line is kept (rather than deleted) precisely so a third flip cannot pass unnoticed.
+    assert fin.control_of(MATRUH) == Control.AXIS
     supplied, garrisoned = _matruh_supplied_turns(gt12)     # the WHOLE-RUN record, unaffected by the
     assert supplied >= garrisoned * 2 // 3                  # placement above (it only touches `fin`)
 

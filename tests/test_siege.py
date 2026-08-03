@@ -217,7 +217,22 @@ def test_no_gun_reaches_a_wall_inside_the_twelve_turn_clock():
     so a battery that moves now draws its water where it stands, and [52.51] refuses the move when
     it cannot. Measured on this very run: 199 of the Axis batteries' move orders are refused for
     want of water. The guns are the thing that outruns the wells -- which is why they are still 52
-    hexes from Tobruk's wall when the twelve-turn clock runs out."""
+    hexes from Tobruk's wall when the twelve-turn clock runs out.
+
+    RE-MEASURED 2026-08-02, [10.29] (engine._capture_noncombat: a non-combat counter with no
+    strength of any type, alone in an enemy ZOC during the enemy's Movement/Combat Phase, is
+    Captured). The closing distance moves 52 -> 42, and the docstring's own warning is answered the
+    same way as last time: the guns do NOT close on the wall -- 42 hexes is not adjacency, no
+    battery ever designates a fortification, and the two FORT assertions above still hold -- so the
+    pinned pair is re-measured and the thesis is left standing.
+
+    THE CAUSE IS ONE COUNTER. This benchmark fields exactly two counters with no strength of any
+    type, both Commonwealth Squadron Ground Support Units, and exactly ONE of them is taken:
+    AL-SGSU-250RAF, at Operations Stage 1 of Game-Turn 1. That single removal is the whole reason
+    both benchmark signatures move (tests/baselines.py's 2026-08-02 [10.29] entry) -- one counter
+    off the board on the first stage reshapes twelve Game-Turns of scripted movement and combat
+    behind it. It is also why the number moved TOWARD Tobruk rather than away: this is a different
+    war, not a slower one."""
     for build in (rommels_arrival, siege_of_tobruk):
         assert not hasattr(build(), "siege_rules")
     a = run(rommels_arrival(seed=1941), ScriptedPolicy(Side.AXIS), ScriptedPolicy(Side.ALLIED))
@@ -232,7 +247,7 @@ def test_no_gun_reaches_a_wall_inside_the_twelve_turn_clock():
         return min(distance(u.hex, tobruk) for u in st.living(Side.AXIS)
                    if u.barrage > 0 and u.is_combat)
 
-    assert (nearest_gun(a.initial), nearest_gun(a.final)) == (69, 52), (
+    assert (nearest_gun(a.initial), nearest_gun(a.final)) == (69, 42), (
         "the benchmark is silent on 25.14 because no gun gets near a wall; if the guns now close, "
         "this test is measuring something else and must be re-read, not re-pinned")
 

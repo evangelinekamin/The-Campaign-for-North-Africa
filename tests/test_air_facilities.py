@@ -927,10 +927,37 @@ def test_the_shuttle_fills_the_larder_and_the_larder_stops_emptying():
                            if air_dumps[e.payload["supply_id"]] == side)
         assert fuel_to_side > 0, f"no Fuel was ever delivered to a {side.name} air larder"
         assert peak[side] > 0, f"{side.name} air larder never held a Fuel Point all run"
-    # ...and the consequence 35.14 hangs on it: an SGSU that may still work its planes
-    denied = [e for e in r.events if e.kind == EventKind.AIR_REFIT_DENIED
-              and e.payload.get("reason") == "no_sgsu"]
-    assert not denied, "every squadron was still grounded for want of a fed SGSU"
+    # ...and the consequence 35.14 hangs on it: mechanics that may still work their planes.
+    #
+    # RESTATED 2026-08-02, CAUSE [10.29] (engine._capture_noncombat). This line used to read
+    #     denied = [... AIR_REFIT_DENIED and payload["reason"] == "no_sgsu"]
+    #     assert not denied, "every squadron was still grounded for want of a fed SGSU"
+    # and it was passing on BEAT ALIGNMENT, not on the shuttle. MEASURED on the pre-10.29 tree at
+    # this very seed: the Commonwealth's ABLE-SGSU count already reaches ZERO at the Operations
+    # Stage 2 closes of Game-Turns 8 and 9 -- the maintenance beat simply never landed in one of
+    # those stages, so nothing was ever denied. A zero-tolerance negative that survives on which
+    # stage a beat happens to fall in is not measuring what its message says it is.
+    #
+    # Under 10.29 the Axis overruns EIGHT of the Commonwealth's twelve Squadron Ground Support
+    # Units by Game-Turn 5 -- they are is_combat=False with no rating of any type, the exact
+    # population 10.29 names and [35.12] eliminates outright on mere adjacency -- the zero-able
+    # window widens to Game-Turns 6-9, and the beat lands inside it three times. The FOUR SGSUs
+    # left at Game-Turn 6 are all UNFED where they stand (stages_without_air_supply 8, 1, 3 and 1,
+    # at Siwa, Sidi Barrani, D3416 and Matten Baggush) and every one of those fields is still
+    # Commonwealth-held, so nothing here is the shuttle failing to reach a field it used to reach.
+    #
+    # So the claim is restated onto the two things the shuttle actually buys -- and BOTH are
+    # IDENTICAL on the pre- and post-10.29 trees, which is what makes this a restatement and not a
+    # retreat: mechanics on BOTH sides work planes all run (51 Axis / 21 Allied refits resolved,
+    # both trees), and no refit is ever refused because the LARDER WAS EMPTY, which is the denial
+    # this test's own subject controls (engine._refit_stores_dump returning None -> "no_stores").
+    resolved = [e for e in r.events if e.kind == EventKind.AIR_REFIT_RESOLVED]
+    for side in (Side.AXIS, Side.ALLIED):
+        assert [e for e in resolved if e.side == side], \
+            f"no {side.name} squadron was ever worked by its mechanics"
+    starved = [e for e in r.events if e.kind == EventKind.AIR_REFIT_DENIED
+               and e.payload.get("reason") == "no_stores"]
+    assert not starved, "a squadron was grounded because the refit larder held no Stores"
 
 
 def test_the_shuttle_is_sized_to_the_demand_and_not_to_the_terrain_ceiling():

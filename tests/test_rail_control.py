@@ -1257,10 +1257,27 @@ def test_the_axis_railway_actually_runs_in_a_real_campaign():
     Axis's OWN dump brought forward by his own lorries, not by Commonwealth stores overrun at El Daba
     (which is what pays seeds 14, 20 and 33) -- and of the two remaining Axis-paid candidates it
     hauls the most (four hauls against seed 15's two and seed 38's one). Same window, same recipe,
-    and every assertion below is unchanged."""
+    and every assertion below is unchanged.
+
+    *** RE-PINNED 34 -> 31, 2026-08-02, CAUSE [10.29] *** -- engine._capture_noncombat, which takes a
+    non-combat counter with no strength of any type when it is left alone in an enemy ZOC during the
+    enemy's Movement/Combat Phase. It moves every campaign trajectory from Operations Stage 1 of
+    Game-Turn 1 (the Axis collects Commonwealth Squadron Ground Support Units as it advances), and
+    the Axis railway with it. Re-swept seeds 1-40 to Game-Turn 6 on this tree, same recipe as the
+    line below: TWENTY-FOUR activate, and EIGHT of those haul with no AXIS/Rail rejection at all
+    ({1, 6, 11, 14, 20, 23, 31, 36}).
+
+    THE DUAL-WITNESS PROPERTY IS AVAILABLE AGAIN, which the 11 -> 34 re-pin had to state it was not.
+    Seed 31 activates AND hauls on BOTH trees -- one haul off AX-Dump#2 on the pre-10.29 tree, six
+    off AX-Dump#3 here -- so it is a witness under both instruments and not one shopped for the new
+    dice. It also keeps the property every re-pin since 9 has ranked first: its locomotive is bought
+    with the AXIS'S OWN forward dump, brought up by his own lorries, not with Commonwealth Stores
+    overrun at El Daba (which is what pays seeds 1, 6, 11, 14, 20, 23, 33 and 36 here). Same window
+    -- the activation lands on Game-Turn 4, six hauls follow by Game-Turn 6 -- and every assertion
+    below is unchanged."""
     from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy
     from game.scenario import campaign
-    res = run(replace(campaign(34), max_turns=6), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    res = run(replace(campaign(31), max_turns=6), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     hauls = [e for e in res.events if e.kind is EventKind.RAIL_HAULED and e.side is Side.AXIS]
     assert [e for e in res.events if e.kind is EventKind.ROLLING_STOCK_ACTIVATED]
     assert hauls, "the Axis railway bought a locomotive and never ran a train"

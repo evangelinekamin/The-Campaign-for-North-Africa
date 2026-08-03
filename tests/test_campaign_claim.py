@@ -34,6 +34,7 @@ def _ax(label: str):
 
 SOLLUM, BARDIA, TOBRUK = _ax("C4021"), _ax("C4321"), _ax("C4807")
 MATRUH = _ax("D3714")                       # the railhead city, and [60.5]'s airfield
+BARRANI = _ax("C4131")                      # the forward city the take-and-hold contests
 SIWA, JALO, GIARABUB = _ax("C0127"), _ax("B0513"), _ax("C1014")
 
 
@@ -255,11 +256,51 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
     GARRISON, which is this project's faucet debt and not its OOB debt. That carriage asymmetry is
     recorded as a fact with no cause attached to it: the reinforcement half of [4.43b] is already
     WIRED (tests/test_first_line.py), a first-line truck is CAPACITY rather than loaded rations, and
-    these three cities turn on the forward dumps either way."""
+    these three cities turn on the forward dumps either way.
+
+    *** RESTATED 2026-08-02, CAUSE [10.29] -- AND THE ARMY DID NOT MOVE AT SIDI BARRANI EITHER. ***
+    engine._capture_noncombat takes a non-combat counter with no strength of any type when it is
+    left alone in an enemy ZOC during the enemy's Movement/Combat Phase. MEASURED at CAMPAIGN_SEED,
+    GT30 (before -> after):
+
+        COMMONWEALTH   OCCUPIED  Mersa Matruh, Sidi Barrani  ->  Sidi Barrani
+                       BANKED    Mersa Matruh, Sidi Barrani  ->  (nothing)
+        AXIS           OCCUPIED  Giarabub, Bardia, Sollum, Tobruk, Benghazi  -> the same five,
+                                 PLUS Mersa Matruh
+                       BANKED    Tobruk, Benghazi  ->  Tobruk, Benghazi   (unchanged)
+
+    TWO SEPARATE THINGS, and they must not be told as one.
+
+    (1) MERSA MATRUH IS GENUINELY LOST, and it is this rule's own doing. Three Commonwealth
+    Squadron Ground Support Units live on the railhead ([60.5] seeds them there); the moment Selby
+    Force is retreated off the hex at Game-Turn 3 they stand alone, and where the old engine froze
+    the hex behind them -- unenterable under [8.13], unflippable under [10.11]/[64.73] -- this one
+    captures them, and IT-141/64-Cat walks in at GT4 and is still there at GT30. The full trace, and
+    the nine-seed measurement showing the terminus ends Commonwealth on 6 of 9 boards before and 1
+    of 9 after, is in test_campaign_concentration.py::test_the_railhead_is_held_and_the_faucet_
+    keeps_running's 2026-08-02 note. Asserted as OCCUPATION, which is where the take-and-hold lives.
+
+    (2) SIDI BARRANI IS NOT LOST AT ALL -- IT STOPPED SCORING BY ONE STORE POINT. BR-2SctGds stands
+    on the city in BOTH arms, at the same hex, and has never been driven off it. What flips is the
+    knife-edge this docstring's own 2026-08-02 paragraph already named: it "banks it here only
+    because at GT30 it carries exactly 20 of 20". Measured now, arm by arm: AL-Stage-Barrani holds
+    ZERO Stores under it in BOTH arms, so the whole clause rests on the counter's own [53.11]
+    first-line buffer -- 20 Points against the 20 its five steps need before, 3 Points against the
+    24 its SIX steps need after. It is a step stronger and one ration short. That is the last-mile
+    characterisation this test already carries, moving by a Point, not the take-and-hold failing;
+    so the assertion SPLITS the way Sollum's did, occupation from scoreboard, rather than being
+    deleted or re-pinned to the other side."""
     fin = _run(30).final
     cw, ax = _banked(fin, Side.ALLIED), _banked(fin, Side.AXIS)
-    # The Commonwealth holds Sidi Barrani (see the RESTATED notes above, measured seed 4, GT30).
-    assert "Sidi Barrani" in cw
+    # The Commonwealth OCCUPIES Sidi Barrani and has never been driven off it (see the 2026-08-02
+    # note above) -- the take-and-hold thesis, unchanged since this line was first written.
+    assert campaign_claim._occupied(fin, Side.ALLIED, BARRANI), \
+        "the Commonwealth lost Sidi Barrani -- the take-and-hold itself has regressed, not its score"
+    assert "Sidi Barrani" not in cw, (
+        "Sidi Barrani is banked again -- measured, it fails on STORES ALONE and by ONE ration: the "
+        "depot under it is dry of Stores in every arm, so the clause rests on the garrison's own "
+        "[53.11] buffer. INVERT THIS when the last mile carries Stores forward; do not re-pin it "
+        "to a counter that happens to be one step lighter")
     # Sollum stays Axis -- the (ENG) correction's own measured gain, which the 1st Libyan repair
     # did NOT give back at this seed. SPLIT IN TWO 2026-08-02 (the 64.73 repair, see the note above):
     # the Axis still OCCUPIES Sollum and has never been driven off it, and it no longer BANKS it,
@@ -275,13 +316,16 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
         "cities. INVERT THIS: measured, this hex fails on AMMUNITION AND STORES because only "
         "AX-Well-Sollum stands on it, so what gives it back is a stocked forward dump (the last "
         "mile), not [4.43b] -- no German counter stands on a 64.73 city on any measured board")
-    # Mersa Matruh is COMMONWEALTH-OCCUPIED and BANKED at GT30 (see the 2026-08-01 note above) --
-    # Selby Force stands on the terminus and has never been driven off it.
-    assert campaign_claim._occupied(fin, Side.ALLIED, MATRUH), \
-        "the Commonwealth has lost the railhead city -- update this restatement, the finding reversed"
-    assert not campaign_claim._occupied(fin, Side.AXIS, MATRUH), \
-        "the Axis holds the railhead city -- update this restatement, the finding reversed"
-    assert "Mersa Matruh" in cw, "Mersa Matruh is no longer banked -- update this restatement"
+    # Mersa Matruh is AXIS-OCCUPIED at GT30 (RESTATED 2026-08-02, cause [10.29] -- see the note
+    # above): the terminus falls at Game-Turn 3, once the three Squadron Ground Support Units left
+    # standing on it are captured, and no Commonwealth counter retakes it in the next twenty-seven.
+    # This is the SIXTH time the one contested forward city has changed hands in this docstring, and
+    # the first time a rule of the port rather than a datum of the map has moved it.
+    assert campaign_claim._occupied(fin, Side.AXIS, MATRUH), \
+        "the Axis lost the railhead city -- update this restatement, the finding reversed"
+    assert not campaign_claim._occupied(fin, Side.ALLIED, MATRUH), \
+        "the Commonwealth holds the railhead city -- INVERT this restatement, the finding reversed"
+    assert "Mersa Matruh" not in cw, "Mersa Matruh is banked again -- update this restatement"
     matruh = [s for s in fin.supplies if s.id == "AL-Stage-Matruh"]
     assert len(matruh) == 1 and matruh[0].hex == MATRUH, \
         "the railhead depot must still be staged under its garrison"

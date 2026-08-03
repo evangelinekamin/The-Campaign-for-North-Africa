@@ -10,6 +10,137 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+RE-BASELINED 2026-08-02 -- CAUSE: [10.29], THE CAPTURE OF A STRENGTHLESS NON-COMBAT COUNTER. A hex
+that could be neither entered nor flipped, because the one rule that resolves it was not built.
+
+    rommel ca0eec96abbd -> e1d1fa771ce3      siege 76371e5939a0 -> 19693b23b988
+    campaign  1941 d4fa0bd90ffc -> dd3ddecd056f    7    d107a13ab6de -> 250b13e94052
+              4    9d1ce03d1b95 -> fbf8cf16a7ca    2026 5b5e5c38bc6a -> 77d929598c0b
+
+THE BOOK, re-rendered at 300 dpi off PDF p.18 (the page prints its own folio 18) and read character
+by character; the crop is scratchpad-only, the transcription is here and in engine._capture_noncombat:
+
+    [10.29] "Truck Convoys may not enter an Enemy ZOC unless such hex is already occupied by a
+            Friendly combat unit. Furthermore, no non-combat unit (i.e., bare HQ's, Engineers, Air
+            Squadron Ground Support Units, etc.) may ever enter an unoccupied hex in an enemy ZOC
+            voluntarily. If such a unit is alone in an Enemy ZOC at any time during the Enemy
+            Movement/Combat Phase and it has no strength of any type, such Friendly non-combat unit
+            is Captured."
+
+    [8.13]  "A unit may never enter a hex containing an enemy unit (see, however, Case 27.4).
+            Furthermore, movement from hex to hex must be consecutive; units may not skip hexes.
+            (There are, of course, different rules for aircraft.)"   (PDF p.14 = folio 14)
+
+    [3.36]  "An HQ unit that has no combat values, either with or without parentheses, is captured
+            instantly if it is in a hex without any combat units and an Enemy combat unit places the
+            HQ in its Zone of Control. There is no Capability Point expenditure required for such a
+            capture, and the HQ is treated as one Prisoner Point."   (PDF p.6 = folio 6)
+
+THE DEFECT WAS NOT IN EITHER RULE THE FREEZE WAS BLAMED ON. tactics.enemy_zoc_and_occupied bars
+entry on ANY living enemy unit, combat or not -- that is [8.13] verbatim and it is untouched here.
+engine._record_control banks ground only for combat units and campaign_victory._occupier asks
+[64.73]'s own question -- also right ([10.11]: a bare HQ exerts no ZOC). What was missing was the
+REMOVAL. A 0-rated defender cannot shed a step (engine._absorb_losses: "Units with no rating cannot
+absorb") and never runs out of Close-Assault ammunition off its [50.0] basic load, so [15.15] never
+fires either: the counter could not be entered, killed, starved or flipped. Measured over 32 full
+campaigns before the fix: 281 such stalemates, 2,830 stage-closes, the longest 319 stages of a
+332-stage war.
+
+WHAT IS BUILT IS [10.29] AND NOTHING ELSE. The book legislates this situation four times -- [3.36]
+bare HQs, [10.29] any strengthless non-combat unit, [35.12] SGSUs on MERE ADJACENCY, [22.63] Tank
+Delivery Squadrons -- and this is the one clause whose trigger the engine already computes exactly,
+off the same ZOC map movement is gated on. 35.12's adjacency trigger and 22.63 are deliberately NOT
+built. 3.36's population is EMPTY here: data/unit_stats.json prints "dca": 1 on every hq /
+hq_engineer row while citing chart row 'a', and that row prints a DASH in the Close Assault column
+on all three national charts, each re-rendered at 300 dpi and read for this entry: German [4.46c]
+PDF p.137, Commonwealth [4.46a] p.133, Italian [4.46b] p.136 (printed a* there). THOSE TWO CHANGES ARE COUPLED -- fix
+that dca faithfully without landing 3.36 and every bare HQ becomes as unkillable as the SGSU was.
+
+TWO READINGS FLAGGED AS JUDGEMENT CALLS, both pinned in tests/test_noncombat_capture.py:
+  * "alone" = with no FRIENDLY COMBAT UNIT in the hex. 10.29's own previous sentence opposes an
+    "unoccupied hex" to one "already occupied by a Friendly combat unit", and the three sibling
+    clauses say combat unit outright ([3.36] "without any combat units", [35.12] "no Friendly combat
+    unit stacked with it", [22.63] "alone in a hex"). It is also [10.26]'s negation condition.
+  * "at any time during the Enemy Movement/Combat Phase" is sampled at the three beats where
+    _capture_dumps already sweeps -- after movement, after combat, after the 8.2 exploitation pulse.
+
+MEASURED, three full 111-turn campaigns, CampaignAxisPolicy vs CampaignCommonwealthPolicy, the
+frozen population counted at every Operations Stage close exactly as the probe counted it (a hex
+holding only non-combat units of one side with an enemy combat unit adjacent):
+
+    seed   FROZEN stage-closes   distinct frozen stacks   counters captured   winner + 64.76 grade
+    15          52 ->   8              10 -> 5                   10           Axis Smashing, both arms
+    26         436 ->   8              11 -> 4                    9           Axis Smashing, both arms
+    30          18 ->   7              10 -> 6                   11           Axis Smashing, both arms
+
+THE RESIDUE IS HONEST AND IDENTIFIED. Every counter still frozen after the fix is one 10.29 cannot
+reach: CW-SGSUs standing next to an enemy stack too small to exert a ZOC at all (10.11's one
+Stacking Point / 10.15's ten raw defensive points -- [35.12]'s MERE-ADJACENCY trigger is the book's
+answer to those and is not built), plus HQ-4-In-Div / HQ-7-Armd-Div / IT-1-Libyan, which are exactly
+the "dca": 1 rows above. The 32-seed probe measured the same split: 2,830 frozen stage-closes of
+which 1,282 were in an enemy ZOC.
+
+Winner and 64.76 grade are UNCHANGED on all three full wars and on the four max_turns=12 boards
+(Axis Smashing Victory everywhere, before and after). Victory Points move in both directions
+(seed 15 Axis 787->980, seed 26 755->761, seed 30 390->778; at max_turns=12, 1941 1952->1845,
+7 1959->1950, 4 1960->1960, 2026 1860->1956 with CW 10->0) -- the Axis is overrunning Commonwealth
+forward airfields in every one of these wars, so it is the Commonwealth's Squadron Ground Support
+Units that are collected.
+
+THE ONE THING IT COSTS, AND IT IS BIG: THE COMMONWEALTH'S GRIP ON ITS OWN RAILHEAD. [60.5] seeds
+three Commonwealth Squadron Ground Support Units ON Mersa Matruh, and under the old engine those
+three could hold the terminus against the whole Panzerarmee while banking nothing with it. Swept
+over ONE HUNDRED seeds to GT12 against the control tree: the Commonwealth still holds Mersa Matruh
+on 60 of 100 boards before and 13 of 100 after, 51 held->lost against 4 lost->held. The full
+argument, the spot-measured frozen-stage counts and the reason CAMPAIGN_SEED was NOT re-pinned to
+one of the surviving thirteen are in this file's CAMPAIGN_SEED note.
+
+TEST FALLOUT: eight, all restated, none weakened, each with its own measurement written into the
+file it lives in. tests/test_siege.py re-pins the nearest-gun pair 52 -> 42 (still nowhere near a
+wall; ONE counter is taken on that benchmark, AL-SGSU-250RAF at GT1.1, and it moves the whole log).
+tests/test_rail_control.py re-sweeps its 54.4 witness seed 34 -> 31, which is a dual witness under
+both instruments -- a property the previous re-pin had to record as unavailable.
+tests/test_air_facilities.py drops a zero-tolerance "no squadron was ever denied for want of a fed
+SGSU" that was passing on BEAT ALIGNMENT (the control tree's able-SGSU count already reaches zero
+at the GT8/GT9 stage-2 closes) for two claims that are IDENTICAL on both trees: 51 Axis / 21 Allied
+refits resolved, and no refit ever refused for an empty larder. The other five are the railhead
+above.
+
+RECIPE: the four campaign rows use scenario.campaign's OWN max_turns kwarg (see THE TRAP below);
+the three 111-turn rows use campaign(seed) unmodified. Benchmarks seed 42, axis=allied=
+ScriptedPolicy(AXIS). Every one of the six signatures above was read live TWICE on this tree and on
+a pristine `git archive HEAD` control tree, byte-identical both passes; the control tree reproduced
+all six PRE values exactly, first try, which is what makes it a control.
+--------------------------------------------------------------------------------------------------
+NOT RE-BASELINED 2026-08-02 (BYTE-IDENTICAL) -- THE LAST THREE PER-OPERATIONS-STAGE LEDGERS MOVED
+ONTO engine._OpStageLedger, AND THE RESET LINES IN run()'s STAGE LOOP ARE GONE.
+
+    ca0eec96abbd / 76371e5939a0 and campaign 1941 d4fa0bd90ffc / 7 d107a13ab6de / 4 9d1ce03d1b95 /
+    2026 5b5e5c38bc6a   (all six UNCHANGED, measured on a tree carrying ONLY this conversion,
+    read live twice, and identical to the `git archive HEAD` control on every board)
+
+The entry below records why these three were left behind by the refactor that converted the other
+three, and what it would take to move them: "converting them is a BEHAVIOUR change ... and exactly
+what must be measured rather than assumed. Their own slice." This is that slice.
+
+WHAT MOVED, all in game/engine.py. r.ports_bombed_this_stage ([55.18]), r.forts_bombed_this_stage
+([41.37]) and r.building ([24.12]) become _OpStageLedger instances read through `.current`; the
+three lines that reset them inside `for stage in (1, 2, 3)` are deleted, along with the
+DO-NOT-ADD-A-RESET-HERE comment block, whose warning now lives in _OpStageLedger's docstring where
+the next author will actually meet it. No test needed restating -- nothing outside engine.py ever
+named these three.
+
+WHAT IT FIXES, which is the whole point and is NOT visible in any signature above. Inside run() the
+conversion is inert, because every read and every write of all three lies between the stage-loop's
+first statement and the STAGE_ADVANCED/TURN_ADVANCED emit that ends it. For any OTHER caller -- a
+test, a measurement driver, or one of run()'s own Game-Turn-level beats, which is how the [52.42]
+water ledger leaked (49b00f2) -- the old shape was three live bugs: a harbour bombed once NEVER
+regenerated, a fortification could be battered once per WAR instead of once per Operations Stage,
+and an engineer booked on a project stayed pinned to its hex for the rest of the game. Each is now
+pinned by a test that drives two Operations Stages by hand and never enters run()
+(test_ports, test_fort_barrage, test_construction), and each of those tests fails when its own
+read is neutered back to the non-expiring value at its own call site.
+--------------------------------------------------------------------------------------------------
 RE-BASELINED 2026-08-02 -- CAUSE: [64.73], THE OCCUPATION QUALITY-TEST. The last abstract-game rule
 standing in the victory module: it asked TWO of the rule's FOUR commodities, and asked them through
 the section-32.16 half-CPA supply trace that CLAUDE.md rule 3 says does not apply here.
@@ -2243,8 +2374,8 @@ from __future__ import annotations
 
 import hashlib
 
-ROMMELS_ARRIVAL = "ca0eec96abbd"     # re-baselined 2026-08-02, [52.42] (top of this file)
-SIEGE_OF_TOBRUK = "76371e5939a0"     # re-baselined 2026-08-02, [52.42] (top of this file)
+ROMMELS_ARRIVAL = "e1d1fa771ce3"     # re-baselined 2026-08-02, [10.29] (top of this file)
+SIEGE_OF_TOBRUK = "19693b23b988"     # re-baselined 2026-08-02, [10.29] (top of this file)
 
 BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 
@@ -2332,6 +2463,42 @@ BENCHMARKS = {"rommel": ROMMELS_ARRIVAL, "siege": SIEGE_OF_TOBRUK}
 # candidates that do (1, 8, 21, 23) it is the only one that also carries a Commonwealth unit within
 # 15 hexes of the railhead on the PRE-change tree, and it fields the largest surviving Commonwealth
 # force at GT12 (44 combat units). It is not a seed shopped for the new dice.
+#
+# *** DELIBERATELY NOT RE-PINNED 2026-08-02, CAUSE [10.29] -- AND THE REASON IS THE LARGEST FINDING
+# OF THAT SLICE. *** engine._capture_noncombat takes a non-combat counter with no strength of any
+# type when it is left alone in an enemy ZOC during the enemy's Movement/Combat Phase. Swept over
+# ONE HUNDRED seeds, campaign to GT12, CampaignAxisPolicy vs CampaignCommonwealthPolicy, on both
+# trees (the pre-change arm is a `git archive HEAD` control tree, not this one with a flag off):
+#
+#     the Commonwealth still holds Mersa Matruh at GT12 on   60 of 100 seeds BEFORE
+#                                                            13 of 100 seeds AFTER
+#     51 held->lost against 4 lost->held. This is not a re-shuffle and it is not modest.
+#
+# THE CAUSE IS THAT THE GRIP WAS SUBSTANTIALLY THE BUG. [60.5] seeds THREE Commonwealth Squadron
+# Ground Support Units on the Mersa Matruh railhead. They have no rating of any type, so under the
+# old engine they could hold the terminus against the whole Panzerarmee and bank nothing with it:
+# [8.13] bars entry into a hex containing ANY enemy unit, [10.11]/[64.73] give a bare SGSU no ZOC,
+# no ground and no city, engine._absorb_losses cannot take a step off a unit with no rating and
+# [15.15] never fires off its [50.0] basic load -- the hex was unenterable, unflippable, unkillable
+# and unstarvable. Spot-measured on the pre-change tree at seeds 1/5/6/8: the railhead spends 7, 27,
+# 5 and 7 of its 35 Operations Stage closes in exactly that state, occupied ONLY by non-combat
+# counters with an Axis combat unit adjacent. On those boards the Eighth Army's grip on its own
+# railhead was an invisible garrison the book says is captured.
+#
+# NINE SEEDS STILL HOLD IT UNDER BOTH INSTRUMENTS ({2, 29, 32, 35, 41, 54, 58, 67, 84}; thirteen on
+# this tree, adding {57, 61, 75, 80}), so a re-pin was available and was NOT taken. Re-pinning would
+# have made five campaign-narrative tests pass as written while concealing the single most important
+# thing this slice measured -- and this note's own discipline is that a moved distribution is
+# "recorded rather than absorbed". The five are RESTATED instead, each with the trace and the
+# measurement, and each keeps its INVERT-THIS instruction for the day a faithful forward Commonwealth
+# garrison policy stops leaving the terminus to its ground crews:
+#     test_campaign_concentration.py::test_the_railhead_is_held_and_the_faucet_keeps_running
+#     test_campaign_concentration.py::test_the_standing_garrison_order_still_holds
+#     test_campaign.py::test_campaign_commonwealth_can_attack
+#     test_campaign_faucet.py::test_the_commonwealth_trucks_actually_run
+#     test_campaign_claim.py::test_both_sides_take_the_cities_they_used_to_sprint_past
+# Whoever re-pins CAMPAIGN_SEED next should read those five first: three of them now assert the
+# LOSS, and a seed that holds the railhead will fail them in the good direction.
 # --------------------------------------------------------------------------------------------------
 CAMPAIGN_SEED = 23
 

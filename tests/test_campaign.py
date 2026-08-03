@@ -18,6 +18,7 @@ from game.engine import determinism_signature, run
 from game.events import Side
 from game.policy import ScriptedPolicy
 from game.scenario import campaign
+from game.state import SupplyUnit
 from baselines import CAMPAIGN_SEED                                 # noqa: E402
 
 MATRUH = coords.to_axial(coords.parse("D3714"))       # the railhead (60.7) -- rule 64.73 victory city
@@ -133,6 +134,21 @@ def test_campaign_commonwealth_can_attack():
     # a scaffold with nothing to hold up. The FIRST fallback (the courier, 2026-07-25) is left in
     # place: it is older than this arc, it is currently unexercised too, and it is the honest guard
     # for a fold that has lost this example before.
+    #
+    # REINSTATED 2026-08-02, CAUSE [10.29] (engine._capture_noncombat), AND NOW LOAD-BEARING -- the
+    # twin of the identical reinstatement in test_campaign_concentration.py::
+    # test_the_standing_garrison_order_still_holds, whose 2026-08-02 note carries the trace. At
+    # CAMPAIGN_SEED the Axis takes the Mersa Matruh terminus at Game-Turn 3, once the three
+    # Squadron Ground Support Units left standing on it are captured, so by GT13 the depot under
+    # the railhead is AXIS-owned and the courier stands on a city it cannot be fed at -- which is
+    # what [64.73]'s quality-test (campaign_claim._banking) asks, and refuses. The scaffold comes
+    # back in the cleaner form: a Commonwealth field depot is STOOD UNDER the courier rather than
+    # an enemy dump being force-fed, so what is constructed is the board this check needs (a unit
+    # BANKING a supplied victory city) and nothing else on it is touched.
+    if not garrison_units(on, Side.ALLIED):
+        on = replace(on, supplies=on.supplies + (
+            SupplyUnit("AL-Constructed-Matruh", Side.ALLIED, MATRUH, ammo=9999, fuel=9999,
+                       stores=9999, water=9999, constructed=True),))
     assert garrison_units(on, Side.ALLIED), "the CW banks no victory city -- the check is vacuous"
     assert campaign_claim.claims(on, Side.ALLIED, escort=True), \
         "the take-and-hold claims no city -- the check is vacuous"

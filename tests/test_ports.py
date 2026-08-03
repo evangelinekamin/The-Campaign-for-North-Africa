@@ -22,14 +22,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from game import coords, supply
-from game.engine import (_barrage_step, _naval_convoys, _port_regen, _Run,
+from game.engine import (_air_support, _barrage_step, _naval_convoys, _port_regen, _Run,
                          determinism_signature, run)
 from game.events import Control, EventKind, Phase, Side
 from game.invariants import check
 from game.movement import TerrainMap
 from game.policy import ScriptedPolicy
 from game.scenario import coastal_corridor, rommels_arrival, siege_of_tobruk
-from game.state import Convoy, GameState, Port, SupplyUnit, VP
+from game.state import AirMission, AirWing, Convoy, GameState, Port, SupplyUnit, VP
 from game.terrain import Terrain
 from tests.siege_fixtures import stand_the_siege_train_beside_tobruk
 
@@ -280,6 +280,44 @@ def test_blocked_harbour_regens_only_up_to_the_scuttled_ceiling():
         _port_regen(r2)
         levels.append(r2.state.port("PORT-Tobruk").eff)
     assert levels == [1, 2, 2, 2]                         # climbs to the ceiling and holds, not to 5
+
+
+def _bombed_harbour_state(port: Port) -> GameState:
+    """An Axis LAND air wing tasked against `port`, at 500 Bomb Points -- the [41.5] 471+ column,
+    where every one of the 36 codes takes at least one Efficiency Level, so the ledger is written
+    whatever the dice say. Neither side controls the port hex, so _air_port reads it as the enemy's."""
+    wing = AirWing("LW", Side.AXIS, "LAND", fighters=9, strike=500, recon=3)
+    return GameState(
+        turn=1, max_turns=4, phase=Phase.COMBAT, active_side=Side.AXIS, seed=3,
+        weather="clear", vp=VP(),
+        terrain=TerrainMap(terrain={port.hex: Terrain.CLEAR}, fortifications={}),
+        control={}, units=(), target_hex=port.hex, supplies=(), consumed={}, initial_supply={},
+        air=(wing,), air_missions=(AirMission(Side.AXIS, "port", port.id, 1),), ports=(port,))
+
+
+def test_55_18_the_bomb_ledger_expires_by_itself_at_the_operations_stage_boundary():
+    """55.18's "no regeneration in a stage the bombs landed in" is a fact about ONE Operations
+    Stage, and the stage ENDS. The ledger that records it must therefore be reborn empty at the
+    boundary -- BY ITSELF, on its own (turn, stage) stamp, not by a line inside engine.run()'s
+    `for stage in (1, 2, 3)` loop.
+
+    This test drives two Operations Stages by hand on one _Run and never enters run(), exactly as a
+    measurement driver does and as the [52.42] water and [55.3] tonnage ledgers are already pinned
+    (test_water_cpa, test_coastal_shipping). Against a ledger cleared only inside run()'s loop, the
+    harbour bombed in Stage 1 is still marked in Stage 2 and NEVER REGENERATES -- for the rest of
+    the war. That is the same defect that shipped twice from the same shape (024d042, 49b00f2)."""
+    port = Port("PORT-X", Side.ALLIED, (1, 0), "major", max_eff=5, eff=4,
+                cap_ammo=400, cap_fuel=400, cap_stores=400, cap_water=400, cap_tons=1000)
+    r = _Run(_bombed_harbour_state(port))
+    _air_support(r, Side.AXIS, set())                     # Operations Stage 1: the quay takes levels
+    bombed = r.state.port("PORT-X").eff
+    assert bombed < 4, "the 471+ column takes at least one level on all 36 codes"
+    _port_regen(r)                                        # end of Stage 1: bombed, so no regeneration
+    assert r.state.port("PORT-X").eff == bombed
+    r.emit(EventKind.STAGE_ADVANCED, Side.SYSTEM, "SYSTEM", {"stage": 2})
+    _port_regen(r)                                        # end of Stage 2: unbombed, so +1 (55.18)
+    assert r.state.port("PORT-X").eff == bombed + 1, \
+        "a harbour bombed last Operations Stage must regenerate in the next one"
 
 
 # --- 55.3 seeds Tobruk at the charted Efficiency 2 of 5, San Giorgio blocking ------
