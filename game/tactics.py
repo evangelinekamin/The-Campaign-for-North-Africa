@@ -207,14 +207,47 @@ def _mine_extra_cost(state: GameState, unit: Unit):
     return extra
 
 
+def formation_cpa(state: GameState, unit: Unit, formation=()) -> int:
+    """[6.15] The Capability Point Allowance a PARENT FORMATION moves on: "that of the lowest CPA
+    of the units comprising that parent formation, regardless of the CPA of any higher-CPA units.
+    If the British 7th Armored Division was to move as an entity... it would move with a CPA of
+    '10', or that of its lowest-CPA unit -- the 1st KRRC (without trucks)."
+
+    `formation` is the [19.12] subtree the counter carries (engine._co_located_subtree). Empty for
+    a counter with nothing attached, which is every counter in a scenario with no live organization
+    tree -- so those are byte-identical to the bare `effective_cpa` this replaced.
+
+    The minimum is over EFFECTIVE CPA, not printed cpa, because [6.17] lets a motorized infantry
+    unit "assume the CPA of the Truck unit carrying it": a subsidiary that has been given trucks
+    must stop binding the formation down to its foot rate. (effective_cpa also carries Rommel's
+    31.4 +5, which is the same argument from the other end -- the value a unit can actually spend
+    this Operations Stage is the one the rule is about.)
+
+    ONLY THE CPA IS BOUND HERE, NOT THE MOBILITY CLASS, and that gap is deliberate and flagged.
+    The counter still crosses ground on its Parent's `unit.mobility`, so a motorized subsidiary
+    carried by a foot Parent is not tested against [8.44]'s Salt Marsh ban or [8.45]'s desert gate.
+    That is a LIVE defect today and not one this rule introduces -- IT-4-CCNN---(4CN) already
+    carries kids of mobility {FOOT, MOTORIZED} under a FOOT Parent on scenario.campaign(1).
+    `tactics.may_step_into` is the existing instrument for it (it already asks whether EVERY unit
+    in a stack may legally cross a hexside, for forced relocations), and wiring it is its own
+    measured slice: [6.15] speaks about Capability Points and says nothing about mobility, so
+    extending it here would be inventing the rest of a rule the book stops short of."""
+    return min([effective_cpa(state, unit)] + [effective_cpa(state, u) for u in formation])
+
+
 def reachable_for(state: GameState, unit: Unit, enemy_zoc: frozenset,
-                  enemy_occupied: frozenset, roster: tuple | None = None) -> dict[Coord, float]:
+                  enemy_occupied: frozenset, roster: tuple | None = None,
+                  formation=()) -> dict[Coord, float]:
     """Hexes `unit` can legally reach this segment within its remaining CPA. Pass a
     `roster` (the friendly units snapshotted at phase start) so a unit's legal set
     is computed against the phase-start board -- otherwise ZOC-negation shifts as
     earlier units move and the observation ends up offering hexes the engine then
-    rejects (the observation/validation must agree on ONE snapshot)."""
-    budget = max(0.0, _cp_ceiling(effective_cpa(state, unit), unit.reserve_released)
+    rejects (the observation/validation must agree on ONE snapshot).
+
+    `formation` is the [19.12] subtree this counter carries, and it binds the CPA under [6.15]
+    (see formation_cpa). It does NOT change `cp_used`: the carried units ride inside the Parent's
+    counter and cost no Capability Point of their own, so the spend is the Parent's alone."""
+    budget = max(0.0, _cp_ceiling(formation_cpa(state, unit, formation), unit.reserve_released)
                  - unit.cp_used)                                     # 8.17 ceiling (+31.4, +18.24)
     src = roster if roster is not None else state.living(unit.side)
     negators = frozenset(u.hex for u in src if u.is_combat and u.id != unit.id)  # §10.26
@@ -227,10 +260,15 @@ def reachable_for(state: GameState, unit: Unit, enemy_zoc: frozenset,
 
 def reachable_for_prev(state: GameState, unit: Unit, enemy_zoc: frozenset,
                        enemy_occupied: frozenset,
-                       roster: tuple | None = None) -> tuple[dict[Coord, float], dict]:
+                       roster: tuple | None = None,
+                       formation=()) -> tuple[dict[Coord, float], dict]:
     """`reachable_for`, additionally returning the Dijkstra predecessor map so a mover's
-    actual ZOC-legal path can be reconstructed for Breakdown-Point accrual (21.21)."""
-    budget = max(0.0, _cp_ceiling(effective_cpa(state, unit), unit.reserve_released)
+    actual ZOC-legal path can be reconstructed for Breakdown-Point accrual (21.21).
+
+    `formation` binds the CPA under [6.15] exactly as in `reachable_for`. THIS is the form
+    engine._movement validates against, so a rule that bound only the other one would hold for
+    what a policy is offered and not for what the engine accepts."""
+    budget = max(0.0, _cp_ceiling(formation_cpa(state, unit, formation), unit.reserve_released)
                  - unit.cp_used)                                     # 8.17 ceiling (+31.4, +18.24)
     src = roster if roster is not None else state.living(unit.side)
     negators = frozenset(u.hex for u in src if u.is_combat and u.id != unit.id)  # §10.26

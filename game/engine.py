@@ -3829,12 +3829,16 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
             continue
         # Reachability is computed against the phase-start roster so a unit's legal
         # set doesn't depend on the order earlier units moved (matches observe()).
-        reach, prev = tactics.reachable_for_prev(r.state, u, enemy_zoc, enemy_occupied, roster)
+        # [19.12] the subtree this counter carries, computed BEFORE the reach because [6.15] binds
+        # the reach to it: "the CPA of a Parent Formation... is that of the lowest CPA of the units
+        # comprising that parent formation, regardless of the CPA of any higher-CPA units."
+        carried = _co_located_subtree(r.state, u, attached_index)  # 19.12: its counter moves the formation
+        reach, prev = tactics.reachable_for_prev(r.state, u, enemy_zoc, enemy_occupied, roster,
+                                                 formation=carried)          # 6.15
         if order.to == u.hex or order.to not in reach:
             _reject(r, side, actor, order,
                     "destination unreachable within CPA or blocked by ZOC")
             continue
-        carried = _co_located_subtree(r.state, u, attached_index)  # 19.12: its counter moves the formation
         present = [x for x in r.state.units_at(order.to) if x.side == side]
         # 9.14 at the destination is the FORMATION's footprint, not the bare HQ's: the Parent counts
         # its Organization SP only once its subsidiaries stand with it (9.12), so they must be in the
@@ -3896,12 +3900,29 @@ def _co_located_subtree(state: GameState, parent, index: dict) -> list:
     here or not at all. Empty for any counter with nothing attached, so every scenario without a
     live organization tree carries nothing and stays byte-identical.
 
-    FLAGGED ([6.15]): the mover's reach is gated on the PARENT's CPA (the caller runs
-    reachable_for_prev on the Parent counter), not on the LOWEST CPA among the formation's
-    components as 6.15 directs. Immaterial while the only Parents that carry a subtree are
-    homogeneous foot-infantry regiments -- a motorized formation's HQ is non-combat and never
-    carries -- so no carried component has a lower CPA to bind the move; noted so the
-    simplification is not silent."""
+    [6.15] IS NOW HONOURED, and the flag that stood here is discharged (2026-08-04). The caller
+    computes this subtree BEFORE its reach and hands it to reachable_for_prev as `formation`, so
+    the move is gated on the LOWEST CPA among the formation's components (tactics.formation_cpa)
+    rather than on the Parent's own. On the setup tree that is byte-identical -- every one of
+    scenario.campaign(1)'s 15 combat Parents already has a CPA equal to its formation minimum --
+    but it stops being so the moment a [19.5] guest slower than its Parent attaches, or a motorized
+    HQ carries foot infantry.
+
+    STILL FLAGGED, AND IT IS A [19.12] GAP RATHER THAN A [6.15] ONE: this is the ONLY site that
+    carries a subtree. engine._react (8.5 reaction) and engine._retreat_before_assault move a
+    counter without it and without excluding attached ones, so in those two segments a Parent can
+    step away from the subsidiaries its counter is supposed to contain, and a subsidiary can move
+    on its own order in defiance of "may not self-move" -- the rule this function exists to
+    enforce. [6.15] is deliberately NOT applied there: binding the CPA of a move that does not
+    carry the formation would apply half a rule and disguise the real defect.
+
+    A SECOND GAP, DELIBERATELY LEFT: only the CPA is bound, not the MOBILITY class. The counter
+    still crosses ground on the Parent's own mobility, so a motorized subsidiary carried by a foot
+    Parent escapes [8.44]'s Salt Marsh ban and [8.45]'s desert gate. That is live TODAY --
+    IT-4-CCNN---(4CN) carries kids of mobility {FOOT, MOTORIZED} under a FOOT Parent on
+    scenario.campaign(1) -- and tactics.may_step_into is the instrument for it. [6.15] speaks about
+    Capability Points and is silent on mobility, so fixing it here would be inventing the rest of a
+    rule the book stops short of."""
     out, frontier, seen = [], [parent.id], {parent.id}
     while frontier:
         pid = frontier.pop()
