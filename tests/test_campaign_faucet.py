@@ -385,11 +385,26 @@ def _faucet_reading(seed: int) -> dict:
     ordered = {o.truck_id for o in relay.campaign_truck_orders(fin, Side.ALLIED)}
     ordered |= {o.truck_id for o in relay.air_supply_orders(fin, Side.ALLIED)}
 
-    quiet = int(fin.max_turns * 0.75)             # "fell silent": no move in the last quarter
+    # A LORRY THAT IS STILL WORKING HAS NOT FALLEN SILENT, whether or not it is still driving.
+    # CORRECTED 2026-08-04: "silent" was read off TRUCK_MOVED alone, and a shuttle that stands on a
+    # hex carrying BOTH ends of its run -- seed 11's AL-Truck-Airfield-L, on the rail staging dump
+    # AL-Stage-Rail-27.101 and the D3516 air-facility larder at once -- ferries fuel between them in
+    # place and never needs to drive. MEASURED at seed 11: its last TRUCK_MOVED is Game-Turn 3 and it
+    # goes on to load 27 times and unload 27 times through Game-Turn 12. Reading that as "fell
+    # silent, re-diagnose" was the metric mistaking the pool's PURPOSE (deliver freight) for one of
+    # its means (drive). Work is move OR load OR unload.
+    last_work = dict(last_move)
+    for e in res.events:
+        if (e.side == Side.ALLIED and e.kind.name in ("TRUCK_LOADED", "TRUCK_UNLOADED")
+                and e.payload.get("truck_id")):
+            tid = e.payload["truck_id"]
+            last_work[tid] = max(last_work.get(tid, 0), e.turn)
+
+    quiet = int(fin.max_turns * 0.75)             # "fell silent": no work in the last quarter
     allied = [t for t in fin.trucks if t.side == Side.ALLIED]
-    never_moved = [t.id for t in allied if t.id not in last_move]
+    never_moved = [t.id for t in allied if t.id not in last_work]
     undiagnosed = [t.id for t in allied
-                   if t.id in last_move and last_move[t.id] <= quiet
+                   if t.id in last_work and last_work[t.id] <= quiet
                    and t.id in ordered and _OVER_ASK not in refused.get(t.id, ())]
 
     line_d = distance(railhead(fin).hex, CAIRO)   # 54.3: where the trains actually reach
@@ -415,6 +430,10 @@ def _faucet_reading(seed: int) -> dict:
         "late": sum(1 for e in moves if e.turn > 3 * fin.max_turns // 4),
         "ordered": len(ordered),
         "never_moved": never_moved,
+        # ...and the two sets a never-moved lorry has to be read against (2026-08-04): which lorries
+        # are the [60.43] air pool, and which the relay still has an order for.
+        "air_pool_ids": {t.id for t in air_pool},
+        "ordered_ids": ordered,
         "undiagnosed": undiagnosed,
         "forward": len(forward),
         "freight": len(freight),
@@ -568,8 +587,27 @@ def test_the_commonwealth_trucks_actually_run():
             f"game-turns, under one a turn (panel minimum is 39 on the control tree, 40 on this one)"
         assert r["unloads"], f"seed {s}: the Commonwealth trucks never delivered anything"
         assert r["early"], f"seed {s}: the pool never ran at all in the opening weeks"
-        assert not r["never_moved"], \
-            f"seed {s}: {r['never_moved']} never moved at all -- the pool did not start"
+        # RESTATED 2026-08-04, CAUSE [4.44B]. This used to read `assert not r["never_moved"]` for
+        # the WHOLE Commonwealth pool, and it held on all 24 seeds of both trees until the
+        # Commonwealth order-of-battle pass. MEASURED over the panel on both trees: control 0 seeds
+        # with a never-moved lorry, this tree exactly ONE -- seed 6's AL-Truck-Airfield-H, a [60.43]
+        # Any-Air-Facility heavy standing at (27,101), which THE RELAY PROPOSES NOTHING FOR (it is
+        # not in `ordered`) and the engine never refuses an order from (no ORDER_REJECTED names it).
+        # No FREIGHT lorry never-moves on any seed of either tree.
+        #
+        # A lorry with nothing to do has not failed to start; it has nothing to do. That is the same
+        # already-named stall (i) that the `undiagnosed` check below allows a lorry to STOP for, and
+        # a lorry that never started for it is the same phenomenon at Game-Turn 1 instead of
+        # Game-Turn 9. So the blanket claim is split: the FREIGHT pool -- the pool this test is
+        # named for -- must start, absolutely and on every seed; an AIR lorry may sit still only if
+        # the relay is not cycling it, which is exactly the condition `air_astray` uses to decide
+        # whether a mis-parked air lorry is a defect or a fact. A never-moved air lorry the relay
+        # IS still ordering is a red, and would be one here.
+        assert not [t for t in r["never_moved"] if t not in r["air_pool_ids"]], \
+            f"seed {s}: {r['never_moved']} never moved at all -- the freight pool did not start"
+        assert not [t for t in r["never_moved"] if t in r["ordered_ids"]], \
+            f"seed {s}: {r['never_moved']} never moved and the relay is still ordering it -- " \
+            f"that is neither the known _step_toward dead end nor a lorry with nothing to do"
         assert not r["undiagnosed"], \
             f"seed {s}: {r['undiagnosed']} fell silent in the last quarter, the relay HAS an order " \
             f"for each and the engine never refused that order as uncarriable -- that is neither " \

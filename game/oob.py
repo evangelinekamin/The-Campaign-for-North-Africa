@@ -891,13 +891,27 @@ def _make_unit(rec: dict, side: Side, ax, role: str, stats: dict, seen: dict,
         return model.get(key, s.get(key, 0))
     return Unit(
         _uid(seen, rec["counter"]), side, ax,
-        (StepRecord(role, s["steps"]),),
+        # [4.44B]/[4.44b]/[4.45c] "TOE & Weapon System(s)": the number of TOE Strength Points the
+        # counter possesses UPON ARRIVAL/DEPLOYMENT, which is not always its ID Code's Maximum TOE.
+        # The Organization at Arrival charts print three forms and their own key (scan p.116)
+        # defines them: "N = The unit possesses the maximum number of TOE Strength Points listed on
+        # the Unit Characteristics Chart for that ID Code. U@# = Understrength at 'x' TOE Strength
+        # Points... O@# = Overstrength at 'x'... The unit arrives/deploys with that number of TOE
+        # Strength Points, but may only absorb replacement points up to the maximum number
+        # permitted for that ID Code." So arrival strength and the rebuild ceiling are two
+        # different cells, and `toe` is the first of them: absent (every record written before the
+        # [4.44B] pass) it falls back to the role's full TOE, which is exactly what "N" means.
+        # max_toe stays the ID Code's Maximum TOE below, so a U@ counter arrives with the headroom
+        # [19.61]/[20.4] can fill and an O@ counter arrives above a ceiling it may not re-exceed.
+        (StepRecord(role, rec.get("toe", s["steps"])),),
         mobility=mob,
         cpa=s["cpa"], stacking_points=s.get("sp", 1),       # 1=battalion (rule 9.4)
-        # [19.61]/[9.26] the counter's printed maximum TOE Strength = its charted full-strength
-        # figure, which is exactly `steps` at construction (the OOB builds every unit at full TOE).
-        # It is the rebuild ceiling (19.61/19.68) and the shell denominator (9.26). A model may
-        # override it (a unit arriving below its paper strength, 19.6 second paragraph).
+        # [19.61]/[9.26] the counter's printed maximum TOE Strength -- the [4.46a/b/c] Unit
+        # Characteristics Chart's own "Maximum TOE" column for the counter's ID Code. It is the
+        # rebuild ceiling (19.61/19.68) and the shell denominator (9.26), and it is a DIFFERENT
+        # cell from the arrival TOE above: a `U@2` counter arrives at 2 and may be rebuilt to its
+        # code's maximum. The role's `steps` is the fallback for a row whose chart cell was never
+        # transcribed; a model may override it (19.6 second paragraph).
         max_toe=model.get("max_toe", s.get("max_toe", s["steps"])),
         oca=model.get("oca", s["oca"]), dca=model.get("dca", s["dca"]),
         barrage=rating("barrage"), anti_armor=rating("anti_armor"),

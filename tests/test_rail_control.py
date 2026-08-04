@@ -1304,10 +1304,47 @@ def test_the_axis_railway_actually_runs_in_a_real_campaign():
     not standing on -- a pre-existing gap in the proposer (it fires on the control tree too), newly
     exercised much harder on a board where the Axis activates more locomotives. It is a doctrine
     bug, not a 54.4 rule bug, it is out of this slice's scope, and it is flagged here rather than
-    absorbed into a seed choice."""
+    absorbed into a seed choice.
+
+    *** RE-PINNED 6 -> 38, 2026-08-04, CAUSE [4.44B] -- AND THE SWEEP IS THE BIGGEST FINDING THIS
+    TEST HAS EVER CARRIED, SO IT IS WRITTEN OUT IN FULL RATHER THAN COMPRESSED TO A SEED. *** The
+    Commonwealth order-of-battle pass seeds the 39 counters the [4.44B] chart deploys at Game-Turn 1
+    and this engine did not carry -- among them the whole of the 7th Armoured Division's armour and,
+    on the railhead itself, the 1st South Staffordshires that [60.41] attaches to the Matruh
+    Garrison. Re-swept seeds 1-40 to Game-Turn 6 on BOTH trees, same recipe as the line below, and
+    the control arm REPRODUCES the 31 -> 6 entry above EXACTLY (29 activate, THREE clean =
+    {6, 20, 38}), which is what licenses the comparison:
+
+        BEFORE   29 activate, THREE clean  {6, 20, 38}
+        AFTER     7 activate, FOUR clean   {11, 15, 17, 38}
+
+    READ THE PAYERS, NOT THE COUNTS. On the control tree TWENTY-FOUR of the 29 activations are
+    bought with AL-STAGE-MATRUH -- the Commonwealth's own railhead depot, overrun -- and two more
+    with AL-Stage-ElDaba; only three come out of an Axis dump. On this tree ALL SEVEN are AX-Dump#2,
+    #3 or #4, the Axis's own forward stocks, and not one is plunder. The Axis railway in this
+    campaign was very largely a CAPTURED railway, and it was captured because the Eighth Army had no
+    order of battle to hold its own terminus with. Seed 23's board says the same thing from the
+    other end (tests/test_campaign_concentration.py's 2026-08-04 note: Mersa Matruh AXIS -> ALLIED
+    at Game-Turn 12, railhead AL-Alexandria -> AL-Stage-Matruh). The 29 -> 7 collapse is therefore
+    NOT 54.4 becoming less reachable -- it is the rule finally being asked of the Axis's own
+    logistics on nearly every board instead of of a windfall.
+
+    Seed 38 is chosen because it is the ONLY dual witness -- the one seed that activates, hauls and
+    draws no AXIS/Rail rejection on BOTH trees -- so it is a witness under both instruments and not
+    one shopped for the new dice. It also gains the property every re-pin since 9 has ranked first:
+    on the control tree its locomotive is paid by AL-Stage-ElDaba (Commonwealth stores overrun),
+    and here it is paid by AX-DUMP#4, the Axis's own forward dump brought up by his own lorries.
+    Same window (the activation lands inside six Game-Turns, one haul follows) and every assertion
+    below is unchanged."""
     from game.campaign_policy import CampaignAxisPolicy, CampaignCommonwealthPolicy
     from game.scenario import campaign
-    res = run(replace(campaign(6), max_turns=6), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
+    # RECIPE CORRECTED 2026-08-04 (flagged by this slice's gate, pre-existing): this read
+    # `replace(campaign(38), max_turns=6)`, which truncates the CLOCK but not the BUILD -- the
+    # convoy schedule, the air missions, the Malta interdiction orders and both halves of the
+    # Tobruk duel are all generated from scenario.campaign's OWN max_turns kwarg, so the replace()
+    # form runs a six-turn war on a full-length war's schedules. A truncated build and a truncated
+    # clock are two different wars, and every other baseline in this repo uses the kwarg.
+    res = run(campaign(38, max_turns=6), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     hauls = [e for e in res.events if e.kind is EventKind.RAIL_HAULED and e.side is Side.AXIS]
     assert [e for e in res.events if e.kind is EventKind.ROLLING_STOCK_ACTIVATED]
     assert hauls, "the Axis railway bought a locomotive and never ran a train"

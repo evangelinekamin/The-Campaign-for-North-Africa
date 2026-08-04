@@ -71,11 +71,30 @@ def test_tobruk_and_bardia_keep_their_level_2(board):
 
 def test_the_commonwealth_garrisons_every_hex_of_the_delta(board):
     """[64.71] The Axis auto-wins by occupying every hex of Alexandria AND Cairo. Leaving them
-    empty is not a strategy, it is a way to lose the war -- so the standing order claims all of
-    them. At t0 all seven stand empty, so all seven are claimed, one unit apiece."""
+    empty is not a strategy, it is a way to lose the war -- so between them the standing order and
+    the units already there cover all seven, one unit apiece.
+
+    RESTATED 2026-08-04, CAUSE [4.44B] -- and the restatement is the SAME CLAIM asked correctly.
+    The old form said "at t0 all seven stand empty, so all seven are claimed", which was a fact
+    about an INCOMPLETE order of battle, not about the rule: [60.41] Commonwealth Initial
+    Deployment prints 'Alexandria (E3613 &/or 3714): HQ: 2nd New Zealand Division; 4th NZ Bde
+    (2 NZ); 27th NZ MG Bn (2 NZ); 2nd NZ Cavalry (2 NZ); 4th NZ Field Arty Regt (2 NZ)', and with
+    those counters seeded the Alexandria hex E3613 is garrisoned from Game-Turn 1 by the book's own
+    setup. delta_claims deliberately SKIPS an occupied hex (delta_garrison pins its holder instead),
+    so asserting "every hex is claimed" would now be asserting that the standing order sends a
+    second battalion to a hex the 2nd New Zealand Division is already standing on. What 64.71
+    actually requires is that no hex is left OPEN, and that is what is asserted."""
     plan = delta_claims(board, Side.ALLIED)
-    assert {c.city for c in plan} == set(delta_hexes(board))
+    garrisoned = {ax for ax in delta_hexes(board)
+                  if any(u.side == Side.ALLIED and u.alive and u.is_combat and u.strength >= 1
+                         for u in board.units_at(ax))}
+    assert {c.city for c in plan} | garrisoned == set(delta_hexes(board))
+    assert not ({c.city for c in plan} & garrisoned), "a garrisoned hex must not also be claimed"
     assert len({c.unit_id for c in plan}) == len(plan), "one unit may not hold two hexes"
+    # ...and the one hex the book itself garrisons is Alexandria, by the counters [60.41] names.
+    from game.coords import parse, to_axial
+    assert garrisoned == {to_axial(parse("E3613"))}
+    assert delta_garrison(board, Side.ALLIED)      # the 64.71 pin is on the holder it found there
 
 
 def test_the_delta_order_never_impounds_the_armour(board):
@@ -93,14 +112,29 @@ def test_the_axis_never_garrisons_the_delta(board):
 
 
 def test_a_unit_on_a_delta_hex_is_pinned_there(board):
-    """The dual of the claim: the unit that arrives never marches away again (hold_garrisons)."""
+    """The dual of the claim: the unit that arrives never marches away again (hold_garrisons).
+
+    RESTATED 2026-08-04, CAUSE [4.44B]. The hex this used to inject into -- delta_hexes()[0], the
+    Alexandria hex E3613 -- is no longer empty: [60.41] deploys the 2nd New Zealand Division there
+    and the pass that seeded it put four of its battalions on the hex. delta_garrison keeps ONE
+    holder per hex (min by (is_tank, id)), so the injected battalion was simply not the one chosen
+    and the test was asking whether a unit is pinned on a hex where a DIFFERENT unit is pinned. It
+    injects into an unoccupied Delta hex instead, which is the case the test was written for; the
+    already-garrisoned hex is asserted beside it, so both halves of the standing order are covered
+    rather than one being traded for the other."""
     from dataclasses import replace
-    alex = delta_hexes(board)[0]
+    empty = next(ax for ax in delta_hexes(board)
+                 if not any(u.side == Side.ALLIED and u.alive and u.is_combat and u.strength >= 1
+                            for u in board.units_at(ax)))
     briton = next(u for u in board.living(Side.ALLIED) if u.is_combat and not u.is_tank)
-    held = replace(board, units=tuple(replace(u, hex=alex) if u.id == briton.id else u
+    held = replace(board, units=tuple(replace(u, hex=empty) if u.id == briton.id else u
                                       for u in board.units))
     assert briton.id in delta_garrison(held, Side.ALLIED)
     assert hold_garrisons([MoveOrder(briton.id, (27, 100))], held, Side.ALLIED) == []
+    # the hex [60.41] garrisons for us pins its own holder on the untouched board
+    pinned = delta_garrison(board, Side.ALLIED)
+    assert len(pinned) == 1 and hold_garrisons(
+        [MoveOrder(next(iter(pinned)), (27, 100))], board, Side.ALLIED) == []
 
 
 def test_delta_helpers_are_inert_without_a_campaign_victory():

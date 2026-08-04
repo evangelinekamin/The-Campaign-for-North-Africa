@@ -168,7 +168,16 @@ def test_the_army_does_not_sit_out_the_war_in_the_delta(gt12):
         supply trace cannot yet see the Commonwealth railroad; read its docstring), and until that
         lands this count stays depressed. Flagged, not papered over."""
     start, fin = gt12.initial, gt12.final
-    assert _near_railhead(start) == 10                       # the Game-Turn 1 frontier screen
+    # RE-FIT 2026-08-04 ([4.44B], the Commonwealth order-of-battle pass): 10 -> 22. An EXACT COUNT of
+    # the built order of battle with no dice in it, and the largest single jump this line has taken.
+    # The [4.44B] COMMONWEALTH ORGANIZATION AT ARRIVAL CHART prints 39 counters at Arrives 'D' that
+    # this OOB did not carry, and [60.41] Commonwealth Initial Deployment puts most of them inside
+    # fifteen hexes of Mersa Matruh: the whole of the 7th Armoured Division's armour (4 Armd Bde HQ,
+    # 6 RTR, 7 Hus, 7 Armd Bde HQ, 1 RTR, 8 Hus, 2 RflBde, 11 Hus), the 4th Indian Division's two
+    # deployed brigades and its field regiment, and the 1st South Staffordshires on the railhead
+    # itself. THE FRONTIER SCREEN WAS MORE THAN HALF ABSENT, and it is the screen this whole test is
+    # about.
+    assert _near_railhead(start) == 22                       # the Game-Turn 1 frontier screen
     # RE-FIT 2026-07-17 (Phase 3.3): 75 -> 141. Rule 20.11 splits every Commonwealth infantry/motor
     # brigade into an HQ + THREE battalions (34 brigades in reinforcements_campaign.json), so the
     # seeded Delta stream grows by the two extra battalions each brigade always had. This is an exact
@@ -189,8 +198,13 @@ def test_the_army_does_not_sit_out_the_war_in_the_delta(gt12):
     # is_combat False, per data/unit_stats.json) exactly like every other Commonwealth division HQ
     # in this file. One fewer combat counter in the Delta stream because a stand-in that was never
     # a real counter stops being counted as one. Still an exact count, no dice moved.
+    # RE-FIT 2026-08-04 ([4.44B], the Commonwealth order-of-battle pass): 296 -> 338. The chart's 51
+    # rule-20 arrivals that this OOB was missing, less the four Polish counters (they print Arrives
+    # '3/1', so arrival_turn == 1 and this filter excludes them) and the handful whose formation
+    # musters outside fifteen hexes of Cairo. Still an exact count of the built order of battle, no
+    # dice moved.
     assert sum(1 for u in start.units if u.side == Side.ALLIED and u.is_combat
-               and u.arrival_turn > 1 and distance(u.hex, CAIRO) <= 15) == 296   # the Delta stream
+               and u.arrival_turn > 1 and distance(u.hex, CAIRO) <= 15) == 338   # the Delta stream
 
     # The rear echelon MOVES -- the original defect was an army that never left the Delta AT ALL, and
     # that is what these two assertions guard. The absolute counts are FITTED and have moved THREE
@@ -404,16 +418,32 @@ def test_the_railhead_is_held_and_the_faucet_keeps_running(gt12):
     Commonwealth garrison policy that does not leave the terminus to its ground crews is the actual
     fix, exactly as the 2026-07-26 note said. It is still not this slice's to make."""
     fin = gt12.final
-    # THE TERMINUS IS LOST AND THE LINE RETRACTS GRACEFULLY (see the 2026-08-02 note above).
-    # Asserted as the MECHANISM, not as a station id: the railway must fall back to a real station
-    # of its own lane, which is what distinguishes 54.3's retraction from the faucet dying.
-    assert fin.control_of(MATRUH) == Control.AXIS
+    # *** 🟢 THE FLAG FIRED AND THE FINDING REVERSED, 2026-08-04, CAUSE [4.44B] -- AND THE LINE
+    # BELOW IS THE INVERSION ITS OWN GUARD ASKED FOR. *** The 2026-08-02 note ends "a FAITHFUL
+    # forward Commonwealth garrison policy that does not leave the terminus to its ground crews is
+    # the actual fix". It was not a policy that was missing. It was the ORDER OF BATTLE: the
+    # [4.44B] COMMONWEALTH ORGANIZATION AT ARRIVAL CHART prints 39 counters at Arrives 'D' that this
+    # engine did not carry, and [60.41] Commonwealth Initial Deployment prints one of them --
+    # '1st South Staffordshires', attached to the Matruh Garrison -- STANDING ON THIS HEX at
+    # Game-Turn 1. MEASURED at CAMPAIGN_SEED, GT12 (before -> after): Mersa Matruh AXIS -> ALLIED,
+    # railhead AL-Alexandria -> AL-Stage-Matruh (the deepest retraction this test ever recorded,
+    # undone -- the lane runs its whole length again), and garrison_units(fin) is exactly
+    # {'1-SoStff'}: the counter this pass seeded is the counter banking the city.
+    #
+    # THE MECHANISM CLAIM IS NOT WEAKENED BY THE INVERSION, it is asserted from the other side.
+    # What the 2026-08-02 form pinned was that losing the terminus makes the line RETRACT rather
+    # than die; what is pinned now is that HOLDING it keeps the line whole -- the same lane, the
+    # same 56.15 test, the same "never cancelled" claim below, and a railhead that is still a real
+    # station of its own lane. The `head.id != "AL-Stage-Matruh"` tripwire is kept, inverted: if the
+    # Commonwealth ever loses the terminus again at this seed, this line says so out loud instead
+    # of the test quietly passing on a retraction.
+    assert fin.control_of(MATRUH) == Control.ALLIED
     line = next(c.retarget for c in fin.convoys
                 if c.side == Side.ALLIED and c.lane == "CW-RAILHEAD" and c.retarget)
     head = railhead(fin)
     assert head is not None and head.id in line, "the rail lane lost its line entirely"
-    assert head.id != "AL-Stage-Matruh", \
-        "the Commonwealth holds the terminus again -- INVERT this restatement, the finding reversed"
+    assert head.id == "AL-Stage-Matruh", \
+        "the Commonwealth lost the terminus again -- INVERT this restatement, the finding reversed"
 
     cancelled = [e for e in gt12.events if e.kind.name == "CONVOY_CANCELLED"
                  and e.payload.get("lane") == "CW-RAILHEAD"]
@@ -515,7 +545,15 @@ def test_the_standing_garrison_order_still_holds(gt12):
     # standing on it are captured, and holds it at GT12. That is not incidental to this test either
     # -- it is why both fallbacks above now fire -- but it is still not what this test asserts, and
     # the line is kept (rather than deleted) precisely so a third flip cannot pass unnoticed.
-    assert fin.control_of(MATRUH) == Control.AXIS
+    #
+    # RESTATED A FOURTH TIME 2026-08-04, CAUSE [4.44B] -- and this time it flips BACK, which is why
+    # the line was kept. The Commonwealth order-of-battle pass seeds the 1st South Staffordshires
+    # on Mersa Matruh at Game-Turn 1, where [60.41] prints it attached to the Matruh Garrison, and
+    # the terminus is held at GT12 (the full trace is in
+    # test_the_railhead_is_held_and_the_faucet_keeps_running's own 2026-08-04 note). Neither
+    # fallback above fires any more: garrison_units(fin) is {'1-SoStff'} on the real GT12 board, so
+    # this test again asks its question of a unit that genuinely banks an uncaptured city.
+    assert fin.control_of(MATRUH) == Control.ALLIED
     supplied, garrisoned = _matruh_supplied_turns(gt12)     # the WHOLE-RUN record, unaffected by the
     assert supplied >= garrisoned * 2 // 3                  # placement above (it only touches `fin`)
 

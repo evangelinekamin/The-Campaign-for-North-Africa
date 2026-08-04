@@ -22,6 +22,7 @@ import pytest
 
 from game import supply
 from game import tactics
+from game.apply import fold
 from game.hexmap import neighbors
 from game.campaign_policy import (CampaignAxisPolicy, CampaignCommonwealthPolicy, deny_dumps,
                                   keep_in_trace)
@@ -117,14 +118,34 @@ def _overrun(dump_id: str):
 def test_a_field_dump_is_captured_when_the_enemy_enters_its_hex():
     """[32.13] "If any enemy combat unit enters a Supply Unit's hex, that unit is captured (and its
     supplies used immediately and freely)." [49.19]: "Fuel is non-denominational... making a supply
-    dump a worthwhile objective." """
+    dump a worthwhile objective."
+
+    RESTATED 2026-08-04, CAUSE [4.44B]. What 32.13 says is that the dump CHANGES HANDS when the
+    enemy walks onto it; it says nothing about who holds it an hour later. The end-of-run form was
+    reading the second question and calling it the first, and the Commonwealth order-of-battle pass
+    made the difference visible: with the 39 charted counters [4.44B] deploys at Game-Turn 1 --
+    among them the 7th Armoured Division's four tank regiments and the 4th Indian Division's two
+    deployed brigades -- the Eighth Army now RETAKES Mersa Matruh inside the same Game-Turn, so the
+    depot ends the fold Commonwealth-held after having been Axis-held. Both facts are asserted: the
+    capture fires and flips the owner AT THE MOMENT THE RULE SPEAKS ABOUT (the state folded up to
+    and including the capture event), and the recapture is recorded as the finding it is rather
+    than papered over."""
     st, dump, _foe = _overrun("AL-Stage-Matruh")
     res = run(replace(st, max_turns=1), CampaignAxisPolicy(), CampaignCommonwealthPolicy())
     took = [e for e in res.events if e.kind == EventKind.SUPPLY_CAPTURED
             and e.payload["supply_id"] == dump.id]
     assert took, "no dump changed hands -- 32.13 did not fire on an overrun depot"
     assert took[0].payload["from"] != took[0].payload["to"]
-    assert res.final.supply(dump.id).side == Side.AXIS
+    at_capture = fold(st, res.events[:res.events.index(took[0]) + 1])
+    assert at_capture.supply(dump.id).side == Side.AXIS
+    # ...and the recapture, ASSERTED and not merely described (2026-08-04): the docstring above
+    # says "both facts are asserted", and until this line only the first one was. If the Eighth
+    # Army ever stops retaking its own railhead depot inside the Game-Turn it lost it, that is a
+    # finding about the [4.44B] order of battle and it should fail HERE, loudly, rather than be
+    # absorbed by a test that had quietly stopped looking at the end of the fold.
+    assert res.final.supply(dump.id).side == Side.ALLIED, (
+        "the Commonwealth no longer retakes Mersa Matruh's depot in the turn it is overrun -- "
+        "re-measure the [4.44B] deployed counters before restating this")
 
 
 def test_capture_moves_supply_and_never_mints_it():
@@ -344,7 +365,14 @@ def test_a_major_city_is_two_harder_to_blow_and_a_small_dump_one_easier():
 def _about_to_fall(dump_id: str):
     """A campaign state in which `dump_id` is ABOUT TO FALL: one friendly battalion standing on it,
     an overwhelming enemy stack in the next hex. Built by moving real counters, so every rule the
-    doctrine and the engine consult (CPA, gun/non-gun, stacking, strength) reads a real unit."""
+    doctrine and the engine consult (CPA, gun/non-gun, stacking, strength) reads a real unit.
+
+    THE OWNER'S OTHER COUNTERS ARE CLEARED OFF THE DUMP HEX, exactly as _overrun clears them for
+    its own reason (2026-08-04, [4.44B]): the fixture's whole premise is ONE battalion standing on
+    the depot, and the Commonwealth order-of-battle pass put a second real counter on Mersa Matruh
+    -- the 1st South Staffordshires, which [60.41] attaches to the Matruh Garrison. With two
+    defenders the doctrine correctly judged the depot holdable and proposed no demolition, so the
+    test was failing on a premise it had stopped establishing rather than on the rule it names."""
     st = campaign(seed=1941)
     dump = st.supply(dump_id)
     holder = next(u for u in st.living(dump.side) if u.is_combat and not u.is_gun)
@@ -352,7 +380,15 @@ def _about_to_fall(dump_id: str):
     foe = [u for u in st.living(tactics.other(dump.side)) if u.is_combat][:4]
     units = [replace(holder, hex=dump.hex)] + [replace(u, hex=nxt) for u in foe]
     keep = {u.id for u in units}
-    return replace(st, units=tuple(units) + tuple(u for u in st.units if u.id not in keep)), holder
+    rest = tuple(u for u in st.units
+                 if u.id not in keep and not (u.hex == dump.hex and u.side == dump.side))
+    # Dropping counters removes their seeded intrinsic pools from the on-hand base, so re-derive the
+    # t0 conservation base for THIS unit set -- the identical step _overrun takes, and required
+    # because test_a_blown_dump_is_destroyed_not_handed_over folds this state through run().
+    from game.scenario import _initial_supply
+    all_units = tuple(units) + rest
+    return replace(st, units=all_units,
+                   initial_supply=_initial_supply(st.supplies, all_units)), holder
 
 
 def test_a_dump_about_to_fall_is_blown():

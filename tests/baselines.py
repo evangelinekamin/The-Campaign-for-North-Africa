@@ -10,6 +10,50 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+NOT RE-BASELINED 2026-08-04 -- [4.44B], THE COMMONWEALTH ORDER OF BATTLE. Ninety counters the
+COMMONWEALTH ORGANIZATION AT ARRIVAL CHART prints and this engine did not carry are seeded (39 of
+them at Arrives 'D', on the Game-Turn-1 map), eighteen [4.46a] stat rows are transcribed, and
+game.oob._make_unit learns the charts' per-counter arrival TOE ('U@2' finally means understrength
+at two). BOTH BENCHMARK SIGNATURES ARE BYTE-IDENTICAL: rommel e1d1fa771ce3, siege 19693b23b988,
+unchanged -- the two Desert Fox scenarios read neither campaign OOB file, the eighteen new rows are
+additive keys nothing else selects, and the two Maximum-TOE cells added to the pre-existing 'g' and
+'ee' rows move no Desert Fox counter's log. THE CAMPAIGN MOVES, and it moves further than any
+order-of-battle pass has moved it.
+
+    Recipe, as ever: scenario.campaign(seed, max_turns=12) via its OWN kwarg, CampaignAxisPolicy
+    vs CampaignCommonwealthPolicy, sha256(determinism_signature(events))[:12]. The control column
+    reproduces the 2026-08-03 entry below exactly, which is what licenses the comparison.
+
+        1    52a69aec9ddb -> 285e66bc94e6      4    ebb2ff193892 -> 2c37028bc306
+        7    ab81428240bb -> 6f6cd2322352      777  73e777a74972 -> 54e8a1d06fb4
+        1941 f5159116d16f -> 12b239aab896      2026 02eb0ac927a8 -> b9e0e0257f28
+
+    WHAT MOVED THE CAMPAIGN, because a signature proves determinism and nothing else and the
+    behaviour is the point. Whole-war A/B on seeds 42/1941/7/2026, control tree built OUTSIDE the
+    repo: the 64.76 GRADE DOES NOT MOVE (Axis Smashing Victory, eight runs of eight) and the
+    Commonwealth VP shift is RANDOM IN SIGN at the granularity of one 10-point city (-10, 0, +10,
+    -10) -- the S7-stores result again. What moves is the first half of the war, which the
+    end-of-game scoreboard never looks at. Panel 1..24 at Game-Turn 30, control -> this tree:
+
+        the Commonwealth stands on Mersa Matruh      3/24 -> 20/24
+        ...and BANKS it (the 64.73 quality test)     3/24 -> 20/24
+        the Axis stands on Mersa Matruh             18/24 ->  4/24
+        the Commonwealth stands on Sidi Barrani     18/24 -> 23/24
+
+    ONE COUNTER DID MOST OF IT: [60.41] prints "D3714: Matruh Garrison (I; Att: ... 1st South
+    Staffordshires" and that counter was among the ninety. Two consequences are pinned in the
+    suite: tests/test_campaign_concentration.py inverts its [10.29] "the terminus is lost"
+    restatement (the guard line it left for exactly this), and tests/test_rail_control.py re-pins
+    its witness seed 6 -> 38 on a sweep that found the Axis railway had been a CAPTURED railway --
+    26 of 29 locomotive activations over seeds 1-40 were bought with Commonwealth stores overrun at
+    Mersa Matruh or El Daba on the control tree, and NONE of the 7 here is.
+
+    THE ONE COST, named rather than absorbed: [60.41]'s 177 first-line Truck Points are a FIXED
+    pool that oob._seed_first_line splits evenly over the Game-Turn-1 combat muster, and that muster
+    goes 27 -> 57 counters, so every Commonwealth unit's carrying ceiling falls 6.556 -> 3.105 Truck
+    Points. The book lists the allotment BY HEX; a faithful per-hex placement is now reconstructible
+    and is not built here (scratchpad/data-debt/cw-counters-outcome.md section 4).
+--------------------------------------------------------------------------------------------------
 NOT RE-BASELINED 2026-08-03 -- THREE DEFECTS AT THE CPA SEAM: [19.68]'s CP TO A DEAD PARENT, THE
 ASSAULT'S WATER DRAWN BEFORE ITS AMMUNITION, AND [10.36] RETREATING A VEHICLE [52.51] FORBIDS TO
 MOVE. BOTH BENCHMARK SIGNATURES ARE BYTE-IDENTICAL across all three: rommel e1d1fa771ce3, siege

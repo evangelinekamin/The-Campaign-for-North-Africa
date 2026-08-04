@@ -131,14 +131,30 @@ def test_reinforcement_first_line_totals_match_the_transcribed_schedule():
 def test_reinforcement_first_line_seeds_a_cw_tank_reinforcement():
     # The armour-elimination diagnosis's headline gap: EVERY CW armour counter in the campaign is a
     # rule-20 reinforcement, and _seed_first_line only ever seeded the GT1 muster, so all 39 carried
-    # first_line_capacity(AMMO) == 0. [4.43a] GT88: "24 Armored Bde [8]; Trucks: 7 L, 36 M, 8 H" -- it
-    # is the LONE combat-eligible arrival that Game-Turn, so it receives the entire bucket undivided --
+    # first_line_capacity(AMMO) == 0. [4.43a] GT88: "24 Armored Bde [8]; Trucks: 7 L, 36 M, 8 H" --
     # the direct proof the fix reaches CW armour.
+    #
+    # RESTATED 2026-08-04, CAUSE [4.44B]. The old form asserted the tank took the ENTIRE bucket
+    # undivided, "the LONE combat-eligible arrival that Game-Turn". It is not lone any more, and it
+    # never should have been: the [4.44B] 8th Armored Division sheet (scan p.118) prints the 11th
+    # KRRC arriving 1/88 beside it, and that counter was one of the 91 the Commonwealth
+    # order-of-battle survey found missing. So the bucket is now shared by two counters and
+    # _seed_reinforcement_first_line splits it evenly, which is the schedule's OWN rule -- [4.43a]'s
+    # legend reads "may be freely divided amongst the units". The assertion is moved onto the
+    # property that is actually the mechanism's: the whole charted bucket lands, undivided-in-total,
+    # on the Game-Turn's combat arrivals, and the tank gets a real share of it. That is strictly
+    # more than "one unit got 7/36/8", because it holds however many counters the chart puts in the
+    # bucket.
     st = scenario.campaign(max_turns=1)
     tank = st.unit("24-Armd-Bde")   # 8th Armoured Division, arrival_turn 88 (see reinforcements_campaign.json)
     assert tank is not None and tank.arrival_turn == 88
-    assert (tank.fl_light, tank.fl_medium, tank.fl_heavy) == (7, 36, 8)
-    assert supply.first_line_capacity(tank, "AMMO") == 7 * 2 + 36 * 4 + 8 * 8
+    bucket = [u for u in st.units if u.side == Side.ALLIED and u.nationality == "CW"
+              and u.arrival_turn == 88 and u.is_combat and not u.is_garrison_home]
+    assert {u.id for u in bucket} == {"24-Armd-Bde", "11-KRRC-[8]"}
+    assert (sum(u.fl_light for u in bucket), sum(u.fl_medium for u in bucket),
+            sum(u.fl_heavy for u in bucket)) == (7, 36, 8)         # [4.43a] GT88, whole and exact
+    assert (tank.fl_light, tank.fl_medium, tank.fl_heavy) == (3, 18, 4)   # _share, remainder first
+    assert supply.first_line_capacity(tank, "AMMO") == 3 * 2 + 18 * 4 + 4 * 8
 
 
 def test_reinforcement_first_line_skips_a_bucket_with_no_combat_recipient():

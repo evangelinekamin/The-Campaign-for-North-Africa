@@ -224,7 +224,36 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
     [54.32]/[54.33]/[54.34] per-Operations-Stage railway (2026-08-01) fed the Eighth Army three times
     a week and INVERTED the whole thing back -- "the Commonwealth stands on Mersa Matruh and banks
     it", exactly as the 2026-07-26 note had instructed its successor to do. Six honest re-pins, and
-    the seventh is a panel."""
+    the seventh is a panel.
+
+    ------------------------------------------------------------------------------------------------
+    *** 🟢 2026-08-04, CAUSE [4.44B] -- THE ORDER OF BATTLE, AND THE LARGEST MOVE THIS PANEL HAS
+    RECORDED. *** The Commonwealth order-of-battle pass seeds the 90 counters the [4.44B] chart
+    prints and this engine did not carry -- 39 of them at Arrives 'D', among them the whole of the
+    7th Armoured Division's armour, the Operation Compass infantry (6th Australian, 4th Indian, 2nd
+    New Zealand), and the 1st South Staffordshires that [60.41] attaches to the Matruh Garrison.
+    Panel 1..24 at Game-Turn 30, control tree against this one, and the control arm REPRODUCES every
+    number the "(this tree)" column of the counts below carried before this entry -- 18 / 23 / 18 /
+    21 / 22 / 24 / 21 -- which is what licenses the comparison:
+
+        the Axis stands on Tobruk                24/24 -> 24/24
+        the Axis stands on Bardia                24/24 -> 22/24   (moved to a count; see its note)
+        the Axis banks Tobruk / Benghazi         24/24 -> 24/24
+        Bardia is not banked                     24/24 -> 24/24
+        the Commonwealth stands on Sidi Barrani  18/24 -> 23/24
+        the Axis stands on Sollum                23/24 -> 22/24
+        --- THE AXIS STANDS ON MERSA MATRUH      18/24 ->  4/24
+        --- THE COMMONWEALTH STANDS ON IT         3/24 -> 20/24
+        --- THE COMMONWEALTH BANKS IT             3/24 -> 20/24
+        Sidi Barrani is not banked               22/24 -> 20/24
+
+    THE EIGHTH ARMY KEEPS ITS OWN RAILHEAD NOW, and it is the counters that did it, not a policy and
+    not a rule: the same pass moves Sidi Barrani from 18 boards to 23 and leaves the Axis's own rear
+    (Tobruk, Benghazi, Bardia's control) exactly where it was. Two consequences are recorded
+    elsewhere and belong beside this table: the Axis railway stops being bought with captured
+    Commonwealth stores (tests/test_rail_control.py's 2026-08-04 re-pin -- 24 of 29 activations were
+    paid by AL-Stage-Matruh on the control tree and none is here), and the Commonwealth's own rail
+    line stops retracting (tests/test_campaign_concentration.py's, same date)."""
     panel = [_claim_reading(seed) for seed in CAMPAIGN_PANEL]
 
     # --- the seven claims that hold on every seed of both trees, asserted on every seed ----------
@@ -235,7 +264,7 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
         # standing on -- now holds its own rear. Asserted on OCCUPATION, because "threw away what it
         # opened holding" is a claim about the ARMY.
         assert r["ax_tobruk"], f"seed {s}: the Axis threw away Tobruk, which it opened the war holding"
-        assert r["ax_bardia"], f"seed {s}: the Axis threw away Bardia, which it opened the war holding"
+        # (Bardia MOVED to the seed-luck block below 2026-08-04, cause [4.44B] -- see its _count.)
         # ...and Tobruk BANKS because its 500-point staging dump stands under the garrison, which is
         # the clause table above told the other way round.
         assert "Tobruk" in r["ax_banked"], \
@@ -267,34 +296,56 @@ def test_both_sides_take_the_cities_they_used_to_sprint_past():
     # Axis's, which it holds against Compass. These are claims about the ARMY, so they are asked of
     # occupation and not of the scoreboard.
     _count("the Commonwealth lost Sidi Barrani -- the take-and-hold itself has regressed, not its "
-           "score", lambda r: r["cw_barrani"], 19, 18)
+           "score", lambda r: r["cw_barrani"], 18, 23)
     _count("the Axis lost Sollum -- the take-and-hold itself has regressed, not merely its score",
-           lambda r: r["ax_sollum"], 24, 23)
-    # THE RAILHEAD CITY, the [10.29] finding above. It is asserted in BOTH directions, as the
-    # single-seed form did: the Axis stands on it, and the Commonwealth does not. If the
-    # Commonwealth starts retaking its own terminus, the second of these fails and the [10.29]
-    # restatement is the thing to update -- which is the point of pinning it.
-    _count("the Axis lost the railhead city on most of the panel -- update this restatement, the "
-           "[10.29] finding reversed", lambda r: r["ax_matruh"], 20, 18)
-    _count("the Commonwealth holds the railhead city on most of the panel -- INVERT this "
-           "restatement, the [10.29] finding reversed", lambda r: not r["cw_matruh"], 23, 21)
+           lambda r: r["ax_sollum"], 23, 22)
+    # BARDIA MOVED HERE FROM THE PER-SEED BLOCK, 2026-08-04, CAUSE [4.44B]. "The Axis holds its own
+    # rear" held on 24 of 24 boards of both trees until the Commonwealth order-of-battle pass; it now
+    # reads 22 of 24, failing at seeds 10 and 16. IT IS NOT THROWN AWAY ON EITHER: measured, the hex
+    # is Axis-CONTROLLED at Game-Turn 30 on both (Control.AXIS), it simply has no counter standing on
+    # it -- the garrison marched off to meet an Eighth Army that, with its Operation Compass order of
+    # battle finally on the board, is over the wire by GT30 (on seed 10 the Commonwealth is standing
+    # on Sollum). An army that leaves a city it still controls to fight is doing the opposite of
+    # sprinting past one, which is what this test is named for, so the claim keeps its floor and
+    # loses its absoluteness.
+    _count("the Axis threw away Bardia, which it opened the war holding",
+           lambda r: r["ax_bardia"], 24, 22,
+           "measured, the hex is still Control.AXIS on both failing seeds -- the garrison left it, "
+           "the enemy did not take it")
+    # THE RAILHEAD CITY -- AND THE [10.29] FINDING IS REVERSED, 2026-08-04, CAUSE [4.44B]. Both
+    # counts below said "INVERT this restatement / update this restatement" if the Commonwealth ever
+    # started retaking its own terminus. It has, and by a landslide: control 18/24 -> 4/24 for the
+    # Axis holding it, 21/24 -> 4/24 for the Commonwealth NOT holding it. What changed is not a rule
+    # about capture but the order of battle that was supposed to garrison the hex: [60.41] prints
+    # the 1st South Staffordshires on Mersa Matruh at Game-Turn 1 and this engine did not carry the
+    # counter, so the terminus was defended by three Squadron Ground Support Units and [10.29] duly
+    # collected them. The rule was right; the roster was short. The pins are inverted, both
+    # directions kept, so a THIRD flip cannot pass unnoticed either.
+    _count("the Commonwealth lost the railhead city on most of the panel -- INVERT this "
+           "restatement, the [4.44B] finding reversed", lambda r: r["cw_matruh"], 3, 20)
+    _count("the Axis holds the railhead city on most of the panel -- INVERT this restatement, the "
+           "[4.44B] finding reversed", lambda r: not r["ax_matruh"], 6, 20)
     # THE SCOREBOARD, and every one of these is an INVERT-ME on the last mile (see the docstring).
-    _count("Sidi Barrani is banked again", lambda r: "Sidi Barrani" not in r["cw_banked"], 23, 22,
+    _count("Sidi Barrani is banked again", lambda r: "Sidi Barrani" not in r["cw_banked"], 22, 20,
            "measured, it fails on STORES ALONE and by ONE ration: the depot under it is dry of "
            "Stores in every arm, so the clause rests on the garrison's own [53.11] buffer. INVERT "
            "THIS when the last mile carries Stores forward; do not re-pin it to a counter that "
            "happens to be one step lighter")
-    _count("Sollum is banked again", lambda r: "Sollum" not in r["ax_banked"], 23, 24,
+    _count("Sollum is banked again", lambda r: "Sollum" not in r["ax_banked"], 24, 24,
            "64.73's Ammunition and Stores are reaching the border cities. INVERT THIS: measured, "
            "this hex fails on AMMUNITION AND STORES because only AX-Well-Sollum stands on it, so "
            "what gives it back is a stocked forward dump (the last mile), not [4.43b] -- no German "
            "counter stands on a 64.73 city on any measured board")
-    _count("Mersa Matruh is banked by the Commonwealth again",
-           lambda r: "Mersa Matruh" not in r["cw_banked"], 23, 21,
-           "update the [10.29] restatement above; the depot's own residual Ammunition is NOT "
-           "re-pinned with it -- that is a transit node's leftovers, not the banking, and the "
-           "capability it stood for is pinned in tests/test_campaign_concentration.py on the "
-           "can-move-and-fire draw")
+    # INVERTED 2026-08-04, CAUSE [4.44B], with the two occupation counts above: the Commonwealth
+    # does not merely stand on its railhead again, it BANKS it -- 21/24 -> 4/24 for "not banked",
+    # i.e. banked on twenty of twenty-four boards where it was banked on three. 64.73's quality test
+    # is an in-hex supply question and the answer changed because a garrison the chart prints is
+    # finally standing there to be asked it.
+    _count("Mersa Matruh is NOT banked by the Commonwealth any more -- INVERT this restatement, "
+           "the [4.44B] finding reversed", lambda r: "Mersa Matruh" in r["cw_banked"], 3, 20,
+           "the depot's own residual Ammunition is NOT pinned with it -- that is a transit node's "
+           "leftovers, not the banking, and the capability it stood for is pinned in "
+           "tests/test_campaign_concentration.py on the can-move-and-fire draw")
 
 
 def test_occupying_sollum_brings_the_supply_chain_up_to_it():
