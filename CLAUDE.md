@@ -84,6 +84,27 @@ literals.
    eyes.** This has repeatedly settled what OCR could not — including proving the *book itself* is
    misprinted (the 54.17 demolition table). That override is recorded under a **named errata key** in
    `data/logistics_rates.json`, never applied silently.
+
+   **THERE ARE TWO OCR CORPORA. PREFER THE NEWER ONE FOR ANYTHING TABULAR.**
+   - **`/home/eve/projects/tcfnatdw-ocr/ocr/`** (note the lower-case `projects`) — Mistral OCR 4,
+     2026-08-04. Per-PDF-page: `markdown/page-NNNN.md`, extracted `tables/page-NNNN-table-NN.html`,
+     raw `pages/*.json` with per-block confidences, and `combined.md`. The oversized log sheets and
+     the five map foldouts are tiled at 300 DPI into `markdown/page-NNNN-tiles.md`. **This is the
+     one to use for charts.** Spot-checked against the failures that each cost this port a slice:
+     it carries `[55.3]`'s Maximum Tonnage column (the old corpus dropped it entirely), reads
+     `Case 00.00` and `the Derna hex (00000)` correctly (a transcription here once "corrected" the
+     first of those and was wrong), and prints all seven `[4.46]` Headquarters dashes including
+     Maximum TOE. It also carries `[54.5]`'s stacking-point half, which nothing reads yet.
+   - **`docs/rules/*.md`** — the older `baidu/Unlimited-OCR` corpus, since reorganised into chapters
+     and hand-corrected twice. Still better for *prose* navigation and it fixes real ambiguities
+     Mistral misses (it reads the 11.32 division glyph as `+`, and 12.18's fraction as 1/3 where the
+     reviewed text has 1/2). **`docs/rules/90-charts-tables-and-play-aids.md` is UNRELIABLE** — caught
+     dropping `[55.3]`'s Maximum Tonnage column outright and transposing `[54.2]`'s Water and Fuel
+     Capacity headers. Never transcribe a chart from it.
+
+   Neither corpus outranks the scan. Use the new one to *find* a page and to cross-check a reading;
+   render the page before you write a number down. **Some sheets are printed sideways — rotate them**
+   (the Italian `[4.46b]` characteristics sheet is one, and was misread until rotated).
 3. **Sections 32, 47 and 58 are the ABSTRACT game and DO NOT APPLY.** They exist for players *not*
    running the full Logistics/Air games — "Why anyone would play a campaign game without the Air and/or
    Logistics Game(s) is beyond me" (the designer, ch. 64). We run the full games. An abstract-game rule
