@@ -3578,17 +3578,20 @@ def _draw_stage_water(r: _Run, u, order: "MoveOrder | None" = None, *,
     semantic -- the `not _waterless(u)` attacker gate above reads the same snapshot -- not something
     this leg introduces.
 
-    A SECOND ORDERING NOTE, ON THE ATTACKER, and this one is a leak DECLARED rather than fixed. In
-    _resolve_combat's armed_atk comprehension this draw short-circuits AHEAD of _charge_ammo, so an
-    attacker that pays its Water Point and is then found to have no ammunition has paid for an
-    assault it never makes: it is dropped from armed_atk, never reaches _charge_combat_cp, uses no
-    CPA, and under 52.42 as printed owes nothing. The order is deliberate and pre-existing -- the
-    `not _waterless(u)` gate has always stood ahead of the ammo charge, and tests/test_water.py pins
-    "a dry unit does not even spend its load" -- so reversing it would protect the nuisance
-    commodity by spending the scarce one. Measured at 36 Points on campaign/1941 to Game-Turn 12, 3%
-    of that seed's vehicle bill. The MOVEMENT path has no such leak because a cheap oracle exists
-    there (_can_fuel_move, over supply.in_hex_available); _charge_ammo has no such oracle -- it
-    decides and draws in one pass -- so the assault path gets the declaration instead.
+    A SECOND ORDERING NOTE, ON THE ATTACKER, and this one is now CLOSED. In _resolve_combat's
+    armed_atk comprehension this draw once short-circuited AHEAD of the ammunition question, so an
+    attacker that paid its Water Point and was then found to have no ammunition had paid for an
+    assault it never made: dropped from armed_atk, never reaching _charge_combat_cp, using no CPA,
+    and under 52.42 as printed owing nothing. The reason given for leaving it -- that the movement
+    path has a cheap oracle (_can_fuel_move) while "_charge_ammo has no such oracle, it decides and
+    draws in one pass" -- WAS FALSE WHEN WRITTEN: _has_ammo is exactly that oracle, the non-mutating
+    mirror of _charge_ammo's [50.15] gate, already in this file for 15.15's capitulation test. It
+    now stands ahead of this draw, and _charge_ammo still stands BEHIND it, so neither commodity is
+    spent for the other: a dry attacker still never spends its load, and an unarmed one no longer
+    spends its water. The old "36 Points on campaign/1941 to GT12, 3% of that seed's vehicle bill"
+    no longer reproduced at the commit that closed this -- eleven full campaigns showed 972 phasing
+    assault charges and ZERO refusals, so the leak was latent, not live, and the A/B was
+    byte-identical on two seeds. It is closed because it is wrong, not because it was costing.
 
     NAMED DEBT, PRE-EXISTING AND UNTOUCHED BY THIS SLICE: 52.42 bills "or Truck Point", and the
     2nd/3rd-line convoys are TruckFormations rather than Units, so they are outside every rule-52
@@ -4472,17 +4475,24 @@ def _rebuild(r: _Run, side: Side, unit, points: int) -> str:
         r.emit(EventKind.CP_EXPENDED, side, actor,
                {"unit_id": unit.id, "activity": "rebuild", "cp": price})
         if unit.assigned_to:                               # 19.68: "and its parent, if such"
-            # NAMED DEBT, PRE-EXISTING AND NOT FIXED HERE: this CP_EXPENDED is charged to
-            # `assigned_to` unconditionally, so when the Parent Formation has already been
-            # eliminated the fold lands cp_used on a destroyed counter (seen live: campaign(seed=4)
-            # GT7 stage 1, IT-LTC, alive=False and on_map=False). The 52.42 leg is right -- the
-            # draw below returns at once for a counter state.on_map rejects -- but the CHARGE
-            # itself predates this slice and belongs to whoever fixes [19.68]'s parent handling.
+            # BOTH LEGS OF ONE CHARGE ASK ONE QUESTION: does the Parent Formation exist? It used to
+            # be asked of the water only, so a Parent the campaign had already destroyed drank
+            # nothing and was billed a Capability Point anyway -- cp_used folded onto a corpse
+            # (14.1% of all parent charges over eleven full campaigns; 1,360 of 9,680).
+            #   [19.62] a unit "completely eliminated ... may not be rebuilt"; [19.63] an eliminated
+            #   HQ counter, absent its 50%-plus-two-Infantry-Point revival, "is gone for good";
+            #   [19.67] "The HQ unit for a Parent Formation is, for play purposes, its Cadre";
+            #   [6.11] "Each unit has a Capability Point Allowance (CPA)."
+            # A counter that is gone for good has no CPA for 19.68 to spend. FLAGGED: state.on_map
+            # is `alive and turn >= arrival_turn`, so its second arm also excludes a Parent whose
+            # rule-20 reinforcement turn has not come -- the engine's own convention (state.living
+            # filters on exactly this) rather than a printed rule, kept because the alternative is
+            # the two legs disagreeing again.
             parent = r.state.unit(unit.assigned_to)
-            if parent is not None:
+            if parent is not None and r.state.on_map(parent):
                 _draw_stage_water(r, parent)               # 52.42: charged, so it too uses CPA
-            r.emit(EventKind.CP_EXPENDED, side, actor,
-                   {"unit_id": unit.assigned_to, "activity": "rebuild", "cp": price})
+                r.emit(EventKind.CP_EXPENDED, side, actor,
+                       {"unit_id": unit.assigned_to, "activity": "rebuild", "cp": price})
     return ""
 
 
@@ -6312,14 +6322,17 @@ def _spend_cp(r: _Run, side: Side, actor: str, unit, activity: str, cp: int) -> 
 
     FOR THE COMBAT CHARGES that is exactly what [52.5] says: it forbids a dry vehicle to move and to
     close assault offensively and nothing else, so it may still barrage, defend and be reorganized.
-    THE [10.36] FORCED RETREAT IS THE ONE CASE THAT SENTENCE DOES NOT COVER, and it is flagged here
-    rather than glossed over: 10.36 IS movement ("playing all CP's for such movement") and 52.51
-    does forbid a dry vehicle to move, so this site bills a prohibition it does not enforce.
-    Refusing it would need a consequence the book does not supply -- a mandatory retreat that may
-    not be taken is neither a stand nor a surrender, and 10.36e's surrender is reserved for the
-    different case where no legal destination exists at all -- so the retreat is carried out and the
-    counter is left dry, which is the only outcome the printed rules do describe. A live rule
-    interaction, named so the next reader meets it as a question and not as an omission."""
+
+    THE [10.36] FORCED RETREAT WAS THE ONE CASE THAT SENTENCE DOES NOT COVER, and this site used to
+    bill a prohibition it did not enforce: 10.36 IS movement ("playing all CP's for such movement"),
+    52.51 does forbid a dry vehicle to move, and the retreat was carried out anyway. The reason
+    given for leaving it -- that refusing would need "a consequence the book does not supply" -- WAS
+    FALSE WHEN WRITTEN. [15.82] supplies one: "For each hex of mandated Retreat that units cannot or
+    chooses not to Retreat those units suffer an additional 10% loss." _mandatory_retreat now splits
+    the dry vehicles off before the walk and bills them that instead (see its docstring for the
+    scope reading, and for why 10.36e's Surrender is NOT what a dry vehicle gets), so no dry vehicle
+    reaches this site as a mover any more. What still reaches it is every other CPA charge in the
+    list above, where 52.5 forbids nothing and the charge is right."""
     _draw_stage_water(r, unit)                      # 52.42: spending CP is using CPA
     old = r.state.unit(unit.id).cp_used
     r.emit(EventKind.CP_EXPENDED, side, actor,
@@ -6450,6 +6463,25 @@ def _mandatory_attack(r: _Run, side: Side, pinned: set[str],
         _mandatory_retreat(r, side, obligated, anchor)
 
 
+def _refused_retreat_losses(r: _Run, side: Side, actor: str, units: list, *, hexes: int) -> None:
+    """[15.82] "For each hex of mandated Retreat that units cannot or chooses not to Retreat those
+    units suffer an additional 10% loss."
+
+    The printed price of a mandated Retreat NOT taken, billed on the LIVE TOE at each un-retreated
+    hex. It MIRRORS the arithmetic _retreat already applies to its own shortfall (`n - done` hexes
+    at 10% each) rather than sharing it: that site emits role='defender' off the ATTACKER's side,
+    because there the un-retreated stack is the loser of a Close Assault, and neither of those is
+    true here. This function owns the price only; the caller owns the reason it fell due."""
+    for _ in range(hexes):
+        for u in units:
+            cur = r.state.unit(u.id)
+            extra = math.ceil(0.10 * cur.strength)
+            if extra > 0:
+                r.emit(EventKind.STEP_LOST, side, actor,
+                       {"unit_id": u.id, "amount": min(extra, cur.strength),
+                        "role": "mandatory_retreat"})
+
+
 def _mandatory_retreat(r: _Run, side: Side, units: list, anchor: Coord) -> None:
     """10.36: a stack that left an enemy hex unanswered Retreats to a hex THREE HEXES DISTANT from
     the Enemy unit (`anchor`) -- "no doubling back" (no step nearer the anchor than the hex before
@@ -6459,8 +6491,44 @@ def _mandatory_retreat(r: _Run, side: Side, units: list, anchor: Coord) -> None:
     bleeds. If no such ZOC-free destination three hexes distant exists the stack Surrenders in
     entirety (10.36e). The start hex is adjacent to the anchor (its ZOC reaches only one hex), so
     "three hexes distant" is the binding end-state: the walk stops at distance 3, it does not push
-    on to distance 4. Draws no die, so replay stays byte-identical."""
+    on to distance 4. Draws no die, so replay stays byte-identical.
+
+    A DRY VEHICLE DOES NOT WALK, AND IS NOT LET OFF EITHER. [52.51] "Vehicles without water may not
+    move or close assault offensively", and a forced retreat IS movement three times over: [8.12]
+    calls it "involuntary movement" in as many words and still charges CP and Breakdown, [6.0]'s
+    General Rule counts "movement (including retreats and advances)" as CPA-spending, and 10.36
+    itself says "playing all CP's for such movement". 52.51 carries no voluntary/involuntary
+    qualifier, while its own neighbour 52.52 says infantry may not "voluntarily" exceed their CPA --
+    the designer distinguishes where he means to, and here he does not. Nor does 10.32's exemption
+    list (solely Guns/AT/AA/non-combat, or Pinned) reach thirst, so 10.36's "for any reason" fires
+    and 52.51 forbids the compliance: a genuine two-rule collision, not an oversight.
+
+    THE BOOK PRICES THE NON-COMPLIANCE: [15.82] "For each hex of mandated Retreat that units cannot
+    or chooses not to Retreat those units suffer an additional 10% loss." That is billed here, on
+    all three hexes, by the same arithmetic _retreat already uses for the post-assault case. FLAGGED
+    AS A READING: 15.82 sits under [15.8] DETERMINING CASUALTIES, so applying it to a rule-10
+    obligation extends its scope; what licenses it is that 15.82's first sentence is DEFINITIONAL --
+    it says what "A Retreat of a specific number of hexes" MEANS -- and 10.36 uses exactly that
+    construction. The alternative considered and rejected: treat a dry vehicle as Pinned and exempt
+    it outright, which invents an exemption 10.32 does not list and REWARDS thirst by cancelling the
+    three Disorganization Points too. 10.36e's Surrender is deliberately NOT reached for -- the book
+    reserves it for the different case of no legal destination at all.
+
+    The three Disorganization Points are still earned (10.36 attaches them to the obligation, not to
+    the movement); no CP is burnt, because 10.36 spends them "for such movement" and no movement
+    happens -- the principle _can_fuel_move applies to fuel. INFANTRY IS UNTOUCHED: 52.52 bars only
+    a VOLUNTARY exceeding of CPA, and 8.12 makes this retreat involuntary, so dry foot counters owe
+    their three hexes exactly as watered ones do."""
     actor = f"{side.value}/Front"
+    dry = [u for u in units if supply._is_vehicle_type(u) and _waterless(u)]   # 52.51: may not move
+    if dry:
+        _refused_retreat_losses(r, side, actor, dry, hexes=3)      # 15.82: 10% per hex not retreated
+        for u in dry:                                   # 10.36: the three DP are earned all the same
+            if r.state.unit(u.id).alive:
+                r.emit(EventKind.COHESION_CHANGED, side, actor, {"unit_id": u.id, "delta": -3})
+        units = [u for u in units if u.id not in {d.id for d in dry}]
+        if not units:
+            return
     enemy_zoc, enemy_occ = tactics.enemy_zoc_and_occupied(r.state, side)
     blocked = enemy_zoc | enemy_occ                     # 10.36: no Enemy-ZOC hex (nor enemy unit) en route
     ids = {u.id for u in units}
@@ -6957,12 +7025,23 @@ def _resolve_combat(r: _Run, side: Side, actor: str, attackers, defenders,
     # defender adds no defensive strength but still suffers losses. Charged before
     # resolution (conservation holds per event). Returns True if the assault RESOLVED
     # (so the caller locks the hex and commits the attackers), False if it was rejected.
+    #
+    # THE ORDER OF THE LAST THREE GATES IS A RULE, not a convenience. [52.42] bills the Water Point
+    # "if it uses any of its CPA"; an attacker refused for want of ammunition is dropped here, never
+    # reaches _charge_combat_cp, and so never spends the [6.3] 5-CP Assault -- it uses none of its
+    # CPA and owes nothing. So the ammunition question is SETTLED before the water is drawn, and it
+    # is settled by _has_ammo, the non-mutating [50.15] oracle _defenders_capitulate already uses.
+    # This is verbatim _can_fuel_move's reasoning at the movement seam: each commodity is due only
+    # if the act actually happens. It is NOT a swap -- _charge_ammo still runs LAST, so a dry
+    # attacker never spends its scarce load on an assault 52.51 forbids it (tests/test_water.py's
+    # "a dry unit does not even spend its load").
     armed_atk = [u for u in attackers
                  if u.id not in pinned and u.cohesion > -26          # 6.26: -26 or worse may not attack
                  and not _waterless(u)                               # 52.51/52.52: no offensive assault when dry
                  and not _salt_marsh_barred_assault(r.state, u, target)   # 8.44
                  and not _escarpment_barred_assault(r.state, u, target)   # 8.42/15.34
                  and u.id not in fired_anti_armor                    # 14.26/15.21: not if it fired anti-armor
+                 and _has_ammo(r.state, u, phasing=True)             # 50.15, ASKED not charged -- see above
                  and _draw_stage_water(r, u)                         # 52.42: the 5-CP Assault USES CPA
                  and _charge_ammo(r, side, actor, u, phasing=True)]
     if not armed_atk:

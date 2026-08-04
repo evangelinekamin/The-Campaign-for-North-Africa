@@ -11,6 +11,7 @@ in (10.36e).
 from __future__ import annotations
 
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -147,6 +148,81 @@ def test_gun_only_stack_is_exempt():
     _mandatory_attack(r, Side.AXIS, set(), set(), {})
     assert not any(e.kind == EventKind.UNIT_RETREATED for e in r.events)
     assert r.state.unit("A1").hex == (0, 0)
+
+
+def test_a_dry_vehicle_pays_15_82s_price_instead_of_taking_the_10_36_retreat():
+    # THE TWO-RULE COLLISION 10.36's "for any reason" walks straight into, and it is a real one:
+    #
+    #   [10.36] "If, for any reason, a unit can neither Assault nor Hold Off an Enemy unit, that
+    #           Friendly unit must Retreat three hexes (playing all CP's for such movement) and
+    #           earn three Disorganization Points, in addition to any garnered by the retreat."
+    #   [52.51] "Vehicles without water may not move or close assault offensively."
+    #   [8.12]  a forced Retreat "is considered involuntary movement"; [6.0]'s General Rule counts
+    #           "movement (including retreats and advances)" as CPA-spending movement; and 10.36
+    #           itself says "playing all CP's for such movement". A retreat IS movement.
+    #
+    # A dry vehicle can neither Assault (52.51 bars it) nor Hold Off, and 10.32's exemption list --
+    # solely Guns/AT/AA/non-combat, or Pinned -- does not reach it, so 10.36 genuinely fires and
+    # 52.51 genuinely forbids the compliance. 52.51 carries no voluntary/involuntary qualifier,
+    # while its own neighbour 52.52 says infantry may not "voluntarily" exceed their CPA: the
+    # designer distinguishes where he means to, and here he does not.
+    #
+    # THE BOOK PRICES NON-COMPLIANCE, and the engine already bills that price one function over
+    # (engine._retreat, the post-assault case):
+    #
+    #   [15.82] "For each hex of mandated Retreat that units cannot or chooses not to Retreat those
+    #           units suffer an additional 10% loss."
+    #
+    # FLAGGED AS A READING: 15.82 sits under [15.8] DETERMINING CASUALTIES, so applying it to a
+    # rule-10 obligation extends its scope. What licenses it is that 15.82's first sentence is
+    # DEFINITIONAL -- it defines what "A Retreat of a specific number of hexes" means -- and 10.36
+    # uses exactly that construction. The alternative (exempt a dry vehicle as if it were Pinned)
+    # was rejected because it invents an exemption 10.32 does not list and REWARDS thirst by
+    # cancelling the three Disorganization Points as well. 10.36e's Surrender is NOT reached for:
+    # the book reserves it for the different case of no legal destination at all.
+    #
+    # The three Disorganization Points are still earned -- 10.36 attaches them to the obligation,
+    # not to the movement -- and no CP is burnt, because 10.36 spends them "for such movement" and
+    # no movement happens (the same principle engine._can_fuel_move applies to fuel).
+    axis, foe, st = _contact_state(mob=Mobility.VEHICLE)
+    dry = replace(st.unit("A1"), stages_without_water=1)          # 52.51: dry this Operations Stage
+    r = _Run(replace(st, units=(dry, foe)))
+    _mandatory_attack(r, Side.AXIS, set(), set(), {})
+    assert not any(e.kind == EventKind.UNIT_RETREATED for e in r.events)
+    a = r.state.unit("A1")
+    assert a.hex == (0, 0)                    # 52.51: it may not move, so it does not
+    assert a.strength == 3                    # 15.82: 10% of the live TOE for each of the 3 hexes
+    assert a.cohesion == 3                    # 10.36: the three DP are earned all the same
+    assert a.cp_used == 0                     # no movement, so no "all CP's for such movement"
+
+
+def test_a_watered_vehicle_still_takes_the_10_36_retreat():
+    # The control for the test above: identical counter, identical contact, water on board. It is
+    # the thirst that stops it, not its being a vehicle.
+    axis, foe, st = _contact_state(mob=Mobility.VEHICLE)
+    r = _Run(st)
+    _mandatory_attack(r, Side.AXIS, set(), set(), {})
+    assert any(e.kind == EventKind.UNIT_RETREATED and e.payload["unit_id"] == "A1"
+               for e in r.events)
+    a = r.state.unit("A1")
+    assert distance(a.hex, (1, 0)) > 1
+    assert a.strength == 6                    # no 15.82 loss: the retreat WAS taken
+    assert a.cohesion == 3
+    assert a.cp_used == 40
+
+
+def test_dry_infantry_is_still_force_retreated():
+    # THE ASYMMETRY IS THE BOOK'S. 52.51 immobilises a dry VEHICLE; 52.52 says only that dry
+    # infantry "may not voluntarily exceed their CPA" -- and [8.12] makes a forced retreat
+    # INVOLUNTARY movement. So a dry foot counter owes 10.36 its three hexes exactly as a watered
+    # one does, and the 15.82 price above must not reach it.
+    axis, foe, st = _contact_state(mob=Mobility.FOOT)
+    dry = replace(st.unit("A1"), stages_without_water=1)
+    r = _Run(replace(st, units=(dry, foe)))
+    _mandatory_attack(r, Side.AXIS, set(), set(), {})
+    assert any(e.kind == EventKind.UNIT_RETREATED and e.payload["unit_id"] == "A1"
+               for e in r.events)
+    assert r.state.unit("A1").strength == 6
 
 
 def test_unit_out_of_contact_is_untouched():

@@ -130,6 +130,13 @@ def _shortfalls(events, unit_id=None):
             and (unit_id is None or e.payload["unit_id"] == unit_id)]
 
 
+def _cp_charged(events, unit_id):
+    """The [6.3] Capability Points billed to one counter -- the OTHER leg of the charges this file
+    watches. 52.42's Point falls due because a charge landed; if no charge may land, no Point does."""
+    return sum(e.payload["cp"] for e in events
+               if e.kind == EventKind.CP_EXPENDED and e.payload.get("unit_id") == unit_id)
+
+
 # --- [52.41] / [52.42] at the stage-start Water Distribution ---------------------------------
 
 def test_52_42_a_vehicle_that_has_spent_no_cpa_is_billed_nothing_at_the_stage_start():
@@ -379,6 +386,25 @@ def test_52_42_51_a_vehicle_that_cannot_pay_may_not_close_assault_offensively():
     assert r.state.unit("A").ammo == 100                  # not a round spent
 
 
+def test_52_42_an_attacker_refused_for_ammunition_pays_no_water_point():
+    # THE CONDITION CUTS BOTH WAYS. 52.42 bills the Point "if it uses any of its CPA", and an
+    # attacker that cannot draw its [50.15] Close-Assault ammunition is dropped from armed_atk,
+    # never reaches _charge_combat_cp, and so spends none of the [6.3] 5-CP Assault -- it uses none
+    # of its CPA and owes nothing. So the ammunition question must be SETTLED (not charged) first.
+    # That is verbatim _can_fuel_move's reasoning one site over: "each is due only if the move
+    # actually happens". _has_ammo is the non-mutating oracle for it -- the same one 15.15's
+    # capitulation test already uses -- so nothing is spent to ask.
+    #
+    # NOT a swap of the two draws: charging the ammunition first would spend the SCARCE commodity
+    # on an assault the water then refuses, which is what the test above forbids.
+    dfn = _foot("D", Side.ALLIED, (0, 0), ammo=100)
+    atk = _veh("A", Side.AXIS, (1, 0), strength=3, ammo=0)       # watered, but shot out (50.12)
+    r = _Run(_state([atk, dfn], [_well("AX-Well", Side.AXIS, (1, 0))], phase=Phase.COMBAT))
+    assert _resolve_combat(r, Side.AXIS, "AXIS/Front", [atk], [dfn], (0, 0), set(), set()) is False
+    assert _water_drawn(r.events, "A") == 0                      # no act, no Water Point
+    assert r.state.unit("A").stages_without_water == 0           # and it is not made dry either
+
+
 def test_52_42_a_watered_vehicle_close_assaults_and_pays_for_it():
     dfn = _foot("D", Side.ALLIED, (0, 0), ammo=100)
     atk = _veh("A", Side.AXIS, (1, 0), strength=3, ammo=100)
@@ -514,6 +540,50 @@ def test_a_destroyed_parent_formation_drinks_nothing():
     assert _draw_stage_water(r, dead) is True
     assert _water_drawn(r.events, "DEAD") == 0
     assert _shortfalls(r.events, "DEAD") == []
+
+
+def test_19_68_a_destroyed_parent_formation_is_charged_no_capability_point():
+    # THE OTHER LEG OF THE SAME CHARGE, and until now the two disagreed about who exists. The
+    # 52.42 draw above asks state.on_map; [19.68]'s own CP_EXPENDED for "(and its parent, if such
+    # is the situation)" asked nothing at all, so a Parent Formation the campaign had already
+    # destroyed had cp_used folded onto its corpse.
+    #
+    #   [19.62] "Units that have been completely eliminated because of attrition on combat -- not
+    #           breakdown (i.e., no TOE Strength Points remaining) may not be rebuilt."
+    #   [19.63] "If a HQ unit (counter) is eliminated, it may not be rebuilt unless at least 50%
+    #           of its assigned units still exist ... Otherwise it is gone for good."
+    #   [19.67] "The HQ unit for a Parent Formation is, for play purposes, its Cadre."
+    #   [6.11]  "Each unit has a Capability Point Allowance (CPA)."
+    #
+    # A counter that is gone for good has no CPA for 19.68 to spend. The CHILD's own charge is
+    # untouched -- organization.may_rebuild already applies 19.62's existence test to it.
+    dead = _veh("HQ", Side.AXIS, (0, 0), strength=3)
+    dead = replace(dead, steps=(StepRecord("s", 0),))
+    assert not dead.alive
+    tank = _rebuildable("TK", Side.AXIS, (0, 0), strength=2, max_toe=6, assigned_to="HQ")
+    r = _Run(_rebuild_state([dead, tank], [_well("AX-Well", Side.AXIS, (0, 0))],
+                            {"AXIS/tank": 2}))
+    assert _rebuild(r, Side.AXIS, tank, 2) == ""
+    assert _cp_charged(r.events, "TK") == 1              # 19.68: the rebuilt unit itself still pays
+    assert _cp_charged(r.events, "HQ") == 0              # the destroyed Parent Formation does not
+
+
+def test_19_68_a_parent_that_has_not_yet_arrived_is_charged_no_capability_point():
+    # THE SAME GUARD'S SECOND ARM, AND IT IS A READING RATHER THAN A TRANSCRIPTION -- flagged here
+    # and at the site. state.on_map is `alive and turn >= arrival_turn`, so it also excludes a
+    # Parent Formation whose rule-20 reinforcement turn has not come. 19.68 says nothing about
+    # reinforcement timing; what licenses this arm is that state.on_map is the predicate
+    # state.living -- and so every rule-52 water beat, including the 52.42 leg of THIS charge --
+    # has always filtered on, and one charge must not be half-billed. The narrower alternative
+    # (test `alive` only) would leave the two legs disagreeing again on ~5 charges per campaign.
+    unarrived = _veh("HQ", Side.AXIS, (0, 0), strength=3, arrival_turn=9)
+    tank = _rebuildable("TK", Side.AXIS, (0, 0), strength=2, max_toe=6, assigned_to="HQ")
+    r = _Run(_rebuild_state([unarrived, tank], [_well("AX-Well", Side.AXIS, (0, 0))],
+                            {"AXIS/tank": 2}))
+    assert r.state.turn == 1 and not r.state.on_map(unarrived)
+    assert _rebuild(r, Side.AXIS, tank, 2) == ""
+    assert _cp_charged(r.events, "TK") == 1
+    assert _cp_charged(r.events, "HQ") == 0
 
 
 # --- the scenario gate: a board that models no Water at all is untouched -----------------------

@@ -10,6 +10,133 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+NOT RE-BASELINED 2026-08-03 -- THREE DEFECTS AT THE CPA SEAM: [19.68]'s CP TO A DEAD PARENT, THE
+ASSAULT'S WATER DRAWN BEFORE ITS AMMUNITION, AND [10.36] RETREATING A VEHICLE [52.51] FORBIDS TO
+MOVE. BOTH BENCHMARK SIGNATURES ARE BYTE-IDENTICAL across all three: rommel e1d1fa771ce3, siege
+19693b23b988, unchanged. THE CAMPAIGN MOVES.
+
+    Recipe, as ever: scenario.campaign(seed, max_turns=12) via its OWN kwarg, CampaignAxisPolicy
+    vs CampaignCommonwealthPolicy, sha256(determinism_signature(events))[:12].
+
+        1    52a69aec9ddb  UNCHANGED          4    b85cb778bd22 -> ebb2ff193892
+        7    ab81428240bb  UNCHANGED          1941 2ed7ca890183 -> f5159116d16f
+        777  73e777a74972  UNCHANGED          2026 c4f172350b45 -> 02eb0ac927a8
+
+    And the FULL 111-turn war, same policies, because two of the three defects are too rare to
+    reach inside twelve Game-Turns:
+
+        1    c1097eb4de68 -> d5c593370acd      4    94fac6b942bf -> f4f98d831216
+        7    a6a2b58e0177 -> 35bd93c4c7d0      777  f013bf6cd331 -> 4df02a291a8b
+        1941 8fcc60690e8d -> 0ac39dc31a3b      2026 7314c46127c0 -> 6345c68e599b
+
+    The "before" column is git HEAD (2f41e4b) measured through a tree with the three new guards
+    neutered AT THEIR OWN CALL SITES; that tree reproduced HEAD's own eight signatures exactly,
+    which is what makes it a legitimate control.
+
+THE BOOK, every string re-rendered at 300/400 dpi for this entry and read character by character.
+NOTE FOR THE NEXT READER: in this PDF the second booklet's offset is FOLIO + 47, not the +51 that
+has been passed around -- rule 52 is at PDF p.68 and that page prints its own folio 21. Main-booklet
+pages do match (PDF index == folio). Also: the book MISPRINTS [19.67] -- it reads "that Parent
+Formation may be rebuilt by or Reassignments", a word short, re-rendered twice at 400 dpi to be
+sure. Not repaired, not relied on.
+
+  1. [19.68] "Rebuilding units takes place in the Organization Phase only... For every two
+     Replacement TOE Strength Points added to a unit, that unit (and its parent, if such is the
+     situation) uses one Capability Point." (PDF p.30 = folio 30)
+     [19.62] "Units that have been completely eliminated because of attrition on combat -- not
+     breakdown (i.e., no TOE Strength Points remaining) may not be rebuilt."
+     [19.63] "If a HQ unit (counter) is eliminated, it may not be rebuilt unless at least 50% of
+     its assigned units still exist and are not attached to other units. In such case, two Infantry
+     Replacement Points may be used to revive the HQ. Otherwise it is gone for good."
+     [19.67] "The HQ unit for a Parent Formation is, for play purposes, its Cadre."
+     [6.11] "Each unit has a Capability Point Allowance (CPA)." (PDF p.12 = folio 12)
+  2. [52.42] "Each TOE Strength Point of Vehicle (Tank, Recce, Artillery, etc.) or Truck Point
+     requires one Water Point each Operations Stage, if it uses any of its CPA." (PDF p.68)
+  3. [10.36] "If, for any reason, a unit can neither Assault nor Hold Off an Enemy unit, that
+     Friendly unit must Retreat three hexes (playing all CP's for such movement) and earn three
+     Disorganization Points, in addition to any garnered by the retreat." (PDF p.18 = folio 18)
+     [52.51] "Vehicles without water may not move or close assault offensively."
+     [8.12] a forced Retreat "is considered involuntary movement... However, involuntary movement
+     also requires expenditure of CP's and checks for Breakdown." (folio 13 col 3 -> folio 14 col 1)
+     [15.82] "For each hex of mandated Retreat that units cannot or chooses not to Retreat those
+     units suffer an additional 10% loss." (PDF p.24 = folio 24)
+
+WHAT CHANGED, AND WHAT EACH ONE COST.
+
+  1. THE [19.68] PARENT CHARGE NOW ASKS WHETHER THE PARENT EXISTS (engine._rebuild). The 52.42
+     water leg of that charge has always asked state.on_map; the CP leg asked nothing, so a Parent
+     Formation the campaign had already destroyed drank nothing and was billed a Capability Point
+     anyway. Two legs of ONE charge disagreeing about who exists.
+     MEASURED, six full 111-turn campaigns: 66 / 87 / 109 / 120 / 140 / 148 such rows per campaign
+     (seeds 1 / 4 / 7 / 2026 / 777 / 1941) -> ZERO on every seed. The dead parents are
+     overwhelmingly HQ counters, i.e. exactly what 19.63 calls gone for good.
+     AND IT IS PROVABLY INERT. On seed 7's full campaign the base log is 223,519 events and the
+     repaired log is 223,410 -- the base log MINUS exactly the 109 dead-parent rows and nothing
+     else, compared event for event on (kind, side, actor, turn, stage, phase, payload, rng_draws)
+     with seq excluded because deleting a row renumbers it. IDENTICAL AFTER DELETION: True. With
+     this fix ALONE, survivor counts and the 64.76 grade string are unchanged on all six seeds.
+     So it was a ledger lie with no behavioural bite -- and it is fixed because it is wrong, which
+     is the only reason this file accepts. FLAGGED, A READING: state.on_map is
+     `alive and turn >= arrival_turn`, so the guard also declines to bill a Parent whose rule-20
+     reinforcement turn has not come (~5 charges a campaign). 19.68 says nothing about arrival; what
+     licenses it is that on_map is the predicate state.living -- and so every rule-52 water beat,
+     including this charge's own other leg -- has always filtered on.
+     This CLOSES the debt named at the bottom of the 52.42 round-2 entry further down this file.
+
+  2. THE ASSAULT SETTLES ITS AMMUNITION BEFORE IT DRAWS ITS WATER (engine._resolve_combat). 52.42
+     bills the Point "if it uses any of its CPA"; an attacker refused for want of ammunition is
+     dropped from armed_atk, never reaches _charge_combat_cp, spends none of the [6.3] 5-CP Assault
+     and owes nothing. _has_ammo -- the non-mutating [50.15] oracle already in the file for 15.15's
+     capitulation test -- now stands ahead of the draw. _charge_ammo still stands BEHIND it, so a
+     DRY attacker still never spends its scarce load on an assault 52.51 forbids: this is an insert,
+     not a swap, and both tests that pin the dry case still pass unchanged.
+     THE DOCSTRING'S OWN REASON FOR DEFERRING IT WAS FALSE WHEN WRITTEN -- it said "_charge_ammo has
+     no such oracle, it decides and draws in one pass", and _has_ammo is that oracle, thirty lines
+     away. Its "36 Points / 3% of the vehicle bill" no longer reproduces either: MEASURED over six
+     full campaigns the phasing assault refuses for ammunition ZERO times, and both benchmarks
+     likewise. Seed 7's full 111-turn log is BYTE-IDENTICAL with this fix alone -- all 223,519
+     events. A latent hole closed at zero cost, not a live leak.
+
+  3. A DRY VEHICLE NO LONGER TAKES THE [10.36] RETREAT; [15.82] PRICES ITS REFUSAL
+     (engine._mandatory_retreat + the new engine._refused_retreat_losses). 10.36's "for any reason"
+     genuinely fires on a dry vehicle -- it can neither Assault (52.51) nor Hold Off, and 10.32's
+     exemption list (solely Guns/AT/AA/non-combat, or Pinned) does not reach thirst -- and 52.51
+     then genuinely forbids the compliance, because a forced retreat IS movement by [8.12], by
+     [6.0]'s General Rule ("movement (including retreats and advances)") and by 10.36's own
+     "playing all CP's for such movement". 52.51 carries no voluntary/involuntary qualifier while
+     its neighbour 52.52 expressly says infantry may not "voluntarily" exceed their CPA, so the
+     asymmetry is the book's: DRY INFANTRY IS STILL FORCE-RETREATED, and there is a test for it.
+     FLAGGED, A READING: 15.82 sits under [15.8] DETERMINING CASUALTIES, so pricing a rule-10
+     obligation with it extends its scope. What licenses it is that 15.82's first sentence is
+     DEFINITIONAL -- it says what "A Retreat of a specific number of hexes" MEANS -- and 10.36 uses
+     exactly that construction; it is also the only price the book prints for a retreat that cannot
+     be taken, and engine._retreat has billed it for the post-assault case all along. THE
+     ALTERNATIVE, RECORDED SO IT CAN BE REOPENED: exempt a dry vehicle as if it were Pinned. It was
+     rejected because it invents an exemption 10.32 does not list and REWARDS thirst by cancelling
+     the three Disorganization Points and the CP burn as well. 10.36e's Surrender is deliberately
+     NOT what a dry vehicle gets -- the book reserves that for no-legal-destination.
+     MEASURED, six full campaigns: it fires on TWO seeds (1 and 777), 2 and 3 STEP_LOST rows, 2 and
+     3 TOE Strength Points -- ~0.8 rows per campaign. Everything else on those two seeds is chaos
+     downstream of two counters standing still: seed 1 survivors ALLIED 202->200 / AXIS 99->100 at
+     an unchanged "Axis Smashing Victory: 386-10"; seed 777 ALLIED 234->223 / AXIS 102->101 and
+     1219-20 -> 1199-10, still "Axis Smashing Victory". The other four seeds do not reach it at all.
+
+THE BOARD, six full 111-turn campaigns, all three fixes together: WINNER AXIS AND GRADE "SMASHING
+VICTORY" ON ALL SIX, BEFORE AND AFTER. The 64.76 string is character-identical on five of six
+(386-10, 1187-20, 475-0, 772-20, 412-20); only seed 777 moves, and only within the same grade.
+Survivor counts are identical on four of six. PREDICTED IN WRITING BEFORE MEASURING and the
+prediction held on every line: benchmarks unchanged, every campaign signature moved, board unmoved.
+
+THE NEUTER TABLE (each guard disabled AT ITS OWN CALL SITE, never a shared helper, over
+tests/test_mandatory_attack.py + test_water_cpa.py + test_water.py + test_reorganization_segment.py
++ test_replacement_spend.py + test_desert.py + test_salt_marsh.py + test_fort_barrage.py +
+test_organization.py + test_supply.py + test_combat.py, 0 failures with all three live):
+
+    [19.68] the dead-parent CP guard (engine._rebuild)                   2 RED
+    [50.15] the ammo oracle ahead of the water (engine._resolve_combat)  1 RED
+    [52.51] the dry-vehicle split (engine._mandatory_retreat)            1 RED
+
+--------------------------------------------------------------------------------------------------
 NOT RE-BASELINED 2026-08-02 -- [4.46], THE HEADQUARTERS CLOSE-ASSAULT DASH. Recorded here anyway,
 because the entry below says in as many words that 3.36's population is empty and that "THOSE TWO
 CHANGES ARE COUPLED", and this is the other half landing. BOTH BENCHMARK SIGNATURES ARE BYTE-
@@ -737,6 +864,8 @@ emitted unconditionally, so a dead Parent has cp_used folded onto a destroyed co
 at campaign(seed=4) GT7 stage 1, IT-LTC with alive=False and on_map=False. The 52.42 leg is right
 (the draw returns at once for a counter state.on_map rejects); the CHARGE predates this slice and is
 flagged at the site in engine._rebuild.
+    PAID 2026-08-03 -- see the entry at the top of this file. Measured at 66-148 rows per full
+    campaign before the repair and zero after, and proved inert by log-diff on seed 7.
 
 --------------------------------------------------------------------------------------------------
 NOT RE-BASELINED 2026-08-01 (THIRD ENTRY OF THE DAY) -- CAUSE: [25.14] FORTIFICATIONS, the campaign
