@@ -7,7 +7,7 @@ then found it INERT in play -- no policy attached anything, so no formation ever
   * concentrate_formations (game.campaign_policy) is the Reorganization-Segment standing order both
     campaign policies now issue -- 19.4/19.12 attach of each assigned unit that stands in its Parent's
     hex, plus the 19.43 reconciliation of any link a retreat has left stale, under a 9.14 stacking gate;
-  * a concentrated formation then MOVES as one counter (engine._co_located_subtree, 19.12) so it
+  * a concentrated formation then MOVES as one counter (organization.co_located_subtree, 19.12) so it
     reaches combat still concentrated;
   * organization.size and engine._parents_of read the fold from PHYSICAL co-location, so a split
     formation counts honestly and never mis-fires;
@@ -104,7 +104,7 @@ def test_co_located_subtree_is_only_the_units_standing_with_the_parent():
     here = _u("R-I", (1, 1), attached_to="R", nationality="GE")
     split = _u("R-II", (7, 7), attached_to="R", nationality="GE")     # stale link: elsewhere
     state = _state([hq, here, split])
-    subtree = engine._co_located_subtree(state, hq, engine._attached_index(state))
+    subtree = organization.co_located_subtree(state, hq, organization.attached_index(state))
     assert [u.id for u in subtree] == ["R-I"]                          # the split unit is NOT carried
 
 

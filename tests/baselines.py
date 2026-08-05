@@ -10,6 +10,29 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+NOT RE-BASELINED 2026-08-04 -- [15.53]/[19.12], HQ-FOLLOWS-ITS-FORMATION. The driver that lets a
+concentrated formation march: campaign_policy.formation_moves orders a bare, non-combat Parent
+counter (every Commonwealth brigade/division HQ, every German division and panzer-regiment HQ) at
+the destination the army's own proposer gave its strongest carried combat child, and both campaign
+policies compose it into movement(). The [4.45] concentrate gate that skipped a non-combat Parent is
+gone, so 76 Parent Formations that froze 318 children now concentrate and march as one counter.
+
+BOTH BENCHMARK SIGNATURES ARE BYTE-IDENTICAL: rommel e1d1fa771ce3, siege 19693b23b988, unchanged --
+neither Desert Fox scenario carries a live organization tree, so formation_moves returns [] and no
+event moves. THE CAMPAIGN MOVES, on every seed and by design: with the setup tree finally mobile the
+Eighth Army's Delta brigades and the DAK's panzer divisions manoeuvre as formations for the first
+time. Determinism holds -- seed 4 at max_turns=12 replays byte-for-byte (20164 events, identical
+determinism_signature) -- which is the only thing a signature proves.
+
+    Recipe, as ever: scenario.campaign(seed, max_turns=12) via its OWN kwarg, CampaignAxisPolicy
+    vs CampaignCommonwealthPolicy, sha256(determinism_signature(events))[:12]. The control column
+    reproduces the 2026-08-04 [4.44B] entry below exactly, which is what licenses the comparison.
+
+        1    285e66bc94e6 -> 56f2a0260368      4    2c37028bc306 -> b0cc0d4cbec2
+        7    6f6cd2322352 -> fbd42e2bdf0e      777  54e8a1d06fb4 -> 39be31455fd1
+        1941 12b239aab896 -> 9da36ecc4730      2026 b9e0e0257f28 -> 6ce904d7ff13
+
+--------------------------------------------------------------------------------------------------
 NOT RE-BASELINED 2026-08-04 -- [4.44B], THE COMMONWEALTH ORDER OF BATTLE. Ninety counters the
 COMMONWEALTH ORGANIZATION AT ARRIVAL CHART prints and this engine did not carry are seeded (39 of
 them at Arrives 'D', on the Game-Turn-1 map), eighteen [4.46a] stat rows are transcribed, and

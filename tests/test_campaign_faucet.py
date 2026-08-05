@@ -359,6 +359,35 @@ _PANEL_TURNS = 12          # THE HORIZON: see the docstring of the panel test be
 _OVER_ASK = "load exceeds truck capacity (53.12)"
 
 
+def _chain_fuel(fin) -> dict:
+    """THE FIELD SUPPLY DEPOT CHAIN, as the trains actually reach it: the head station
+    campaign_policy.railhead resolves to, plus every AL-Stage depot forward of it that the
+    Commonwealth still holds. "Forward" is campaign_policy._concentrate's own definition -- nearer
+    the front (objective_for, the Axis rear) than the head itself -- so the Delta stations BEHIND
+    the line, which the railway founds as it lays track (24.61/54.35), are not counted as the
+    chain's head and cannot make the claim vacuous."""
+    head = railhead(fin)
+    front = fin.objective_for(Side.ALLIED)
+    depth = distance(head.hex, front)
+    return {s.id: s.fuel for s in fin.supplies
+            if s.id.startswith("AL-Stage") and fin.control_of(s.hex) != Control.AXIS
+            and distance(s.hex, front) <= depth}
+
+
+def _routed_at_a_truck_phase(res, quiet: int) -> set:
+    """Which lorries the relay was ROUTING in the last quarter of the span, asked at the Truck
+    Convoy Phases the engine itself asked it at (engine._truck_convoys). See the note at its one
+    caller: the turn-close snapshot answers a different question and answers it wrong."""
+    pol = CampaignCommonwealthPolicy()
+    st, routed = res.initial, set()
+    for e in res.events:
+        st = apply(st, e)
+        if (e.kind.name == "PHASE_ADVANCED" and e.payload.get("phase") == "LOGISTICS"
+                and e.payload.get("active_side") == "ALLIED" and st.turn > quiet):
+            routed |= {o.truck_id for o in pol.truck_orders(st, Side.ALLIED)}
+    return routed
+
+
 def _faucet_reading(seed: int) -> dict:
     """ONE ROW OF THE PANEL. Fold the campaign at `seed` and read off every fact
     test_the_commonwealth_trucks_actually_run asserts, so the test body can read as a sweep and
@@ -406,6 +435,26 @@ def _faucet_reading(seed: int) -> dict:
     undiagnosed = [t.id for t in allied
                    if t.id in last_work and last_work[t.id] <= quiet
                    and t.id in ordered and _OVER_ASK not in refused.get(t.id, ())]
+    # ...AND THE DIAGNOSIS IS ASKED OF THE RUN, NOT OF THE TURN-CLOSE SNAPSHOT (2026-08-04, cause
+    # [19.12]). `ordered` above asks the relay what it would route on the FINAL board. That is not
+    # the board the engine ever asked it on: game.engine._truck_convoys calls policy.truck_orders at
+    # each Truck Convoy Phase, and a staging dump that is full at the turn close is a transit node
+    # that was empty when the phase ran. So a lorry could read "the relay HAS an order for it" and
+    # have been proposed NOTHING all quarter -- which is stall (i) below, not a new failure.
+    #
+    # MEASURED, panel 1..24, the lorry that forced this: seed 12's AL-Truck-Airfield-M shuttles
+    # Mersa Matruh <-> the D3516 larder through Game-Turn 8 and then stops. It carries no
+    # ORDER_REJECTED of any kind, and the final-state relay call hands it a 246-Fuel run to D3416 --
+    # but at ALL NINE Truck Convoy Phases of Game-Turns 10-12 the relay proposes it nothing at all.
+    # The old instrument called that undiagnosed; it is stall (i) exactly.
+    #
+    # The fold is LAZY -- it runs only for a lorry the old filter already flagged, i.e. only on a
+    # seed that would otherwise be red -- so the panel pays nothing on the other twenty-three. The
+    # check is not weakened: a lorry the relay IS routing at a phase, that neither moves nor is
+    # refused, would mean the engine silently dropped a live order, and that is still red.
+    if undiagnosed:
+        routed = _routed_at_a_truck_phase(res, quiet)
+        undiagnosed = [t for t in undiagnosed if t in routed]
 
     line_d = distance(railhead(fin).hex, CAIRO)   # 54.3: where the trains actually reach
     freight = [t for t in allied if t.line != 1]
@@ -444,6 +493,7 @@ def _faucet_reading(seed: int) -> dict:
         "west_hauls": sum(1 for e in unloads
                           if _west_of_matruh(dump_hex[e.payload["supply_id"]])),
         "depot_fuel": {d: fin.supply(d).fuel for d in depots},
+        "chain_fuel": _chain_fuel(fin),
     }
 
 
@@ -626,8 +676,28 @@ def test_the_commonwealth_trucks_actually_run():
         # stock ends up at the head and the links behind are transit nodes at zero. (Which link is
         # the head moves with the front: [15.53] concentration has had Sidi Barrani and Sollum in
         # Axis hands, leaving the rail-fed Matruh reservoir forward-most.)
-        assert any(v > 0 for v in r["depot_fuel"].values()), \
-            f"seed {s}: no Field Supply Depot filled: {r['depot_fuel']}"
+        #
+        # *** RESTATED 2026-08-04, CAUSE [19.12] -- AND IT IS THE COMMENT ABOVE FINALLY BEING TAKEN
+        # AT ITS WORD. *** This read the three SEEDED depots by name (Matruh, Barrani, Sollum) while
+        # its own comment said the claim is about the chain and that the head MOVES. Those three
+        # names only describe the chain while the Commonwealth still holds Mersa Matruh: let the
+        # Panzerarmee take the terminus and the line RETRACTS east (54.3, and this file's own
+        # test_the_railhead_retracts_east_when_the_enemy_stands_on_it), so all three read zero while
+        # the chain is perfectly healthy one station further back. Naming links was folklore of
+        # exactly the kind tests/baselines.py warns about; _chain_fuel asks
+        # campaign_policy.railhead, which is this project's ONE definition of where the trains reach.
+        #
+        # MEASURED, panel 1..24, this tree against the `git archive ba2b31c` control (control ->
+        # current):  the three named depots  24/24 -> 23/24,  the live chain  24/24 -> 24/24.
+        # The one seed that flips out under the old form is seed 7, and its board says plainly that
+        # the faucet did not fail: the Axis holds Mersa Matruh at Game-Turn 12 (it held it on the
+        # CONTROL tree too -- the railhead there was already AL-Stage-ElDaba), the trains land the
+        # same 144,000 Fuel Points down their whole length, the lorries make 65 moves and 25
+        # unloads, and AL-Stage-ElHamman -- the station the line has retracted to, i.e. the chain's
+        # actual head -- stands full at its 8,000-Point ceiling.
+        assert any(v > 0 for v in r["chain_fuel"].values()), (
+            f"seed {s}: the Field Supply Depot chain the trains reach is dry: {r['chain_fuel']} "
+            f"(the three seeded depots read {r['depot_fuel']})")
 
     # --- the two seed-luck claims, asserted of the DISTRIBUTION ----------------------------------
     # (1) THE POOL IS STILL ALIVE AT THE END OF THE SPAN. This test's own thesis -- "the lorry pool

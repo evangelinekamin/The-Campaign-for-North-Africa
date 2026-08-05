@@ -8,7 +8,7 @@ The rule, verbatim (docs/rules/06-the-capability-point-system.md, chapter 6):
     Arm. Div) it would move with a CPA of '10', or that of its lowest-CPA unit -- the 1st KRRC
     (without trucks)."
 
-WHY THIS LANDS NOW. `engine._co_located_subtree` has carried a Parent's attached subtree since the
+WHY THIS LANDS NOW. `organization.co_located_subtree` has carried a Parent's attached subtree since the
 [4.45] formation tree was seeded, and its own docstring has flagged this simplification the whole
 time: the mover's reach was gated on the PARENT's CPA, which it called immaterial "while the only
 Parents that carry a subtree are homogeneous foot-infantry regiments -- a motorized formation's HQ

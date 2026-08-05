@@ -213,7 +213,7 @@ def formation_cpa(state: GameState, unit: Unit, formation=()) -> int:
     If the British 7th Armored Division was to move as an entity... it would move with a CPA of
     '10', or that of its lowest-CPA unit -- the 1st KRRC (without trucks)."
 
-    `formation` is the [19.12] subtree the counter carries (engine._co_located_subtree). Empty for
+    `formation` is the [19.12] subtree the counter carries (organization.co_located_subtree). Empty
     a counter with nothing attached, which is every counter in a scenario with no live organization
     tree -- so those are byte-identical to the bare `effective_cpa` this replaced.
 

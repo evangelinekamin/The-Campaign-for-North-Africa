@@ -32,7 +32,7 @@ WHERE THE TREE COMES FROM. This module builds and polices the tree; the historic
 who begins the game assigned to whom -- is the [4.45] Organization at Arrival Charts, transcribed to
 data/oob_organization_4_45.json and seeded onto the campaign OOB (game.oob._seed_organization, Block
 B). The campaign then CONCENTRATES it in the Reorganization Segment and fights it as formations
-(game.campaign_policy.concentrate_formations + engine._co_located_subtree / combat_size, Block C), which
+(game.campaign_policy.concentrate_formations + co_located_subtree / combat_size, Block C), which
 is what makes [15.53] reach its Brigade/Division tiers in play. A scenario with no seeded tree (both
 Desert Fox benchmarks) leaves every counter independent -- exactly what the engine had before.
 """
@@ -144,7 +144,7 @@ def size(unit, attached=()) -> int:
     THE FOLD IS BY THE LINK, NOT BY CO-LOCATION, and deliberately. 19.12/19.13 make an attached unit
     ALWAYS stand in its Parent's hex, so folding it to zero wherever the link points has the same
     answer as folding it only when co-located -- EXCEPT during the one-event-at-a-time carry that
-    moves a formation (engine._co_located_subtree), where the Parent steps to the new hex an event
+    moves a formation (co_located_subtree), where the Parent steps to the new hex an event
     before its subsidiaries follow. A co-location test would read those subsidiaries UN-folded for
     that single event and trip the [9.14] limit on a formation merely mid-stride; worse, it would
     make one counter's move change a DIFFERENT hex's point-count, which the incremental invariant
@@ -257,6 +257,89 @@ def combat_size(units) -> int:
             t = replace(t, attached_to="")
         return size_equivalent(t, units)
     return max((_present_size(t) for t in tops.values()), default=0)
+
+
+# --- [19.12] the counter, and the formation it carries ----------------------------------
+
+def attached_index(state) -> dict:
+    """parent-id -> its subsidiaries' ids, sorted. Built once per Movement Segment: attachment only
+    changes in the Reorganization Segment (19.4), so the graph is stable while units move, and the
+    carry below can look up a mover's children in O(1) instead of rescanning every counter."""
+    idx: dict[str, list[str]] = {}
+    for x in state.units:
+        if x.attached_to:
+            idx.setdefault(x.attached_to, []).append(x.id)
+    for kids in idx.values():
+        kids.sort()
+    return idx
+
+
+def co_located_subtree(state, parent, index: dict) -> list:
+    """[19.12]/[19.46] The attached units standing in `parent`'s hex that its counter REPRESENTS --
+    the subtree it carries when it moves ("functionally combined into one unit"). Co-located ONLY:
+    a link to a unit in another hex is stale (a split the Reorganization Segment has yet to
+    reconcile, 19.13) and is NOT part of the counter, so it is never teleported along. Walked
+    transitively (19.46), in id order for determinism.
+
+    Because the carried units ride inside the Parent's counter they cost NO additional Capability
+    Point and NO Fuel (the formation's per-hex consumption is the Parent's, drawn once), and they
+    never separately trip Reaction (8.5) -- one counter made one move. A subsidiary is dropped from
+    the Movement Segment's own order loop (it may not self-move, 19.12), so it moves with its Parent
+    here or not at all. Empty for any counter with nothing attached, so every scenario without a
+    live organization tree carries nothing and stays byte-identical.
+
+    IT LIVES HERE, IN RULE 19's OWN MODULE, AND NOT IN THE ENGINE (moved 2026-08-04). It has TWO
+    readers now: engine._movement, which carries the formation, and
+    campaign_policy.formation_moves, the driver that ORDERS a Parent counter to march. Those two
+    must agree exactly on what a counter contains -- the driver pre-tests [6.15] reach and [9.14]
+    stacking against this set and the engine then validates the same move against it -- so a second
+    transcription of the walk in the policy layer would be a place for them to drift apart.
+
+    [6.15] IS HONOURED, and the flag that stood here is discharged (2026-08-04). The caller computes
+    this subtree BEFORE its reach and hands it to reachable_for_prev as `formation`, so the move is
+    gated on the LOWEST CPA among the formation's components (tactics.formation_cpa) rather than on
+    the Parent's own. On the setup tree that is byte-identical -- every one of scenario.campaign(1)'s
+    15 combat Parents already has a CPA equal to its formation minimum -- but it stops being so the
+    moment a [19.5] guest slower than its Parent attaches, or a motorized HQ carries foot infantry.
+
+    STILL FLAGGED, AND IT IS A [19.12] GAP RATHER THAN A [6.15] ONE: this is the ONLY site that
+    carries a subtree. engine._react (8.5 reaction) and engine._retreat_before_assault move a
+    counter without it and without excluding attached ones, so in those two segments a Parent can
+    step away from the subsidiaries its counter is supposed to contain, and a subsidiary can move
+    on its own order in defiance of "may not self-move" -- the rule this function exists to
+    enforce. [6.15] is deliberately NOT applied there: binding the CPA of a move that does not
+    carry the formation would apply half a rule and disguise the real defect.
+
+    A SECOND GAP, DELIBERATELY LEFT: only the CPA is bound, not the MOBILITY class. The counter
+    still crosses ground on the Parent's own mobility, so a motorized subsidiary carried by a foot
+    Parent escapes [8.44]'s Salt Marsh ban and [8.45]'s desert gate. That is live TODAY --
+    IT-4-CCNN---(4CN) carries kids of mobility {FOOT, MOTORIZED} under a FOOT Parent on
+    scenario.campaign(1) -- and tactics.may_step_into is the instrument for it. [6.15] speaks about
+    Capability Points and is silent on mobility, so fixing it here would be inventing the rest of a
+    rule the book stops short of. THE DRIVER MAKES IT BITE THE OTHER WAY ROUND AS WELL, and that is
+    named rather than fixed: every bare Parent it can now order is a MOTORIZED HQ, so a Commonwealth
+    brigade of foot battalions crosses ground as a motorized counter once its HQ leads it.
+
+    A THIRD FLAG, RAISED BY THE DRIVER RATHER THAN INTRODUCED BY IT -- THE FORMATION'S FUEL BILL.
+    "No Fuel" above means the move is charged to the Parent alone, and [49.13] prices a move at
+    rate x ceil(CP/5) x TOE STRENGTH POINTS -- of which a formation has its members' as well as its
+    HQ's. While the only counters that carried a subtree were FOOT Italian regiments (rate 0) the
+    difference was exactly zero and nobody could see it. It stops being zero the moment a motorized
+    HQ leads an armoured brigade: the formation moves on the HQ's one Strength Point of fuel instead
+    of its battalions'. Whether [19.12]'s "functionally combined into one unit" really buys a
+    division its petrol at an HQ's rate is a reading to settle against the scan, not here."""
+    out, frontier, seen = [], [parent.id], {parent.id}
+    while frontier:
+        pid = frontier.pop()
+        for cid in index.get(pid, ()):
+            if cid in seen:
+                continue
+            c = state.unit(cid)
+            if c is not None and c.alive and tuple(c.hex) == tuple(parent.hex):
+                seen.add(cid)
+                out.append(c)
+                frontier.append(cid)
+    return out
 
 
 # --- [19.4] / [19.5] attachment ---------------------------------------------------------

@@ -46,7 +46,8 @@ from .relay import (  # extracted to game.relay; re-exported so every caller and
 
 __all__ = ["CAMPAIGN_CW_OFFENSIVES", "CampaignAxisPolicy", "CampaignCommonwealthPolicy",
            "OffensiveSchedule", "air_supply_orders", "build_the_chain", "campaign_motorization",
-           "campaign_truck_orders", "concentrate_formations", "deny_dumps", "garrison_units",
+           "campaign_truck_orders", "concentrate_formations", "deny_dumps", "formation_moves",
+           "garrison_units",
            "hold_depots", "hold_garrisons", "keep_in_trace", "railhead", "take_and_hold_moves",
            "take_and_hold_supply"]
 
@@ -64,7 +65,7 @@ def concentrate_formations(state: GameState, side: Side) -> list[OrganizationOrd
         belongs to (19.28's paper assignment made concrete on the map), not the [19.5]-capped
         attachment of a stranger. Once attached, the formation's units resolve at its Organization
         Size in close assault (organization.combat_size), and its counter carries them as one when
-        it advances (engine._co_located_subtree) -- so a division fights, and moves, as a division.
+        it advances (organization.co_located_subtree) -- so a division fights, and moves, as a division.
 
       * DETACH (19.43) any unit a link still binds to a Parent it no longer stands with. Voluntary
         movement keeps a formation together (the carry above), but a retreat or a Reaction can
@@ -79,23 +80,39 @@ def concentrate_formations(state: GameState, side: Side) -> list[OrganizationOrd
     room is made. The engine re-checks the limit at rest regardless (invariants), this only keeps the
     staff from ordering an attach the board cannot hold.
 
-    ONLY UNDER A COMBAT PARENT (FLAGGED -- an engine limitation, not a rule). In the game a division
-    is one counter and its HQ moves WITH it; in this engine an HQ is a separate counter, and a bare,
-    non-combat HQ counter (every CW brigade/division HQ, and every German division AND panzer-regiment
-    HQ) is moved by no proposer. Fold a formation into such an HQ and its units -- which may no longer
-    self-move once attached (19.12, engine._movement) -- would be FROZEN where they stand, since
-    nothing can order the HQ to lead them (measured: the Eighth Army's Delta brigades concentrated and
-    never reached the railhead, the whole faucet died). So concentration is confined to formations
-    whose Parent is itself a COMBAT counter that CAN be ordered forward and CAN carry them
-    (engine._co_located_subtree) -- in the campaign OOB that is the Italian infantry regiments and tank
-    groups and the one Commonwealth combat brigade (1 Army Tank Bde); EVERY German Parent Formation is
-    a bare, non-combat HQ counter, so the DAK concentrates nothing here. This is where Organization
-    Size actually bites, and under this engine's separate-HQ model it bites for the AXIS through its
-    ITALIAN formations -- a faithful counterweight to the Commonwealth replacement flow. FLAGGED, and
-    worth stating plainly, as the REVERSE of the historical picture: the DAK's own panzer regiments,
-    which fought concentrated, cannot concentrate here (their counters are non-combat HQs), while the
-    Italian binary divisions do. The German (and CW brigade/division) tiers wait on the [4.44]/[4.45]
-    HQ-follows-its-formation movement, not transcribed.
+    UNDER ANY PARENT A UNIT IS ASSIGNED TO -- combat counter or bare HQ (2026-08-04). (This heading
+    read "ANY PARENT THE CHART NAMES" until the faithfulness review pointed out that the attach loop
+    below tests only side, alive and co-location -- it never asks organization.formation(org_type),
+    so it does not in fact confine itself to Parents the [19.3] chart names. Harmless today: measured,
+    zero Parents with assigned children lack a [19.3] row, and zero lack a [19.5] row at Game-Turns
+    1/13/68/75. But the engine, not this proposer, is what would catch a future OOB pass that seeded
+    `assigned_to` at a chartless counter -- organization.may_attach rejects it -- and a heading should
+    not describe a guard that lives somewhere else.) This used to be
+    confined to formations whose Parent is itself a COMBAT counter, and that gate was a WORKAROUND
+    FOR A MISSING DRIVER, flagged here as "an engine limitation, not a rule": in the game a division
+    is one counter and its HQ moves WITH it, while in this engine an HQ is a separate counter, and no
+    proposer ever ordered a bare, non-combat one. Fold a formation into such an HQ and its units --
+    which may no longer self-move once attached (19.12, engine._movement) -- were FROZEN where they
+    stood, because nothing could order the HQ to lead them. Measured, and it killed the faucet: the
+    Eighth Army's Delta brigades concentrated and never reached the railhead.
+
+    THE DRIVER IS BUILT AND THE GATE IS GONE: formation_moves below orders a Parent counter that
+    carries a subtree, at the destination the army's own proposer gave its strongest carried combat
+    child, and both campaign policies compose it into movement(). A concentrated formation MARCHES.
+    Nothing about the attach half changed -- 19.4/19.41 was never the thing that was wrong.
+
+    WHAT THE GATE COST, MEASURED on scenario.campaign(1) before it was dropped: of 91 Parent
+    Formations with assigned children, 15 concentrated and 76 were refused, freezing 318 children --
+    and 61 of the 76 were COMMONWEALTH (37 infantry brigades, 13 infantry divisions, 3
+    super-brigades, 6 armour formations, 2 allied brigades) against 8 German (4 division HQs, 2
+    armored regiments, 288 Son and the Ramcke Brigade) and 7 Italian. (Both parenthetical
+    breakdowns were CORRECTED 2026-08-04: they read "5 armour" and "5 division HQs", so the
+    Commonwealth cells summed to 60 against a stated 61 and the German cells to 7 against a stated
+    8. In a repo where docstrings are the audit record, a census whose cells do not sum is a
+    defect.) So [15.53] Organization Size bit for the AXIS through its
+    Italian binary divisions and for almost nobody else -- the reverse of the historical picture,
+    with the DAK's own panzer regiments unable to concentrate. Both tiers are now open to both
+    sides, on the same rule.
 
     Pure setup-tree play: no Kampfgruppe is formed here (that is the speculative 19.71 act, flagged
     and deferred). Returns [] when no unit carries the tree, so any policy that inherits this on a
@@ -111,14 +128,13 @@ def concentrate_formations(state: GameState, side: Side) -> list[OrganizationOrd
             if p is None or not p.alive or tuple(p.hex) != tuple(u.hex):
                 orders.append(OrganizationOrder("detach", unit_id=u.id, parent_id=u.attached_to))
 
-    # ATTACH each assigned unit co-located with its COMBAT Parent, per formation, gated on 9.14.
+    # ATTACH each assigned unit co-located with its Parent, per formation, gated on 9.14.
     kids: dict[str, list] = defaultdict(list)
     for u in living:
         if not u.assigned_to or u.attached_to:
             continue
         p = by_id.get(u.assigned_to)
-        if (p is not None and p.side == side and p.alive and p.is_combat
-                and tuple(p.hex) == tuple(u.hex)):
+        if p is not None and p.side == side and p.alive and tuple(p.hex) == tuple(u.hex):
             kids[p.id].append(u)
 
     work = {u.id: u for u in state.units}                 # tracks this Segment's attaches so several
@@ -134,6 +150,105 @@ def concentrate_formations(state: GameState, side: Side) -> list[OrganizationOrd
         for c in children:
             orders.append(OrganizationOrder("attach", unit_id=c.id, parent_id=pid))
             work[c.id] = replace(work[c.id], attached_to=pid)
+    return orders
+
+
+def formation_moves(state: GameState, side: Side,
+                    ordered: list[MoveOrder]) -> list[MoveOrder]:
+    """[19.12] THE PARENT COUNTER MARCHES ITS FORMATION -- the driver without which concentrating
+    a formation FREEZES it, and the reason concentrate_formations above no longer has to refuse.
+
+    An attached subsidiary may not self-move: "both the attached unit and the Parent Formation are
+    in the same hex... functionally combined into one unit", and engine._movement drops a
+    subsidiary's own order accordingly. The formation moves when its PARENT's counter moves, which
+    carries the whole co-located subtree at no Capability Point and no Fuel. So somebody has to
+    order the Parent -- and until this function existed nobody ever did, because every proposer in
+    this repo skips a non-combat unit and every Commonwealth brigade/division HQ and every German
+    division and panzer-regiment HQ is exactly that.
+
+    IT RIDES ALONGSIDE, ON THE `_railway` PRECEDENT, and it keeps that proposer's invariant by
+    reading it rather than by assuming it: `ordered` is every move order the side has already made
+    this Segment, and a Parent that appears in it is left alone. NO UNIT IS ORDERED TWICE. A COMBAT
+    Parent is skipped outright -- the army proposer already had its say about that counter, and the
+    fifteen combat Parents on the campaign board keep behaving exactly as they did.
+
+    *** THE DOCTRINE, AND IT IS INHERITED RATHER THAN AUTHORED (flagged: this is the one judgement
+    call in the slice). *** Where should a division HQ go? That is a commander's question, and this
+    project's answer to commanders' questions is that they belong to the staff, not to a scripted
+    reflex. So no HQ doctrine is invented here. The Parent REPRESENTS its children (19.12), so it
+    is given THE DESTINATION THE EXISTING PROPOSER ALREADY CHOSE FOR THE STRONGEST COMBAT UNIT IT
+    CARRIES -- the formation's main body. Whatever the army was doing, the formation keeps doing:
+    the Commonwealth's forward concentration on the railhead, the Axis drive on Alexandria, the
+    rule-64.73 take-and-hold, and the standing garrison order. The alternative default -- "the
+    Parent follows the army it belongs to" -- would have been a second, weaker copy of doctrine
+    that already exists.
+
+    *** THE STANDING ORDERS ARE A VETO, AND THAT SENTENCE IS LOAD-BEARING (repaired 2026-08-04
+    after both adversarial reviews found the same defect, independently, each with its own A/B).
+    This docstring used to claim the garrison case worked by itself -- "a child held on its city
+    proposes no move, so its formation stands with it" -- and it was FLATLY WRONG. hold_garrisons
+    and delta_garrison hold a unit by DELETING its move order, so a pinned child looks exactly like
+    a child the army had no plans for, and the strength-ordered fallback below stepped over it and
+    took a sibling's destination. The [19.12] carry then marched the garrison off its hex at zero
+    Capability Points. A formation carrying ANY pinned unit is now skipped outright. ***
+
+    TWO GATES, BOTH THE ENGINE'S OWN, so the proposer rarely orders a rejection (the discipline
+    _march keeps: "don't propose a reject" -- and note RARELY, not never: this pre-tests [6.15] and
+    [9.14], but engine._movement's chain has six more gates a bare HQ can fail, and measured on
+    campaign(1) over 12 Game-Turns the non-combat ORDER_REJECTED count goes 0 -> 36, every one of
+    them "out of supply: no fuel for this move". That is faithful behaviour, not a defect; the
+    earlier wording of this sentence simply overstated the guarantee):
+      * [6.15] the destination must lie within the FORMATION's reach, which is bound to the lowest
+        CPA among its components (tactics.formation_cpa) -- and the strongest child's own order was
+        computed at ITS CPA, which may be far higher than the formation's;
+      * [9.14] the resulting stack at the destination must be legal, tested on the formation's whole
+        footprint exactly as engine._movement tests it (a Parent jumps from a bare 0 to its full
+        Organization value the moment it carries anybody, 9.12).
+    When the strongest child's destination fails either, the next strongest is tried. That is not a
+    new heuristic: every candidate is a destination the existing doctrine chose for a member of this
+    formation, and without the fallback one fast battalion in a slow brigade would freeze it -- the
+    very failure this driver exists to end.
+
+    Returns [] for any counter carrying nothing, so a scenario with no live organization tree (both
+    Desert Fox benchmarks) proposes nothing and stays byte-identical."""
+    index = organization.attached_index(state)
+    dest = {o.unit_id: tuple(o.to) for o in ordered}
+    roster = state.living(side)
+    enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(state, side)
+    # [64.71]/[64.73] THE STANDING ORDERS BIND THE FORMATION, NOT ONLY THE COUNTER THEY NAME.
+    # Both standing orders are implemented as order-DROPPING transforms (campaign_claim.
+    # hold_garrisons, delta_garrison): the way a garrison is held is that its move order is
+    # deleted. So a pinned child is INDISTINGUISHABLE from a child the army simply had no plans
+    # for, and the fallback below would step over it and take a sibling's destination -- after
+    # which engine._movement's [19.12] carry walks the garrison off its hex at zero Capability
+    # Points, with no rejection and no event anyone would look at. Measured before this guard on
+    # campaign(seed=1): Polish-Bde-I carried off Delta hex (43,141) three times in three
+    # Game-Turns, and Delta hex occupancy over a 12-turn fold fell to 8 stages in 36.
+    # ABSTENTION IS A VETO HERE, because delta_garrison's contract is absolute: "the one unit
+    # standing on each of them never marches away. Ever." [64.71] is the AUTO-WIN condition.
+    pinned = campaign_claim.garrison_units(state, side) | campaign_claim.delta_garrison(state, side)
+    orders: list[MoveOrder] = []
+    for p in roster:
+        if p.is_combat or p.attached_to or p.id in dest or p.id not in index:
+            continue                       # the army's counters, a subsidiary, and anything another
+                                           # proposer already ordered, are not this proposer's
+        carried = organization.co_located_subtree(state, p, index)
+        if not carried:
+            continue                       # a bare HQ carrying nothing is nobody's formation
+        if any(c.id in pinned for c in carried):
+            continue                       # 64.71/64.73: a formation holding a pinned garrison stays
+        reach = tactics.reachable_for(state, p, enemy_zoc, enemy_occupied, roster,
+                                      formation=carried)              # 6.15
+        for child in sorted(carried, key=lambda u: (-u.effective_strength, u.id)):
+            to = dest.get(child.id)
+            if to is None or to == tuple(p.hex) or to not in reach:
+                continue
+            present = [x for x in state.units_at(to) if x.side == side]
+            if not stacking.within_hex_limit(present + [p] + carried,
+                                             state.terrain.terrain[to]):     # 9.14
+                continue
+            orders.append(MoveOrder(p.id, to))
+            break
     return orders
 
 
@@ -437,8 +552,15 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
         # The railway gang is never in `army`: an engineer is not a combat unit "in any way, shape,
         # or form" (23.11), and every proposer in this repo skips a non-combat unit. So its orders
         # simply ride alongside, and no unit can be ordered twice.
-        return self._railway(state, side) + take_and_hold_moves(state, side, army,
+        #
+        # [19.12] AND SO DOES THE FORMATION PROPOSER, on the same precedent -- but it reads the
+        # orders already made instead of assuming the invariant, because a Parent counter IS a
+        # non-combat unit and the railway gang is the one other proposer that names those. It marches
+        # each concentrated formation where the army was already sending its main body; without it a
+        # brigade that folds into its own HQ can never move again (see formation_moves).
+        plan = self._railway(state, side) + take_and_hold_moves(state, side, army,
                                                                 escort=self._escort(state))
+        return plan + formation_moves(state, side, plan)
 
     def _railway(self, state: GameState, side: Side) -> list[MoveOrder]:
         """[24.6] THE TWO NEW ZEALAND RAILROAD CONSTRUCTION COMPANIES GO WHERE THE TRACK ENDS.
@@ -1369,14 +1491,17 @@ class CampaignAxisPolicy(_CampaignAxisSupplyMixin, ScriptedPolicy):
         super().__init__(attacker=Side.AXIS)
 
     def organization(self, state: GameState, side: Side) -> list[OrganizationOrder]:
-        # [19.4]/[19.12] Concentrate the seeded [4.45] formation tree. The [15.53] Organization Size
-        # edge this yields the Axis is delivered by the ITALIAN regiments and tank groups -- the only
-        # Axis Parent Formations that are combat counters; every German (DAK) formation is a bare,
-        # non-combat HQ counter and concentrates nothing here (see concentrate_formations for why).
+        # [19.4]/[19.12] Concentrate the seeded [4.45] formation tree -- ALL of it, Italian regiments
+        # and tank groups and the DAK's own division and panzer-regiment HQs alike, now that a bare HQ
+        # can be ordered to lead its formation (formation_moves, composed into movement below).
         return concentrate_formations(state, side)
 
     def movement(self, state: GameState, side: Side) -> list[MoveOrder]:
-        return take_and_hold_moves(state, side, super().movement(state, side), escort=True)
+        # [19.12] The formation proposer rides alongside the army here exactly as it does on the
+        # Commonwealth side: every DAK Parent Formation is a bare, non-combat HQ counter, so without
+        # it the panzer divisions concentrate and then stand still (see formation_moves).
+        plan = take_and_hold_moves(state, side, super().movement(state, side), escort=True)
+        return plan + formation_moves(state, side, plan)
 
     def malta_raid(self, state: GameState) -> str:
         # [44.23] The Axis Malta doctrine, shared verbatim with the LIVE-staff campaign

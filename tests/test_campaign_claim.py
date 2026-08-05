@@ -18,7 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from game import campaign_claim, coords                                  # noqa: E402
-from game.apply import fold                                              # noqa: E402
+from game.apply import apply, fold                                       # noqa: E402
 from game.campaign_policy import (CampaignAxisPolicy,                    # noqa: E402
                                   CampaignCommonwealthPolicy)
 from game.engine import determinism_signature, run                       # noqa: E402
@@ -366,33 +366,81 @@ def test_occupying_sollum_brings_the_supply_chain_up_to_it():
     shortcut. What must hold, and what actually failed before spine_awaits_control existed, is the
     JUDGEMENT: a city carrying our OWN empty Field Supply Depot on an ENEMY-CONTROLLED hex is dry
     because of CONTROL, not distance, so it is claimed and a unit is sent -- and NO field dump is
-    sent with it (the depot is already there; a second one would only mask it from the lorries)."""
+    sent with it (the depot is already there; a second one would only mask it from the lorries).
+
+    *** 🟢 RESTATED 2026-08-04, CAUSE [19.12] -- AND THE NOTE ABOVE IS WITHDRAWN BECAUSE THE
+    COMMONWEALTH NOW WINS THE FIGHT FOR IT. *** The [15.53] HQ-follows-its-formation driver lets a
+    concentrated brigade march under its own bare HQ, and the Eighth Army takes Sollum. The old form
+    asserted the hinge OF THE FINAL BOARD, which is exactly where it is no longer true: at GT24 the
+    hex is COMMONWEALTH-controlled, two battalions stand on it, and AL-Stage-Sollum -- the depot
+    this test's own docstring says "sat dry all campaign" and "stood empty the whole time" -- holds
+    1,176 Fuel and 15 Ammunition. spine_awaits_control reads False because its precondition (the
+    ENEMY holds the hex) has been removed by the thing it exists to cause.
+
+    So the test is restated to assert BOTH halves of its own story, and it is strictly stronger than
+    the form it replaces:
+      * THE JUDGEMENT, on the turn-closes OF THIS RUN where its precondition genuinely stands.
+        MEASURED at CAMPAIGN_SEED: Sollum is Axis-held with our empty depot on it at the Game-Turn
+        2, 3 and 4 closes, and it is claimed at every one of them with NO dump in tow.
+      * THE OUTCOME, which the pre-driver tree could not reach and which this docstring could
+        therefore only promise: 1-RFslr walks onto the hex at Game-Turn 5, the supply comes up
+        behind it from Game-Turn 8 (4 Ammunition / 45 Fuel), and the depot carries 1,000-2,000 Fuel
+        from Game-Turn 16 to the end. That is spine_awaits_control's own sentence -- "put one
+        battalion on it and the supply comes up behind it within a Game-Turn or two" -- happening.
+    Asserting the outcome is no longer "measuring the Axis's defence" as a substitute for the
+    judgement, because the judgement is still asserted, on real boards, immediately above it."""
     res = _run(24)
     assert res.initial.supply("AL-Stage-Sollum").empty        # seeded empty: hauled into, not filled
     fin = res.final
 
     # The hinge: our own depot, empty, on a hex the enemy holds -- distance is not the problem.
-    assert campaign_claim.spine_awaits_control(fin, Side.ALLIED, SOLLUM)
-    assert campaign_claim.depot_on(fin, Side.ALLIED, SOLLUM).empty
-    assert fin.control_of(SOLLUM) == Control.AXIS
+    st, hinge = res.initial, []
+    for e, nxt in zip(res.events, res.events[1:] + [None]):
+        st = apply(st, e)
+        if (nxt is None or nxt.turn != e.turn) and campaign_claim.spine_awaits_control(
+                st, Side.ALLIED, SOLLUM):
+            hinge.append(st)
+    assert hinge, ("Sollum is never both enemy-held and carrying our own empty depot -- the hinge "
+                   "has no board to stand on in this run; re-derive it, do not delete it")
+    # (Two lines stood here re-asserting `depot.empty` and `control_of(SOLLUM) == AXIS` of
+    # hinge[0]. DROPPED 2026-08-04, flagged by the [15.53] correctness review: the selector above
+    # is `spine_awaits_control`, which returns EXACTLY `depot is not None and depot.empty and
+    # control_of(ax) == AXIS`, so both lines re-asserted the selector's own conjuncts of a board
+    # chosen BY that selector and could no longer fail. They were real assertions in the older
+    # form, which asked them of the FINAL board independently of any selector; once the test moved
+    # to selecting hinge boards they became tautologies. A test line that cannot fail is worse than
+    # no line -- it reads as coverage. What still bites here: `assert hinge`, the claims() loop
+    # below, and the two outcome assertions at the end.)
 
     # ...so a unit is claimed for it -- ALONE, with no field dump in tow.
-    plan = {c.city: c for c in campaign_claim.claims(fin, Side.ALLIED, escort=True)}
-    assert SOLLUM in plan, "Sollum is not even claimed -- the shortcut is dead"
-    assert plan[SOLLUM].depot_id is None, "a field dump was sent to MASK the depot already on Sollum"
+    for board in hinge:
+        plan = {c.city: c for c in campaign_claim.claims(board, Side.ALLIED, escort=True)}
+        assert SOLLUM in plan, "Sollum is not even claimed -- the shortcut is dead"
+        assert plan[SOLLUM].depot_id is None, \
+            "a field dump was sent to MASK the depot already on Sollum"
 
-    # THE SHORTCUT'S EVIDENCE -- AND WHAT CHANGED UNDERNEATH IT. The hinge is untouched and asserted
-    # above: the depot ON Sollum is still EMPTY and the hex is still ENEMY-HELD, which is what
-    # spine_awaits_control reads and why Sollum is claimed with no dump in tow.
+    # AND THE SHORTCUT DELIVERS: the hex is taken and OUR OWN depot on it fills (2026-08-04).
+    assert fin.control_of(SOLLUM) == Control.ALLIED, \
+        "the Eighth Army no longer takes Sollum -- INVERT this restatement, the finding reversed"
+    assert not campaign_claim.depot_on(fin, Side.ALLIED, SOLLUM).empty, \
+        "Sollum is held and its own Field Supply Depot is still dry -- the supply did not follow"
+
+    # THE SHORTCUT'S EVIDENCE -- AND WHAT CHANGED UNDERNEATH IT. This block used to open by
+    # re-asserting the hinge of the FINAL board ("the depot ON Sollum is still EMPTY and the hex is
+    # still ENEMY-HELD"). Both halves of that are now false and both are asserted the other way
+    # round twelve lines above: [19.12]'s formation driver puts the Eighth Army on the hex, and the
+    # lorries fill its depot. The duplicate assertion is DROPPED rather than restated, because the
+    # single restatement above already carries it -- two copies of a claim is how one of them goes
+    # stale unnoticed, which is exactly what happened here.
     #
-    # What is no longer true is the old COROLLARY -- that a Commonwealth battalion standing on Sollum
-    # today could not be fed there either, so gating the claim on can_be_fed alone would decline
-    # Sollum for ever. It would not, now: the railway finally carries its charted 54.32 tonnage, so
-    # the link BEHIND Sollum -- the Sidi Barrani Field Supply Depot -- is stocked, and a 32.16 trace
-    # from Sollum reaches it. Before that fix the entire Commonwealth chain was dry (the railhead
-    # held ZERO Fuel on every turn of the war) and the honest trace test said NO everywhere. The
-    # judgement was right then and is right now; the ground under it is finally supplied.
-    assert campaign_claim.depot_on(fin, Side.ALLIED, SOLLUM).empty      # the depot ON it: still dry
+    # What was no longer true even before that -- the old COROLLARY -- is that a Commonwealth
+    # battalion standing on Sollum could not be fed there either, so gating the claim on can_be_fed
+    # alone would decline Sollum for ever. It would not: the railway carries its charted 54.32
+    # tonnage, so the link BEHIND Sollum -- the Sidi Barrani Field Supply Depot -- is stocked, and a
+    # 32.16 trace from Sollum reaches it. Before that fix the entire Commonwealth chain was dry (the
+    # railhead held ZERO Fuel on every turn of the war) and the honest trace test said NO everywhere.
+    # The judgement was right then and is right now; the ground under it is finally supplied.
+    #
     # THE LINK BEHIND SOLLUM IS STOCKED -- which is the claim, and the only form of it that was ever
     # true. The Sidi Barrani Field Supply Depot now carries a real reservoir (the charted [60.44]
     # start-line stock, kept topped up by the [60.43] lorry park off the rail-fed railhead), so the

@@ -3782,7 +3782,7 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
     enemy_zoc, enemy_occupied = tactics.enemy_zoc_and_occupied(r.state, side)
     roster = r.state.living(side)          # phase-start snapshot (matches the observation)
     orders = policy.movement(r.state, side)
-    attached_index = _attached_index(r.state)   # 19.12: parent -> its subsidiaries (stable this Segment)
+    attached_index = organization.attached_index(r.state)   # 19.12: parent -> its subsidiaries
     _drain_staff(r, policy, side)          # the deliberation that produced these orders
     for order in orders:
         u = r.state.unit(order.unit_id)
@@ -3791,7 +3791,7 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
             continue
         if u.attached_to:                               # 19.12: an attached subsidiary is inside its
             continue                                    # Parent's counter and moves only when the Parent
-                                                        # does (_co_located_subtree) -- never on its own order
+                                                        # does (organization.co_located_subtree)
         if u.cohesion <= -26:                           # 6.26: a unit at Cohesion -26 or worse may
             _reject(r, side, actor, order,              # not move (nor attack, nor defend). The
                     "Cohesion -26 or worse: may not move (6.26)")   # surrender-on-enemy-adjacency
@@ -3832,7 +3832,8 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
         # [19.12] the subtree this counter carries, computed BEFORE the reach because [6.15] binds
         # the reach to it: "the CPA of a Parent Formation... is that of the lowest CPA of the units
         # comprising that parent formation, regardless of the CPA of any higher-CPA units."
-        carried = _co_located_subtree(r.state, u, attached_index)  # 19.12: its counter moves the formation
+        carried = organization.co_located_subtree(   # 19.12: its counter moves the formation
+            r.state, u, attached_index)
         reach, prev = tactics.reachable_for_prev(r.state, u, enemy_zoc, enemy_occupied, roster,
                                                  formation=carried)          # 6.15
         if order.to == u.hex or order.to not in reach:
@@ -3871,70 +3872,6 @@ def _movement(r: _Run, policies: dict, side: Side, eligible: frozenset | None = 
                              movement.reconstruct_path(prev, u.hex, order.to))
         _react(r, policies, side, u.id)         # 8.5: the non-phasing side may slide aside
     _sweep_revealed_dummies(r, side, actor)      # 26.14/26.23: end of this Movement Phase
-
-
-def _attached_index(state: GameState) -> dict:
-    """parent-id -> its subsidiaries' ids, sorted. Built once per Movement Segment: attachment only
-    changes in the Reorganization Segment (19.4), so the graph is stable while units move, and the
-    carry below can look up a mover's children in O(1) instead of rescanning every counter."""
-    idx: dict[str, list[str]] = {}
-    for x in state.units:
-        if x.attached_to:
-            idx.setdefault(x.attached_to, []).append(x.id)
-    for kids in idx.values():
-        kids.sort()
-    return idx
-
-
-def _co_located_subtree(state: GameState, parent, index: dict) -> list:
-    """[19.12]/[19.46] The attached units standing in `parent`'s hex that its counter REPRESENTS --
-    the subtree it carries when it moves ("functionally combined into one unit"). Co-located ONLY:
-    a link to a unit in another hex is stale (a split the Reorganization Segment has yet to
-    reconcile, 19.13) and is NOT part of the counter, so it is never teleported along. Walked
-    transitively (19.46), in id order for determinism.
-
-    Because the carried units ride inside the Parent's counter they cost NO additional Capability
-    Point and NO Fuel (the formation's per-hex consumption is the Parent's, drawn once), and they
-    never separately trip Reaction (8.5) -- one counter made one move. A subsidiary is dropped from
-    the Movement Segment's own order loop (it may not self-move, 19.12), so it moves with its Parent
-    here or not at all. Empty for any counter with nothing attached, so every scenario without a
-    live organization tree carries nothing and stays byte-identical.
-
-    [6.15] IS NOW HONOURED, and the flag that stood here is discharged (2026-08-04). The caller
-    computes this subtree BEFORE its reach and hands it to reachable_for_prev as `formation`, so
-    the move is gated on the LOWEST CPA among the formation's components (tactics.formation_cpa)
-    rather than on the Parent's own. On the setup tree that is byte-identical -- every one of
-    scenario.campaign(1)'s 15 combat Parents already has a CPA equal to its formation minimum --
-    but it stops being so the moment a [19.5] guest slower than its Parent attaches, or a motorized
-    HQ carries foot infantry.
-
-    STILL FLAGGED, AND IT IS A [19.12] GAP RATHER THAN A [6.15] ONE: this is the ONLY site that
-    carries a subtree. engine._react (8.5 reaction) and engine._retreat_before_assault move a
-    counter without it and without excluding attached ones, so in those two segments a Parent can
-    step away from the subsidiaries its counter is supposed to contain, and a subsidiary can move
-    on its own order in defiance of "may not self-move" -- the rule this function exists to
-    enforce. [6.15] is deliberately NOT applied there: binding the CPA of a move that does not
-    carry the formation would apply half a rule and disguise the real defect.
-
-    A SECOND GAP, DELIBERATELY LEFT: only the CPA is bound, not the MOBILITY class. The counter
-    still crosses ground on the Parent's own mobility, so a motorized subsidiary carried by a foot
-    Parent escapes [8.44]'s Salt Marsh ban and [8.45]'s desert gate. That is live TODAY --
-    IT-4-CCNN---(4CN) carries kids of mobility {FOOT, MOTORIZED} under a FOOT Parent on
-    scenario.campaign(1) -- and tactics.may_step_into is the instrument for it. [6.15] speaks about
-    Capability Points and is silent on mobility, so fixing it here would be inventing the rest of a
-    rule the book stops short of."""
-    out, frontier, seen = [], [parent.id], {parent.id}
-    while frontier:
-        pid = frontier.pop()
-        for cid in index.get(pid, ()):
-            if cid in seen:
-                continue
-            c = state.unit(cid)
-            if c is not None and c.alive and tuple(c.hex) == tuple(parent.hex):
-                seen.add(cid)
-                out.append(c)
-                frontier.append(cid)
-    return out
 
 
 def _react(r: _Run, policies: dict, phasing: Side, mover_id: str) -> None:
@@ -6233,7 +6170,7 @@ def _minefield_encounter(r: _Run, side: Side, actor: str, u, path: list) -> None
     along the path it actually walked (the CP surcharge itself already rode `reach[order.to]` via
     game.tactics' extra_cost hook; this is the SEPARATE reveal + destruction-roll consequence of
     having walked through one). Applies only to the mover itself, not any 19.12 carried subsidiary
-    -- FLAGGED, the same simplification game.tactics._co_located_subtree's own [6.15] note already
+    -- FLAGGED, the same simplification game.organization.co_located_subtree's own [6.15] note already
     accepts for a Parent's carried formation.
 
     Called from EVERY way a unit crosses ground under its own power or under orders: ordinary
