@@ -644,12 +644,33 @@ class StaffPolicy(ScriptedPolicy):
                 "kind": "naval", "severity": "warn", "seat": NAVAL,
                 "line": f"{len(throttled)} harbour(s) throttled below full landing"})
 
+    def air_missions(self, state: GameState, side: Side) -> list:
+        """[39.1] THE AIR MARSHAL'S MISSION COLUMN -- and it is now an ORDER rather than a caption.
+
+        THIS METHOD IS WHY THIS BLOCK EXISTS. Until it landed, _air_plan below read the scenario's
+        baked schedule off GameState and staged it as a STAFF_PROPOSAL with the rationale "air
+        marshal tasks N mission(s) this turn" -- while engine._air_support read the very same
+        schedule for itself and flew it. The seat NARRATED A DECISION IT NEVER MADE: had it proposed
+        something else, or nothing, precisely nothing would have changed. What this method returns
+        is what the engine flies.
+
+        The doctrine on it is still scripted, exactly like the Quartermaster's and the Convoy
+        officer's (see the class docstring), and it is the base Policy's: this side's missions, due
+        this Game-Turn. A live LLM Air Marshal replaces the body and nothing else -- the engine
+        already re-validates side, Game-Turn, kind and target shape at the boundary, already sorts
+        what comes back so the seat's ordering cannot matter, and [39.19]'s within-stage plane
+        ledger already stops a seat flying its squadrons twice in one Operations Stage."""
+        return super().air_missions(state, side)
+
     def _air_plan(self, state: GameState, obs: dict) -> None:
-        """The Air Marshal's standing tasking in the side-turn plan: the LAND air missions due
-        this turn (strike/fort/port/recon), flagged grounded when the sky is foul (29.43/29.52).
-        A pure projection over air_brief -- the seat holds no ground unit."""
+        """The Air Marshal's standing tasking in the side-turn plan: the LAND air missions the seat
+        is tasking this Game-Turn, flagged grounded when the sky is foul (29.43/29.52). The seat
+        holds no ground unit, so it never touches the Lane partition.
+
+        IT PROPOSES THE LIST air_missions() RETURNS, from that one source, so the staff log and the
+        engine's mission column can never disagree about what the Air Marshal ordered."""
         brief = air_brief(obs)
-        due = [m for m in state.air_missions if m.side == self.side and m.turn == state.turn]
+        due = self.air_missions(state, self.side)
         proposes = []
         for m in due:
             one = {"order": "air_mission", "units": [m.kind]}

@@ -328,13 +328,13 @@ def test_39_19_a_plane_that_flew_the_strategic_phase_may_not_fly_the_desert():
     none = _mini(strike=40)                                      # 4 of [60.32]'s bombers...
     assert air.squadron_planes(none, Side.AXIS, "LAND", "strike") == 4
     assert basing.africa_planes(none, Side.AXIS, 1) == 4          # ...all four in Africa (43.12
-    assert _air_points(none, Side.AXIS, "LAND", "strike") == 40   # bases no Italian aeroplane)
+    assert _air_points(_Run(none), Side.AXIS, "LAND", "strike") == 40   # bases no Italian aeroplane)
     one = _mini(strike=40, strategic={AXIS_STRIKE: 1})
-    assert _air_points(one, Side.AXIS, "LAND", "strike") == 35    # the other three carry 35 points
+    assert _air_points(_Run(one), Side.AXIS, "LAND", "strike") == 35    # the other three carry 35 points
     three = _mini(strike=40, strategic={AXIS_STRIKE: 3})
-    assert _air_points(three, Side.AXIS, "LAND", "strike") == 11  # one bomber left
+    assert _air_points(_Run(three), Side.AXIS, "LAND", "strike") == 11  # one bomber left
     allgone = _mini(strike=40, strategic={AXIS_STRIKE: 4})
-    assert _air_points(allgone, Side.AXIS, "LAND", "strike") == 0  # every African bomber went
+    assert _air_points(_Run(allgone), Side.AXIS, "LAND", "strike") == 0  # every African bomber went
 
 
 def test_39_19_the_exclusion_lasts_the_GAME_TURN_not_the_operations_stage():

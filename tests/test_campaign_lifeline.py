@@ -49,7 +49,7 @@ from game.campaign_staff import CampaignStaffPolicy                      # noqa:
 from game.engine import (_air_support, _convoy_dest,   # noqa: E402
                          _Run, determinism_signature, run)
 from game.events import Control, EventKind, Side                         # noqa: E402
-from game.policy import ScriptedPolicy                                   # noqa: E402
+from game.policy import Policy, ScriptedPolicy                                   # noqa: E402
 from game.scenario import (_AXIS_TOBRUK_LANE, campaign,                  # noqa: E402
                            rommels_arrival, siege_of_tobruk)
 from game.state import AirMission                                        # noqa: E402
@@ -275,7 +275,7 @@ def test_a_side_never_bombs_the_harbour_of_a_city_it_holds():
         out = set()
         for side in (Side.AXIS, Side.ALLIED):
             r = _Run(state)
-            _air_support(r, side, set())                  # the side flies its due LAND missions
+            _air_support(r, Policy(), side, set())                  # the side flies its due LAND missions
             if any(e.kind == EventKind.AIR_STRIKE_RESOLVED
                    and e.payload.get("target") == "PORT-Tobruk" for e in r.events):
                 out.add(side)

@@ -27,7 +27,7 @@ from game.engine import (_air_support, _barrage_step, _naval_convoys, _port_rege
 from game.events import Control, EventKind, Phase, Side
 from game.invariants import check
 from game.movement import TerrainMap
-from game.policy import ScriptedPolicy
+from game.policy import Policy, ScriptedPolicy
 from game.scenario import coastal_corridor, rommels_arrival, siege_of_tobruk
 from game.state import AirMission, AirWing, Convoy, GameState, Port, SupplyUnit, VP
 from game.terrain import Terrain
@@ -309,7 +309,7 @@ def test_55_18_the_bomb_ledger_expires_by_itself_at_the_operations_stage_boundar
     port = Port("PORT-X", Side.ALLIED, (1, 0), "major", max_eff=5, eff=4,
                 cap_ammo=400, cap_fuel=400, cap_stores=400, cap_water=400, cap_tons=1000)
     r = _Run(_bombed_harbour_state(port))
-    _air_support(r, Side.AXIS, set())                     # Operations Stage 1: the quay takes levels
+    _air_support(r, Policy(), Side.AXIS, set())                     # Operations Stage 1: the quay takes levels
     bombed = r.state.port("PORT-X").eff
     assert bombed < 4, "the 471+ column takes at least one level on all 36 codes"
     _port_regen(r)                                        # end of Stage 1: bombed, so no regeneration

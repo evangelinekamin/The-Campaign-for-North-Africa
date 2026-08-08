@@ -25,7 +25,7 @@ from .hexmap import distance, is_adjacent, neighbors
 from .invariants import check_event
 from .policy import AttackOrder, MoveOrder, Policy, RailActivateOrder, RailHaulOrder
 from .staff_events import clean_staff_payload
-from .state import Coord, GameState, Minefield
+from .state import AirMission, Coord, GameState, Minefield
 from .terrain import Hexside, Terrain, is_motorized, salt_marsh_barred
 
 # BARRAGE_HITS_PER_FORT_LEVEL used to stand here: "how many effective barrages it takes to batter a
@@ -227,6 +227,21 @@ class _Run:
         # Read ONLY through _port_tons(), i.e. through _OpStageLedger, which expires it at the
         # (turn, stage) boundary; empty for every port-less scenario.
         self.port_tons = _OpStageLedger(self, dict)
+        # [39.19] "GENERALLY, A PLANE MAY FLY ONLY ONE MISSION PER OPERATIONS STAGE OR STRATEGIC
+        # PHASE." The aeroplanes of each squadron that have already flown a LAND mission THIS
+        # Operations Stage, keyed air.squadron(side, arena, role) -> planes -- the same key
+        # GameState.air_unfit (38.31) and GameState.air_strategic (39.19's Game-Turn half) are
+        # carried under, so all three ledgers speak one language. Written ONLY by the fuel callback
+        # in _air_support, i.e. only when a mission is REALLY flown; read by _air_points as its last
+        # gate, and gated by nothing.
+        # A SECOND LEDGER AND NOT AN EXTENSION OF air_strategic, because they run on different
+        # CLOCKS: that one is cleared at TURN_ADVANCED (39.19 is a per-GAME-TURN exclusion between
+        # the two phases), this one at the Operations Stage. Folding them would make a plane that
+        # flew in Stage 1 ineligible for Stages 2 and 3, which 40.0 forbids in as many words --
+        # "only one mission in an Operations Stage (three in one Game-Turn)".
+        # An _OpStageLedger, so a caller that drives the Operations Stages itself -- a test, a
+        # measurement driver, one of run()'s own Game-Turn beats -- cannot inherit a spent one.
+        self.air_flown = _OpStageLedger(self, dict)
         # THE AXIS RAILWAY'S PER-OPERATIONS-STAGE LEDGER (54.33/54.35/54.43) -- four facts about
         # one Operations Stage, held in ONE _RailStage under ONE stamp so they expire together and
         # cannot disagree about which stage that is. Read through the eight accessors below.
@@ -610,9 +625,15 @@ def _malta_strike_flown(r: _Run, flew: bool) -> None:
                SAME METHOD AS ALL OTHER PLANES."
         38.31 "As soon as a plane flies any mission other than transfer, IT MUST BE REFITTED AGAIN."
 
-    The exact twin of _air_unfit for a squadron that has no squadron key, and the reason the island
-    cannot simply put its whole surviving strike force over the lane 111 times: what flew this
-    Game-Turn must be readied by _malta_refit before it flies the next one.
+    The exact twin of _air_sortie_flown's 38.31 half for a squadron that has no squadron key, and
+    the reason the island cannot simply put its whole surviving strike force over the lane 111
+    times: what flew this Game-Turn must be readied by _malta_refit before it flies the next one.
+
+    It books NO 39.19 within-stage commitment, and that is correct twice over: the island's planes
+    are a roster on Malta rather than an air.squadron(side, arena, role) pool, so there is no key
+    to book them under; and this is a STRATEGIC-Phase mission (44.24), which 39.19's other half
+    governs on the Game-Turn clock (GameState.air_strategic, game.basing.mediterranean_strategic),
+    not the Operations-Stage one.
 
     A Game-Turn with no Axis convoy on the lane costs nothing, and that is 41.65C rather than an
     optimisation: "if no convoys have been located, THE PLANES NEVER TAKE OFF and therefore do not
@@ -2481,13 +2502,12 @@ def _air_fuel(r: _Run, side: Side, role: str, points: int, mission: dict) -> int
     unspent for as long as it likes (38.25), and we can only forgive the stage in which it would
     have been spent. It errs in the book's own direction, and it dissolves with 34.72.
 
-    NOT MODELLED, each named where it lands: 39.19's "a plane may fly only one mission per
-    Operations Stage" (two tasked missions in one stage are charged as two sets of planes, which is
-    what the rule requires of the PLAYER -- but nothing here stops a policy tasking more sorties
-    than it has aeroplanes; 5.5 owns 39.19); and 38.4's Ammunition Points for the bombs
-    (38.43/38.44). 38.3's REFIT -- the other half of readiness -- is built: _air_points caps the
-    commitment at the squadron's refitted planes BEFORE this bill is drawn, and _air_unfit spends
-    that readiness right after it."""
+    STILL NOT MODELLED: 38.4's Ammunition Points for the bombs (38.43/38.44). BOTH halves of
+    readiness are now built and both are drawn from this one callback by _air_sortie_flown --
+    38.3's REFIT (_air_points caps the commitment at the squadron's refitted planes BEFORE this
+    bill, and the readiness is spent right after it) and 39.19's ONE MISSION PER OPERATIONS STAGE,
+    which used to be the line above this one saying "nothing here stops a policy tasking more
+    sorties than it has aeroplanes". Something does now: _Run.air_flown."""
     if points <= 0:                                     # no planes committed -> no fuel, no event
         return 0
     if not air.based_on_map(r.state, side):             # 36.5/61.42 unbuilt -- see air.based_on_map
@@ -2684,8 +2704,17 @@ def _air_superiority(r: _Run) -> None:
     a Player declines -- "There may be a time when a Player wishes to either CONSERVE FUEL or,
     perhaps, retain some flexibility with his fighter force. Scramble gives him the ability to do
     that." This beat, by contrast, fires unconditionally once per arena per Operations Stage; no
-    order routes to it and nothing can decline it, because air missions are scenario-scheduled
-    (game.scenario) and no Policy seat has an air hook at all.
+    order routes to it and nothing can decline it. UPDATED 2026-08-08: the premise used to read
+    "because air missions are scenario-scheduled and no Policy seat has an air hook at all", and
+    that half is now FALSE -- Policy.air_missions exists and a seat writes its own mission column.
+    THE CONCLUSION IS UNCHANGED, and for the reason that always did the work: CAP is still not an
+    ASSIGNABLE KIND. There is no "cap" or "scramble" in _AIR_MISSIONS, so no mission column can
+    name one, and this beat still fires unconditionally with nothing able to decline it. What the
+    hook changed is which rule blocks ordered CAP: not "there is no seat" any more, but [40.27],
+    which puts interception on the PATH OF FLIGHT between both sides' missions being placed and
+    either resolving -- while _air_support runs inside EACH side's own Combat Segment, so the two
+    sides' missions are never on the map simultaneously. Ordered CAP needs the Land Support Air
+    Phase lifted out of _combat and run once per Operations Stage for both sides ([33] IV.F).
 
     Billing it was measured and it was NOT a rounding error: over the full campaign the automatic
     patrol took 84 of 84 Axis air Fuel Points on seeds 7 and 1941 and 72 of 128 on seed 4 -- so on
@@ -2727,15 +2756,64 @@ def _air_superiority(r: _Run) -> None:
 _REFITTABLE_ROLES: tuple[str, ...] = ("recon", "strike")
 
 
-def _air_points(state: GameState, side: Side, arena: str, role: str) -> int:
+def _stage_available(r: _Run, side: Side, arena: str, role: str, points: int) -> int:
+    """[39.19] `points` capped by the aeroplanes of this squadron that have NOT yet flown this
+    Operations Stage -- "generally, a plane may fly only one mission per Operations Stage or
+    Strategic Phase" -- read back out in the rating those Air Points are denominated in (34.13
+    TacAir / 34.14 Bombload), the same conversion basing.available_points and air.ready_points make
+    for the same reason. The cap is taken in PLANES because that is the unit the rule binds ("a
+    PLANE may fly only one mission"), and because the points<->planes round trip is lossy and
+    rounds outward -- re-deriving a mission's Air Points from a remaining plane count would inflate
+    every partial commitment, so the points asked for are capped and never recomputed.
+
+    GATED BY NOTHING, AND THAT IS THE POINT. [38.31]'s refit ledger enforces this bound today as a
+    SIDE EFFECT, but only where air.refit_modelled is true and only for _REFITTABLE_ROLES -- two
+    preconditions that belong to rule 38 and to a DATA gap ([36.5]/[61.42]), not to rule 39. With
+    that hatch open (measured: siege_of_tobruk(port_bomb=True) has refit_modelled False for the
+    Axis) five missions in one Operations Stage each drew the WHOLE establishment. 39.19 carries no
+    precondition in the book and carries none here.
+
+    39.2 IS NOT DOUBLE-CHARGED HERE, and the plane unit is why. Its "two missions" are two mission
+    LABELS on ONE FLIGHT at ONE target -- 41.16 "certain planes may undertake two missions
+    SIMULTANEOUSLY", 39.2 "may strafe and bomb THE SAME TARGET as a combined mission" -- so a
+    ledger counting AEROPLANES PUT IN THE AIR prices that flight at one, where a mission-denominated
+    ledger would have charged it twice.
+
+    ⚠ BUT DO NOT READ THAT AS "39.2 NEEDS NO WORK" -- this paragraph said so, and said it in a
+    direction that would mislead the next builder (corrected 2026-08-08, faithfulness review). The
+    ledger does not double-book a combined mission; it ANNIHILATES ITS SECOND HALF. Measured: two
+    labels at one target in one stage resolve as one AIR_STRIKE_RESOLVED and then NO EVENT AT ALL,
+    because the second label finds the arm already spent. So whoever implements strafing (40.5/40.6)
+    must make BOTH LABELS RIDE ONE COMMITMENT -- and that IS a branch, just not the one this
+    paragraph originally warned against. It is unreachable today only because strafing is unbuilt.
+
+    IT SUBTRACTS FROM basing.available_planes AND NOT FROM THE WHOLE ESTABLISHMENT, because 39.19's
+    Strategic-Phase half has a prior claim on the same squadron and the two claims are on DIFFERENT
+    aeroplanes: a bomber sent to Malta this Game-Turn is not one of the machines still standing for
+    the desert. Reading against the establishment instead would let one plane stand for both.
+
+    AND THAT IS ALSO WHY THIS GATE IS PROVABLY INERT WHEREVER A SQUADRON DRAWS ITS POINTS ONCE IN A
+    STAGE: with `flown` at zero it computes exactly the cap basing.available_points already applied
+    as the FIRST gate, so the min returns its argument untouched. Measured over three full 111-turn
+    campaigns, no Operations Stage on any seed ever drew twice -- so the ledger binds nothing there
+    and every baseline must stay byte-identical. If one moves, this reasoning is wrong; find out
+    why before re-baselining."""
+    flown = r.air_flown.current.get(air.squadron(side, arena, role), 0)
+    left = max(0, basing.available_planes(r.state, side, arena, role) - flown)
+    return min(points, air.points_of_planes(side, role, left))
+
+
+def _air_points(r: _Run, side: Side, arena: str, role: str) -> int:
     """Committed Air Points of `role` ("strike"|"recon") `side` can put over `arena` this OpStage,
-    after THREE gates, IN THIS ORDER: rule 43 and rule 39.19 take out the aeroplanes that are not in
-    Africa or have already flown this Game-Turn's Strategic Phase (game.basing.available_points);
-    the 40/45/46 superiority contest then scales the LOSER down (AIR_SUPERIORITY_LOSER_SCALE); and
-    38.31's REFIT ledger caps whatever is left at what the squadron's refitted aeroplanes can carry
-    -- "a plane that is not refitted may fly no mission other than transfer, even if it is
-    refueled". The winner of a contested sky still flies only the machines that are on the right
-    continent, have not already been to Malta today, and that its mechanics got back into the air.
+    after FOUR gates, IN THIS ORDER: rule 43 and rule 39.19's STRATEGIC half take out the
+    aeroplanes that are not in Africa or have already flown this Game-Turn's Strategic Phase
+    (game.basing.available_points); the 40/45/46 superiority contest then scales the LOSER down
+    (AIR_SUPERIORITY_LOSER_SCALE); 38.31's REFIT ledger caps whatever is left at what the squadron's
+    refitted aeroplanes can carry -- "a plane that is not refitted may fly no mission other than
+    transfer, even if it is refueled"; and 39.19's WITHIN-STAGE half takes out the aeroplanes that
+    have already flown a mission earlier in this same Operations Stage. The winner of a contested
+    sky still flies only the machines that are on the right continent, have not already been to
+    Malta today, that its mechanics got back into the air, and that are not already airborne.
 
     THE BASING CUT COMES FIRST, AND THAT ORDER IS LOAD-BEARING. The sky over the desert is contested
     by the aeroplanes IN the desert: scaling the whole establishment first and then capping it at
@@ -2743,34 +2821,73 @@ def _air_points(state: GameState, side: Side, arena: str, role: str) -> int:
     superiority, and a loser-scale of 0.5 above a cap of 0.25 would be arithmetically invisible --
     the Axis would fly the same strength whether it held the sky or lost it.
 
-    THE REFIT CAP COMES LAST and reads the CUT establishment (basing.establishment): otherwise the
-    Mediterranean contingent would act as a readiness buffer for aeroplanes that are not in Africa,
-    and the African squadron would fly on the serviceability of a force based a thousand miles away.
+    THE REFIT CAP COMES LAST OF RULE 38's and reads the CUT establishment (basing.establishment):
+    otherwise the Mediterranean contingent would act as a readiness buffer for aeroplanes that are
+    not in Africa, and the African squadron would fly on the serviceability of a force based a
+    thousand miles away.
 
-    All three gates are read at MISSION time and none draws anything; the fuel bill (38.24) comes
-    after, on whatever survives them."""
+    39.19's WITHIN-STAGE GATE IS LAST OF ALL, below the _REFITTABLE_ROLES test rather than behind
+    it, because the exclusion of the fighter arm from the refit ledger is a rule-38 decision and
+    rule 39 binds every plane. Placing it last is also what makes it PROVABLY inert wherever 38.31
+    is modelled: both ledgers are written with the same plane count off one conversion, so the
+    unfit count is never below the flown count within a stage, and the min returns its argument
+    unchanged. It is composed with min and not subtracted, because a plane that flew this stage
+    sits in BOTH ledgers and subtracting both would charge it twice.
+
+    All four gates are read at MISSION time and none draws anything; the fuel bill (38.24) comes
+    after, on whatever survives them. It takes the _Run and not the GameState because the
+    within-stage ledger is run-scoped -- a fact that never needs to outlive its Operations Stage."""
+    state = r.state
     victor = state.air_superiority.get(arena)
     scale = 1.0 if victor is None or victor == side.value else AIR_SUPERIORITY_LOSER_SCALE
     total = sum(getattr(w, role) for w in state.air if w.side == side and w.arena == arena)
-    points = basing.available_points(state, side, arena, role, total)   # 43.11/43.12 + 39.19
+    points = basing.available_points(state, side, arena, role, total)   # 43.11/43.12 + 39.19 GT half
     points = int(points * scale)
-    if role not in _REFITTABLE_ROLES:                    # the fighter arm is outside the ledger
-        return points
-    return air.ready_points(state, side, arena, role, points,
-                            basing.establishment(state, side, arena, role))
+    if role in _REFITTABLE_ROLES:                        # the fighter arm is outside RULE 38's ledger
+        points = air.ready_points(state, side, arena, role, points,
+                                  basing.establishment(state, side, arena, role))
+    return _stage_available(r, side, arena, role, points)          # 39.19 within-stage, gated by nothing
 
 
-def _air_unfit(r: _Run, side: Side, arena: str, role: str, points: int) -> None:
-    """[38.31] The planes that just flew are no longer refitted: "AS SOON AS A PLANE FLIES ANY
-    MISSION other than transfer, IT MUST BE REFITTED AGAIN." Emitted the moment a tasked mission
-    actually flies (the fuel callback in _air_support), never for a mission that was refused,
-    grounded or never ordered."""
-    if points <= 0 or role not in _REFITTABLE_ROLES or not air.refit_modelled(r.state, side):
+def _air_sortie_flown(r: _Run, side: Side, arena: str, role: str, points: int) -> None:
+    """[38.31] + [39.19] THE AEROPLANES THAT JUST FLEW, booked into both ledgers off ONE count.
+
+        38.31 "AS SOON AS A PLANE FLIES ANY MISSION other than transfer, IT MUST BE REFITTED
+              AGAIN." -- a persistent readiness stock (GameState.air_unfit), released by a die.
+        39.19 "Generally, a plane may fly only ONE MISSION PER OPERATIONS STAGE" -- a within-stage
+              commitment (_Run.air_flown), released by the stage ending.
+
+    ONE plane count for two ledgers, because two call sites that each convert Air Points to
+    aeroplanes are two chances to disagree about how many machines left the ground, and the
+    disagreement would be SILENT -- the argument that 39.19's gate cannot move a signature where
+    38.31 is modelled depends on the two counts being equal, not merely similar.
+
+    Called from the fuel callback in _air_support, so it is invoked exactly when a mission is REALLY
+    flown: after every resolver's structural refusal (bombing a harbour your own side holds, a fort
+    you hold, recon over a Major City -- refusals to ORDER the mission, and 39.31 defines an abort
+    as cancelling "before any action is taken"), and never for a mission that was only tasked. A
+    mission that arrives over an EMPTY hex is billed, because 39.0 says missions are assigned
+    "blindly, and only find out what target are present when the planes arrive". It receives what
+    FLEW rather than what was committed, because 38.24 refuels one plane at a time and a half-funded
+    larder flies half the force; the unfuelled aeroplanes never took off, and neither rule binds them.
+
+    THE 39.19 HALF IS GATED BY NOTHING; the two early returns below are rule 38's own -- the fighter
+    arm's exclusion (a fuel-billing decision, see _REFITTABLE_ROLES) and the [36.5]/[61.42] data
+    escape hatch. ⚠ AND WHEN CAP/SCRAMBLE BECOME ORDERED MISSIONS THEY MUST ROUTE THROUGH HERE TOO:
+    40.33 is explicit that "even a failed Scramble means the planes have flown and they still must
+    refuel and refit", so a resolver that computes an effect without calling its fuel callback is a
+    plane that flew for free -- in both ledgers."""
+    if points <= 0:                                      # nothing took off; nothing to book
         return
     planes = air.flying_planes(r.state, side, arena, role, points,
                                basing.establishment(r.state, side, arena, role))
     if planes <= 0:
         return
+    flown = r.air_flown.current                          # 39.19: every side, every arena, every role
+    key = air.squadron(side, arena, role)
+    flown[key] = flown.get(key, 0) + planes
+    if role not in _REFITTABLE_ROLES or not air.refit_modelled(r.state, side):
+        return                                           # 38.31's own two preconditions, and only its
     unfit = air.unfit_planes(r.state, side, arena, role) + planes
     r.emit(EventKind.AIR_SQUADRON_UNFIT, side, f"{side.value}/Air",
            {"squadron": air.squadron(side, arena, role), "arena": arena, "role": role,
@@ -2957,7 +3074,97 @@ def _payload_target(target) -> object:
     return target if isinstance(target, str) else list(target)
 
 
-def _air_support(r: _Run, side: Side, pinned: set[str]) -> None:
+def _is_hex(target) -> bool:
+    """Is this AirMission target the (q, r) a hex-targeted mission needs? The shape test the
+    order-rejection boundary applies to a POLICY's target, because every resolver but _air_port
+    calls tuple() on it and then indexes it as a Coord."""
+    return (isinstance(target, (tuple, list)) and len(target) == 2
+            and all(isinstance(c, int) for c in target))
+
+
+# [39.11] "NO PLANE MAY FLY UNLESS IT HAS BEEN ASSIGNED A SPECIFIC MISSION." The LAND missions this
+# engine can actually fly, and THE ONE SOURCE OF THAT VOCABULARY: _air_support dispatches through
+# this table and validates a policy's `kind` against the same keys, so a kind cannot be flyable
+# without being nameable, or nameable without being flyable. A whitelist held apart from the
+# dispatch would be a second source of truth that can drift -- which is exactly the defect this
+# closes, the chain here having previously been a bare if/elif with no else that dropped an
+# unrecognised kind silently: no event, no refusal, no invariant.
+# The lambdas normalise three call shapes into one (strike alone joins the 12.44 `pinned` set; port
+# alone carries a port id rather than a Coord) and bind their resolvers at CALL time, which is why
+# this table may sit above them.
+_AIR_MISSIONS = {
+    "strike":   lambda r, side, m, pinned, fuel: _air_strike(r, side, tuple(m.target), pinned, fuel),
+    "fort":     lambda r, side, m, pinned, fuel: _air_fort(r, side, tuple(m.target), fuel),
+    "port":     lambda r, side, m, pinned, fuel: _air_port(r, side, m.target, fuel),
+    "airfield": lambda r, side, m, pinned, fuel: _air_facility_bomb(r, side, tuple(m.target), fuel),
+    "dump":     lambda r, side, m, pinned, fuel: _air_dump_bomb(r, side, tuple(m.target), fuel),
+    "trucks":   lambda r, side, m, pinned, fuel: _air_truck_bomb(r, side, tuple(m.target), fuel),
+    "recon":    lambda r, side, m, pinned, fuel: _air_recon(r, side, tuple(m.target), fuel),
+}
+
+
+def _mission_order(m) -> tuple:
+    """The deterministic dispatch order for a tasked air mission -- ONE definition, because both
+    the air-less rejection sweep and the flying loop sort with it and a second copy is how the two
+    would drift apart.
+
+    IT MUST NOT DEPEND ON THE MISSION'S PYTHON REPRESENTATION (corrected 2026-08-08, correctness
+    review). The key used to be `str(target)`, and '(' (0x28) sorts before '[' (0x5B) -- so a TUPLE
+    target always dispatched ahead of a LIST one whatever its coordinates, and with one aeroplane
+    left in the [39.19] ledger the sort order decides which hex is actually reconnoitred. `_is_hex`
+    deliberately accepts both shapes, so the key canonicalises exactly as `_payload_target` does.
+    A malformed target that is neither string nor hex falls back to its TYPE NAME, which is stable
+    across runs for the same reason the rejection payload's is."""
+    t = getattr(m, "target", "")
+    kind = str(getattr(m, "kind", ""))
+    if _is_hex(t):
+        return (kind, "", tuple(t))
+    return (kind, t if isinstance(t, str) else type(t).__name__, ())
+
+
+def _reject_air_mission(r: _Run, side: Side, m, fault: str) -> None:
+    """Refuse one tasked air mission at the boundary (the [39.11] mission column is a Player's, so
+    a malformed entry is untrusted input to be rejected, never a misencoded rule that raises).
+
+    NEVER repr() AN UNTRUSTED TARGET INTO THE EVENT LOG (corrected 2026-08-08, blast-radius
+    review). ORDER_REJECTED payloads are hashed into both benchmark signatures, and repr() of a set
+    reorders under PYTHONHASHSEED while repr() of a plain object carries its MEMORY ADDRESS -- so
+    the same seed produced two different event logs, which CLAUDE.md rule 4 forbids absolutely. The
+    type NAME tells a reader (or an LLM reading back its own rejection) everything a malformed
+    target can usefully say, and says it identically on every run."""
+    target = getattr(m, "target", None)
+    r.emit(EventKind.ORDER_REJECTED, side, f"{side.value}/Air",
+           {"order": "air_mission", "kind": str(getattr(m, "kind", "")),
+            "target": (_payload_target(target)
+                       if isinstance(target, str) or _is_hex(target)
+                       else f"<{type(target).__name__}>"),
+            "reason": fault})
+
+
+def _air_mission_fault(state: GameState, side: Side, m) -> "str | None":
+    """Why `side`'s Air Marshal may not be flown `m` this Game-Turn, or None if it is a legal
+    tasking. THE ORDER-REJECTION BOUNDARY FOR Policy.air_missions, and it exists because that hook
+    is untrusted input: game.llm.MockClient can return adversarial output, and a live LLM seat
+    is no more trustworthy than one. Every other hook in this engine re-validates the same way.
+
+    It is a REJECTION and not an invariant. game.invariants "must never raise -- a violation means
+    a rule is misencoded"; a staff's bad order is not a misencoded rule, and crashing the fold on a
+    seat's typo would be the wrong failure mode. One path serves a bad policy order and a bad
+    scenario seed alike, and both are loud in the log."""
+    if not isinstance(m, AirMission):
+        return "not an air mission"
+    if m.side != side:
+        return "air mission belongs to the other side"
+    if m.turn != state.turn:
+        return "air mission is not due this Game-Turn"
+    if m.kind not in _AIR_MISSIONS:                       # 39.11: not a SPECIFIC mission
+        return "unknown air mission kind"
+    if not (isinstance(m.target, str) if m.kind == "port" else _is_hex(m.target)):
+        return "malformed air mission target"
+    return None
+
+
+def _air_support(r: _Run, policy, side: Side, pinned: set[str]) -> None:
     """The LAND air-support sub-segment (rules 41.31/41.37/41.39B/42.2) at the TOP of the phasing
     side's Combat Segment, before _barrage_step. Flies `side`'s due LAND air missions in a fixed,
     deterministic order. STRIKE pins the strongest enemy in the target hex (12.44, joining the same
@@ -2969,11 +3176,40 @@ def _air_support(r: _Run, side: Side, pinned: set[str]) -> None:
     bombing destroys Truck Points and their cargo outright (41.32); RECON lifts the fog over a hex
     (42.2). Each mission is grounded when its OWN target hex lies under a Sandstorm/
     Rainstorm (29.43/29.52, keyed on the 29.7 section it flies over), so a storm confined to 2-3
-    sections no longer grounds the whole air force; an air-less segment stays byte-identical."""
+    sections no longer grounds the whole air force; an air-less segment stays byte-identical.
+
+    WHICH MISSIONS FLY IS THE AIR MARSHAL'S DECISION AND NOT THIS ENGINE'S (39.11: "no plane may fly
+    unless it has been assigned a specific mission"). It used to read the scenario's baked schedule
+    straight off GameState; it now asks `policy` (Policy.air_missions), whose default is that very
+    comprehension -- so every scenario and policy that holds no air doctrine is byte-identical.
+
+    THE SORT STAYS HERE, ON THIS SIDE OF THE HOOK, and that is deliberate: it makes the order a
+    policy happens to return its missions in non-load-bearing, which is what keeps a live LLM seat
+    deterministic when it shuffles its own list. The key is defensive because the thing being
+    sorted is untrusted -- a policy that hands back something that is not a mission at all must be
+    REFUSED at the boundary below, not crash the fold before it gets there."""
+    due = policy.air_missions(r.state, side)              # 39.11: the seat's own mission column
+    # THE BOUNDARY IS ASKED BEFORE THE AIR FORCE IS (moved above this guard 2026-08-08,
+    # faithfulness review). `if not r.state.air: return` used to come FIRST, so a side the scenario
+    # seeded with no AirWing -- which is BOTH Desert Fox benchmarks -- swallowed a malformed order
+    # entirely: no rejection, no event, no feedback, the exact defect class this slice exists to
+    # close. A seat must learn that its order was junk whether or not it owns an aeroplane.
+    # Byte-identity is preserved because the DEFAULT hook returns the scenario's own missions and
+    # those scenarios carry air_missions=(), so `due` is empty and this loop emits nothing.
     if not r.state.air:
+        for m in sorted(due, key=_mission_order):
+            fault = _air_mission_fault(r.state, side, m)
+            if fault is not None:
+                _reject_air_mission(r, side, m, fault)
         return
-    due = [m for m in r.state.air_missions if m.side == side and m.turn == r.state.turn]
-    for m in sorted(due, key=lambda m: (m.kind, str(m.target))):
+    for m in sorted(due, key=_mission_order):
+        # THE BOUNDARY COMES FIRST, BEFORE THE WEATHER. An unflyable order is not a mission at all,
+        # and grounding it for weather would hide an order error behind a sandstorm -- the rejection
+        # would appear or not appear depending on the sky.
+        fault = _air_mission_fault(r.state, side, m)
+        if fault is not None:
+            _reject_air_mission(r, side, m, fault)
+            continue
         if _air_grounded(r.state.weather_at(_mission_hex(r.state, m))):   # 29.43/29.52, per section
             continue
         # 34.17/38.21/38.24: the sortie is fuelled out of the air-facility dumps, and an unfuelled
@@ -2991,30 +3227,18 @@ def _air_support(r: _Run, side: Side, pinned: set[str]) -> None:
         role = "recon" if m.kind == "recon" else "strike"
 
         def fuel(points: int, role=role, m=m) -> int:
-            # 38.24 pays for the sortie; 38.31 un-refits the planes that flew it. Both hang off
-            # this ONE callback because it is invoked exactly when a mission is really flown --
-            # after every resolver's structural refusal (bombing your own harbour, no siege rules)
-            # and never for a mission that was only tasked.
+            # 38.24 pays for the sortie; 38.31 un-refits the planes that flew it and 39.19 books
+            # them as airborne for the rest of this Operations Stage. All three hang off this ONE
+            # callback because it is invoked exactly when a mission is really flown -- after every
+            # resolver's structural refusal (bombing your own harbour, no siege rules) and never
+            # for a mission that was only tasked.
             flown = _air_fuel(r, side, role, points,
                               {"arena": "LAND", "kind": m.kind,
                                "target": _payload_target(m.target)})
-            _air_unfit(r, side, "LAND", role, flown)
+            _air_sortie_flown(r, side, "LAND", role, flown)
             return flown
 
-        if m.kind == "strike":
-            _air_strike(r, side, tuple(m.target), pinned, fuel)
-        elif m.kind == "fort":
-            _air_fort(r, side, tuple(m.target), fuel)
-        elif m.kind == "port":
-            _air_port(r, side, m.target, fuel)
-        elif m.kind == "airfield":
-            _air_facility_bomb(r, side, tuple(m.target), fuel)
-        elif m.kind == "dump":
-            _air_dump_bomb(r, side, tuple(m.target), fuel)
-        elif m.kind == "trucks":
-            _air_truck_bomb(r, side, tuple(m.target), fuel)
-        elif m.kind == "recon":
-            _air_recon(r, side, tuple(m.target), fuel)
+        _AIR_MISSIONS[m.kind](r, side, m, pinned, fuel)
 
 
 def _city_wall(state: GameState, tgt: Coord) -> int:
@@ -3043,7 +3267,7 @@ def _air_strike(r: _Run, side: Side, tgt: Coord, pinned: set[str], fuel) -> None
     A strike over an empty (or walled) hex is still a mission FLOWN -- 39.0's own note is that
     missions are assigned blindly, "and only find out what target are present when the planes
     arrive" -- so it is fuelled like any other."""
-    committed = _air_points(r.state, side, "LAND", "strike")
+    committed = _air_points(r, side, "LAND", "strike")
     strength = fuel(committed)                           # 38.24: however many planes were fuelled
     if committed > 0 and strength <= 0:                  # 38.21: no fuel, no flight
         return
@@ -3094,7 +3318,7 @@ def _air_fort(r: _Run, side: Side, tgt: Coord, fuel) -> None:
     when the planes arrive") as arriving over a hex that turns out to hold no enemy unit, which
     _air_strike bills -- so the fort check sits AFTER the fuel draw, and the two resolvers draw the
     line in the same place."""
-    strength = _air_points(r.state, side, "LAND", "strike")
+    strength = _air_points(r, side, "LAND", "strike")
     if strength <= 0:                                    # no committed strike / lost the sky
         return
     if r.state.control_of(tgt) == CONTROL_OF[side]:      # never batter your OWN works
@@ -3134,7 +3358,7 @@ def _air_port(r: _Run, side: Side, port_id: str, fuel) -> None:
     the Port serves whoever HOLDS the hex (56.15 gates the convoy lane the same way), so the game-turn
     the fortress changes hands, besieger and besieged swap. Falls back to the seeded side on a hex
     neither player has entered, so a scenario that records no control there reads as before."""
-    strength = _air_points(r.state, side, "LAND", "strike")
+    strength = _air_points(r, side, "LAND", "strike")
     if strength <= 0:                                    # no committed strike / lost the sky
         return
     port = r.state.port(port_id)
@@ -3196,7 +3420,7 @@ def _air_facility_bomb(r: _Run, side: Side, tgt: Coord, fuel) -> None:
     facility = air.facility_at(r.state, tgt)
     if facility is None or air.holder(r.state, facility) == side or air.destroyed(facility):
         return
-    strength = _air_points(r.state, side, "LAND", "strike")
+    strength = _air_points(r, side, "LAND", "strike")
     if strength <= 0:                                    # no committed strike / lost the sky
         return
     strength = fuel(strength)                            # 38.24: however many planes were fuelled
@@ -3301,7 +3525,7 @@ def _air_dump_bomb(r: _Run, side: Side, tgt: Coord, fuel) -> None:
     dumps = tuple(sorted((su for su in r.state.supplies
                           if su.side != side and not su.is_dummy and not su.empty
                           and su.hex == tgt), key=lambda su: su.id))
-    strength = _air_points(r.state, side, "LAND", "strike")
+    strength = _air_points(r, side, "LAND", "strike")
     if strength <= 0:                                    # no committed strike / lost the sky
         return
     strength = fuel(strength)                            # 38.24: however many planes were fuelled
@@ -3365,7 +3589,7 @@ def _air_truck_bomb(r: _Run, side: Side, tgt: Coord, fuel) -> None:
     owner = _other(side)
     formations = [t for t in r.state.trucks_at(tgt) if t.side == owner and t.points > 0]
     walled = _city_wall(r.state, tgt) > 0                # 41.32: sheltered until the city is at zero
-    strength = _air_points(r.state, side, "LAND", "strike")
+    strength = _air_points(r, side, "LAND", "strike")
     if strength <= 0:                                    # no committed strike / lost the sky
         return
     strength = fuel(strength)                            # 38.24: however many planes were fuelled
@@ -3393,8 +3617,21 @@ def _air_recon(r: _Run, side: Side, tgt: Coord, fuel) -> None:
     than Patrol' (3.6) -- unit CLASS, never id. The +-2 noise is baked here (rng), so apply stays pure."""
     if r.state.fort_level(tgt) > 1:                      # 42.22: no recon over a Major City
         return
-    committed = _air_points(r.state, side, "LAND", "recon")
-    if committed > 0 and fuel(committed) <= 0:           # 38.21: no fuel, no flight
+    committed = _air_points(r, side, "LAND", "recon")
+    # [39.19] NO AEROPLANES, NO RECONNAISSANCE -- and this line is the whole of a defect that all
+    # three adversarial lenses and the gate reproduced independently (2026-08-08). The guard below
+    # used to read `if committed > 0 and fuel(...) <= 0`, which SHORT-CIRCUITS at committed == 0:
+    # once the within-stage ledger had spent the arm the test was False, and the function walked on
+    # to the [42.2] fog-lift regardless. Five recon missions in one Operations Stage revealed all
+    # five hexes on one squadron's worth of fuel; a wing with recon=0 revealed them on none at all.
+    # Its six sibling resolvers all open `if strength <= 0: return`; recon was the sole exception,
+    # and it is the one that matters most, because rule 3.6 limited intelligence is exactly what
+    # reconnaissance defeats (game.observation unions air_sighted_for). Pre-existing, but harmless
+    # only while a static schedule was the sole author of missions -- the Policy hook makes it
+    # reachable by an untrusted seat, which is the thing this slice exists to make safe.
+    if committed <= 0:                                   # 39.19 / lost the sky: nothing flies
+        return
+    if fuel(committed) <= 0:                             # 38.21: no fuel, no flight
         return
     enemies = sorted(r.state.enemies_at(tgt, side), key=lambda u: u.id)
     revealed: list[dict] = []
@@ -6324,7 +6561,7 @@ def _combat(r: _Run, policies: dict, side: Side) -> None:
     charged: set[str] = set()         # 6.3 per-segment CP ledger (one combat charge/unit)
     fired_anti_armor: set[str] = set()   # 14.26/15.21: phasing units that fired anti-armor this segment
     held_off: dict = {}               # 10.34: Actual Barrage Points the phasing side laid on each enemy hex
-    _air_support(r, side, pinned)     # 41.31: air strikes pin BEFORE barrage, joining the 12.44 set
+    _air_support(r, policies[side], side, pinned)     # 41.31: air strikes pin BEFORE barrage, joining the 12.44 set
     _naval_bombardment(r, side, pinned)   # 30.2: off-shore gunfire, another pre-barrage 12.44 pin
     _barrage_step(r, side, enemy, pinned, charged, held_off)
     _retreat_before_assault(r, policies[enemy], enemy, side, pinned)

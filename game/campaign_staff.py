@@ -6,7 +6,7 @@ project supply forward. The base StaffPolicy truck relay is left verbatim for st
 """
 from __future__ import annotations
 
-from .campaign_policy import (_CampaignAxisSupplyMixin, air_transfer_doctrine,
+from .campaign_policy import (_CampaignAxisSupplyMixin, air_mission_doctrine, air_transfer_doctrine,
                               axis_rail_doctrine, coastal_shipping_doctrine, convoy_plan_doctrine,
                               hold_garrisons, malta_africa_doctrine, malta_raid_doctrine)
 from .events import Side
@@ -20,6 +20,25 @@ class CampaignStaffPolicy(_CampaignAxisSupplyMixin, StaffPolicy):
     (the multi-hop coastal haul + staging-dump-aware leapfrog, see _CampaignAxisSupplyMixin). The
     Commonwealth fields no trucks, so the mixin is a no-op on that side and the one class serves both
     mirrors of the two-staff campaign. Constructed exactly like StaffPolicy (client, side, ...)."""
+
+    def air_missions(self, state: GameState, side: Side) -> list:
+        """[39.1] THE SAME LAND MISSION COLUMN THE SCRIPTED CAMPAIGN FLIES, on both sides -- the
+        campaign's symmetric siege of the Tobruk harbour (air_mission_doctrine).
+
+        Wired here for the reason malta_raid and rail_orders are: without it the live-staff campaign
+        would inherit StaffPolicy's own seat, which reads the seeded schedule and is right, but the
+        two campaign variants would then be running rule 39 out of two different files. One doctrine,
+        both variants, no drift.
+
+        THE SEAT IT SITS ON IS THE MOST OBVIOUS PROMOTION CANDIDATE LEFT IN THE STAFF, and unlike
+        the QM's convoy split it needs no new machinery to become live: Policy.air_missions returns
+        a list of AirMissions, the engine validates every field of them at the boundary and [39.19]
+        bounds how many aeroplanes the answer can put in the air, so an LLM Air Marshal can be
+        handed the whole decision the moment there is an observation worth deciding from. What
+        stands in the way is not the seam but the MAP: an AirMission carries no origin and nothing
+        range-checks it (34.11/37.21), so a live seat could task a Stuka anywhere on the board. That
+        gate belongs with 34.72's Squadron Composition Sheet -- see Policy.air_missions' flag."""
+        return air_mission_doctrine(state, side)
 
     def malta_raid(self, state: GameState) -> str:
         """[44.23] THE SAME MALTA DOCTRINE THE SCRIPTED CAMPAIGN AXIS FLIES. The Availability Level

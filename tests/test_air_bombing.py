@@ -33,6 +33,7 @@ from game.invariants import check
 from game.logistics_data import (air_dump_bombing_crt_41_35, air_dump_truck_loss_per_pct_41_35,
                                  air_truck_bombing_crt_41_32)
 from game.movement import TerrainMap
+from game.policy import Policy
 from game.state import (AirFacility, AirMission, AirWing, GameState, StepRecord, SupplyUnit,
                         TruckFormation, Unit, VP)
 from game.terrain import Mobility, Terrain
@@ -371,7 +372,7 @@ def test_the_new_mission_kinds_route_through_the_air_support_segment(kind):
                 supplies=[_enemy_dump(fuel=100)],
                 trucks=[_truck("AL-T1", 6, side=Side.ALLIED, fuel=60)])
     r = _Run(st)
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     kinds = [e.kind for e in r.events]
     assert EventKind.AIR_STRIKE_RESOLVED in kinds
     assert EventKind.SUPPLY_CONSUMED in kinds                    # 38.24: the sortie was fuelled

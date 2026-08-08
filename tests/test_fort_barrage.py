@@ -43,7 +43,7 @@ from game.apply import fold
 from game.engine import _Run, _barrage_step, determinism_signature, run
 from game.events import Control, EventKind, Phase, Side
 from game.movement import TerrainMap
-from game.policy import ScriptedPolicy
+from game.policy import Policy, ScriptedPolicy
 from game.scenario import rommels_arrival
 from game.state import AirMission, AirWing, GameState, StepRecord, SupplyUnit, Unit, VP
 from game.terrain import Mobility, Terrain
@@ -423,7 +423,7 @@ def _bomb_state(*, fort: int = 3, strike: int = 500, control: dict | None = None
 def _bomb(state: GameState) -> _Run:
     from game.engine import _air_support
     r = _Run(state)
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     return r
 
 
@@ -537,10 +537,10 @@ def test_41_37_the_per_stage_cap_expires_by_itself_for_a_caller_that_drives_the_
     in Stage 1 and never lifted, and Tobruk's wall can be battered ONCE PER WAR."""
     from game.engine import _air_support
     r = _Run(_bomb_state(fort=2))
-    _air_support(r, Side.AXIS, set())                     # Operations Stage 1: one level (41.37)
+    _air_support(r, Policy(), Side.AXIS, set())                     # Operations Stage 1: one level (41.37)
     assert r.state.fort_level((1, 0)) == 1
     r.emit(EventKind.STAGE_ADVANCED, Side.SYSTEM, "SYSTEM", {"stage": 2})
-    _air_support(r, Side.AXIS, set())                     # Operations Stage 2: the NEXT level
+    _air_support(r, Policy(), Side.AXIS, set())                     # Operations Stage 2: the NEXT level
     assert r.state.fort_level((1, 0)) == 0, \
         "the cap is one level per Operations Stage, not one level per run"
     assert [e.stage for e in _kinds(r, EventKind.FORT_REDUCED)] == [1, 2]

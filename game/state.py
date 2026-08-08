@@ -474,18 +474,34 @@ class AirFacility:
 
 @dataclass(frozen=True, slots=True)
 class AirMission:
-    """A scheduled LAND-arena air TASKING (rules 41.31/41.36/41.37/41.39B/42.2): the convoys/
-    interdictions idiom carried to air support. `kind` is "strike" (41.31 pin a stack),
-    "fort" (41.37 batter a fortification one level/OpStage), "port" (41.39B knock a harbour's
-    Efficiency Level down), "airfield" (41.36 knock an air facility's Capacity Level down) or
-    "recon" (42.2 fog-lift). `target` is the hex (q, r) for strike/fort/airfield/recon, or the
-    port id for "port". On game-turn `turn`, side `side`'s LAND air
-    flies it in that side's Combat Segment (game.engine._air_support) -- the committed strike/
-    recon Air Points come from its AirWings, scaled by the superiority gate. A static schedule
-    now, replaced by the Air Marshal seat's live orders later (P5 Step 6); default
-    GameState.air_missions=() flies nothing, so every air-mission-less scenario stays byte-identical."""
+    """ONE LAND-arena air TASKING (rules 41.31/41.32/41.35/41.36/41.37/41.39B/42.2): the convoys/
+    interdictions idiom carried to air support. The SEVEN kinds game.engine._AIR_MISSIONS
+    dispatches, which is the one place the vocabulary lives:
+
+        "strike"   41.31 B-CU  pin the strongest enemy combat unit in the hex
+        "fort"     41.37 B-F/C batter a fortification down one level per Operations Stage
+        "port"     41.39B      knock a harbour's Efficiency Level down (55.1)
+        "airfield" 41.36       knock an air facility's Capacity Level down (36.14)
+        "dump"     41.35 B-SD  destroy a percentage of every enemy supply pile in the hex
+        "trucks"   41.32 B-TC  destroy Truck Points and their cargo outright
+        "recon"    42.2        lift the fog over the hex
+
+    `target` is the hex (q, r) for all of them but "port", which carries the port id. On Game-Turn
+    `turn`, side `side`'s LAND air flies it in that side's Combat Segment
+    (game.engine._air_support) -- the committed strike/recon Air Points come from its AirWings,
+    scaled by the superiority gate, capped by rule 43's basing, by 38.31's refit ledger and by
+    39.19's within-stage plane ledger.
+
+    NO LONGER A STATIC SCHEDULE. game.scenario still SEEDS these, but the engine reaches them only
+    through Policy.air_missions -- whose default is exactly "this side's, due this Game-Turn", so a
+    seeded schedule and a commander with no air doctrine agree byte for byte. An Air Marshal seat
+    that holds one returns its own list instead, and the engine re-validates side, turn, kind and
+    target shape at the boundary. Default GameState.air_missions=() flies nothing, so every
+    air-mission-less scenario stays byte-identical.
+
+    It carries no ORIGIN, so nothing range-checks it -- see Policy.air_missions' own flag."""
     side: Side
-    kind: str                      # "strike" | "fort" | "port" | "recon"
+    kind: str                      # a key of game.engine._AIR_MISSIONS (the seven listed above)
     target: object                 # (q, r) hex, or a port id str (kind == "port")
     turn: int
 

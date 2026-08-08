@@ -532,6 +532,14 @@ class CampaignCommonwealthPolicy(ScriptedPolicy):
         # against the DAK's concentration (see concentrate_formations).
         return concentrate_formations(state, side)
 
+    def air_missions(self, state: GameState, side: Side) -> list:
+        # [39.1] The SAME Air Marshal doctrine the campaign Axis flies, and it is symmetric because
+        # the rule and the target are: there is one Tobruk harbour, both sides task it every
+        # Game-Turn, and _air_port hands the besieger's role back and forth as the fortress changes
+        # hands (scenario._campaign_air_missions). Malta's raid is the Axis Player's alone; the LAND
+        # mission column is not.
+        return air_mission_doctrine(state, side)
+
     def _on_offensive(self, state: GameState) -> bool:
         return self._schedule.is_offensive(state.turn)
 
@@ -1473,6 +1481,28 @@ def malta_raid_doctrine(state: GameState) -> str:
     return "I"
 
 
+def air_mission_doctrine(state: GameState, side: Side) -> list:
+    """[39.1] THE AIR MARSHAL'S STANDING TASKING IN THE CAMPAIGN: bomb the harbour, every Game-Turn,
+    all war. Shared verbatim by the scripted campaign and the LIVE-STAFF campaign, the way
+    malta_raid_doctrine, convoy_plan_doctrine, axis_rail_doctrine and coastal_shipping_doctrine
+    already are, so the two campaign variants cannot diverge on rule 39.
+
+    IT IS THE SEEDED SCHEDULE, AND THAT IS A DELIBERATE FLOOR RATHER THAN A DOCTRINE THIS FUNCTION
+    INVENTED. scenario._campaign_air_missions writes a symmetric B-P mission against PORT-Tobruk for
+    both sides every Game-Turn and lets the ENGINE decide who is besieging (_air_port refuses the
+    side that holds the hex), which is the siege duel the campaign is built around. Reading it back
+    out here is what makes it the SEAT'S order instead of a fact of the world: it is now proposed by
+    the Air Marshal, validated at the boundary, bounded by [39.19], and OVERRIDABLE.
+
+    ⚠ FLAGGED, AND IT IS WHY NOTHING CLEVERER IS WRITTEN HERE. The rulebook prints no target-
+    selection doctrine at all -- 39.12 gives the Player a mission column and 39.15 tells him there
+    is no limit on what he writes in it. A heuristic that picked targets off the board (the nearest
+    enemy dump, the richest truck stack) would be an INVENTION with a citation stapled to it, and
+    would move the campaign signature on nothing but this file's opinion. The decision now has a
+    seat; giving that seat a real opinion is an LLM's job, or a later block's, not this one's."""
+    return [m for m in state.air_missions if m.side == side and m.turn == state.turn]
+
+
 class CampaignAxisPolicy(_CampaignAxisSupplyMixin, ScriptedPolicy):
     """The scripted Axis for the FULL campaign: the base attacker (attacker=AXIS, so combat and
     elastic retreat are inherited and byte-identical to ScriptedPolicy(Side.AXIS)), PLUS the
@@ -1502,6 +1532,11 @@ class CampaignAxisPolicy(_CampaignAxisSupplyMixin, ScriptedPolicy):
         # it the panzer divisions concentrate and then stand still (see formation_moves).
         plan = take_and_hold_moves(state, side, super().movement(state, side), escort=True)
         return plan + formation_moves(state, side, plan)
+
+    def air_missions(self, state: GameState, side: Side) -> list:
+        # [39.1] The Air Marshal's LAND tasking, shared verbatim with the LIVE-staff campaign
+        # (game.campaign_staff) so the two campaign variants cannot diverge on rule 39.
+        return air_mission_doctrine(state, side)
 
     def malta_raid(self, state: GameState) -> str:
         # [44.23] The Axis Malta doctrine, shared verbatim with the LIVE-staff campaign

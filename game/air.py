@@ -59,15 +59,17 @@ AND THREE MORE, NAMED HERE BECAUSE THEY ARE EASY TO MISTAKE FOR BUILT:
     Points) and data/logistics_rates.json transcribes only bomb_points -- but 12.54 sends the barrage
     at a facility to the Bombload column, so the facility path needs no new transcription. The
     Barrage-Points scale is owed to the OTHER target rows of that table.
-  * **NO SCENARIO OR POLICY GENERATES AN 'airfield', 'dump' OR 'trucks' AIR MISSION** -- still true
-    of the LAND SUPPORT channel, and 5.5 added two more resolvers to the list rather than shortening
-    it. engine._air_facility_bomb (41.36), _air_dump_bomb (41.35) and _air_truck_bomb (41.32) are
-    faithful resolvers whose only callers in the tree are their tests: the LAND air schedule is
-    static (game.scenario) and seeds only strike/fort/port/recon, and no Policy seat has an air hook
-    at all. **The 41.35/41.32 missions are the two that most obviously want one** -- bombing dumps
-    and lorries is how an air force attacks a logistics game -- and giving the air seat a real
-    mission column (39.1/40.21) is the same unbuilt thing engine._air_superiority's flagged free CAP
-    is waiting on. Until then this rule is built and unexercised, which is a different defect from
+  * **NO SCENARIO GENERATES AN 'airfield', 'dump' OR 'trucks' AIR MISSION -- BUT A POLICY NOW CAN**
+    (corrected 2026-08-08; this bullet read "NO SCENARIO OR POLICY", and the second half stopped
+    being true when Policy.air_missions landed). engine._air_facility_bomb (41.36), _air_dump_bomb
+    (41.35) and _air_truck_bomb (41.32) are faithful resolvers that the SHIPPED schedule still never
+    calls -- game.scenario seeds only strike/fort/port/recon -- but _AIR_MISSIONS dispatches all
+    three, so a seat that writes them into its mission column gets them flown. **The 41.35/41.32
+    missions are the two that most obviously want one** -- bombing dumps and lorries is how an air
+    force attacks a logistics game -- and the seat that can now order them is the one to do it. What
+    remains genuinely unbuilt is ORDERED CAP, which engine._air_superiority's flagged free patrol
+    waits on for a different reason ([40.27] sequencing, not a missing hook). Until a policy
+    actually orders them these three stay unexercised in play, which is a different defect from
     unbuilt and a smaller one. What 5.4 built instead is the STRATEGIC one: engine.
     _malta_raid resolves 44.21's raid on the same [41.5] Airfields row and the same 41.36 rule, but
     it may not route through _air_facility_bomb, because that function sizes its attack from

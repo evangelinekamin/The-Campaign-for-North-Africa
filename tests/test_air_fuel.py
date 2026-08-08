@@ -29,7 +29,7 @@ from game.events import Control, EventKind, Phase, Side
 from game.invariants import check
 from game.logistics_data import aircraft_characteristics_4_44
 from game.movement import TerrainMap
-from game.policy import ScriptedPolicy
+from game.policy import Policy, ScriptedPolicy
 from game.scenario import campaign, rommels_arrival, siege_of_tobruk
 from game.state import (AirFacility, AirMission, AirWing, GameState, StepRecord, SupplyUnit,
                         Unit, VP)
@@ -191,7 +191,7 @@ def _strike_mission(target=(1, 0)):
 def test_38_24_the_fuel_comes_out_of_the_air_facilitys_own_dump():
     st = _state(facilities=[_field()], supplies=[_dump(fuel=9)], missions=_strike_mission())
     r = _Run(st)
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     drawn = [e for e in r.events if e.kind == EventKind.SUPPLY_CONSUMED]
     assert [(e.payload["supply_id"], e.payload["commodity"], e.payload["qty"]) for e in drawn] \
         == [("AF-Sup", supply.FUEL, 9)]                  # 3 of the 4 bombers x Fuel 3 (38.24 pays
@@ -207,7 +207,7 @@ def test_38_24_an_ordinary_field_dump_may_not_fuel_an_aeroplane():
                                                        air_dump=False)],
                 missions=_strike_mission())
     r = _Run(st)
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert not any(e.kind == EventKind.SUPPLY_CONSUMED for e in r.events)
     assert [e.kind for e in r.events if e.kind == EventKind.AIR_MISSION_GROUNDED]
     assert r.state.supply("ARMY").fuel == 500
@@ -258,7 +258,7 @@ def test_38_24_refuels_ONE_PLANE_AT_A_TIME_and_a_half_paid_force_flies_half():
     # and the half-funded sortie really does fly, at the reduced strength
     r = _Run(_state(facilities=[_field()], supplies=[_dump(fuel=3)], strike=23,
                     missions=_strike_mission()))
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     resolved = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED]
     assert len(resolved) == 1 and resolved[0].payload["strength"] == 11
     assert not any(e.kind == EventKind.AIR_MISSION_GROUNDED for e in r.events)
@@ -280,7 +280,7 @@ def test_38_21_a_larder_that_cannot_fuel_ONE_plane_grounds_the_mission():
 
     st = _state(facilities=[_field()], supplies=[_dump(fuel=0)], missions=_strike_mission())
     r = _Run(st)
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     grounded = [e for e in r.events if e.kind == EventKind.AIR_MISSION_GROUNDED]
     assert len(grounded) == 1
     p = grounded[0].payload
@@ -301,14 +301,14 @@ def test_59_32_the_scenarios_first_operations_stage_is_already_fuelled():
     first = _state(facilities=[_field()], supplies=[_dump(fuel=9)], missions=_strike_mission(),
                    stage=1)
     r = _Run(first)
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert any(e.kind == EventKind.AIR_STRIKE_RESOLVED for e in r.events)   # it flew
     assert not any(e.kind == EventKind.SUPPLY_CONSUMED for e in r.events)   # and it was free
     assert r.state.supply("AF-Sup").fuel == 9
     # ...and a DRY larder does not ground the opening stage either: the tanks are already full
     dry = _Run(_state(facilities=[_field()], supplies=[_dump(fuel=0)],
                       missions=_strike_mission(), stage=1))
-    _air_support(dry, Side.AXIS, set())
+    _air_support(dry, Policy(), Side.AXIS, set())
     assert not any(e.kind == EventKind.AIR_MISSION_GROUNDED for e in dry.events)
 
 
@@ -322,7 +322,7 @@ def test_a_grounded_bombing_mission_rolls_no_crt_die():
                         missions=(AirMission(Side.AXIS, "port", "PORT-X", 1),)),
                  ports=(port,))
     r = _Run(st)
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert not any(e.rng_draws for e in r.events)
     assert r.state.port("PORT-X").eff == 4
 
@@ -340,7 +340,7 @@ def test_a_mission_that_is_never_flown_burns_no_fuel():
                         missions=(AirMission(Side.AXIS, "port", "PORT-A", 1),)),
                  ports=(port,))
     r = _Run(st)
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert not r.events                                  # nothing flew, nothing was billed
     assert r.state.supply("AF-Sup").fuel == 9
 
@@ -378,7 +378,7 @@ def test_zero_committed_points_cost_nothing_and_emit_nothing():
     st = _state(facilities=[_field()], supplies=[_dump(fuel=0)], strike=0,
                 missions=_strike_mission())
     r = _Run(st)
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert not any(e.kind in (EventKind.SUPPLY_CONSUMED, EventKind.AIR_MISSION_GROUNDED)
                    for e in r.events)
 
@@ -386,7 +386,7 @@ def test_zero_committed_points_cost_nothing_and_emit_nothing():
 def test_the_marker_folds_to_identity():
     st = _state(facilities=[_field()], supplies=[_dump(fuel=0)], missions=_strike_mission())
     r = _Run(st)
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert fold(st, r.events) == r.state
 
 
@@ -410,8 +410,11 @@ def test_the_automatic_superiority_patrol_draws_no_fuel_and_here_is_why():
     CONSERVE FUEL or, perhaps, retain some flexibility with his fighter force."
 
     engine._air_superiority is not that mission. It is our collapse of rules 40/45/46 into one die,
-    it fires unconditionally once per arena per Operations Stage, and no order routes to it: air
-    missions are scenario-scheduled and no Policy seat has an air hook. Billing it was measured
+    it fires unconditionally once per arena per Operations Stage, and no order routes to it. (That
+    last clause read "air missions are scenario-scheduled and no Policy seat has an air hook" until
+    2026-08-08; a seat now writes its own mission column, but CAP is still not an ASSIGNABLE KIND --
+    there is no "cap" in engine._AIR_MISSIONS -- so nothing can order or decline this beat and the
+    conclusion below is untouched.) Billing it was measured
     over the full campaign and it took 84 of 84 Axis air Fuel Points on two seeds in three -- the
     Axis air force burning its entire war's fuel on patrols nobody ordered and never bombing
     anything. So the contest is free until CAP is an assignable mission with a mission column
@@ -444,7 +447,7 @@ def test_a_side_the_scenario_never_based_on_the_map_is_outside_the_model():
     st = _state(missions=_strike_mission())                      # no facilities at all
     assert not air.based_on_map(st, Side.AXIS)
     r = _Run(st)
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert any(e.kind == EventKind.AIR_STRIKE_RESOLVED for e in r.events)
     assert not any(e.kind == EventKind.AIR_MISSION_GROUNDED for e in r.events)
 
@@ -456,7 +459,7 @@ def test_a_side_that_LOSES_its_last_field_is_grounded_not_freed():
                 control={(0, 0): Control.ALLIED})
     assert air.based_on_map(st, Side.AXIS)                       # seeded Axis, currently lost
     r = _Run(st)
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert [e.payload["kind"] for e in r.events
             if e.kind == EventKind.AIR_MISSION_GROUNDED] == ["strike"]
 

@@ -36,7 +36,7 @@ from game.events import EventKind, Phase, Side
 from game.invariants import check
 from game.logistics_data import aircraft_refit_table_38_37, squadron_capacity_35_23
 from game.movement import TerrainMap
-from game.policy import ScriptedPolicy
+from game.policy import Policy, ScriptedPolicy
 from game.scenario import campaign, rommels_arrival, siege_of_tobruk
 from game.state import (AirFacility, AirMission, AirWing, GameState, StepRecord, SupplyUnit,
                         Unit, VP)
@@ -246,7 +246,7 @@ def test_38_31_a_mission_flown_leaves_its_planes_unfit():
     fixture's African contingent is two of [60.32]'s bombers (34.14; they average 11 Bomb Points
     apiece), so two aeroplanes come back unfit."""
     r = _Run(_state(missions=(AirMission(Side.AXIS, "strike", (1, 0), 1),)))
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     unfit = [e for e in r.events if e.kind == EventKind.AIR_SQUADRON_UNFIT]
     assert [e.payload["planes"] for e in unfit] == [2]
     assert unfit[0].payload["squadron"] == AXIS_STRIKE
@@ -258,9 +258,9 @@ def test_38_31_an_unrefitted_squadron_may_fly_no_mission_even_when_fuelled():
     """"A plane that is not refitted may fly no mission other than transfer, EVEN IF IT IS
     REFUELED." The larder is full; the squadron is not."""
     st = _state(unfit={AXIS_STRIKE: 2}, missions=(AirMission(Side.AXIS, "strike", (1, 0), 1),))
-    assert _air_points(st, Side.AXIS, "LAND", "strike") == 0
+    assert _air_points(_Run(st), Side.AXIS, "LAND", "strike") == 0
     r = _Run(st)
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert not any(e.kind == EventKind.SUPPLY_CONSUMED for e in r.events)   # no fuel drawn
     assert r.state.supply("AF-Sup").fuel == 99
     # the tasking still records itself -- a strike with nothing in the air, exactly as a side that
@@ -275,10 +275,10 @@ def test_38_31_a_half_refitted_squadron_flies_at_its_refitted_planes_share():
     squadron's 23 -- the same arithmetic air.refuel uses for a part-fuelled force."""
     st = _state(unfit={AXIS_STRIKE: 1})
     assert _ready(st) == 1
-    assert _air_points(st, Side.AXIS, "LAND", "strike") == 11
+    assert _air_points(_Run(st), Side.AXIS, "LAND", "strike") == 11
     # and flying it un-fits that ONE plane, never more than were ready
     r = _Run(replace(st, air_missions=(AirMission(Side.AXIS, "strike", (1, 0), 1),)))
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     ev = [e for e in r.events if e.kind == EventKind.AIR_SQUADRON_UNFIT]
     assert [e.payload["planes"] for e in ev] == [1]
     assert r.state.air_unfit == {AXIS_STRIKE: 2}
@@ -292,7 +292,7 @@ def test_the_fighter_arm_is_deliberately_outside_the_ledger():
     from game.engine import _REFITTABLE_ROLES
     assert _REFITTABLE_ROLES == ("recon", "strike")
     st = _state(fighters=8, unfit={"AXIS/LAND/fighters": 99})
-    assert _air_points(st, Side.AXIS, "LAND", "fighters") == 8       # untouched by the ledger
+    assert _air_points(_Run(st), Side.AXIS, "LAND", "fighters") == 8       # untouched by the ledger
 
 
 # --- [38.34] / [38.36] the maintenance beat ----------------------------------------------------
@@ -480,7 +480,7 @@ def test_the_beat_is_silent_for_a_side_the_scenario_never_based_on_the_map():
     rule. Both sides ARE based on the map in the full campaign."""
     st = _state(facilities=[], supplies=[], units=[], unfit={AXIS_STRIKE: 2})
     assert not air.refit_modelled(st, Side.AXIS)
-    assert _air_points(st, Side.AXIS, "LAND", "strike") == 23       # ungoverned, as before 5.3
+    assert _air_points(_Run(st), Side.AXIS, "LAND", "strike") == 23       # ungoverned, as before 5.3
     r = _Run(st)
     _air_maintenance(r)
     assert r.events == []
@@ -489,16 +489,32 @@ def test_the_beat_is_silent_for_a_side_the_scenario_never_based_on_the_map():
 # --- the cycle, end to end ---------------------------------------------------------------------
 
 def test_the_cycle_turns_over_stage_after_stage():
-    """Fly, go unfit, refit part of the force, fly what came back. Three OpStages of one squadron,
-    with the die pinned, is the governor in miniature."""
+    """Fly, go unfit, refit part of the force, fly what came back. Two OpStages of one squadron,
+    with the die pinned, is the governor in miniature.
+
+    RESTATED 2026-08-08 WHEN [39.19]'s WITHIN-STAGE LEDGER LANDED, AND IT WAS THIS TEST THAT WAS
+    WRONG. It always claimed to run "stage after stage" -- its own comments read "stage 2: both
+    bombers fly" and "the one refitted plane flies alone" -- but it never advanced r.state.stage, so
+    both sorties and the maintenance beat between them happened inside ONE Operations Stage. That
+    sequence cannot occur: _air_maintenance is the Tactical Maintenance Segment (33 IV.F.7), which
+    run() fires ONCE at the top of a stage, and 39.19 forbids a plane a second mission in a stage
+    whether its mechanics got to it or not ("generally, a plane may fly only one mission per
+    Operations Stage" -- refit restores serviceability, not the allowance).
+
+    So the stage is advanced here, which is what the docstring always said and what run() always
+    did. The assertions are UNCHANGED and every number is the same: the point of the test -- that
+    the refit percentage is what a squadron flies on next time -- is untouched, and it is now made
+    on a board the engine can actually reach. Left as it was, it would have been a test asserting
+    38.31 while reading as though it asserted 39.19."""
     r = _Run(_state(missions=(AirMission(Side.AXIS, "strike", (1, 0), 1),)))
     _pin_die(r, 4)                                      # 4 + 2 Italian = 6 -> 40%
-    _air_support(r, Side.AXIS, set())                   # stage 2: both bombers fly
+    _air_support(r, Policy(), Side.AXIS, set())         # stage 2: both bombers fly
     assert r.state.air_unfit == {AXIS_STRIKE: 2}
-    _air_maintenance(r)                                 # 40% of 2 = 0.8 -> 1 back
+    r.emit(EventKind.STAGE_ADVANCED, Side.SYSTEM, "SYSTEM", {"stage": 3})   # the next OpStage...
+    _air_maintenance(r)                                 # ...with maintenance. 40% of 2 = 0.8 -> 1 back
     assert r.state.air_unfit == {AXIS_STRIKE: 1}
     strikes = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED]
-    _air_support(r, Side.AXIS, set())                   # and the one refitted plane flies alone
+    _air_support(r, Policy(), Side.AXIS, set())         # and the one refitted plane flies alone
     strikes2 = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED]
     assert strikes[0].payload["strength"] == 23         # the whole African contingent
     assert strikes2[-1].payload["strength"] == 11       # one bomber's own Bombload

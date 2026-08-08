@@ -10,6 +10,41 @@ DETERMINISM -- the same seed replays byte-for-byte -- and nothing else. It is no
 claim, and pinning it must never become a reason to avoid fixing a rule.
 
 --------------------------------------------------------------------------------------------------
+NOT RE-BASELINED 2026-08-08 -- [39.1]/[39.19], THE AIR MARSHAL'S SEAT AND THE WITHIN-STAGE PLANE
+LEDGER. Policy.air_missions hands the LAND mission column back to the commander (it was a fixed
+schedule in game.scenario that engine._air_support read straight off GameState); [39.19]'s
+within-stage ledger (_Run.air_flown, an _OpStageLedger) bounds what a seat can put in the air; and
+the dispatch chain becomes engine._AIR_MISSIONS, which is now both the resolver table and the
+whitelist an unflyable order is ORDER_REJECTED against.
+
+NOTHING MOVED. NOT ONE OF THE EIGHT SIGNATURES, AND THAT WAS THE ACCEPTANCE CRITERION, PREDICTED IN
+ADVANCE RATHER THAN DISCOVERED AFTERWARDS. Both benchmarks: rommel e1d1fa771ce3, siege 19693b23b988,
+unchanged -- rommels_arrival and siege_of_tobruk both seed air=() and air_missions=(), so
+_air_support returns at its first line and no ledger, hook or whitelist can reach them. All six
+campaign seeds at max_turns=12, unchanged, reproducing the 2026-08-04 [15.53] entry below exactly:
+
+    1    56f2a0260368      4    b0cc0d4cbec2      7    fbd42e2bdf0e
+    777  39be31455fd1      1941 9da36ecc4730      2026 6ce904d7ff13
+
+And the FULL 111-Game-Turn campaign, measured because the campaign is the only board that flies air
+at all -- seed 1941 e98efd60...50a4d3 (270,991 events), seed 7 95658f90...6c8a15d (256,790) -- both
+byte-identical to the control folds recorded in scratchpad/port/39-precondition.md.
+
+WHY IT COULD NOT MOVE, which is the part worth keeping. (a) Policy.air_missions' default IS the
+comprehension the engine used to run inline, so no policy that lacks an air doctrine tasks anything
+different. (b) The new gate reads basing.available_planes minus what has flown THIS Operations
+Stage, so on the first draw of a stage it computes exactly the cap basing.available_points had
+already applied as gate one, and the min returns its argument untouched -- and measured over three
+full campaigns, no Operations Stage on any seed ever draws twice. (c) The whitelist's rejection
+branch fires only for a kind no scenario produces.
+
+SO THIS SLICE CHANGES NO BEHAVIOUR AND IS ENTIRELY A PREREQUISITE -- which is the point: it is what
+makes the seat safe to hand to an LLM. The hole it closes is real and was reproduced at HEAD before
+it was fixed (tests/test_air_assignment.py): with air.refit_modelled False -- the [36.5]/[61.42]
+DATA escape hatch, which is the state siege_of_tobruk(port_bomb=True) leaves the Axis in -- five
+strike missions tasked into one Operations Stage each drew the WHOLE squadron. [38.31]'s refit
+ledger had been standing in for [39.19] by accident, and it is switched off there.
+--------------------------------------------------------------------------------------------------
 NOT RE-BASELINED 2026-08-04 -- [15.53]/[19.12], HQ-FOLLOWS-ITS-FORMATION. The driver that lets a
 concentrated formation march: campaign_policy.formation_moves orders a bare, non-combat Parent
 counter (every Commonwealth brigade/division HQ, every German division and panzer-regiment HQ) at

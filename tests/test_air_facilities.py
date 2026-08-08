@@ -21,7 +21,7 @@ from game.engine import _air_facility_bomb, _Run, _sgsu_upkeep, run
 from game.events import Control, Event, EventKind, Phase, Side
 from game.invariants import InvariantViolation, check
 from game.movement import TerrainMap
-from game.policy import ScriptedPolicy
+from game.policy import Policy, ScriptedPolicy
 from game.scenario import campaign, rommels_arrival
 from game.state import (AirFacility, AirMission, AirWing, GameState, StepRecord, SupplyUnit,
                         Unit, VP)
@@ -384,7 +384,7 @@ def test_air_missions_route_the_airfield_kind():
                  air_superiority={"LAND": Side.AXIS.value})
     from game.engine import _air_support
     r = _Run(st)
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert [e for e in r.events if e.payload.get("arena") == "AIRFIELD"]
 
 

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from . import observation, stacking, supply, tactics
 from .events import Side
 from .hexmap import Coord, distance, neighbors
-from .state import GameState, Unit
+from .state import AirMission, GameState, Unit
 
 
 @dataclass(frozen=True, slots=True)
@@ -259,6 +259,40 @@ class Policy:
     def react_to(self, state: GameState, side: Side, trigger: str,
                  eligible: frozenset[str]) -> list[MoveOrder]:
         return []  # optional: a non-phasing motorized unit slides aside as an enemy moves adjacent (rule 8.5)
+
+    def air_missions(self, state: GameState, side: Side) -> list[AirMission]:
+        """[39.1] THE AIR MARSHAL'S TASKING: which LAND air missions `side` flies this Game-Turn.
+
+            39.11 "no plane may fly unless it has been ASSIGNED A SPECIFIC MISSION"
+            39.15 "There is no limit to the number of planes that may be assigned to a mission"
+            39.19 "Generally, a plane may fly only ONE MISSION PER OPERATIONS STAGE"
+
+        THE DECISION THIS ENGINE USED TO MAKE FOR THE COMMANDER. game.scenario baked a fixed
+        schedule into GameState.air_missions and engine._air_support read it straight off state, so
+        no Policy was ever asked -- and the staff's own Air Marshal seat merely *narrated* the
+        schedule as a proposal it had not made. This hook is the handback.
+
+        THE DEFAULT IS THE SCHEDULE, VERBATIM, and that is the whole safety argument for opening
+        the hook: it is the comprehension the engine used to run inline, so every scenario and
+        every policy that does not override this flies exactly what it flew before, byte for byte
+        (ScriptedPolicy included, unchanged). A commander with no air doctrine still flies the
+        historical tasking rather than nothing, for the same reason convoy_plan ships a mix.
+
+        The engine RE-VALIDATES what comes back -- side, Game-Turn, kind and target shape -- and
+        rejects an unflyable order with ORDER_REJECTED rather than trusting the seat, because a
+        live LLM seat is untrusted input. It also SORTS the survivors itself, so the order a policy
+        happens to return them in is never load-bearing. And it BOUNDS them: [39.19]'s within-stage
+        plane ledger means a staff that tasks ten missions still flies each aeroplane once.
+
+        ⚠ FLAGGED, AND IT IS CREATED BY THIS HOOK RATHER THAN BY THE RULE: an AirMission carries
+        no ORIGIN, so nothing range-checks it ([34.11]/[37.21]). The per-aircraft Range is
+        transcribed for all 28 types and the [37.4] Air Distance Chart is on disk, but an AirWing
+        is a hexless national (side, arena, role) pool with no base to measure from -- so any
+        origin would be an invention, and the gate is deliberately NOT built here. Today's schedule
+        only ever targets one harbour, so rangelessness was invisible; a live seat can task a
+        bomber at any hex on the map. It dissolves with [34.72]'s Squadron Composition Sheet, the
+        same blocker air.refuel's pooled larder and engine._refit_stores_dump already wait on."""
+        return [m for m in state.air_missions if m.side == side and m.turn == state.turn]
 
     def malta_raid(self, state: GameState) -> str:
         """[44.23]/[44.25] The Axis Malta Availability Level ("I".."IV") to commit this Game-Turn.

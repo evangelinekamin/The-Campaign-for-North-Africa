@@ -581,6 +581,28 @@ def mediterranean_strategic(state: GameState, side: Side, role: str) -> int:
     return state.air_strategic.get(mediterranean_squadron(side, role), 0)
 
 
+def available_planes(state: GameState, side: Side, arena: str, role: str) -> int:
+    """[43.11]/[43.12] + [39.19] THE AEROPLANES OF THIS SQUADRON THAT MAY FLY AN OPERATIONS-STAGE
+    MISSION AT ALL THIS GAME-TURN: the contingent rule 43 leaves on this continent, less the ones
+    already committed to this Game-Turn's Strategic Phase (the Malta raid, 44.21/44.25).
+
+    THE SUBTRACTION IS THE RULE, and it is why this is not composed with the OTHER caps by min.
+    39.19's two halves claim DISJOINT sets of aeroplanes -- "a plane flying a mission in an
+    Operations Stage may not fly in the Strategic Phase of that Game-Turn AND VICE VERSA" -- so a
+    bomber over Malta and a bomber over the desert are two bombers, and a cap that took the larger
+    of the two claims would let one machine stand for both. 38.31's refit stock is a different
+    matter and IS composed with min (engine._air_points), because an unfit plane is the SAME plane
+    that flew.
+
+    Read by engine._stage_available as the baseline its within-stage ledger is subtracted from, so
+    that all three of 39.19's and 43's claims on one squadron are counted once each and no plane is
+    ever spent twice. ⚠ Note it deliberately reads STRATEGIC and not UNFIT: engine._malta_africa
+    books the raid into both, but _air_maintenance can refit a Malta flier in the very next
+    Operations Stage, and 39.19 excludes it from the desert for the rest of the Game-Turn anyway."""
+    return max(0, establishment(state, side, arena, role)
+               - strategic_planes(state, side, arena, role))
+
+
 def available_points(state: GameState, side: Side, arena: str, role: str, points: int) -> int:
     """[43.11]/[43.12] + [39.19] `points` capped by BOTH of rule 43's and rule 39.19's answers to
     the same question -- how many aeroplanes of this squadron are on this continent and have not
@@ -591,6 +613,5 @@ def available_points(state: GameState, side: Side, arena: str, role: str, points
     only one of the places a mission is sized from. A side rule 43 does not bind, with nothing
     committed to the Strategic Phase, gets its points back verbatim: its whole squadron of planes
     carries at least the Air Points the same squadron was totted up from."""
-    left = max(0, establishment(state, side, arena, role)
-               - strategic_planes(state, side, arena, role))
-    return min(points, air.points_of_planes(side, role, left))
+    return min(points, air.points_of_planes(
+        side, role, available_planes(state, side, arena, role)))

@@ -19,7 +19,7 @@ from game.events import Event, EventKind, Phase, Side
 from game.invariants import check
 from game.movement import TerrainMap
 from game.observation import SIGHTING, observe
-from game.policy import ScriptedPolicy
+from game.policy import Policy, ScriptedPolicy
 from game.scenario import coastal_corridor, rommels_arrival, siege_of_tobruk
 from game.state import AirMission, AirWing, GameState, StepRecord, SupplyUnit, Unit, VP
 from game.terrain import Mobility, Terrain
@@ -184,14 +184,14 @@ def _strike(target=(1, 0)):
 
 def test_strike_flies_nothing_without_a_mission():
     r = _Run(_strike_state())
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert not any(e.kind == EventKind.AIR_STRIKE_RESOLVED for e in r.events)
 
 
 def test_strike_pins_the_target_and_folds_identity():
     r = _Run(_strike_state(missions=_strike()))
     pinned: set = set()
-    _air_support(r, Side.AXIS, pinned)
+    _air_support(r, Policy(), Side.AXIS, pinned)
     strike = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED]
     assert len(strike) == 1
     p = strike[0].payload
@@ -206,7 +206,7 @@ def test_strike_blocked_behind_intact_major_city_wall():
     # 41.31: a garrison behind fort_level>1 is UN-STRIKABLE -- air alone cannot crack Tobruk.
     r = _Run(_strike_state(fort=2, missions=_strike()))
     pinned: set = set()
-    _air_support(r, Side.AXIS, pinned)
+    _air_support(r, Policy(), Side.AXIS, pinned)
     p = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED][0].payload
     assert p["walled"] is True and p["pinned"] == [] and not pinned
 
@@ -214,7 +214,7 @@ def test_strike_blocked_behind_intact_major_city_wall():
 def test_strike_severity_default_is_pin_only():
     assert engine.AIR_STRIKE_STEP_SEVERITY == 0
     r = _Run(_strike_state(missions=_strike()))
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert not any(e.kind == EventKind.STEP_LOST for e in r.events)   # pin-only
 
 
@@ -223,7 +223,7 @@ def test_strike_severity_dial_sheds_a_step():
     old = engine.AIR_STRIKE_STEP_SEVERITY
     try:
         engine.AIR_STRIKE_STEP_SEVERITY = 2
-        _air_support(r, Side.AXIS, set())
+        _air_support(r, Policy(), Side.AXIS, set())
     finally:
         engine.AIR_STRIKE_STEP_SEVERITY = old
     loss = [e for e in r.events if e.kind == EventKind.STEP_LOST]
@@ -252,7 +252,7 @@ def test_fort_bombing_reduces_at_most_one_level_per_operations_stage():
     between them -- which the old flat resolver got right by accident, having no way to take two."""
     twice = (AirMission(Side.AXIS, "fort", (1, 0), 1), AirMission(Side.AXIS, "fort", (1, 0), 1))
     r = _Run(_strike_state(fort=3, air_strike=500, missions=twice))
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     fr = [e for e in r.events if e.kind == EventKind.FORT_REDUCED]
     assert len(fr) == 1 and fr[0].payload["level"] == 2          # one level/OpStage (41.37)
     assert r.state.fort_level((1, 0)) == 2
@@ -269,7 +269,7 @@ def test_fort_bombing_never_batters_your_own_works():
     s = replace(_strike_state(fort=3, missions=fort_mission),
                 control={(1, 0): Control.AXIS})
     r = _Run(s)
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert not any(e.kind == EventKind.FORT_REDUCED for e in r.events)
     assert r.state.fort_level((1, 0)) == 3
 
@@ -298,7 +298,7 @@ def test_port_bombing_rolls_the_41_5_ports_row():
                 cap_ammo=400, cap_fuel=400, cap_stores=400, cap_water=400, cap_tons=1000)
     r = _Run(_strike_state(ports=(port,),
                            missions=(AirMission(Side.AXIS, "port", "PORT-X", 1),)))
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     marker = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED
               and e.payload.get("arena") == "PORT"]
     assert len(marker) == 1                                      # the roll is always logged
@@ -320,7 +320,7 @@ def test_port_bombing_never_bombs_your_own_harbour():
                 cap_ammo=400, cap_fuel=400, cap_stores=400, cap_water=400, cap_tons=1000)
     r = _Run(_strike_state(ports=(port,),
                            missions=(AirMission(Side.AXIS, "port", "PORT-A", 1),)))
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert not any(e.kind == EventKind.PORT_EFFICIENCY_CHANGED for e in r.events)
     assert r.state.port("PORT-A").eff == 4
 
@@ -334,12 +334,12 @@ def test_fort_and_port_bombing_need_committed_strike_points():
     # A strike=0 wing fields no strike Air Points -> neither the works nor the harbour is battered.
     fort_mission = (AirMission(Side.AXIS, "fort", (1, 0), 1),)
     r = _Run(_strike_state(fort=3, air_strike=0, missions=fort_mission))
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert not any(e.kind == EventKind.FORT_REDUCED for e in r.events)
     assert r.state.fort_level((1, 0)) == 3
     r2 = _Run(_strike_state(air_strike=0, ports=(port,),
                             missions=(AirMission(Side.AXIS, "port", "PORT-X", 1),)))
-    _air_support(r2, Side.AXIS, set())
+    _air_support(r2, Policy(), Side.AXIS, set())
     assert not any(e.kind == EventKind.PORT_EFFICIENCY_CHANGED for e in r2.events)
     assert r2.state.port("PORT-X").eff == 4
 
@@ -352,11 +352,11 @@ def test_losing_the_land_sky_below_a_point_grounds_fort_and_port_bombing():
     fort_mission = (AirMission(Side.AXIS, "fort", (1, 0), 1),)
     r = _Run(_strike_state(fort=3, air_strike=1,
                            superiority=Side.ALLIED.value, missions=fort_mission))
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert not any(e.kind == EventKind.FORT_REDUCED for e in r.events)
     r2 = _Run(_strike_state(air_strike=1, superiority=Side.ALLIED.value, ports=(port,),
                             missions=(AirMission(Side.AXIS, "port", "PORT-X", 1),)))
-    _air_support(r2, Side.AXIS, set())
+    _air_support(r2, Policy(), Side.AXIS, set())
     assert not any(e.kind == EventKind.PORT_EFFICIENCY_CHANGED for e in r2.events)
 
 
@@ -377,7 +377,7 @@ def test_fort_and_port_bombing_carry_committed_strength():
     # instead of two.
     r = _Run(_strike_state(fort=3, air_strike=6,
                            missions=(AirMission(Side.AXIS, "fort", (1, 0), 1),)))
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     fm = [e for e in r.events if e.kind == EventKind.AIR_STRIKE_RESOLVED
           and e.payload.get("arena") == "FORT"]
     assert len(fm) == 1 and fm[0].payload["strength"] == 6
@@ -386,7 +386,7 @@ def test_fort_and_port_bombing_carry_committed_strength():
             assert fr.payload["strength"] == 6
     r2 = _Run(_strike_state(air_strike=6, ports=(port,),
                             missions=(AirMission(Side.AXIS, "port", "PORT-X", 1),)))
-    _air_support(r2, Side.AXIS, set())
+    _air_support(r2, Policy(), Side.AXIS, set())
     marker = [e for e in r2.events if e.kind == EventKind.AIR_STRIKE_RESOLVED
               and e.payload.get("arena") == "PORT"]
     assert len(marker) == 1 and marker[0].payload["strength"] == 6   # committed strike rides the marker
@@ -409,19 +409,19 @@ def test_air_points_scale_the_loser():
     halves THOSE. tests/test_basing.py exercises the ordering against an establishment rule 43 does
     govern."""
     s = _strike_state(air_strike=8, superiority=Side.ALLIED.value)   # Axis LOST the LAND sky
-    assert _air_points(s, Side.AXIS, "LAND", "strike") == 4          # halved, from 8
-    assert _air_points(s, Side.ALLIED, "LAND", "strike") == 0        # no Allied wing here
+    assert _air_points(_Run(s), Side.AXIS, "LAND", "strike") == 4          # halved, from 8
+    assert _air_points(_Run(s), Side.ALLIED, "LAND", "strike") == 0        # no Allied wing here
     s2 = _strike_state(air_strike=8, superiority=Side.AXIS.value)    # Axis WON
-    assert _air_points(s2, Side.AXIS, "LAND", "strike") == 8         # the African contingent, whole
+    assert _air_points(_Run(s2), Side.AXIS, "LAND", "strike") == 8         # the African contingent, whole
     s3 = _strike_state(air_strike=8, superiority=None)               # contested
-    assert _air_points(s3, Side.AXIS, "LAND", "strike") == 8
+    assert _air_points(_Run(s3), Side.AXIS, "LAND", "strike") == 8
 
 
 # --- RECON (42.2): folds air_sighted, forbidden over a Major City ------------
 
 def test_recon_lifts_fog_and_folds_air_sighted():
     r = _Run(_strike_state(missions=(AirMission(Side.AXIS, "recon", (1, 0), 1),)))
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     rec = [e for e in r.events if e.kind == EventKind.AIR_RECON_RESOLVED]
     assert len(rec) == 1
     p = rec[0].payload
@@ -435,7 +435,7 @@ def test_recon_lifts_fog_and_folds_air_sighted():
 def test_recon_forbidden_over_major_city():
     # a fortified Major City (fort_level>1) may not be recon'd (42.22)
     r = _Run(_strike_state(fort=2, missions=(AirMission(Side.AXIS, "recon", (1, 0), 1),)))
-    _air_support(r, Side.AXIS, set())
+    _air_support(r, Policy(), Side.AXIS, set())
     assert not any(e.kind == EventKind.AIR_RECON_RESOLVED for e in r.events)  # 42.22
     assert r.state.air_sighted == frozenset()
 
@@ -491,7 +491,7 @@ def test_interdiction_routes_through_a_sea_air_strike_only_with_sea_air():
 def test_air_support_grounded_flies_nothing():
     for foul in ("sandstorm", "rainstorm"):
         r = _Run(_strike_state(weather=foul, missions=_strike()))
-        _air_support(r, Side.AXIS, set())
+        _air_support(r, Policy(), Side.AXIS, set())
         assert not r.events                             # 29.43/29.52 grounded
 
 
